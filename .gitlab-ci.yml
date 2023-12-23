@@ -25,7 +25,7 @@ compile:
     paths:
       - release
 
-docker-build:
+docker-build-backend:
   image: docker:cli
   stage: build
   services:
@@ -46,4 +46,4 @@ docker-build:
   rules:
     - if: $CI_COMMIT_BRANCH
       exists:
-        - Dockerfile
+        - ./backend/Dockerfile
