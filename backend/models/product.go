@@ -19,6 +19,6 @@ type Product struct {
 }
 
 type ProductDTOExpire struct {
-	Barcode  string    `json:"barcode"`
-	ExpireAt time.Time `json:"expireAt"`
+	Barcode  string `json:"barcode"`
+	ExpireAt Date   `json:"expireAt"`
 }

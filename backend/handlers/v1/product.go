@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -239,7 +240,7 @@ func SetExpireAt(c *gin.Context) {
 		return
 	}
 
-	dbProduct.ExpireAt = expireAt.Timestamp
+	dbProduct.ExpireAt = time.Time(expireAt.Timestamp)
 
 	saveResult := db.Save(&dbProduct)
 	if saveResult.Error != nil {
@@ -250,8 +251,24 @@ func SetExpireAt(c *gin.Context) {
 
 	expireDTO := models.ProductDTOExpire{
 		Barcode:  dbProduct.Barcode,
-		ExpireAt: dbProduct.ExpireAt,
+		ExpireAt: expireAt.Timestamp,
 	}
 
 	c.JSON(http.StatusOK, expireDTO)
+}
+
+func GetExpired(c *gin.Context) {
+	logger, _ := c.MustGet("logger").(*zerolog.Logger)
+
+	db, ok := c.MustGet("db").(*gorm.DB)
+	if !ok {
+		logger.Error().Msg("Failed to get database from context")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get database from context"})
+		return
+	}
+
+	var products []models.Product
+	db.Where("expire_at < ?", time.Now()).Find(&products)
+
+	c.JSON(http.StatusOK, products)
 }

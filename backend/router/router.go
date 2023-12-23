@@ -57,6 +57,7 @@ func SetupRouter(logger *zerolog.Logger, db *gorm.DB, cntrl controllers.OpenFood
 	r.PATCH("/api/v1/products/:id", v1.UpdateProduct)
 	r.DELETE("/api/v1/products/:id", v1.DeleteProduct)
 	r.POST("/api/v1/products/:id/expire", v1.SetExpireAt)
+	r.GET("/api/v1/products/expired", v1.GetExpired)
 
 	return r
 }
