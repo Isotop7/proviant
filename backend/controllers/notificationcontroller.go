@@ -7,11 +7,13 @@ import (
 	"html/template"
 	"time"
 
+	"github.com/rs/zerolog"
 	gomail "gopkg.in/mail.v2"
 	"gorm.io/gorm"
 )
 
 type NotificationController struct {
+	Logger        *zerolog.Logger
 	Configuration models.NotificationConfiguration
 	DB            *gorm.DB
 }
@@ -24,18 +26,21 @@ func (nc NotificationController) Dispatch() {
 			var notificationProducts []models.Product
 			getError := nc.DB.Where("expire_at < ?", time.Now()).Find(&notificationProducts)
 			if getError.Error != nil {
-				fmt.Println(getError.Error)
+				nc.Logger.Error().Msg(getError.Error.Error())
 			}
 
 			for _, product := range notificationProducts {
-				fmt.Printf("Sending notification for product with id '%d' and barcode '%s'\n", product.ID, product.Barcode)
+				nc.Logger.Info().Msgf("Sending notification for product with id '%d' and barcode '%s'", product.ID, product.Barcode)
 				sendError := nc.SendMail(product)
 				if sendError != nil {
-					fmt.Println(sendError)
+					nc.Logger.Error().Msg(sendError.Error())
+				} else {
+					nc.Logger.Info().Msg("Notification send successfully")
 				}
 			}
 
 			// Sleep
+			nc.Logger.Info().Msgf("NotificationController is now sleeping for %d hours", sleepInterval)
 			time.Sleep(sleepInterval)
 		}
 	}()
@@ -72,6 +77,7 @@ func (nc NotificationController) SendMail(product models.Product) error {
 	})
 	body := bodyBuf.String()
 
+	// Set body of mail to generated template output
 	m.SetBody("text/html", body)
 
 	// Settings for SMTP server
@@ -82,9 +88,10 @@ func (nc NotificationController) SendMail(product models.Product) error {
 		nc.Configuration.SMTP.Password,
 	)
 
+	// Set ssl mode
 	d.SSL = nc.Configuration.SMTP.SSL
 
-	// Now send E-Mail
+	// Send mail and return error
 	err := d.DialAndSend(m)
 	return err
 }

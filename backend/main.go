@@ -5,7 +5,10 @@ import (
 	"expiro/backend/models"
 	"expiro/backend/router"
 	"fmt"
+	"os"
+	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -27,24 +30,33 @@ func main() {
 		panic(configErr.Error())
 	}
 
+	// Unmarshal yaml to configuration struct
 	configuration := models.ExpiroConfiguration{}
 	err := viper.Unmarshal(&configuration)
 	if err != nil {
 		panic(err)
 	}
 
+	// Setup logging
+	var logger zerolog.Logger
+	if configuration.Logging.Enabled {
+		fileLogger, _ := os.OpenFile(
+			configuration.Logging.File,
+			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+			0664,
+		)
+		multi := zerolog.MultiLevelWriter(fileLogger, zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime})
+		logger = zerolog.New(multi).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
+	} else {
+		logger = zerolog.New(
+			zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime},
+		).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
+	}
+
 	// Validate database parametes
 	dbValidErr := configuration.ValidDatabaseConfiguration()
 	if dbValidErr != nil {
 		panic(dbValidErr)
-	}
-
-	// Set default values if correctable invalid values were specified
-	if configuration.Database.Name == "" {
-		configuration.Database.Name = "expiro"
-	}
-	if configuration.Database.Port <= 0 {
-		configuration.Database.Port = 3306
 	}
 
 	// Generate database URI
@@ -79,9 +91,10 @@ func main() {
 
 	// Setup NotificationController
 	if !configuration.Notification.Enabled {
-		fmt.Println("Notifications are disabled")
+		logger.Info().Msg("Notifications are disabled")
 	} else {
 		notificationController := controllers.NotificationController{
+			Logger:        &logger,
 			Configuration: configuration.Notification,
 			DB:            db,
 		}
@@ -89,7 +102,7 @@ func main() {
 	}
 
 	// Call function to setup router and pass database interface
-	r := router.SetupRouter(db, cntrl)
+	r := router.SetupRouter(&logger, db, cntrl)
 
 	// Get server port or instead set default value
 	serverPort := configuration.Server.Port

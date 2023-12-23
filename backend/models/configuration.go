@@ -14,6 +14,11 @@ type ServerConfiguration struct {
 	Port int
 }
 
+type LoggingConfiguration struct {
+	Enabled bool
+	File    string
+}
+
 type SMTPConfiguration struct {
 	Host     string
 	Port     int
@@ -38,6 +43,7 @@ type OpenFoodFactsConfiguration struct {
 type ExpiroConfiguration struct {
 	Database      DatabaseConfiguration
 	Server        ServerConfiguration
+	Logging       LoggingConfiguration
 	Notification  NotificationConfiguration
 	OpenFoodFacts OpenFoodFactsConfiguration
 }
@@ -49,6 +55,10 @@ func (ec ExpiroConfiguration) ValidDatabaseConfiguration() error {
 		return errors.New("no database user specified")
 	} else if ec.Database.Password == "" {
 		return errors.New("no database password specified")
+	} else if ec.Database.Name == "" {
+		return errors.New("no database name specified")
+	} else if ec.Database.Port <= 0 {
+		return errors.New("no valid database port specified")
 	}
 	return nil
 }

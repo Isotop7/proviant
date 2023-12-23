@@ -4,13 +4,35 @@ import (
 	"expiro/backend/controllers"
 	common "expiro/backend/handlers"
 	v1 "expiro/backend/handlers/v1"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
-func SetupRouter(db *gorm.DB, cntrl controllers.OpenFoodFactsAPIController) *gin.Engine {
-	r := gin.Default()
+func LoggerMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+
+		// Process the request
+		c.Next()
+
+		// Log the request details
+		logger.Info().
+			Str("remote", c.Request.RemoteAddr).
+			Str("method", c.Request.Method).
+			Str("path", c.Request.URL.Path).
+			Int("status", c.Writer.Status()).
+			Dur("duration", time.Since(start)).
+			Msg("Request handled")
+	}
+}
+
+func SetupRouter(logger *zerolog.Logger, db *gorm.DB, cntrl controllers.OpenFoodFactsAPIController) *gin.Engine {
+	r := gin.New()
+
+	r.Use(LoggerMiddleware(logger), gin.Recovery())
 
 	r.Use(func(c *gin.Context) {
 		c.Set("db", db)

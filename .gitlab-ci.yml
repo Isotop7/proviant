@@ -3,7 +3,8 @@ image: golang:latest
 stages:
   - test
   - build
-  - deploy
+  - distribute
+  - save-private
 
 format:
   stage: test
@@ -27,7 +28,7 @@ compile-backend:
 
 docker-build-backend:
   image: docker:cli
-  stage: build
+  stage: distribute
   services:
     - docker:dind
   only:
@@ -37,6 +38,29 @@ docker-build-backend:
     DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - cd ./backend
+    - docker build --pull -t "$DOCKER_IMAGE_NAME" .
+    - docker push "$DOCKER_IMAGE_NAME"
+    - |
+      if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
+        docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:latest"
+        docker push "$CI_REGISTRY_IMAGE:latest"
+      fi
+
+docker-build-backend:
+  image: docker:cli
+  stage: save-private
+  services:
+    - docker:dind
+  only:
+    - develop
+    - master
+  when: manual
+  variables:
+    DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  before_script:
+    - docker login -u "$PRIVATE_REGISTRY_USER" -p "$PRIVATE_REGISTRY_PASSWORD" $PRIVATE_REGISTRY
   script:
     - cd ./backend
     - docker build --pull -t "$DOCKER_IMAGE_NAME" .
