@@ -4,7 +4,6 @@ stages:
   - test
   - build
   - distribute
-  - save-private
 
 format:
   stage: test
@@ -50,7 +49,7 @@ docker-build-backend:
 
 docker-build-backend-private:
   image: docker:cli
-  stage: save-private
+  stage: distribute
   services:
     - docker:dind
   only:
