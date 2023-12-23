@@ -83,6 +83,7 @@ func main() {
 	} else {
 		notificationController := controllers.NotificationController{
 			Configuration: configuration.Notification,
+			DB:            db,
 		}
 		notificationController.Dispatch()
 	}

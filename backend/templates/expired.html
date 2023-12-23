@@ -1,0 +1,18 @@
+<!-- expired.html -->
+<style>
+    i {
+        color: red;
+    }
+</style>
+<!DOCTYPE html>
+<html>
+<body>
+    <h2>Product expiration</h2>
+    <p>
+        Your product <i>{{.ProductName}}</i> with ID <i>{{.ID}}</i> and Barcode <i>{{.Barcode}}</i> is expired.
+    </p>
+    <p>
+        Expired At: {{.ExpireAt}}
+    </p>
+</body>
+</html>

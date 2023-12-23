@@ -12,8 +12,9 @@ server:
 notification:
   enabled: true
   interval: 12
-  fromAddress: sender
-  toAddress: recipient
+  fromAddress: sender@local.net
+  toAddress: 
+    - recipient@local.net
   smtp:
     host: 127.0.0.1
     port: 25

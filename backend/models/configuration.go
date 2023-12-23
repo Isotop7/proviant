@@ -26,7 +26,7 @@ type NotificationConfiguration struct {
 	Enabled     bool
 	Interval    int
 	FromAddress string
-	ToAddress   string
+	ToAddress   []string
 	SMTP        SMTPConfiguration
 }
 
