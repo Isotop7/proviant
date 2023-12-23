@@ -15,7 +15,7 @@ format:
     - go test -race $(go list ./... | grep -v /vendor/)
     - go mod verify
 
-compile:
+compile-backend:
   stage: build
   script:
     - cd ./backend
@@ -23,7 +23,7 @@ compile:
     - go build -o release ./...
   artifacts:
     paths:
-      - release
+      - ./backend/release
 
 docker-build-backend:
   image: docker:cli
@@ -43,7 +43,3 @@ docker-build-backend:
         docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:latest"
         docker push "$CI_REGISTRY_IMAGE:latest"
       fi
-  rules:
-    - if: $CI_COMMIT_BRANCH
-      exists:
-        - ./backend/Dockerfile
