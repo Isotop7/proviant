@@ -30,6 +30,9 @@ docker-build-backend:
   stage: build
   services:
     - docker:dind
+  only:
+    - develop
+    - master
   variables:
     DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   before_script:
