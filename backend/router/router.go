@@ -35,6 +35,11 @@ func SetupRouter(logger *zerolog.Logger, db *gorm.DB, cntrl controllers.OpenFood
 	r.Use(LoggerMiddleware(logger), gin.Recovery())
 
 	r.Use(func(c *gin.Context) {
+		c.Set("logger", logger)
+		c.Next()
+	})
+
+	r.Use(func(c *gin.Context) {
 		c.Set("db", db)
 		c.Next()
 	})
