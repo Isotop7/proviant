@@ -24,7 +24,11 @@ func (nc NotificationController) Dispatch() {
 		for {
 			// Get products with pending notification
 			var notificationProducts []models.Product
-			getError := nc.DB.Where("expire_at < ?", time.Now()).Find(&notificationProducts)
+			getError := nc.DB.
+				Where("expire_at < ?", time.Now()).
+				Where("notified_at < ?", time.Now().Add(-(sleepInterval))).
+				Find(&notificationProducts)
+
 			if getError.Error != nil {
 				nc.Logger.Error().Msg(getError.Error.Error())
 			}
@@ -36,6 +40,9 @@ func (nc NotificationController) Dispatch() {
 					nc.Logger.Error().Msg(sendError.Error())
 				} else {
 					nc.Logger.Info().Msg("Notification send successfully")
+					if nc.updateNotifiedAt(product.ID) {
+						nc.Logger.Info().Msg("Property NotifiedAt was updated")
+					}
 				}
 			}
 
@@ -94,4 +101,22 @@ func (nc NotificationController) SendMail(product models.Product) error {
 	// Send mail and return error
 	err := d.DialAndSend(m)
 	return err
+}
+
+func (nc NotificationController) updateNotifiedAt(id uint) bool {
+	// Product by id
+	var dbProduct models.Product
+	selectErr := nc.DB.First(&dbProduct, id)
+
+	if selectErr.Error != nil {
+		nc.Logger.Error().Msgf("Product with ID '%d' was not found in database", int(id))
+		return false
+	}
+
+	// Update notified_at
+	dbProduct.NotifiedAt = time.Now()
+
+	// Save changes to database
+	nc.DB.Save(&dbProduct)
+	return true
 }
