@@ -2,7 +2,8 @@ package controllers
 
 import (
 	"bytes"
-	"expiro/backend/models"
+	"expiro/backend/models/configuration"
+	"expiro/backend/models/database"
 	"fmt"
 	"html/template"
 	"time"
@@ -14,7 +15,7 @@ import (
 
 type NotificationController struct {
 	Logger        *zerolog.Logger
-	Configuration models.NotificationConfiguration
+	Configuration configuration.NotificationConfiguration
 	DB            *gorm.DB
 }
 
@@ -23,7 +24,7 @@ func (nc NotificationController) Dispatch() {
 	go func() {
 		for {
 			// Get products with pending notification
-			var notificationProducts []models.Product
+			var notificationProducts []database.Product
 			getError := nc.DB.
 				Where("expire_at < ?", time.Now()).
 				Where("notified_at < ?", time.Now().Add(-(sleepInterval))).
@@ -53,7 +54,7 @@ func (nc NotificationController) Dispatch() {
 	}()
 }
 
-func (nc NotificationController) SendMail(product models.Product) error {
+func (nc NotificationController) SendMail(product database.Product) error {
 	m := gomail.NewMessage()
 
 	// Set E-Mail sender
@@ -105,7 +106,7 @@ func (nc NotificationController) SendMail(product models.Product) error {
 
 func (nc NotificationController) updateNotifiedAt(id uint) bool {
 	// Product by id
-	var dbProduct models.Product
+	var dbProduct database.Product
 	selectErr := nc.DB.First(&dbProduct, id)
 
 	if selectErr.Error != nil {

@@ -2,7 +2,9 @@ package main
 
 import (
 	"expiro/backend/controllers"
-	"expiro/backend/models"
+	"expiro/backend/models/auth"
+	"expiro/backend/models/configuration"
+	"expiro/backend/models/database"
 	"expiro/backend/router"
 	"fmt"
 	"os"
@@ -31,7 +33,7 @@ func main() {
 	}
 
 	// Unmarshal yaml to configuration struct
-	configuration := models.ExpiroConfiguration{}
+	configuration := configuration.ExpiroConfiguration{}
 	err := viper.Unmarshal(&configuration)
 	if err != nil {
 		panic(err)
@@ -76,7 +78,10 @@ func main() {
 	}
 
 	// Run migrations for database
-	db.AutoMigrate(&models.Product{})
+	db.AutoMigrate(
+		&database.Product{},
+		&auth.User{},
+	)
 
 	// Check API controller config and generate instance
 	if configuration.OpenFoodFacts.Timeout <= 0 {

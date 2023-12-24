@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"expiro/backend/models"
+	"expiro/backend/models/configuration"
+	"expiro/backend/models/database"
+	"expiro/backend/models/external"
 	"fmt"
 	"net/http"
 	"time"
@@ -13,10 +15,10 @@ import (
 )
 
 type OpenFoodFactsAPIController struct {
-	Configuration models.OpenFoodFactsConfiguration
+	Configuration configuration.OpenFoodFactsConfiguration
 }
 
-func (cntrl OpenFoodFactsAPIController) GetDataset(db *gorm.DB, barcode string) (models.Product, error) {
+func (cntrl OpenFoodFactsAPIController) GetDataset(db *gorm.DB, barcode string) (database.Product, error) {
 	// Create a context with a timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -24,7 +26,7 @@ func (cntrl OpenFoodFactsAPIController) GetDataset(db *gorm.DB, barcode string) 
 	// Channel to receive the response or timeout signal
 	ch := make(chan bool)
 	// Dataset to store query response
-	var dataset models.OpenFoodFactsAPIDataset
+	var dataset external.OpenFoodFactsAPIDataset
 	filteredDataset := "product_name,categories,countries,generic_name,image_url"
 
 	// Query API for dataset
@@ -50,11 +52,11 @@ func (cntrl OpenFoodFactsAPIController) GetDataset(db *gorm.DB, barcode string) 
 	select {
 	case <-ctx.Done():
 		// Timeout occured
-		return models.Product{}, errors.New("timeout occured")
+		return database.Product{}, errors.New("timeout occured")
 	case success := <-ch:
 		if success {
 			// Request was successful, returning subset of populated dataset
-			return models.Product{
+			return database.Product{
 				Barcode:     dataset.Barcode,
 				ProductName: dataset.Product.ProductName,
 				Categories:  dataset.Product.Categories,
@@ -64,5 +66,5 @@ func (cntrl OpenFoodFactsAPIController) GetDataset(db *gorm.DB, barcode string) 
 		}
 	}
 
-	return models.Product{}, nil
+	return database.Product{}, nil
 }

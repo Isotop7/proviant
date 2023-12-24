@@ -2,7 +2,7 @@ package v1
 
 import (
 	"expiro/backend/controllers"
-	"expiro/backend/models"
+	"expiro/backend/models/database"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -21,7 +21,7 @@ func GetProducts(c *gin.Context) {
 	if limitParam := c.Query("limit"); limitParam != "" {
 		if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
 			logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Limit '%d' is invalid", limit)})
+			c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Limit '%d' is invalid", limit)})
 			return
 		}
 	}
@@ -29,11 +29,12 @@ func GetProducts(c *gin.Context) {
 	db, ok := c.MustGet("db").(*gorm.DB)
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get database from context"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
 		return
 	}
 
-	var products []models.Product
+	// TODO: Move to database controller
+	var products []database.Product
 	if limit > 0 {
 		db.Limit(limit).Find(&products)
 	} else {
@@ -50,23 +51,24 @@ func GetProduct(c *gin.Context) {
 
 	if _, err := strconv.Atoi(id); err != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", id)
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("ID '%s' is invalid", id)})
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", id)})
 		return
 	}
 
 	db, ok := c.MustGet("db").(*gorm.DB)
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get database from context"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
 		return
 	}
 
-	var product models.Product
+	// TODO: Move to database controller
+	var product database.Product
 	getError := db.First(&product, id)
 
 	if getError.Error != nil || product.ID <= 0 {
 		logger.Error().Msgf("Product with ID '%s' was not found in database", id)
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Product with id '%s' was not found", id)})
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%s' was not found", id)})
 		return
 	}
 
@@ -79,40 +81,40 @@ func CreateProduct(c *gin.Context) {
 	db, ok := c.MustGet("db").(*gorm.DB)
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get database from context"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
 		return
 	}
 
-	var product models.Product
+	var product database.Product
 	if err := c.ShouldBindJSON(&product); err != nil {
 		logger.Error().Msgf("Error parsing body: %s", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		fmt.Println(err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 
 	if product.Barcode == "" {
 		logger.Error().Msgf("Body is missing barcode")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "barcode missing"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "barcode missing"})
 		return
 	}
 
 	cntrl, ok := c.MustGet("cntrl").(controllers.OpenFoodFactsAPIController)
 	if !ok {
 		logger.Error().Msg("Failed to get controller from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get controller from context"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get controller from context"})
 		return
 	}
-	var apiProduct models.Product
+	var apiProduct database.Product
 	apiProduct, err := cntrl.GetDataset(db, product.Barcode)
 	if err == nil {
 		product = apiProduct
 	}
 
+	// TODO: Move to database controller
 	createResult := db.Create(&product)
 	if createResult.Error != nil {
 		logger.Error().Msgf("Error creating product: %s", createResult.Error.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": createResult.Error.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": createResult.Error.Error()})
 		return
 	}
 
@@ -126,32 +128,33 @@ func UpdateProduct(c *gin.Context) {
 
 	if _, err := strconv.Atoi(id); err != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", id)
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("ID '%s' is invalid", id)})
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", id)})
 		return
 	}
 
 	db, ok := c.MustGet("db").(*gorm.DB)
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get database from context"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
 		return
 	}
 
-	var product models.Product
+	var product database.Product
 	if err := c.ShouldBindJSON(&product); err != nil {
 		logger.Error().Msgf("Error parsing body: %s", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		fmt.Println(err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+
 		return
 	}
 
 	if product.Barcode == "" {
 		logger.Error().Msgf("Body is missing barcode")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "barcode missing"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "barcode missing"})
 		return
 	}
 
-	var dbProduct models.Product
+	// TODO: Move to database controller
+	var dbProduct database.Product
 	getError := db.First(&dbProduct, id)
 
 	dbProduct.Barcode = product.Barcode
@@ -163,14 +166,14 @@ func UpdateProduct(c *gin.Context) {
 
 	if getError.Error != nil || product.ID <= 0 {
 		logger.Error().Msgf("Product with ID '%s' was not found in database", id)
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Product with id '%s' was not found", id)})
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%s' was not found", id)})
 		return
 	}
 
 	saveResult := db.Save(&dbProduct)
 	if saveResult.Error != nil {
 		logger.Error().Msgf("Error saving product: %s", saveResult.Error.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": saveResult.Error.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": saveResult.Error.Error()})
 		return
 	}
 
@@ -184,25 +187,26 @@ func DeleteProduct(c *gin.Context) {
 
 	if _, err := strconv.Atoi(id); err != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", id)
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("ID '%s' is invalid", id)})
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", id)})
 		return
 	}
 
 	db, ok := c.MustGet("db").(*gorm.DB)
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get database from context"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
 		return
 	}
 
-	deleteResult := db.Delete(&models.Product{}, id)
+	// TODO: Move to database controller
+	deleteResult := db.Delete(&database.Product{}, id)
 	if deleteResult.Error != nil {
 		logger.Error().Msgf("Error deleting product: %s", deleteResult.Error.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": deleteResult.Error.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": deleteResult.Error.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": fmt.Sprintf("Product with ID '%s' was deleted", id)})
+	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Product with ID '%s' was deleted", id)})
 }
 
 func SetExpireAt(c *gin.Context) {
@@ -212,31 +216,32 @@ func SetExpireAt(c *gin.Context) {
 
 	if _, err := strconv.Atoi(id); err != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", id)
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("ID '%s' is invalid", id)})
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", id)})
 		return
 	}
 
 	db, ok := c.MustGet("db").(*gorm.DB)
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get database from context"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
 		return
 	}
 
-	var expireAt models.Timestamp
+	var expireAt database.Timestamp
 	if err := c.ShouldBindJSON(&expireAt); err != nil {
 		logger.Error().Msgf("Error parsing body: %s", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		fmt.Println(err.Error())
 		return
 	}
 
-	var dbProduct models.Product
+	// TODO: Move to database controller
+	var dbProduct database.Product
 	getError := db.First(&dbProduct, id)
 
 	if getError.Error != nil {
 		logger.Error().Msgf("Product with ID '%s' was not found in database", id)
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Product with id '%s' was not found", id)})
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%s' was not found", id)})
 		return
 	}
 
@@ -245,11 +250,11 @@ func SetExpireAt(c *gin.Context) {
 	saveResult := db.Save(&dbProduct)
 	if saveResult.Error != nil {
 		logger.Error().Msgf("Error saving product: %s", saveResult.Error.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": saveResult.Error.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": saveResult.Error.Error()})
 		return
 	}
 
-	expireDTO := models.ProductDTOExpire{
+	expireDTO := database.ProductDTOExpire{
 		Barcode:  dbProduct.Barcode,
 		ExpireAt: expireAt.Timestamp,
 	}
@@ -263,11 +268,12 @@ func GetExpired(c *gin.Context) {
 	db, ok := c.MustGet("db").(*gorm.DB)
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get database from context"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
 		return
 	}
 
-	var products []models.Product
+	// TODO: Move to database controller
+	var products []database.Product
 	db.Where("expire_at < ?", time.Now()).Find(&products)
 
 	c.JSON(http.StatusOK, products)
