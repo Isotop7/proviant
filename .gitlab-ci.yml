@@ -57,6 +57,7 @@ docker-build-backend-private:
     - master
   when: manual
   variables:
+    CI_REGISTRY_IMAGE: $PRIVATE_REGISTRY/$CI_PROJECT_NAME
     DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   before_script:
     - docker login -u "$PRIVATE_REGISTRY_USER" -p "$PRIVATE_REGISTRY_PASSWORD" $PRIVATE_REGISTRY
