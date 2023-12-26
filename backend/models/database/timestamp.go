@@ -9,7 +9,7 @@ import (
 type Date time.Time
 
 type Timestamp struct {
-	Timestamp Date `json:"timestamp"`
+	Timestamp Date `json:"timestamp" binding:"required"`
 }
 
 func (d *Date) UnmarshalJSON(b []byte) error {

@@ -10,15 +10,13 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type OpenFoodFactsAPIController struct {
 	Configuration configuration.OpenFoodFactsConfiguration
 }
 
-func (cntrl OpenFoodFactsAPIController) GetDataset(db *gorm.DB, barcode string) (database.Product, error) {
+func (cntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database.Product, error) {
 	// Create a context with a timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -31,9 +29,11 @@ func (cntrl OpenFoodFactsAPIController) GetDataset(db *gorm.DB, barcode string) 
 
 	// Query API for dataset
 	go func() {
-		resp, err := http.Get(fmt.Sprintf("%s/%s?fields=%s", cntrl.Configuration.URL, barcode, filteredDataset))
+		queryURL := fmt.Sprintf("%s/%s?fields=%s", cntrl.Configuration.URL, barcode, filteredDataset)
+		resp, err := http.Get(queryURL)
 		// If upstream error is received, we also throw it
 		if err != nil {
+			// TODO: Add logging
 			fmt.Println("Error:", err)
 			ch <- false
 			return
@@ -42,6 +42,7 @@ func (cntrl OpenFoodFactsAPIController) GetDataset(db *gorm.DB, barcode string) 
 
 		// Parse the response and populate the dataset struct
 		if err := json.NewDecoder(resp.Body).Decode(&dataset); err != nil {
+			// TODO: Add logging
 			fmt.Println("Error decoding response:", err)
 		}
 

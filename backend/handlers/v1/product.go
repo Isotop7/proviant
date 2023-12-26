@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -33,13 +32,8 @@ func GetProducts(c *gin.Context) {
 		return
 	}
 
-	// TODO: Move to database controller
-	var products []database.Product
-	if limit > 0 {
-		db.Limit(limit).Find(&products)
-	} else {
-		db.Find(&products)
-	}
+	dbController := controllers.DatabaseController{DB: db}
+	products := dbController.GetProductsBulk(limit)
 
 	c.JSON(http.StatusOK, products)
 }
@@ -47,11 +41,13 @@ func GetProducts(c *gin.Context) {
 func GetProduct(c *gin.Context) {
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
 
-	id := c.Param("id")
+	idParam := c.Param("id")
 
-	if _, err := strconv.Atoi(id); err != nil {
-		logger.Warn().Msgf("Requested ID '%s' is invalid", id)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", id)})
+	var id int
+	var convErr error
+	if id, convErr = strconv.Atoi(idParam); convErr != nil {
+		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
@@ -62,13 +58,12 @@ func GetProduct(c *gin.Context) {
 		return
 	}
 
-	// TODO: Move to database controller
-	var product database.Product
-	getError := db.First(&product, id)
+	dbController := controllers.DatabaseController{DB: db}
+	product, getError := dbController.GetProductByID(id)
 
-	if getError.Error != nil || product.ID <= 0 {
-		logger.Error().Msgf("Product with ID '%s' was not found in database", id)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%s' was not found", id)})
+	if getError != nil {
+		logger.Error().Msgf("Product with ID '%d' was not found in database", id)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", id)})
 		return
 	}
 
@@ -105,16 +100,16 @@ func CreateProduct(c *gin.Context) {
 		return
 	}
 	var apiProduct database.Product
-	apiProduct, err := cntrl.GetDataset(db, product.Barcode)
+	apiProduct, err := cntrl.GetDataset(product.Barcode)
 	if err == nil {
 		product = apiProduct
 	}
 
-	// TODO: Move to database controller
-	createResult := db.Create(&product)
-	if createResult.Error != nil {
-		logger.Error().Msgf("Error creating product: %s", createResult.Error.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"message": createResult.Error.Error()})
+	dbController := controllers.DatabaseController{DB: db}
+	createResult := dbController.CreateProduct(&product)
+	if createResult != nil {
+		logger.Error().Msgf("Error creating product: %s", createResult)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": createResult})
 		return
 	}
 
@@ -124,11 +119,13 @@ func CreateProduct(c *gin.Context) {
 func UpdateProduct(c *gin.Context) {
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
 
-	id := c.Param("id")
+	idParam := c.Param("id")
+	var id int
+	var convErr error
 
-	if _, err := strconv.Atoi(id); err != nil {
-		logger.Warn().Msgf("Requested ID '%s' is invalid", id)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", id)})
+	if id, convErr = strconv.Atoi(idParam); convErr != nil {
+		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
@@ -153,41 +150,33 @@ func UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	// TODO: Move to database controller
-	var dbProduct database.Product
-	getError := db.First(&dbProduct, id)
+	dbController := controllers.DatabaseController{DB: db}
+	updateErr := dbController.UpdateProduct(&product, id)
 
-	dbProduct.Barcode = product.Barcode
-	dbProduct.ProductName = product.ProductName
-	dbProduct.Categories = product.Categories
-	dbProduct.Countries = product.Countries
-	dbProduct.ImageURL = product.ImageURL
-	dbProduct.ExpireAt = product.ExpireAt
-
-	if getError.Error != nil || product.ID <= 0 {
-		logger.Error().Msgf("Product with ID '%s' was not found in database", id)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%s' was not found", id)})
+	if updateErr == nil {
+		c.JSON(http.StatusOK, product)
+		return
+	} else if updateErr == gorm.ErrRecordNotFound {
+		logger.Error().Msgf("Product with ID '%d' was not found in database", id)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", id)})
+		return
+	} else {
+		logger.Error().Msgf("Error saving product: %s", updateErr)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": updateErr})
 		return
 	}
-
-	saveResult := db.Save(&dbProduct)
-	if saveResult.Error != nil {
-		logger.Error().Msgf("Error saving product: %s", saveResult.Error.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"message": saveResult.Error.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, product)
 }
 
 func DeleteProduct(c *gin.Context) {
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
 
-	id := c.Param("id")
+	idParam := c.Param("id")
+	var id int
+	var convErr error
 
-	if _, err := strconv.Atoi(id); err != nil {
-		logger.Warn().Msgf("Requested ID '%s' is invalid", id)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", id)})
+	if id, convErr = strconv.Atoi(idParam); convErr != nil {
+		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
@@ -198,25 +187,27 @@ func DeleteProduct(c *gin.Context) {
 		return
 	}
 
-	// TODO: Move to database controller
-	deleteResult := db.Delete(&database.Product{}, id)
-	if deleteResult.Error != nil {
-		logger.Error().Msgf("Error deleting product: %s", deleteResult.Error.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"message": deleteResult.Error.Error()})
+	dbController := controllers.DatabaseController{DB: db}
+	deleteResult := dbController.DeleteProduct(id)
+	if deleteResult != nil {
+		logger.Error().Msgf("Error deleting product: %s", deleteResult)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": deleteResult})
 		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Product with ID '%d' was deleted", id)})
 	}
-
-	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Product with ID '%s' was deleted", id)})
 }
 
 func SetExpireAt(c *gin.Context) {
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
 
-	id := c.Param("id")
+	idParam := c.Param("id")
+	var id int
+	var convErr error
 
-	if _, err := strconv.Atoi(id); err != nil {
-		logger.Warn().Msgf("Requested ID '%s' is invalid", id)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", id)})
+	if id, convErr = strconv.Atoi(idParam); convErr != nil {
+		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
@@ -228,38 +219,33 @@ func SetExpireAt(c *gin.Context) {
 	}
 
 	var expireAt database.Timestamp
-	if err := c.ShouldBindJSON(&expireAt); err != nil {
-		logger.Error().Msgf("Error parsing body: %s", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-		fmt.Println(err.Error())
+	var bindErr error
+	if bindErr = c.ShouldBindJSON(&expireAt); bindErr != nil {
+		logger.Error().Msgf("Error parsing body: %s", bindErr.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"message": bindErr.Error()})
+		fmt.Println(bindErr.Error())
 		return
 	}
 
-	// TODO: Move to database controller
-	var dbProduct database.Product
-	getError := db.First(&dbProduct, id)
+	dbController := controllers.DatabaseController{DB: db}
+	barcode, updateErr := dbController.SetProductExpireAt(id, expireAt)
 
-	if getError.Error != nil {
-		logger.Error().Msgf("Product with ID '%s' was not found in database", id)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%s' was not found", id)})
+	if updateErr == nil || barcode != "" {
+		expireDTO := database.ProductDTOExpire{
+			Barcode:  barcode,
+			ExpireAt: expireAt.Timestamp,
+		}
+		c.JSON(http.StatusOK, expireDTO)
+		return
+	} else if updateErr == gorm.ErrRecordNotFound {
+		logger.Error().Msgf("Product with ID '%d' was not found in database", id)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", id)})
+		return
+	} else {
+		logger.Error().Msgf("Error saving product: %s", updateErr)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": updateErr})
 		return
 	}
-
-	dbProduct.ExpireAt = time.Time(expireAt.Timestamp)
-
-	saveResult := db.Save(&dbProduct)
-	if saveResult.Error != nil {
-		logger.Error().Msgf("Error saving product: %s", saveResult.Error.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"message": saveResult.Error.Error()})
-		return
-	}
-
-	expireDTO := database.ProductDTOExpire{
-		Barcode:  dbProduct.Barcode,
-		ExpireAt: expireAt.Timestamp,
-	}
-
-	c.JSON(http.StatusOK, expireDTO)
 }
 
 func GetExpired(c *gin.Context) {
@@ -272,9 +258,7 @@ func GetExpired(c *gin.Context) {
 		return
 	}
 
-	// TODO: Move to database controller
-	var products []database.Product
-	db.Where("expire_at < ?", time.Now()).Find(&products)
-
+	dbController := controllers.DatabaseController{DB: db}
+	products := dbController.GetProductsExpired()
 	c.JSON(http.StatusOK, products)
 }

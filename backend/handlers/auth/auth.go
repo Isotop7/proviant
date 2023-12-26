@@ -9,6 +9,7 @@ import (
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -47,11 +48,12 @@ func AuthorizationMiddleware(db *gorm.DB) (*jwt.GinJWTMiddleware, error) {
 				return nil, jwt.ErrFailedAuthentication
 			}
 
-			if dbController.VerifyPassword(&user, loginVals.Password) {
+			authErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginVals.Password))
+			if authErr != nil {
+				return nil, jwt.ErrFailedAuthentication
+			} else {
 				return user, nil
 			}
-
-			return nil, jwt.ErrFailedAuthentication
 		},
 		Authorizator: func(data interface{}, c *gin.Context) bool {
 			/*if v, ok := data.(*auth.User); ok && v.Username == "admin" {
@@ -107,13 +109,13 @@ func Signup(c *gin.Context) {
 		return
 	}
 
-	if dbController.Exists(user) {
-		logger.Error().Msgf("User '%s' with ID '%d' already exists", user.Username, user.ID)
+	if dbController.UserExists(user) {
+		logger.Error().Msgf("User '%s' already exists", user.Username)
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid user data"})
 		return
 	}
 
-	createError := dbController.Create(&user)
+	createError := dbController.CreateUser(&user)
 	if createError != nil {
 		logger.Error().Msgf("User '%s' with ID '%d' could not be created. Error: %s", user.Username, user.ID, createError.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid user data"})
