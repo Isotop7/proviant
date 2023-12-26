@@ -78,15 +78,15 @@ func SetupRouter(logger *zerolog.Logger, db *gorm.DB, cntrl controllers.OpenFood
 	r.POST("/auth/signup", auth.Signup)
 	r.GET("/auth/refresh_token", jwtAuthMiddleware.RefreshHandler)
 	// Product routes
-	productApi := r.Group("/api/v1/products")
-	productApi.Use(jwtAuthMiddleware.MiddlewareFunc())
-	productApi.GET("", v1.GetProducts)
-	productApi.GET("/:id", v1.GetProduct)
-	productApi.POST("", v1.CreateProduct)
-	productApi.PATCH("/:id", v1.UpdateProduct)
-	productApi.DELETE("/:id", v1.DeleteProduct)
-	productApi.POST("/:id/expire", v1.SetExpireAt)
-	productApi.GET("/expired", v1.GetExpired)
+	productAPI := r.Group("/api/v1/products")
+	productAPI.Use(jwtAuthMiddleware.MiddlewareFunc())
+	productAPI.GET("", v1.GetProducts)
+	productAPI.GET("/:id", v1.GetProduct)
+	productAPI.POST("", v1.CreateProduct)
+	productAPI.PATCH("/:id", v1.UpdateProduct)
+	productAPI.DELETE("/:id", v1.DeleteProduct)
+	productAPI.POST("/:id/expire", v1.SetExpireAt)
+	productAPI.GET("/expired", v1.GetExpired)
 
 	return r
 }

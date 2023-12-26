@@ -4,9 +4,9 @@ import "gorm.io/gorm"
 
 type User struct {
 	gorm.Model
-	ID       uint   `gorm="primaryKey"`
-	Username string `json="username"`
-	Password string `json="-"`
+	ID       uint   `gorm:"primaryKey"`
+	Username string `json:"username"`
+	Password string `json:"-"`
 }
 
 func (u User) IsValid() bool {
