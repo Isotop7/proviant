@@ -48,7 +48,7 @@ func (nc NotificationController) Dispatch() {
 			}
 
 			// Sleep
-			nc.Logger.Info().Msgf("NotificationController is now sleeping for %d hours", sleepInterval)
+			nc.Logger.Info().Msgf("NotificationController is now sleeping for %d hours", nc.Configuration.Interval)
 			time.Sleep(sleepInterval)
 		}
 	}()

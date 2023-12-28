@@ -16,6 +16,7 @@ type Product struct {
 	ExpireAt    time.Time `json:"expireAt"`
 	ScannedAt   time.Time `json:"scannedAt"`
 	NotifiedAt  time.Time `json:"notifiedAt"`
+	UserID      uint      `json:"userID"`
 }
 
 type ProductDTOExpire struct {

@@ -1,12 +1,17 @@
 package auth
 
-import "gorm.io/gorm"
+import (
+	"expiro/backend/models/database"
+
+	"gorm.io/gorm"
+)
 
 type User struct {
 	gorm.Model
 	ID       uint   `gorm:"primaryKey,unique"`
 	Username string `json:"username"`
 	Password string `json:"-"`
+	Products []database.Product
 }
 
 func (u User) IsValid() bool {

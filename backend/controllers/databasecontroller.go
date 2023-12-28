@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"expiro/backend/errors"
 	"expiro/backend/models/auth"
 	"expiro/backend/models/database"
 	"time"
@@ -17,6 +18,13 @@ func (dbc DatabaseController) FindUserByUsername(username string) (auth.User, er
 	var user auth.User
 	// Gets first user with matching username
 	selectErr := dbc.DB.First(&user, "username = ?", username)
+	return user, selectErr.Error
+}
+
+func (dbc DatabaseController) GetUserByID(userID uint) (auth.User, error) {
+	var user auth.User
+	// Gets first user with matching username
+	selectErr := dbc.DB.First(&user, userID)
 	return user, selectErr.Error
 }
 
@@ -46,50 +54,72 @@ func (dbc DatabaseController) CreateUser(user *auth.User) error {
 	return createResult.Error
 }
 
-func (dbc DatabaseController) GetProductsBulk(limit int) []database.Product {
-	// Get products, optional: set limit on returned dataset
-	var products []database.Product
-	if limit > 0 {
-		dbc.DB.Limit(limit).Find(&products)
-	} else {
-		dbc.DB.Find(&products)
+func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error) {
+	// Get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return []database.Product{}, userErr
 	}
-	return products
+	// Get user with products preloaded
+	var userWithData auth.User
+	findErr := dbc.DB.Model(user).Preload("Products").Find(&userWithData)
+	if findErr.Error != nil {
+		return []database.Product{}, findErr.Error
+	}
+
+	// Apply optional limit
+	if limit > 0 {
+		return userWithData.Products[:limit], nil
+	} else {
+		return userWithData.Products, nil
+	}
 }
 
-func (dbc DatabaseController) GetProductByID(id int) (database.Product, error) {
+func (dbc DatabaseController) GetProductByID(productID int, userID uint) (database.Product, error) {
 	// Get single product by ID
-	if id <= 0 {
+	if productID <= 0 {
 		return database.Product{}, gorm.ErrNotImplemented
 	}
 	var product database.Product
-	getError := dbc.DB.First(&product, id)
+	getError := dbc.DB.First(&product, productID)
 
 	if getError.Error != nil {
 		return product, nil
+	} else if product.UserID != userID {
+		return database.Product{}, errors.ErrMismatcherUserID
 	} else {
 		return database.Product{}, getError.Error
 	}
 }
 
-func (dbc DatabaseController) CreateProduct(product *database.Product) error {
+func (dbc DatabaseController) CreateProduct(userID uint, product *database.Product) error {
+	// Get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return userErr
+	}
+	user.Products = append(user.Products, *product)
 	// Create new product
-	createResult := dbc.DB.Create(&product)
-	return createResult.Error
+	saveErr := dbc.DB.Save(&user)
+	return saveErr.Error
 }
 
-func (dbc DatabaseController) UpdateProduct(product *database.Product, id int) error {
+func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product *database.Product) error {
 	// Check if id is valid
-	if id <= 0 {
+	if productID <= 0 {
 		return gorm.ErrNotImplemented
 	}
 
 	// Try to get product
 	var dbProduct database.Product
-	getError := dbc.DB.First(&dbProduct, id)
+	getError := dbc.DB.First(&dbProduct, productID)
 
 	if getError.Error != nil {
 		return getError.Error
+	}
+	// Check if supplied user matches the userID in the database object
+	if dbProduct.UserID != userID {
+		return errors.ErrMismatcherUserID
 	}
 
 	// Update values
@@ -109,20 +139,31 @@ func (dbc DatabaseController) UpdateProduct(product *database.Product, id int) e
 	}
 }
 
-func (dbc DatabaseController) DeleteProduct(id int) error {
+func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error {
+	// Get product and check for correct userID
+	_, getError := dbc.GetProductByID(productID, userID)
+	if getError != nil {
+		return getError
+	}
+
 	// Delete product by its id
-	deleteResult := dbc.DB.Delete(&database.Product{}, id)
+	deleteResult := dbc.DB.Delete(&database.Product{}, productID)
 	return deleteResult.Error
 }
 
-func (dbc DatabaseController) SetProductExpireAt(id int, expireAt database.Timestamp) (string, error) {
+func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) (string, error) {
 	// Update ExpireAt date
 	var dbProduct database.Product
-	getError := dbc.DB.First(&dbProduct, id)
+	getError := dbc.DB.First(&dbProduct, productID)
 	if getError.Error != nil {
 		return "", getError.Error
 	}
+	// Check if supplied user matches the userID in the database object
+	if dbProduct.UserID != userID {
+		return "", errors.ErrMismatcherUserID
+	}
 
+	// Update values
 	dbProduct.ExpireAt = time.Time(expireAt.Timestamp)
 	saveResult := dbc.DB.Save(&dbProduct)
 	if saveResult.Error != nil {
@@ -132,9 +173,20 @@ func (dbc DatabaseController) SetProductExpireAt(id int, expireAt database.Times
 	}
 }
 
-func (dbc DatabaseController) GetProductsExpired() []database.Product {
+func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Product, error) {
+	// Get all user products
+	userProducts, getBulkErr := dbc.GetUserProductsBulk(userID, 0)
+	if getBulkErr != nil {
+		return []database.Product{}, getBulkErr
+	}
+
 	// Get all currently expired products
-	var products []database.Product
-	dbc.DB.Where("expire_at < ?", time.Now()).Find(&products)
-	return products
+	var expiredProducts []database.Product
+	timestamp := time.Now()
+	for _, p := range userProducts {
+		if p.ExpireAt.After(timestamp) {
+			expiredProducts = append(expiredProducts, p)
+		}
+	}
+	return expiredProducts, nil
 }

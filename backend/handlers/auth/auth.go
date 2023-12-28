@@ -63,6 +63,7 @@ func AuthorizationMiddleware(db *gorm.DB) (*jwt.GinJWTMiddleware, error) {
 			return false*/
 
 			// TODO: Implement RBAC based on user property
+			// TODO: Check if function manipulates product and check if user is the assigned user
 			return true
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {

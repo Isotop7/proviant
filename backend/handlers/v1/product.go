@@ -2,11 +2,13 @@ package v1
 
 import (
 	"expiro/backend/controllers"
+	"expiro/backend/errors"
 	"expiro/backend/models/database"
 	"fmt"
 	"net/http"
 	"strconv"
 
+	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
@@ -32,10 +34,23 @@ func GetProducts(c *gin.Context) {
 		return
 	}
 
-	dbController := controllers.DatabaseController{DB: db}
-	products := dbController.GetProductsBulk(limit)
+	claims := jwt.ExtractClaims(c)
+	userID := uint(claims["id"].(float64))
+	if userID <= 0 {
+		logger.Error().Msg("Error getting user id from JWT token")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
+		return
+	}
 
-	c.JSON(http.StatusOK, products)
+	dbController := controllers.DatabaseController{DB: db}
+	products, productBulkErr := dbController.GetUserProductsBulk(userID, limit)
+	if productBulkErr != nil {
+		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting products of user"})
+		return
+	} else {
+		c.JSON(http.StatusOK, products)
+	}
 }
 
 func GetProduct(c *gin.Context) {
@@ -43,9 +58,9 @@ func GetProduct(c *gin.Context) {
 
 	idParam := c.Param("id")
 
-	var id int
 	var convErr error
-	if id, convErr = strconv.Atoi(idParam); convErr != nil {
+	var productID int
+	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
 		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
@@ -58,16 +73,29 @@ func GetProduct(c *gin.Context) {
 		return
 	}
 
-	dbController := controllers.DatabaseController{DB: db}
-	product, getError := dbController.GetProductByID(id)
-
-	if getError != nil {
-		logger.Error().Msgf("Product with ID '%d' was not found in database", id)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", id)})
+	claims := jwt.ExtractClaims(c)
+	userID := uint(claims["id"].(float64))
+	if userID <= 0 {
+		logger.Error().Msg("Error getting user id from JWT token")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
 		return
 	}
 
-	c.JSON(http.StatusOK, product)
+	dbController := controllers.DatabaseController{DB: db}
+	product, getError := dbController.GetProductByID(productID, userID)
+
+	if getError != nil {
+		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", productID)})
+		return
+	} else if getError == errors.ErrMismatcherUserID {
+		logger.Error().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' for user was not found", productID)})
+		return
+	} else {
+		c.JSON(http.StatusOK, product)
+		return
+	}
 }
 
 func CreateProduct(c *gin.Context) {
@@ -77,6 +105,14 @@ func CreateProduct(c *gin.Context) {
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
+		return
+	}
+
+	claims := jwt.ExtractClaims(c)
+	userID := uint(claims["id"].(float64))
+	if userID <= 0 {
+		logger.Error().Msg("Error getting user id from JWT token")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
 		return
 	}
 
@@ -106,7 +142,7 @@ func CreateProduct(c *gin.Context) {
 	}
 
 	dbController := controllers.DatabaseController{DB: db}
-	createResult := dbController.CreateProduct(&product)
+	createResult := dbController.CreateProduct(userID, &product)
 	if createResult != nil {
 		logger.Error().Msgf("Error creating product: %s", createResult)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": createResult})
@@ -120,10 +156,10 @@ func UpdateProduct(c *gin.Context) {
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
 
 	idParam := c.Param("id")
-	var id int
+	var productID int
 	var convErr error
 
-	if id, convErr = strconv.Atoi(idParam); convErr != nil {
+	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
 		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
@@ -133,6 +169,14 @@ func UpdateProduct(c *gin.Context) {
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
+		return
+	}
+
+	claims := jwt.ExtractClaims(c)
+	userID := uint(claims["id"].(float64))
+	if userID <= 0 {
+		logger.Error().Msg("Error getting user id from JWT token")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
 		return
 	}
 
@@ -151,14 +195,14 @@ func UpdateProduct(c *gin.Context) {
 	}
 
 	dbController := controllers.DatabaseController{DB: db}
-	updateErr := dbController.UpdateProduct(&product, id)
+	updateErr := dbController.UpdateProduct(productID, userID, &product)
 
 	if updateErr == nil {
 		c.JSON(http.StatusOK, product)
 		return
 	} else if updateErr == gorm.ErrRecordNotFound {
-		logger.Error().Msgf("Product with ID '%d' was not found in database", id)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", id)})
+		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	} else {
 		logger.Error().Msgf("Error saving product: %s", updateErr)
@@ -171,10 +215,10 @@ func DeleteProduct(c *gin.Context) {
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
 
 	idParam := c.Param("id")
-	var id int
+	var productID int
 	var convErr error
 
-	if id, convErr = strconv.Atoi(idParam); convErr != nil {
+	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
 		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
@@ -187,14 +231,22 @@ func DeleteProduct(c *gin.Context) {
 		return
 	}
 
+	claims := jwt.ExtractClaims(c)
+	userID := uint(claims["id"].(float64))
+	if userID <= 0 {
+		logger.Error().Msg("Error getting user id from JWT token")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
+		return
+	}
+
 	dbController := controllers.DatabaseController{DB: db}
-	deleteResult := dbController.DeleteProduct(id)
+	deleteResult := dbController.DeleteProduct(productID, userID)
 	if deleteResult != nil {
 		logger.Error().Msgf("Error deleting product: %s", deleteResult)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": deleteResult})
 		return
 	} else {
-		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Product with ID '%d' was deleted", id)})
+		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Product with ID '%d' was deleted", productID)})
 	}
 }
 
@@ -202,10 +254,10 @@ func SetExpireAt(c *gin.Context) {
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
 
 	idParam := c.Param("id")
-	var id int
+	var productID int
 	var convErr error
 
-	if id, convErr = strconv.Atoi(idParam); convErr != nil {
+	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
 		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
@@ -215,6 +267,14 @@ func SetExpireAt(c *gin.Context) {
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
+		return
+	}
+
+	claims := jwt.ExtractClaims(c)
+	userID := uint(claims["id"].(float64))
+	if userID <= 0 {
+		logger.Error().Msg("Error getting user id from JWT token")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
 		return
 	}
 
@@ -228,7 +288,7 @@ func SetExpireAt(c *gin.Context) {
 	}
 
 	dbController := controllers.DatabaseController{DB: db}
-	barcode, updateErr := dbController.SetProductExpireAt(id, expireAt)
+	barcode, updateErr := dbController.SetProductExpireAt(productID, userID, expireAt)
 
 	if updateErr == nil || barcode != "" {
 		expireDTO := database.ProductDTOExpire{
@@ -238,8 +298,12 @@ func SetExpireAt(c *gin.Context) {
 		c.JSON(http.StatusOK, expireDTO)
 		return
 	} else if updateErr == gorm.ErrRecordNotFound {
-		logger.Error().Msgf("Product with ID '%d' was not found in database", id)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", id)})
+		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", productID)})
+		return
+	} else if updateErr == errors.ErrMismatcherUserID {
+		logger.Error().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' for user was not found", productID)})
 		return
 	} else {
 		logger.Error().Msgf("Error saving product: %s", updateErr)
@@ -258,7 +322,22 @@ func GetExpired(c *gin.Context) {
 		return
 	}
 
+	claims := jwt.ExtractClaims(c)
+	userID := uint(claims["id"].(float64))
+	if userID <= 0 {
+		logger.Error().Msg("Error getting user id from JWT token")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
+		return
+	}
+
 	dbController := controllers.DatabaseController{DB: db}
-	products := dbController.GetProductsExpired()
-	c.JSON(http.StatusOK, products)
+	products, getExpiredErr := dbController.GetProductsExpired(userID)
+
+	if getExpiredErr != nil {
+		logger.Error().Msgf("Error getting expired products: %s", getExpiredErr)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Error getting expired products"})
+		return
+	} else {
+		c.JSON(http.StatusOK, products)
+	}
 }
