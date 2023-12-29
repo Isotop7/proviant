@@ -1,21 +1,14 @@
-{::options parse_block_html="true" /}
+# expiro
 
-<h1 align="center">expiro</h1>
+![License](https://img.shields.io/gitlab/license/Isotop7/expiro)
+![Release](https://gitlab.com/Isotop7/expiro/-/badges/release.svg)
+![CI @ main](https://gitlab.com/Isotop7/expiro/badges/main/pipeline.svg)
+![CI @ develop](https://gitlab.com/Isotop7/expiro/badges/develop/pipeline.svg)
+![Golang version](https://img.shields.io/badge/Go-1.21-green)
 
-<p align="center">
-    <img src="https://img.shields.io/gitlab/license/Isotop7/expiro" alt="License" />
-    <img src="https://gitlab.com/Isotop7/expiro/-/badges/release.svg" alt="Release" />
-    <img src="https://gitlab.com/Isotop7/expiro/badges/mnain/pipeline.svg" alt="CI @ main" />
-    <img src="https://gitlab.com/Isotop7/expiro/badges/develop/pipeline.svg" alt="CI @ develop" />
-    <img src="https://img.shields.io/badge/Go-1.21-green" alt="Golang version>
-</p>
+⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is **expiro**
 
-<p align="center">
-    ⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is <b>expiro</b>
-</p>
-<p align="center">
-    📚 <b>expiro</b> is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food 🥗
-</p>
+📚 **expiro** is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food 🥗
 
 ## 🚀 Features
 
@@ -71,7 +64,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 👤 Author
 
-- GitHub: [@Isotop7](https://github.com/Isotop7)
+- GitLab: [@Isotop7](https://gitlab.com/Isotop7)
 - LinkedIn: [Hendrik Röder](https://www.linkedin.com/in/hendrik-r%C3%B6der-9b8483198/)
 
 ---
