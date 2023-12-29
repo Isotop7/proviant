@@ -1,4 +1,4 @@
-![Expiro](./res/icons/twitter_header_photo_1.png){width=30%}
+![Expiro](./res/icons/twitter_header_photo_1.png){width=60%}
 
 ![License](https://img.shields.io/gitlab/license/Isotop7/expiro)
 ![Release](https://gitlab.com/Isotop7/expiro/-/badges/release.svg)
@@ -28,7 +28,7 @@
 ### 🔙 Backend
 
 1. Clone the repository: `git clone https://gitlab.com/Isotop7/expiro.git`
-2. Navigate to the project directory: `cd expiro/backend`
+2. Navigate to the project directory: `cd expiro/backend/src`
 3. Build the application: `go build -o expiro-backend`
 4. Copy the config file `config.yaml.tmpl`, rename it to `config.yaml` and adjust it
 5. Run the server: `./expiro-server`
