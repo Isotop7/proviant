@@ -1,4 +1,4 @@
-# expiro
+![Expiro](./res/icons/logo.png){width=30%}
 
 ![License](https://img.shields.io/gitlab/license/Isotop7/expiro)
 ![Release](https://gitlab.com/Isotop7/expiro/-/badges/release.svg)
