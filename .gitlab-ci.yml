@@ -8,7 +8,7 @@ stages:
 format:
   stage: test
   script:
-    - cd ./backend
+    - cd ./backend/src
     - go fmt $(go list ./... | grep -v /vendor/)
     - go vet $(go list ./... | grep -v /vendor/)
     - go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
@@ -18,12 +18,12 @@ format:
 compile-backend:
   stage: build
   script:
-    - cd ./backend
+    - cd ./backend/src
     - mkdir -p release
     - go build -o release ./...
   artifacts:
     paths:
-      - ./backend/release
+      - ./backend/src/release
 
 docker-build-backend:
   image: docker:cli
@@ -38,8 +38,8 @@ docker-build-backend:
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
   script:
-    - cd ./backend
-    - docker build --pull -t "$DOCKER_IMAGE_NAME" .
+    - cd ./backend/src
+    - docker build --pull -t "$DOCKER_IMAGE_NAME" ../
     - docker push "$DOCKER_IMAGE_NAME"
     - |
       if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
@@ -62,8 +62,8 @@ docker-build-backend-private:
   before_script:
     - docker login -u "$PRIVATE_REGISTRY_USER" -p "$PRIVATE_REGISTRY_PASSWORD" $PRIVATE_REGISTRY
   script:
-    - cd ./backend
-    - docker build --pull -t "$DOCKER_IMAGE_NAME" .
+    - cd ./backend/src
+    - docker build --pull -t "$DOCKER_IMAGE_NAME" ../
     - docker push "$DOCKER_IMAGE_NAME"
     - |
       if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
