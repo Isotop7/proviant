@@ -1,3 +1,5 @@
+{::options parse_block_html="true" /}
+
 <h1 align="center">expiro</h1>
 
 <p align="center">
