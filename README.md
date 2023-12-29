@@ -1,10 +1,11 @@
 <h1 align="center">expiro</h1>
 
 <p align="center">
-    <img src="https://img.shields.io/github/license/Isotop7/expiro" alt="License" />
-    <img src="https://img.shields.io/github/v/release/Isotop7/expiro" alt="Release" />
-    <img src="https://img.shields.io/github/actions/workflow/status/Isotop7/expiro/golang.yml?branch=main" alt="CI @ master" />
-    <img src="https://img.shields.io/github/actions/workflow/status/Isotop7/expiro/golang.yml?branch=develop" alt="CI @ develop" />
+    <img src="https://img.shields.io/gitlab/license/Isotop7/expiro" alt="License" />
+    <img src="https://gitlab.com/Isotop7/expiro/-/badges/release.svg" alt="Release" />
+    <img src="https://gitlab.com/Isotop7/expiro/badges/mnain/pipeline.svg" alt="CI @ main" />
+    <img src="https://gitlab.com/Isotop7/expiro/badges/develop/pipeline.svg" alt="CI @ develop" />
+    <img src="https://img.shields.io/badge/Go-1.21-green" alt="Golang version>
 </p>
 
 <p align="center">
