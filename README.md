@@ -7,9 +7,6 @@
     <img src="https://img.shields.io/github/actions/workflow/status/Isotop7/expiro/golang.yml?branch=develop" alt="CI @ develop" />
 </p>
 
-<h1 align="center">WARNING: This app is currently experiencing a major rewrite.</h1>
-<h2 align="center">See <a href="https://github.com/Isotop7/expiro/issues/34">issue #34</a> for more infos.</h2>
-
 <p align="center">
     ⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is <b>expiro</b>
 </p>
@@ -26,22 +23,22 @@
 
 ## 🛠️ Technologies and Tools
 
-- **Frontend:** ~~Razor~~, HTML, CSS.
+- **Frontend:** ~~Razor~~, HTML, CSS
 - **Backend:** Go, Gin, Gorm
-- **Database:** MariaDB.
-- **Code Quality:** SonarCloud, CodeQL.
-- **Continuous Integration:** GitHub Actions.
+- **Database:** MariaDB or SQLite (fallback)
 
 ## 📦 Installation and Usage
 
 ### 🔙 Backend
 
-1. Clone the repository: `git clone https://github.com/Isotop7/expiro.git`
+1. Clone the repository: `git clone https://gitlab.com/Isotop7/expiro.git`
 2. Navigate to the project directory: `cd expiro/backend`
 3. Build the application: `go build -o expiro-backend`
 4. Copy the config file `config.yaml.tmpl`, rename it to `config.yaml` and adjust it
 5. Run the server: `./expiro-server`
 6. ~~Start frontend server~~
+
+### 🖼️ Frontend
 
 ### 💻 Client
 
