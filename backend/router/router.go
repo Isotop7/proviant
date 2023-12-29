@@ -9,6 +9,7 @@ import (
 	"expiro/backend/models/configuration"
 	"expiro/backend/models/configuration/static"
 	"net/http"
+	"strconv"
 	"time"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -36,7 +37,7 @@ func LoggerMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
 	}
 }
 
-func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB) (*jwt.GinJWTMiddleware, error) {
+func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB, userAware bool) (*jwt.GinJWTMiddleware, error) {
 	return jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       static.TokenRealm,
 		Key:         []byte(configuration.Server.Authentication.TokenPassword),
@@ -79,15 +80,34 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB
 			}
 		},
 		Authorizator: func(data interface{}, c *gin.Context) bool {
-			/*if v, ok := data.(*auth.User); ok && v.Username == "admin" {
+			// If middleware is not user-aware, exit
+			if !userAware {
 				return true
 			}
 
-			return false*/
+			// Get user data from data context
+			user, ok := data.(*authentication.User)
+			if !ok {
+				return false
+			}
 
-			// TODO: Implement RBAC based on user property
-			// TODO: Check if function manipulates product and check if user is the assigned user
-			return true
+			// Get and convert parameter 'id' from request
+			idParam := c.Param("id")
+			var convErr error
+			var productID int
+			if productID, convErr = strconv.Atoi(idParam); convErr != nil {
+				return false
+			}
+
+			// Get database handle from context
+			db, ok := c.MustGet("db").(*gorm.DB)
+			if !ok {
+				return false
+			}
+			dbController := controllers.DatabaseController{DB: db}
+
+			// Call database controller function that returns owner state
+			return dbController.UserIsProductOwner(user.ID, productID)
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.JSON(code, gin.H{
@@ -108,27 +128,43 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	r.Use(LoggerMiddleware(logger), gin.Recovery())
 
 	// Setup custom middleware
+
 	// Logging
 	r.Use(func(c *gin.Context) {
 		c.Set("logger", logger)
 		c.Next()
 	})
+
 	// Database
 	r.Use(func(c *gin.Context) {
 		c.Set("db", db)
 		c.Next()
 	})
-	// JWT Authorization
-	jwtMiddleware, jwtAuthSetupErr := JWTMiddleware(configuration, db)
+
+	// JWT Authentication
+	jwtMiddleware, jwtAuthSetupErr := JWTMiddleware(configuration, db, false)
 	if jwtAuthSetupErr != nil {
-		logger.Error().Msgf("Error setting up authorization middleware: %s", jwtAuthSetupErr.Error())
-		panic("Error setting up authorization middleware")
+		logger.Error().Msgf("Error setting up authentication middleware: %s", jwtAuthSetupErr.Error())
+		panic("Error setting up authentication middleware")
 	}
 	jwtAuthMiddlewareInitErr := jwtMiddleware.MiddlewareInit()
 	if jwtAuthMiddlewareInitErr != nil {
-		logger.Error().Msg("Error initializing authorization middleware")
-		panic("Error initializing authorization middleware")
+		logger.Error().Msg("Error initializing user-aware authentication middleware")
+		panic("Error initializing authentication middleware")
 	}
+
+	// JWT Authentication and Authorization, aka user-aware
+	jwtUserAwareMiddleware, jwtAuthSetupErr := JWTMiddleware(configuration, db, true)
+	if jwtAuthSetupErr != nil {
+		logger.Error().Msgf("Error setting up user-aware authentication middleware: %s", jwtAuthSetupErr.Error())
+		panic("Error setting up user-aware authentication middleware")
+	}
+	jwtAuthUserAwareMiddlewareInitErr := jwtUserAwareMiddleware.MiddlewareInit()
+	if jwtAuthUserAwareMiddlewareInitErr != nil {
+		logger.Error().Msg("Error initializing user-aware authentication middleware")
+		panic("Error initializing user-aware authentication middleware")
+	}
+
 	// OpenFoodFactsAPI Controller
 	r.Use(func(c *gin.Context) {
 		c.Set("cntrl", cntrl)
@@ -137,21 +173,29 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 
 	// Health routes
 	r.GET("/health", common.GetHealth)
+
 	// Authentication routes
 	r.POST("/auth/login", jwtMiddleware.LoginHandler)
+
 	// Signup routes
 	r.POST("/auth/signup", auth.Signup)
 	r.GET("/auth/refresh_token", jwtMiddleware.RefreshHandler)
-	// Product routes
-	productAPI := r.Group("/api/v1/products")
-	productAPI.Use(jwtMiddleware.MiddlewareFunc())
-	productAPI.GET("", v1.GetProducts)
-	productAPI.GET("/:id", v1.GetProduct)
-	productAPI.POST("", v1.CreateProduct)
-	productAPI.PATCH("/:id", v1.UpdateProduct)
-	productAPI.DELETE("/:id", v1.DeleteProduct)
-	productAPI.POST("/:id/expire", v1.SetExpireAt)
-	productAPI.GET("/expired", v1.GetExpired)
+
+	// Public product routes
+	publicProductAPI := r.Group("/api/v1/products")
+	publicProductAPI.Use(jwtMiddleware.MiddlewareFunc())
+	publicProductAPI.GET("", v1.GetProducts)
+	publicProductAPI.GET("/expired", v1.GetExpired)
+	publicProductAPI.POST("", v1.CreateProduct)
+
+	// Protected product routes
+	protectedProductAPI := r.Group("/api/v1/products")
+	protectedProductAPI.Use(jwtUserAwareMiddleware.MiddlewareFunc())
+	protectedProductAPI.GET("/:id", v1.GetProduct)
+	protectedProductAPI.PATCH("/:id", v1.UpdateProduct)
+	protectedProductAPI.DELETE("/:id", v1.DeleteProduct)
+	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)
+
 	// Catch-All handler
 	r.NoRoute(jwtMiddleware.MiddlewareFunc(), func(c *gin.Context) {
 		claims := jwt.ExtractClaims(c)

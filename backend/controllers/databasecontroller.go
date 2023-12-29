@@ -54,6 +54,23 @@ func (dbc DatabaseController) CreateUser(user *authentication.User) error {
 	return createResult.Error
 }
 
+func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) bool {
+	// Check for invalid product IDs
+	if productID <= 0 {
+		return false
+	}
+
+	// Get single product by ID
+	var product database.Product
+	getError := dbc.DB.First(&product, productID)
+	if getError.Error != nil {
+		return false
+	}
+
+	// Return if given userID matches database assigned userID
+	return product.UserID == userID
+}
+
 func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error) {
 	// Get user object from database
 	user, userErr := dbc.GetUserByID(userID)
@@ -62,7 +79,7 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 	}
 	// Get user with products preloaded
 	var userWithData authentication.User
-	findErr := dbc.DB.Model(user).Preload("Products").Find(&userWithData)
+	findErr := dbc.DB.Preload("Products", "user_id = ?", user.ID).Find(&userWithData, user.ID)
 	if findErr.Error != nil {
 		return []database.Product{}, findErr.Error
 	}
@@ -88,7 +105,7 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 	} else if product.UserID != userID {
 		return database.Product{}, errors.ErrMismatcherUserID
 	} else {
-		return database.Product{}, getError.Error
+		return product, getError.Error
 	}
 }
 
@@ -181,7 +198,7 @@ func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Produc
 	}
 
 	// Get all currently expired products
-	var expiredProducts []database.Product
+	expiredProducts := []database.Product{}
 	timestamp := time.Now()
 	for _, p := range userProducts {
 		if p.ExpireAt.After(timestamp) {
