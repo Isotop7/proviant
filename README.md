@@ -1,4 +1,4 @@
-![Expiro](./res/icons/twitter_header_photo_1.png){width=100%}
+![Expiro](./res/icons/header_3.png){width=100%}
 
 ![License](https://img.shields.io/gitlab/license/Isotop7/expiro)
 ![Release](https://gitlab.com/Isotop7/expiro/-/badges/release.svg)
