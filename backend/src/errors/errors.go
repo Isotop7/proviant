@@ -1,3 +1,4 @@
+// Package errors contains custom error definitions
 package errors
 
 import "errors"

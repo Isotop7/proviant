@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"expiro/backend/models/configuration"
-	"expiro/backend/models/database"
-	"expiro/backend/models/external"
+	"expiro/models/configuration"
+	"expiro/models/database"
+	"expiro/models/external"
 	"fmt"
 	"net/http"
 	"time"
@@ -16,6 +16,7 @@ type OpenFoodFactsAPIController struct {
 	Configuration configuration.OpenFoodFactsConfiguration
 }
 
+// GetDataset gets data from OpenFoodFacts by its API. The search parameter is the barcode of the product
 func (cntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database.Product, error) {
 	// Create a context with a timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

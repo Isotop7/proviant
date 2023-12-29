@@ -16,16 +16,28 @@ help:
 ## tidy: format code and tidy modfile
 .PHONY: tidy
 tidy:
-	go fmt ./...
+	cd ./src && \
+	go fmt ./... && \
 	go mod tidy -v
 
 ## audit: run quality control checks
 .PHONY: audit
 audit:
-	go vet ./...
-	go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
-	go test -race -vet=off ./...
+	cd ./src  && \
+	go vet ./... && \
+	go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./... && \
+	go test -race -vet=off ./... && \
 	go mod verify
+
+# ==================================================================================== #
+# Documentation
+# ==================================================================================== #
+
+## doc: runs a godoc instance
+.PHONY: doc
+doc:
+	cd ./src && \
+	godoc -http=:6060
 
 # ==================================================================================== #
 # App
@@ -33,4 +45,5 @@ audit:
 
 .PHONY: run
 run:
-	go run main.go
+	cd ./src && \
+	go run expiro.go

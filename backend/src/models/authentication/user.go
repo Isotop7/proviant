@@ -1,7 +1,7 @@
 package authentication
 
 import (
-	"expiro/backend/models/database"
+	"expiro/models/database"
 
 	"gorm.io/gorm"
 )

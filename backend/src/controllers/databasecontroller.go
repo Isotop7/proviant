@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"expiro/backend/errors"
-	"expiro/backend/models/authentication"
-	"expiro/backend/models/database"
+	"expiro/errors"
+	"expiro/models/authentication"
+	"expiro/models/database"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"

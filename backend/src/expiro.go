@@ -1,11 +1,12 @@
+// expiro is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food
 package main
 
 import (
-	"expiro/backend/controllers"
-	"expiro/backend/models/authentication"
-	"expiro/backend/models/configuration"
-	"expiro/backend/models/database"
-	"expiro/backend/router"
+	"expiro/controllers"
+	"expiro/models/authentication"
+	"expiro/models/configuration"
+	"expiro/models/database"
+	"expiro/router"
 	"fmt"
 	"os"
 	"time"

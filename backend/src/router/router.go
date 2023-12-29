@@ -1,13 +1,13 @@
 package router
 
 import (
-	"expiro/backend/controllers"
-	"expiro/backend/handlers/auth"
-	"expiro/backend/handlers/common"
-	v1 "expiro/backend/handlers/v1"
-	"expiro/backend/models/authentication"
-	"expiro/backend/models/configuration"
-	"expiro/backend/models/configuration/static"
+	"expiro/controllers"
+	"expiro/handlers/auth"
+	"expiro/handlers/common"
+	v1 "expiro/handlers/v1"
+	"expiro/models/authentication"
+	"expiro/models/configuration"
+	"expiro/models/configuration/static"
 	"net/http"
 	"strconv"
 	"time"

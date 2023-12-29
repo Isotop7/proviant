@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"expiro/backend/controllers"
-	"expiro/backend/models/authentication"
+	"expiro/controllers"
+	"expiro/models/authentication"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

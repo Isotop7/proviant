@@ -1,4 +1,4 @@
-_archive
+doc/
 .vscode/
 expiro.log
 backend/test/*.httpie

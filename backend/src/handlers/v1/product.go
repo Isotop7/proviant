@@ -1,10 +1,10 @@
 package v1
 
 import (
-	"expiro/backend/controllers"
-	"expiro/backend/errors"
-	"expiro/backend/models/configuration/static"
-	"expiro/backend/models/database"
+	"expiro/controllers"
+	"expiro/errors"
+	"expiro/models/configuration/static"
+	"expiro/models/database"
 	"fmt"
 	"net/http"
 	"strconv"

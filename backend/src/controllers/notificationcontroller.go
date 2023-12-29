@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"bytes"
-	"expiro/backend/models/configuration"
-	"expiro/backend/models/database"
+	"expiro/models/configuration"
+	"expiro/models/database"
 	"fmt"
 	"html/template"
 	"time"
