@@ -1,0 +1,34 @@
+---
+database:
+  host: 127.0.0.1
+  port: 3306
+  name: expiro
+  user: root
+  password: password
+
+server:
+  port: 5050
+  authentication:
+    tokenPassword: "secret key"
+    tokenLifetime: 8
+
+logging:
+  enabled: true
+  file: "expiro.log"
+
+notification:
+  enabled: true
+  interval: 12
+  fromAddress: sender@local.net
+  toAddress: 
+    - recipient@local.net
+  smtp:
+    host: 127.0.0.1
+    port: 25
+    ssl: false
+    user: user
+    password: password
+
+openfoodfacts:
+  url: https://world.openfoodfacts.org/api/v2/product
+  timeout: 5

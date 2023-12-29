@@ -1,21 +1,14 @@
-<h1 align="center">isgood</h1>
+![Expiro](./res/icons/header_3.png){width=100%}
 
-<p align="center">
-    <img src="https://img.shields.io/github/license/Isotop7/isgood" alt="License" />
-    <img src="https://img.shields.io/github/v/release/Isotop7/isgood" alt="Release" />
-    <img src="https://sonarcloud.io/api/project_badges/measure?project=Isotop7_isgood&metric=alert_status" alt="SonarCloud" />
-    <img src="https://sonarcloud.io/api/project_badges/measure?project=Isotop7_isgood&metric=security_rating" alt="Sonarcloud security rating">
-    <img src="https://sonarcloud.io/api/project_badges/measure?project=Isotop7_isgood&metric=bugs" alt="Sonarcloud bugs">
-    <img src="https://sonarcloud.io/api/project_badges/measure?project=Isotop7_isgood&metric=code_smells" alt="Sonarcloud code smells">
-    <img src="https://img.shields.io/github/actions/workflow/status/Isotop7/isgood/dotnet.yml?branch=main" alt="CI @ master" />
-</p>
+![License](https://img.shields.io/gitlab/license/Isotop7/expiro)
+![Release](https://gitlab.com/Isotop7/expiro/-/badges/release.svg)
+![CI @ main](https://gitlab.com/Isotop7/expiro/badges/main/pipeline.svg)
+![CI @ develop](https://gitlab.com/Isotop7/expiro/badges/develop/pipeline.svg)
+![Golang version](https://img.shields.io/badge/Go-1.21-green)
 
-<p align="center">
-    ⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is <b>isgood</b>
-</p>
-<p align="center">
-    📚 <b>isgood</b> is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food 🥗
-</p>
+⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is **expiro**
+
+📚 **expiro** is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food 🥗
 
 ## 🚀 Features
 
@@ -26,24 +19,22 @@
 
 ## 🛠️ Technologies and Tools
 
-- **Frontend:** Razor, HTML, CSS.
-- **Backend:** C#, ASP.NET Core, Entity Framework Core, MQTT.
-- **Database:** SQLite.
-- **Code Quality:** SonarCloud, CodeQL.
-- **Continuous Integration:** GitHub Actions.
+- **Frontend:** ~~Razor~~, HTML, CSS
+- **Backend:** Go, Gin, Gorm
+- **Database:** MariaDB or SQLite (fallback)
 
 ## 📦 Installation and Usage
 
 ### 🔙 Backend
 
-1. Clone the repository: `git clone https://github.com/Isotop7/isgood.git`
-2. Navigate to the project directory: `cd isgood/isgood`
-3. Build the application: `dotnet build`
-4. Copy the config file `isgood.tmpl.json`, rename it to `isgood.json` and adjust it
-5. Create/update database backend: `dotnet ef database update`
-6. Run the application: `dotnet run`
-7. Open your browser and access the port shown in the console
-8. Test the insertion of products with MQTT
+1. Clone the repository: `git clone https://gitlab.com/Isotop7/expiro.git`
+2. Navigate to the project directory: `cd expiro/backend/src`
+3. Build the application: `go build -o expiro-backend`
+4. Copy the config file `config.yaml.tmpl`, rename it to `config.yaml` and adjust it
+5. Run the server: `./expiro-server`
+6. ~~Start frontend server~~
+
+### 🖼️ Frontend
 
 ### 💻 Client
 
@@ -54,7 +45,6 @@
 ### 🔙 Backend
 
 - Authentication: Add authentication on the Web UI so only you can edit and delete your digital fridge
-- Customize WebUI: Extend `picocss` with own theme
 - Administrative Functions: Create and Update backend users
 - Personalize fridge: Assign products to users or user groups, send notifications to assigned entity
 - Documentation: Provide screenshots and basic help guide
@@ -62,7 +52,7 @@
 
 ### 💻 Client
 
-- `isgood-esp`: Reference implementation of a ESP microcontroller and a connected barcode scanner to check in products
+- `expiro-esp`: Reference implementation of a ESP microcontroller and a connected barcode scanner to check in products
 
 ## 🤝 Contributing
 
@@ -74,7 +64,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 👤 Author
 
-- GitHub: [@Isotop7](https://github.com/Isotop7)
+- GitLab: [@Isotop7](https://gitlab.com/Isotop7)
 - LinkedIn: [Hendrik Röder](https://www.linkedin.com/in/hendrik-r%C3%B6der-9b8483198/)
 
 ---

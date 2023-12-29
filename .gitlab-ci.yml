@@ -1,0 +1,69 @@
+image: golang:latest
+
+stages:
+  - test
+  - build
+  - distribute
+
+format:
+  stage: test
+  script:
+    - cd ./backend/src
+    - go fmt $(go list ./... | grep -v /vendor/)
+    - go vet $(go list ./... | grep -v /vendor/)
+    - go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
+    - go test -race $(go list ./... | grep -v /vendor/)
+    - go mod verify
+
+compile-backend:
+  stage: build
+  script:
+    - cd ./backend/src
+    - mkdir -p release
+    - go build -o release ./...
+
+docker-build-backend:
+  image: docker:cli
+  stage: distribute
+  services:
+    - docker:dind
+  only:
+    - develop
+    - master
+  variables:
+    DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - cd ./backend/src
+    - docker build --pull -t "$DOCKER_IMAGE_NAME" ../
+    - docker push "$DOCKER_IMAGE_NAME"
+    - |
+      if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
+        docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:latest"
+        docker push "$CI_REGISTRY_IMAGE:latest"
+      fi
+
+docker-build-backend-private:
+  image: docker:cli
+  stage: distribute
+  services:
+    - docker:dind
+  only:
+    - develop
+    - master
+  when: manual
+  variables:
+    CI_REGISTRY_IMAGE: $PRIVATE_REGISTRY/$CI_PROJECT_NAME
+    DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  before_script:
+    - docker login -u "$PRIVATE_REGISTRY_USER" -p "$PRIVATE_REGISTRY_PASSWORD" $PRIVATE_REGISTRY
+  script:
+    - cd ./backend/src
+    - docker build --pull -t "$DOCKER_IMAGE_NAME" ../
+    - docker push "$DOCKER_IMAGE_NAME"
+    - |
+      if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
+        docker tag "$DOCKER_IMAGE_NAME" "$CI_REGISTRY_IMAGE:latest"
+        docker push "$CI_REGISTRY_IMAGE:latest"
+      fi
