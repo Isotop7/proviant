@@ -107,7 +107,7 @@ func main() {
 	}
 
 	// Call function to setup router and pass database interface
-	r := router.SetupRouter(&logger, db, cntrl)
+	r := router.SetupRouter(&logger, &configuration, db, cntrl)
 
 	// Get server port or instead set default value
 	serverPort := configuration.Server.Port

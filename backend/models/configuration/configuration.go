@@ -10,8 +10,14 @@ type DatabaseConfiguration struct {
 	Password string
 }
 
+type AuthenticationConfiguration struct {
+	TokenPassword string
+	TokenLifetime int
+}
+
 type ServerConfiguration struct {
-	Port int
+	Port           int
+	Authentication AuthenticationConfiguration
 }
 
 type LoggingConfiguration struct {

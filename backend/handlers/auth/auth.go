@@ -3,6 +3,8 @@ package auth
 import (
 	"expiro/backend/controllers"
 	"expiro/backend/models/auth"
+	"expiro/backend/models/configuration"
+	"expiro/backend/models/configuration/static"
 	"net/http"
 	"time"
 
@@ -13,18 +15,18 @@ import (
 	"gorm.io/gorm"
 )
 
-func AuthorizationMiddleware(db *gorm.DB) (*jwt.GinJWTMiddleware, error) {
+func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB) (*jwt.GinJWTMiddleware, error) {
 	return jwt.New(&jwt.GinJWTMiddleware{
-		Realm:       "expiro",
-		Key:         []byte("secret key"),
-		Timeout:     time.Hour,
-		MaxRefresh:  time.Hour,
-		IdentityKey: "id",
+		Realm:       static.TokenRealm,
+		Key:         []byte(configuration.Server.Authentication.TokenPassword),
+		Timeout:     (time.Duration(configuration.Server.Authentication.TokenLifetime) * time.Hour),
+		MaxRefresh:  (time.Duration(configuration.Server.Authentication.TokenLifetime) * time.Hour),
+		IdentityKey: static.TokenIdentityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
 			if v, ok := data.(auth.User); ok {
 				return jwt.MapClaims{
-					"id":       v.ID,
-					"username": v.Username,
+					static.TokenIdentityKey: v.ID,
+					static.TokenUsernameKey: v.Username,
 				}
 			}
 			return jwt.MapClaims{}
@@ -32,8 +34,8 @@ func AuthorizationMiddleware(db *gorm.DB) (*jwt.GinJWTMiddleware, error) {
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jwt.ExtractClaims(c)
 			return &auth.User{
-				ID:       uint(claims["id"].(float64)),
-				Username: claims["username"].(string),
+				ID:       uint(claims[static.TokenIdentityKey].(float64)),
+				Username: claims[static.TokenUsernameKey].(string),
 			}
 		},
 		Authenticator: func(c *gin.Context) (interface{}, error) {
@@ -73,8 +75,8 @@ func AuthorizationMiddleware(db *gorm.DB) (*jwt.GinJWTMiddleware, error) {
 			})
 		},
 
-		TokenLookup:   "header: Authorization, query: token, cookie: jwt",
-		TokenHeadName: "Bearer",
+		TokenLookup:   static.TokenLookup,
+		TokenHeadName: static.TokenHeadName,
 		TimeFunc:      time.Now,
 	})
 }

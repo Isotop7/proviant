@@ -3,6 +3,7 @@ package v1
 import (
 	"expiro/backend/controllers"
 	"expiro/backend/errors"
+	"expiro/backend/models/configuration/static"
 	"expiro/backend/models/database"
 	"fmt"
 	"net/http"
@@ -35,7 +36,7 @@ func GetProducts(c *gin.Context) {
 	}
 
 	claims := jwt.ExtractClaims(c)
-	userID := uint(claims["id"].(float64))
+	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
@@ -74,7 +75,7 @@ func GetProduct(c *gin.Context) {
 	}
 
 	claims := jwt.ExtractClaims(c)
-	userID := uint(claims["id"].(float64))
+	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
@@ -173,7 +174,7 @@ func UpdateProduct(c *gin.Context) {
 	}
 
 	claims := jwt.ExtractClaims(c)
-	userID := uint(claims["id"].(float64))
+	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
@@ -232,7 +233,7 @@ func DeleteProduct(c *gin.Context) {
 	}
 
 	claims := jwt.ExtractClaims(c)
-	userID := uint(claims["id"].(float64))
+	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
@@ -271,7 +272,7 @@ func SetExpireAt(c *gin.Context) {
 	}
 
 	claims := jwt.ExtractClaims(c)
-	userID := uint(claims["id"].(float64))
+	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
@@ -323,7 +324,7 @@ func GetExpired(c *gin.Context) {
 	}
 
 	claims := jwt.ExtractClaims(c)
-	userID := uint(claims["id"].(float64))
+	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
