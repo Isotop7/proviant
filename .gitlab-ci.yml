@@ -21,9 +21,6 @@ compile-backend:
     - cd ./backend/src
     - mkdir -p release
     - go build -o release ./...
-  artifacts:
-    paths:
-      - ./backend/src/release
 
 docker-build-backend:
   image: docker:cli
