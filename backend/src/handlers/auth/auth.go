@@ -1,9 +1,10 @@
 package auth
 
 import (
-	"expiro/controllers"
-	"expiro/models/authentication"
 	"net/http"
+
+	"gitlab.com/Isotop7/expiro/controllers"
+	"gitlab.com/Isotop7/expiro/models/authentication"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"

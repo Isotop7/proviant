@@ -2,22 +2,23 @@
 package main
 
 import (
-	"expiro/controllers"
-	"expiro/models/authentication"
-	"expiro/models/configuration"
-	"expiro/models/database"
-	"expiro/router"
 	"fmt"
 	"os"
 	"time"
 
+	"gitlab.com/Isotop7/expiro/controllers"
+	"gitlab.com/Isotop7/expiro/logging"
+	"gitlab.com/Isotop7/expiro/models/authentication"
+	"gitlab.com/Isotop7/expiro/models/configuration"
+	"gitlab.com/Isotop7/expiro/models/database"
+	"gitlab.com/Isotop7/expiro/router"
+
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
-
-var db *gorm.DB
 
 func main() {
 	// Setup config path
@@ -41,7 +42,7 @@ func main() {
 	}
 
 	// Setup logging
-	var logger zerolog.Logger
+	var cLogger zerolog.Logger
 	if configuration.Logging.Enabled {
 		fileLogger, _ := os.OpenFile(
 			configuration.Logging.File,
@@ -49,17 +50,20 @@ func main() {
 			0664,
 		)
 		multi := zerolog.MultiLevelWriter(fileLogger, zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime})
-		logger = zerolog.New(multi).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
+		cLogger = zerolog.New(multi).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
 	} else {
-		logger = zerolog.New(
+		cLogger = zerolog.New(
 			zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime},
 		).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
 	}
+	cLogger.Info().Msg("Logging initialized")
 
 	// Validate database parametes
 	dbValidErr := configuration.ValidDatabaseConfiguration()
 	if dbValidErr != nil {
 		panic(dbValidErr)
+	} else {
+		cLogger.Info().Msg("Database configuration is valid")
 	}
 
 	// Generate database URI
@@ -71,11 +75,19 @@ func main() {
 		configuration.Database.Name)
 
 	var dbErr error
-	db, dbErr = gorm.Open(mysql.Open(databaseURI), &gorm.Config{})
+	var db *gorm.DB
+	gormConfig := gorm.Config{}
+	gormConfig.Logger = logging.ZerologAdapter{LoggingSink: &cLogger}
+	db, dbErr = gorm.Open(mysql.Open(databaseURI), &gormConfig)
 
-	// Check if database can be accessed
+	// Check if external database can be accessed
 	if dbErr != nil {
-		panic(dbErr.Error())
+		cLogger.Warn().Msgf("Database '%s' with on server '%s' could not be reached, falling back to SQLite", configuration.Database.Name, configuration.Database.Host)
+		// If not, try to open embedded database
+		db, dbErr = gorm.Open(sqlite.Open("expiro.db"), &gormConfig)
+		if err != nil {
+			panic(dbErr)
+		}
 	}
 
 	// Run migrations for database
@@ -97,10 +109,10 @@ func main() {
 
 	// Setup NotificationController
 	if !configuration.Notification.Enabled {
-		logger.Info().Msg("Notifications are disabled")
+		cLogger.Info().Msg("Notifications are disabled")
 	} else {
 		notificationController := controllers.NotificationController{
-			Logger:        &logger,
+			Logger:        &cLogger,
 			Configuration: configuration.Notification,
 			DB:            db,
 		}
@@ -108,7 +120,7 @@ func main() {
 	}
 
 	// Call function to setup router and pass database interface
-	r := router.SetupRouter(&logger, &configuration, db, cntrl)
+	r := router.SetupRouter(&cLogger, &configuration, db, cntrl)
 
 	// Get server port or instead set default value
 	serverPort := configuration.Server.Port

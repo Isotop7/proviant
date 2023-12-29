@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"expiro/models/configuration"
-	"expiro/models/database"
-	"expiro/models/external"
 	"fmt"
 	"net/http"
 	"time"
+
+	"gitlab.com/Isotop7/expiro/models/configuration"
+	"gitlab.com/Isotop7/expiro/models/database"
+	"gitlab.com/Isotop7/expiro/models/external"
 )
 
 type OpenFoodFactsAPIController struct {

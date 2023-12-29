@@ -1,13 +1,14 @@
 package v1
 
 import (
-	"expiro/controllers"
-	"expiro/errors"
-	"expiro/models/configuration/static"
-	"expiro/models/database"
 	"fmt"
 	"net/http"
 	"strconv"
+
+	"gitlab.com/Isotop7/expiro/controllers"
+	"gitlab.com/Isotop7/expiro/errors"
+	"gitlab.com/Isotop7/expiro/models/configuration/static"
+	"gitlab.com/Isotop7/expiro/models/database"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"

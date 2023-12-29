@@ -1,16 +1,17 @@
 package router
 
 import (
-	"expiro/controllers"
-	"expiro/handlers/auth"
-	"expiro/handlers/common"
-	v1 "expiro/handlers/v1"
-	"expiro/models/authentication"
-	"expiro/models/configuration"
-	"expiro/models/configuration/static"
 	"net/http"
 	"strconv"
 	"time"
+
+	"gitlab.com/Isotop7/expiro/controllers"
+	"gitlab.com/Isotop7/expiro/handlers/auth"
+	"gitlab.com/Isotop7/expiro/handlers/common"
+	v1 "gitlab.com/Isotop7/expiro/handlers/v1"
+	"gitlab.com/Isotop7/expiro/models/authentication"
+	"gitlab.com/Isotop7/expiro/models/configuration"
+	"gitlab.com/Isotop7/expiro/models/configuration/static"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"

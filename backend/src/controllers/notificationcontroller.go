@@ -2,11 +2,12 @@ package controllers
 
 import (
 	"bytes"
-	"expiro/models/configuration"
-	"expiro/models/database"
 	"fmt"
 	"html/template"
 	"time"
+
+	"gitlab.com/Isotop7/expiro/models/configuration"
+	"gitlab.com/Isotop7/expiro/models/database"
 
 	"github.com/rs/zerolog"
 	gomail "gopkg.in/mail.v2"

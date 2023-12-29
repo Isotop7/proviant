@@ -1,7 +1,7 @@
 package authentication
 
 import (
-	"expiro/models/database"
+	"gitlab.com/Isotop7/expiro/models/database"
 
 	"gorm.io/gorm"
 )

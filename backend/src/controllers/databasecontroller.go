@@ -1,10 +1,11 @@
 package controllers
 
 import (
-	"expiro/errors"
-	"expiro/models/authentication"
-	"expiro/models/database"
 	"time"
+
+	"gitlab.com/Isotop7/expiro/errors"
+	"gitlab.com/Isotop7/expiro/models/authentication"
+	"gitlab.com/Isotop7/expiro/models/database"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
