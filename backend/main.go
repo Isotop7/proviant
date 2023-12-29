@@ -2,7 +2,7 @@ package main
 
 import (
 	"expiro/backend/controllers"
-	"expiro/backend/models/auth"
+	"expiro/backend/models/authentication"
 	"expiro/backend/models/configuration"
 	"expiro/backend/models/database"
 	"expiro/backend/router"
@@ -80,7 +80,7 @@ func main() {
 	// Run migrations for database
 	db.AutoMigrate(
 		&database.Product{},
-		&auth.User{},
+		&authentication.User{},
 	)
 
 	// Check API controller config and generate instance

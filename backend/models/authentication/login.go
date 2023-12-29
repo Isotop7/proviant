@@ -1,4 +1,4 @@
-package auth
+package authentication
 
 type Login struct {
 	Username string `form:"username" json:"username" binding:"required"`

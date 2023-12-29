@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"expiro/backend/errors"
-	"expiro/backend/models/auth"
+	"expiro/backend/models/authentication"
 	"expiro/backend/models/database"
 	"time"
 
@@ -14,23 +14,23 @@ type DatabaseController struct {
 	DB *gorm.DB
 }
 
-func (dbc DatabaseController) FindUserByUsername(username string) (auth.User, error) {
-	var user auth.User
+func (dbc DatabaseController) FindUserByUsername(username string) (authentication.User, error) {
+	var user authentication.User
 	// Gets first user with matching username
 	selectErr := dbc.DB.First(&user, "username = ?", username)
 	return user, selectErr.Error
 }
 
-func (dbc DatabaseController) GetUserByID(userID uint) (auth.User, error) {
-	var user auth.User
+func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, error) {
+	var user authentication.User
 	// Gets first user with matching username
 	selectErr := dbc.DB.First(&user, userID)
 	return user, selectErr.Error
 }
 
-func (dbc DatabaseController) UserExists(user auth.User) bool {
+func (dbc DatabaseController) UserExists(user authentication.User) bool {
 	// Check if user with username exists
-	var dbUser auth.User
+	var dbUser authentication.User
 	// Username must be unique
 	selectErr := dbc.DB.First(&dbUser, "username = ?", user.Username)
 	return !(selectErr.Error == gorm.ErrRecordNotFound)
@@ -38,12 +38,12 @@ func (dbc DatabaseController) UserExists(user auth.User) bool {
 
 func (dbc DatabaseController) GetNextUserID() uint {
 	// Get next user id from database
-	var lastUser auth.User
+	var lastUser authentication.User
 	dbc.DB.Order("id").Limit(1).Find(&lastUser)
 	return (lastUser.ID + 1)
 }
 
-func (dbc DatabaseController) CreateUser(user *auth.User) error {
+func (dbc DatabaseController) CreateUser(user *authentication.User) error {
 	// Create new database user
 	hashedPassword, hashError := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if hashError != nil {
@@ -61,7 +61,7 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 		return []database.Product{}, userErr
 	}
 	// Get user with products preloaded
-	var userWithData auth.User
+	var userWithData authentication.User
 	findErr := dbc.DB.Model(user).Preload("Products").Find(&userWithData)
 	if findErr.Error != nil {
 		return []database.Product{}, findErr.Error
