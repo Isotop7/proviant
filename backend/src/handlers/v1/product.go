@@ -131,14 +131,14 @@ func CreateProduct(c *gin.Context) {
 		return
 	}
 
-	cntrl, ok := c.MustGet("cntrl").(controllers.OpenFoodFactsAPIController)
+	offacntrl, ok := c.MustGet("offacntrl").(controllers.OpenFoodFactsAPIController)
 	if !ok {
 		logger.Error().Msg("Failed to get controller from context")
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get controller from context"})
 		return
 	}
 	var apiProduct database.Product
-	apiProduct, err := cntrl.GetDataset(product.Barcode)
+	apiProduct, err := offacntrl.GetDataset(product.Barcode)
 	if err == nil {
 		product = apiProduct
 	}

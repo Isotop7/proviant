@@ -18,7 +18,7 @@ type OpenFoodFactsAPIController struct {
 }
 
 // GetDataset gets data from OpenFoodFacts by its API. The search parameter is the barcode of the product
-func (cntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database.Product, error) {
+func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database.Product, error) {
 	// Create a context with a timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -31,7 +31,7 @@ func (cntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database.Pro
 
 	// Query API for dataset
 	go func() {
-		queryURL := fmt.Sprintf("%s/%s?fields=%s", cntrl.Configuration.URL, barcode, filteredDataset)
+		queryURL := fmt.Sprintf("%s/%s?fields=%s", offacntrl.Configuration.URL, barcode, filteredDataset)
 		resp, err := http.Get(queryURL)
 		// If upstream error is received, we also throw it
 		if err != nil {

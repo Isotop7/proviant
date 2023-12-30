@@ -123,7 +123,7 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB
 	})
 }
 
-func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConfiguration, db *gorm.DB, cntrl controllers.OpenFoodFactsAPIController) *gin.Engine {
+func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConfiguration, db *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine {
 	r := gin.New()
 
 	r.Use(LoggerMiddleware(logger), gin.Recovery())
@@ -168,7 +168,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 
 	// OpenFoodFactsAPI Controller
 	r.Use(func(c *gin.Context) {
-		c.Set("cntrl", cntrl)
+		c.Set("offacntrl", offacntrl)
 		c.Next()
 	})
 

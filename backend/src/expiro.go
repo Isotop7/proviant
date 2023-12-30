@@ -103,7 +103,7 @@ func main() {
 	if configuration.OpenFoodFacts.URL == "" {
 		panic("URL for OpenFoodFactsAPI not set")
 	}
-	cntrl := controllers.OpenFoodFactsAPIController{
+	offacntrl := controllers.OpenFoodFactsAPIController{
 		Configuration: configuration.OpenFoodFacts,
 	}
 
@@ -120,7 +120,7 @@ func main() {
 	}
 
 	// Call function to setup router and pass database interface
-	r := router.SetupRouter(&cLogger, &configuration, db, cntrl)
+	r := router.SetupRouter(&cLogger, &configuration, db, offacntrl)
 
 	// Get server port or instead set default value
 	serverPort := configuration.Server.Port
