@@ -86,16 +86,17 @@ func GetProduct(c *gin.Context) {
 	dbController := controllers.DatabaseController{DB: db}
 	product, getError := dbController.GetProductByID(productID, userID)
 
-	if getError != nil {
-		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", productID)})
+	switch getError {
+	case nil:
+		c.JSON(http.StatusOK, product)
 		return
-	} else if getError == errors.ErrMismatcherUserID {
+	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
 		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' for user was not found", productID)})
 		return
-	} else {
-		c.JSON(http.StatusOK, product)
+	default:
+		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	}
 }
@@ -199,14 +200,15 @@ func UpdateProduct(c *gin.Context) {
 	dbController := controllers.DatabaseController{DB: db}
 	updateErr := dbController.UpdateProduct(productID, userID, &product)
 
-	if updateErr == nil {
+	switch updateErr {
+	case nil:
 		c.JSON(http.StatusOK, product)
 		return
-	} else if updateErr == gorm.ErrRecordNotFound {
+	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
 		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
-	} else {
+	default:
 		logger.Error().Msgf("Error saving product: %s", updateErr)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": updateErr})
 		return
@@ -292,22 +294,23 @@ func SetExpireAt(c *gin.Context) {
 	dbController := controllers.DatabaseController{DB: db}
 	barcode, updateErr := dbController.SetProductExpireAt(productID, userID, expireAt)
 
-	if updateErr == nil || barcode != "" {
+	switch updateErr {
+	case nil:
 		expireDTO := database.ProductDTOExpire{
 			Barcode:  barcode,
 			ExpireAt: expireAt.Timestamp,
 		}
 		c.JSON(http.StatusOK, expireDTO)
 		return
-	} else if updateErr == gorm.ErrRecordNotFound {
+	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
 		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
-	} else if updateErr == errors.ErrMismatcherUserID {
+	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
 		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' for user was not found", productID)})
 		return
-	} else {
+	default:
 		logger.Error().Msgf("Error saving product: %s", updateErr)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": updateErr})
 		return

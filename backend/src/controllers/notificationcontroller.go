@@ -73,7 +73,7 @@ func (nc NotificationController) SendMail(product database.Product) error {
 		return templErr
 	}
 	var bodyBuf bytes.Buffer
-	templ.Execute(&bodyBuf, struct {
+	templExecErr := templ.Execute(&bodyBuf, struct {
 		ProductName string
 		ID          uint
 		Barcode     string
@@ -84,6 +84,10 @@ func (nc NotificationController) SendMail(product database.Product) error {
 		Barcode:     product.Barcode,
 		ExpireAt:    product.ExpireAt,
 	})
+	if templExecErr != nil {
+		return templExecErr
+	}
+
 	body := bodyBuf.String()
 
 	// Set body of mail to generated template output

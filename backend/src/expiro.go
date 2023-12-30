@@ -91,10 +91,13 @@ func main() {
 	}
 
 	// Run migrations for database
-	db.AutoMigrate(
+	migrationError := db.AutoMigrate(
 		&database.Product{},
 		&authentication.User{},
 	)
+	if migrationError != nil {
+		panic(migrationError)
+	}
 
 	// Check API controller config and generate instance
 	if configuration.OpenFoodFacts.Timeout <= 0 {
@@ -129,5 +132,8 @@ func main() {
 	}
 
 	// Start server
-	r.Run(fmt.Sprintf(":%d", serverPort))
+	runErr := r.Run(fmt.Sprintf(":%d", serverPort))
+	if runErr != nil {
+		panic(runErr)
+	}
 }

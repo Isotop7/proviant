@@ -57,13 +57,17 @@ type ExpiroConfiguration struct {
 func (ec ExpiroConfiguration) ValidDatabaseConfiguration() error {
 	if ec.Database.Host == "" {
 		return errors.New("no database host specified")
-	} else if ec.Database.User == "" {
+	}
+	if ec.Database.User == "" {
 		return errors.New("no database user specified")
-	} else if ec.Database.Password == "" {
+	}
+	if ec.Database.Password == "" {
 		return errors.New("no database password specified")
-	} else if ec.Database.Name == "" {
+	}
+	if ec.Database.Name == "" {
 		return errors.New("no database name specified")
-	} else if ec.Database.Port <= 0 {
+	}
+	if ec.Database.Port <= 0 {
 		return errors.New("no valid database port specified")
 	}
 	return nil

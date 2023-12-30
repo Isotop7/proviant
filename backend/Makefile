@@ -23,11 +23,16 @@ tidy:
 ## audit: run quality control checks
 .PHONY: audit
 audit:
-	cd ./src  && \
+	cd ./src && \
 	go vet ./... && \
 	go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./... && \
 	go test -race -vet=off ./... && \
 	go mod verify
+
+.PHONY: lint
+lint:
+	cd ./src && \
+	docker run -t --rm -v ./:/app -w /app golangci/golangci-lint:v1.55.2 golangci-lint run -v -E gocritic
 
 # ==================================================================================== #
 # Documentation

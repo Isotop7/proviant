@@ -45,7 +45,7 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB
 		Timeout:     (time.Duration(configuration.Server.Authentication.TokenLifetime) * time.Hour),
 		MaxRefresh:  (time.Duration(configuration.Server.Authentication.TokenLifetime) * time.Hour),
 		IdentityKey: static.TokenIdentityKey,
-		PayloadFunc: func(data interface{}) jwt.MapClaims {
+		PayloadFunc: func(data any) jwt.MapClaims {
 			if v, ok := data.(authentication.User); ok {
 				return jwt.MapClaims{
 					static.TokenIdentityKey: v.ID,
@@ -54,14 +54,14 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB
 			}
 			return jwt.MapClaims{}
 		},
-		IdentityHandler: func(c *gin.Context) interface{} {
+		IdentityHandler: func(c *gin.Context) any {
 			claims := jwt.ExtractClaims(c)
 			return &authentication.User{
 				ID:       uint(claims[static.TokenIdentityKey].(float64)),
 				Username: claims[static.TokenUsernameKey].(string),
 			}
 		},
-		Authenticator: func(c *gin.Context) (interface{}, error) {
+		Authenticator: func(c *gin.Context) (any, error) {
 			var loginVals authentication.Login
 			if err := c.ShouldBind(&loginVals); err != nil {
 				return "", jwt.ErrMissingLoginValues
@@ -80,7 +80,7 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB
 				return user, nil
 			}
 		},
-		Authorizator: func(data interface{}, c *gin.Context) bool {
+		Authorizator: func(data any, c *gin.Context) bool {
 			// If middleware is not user-aware, exit
 			if !userAware {
 				return true

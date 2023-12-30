@@ -5,7 +5,7 @@ stages:
   - build
   - distribute
 
-format:
+check-backend:
   stage: test
   script:
     - cd ./backend/src
@@ -14,6 +14,20 @@ format:
     - go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
     - go test -race $(go list ./... | grep -v /vendor/)
     - go mod verify
+
+lint-backend:
+  image: docker:cli
+  stage: test
+  services:
+    - docker:dind
+  only:
+    - develop
+    - master
+  variables:
+    DOCKER_IMAGE_NAME: golangci/golangci-lint:v1.55.2
+  script:
+    - cd ./backend/src
+    - docker run -t --rm -v $(pwd):/app -w /app $DOCKER_IMAGE_NAME golangci-lint run -v -E gocritic
 
 compile-backend:
   stage: build

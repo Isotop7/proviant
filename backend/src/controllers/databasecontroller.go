@@ -98,16 +98,24 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 	if productID <= 0 {
 		return database.Product{}, gorm.ErrNotImplemented
 	}
+	// Parse product to var
 	var product database.Product
 	getError := dbc.DB.First(&product, productID)
 
+	// Check if error occured while getting produc
 	if getError.Error != nil {
-		return product, nil
-	} else if product.UserID != userID {
-		return database.Product{}, errors.ErrMismatcherUserID
-	} else {
-		return product, getError.Error
+		// Return empty set and database error
+		return database.Product{}, getError.Error
 	}
+
+	// Check if userID of database product matches the userID of the current user
+	if product.UserID != userID {
+		// Return empty set and custom error
+		return database.Product{}, errors.ErrMismatcherUserID
+	}
+
+	// Return database product
+	return product, nil
 }
 
 func (dbc DatabaseController) CreateProduct(userID uint, product *database.Product) error {
@@ -185,7 +193,7 @@ func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, exp
 	dbProduct.ExpireAt = time.Time(expireAt.Timestamp)
 	saveResult := dbc.DB.Save(&dbProduct)
 	if saveResult.Error != nil {
-		return "", saveResult.Error
+		return dbProduct.Barcode, saveResult.Error
 	} else {
 		return dbProduct.Barcode, nil
 	}
