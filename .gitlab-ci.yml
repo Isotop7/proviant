@@ -28,7 +28,7 @@ lint-backend:
     DOCKER_IMAGE_NAME: golangci/golangci-lint:v1.55.2
   script:
     - cd ./backend/src
-    - docker run -t --rm -v $(pwd):/app -w /app $DOCKER_IMAGE_NAME golangci-lint run -v -E gocritic
+    - docker run -t --rm -v $(pwd):/app -w /app $DOCKER_IMAGE_NAME golangci-lint run -v -E gocritic --timeout "3m"
   rules:
   - changes:
     - backend/src/**/*
