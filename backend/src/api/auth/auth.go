@@ -13,6 +13,16 @@ import (
 )
 
 // Signup creates a new user object in the database
+// @Summary      	Creates a new user
+// @Description  	Creates a new new user in the database
+// @Tags         	user
+// @Accept			json
+// @Produce      	json
+// @Param			login	body	authentication.Login	true	"Login"
+// @Success      	200  {object}  api.APIResponse
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/auth/signup [post]
 // POST /auth/signup
 func Signup(c *gin.Context) {
 	// Get logger instance from context

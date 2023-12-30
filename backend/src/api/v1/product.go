@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"gitlab.com/Isotop7/expiro/api"
 	"gitlab.com/Isotop7/expiro/controllers"
 	"gitlab.com/Isotop7/expiro/errors"
 	"gitlab.com/Isotop7/expiro/models/configuration/static"
@@ -18,7 +19,14 @@ import (
 )
 
 // GetProducts returns the products of a user
-// GET /api/v1/products
+// @Summary      Return a list of products
+// @Description  Return a list of products of user
+// @Tags         product
+// @Produce      json
+// @Success      200  {object}  []database.Product
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/products [get]
 func GetProducts(c *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
@@ -29,7 +37,7 @@ func GetProducts(c *gin.Context) {
 	var parseError error
 	if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
 		logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Limit '%d' is invalid", limit)})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
 		return
 	}
 
@@ -37,7 +45,7 @@ func GetProducts(c *gin.Context) {
 	db, ok := c.MustGet("db").(*gorm.DB)
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Failed to get database from context"})
 		return
 	}
 
@@ -46,7 +54,7 @@ func GetProducts(c *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
@@ -56,7 +64,7 @@ func GetProducts(c *gin.Context) {
 	products, productBulkErr := dbController.GetUserProductsBulk(userID, limit)
 	if productBulkErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting products of user"})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
 		return
 	} else {
 		c.JSON(http.StatusOK, products)
@@ -65,7 +73,15 @@ func GetProducts(c *gin.Context) {
 }
 
 // GetProduct return a single product of a user
-// GET /api/v1/product
+// @Summary      Returns a single product
+// @Description  Returns a single product of user
+// @Tags         product
+// @Produce      json
+// @Param        id   path      int  true  "Product ID"
+// @Success      200  {object}  database.Product
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/product/{id} [get]
 func GetProduct(c *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
@@ -76,7 +92,7 @@ func GetProduct(c *gin.Context) {
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
@@ -93,7 +109,7 @@ func GetProduct(c *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
@@ -110,18 +126,28 @@ func GetProduct(c *gin.Context) {
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' for user was not found", productID)})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' for user was not found", productID)})
 		return
 	// Unspecified error
 	default:
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", productID)})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	}
 }
 
 // CreateProduct creates a new product of a user
-// POST /api/v1/product/:id
+// @Summary      	Creates a new product
+// @Description  	Creates a new product of a user
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Param        	id   path      int  true  "Product ID"
+// @Param			product	body	database.Product	true	"Product"
+// @Success      	201  {object}  database.Product
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/product/{id} [post]
 func CreateProduct(c *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
@@ -139,7 +165,7 @@ func CreateProduct(c *gin.Context) {
 	userID := uint(claims["id"].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
@@ -147,7 +173,7 @@ func CreateProduct(c *gin.Context) {
 	var product database.Product
 	if err := c.ShouldBindJSON(&product); err != nil {
 		logger.Error().Msgf("Error parsing body: %s", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
 
@@ -155,7 +181,7 @@ func CreateProduct(c *gin.Context) {
 	// TODO: Do we need this or can we change struct annotation to required?
 	if product.Barcode == "" {
 		logger.Error().Msgf("Body is missing barcode")
-		c.JSON(http.StatusBadRequest, gin.H{"message": "barcode missing"})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
 		return
 	}
 
@@ -188,7 +214,17 @@ func CreateProduct(c *gin.Context) {
 }
 
 // UpdateProduct updates a product of a user
-// PATCH /api/v1/product/:id
+// @Summary      	Updates a product
+// @Description  	Updates a product with new values
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Param        	id   	path	int					true  	"Product ID"
+// @Param			product	body	database.Product	true	"Product"
+// @Success      	200  {object}  database.Product
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/product/{id} [patch]
 func UpdateProduct(c *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
@@ -199,7 +235,7 @@ func UpdateProduct(c *gin.Context) {
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
@@ -216,7 +252,7 @@ func UpdateProduct(c *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
@@ -224,8 +260,7 @@ func UpdateProduct(c *gin.Context) {
 	var product database.Product
 	if err := c.ShouldBindJSON(&product); err != nil {
 		logger.Error().Msgf("Error parsing body: %s", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
 
@@ -233,7 +268,7 @@ func UpdateProduct(c *gin.Context) {
 	// TODO: Do we need this or can we change struct annotation to required?
 	if product.Barcode == "" {
 		logger.Error().Msgf("Body is missing barcode")
-		c.JSON(http.StatusBadRequest, gin.H{"message": "barcode missing"})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
 		return
 	}
 
@@ -250,7 +285,7 @@ func UpdateProduct(c *gin.Context) {
 	// Requested product was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", productID)})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	// Unspecified error
 	default:
@@ -261,7 +296,16 @@ func UpdateProduct(c *gin.Context) {
 }
 
 // DeleteProduct deletes a product of a user
-// DELETE /api/v1/product/:id
+// @Summary      	Deletes a product
+// @Description  	Deletes a product of a user
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Param        	id   	path	int					true  	"Product ID"
+// @Success      	200  {object}  api.APIResponse
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/product/{id} [delete]
 func DeleteProduct(c *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
@@ -272,7 +316,7 @@ func DeleteProduct(c *gin.Context) {
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
@@ -289,7 +333,7 @@ func DeleteProduct(c *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
@@ -299,16 +343,26 @@ func DeleteProduct(c *gin.Context) {
 	deleteResult := dbController.DeleteProduct(productID, userID)
 	if deleteResult != nil {
 		logger.Error().Msgf("Error deleting product: %s", deleteResult)
-		c.JSON(http.StatusInternalServerError, gin.H{"message": deleteResult})
+		c.JSON(http.StatusInternalServerError, api.APIResponse{Message: deleteResult.Error()})
 		return
 	} else {
-		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Product with ID '%d' was deleted", productID)})
+		c.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was deleted", productID)})
 		return
 	}
 }
 
 // SetExpireAt updates the expire date of a product of a user
-// POST /api/v1/product/:id/expire
+// @Summary      	Updates the expire date
+// @Description  	Updates the expire date of a product
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Param        	id   		path	int					true  	"Product ID"
+// @Param			timestamp	body	database.Timestamp	true	"Timestamp"
+// @Success      	200  {object}  database.ProductDTOExpire
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/product/{id}/expire [post]
 func SetExpireAt(c *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
@@ -319,7 +373,7 @@ func SetExpireAt(c *gin.Context) {
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("ID '%s' is invalid", idParam)})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
@@ -336,7 +390,7 @@ func SetExpireAt(c *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
@@ -345,7 +399,7 @@ func SetExpireAt(c *gin.Context) {
 	var bindErr error
 	if bindErr = c.ShouldBindJSON(&expireAt); bindErr != nil {
 		logger.Error().Msgf("Error parsing body: %s", bindErr.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"message": bindErr.Error()})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: bindErr.Error()})
 		fmt.Println(bindErr.Error())
 		return
 	}
@@ -355,7 +409,7 @@ func SetExpireAt(c *gin.Context) {
 	product, getErr := dbController.GetProductByID(productID, userID)
 	if getErr != nil {
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", productID)})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	}
 
@@ -375,12 +429,12 @@ func SetExpireAt(c *gin.Context) {
 	// Product was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' was not found", productID)})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
-		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Product with id '%d' for user was not found", productID)})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' for user was not found", productID)})
 		return
 	// Unspecified error
 	default:
@@ -391,7 +445,15 @@ func SetExpireAt(c *gin.Context) {
 }
 
 // GetExpired returns the list of all expired products of a user
-// GET /api/v1/products/expired
+// @Summary      	Gets expired products
+// @Description  	Gets a list of expired products of a user
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Success      	200  {object}  []database.Product
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/products/expired [get]
 func GetExpired(c *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)
@@ -409,7 +471,7 @@ func GetExpired(c *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Error getting user id from JWT token"})
+		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 

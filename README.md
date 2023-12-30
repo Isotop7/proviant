@@ -60,7 +60,8 @@
 
 Documentation is generated with `gomarkdoc`
 
-[README](./backend/doc/README.md)
+- [Package documentation](./backend/src/docs/README.md)
+- [Swagger definition](./backend/src/docs/swagger.yaml) 
 
 ## Contributing
 

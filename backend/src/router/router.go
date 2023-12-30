@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"time"
 
+	"gitlab.com/Isotop7/expiro/api/auth"
+	"gitlab.com/Isotop7/expiro/api/common"
+	v1 "gitlab.com/Isotop7/expiro/api/v1"
 	"gitlab.com/Isotop7/expiro/controllers"
-	"gitlab.com/Isotop7/expiro/handlers/auth"
-	"gitlab.com/Isotop7/expiro/handlers/common"
-	v1 "gitlab.com/Isotop7/expiro/handlers/v1"
 	"gitlab.com/Isotop7/expiro/models/authentication"
 	"gitlab.com/Isotop7/expiro/models/configuration"
 	"gitlab.com/Isotop7/expiro/models/configuration/static"

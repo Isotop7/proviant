@@ -38,10 +38,17 @@ lint:
 # Documentation
 # ==================================================================================== #
 
-## doc: runs a godoc instance
-.PHONY: doc
-doc:
-	go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest --output doc/README.md ./src/...
+## packagedoc: generates package documentation as markdown
+.PHONY: packagedoc
+packagedoc:
+	cd ./src && \
+	go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest --output docs/README.md ./...
+
+## apidoc: generates API documentation
+.PHONY: apidoc
+apidoc:
+	cd ./src && \
+	go run github.com/swaggo/swag/cmd/swag@latest init -g api/api.go --parseDependency
 
 # ==================================================================================== #
 # App
