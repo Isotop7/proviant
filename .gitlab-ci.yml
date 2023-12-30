@@ -32,7 +32,7 @@ lint-backend:
   rules:
   - changes:
     - backend/src/**/*
-    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+    - .gitlab-ci.yml
 
 compile-backend:
   stage: build
