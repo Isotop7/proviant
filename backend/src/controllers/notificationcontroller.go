@@ -14,12 +14,15 @@ import (
 	"gorm.io/gorm"
 )
 
+// NotificationController is the object struct to generate and send notifications for expired products
 type NotificationController struct {
 	Logger        *zerolog.Logger
 	Configuration configuration.NotificationConfiguration
 	DB            *gorm.DB
 }
 
+// Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them.
+// The timeout can be configured with the Configuration struct of NotificationController
 func (nc NotificationController) Dispatch() {
 	sleepInterval := time.Hour * time.Duration(nc.Configuration.Interval)
 	go func() {
@@ -62,7 +65,7 @@ func (nc NotificationController) SendMail(product database.Product) error {
 	m.SetHeader("From", nc.Configuration.FromAddress)
 
 	// Set E-Mail receivers
-	m.SetHeader("To", nc.Configuration.ToAddress...)
+	m.SetHeader("To", nc.Configuration.CCAddresses...)
 
 	subject := fmt.Sprintf("expiro - Warning - Product '%d' expired", product.ID)
 	m.SetHeader("Subject", subject)

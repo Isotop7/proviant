@@ -11,17 +11,22 @@ import (
 	"gorm.io/gorm"
 )
 
+// DatabaseController is the object struct for interacting with the gorm-backed database
 type DatabaseController struct {
 	DB *gorm.DB
 }
 
-func (dbc DatabaseController) FindUserByUsername(username string) (authentication.User, error) {
+// GetUserByUsername uses a given username and returns the matching user object
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) GetUserByUsername(username string) (authentication.User, error) {
 	var user authentication.User
 	// Gets first user with matching username
 	selectErr := dbc.DB.First(&user, "username = ?", username)
 	return user, selectErr.Error
 }
 
+// GetUserByID uses a given user ID and returns the matching user object
+// If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, error) {
 	var user authentication.User
 	// Gets first user with matching username
@@ -29,6 +34,8 @@ func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, err
 	return user, selectErr.Error
 }
 
+// UserExists returns if a given user object exists in the database
+// The check is currently only based on the username property and returns the first found item
 func (dbc DatabaseController) UserExists(user authentication.User) bool {
 	// Check if user with username exists
 	var dbUser authentication.User
@@ -37,6 +44,7 @@ func (dbc DatabaseController) UserExists(user authentication.User) bool {
 	return !(selectErr.Error == gorm.ErrRecordNotFound)
 }
 
+// GetNextUserID returns the next available user ID
 func (dbc DatabaseController) GetNextUserID() uint {
 	// Get next user id from database
 	var lastUser authentication.User
@@ -44,6 +52,9 @@ func (dbc DatabaseController) GetNextUserID() uint {
 	return (lastUser.ID + 1)
 }
 
+// CreateUser creates a new user based on a given user object
+// Before creation, the user password is hashed with brcypt
+// If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) CreateUser(user *authentication.User) error {
 	// Create new database user
 	hashedPassword, hashError := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
@@ -55,6 +66,7 @@ func (dbc DatabaseController) CreateUser(user *authentication.User) error {
 	return createResult.Error
 }
 
+// UserIsProductOwner checks if user (based on user ID) is the matching owner of a product (based on product ID)
 func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) bool {
 	// Check for invalid product IDs
 	if productID <= 0 {
@@ -64,6 +76,7 @@ func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) boo
 	// Get single product by ID
 	var product database.Product
 	getError := dbc.DB.First(&product, productID)
+	// Failsafe - If error is found, return false
 	if getError.Error != nil {
 		return false
 	}
@@ -72,6 +85,9 @@ func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) boo
 	return product.UserID == userID
 }
 
+// GetUserProductsBulk returns an array of products of a user (based on user ID)
+// The returned dataset can be limitied by supplying 'limit'
+// If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error) {
 	// Get user object from database
 	user, userErr := dbc.GetUserByID(userID)
@@ -85,14 +101,17 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 		return []database.Product{}, findErr.Error
 	}
 
-	// Apply optional limit
-	if limit > 0 {
-		return userWithData.Products[:limit], nil
-	} else {
+	// If no limit is supplied, return full set
+	// If limit is supplied, return limited set
+	if limit <= 0 {
 		return userWithData.Products, nil
+	} else {
+		return userWithData.Products[:limit], nil
 	}
 }
 
+// GetProductByID returns a product object (based on product ID) of a user (based on user ID)
+// If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) GetProductByID(productID int, userID uint) (database.Product, error) {
 	// Get single product by ID
 	if productID <= 0 {
@@ -118,6 +137,8 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 	return product, nil
 }
 
+// CreateProduct creates a product in the database and connects it to the user
+// If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) CreateProduct(userID uint, product *database.Product) error {
 	// Get user object from database
 	user, userErr := dbc.GetUserByID(userID)
@@ -130,6 +151,8 @@ func (dbc DatabaseController) CreateProduct(userID uint, product *database.Produ
 	return saveErr.Error
 }
 
+// UpdateProduct gets a product (based on product ID) of a user (based on user ID) and updates its contents with the contents of a supplied reference to the updated product
+// If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product *database.Product) error {
 	// Check if id is valid
 	if productID <= 0 {
@@ -140,6 +163,7 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	var dbProduct database.Product
 	getError := dbc.DB.First(&dbProduct, productID)
 
+	// If database operation returned error, return it to the caller
 	if getError.Error != nil {
 		return getError.Error
 	}
@@ -157,7 +181,9 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	dbProduct.ExpireAt = product.ExpireAt
 	dbProduct.NotifiedAt = product.NotifiedAt
 
+	// Save updated product
 	saveResult := dbc.DB.Save(&dbProduct)
+	// Return error if save did not work
 	if saveResult.Error != nil {
 		return saveResult.Error
 	} else {
@@ -165,6 +191,8 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	}
 }
 
+// DeleteProduct deletes a product (based on product ID) of a user (based on user ID)
+// If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error {
 	// Get product and check for correct userID
 	_, getError := dbc.GetProductByID(productID, userID)
@@ -177,28 +205,33 @@ func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error {
 	return deleteResult.Error
 }
 
-func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) (string, error) {
+// SetProductExpireAt updates the expiry date of a product (based on product ID) of a user (based on user ID)
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error {
 	// Update ExpireAt date
 	var dbProduct database.Product
 	getError := dbc.DB.First(&dbProduct, productID)
 	if getError.Error != nil {
-		return "", getError.Error
+		return getError.Error
 	}
 	// Check if supplied user matches the userID in the database object
 	if dbProduct.UserID != userID {
-		return "", errors.ErrMismatcherUserID
+		return errors.ErrMismatcherUserID
 	}
 
 	// Update values
 	dbProduct.ExpireAt = time.Time(expireAt.Timestamp)
 	saveResult := dbc.DB.Save(&dbProduct)
 	if saveResult.Error != nil {
-		return dbProduct.Barcode, saveResult.Error
+		return saveResult.Error
 	} else {
-		return dbProduct.Barcode, nil
+		return nil
 	}
 }
 
+// GetProductsExpired returns an array of products of a user (based on user ID) that are already expired
+// If the database operations return an error, the error is also returned (otherwise nil)
+// If the user has no products assigned, the function returns an empty dataset
 func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Product, error) {
 	// Get all user products
 	userProducts, getBulkErr := dbc.GetUserProductsBulk(userID, 0)

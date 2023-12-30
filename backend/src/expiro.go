@@ -20,6 +20,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// main is the main function used on start of expiro
 func main() {
 	// Setup config path
 	viper.SetConfigName("config")
@@ -43,7 +44,9 @@ func main() {
 
 	// Setup logging
 	var cLogger zerolog.Logger
+	// Check if logging to file was enabled
 	if configuration.Logging.Enabled {
+		// Create multi writer for file and terminal logging
 		fileLogger, _ := os.OpenFile(
 			configuration.Logging.File,
 			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
@@ -52,14 +55,15 @@ func main() {
 		multi := zerolog.MultiLevelWriter(fileLogger, zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime})
 		cLogger = zerolog.New(multi).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
 	} else {
+		// Create writer to terminal
 		cLogger = zerolog.New(
 			zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime},
 		).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
 	}
 	cLogger.Info().Msg("Logging initialized")
 
-	// Validate database parametes
-	dbValidErr := configuration.ValidDatabaseConfiguration()
+	// Validate database parameters
+	dbValidErr := configuration.ValidateDatabaseConfiguration()
 	if dbValidErr != nil {
 		panic(dbValidErr)
 	} else {
@@ -74,10 +78,13 @@ func main() {
 		configuration.Database.Port,
 		configuration.Database.Name)
 
+	// Generate gorm config
 	var dbErr error
 	var db *gorm.DB
 	gormConfig := gorm.Config{}
+	// Create Zerolog adapter and pass it to gorm config
 	gormConfig.Logger = logging.ZerologAdapter{LoggingSink: &cLogger}
+	// Open database handle
 	db, dbErr = gorm.Open(mysql.Open(databaseURI), &gormConfig)
 
 	// Check if external database can be accessed
@@ -85,12 +92,13 @@ func main() {
 		cLogger.Warn().Msgf("Database '%s' with on server '%s' could not be reached, falling back to SQLite", configuration.Database.Name, configuration.Database.Host)
 		// If not, try to open embedded database
 		db, dbErr = gorm.Open(sqlite.Open("expiro.db"), &gormConfig)
+		// If sqlite database also fails to start, panic
 		if err != nil {
 			panic(dbErr)
 		}
 	}
 
-	// Run migrations for database
+	// Run migrations for database and check for errors
 	migrationError := db.AutoMigrate(
 		&database.Product{},
 		&authentication.User{},
@@ -99,18 +107,19 @@ func main() {
 		panic(migrationError)
 	}
 
-	// Check API controller config and generate instance
+	// Check API controller config and create instance
 	if configuration.OpenFoodFacts.Timeout <= 0 {
 		configuration.OpenFoodFacts.Timeout = 5
 	}
 	if configuration.OpenFoodFacts.URL == "" {
+		// TODO: Move to validator function
 		panic("URL for OpenFoodFactsAPI not set")
 	}
 	offacntrl := controllers.OpenFoodFactsAPIController{
 		Configuration: configuration.OpenFoodFacts,
 	}
 
-	// Setup NotificationController
+	// Setup NotificationController if notifications are enabled
 	if !configuration.Notification.Enabled {
 		cLogger.Info().Msg("Notifications are disabled")
 	} else {
@@ -119,11 +128,12 @@ func main() {
 			Configuration: configuration.Notification,
 			DB:            db,
 		}
+		// Dispatch notification handler goroutine
 		notificationController.Dispatch()
 	}
 
-	// Call function to setup router and pass database interface
-	r := router.SetupRouter(&cLogger, &configuration, db, offacntrl)
+	// Call function to setup router and pass references
+	expiroEngine := router.SetupRouter(&cLogger, &configuration, db, offacntrl)
 
 	// Get server port or instead set default value
 	serverPort := configuration.Server.Port
@@ -132,7 +142,7 @@ func main() {
 	}
 
 	// Start server
-	runErr := r.Run(fmt.Sprintf(":%d", serverPort))
+	runErr := expiroEngine.Run(fmt.Sprintf(":%d", serverPort))
 	if runErr != nil {
 		panic(runErr)
 	}

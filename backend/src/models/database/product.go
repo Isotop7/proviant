@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Product is the database model of a product
 type Product struct {
 	gorm.Model
 	Barcode     string    `json:"barcode"`
@@ -19,7 +20,9 @@ type Product struct {
 	UserID      uint      `json:"userID"`
 }
 
+// ProductDTOExpire is a simplified DTO for product expiration
 type ProductDTOExpire struct {
+	ID       uint   `json:"id"`
 	Barcode  string `json:"barcode"`
 	ExpireAt Date   `json:"expireAt"`
 }

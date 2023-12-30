@@ -1,7 +1,15 @@
+// external provides model definitions from external parties
 package external
 
 import "gorm.io/gorm"
 
+var (
+	// Query parameters for OpenFoodFacts API
+	// This drastically minimizes the response from API calls and should match the properties from external.OpenFoodFactsAPIDataset
+	OpenFoodFactsAPIDatasetDefinition = "product_name,categories,countries,generic_name,image_url"
+)
+
+// OpenFoodFactsAPIDataset represents the data model of a json respons from the OpenFoodFacts API
 type OpenFoodFactsAPIDataset struct {
 	gorm.Model
 	Barcode string `json:"code"`

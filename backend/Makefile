@@ -32,7 +32,7 @@ audit:
 .PHONY: lint
 lint:
 	cd ./src && \
-	docker run -t --rm -v ./:/app -w /app golangci/golangci-lint:v1.55.2 golangci-lint run -v -E gocritic
+	docker run -t --rm -v ./:/app -w /app golangci/golangci-lint:v1.55.2 golangci-lint run -v -E gocritic --timeout "3m"
 
 # ==================================================================================== #
 # Documentation
@@ -41,8 +41,7 @@ lint:
 ## doc: runs a godoc instance
 .PHONY: doc
 doc:
-	cd ./src && \
-	godoc -http=:6060
+	go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest --output doc/README.md ./src/...
 
 # ==================================================================================== #
 # App

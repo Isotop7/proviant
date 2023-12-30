@@ -13,6 +13,8 @@ import (
 	"gitlab.com/Isotop7/expiro/models/external"
 )
 
+// OpenFoodFactsAPIController is the object struct for interacting with the API of OpenFoodFacts
+// It uses the given configuration for accessing the API
 type OpenFoodFactsAPIController struct {
 	Configuration configuration.OpenFoodFactsConfiguration
 }
@@ -20,14 +22,15 @@ type OpenFoodFactsAPIController struct {
 // GetDataset gets data from OpenFoodFacts by its API. The search parameter is the barcode of the product
 func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database.Product, error) {
 	// Create a context with a timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	queryTimeout := time.Second * time.Duration(offacntrl.Configuration.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()
 
 	// Channel to receive the response or timeout signal
 	ch := make(chan bool)
 	// Dataset to store query response
 	var dataset external.OpenFoodFactsAPIDataset
-	filteredDataset := "product_name,categories,countries,generic_name,image_url"
+	filteredDataset := external.OpenFoodFactsAPIDatasetDefinition
 
 	// Query API for dataset
 	go func() {
