@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"gitlab.com/Isotop7/expiro/controllers"
@@ -27,7 +28,9 @@ func main() {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	// Read environment
+	viper.SetEnvPrefix("EXPIRO")
 	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	// Read config
 	configErr := viper.ReadInConfig()
@@ -108,12 +111,11 @@ func main() {
 	}
 
 	// Check API controller config and create instance
-	if configuration.OpenFoodFacts.Timeout <= 0 {
-		configuration.OpenFoodFacts.Timeout = 5
-	}
-	if configuration.OpenFoodFacts.URL == "" {
-		// TODO: Move to validator function
+	validateErr := configuration.ValidateOpenFoodFactsConfiguration()
+	if validateErr != nil {
 		panic("URL for OpenFoodFactsAPI not set")
+	} else {
+		cLogger.Info().Msg("OpenFoodFacts configuration is valid")
 	}
 	offacntrl := controllers.OpenFoodFactsAPIController{
 		Configuration: configuration.OpenFoodFacts,

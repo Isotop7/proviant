@@ -59,8 +59,14 @@ run:
 	cd ./src && \
 	go run expiro.go
 
+.PHONY: rundocker
+rundocker:
+	@make dockerimage
+	cd ./src && \
+	docker run -t --rm -v ./config.yaml.tmpl:/app/config.yaml expiro:latest
+
 # ==================================================================================== #
-# Deploy
+# Package
 # ==================================================================================== #
 
 .PHONY: dockerimage

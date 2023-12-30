@@ -644,7 +644,7 @@ type DatabaseConfiguration struct {
 ```
 
 <a name="ExpiroConfiguration"></a>
-## type [ExpiroConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L58-L64>)
+## type [ExpiroConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L57-L63>)
 
 ExpiroConfiguration is the configuration wrapper struct
 
@@ -659,7 +659,7 @@ type ExpiroConfiguration struct {
 ```
 
 <a name="ExpiroConfiguration.ValidateDatabaseConfiguration"></a>
-### func \(ExpiroConfiguration\) [ValidateDatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L67>)
+### func \(ExpiroConfiguration\) [ValidateDatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L66>)
 
 ```go
 func (ec ExpiroConfiguration) ValidateDatabaseConfiguration() error
@@ -680,7 +680,7 @@ type LoggingConfiguration struct {
 ```
 
 <a name="NotificationConfiguration"></a>
-## type [NotificationConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L43-L49>)
+## type [NotificationConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L43-L48>)
 
 NotificationConfiguration contains all properties regarding the notification handler
 
@@ -689,13 +689,12 @@ type NotificationConfiguration struct {
     Enabled     bool
     Interval    int
     FromAddress string
-    CCAddresses []string
     SMTP        SMTPConfiguration
 }
 ```
 
 <a name="OpenFoodFactsConfiguration"></a>
-## type [OpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L52-L55>)
+## type [OpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L51-L54>)
 
 OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
 

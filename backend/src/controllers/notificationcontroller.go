@@ -65,7 +65,7 @@ func (nc NotificationController) SendMail(product database.Product) error {
 	m.SetHeader("From", nc.Configuration.FromAddress)
 
 	// Set E-Mail receivers
-	m.SetHeader("To", nc.Configuration.CCAddresses...)
+	m.SetHeader("To", "") //TODO: Get user mail
 
 	subject := fmt.Sprintf("expiro - Warning - Product '%d' expired", product.ID)
 	m.SetHeader("Subject", subject)

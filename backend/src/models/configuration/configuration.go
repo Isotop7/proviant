@@ -44,7 +44,6 @@ type NotificationConfiguration struct {
 	Enabled     bool
 	Interval    int
 	FromAddress string
-	CCAddresses []string
 	SMTP        SMTPConfiguration
 }
 
@@ -61,6 +60,16 @@ type ExpiroConfiguration struct {
 	Logging       LoggingConfiguration
 	Notification  NotificationConfiguration
 	OpenFoodFacts OpenFoodFactsConfiguration
+}
+
+func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error {
+	if ec.OpenFoodFacts.URL == "" {
+		return errors.New("empty API URL for OpenFoodFacts specified")
+	}
+	if ec.OpenFoodFacts.Timeout <= 0 {
+		return errors.New("invalid timeout for OpenFoodFacts API specified")
+	}
+	return nil
 }
 
 // ValidateDatabaseConfiguration checks the current database configuration for common errors

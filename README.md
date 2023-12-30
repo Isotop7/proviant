@@ -27,12 +27,52 @@
 
 ### Backend
 
+#### Executable
+
 1. Clone the repository: `git clone https://gitlab.com/Isotop7/expiro.git`
 2. Navigate to the project directory: `cd expiro/backend/src`
 3. Build the application: `go build -o expiro-backend`
 4. Copy the config file `config.yaml.tmpl`, rename it to `config.yaml` and adjust it
 5. Run the server: `./expiro-server`
 6. ~~Start frontend server~~
+
+#### Docker
+
+_TODO: Add compose file_
+
+`expiro` can be configured with environment variables:
+
+```bash
+# Server configuration
+EXPIRO_SERVER_PORT=5050                                                     # Listening port of server
+EXPIRO_SERVER_AUTHENTICATION_TOKENPASSWORD="secret key"                     # Secret used for JSON Web Tokens
+EXPIRO_SERVER_AUTHENTICATION_TOKENLIFETIME=8                                # Lifetime of JSON Web Tokens
+
+# Database configuration
+EXPIRO_DATABASE_HOST="127.0.0.1"                                            # Database server IP or hostname
+EXPIRO_DATABASE_PORT=3306                                                   # Database server port
+EXPIRO_DATABASE_NAME="expiro"                                               # Database name
+EXPIRO_DATABASE_USER="expiro"                                               # Database user
+EXPIRO_DATABASE_PASSWORD="password"                                         # Database user password
+
+# Logging configuration
+EXPIRO_LOGGING_ENABLED=true                                                 # Enable file logging
+EXPIRO_LOGGING_FILE="expiro.log"                                            # Path to log file
+
+# Notification configuration
+EXPIRO_NOTIFICATION_ENABLED=true                                            # Enable notifications
+EXPIRO_NOTIFICATION_INTERVAL=12                                             # Interval in hours when notifications should be send
+EXPIRO_NOTIFICATION_FROMADDRESS="sender@local.net"                          # Sender address for notifications
+EXPIRO_NOTIFICATION_SMTP_HOST="127.0.0.1"                                   # Host or IP address of SMTP server
+EXPIRO_NOTIFICATION_SMTP_PORT=25                                            # Port of SMTP server
+EXPIRO_NOTIFICATION_SMTP_SSL=false                                          # Enables/disables SSL
+EXPIRO_NOTIFICATION_SMTP_USER="user"                                        # Username used for sending notifications via SMTP server
+EXPIRO_NOTIFICATION_SMTP_PASSWORD="password"                                # Password used for sending notifications via SMTP server
+
+# OpenFoodFacts configuration
+EXPIRO_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"   # Address of API backend of OpenFoodFacts
+EXPIRO_OPENFOODFACTS_TIMEOUT=5                                              # Timeout of API requests to OpenFoodFacts API
+```
 
 ### Frontend
 
