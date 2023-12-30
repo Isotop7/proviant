@@ -17,6 +17,7 @@ check-backend:
   rules:
   - changes:
     - backend/src/**/*
+    - .gitlab-ci.yml
 
 lint-backend:
   image: docker:cli
@@ -29,9 +30,9 @@ lint-backend:
     - cd ./backend/src
     - docker run -t --rm -v $(pwd):/app -w /app $DOCKER_IMAGE_NAME golangci-lint run -v -E gocritic
   rules:
-  - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
   - changes:
     - backend/src/**/*
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
 
 compile-backend:
   stage: build
@@ -42,6 +43,7 @@ compile-backend:
   rules:
   - changes:
     - backend/src/**/*
+    - .gitlab-ci.yml
 
 docker-build-backend:
   image: docker:cli
@@ -62,9 +64,10 @@ docker-build-backend:
         docker push "$CI_REGISTRY_IMAGE:latest"
       fi
   rules:
-  - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
   - changes:
     - backend/src/**/*
+    - .gitlab-ci.yml
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
 
 docker-build-backend-private:
   image: docker:cli
@@ -87,6 +90,7 @@ docker-build-backend-private:
         docker push "$CI_REGISTRY_IMAGE:latest"
       fi
   rules:
-  - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
   - changes:
     - backend/src/**/*
+    - .gitlab-ci.yml
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
