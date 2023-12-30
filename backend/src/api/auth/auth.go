@@ -23,7 +23,6 @@ import (
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/auth/signup [post]
-// POST /auth/signup
 func Signup(c *gin.Context) {
 	// Get logger instance from context
 	logger, _ := c.MustGet("logger").(*zerolog.Logger)

@@ -432,13 +432,13 @@ auth contains authentication method handlers
 
 
 <a name="Signup"></a>
-## func [Signup](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/auth/auth.go#L27>)
+## func [Signup](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/auth/auth.go#L26>)
 
 ```go
 func Signup(c *gin.Context)
 ```
 
-Signup creates a new user object in the database @Summary Creates a new user @Description Creates a new new user in the database @Tags user @Accept json @Produce json @Param login body authentication.Login true "Login" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/signup \[post\] POST /auth/signup
+Signup creates a new user object in the database @Summary Creates a new user @Description Creates a new new user in the database @Tags user @Accept json @Produce json @Param login body authentication.Login true "Login" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/signup \[post\]
 
 # common
 
@@ -454,13 +454,13 @@ common implements non\-specifc handlers
 
 
 <a name="GetHealth"></a>
-## func [GetHealth](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/common/health.go#L20>)
+## func [GetHealth](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/common/health.go#L19>)
 
 ```go
 func GetHealth(c *gin.Context)
 ```
 
-GetHealth returns the health status of the backend @Summary Gets health @Description Gets health status of the backend @Tags common @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Router /api/health \[get\] GET /api/health
+GetHealth returns the health status of the backend @Summary Gets health @Description Gets health status of the backend @Tags common @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Router /api/health \[get\]
 
 # v1
 
