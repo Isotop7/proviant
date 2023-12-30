@@ -432,13 +432,13 @@ auth contains authentication method handlers
 
 
 <a name="Signup"></a>
-## func [Signup](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/auth/auth.go#L17>)
+## func [Signup](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/auth/auth.go#L27>)
 
 ```go
 func Signup(c *gin.Context)
 ```
 
-Signup creates a new user object in the database POST /auth/signup
+Signup creates a new user object in the database @Summary Creates a new user @Description Creates a new new user in the database @Tags user @Accept json @Produce json @Param login body authentication.Login true "Login" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/signup \[post\] POST /auth/signup
 
 # common
 
@@ -454,13 +454,13 @@ common implements non\-specifc handlers
 
 
 <a name="GetHealth"></a>
-## func [GetHealth](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/common/health.go#L12>)
+## func [GetHealth](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/common/health.go#L20>)
 
 ```go
 func GetHealth(c *gin.Context)
 ```
 
-GetHealth returns the health status of the backend GET /api/health
+GetHealth returns the health status of the backend @Summary Gets health @Description Gets health status of the backend @Tags common @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Router /api/health \[get\] GET /api/health
 
 # v1
 
@@ -482,40 +482,40 @@ v1 implements version 1 of the expiro backend API
 
 
 <a name="CreateProduct"></a>
-## func [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L140>)
+## func [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L151>)
 
 ```go
 func CreateProduct(c *gin.Context)
 ```
 
-CreateProduct creates a new product of a user POST /api/v1/product/:id
+CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[post\]
 
 <a name="DeleteProduct"></a>
-## func [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L280>)
+## func [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L309>)
 
 ```go
 func DeleteProduct(c *gin.Context)
 ```
 
-DeleteProduct deletes a product of a user DELETE /api/v1/product/:id
+DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
 
 <a name="GetExpired"></a>
-## func [GetExpired](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L410>)
+## func [GetExpired](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L457>)
 
 ```go
 func GetExpired(c *gin.Context)
 ```
 
-GetExpired returns the list of all expired products of a user GET /api/v1/products/expired
+GetExpired returns the list of all expired products of a user @Summary Gets expired products @Description Gets a list of expired products of a user @Tags product @Accept json @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/expired \[get\]
 
 <a name="GetProduct"></a>
-## func [GetProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L84>)
+## func [GetProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L85>)
 
 ```go
 func GetProduct(c *gin.Context)
 ```
 
-GetProduct return a single product of a user @Summary Return a list of products @Description Return a list of products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[get\]
+GetProduct return a single product of a user @Summary Returns a single product @Description Returns a single product of user @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[get\]
 
 <a name="GetProducts"></a>
 ## func [GetProducts](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L30>)
@@ -527,22 +527,22 @@ func GetProducts(c *gin.Context)
 GetProducts returns the products of a user @Summary Return a list of products @Description Return a list of products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[get\]
 
 <a name="SetExpireAt"></a>
-## func [SetExpireAt](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L327>)
+## func [SetExpireAt](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L366>)
 
 ```go
 func SetExpireAt(c *gin.Context)
 ```
 
-SetExpireAt updates the expire date of a product of a user POST /api/v1/product/:id/expire
+SetExpireAt updates the expire date of a product of a user @Summary Updates the expire date @Description Updates the expire date of a product @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param timestamp body database.Timestamp true "Timestamp" @Success 200 \{object\} database.ProductDTOExpire @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/expire \[post\]
 
 <a name="UpdateProduct"></a>
-## func [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L207>)
+## func [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L228>)
 
 ```go
 func UpdateProduct(c *gin.Context)
 ```
 
-UpdateProduct updates a product of a user PATCH /api/v1/product/:id
+UpdateProduct updates a product of a user @Summary Updates a product @Description Updates a product with new values @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.Product true "Product" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[patch\]
 
 # authentication
 
