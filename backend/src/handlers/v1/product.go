@@ -25,7 +25,7 @@ func GetProducts(c *gin.Context) {
 
 	// Get and parse parameter limit
 	limitParam := c.Query("limit")
-	limit := -1
+	var limit int
 	var parseError error
 	if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
 		logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
