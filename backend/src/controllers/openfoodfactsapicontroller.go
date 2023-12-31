@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/Isotop7/expiro/models/configuration"
 	"gitlab.com/Isotop7/expiro/models/database"
 	"gitlab.com/Isotop7/expiro/models/external"
@@ -16,6 +17,7 @@ import (
 // OpenFoodFactsAPIController is the object struct for interacting with the API of OpenFoodFacts
 // It uses the given configuration for accessing the API
 type OpenFoodFactsAPIController struct {
+	Logger        *zerolog.Logger
 	Configuration configuration.OpenFoodFactsConfiguration
 }
 
@@ -27,7 +29,7 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 	defer cancel()
 
 	// Channel to receive the response or timeout signal
-	ch := make(chan bool)
+	queryChannel := make(chan bool)
 	// Dataset to store query response
 	var dataset external.OpenFoodFactsAPIDataset
 	filteredDataset := external.OpenFoodFactsAPIDatasetDefinition
@@ -38,20 +40,17 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 		resp, err := http.Get(queryURL)
 		// If upstream error is received, we also throw it
 		if err != nil {
-			// TODO: Add logging
-			fmt.Println("Error:", err)
-			ch <- false
+			offacntrl.Logger.Error().Msgf("Error decoding response: %s", err)
+			queryChannel <- false
 			return
 		}
 		defer resp.Body.Close()
 
 		// Parse the response and populate the dataset struct
 		if err := json.NewDecoder(resp.Body).Decode(&dataset); err != nil {
-			// TODO: Add logging
-			fmt.Println("Error decoding response:", err)
+			offacntrl.Logger.Error().Msgf("Error decoding response: %s", err)
 		}
-
-		ch <- true
+		queryChannel <- true
 	}()
 
 	// Wait for either a response or a timeout
@@ -59,7 +58,7 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 	case <-ctx.Done():
 		// Timeout occured
 		return database.Product{}, errors.New("timeout occured")
-	case success := <-ch:
+	case success := <-queryChannel:
 		if success {
 			// Request was successful, returning subset of populated dataset
 			return database.Product{

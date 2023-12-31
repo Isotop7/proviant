@@ -82,12 +82,12 @@ func main() {
 
 	// Generate gorm config
 	var dbErr error
-	var db *gorm.DB
+	var dbHandle *gorm.DB
 	gormConfig := gorm.Config{}
 	// Create Zerolog adapter and pass it to gorm config
 	gormConfig.Logger = logging.ZerologAdapter{LoggingSink: &cLogger}
 	// Open database handle
-	db, dbErr = gorm.Open(mysql.Open(databaseURI), &gormConfig)
+	dbHandle, dbErr = gorm.Open(mysql.Open(databaseURI), &gormConfig)
 
 	// Check if external database can be accessed
 	if dbErr != nil {
@@ -96,7 +96,7 @@ func main() {
 	}
 
 	// Run migrations for database and check for errors
-	migrationError := db.AutoMigrate(
+	migrationError := dbHandle.AutoMigrate(
 		&authentication.User{},
 		&database.Product{},
 	)
@@ -113,6 +113,7 @@ func main() {
 	}
 	offacntrl := controllers.OpenFoodFactsAPIController{
 		Configuration: configuration.OpenFoodFacts,
+		Logger:        &cLogger,
 	}
 
 	// Setup NotificationController if notifications are enabled
@@ -122,14 +123,14 @@ func main() {
 		notificationController := controllers.NotificationController{
 			Logger:        &cLogger,
 			Configuration: configuration.Notification,
-			DB:            db,
+			DBHandle:      dbHandle,
 		}
 		// Dispatch notification handler goroutine
 		notificationController.Dispatch()
 	}
 
 	// Call function to setup router and pass references
-	expiroEngine := router.SetupRouter(&cLogger, &configuration, db, offacntrl)
+	expiroEngine := router.SetupRouter(&cLogger, &configuration, dbHandle, offacntrl)
 
 	// Get server port or instead set default value
 	serverPort := configuration.Server.Port

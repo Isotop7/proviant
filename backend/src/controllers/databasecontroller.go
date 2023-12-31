@@ -13,7 +13,7 @@ import (
 
 // DatabaseController is the object struct for interacting with the gorm-backed database
 type DatabaseController struct {
-	DB *gorm.DB
+	DBHandle *gorm.DB
 }
 
 // GetUserByUsername uses a given username and returns the matching user object
@@ -21,7 +21,7 @@ type DatabaseController struct {
 func (dbc DatabaseController) GetUserByUsername(username string) (authentication.User, error) {
 	var user authentication.User
 	// Gets first user with matching username
-	selectErr := dbc.DB.First(&user, "username = ?", username)
+	selectErr := dbc.DBHandle.First(&user, "username = ?", username)
 	return user, selectErr.Error
 }
 
@@ -30,7 +30,7 @@ func (dbc DatabaseController) GetUserByUsername(username string) (authentication
 func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, error) {
 	var user authentication.User
 	// Gets first user with matching username
-	selectErr := dbc.DB.First(&user, userID)
+	selectErr := dbc.DBHandle.First(&user, userID)
 	return user, selectErr.Error
 }
 
@@ -40,7 +40,7 @@ func (dbc DatabaseController) UserExists(user authentication.User) bool {
 	// Check if user with username exists
 	var dbUser authentication.User
 	// Username must be unique
-	selectErr := dbc.DB.First(&dbUser, "username = ?", user.Username)
+	selectErr := dbc.DBHandle.First(&dbUser, "username = ?", user.Username)
 	return !(selectErr.Error == gorm.ErrRecordNotFound)
 }
 
@@ -48,7 +48,7 @@ func (dbc DatabaseController) UserExists(user authentication.User) bool {
 func (dbc DatabaseController) GetNextUserID() uint {
 	// Get next user id from database
 	var lastUser authentication.User
-	dbc.DB.Order("id").Limit(1).Find(&lastUser)
+	dbc.DBHandle.Order("id").Limit(1).Find(&lastUser)
 	return (lastUser.ID + 1)
 }
 
@@ -62,7 +62,7 @@ func (dbc DatabaseController) CreateUser(user *authentication.User) error {
 		return hashError
 	}
 	user.Password = string(hashedPassword)
-	createResult := dbc.DB.Create(user)
+	createResult := dbc.DBHandle.Create(user)
 	return createResult.Error
 }
 
@@ -75,7 +75,7 @@ func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) boo
 
 	// Get single product by ID
 	var product database.Product
-	getError := dbc.DB.First(&product, productID)
+	getError := dbc.DBHandle.First(&product, productID)
 	// Failsafe - If error is found, return false
 	if getError.Error != nil {
 		return false
@@ -96,7 +96,7 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 	}
 	// Get user with products preloaded
 	var userWithData authentication.User
-	findErr := dbc.DB.Preload("Products", "user_id = ?", user.ID).Find(&userWithData, user.ID)
+	findErr := dbc.DBHandle.Preload("Products", "user_id = ?", user.ID).Find(&userWithData, user.ID)
 	if findErr.Error != nil {
 		return []database.Product{}, findErr.Error
 	}
@@ -119,7 +119,7 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 	}
 	// Parse product to var
 	var product database.Product
-	getError := dbc.DB.First(&product, productID)
+	getError := dbc.DBHandle.First(&product, productID)
 
 	// Check if error occured while getting produc
 	if getError.Error != nil {
@@ -147,7 +147,7 @@ func (dbc DatabaseController) CreateProduct(userID uint, product *database.Produ
 	}
 	user.Products = append(user.Products, *product)
 	// Create new product
-	saveErr := dbc.DB.Save(&user)
+	saveErr := dbc.DBHandle.Save(&user)
 	return saveErr.Error
 }
 
@@ -161,7 +161,7 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 
 	// Try to get product
 	var dbProduct database.Product
-	getError := dbc.DB.First(&dbProduct, productID)
+	getError := dbc.DBHandle.First(&dbProduct, productID)
 
 	// If database operation returned error, return it to the caller
 	if getError.Error != nil {
@@ -182,7 +182,7 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	dbProduct.NotifiedAt = product.NotifiedAt
 
 	// Save updated product
-	saveResult := dbc.DB.Save(&dbProduct)
+	saveResult := dbc.DBHandle.Save(&dbProduct)
 	// Return error if save did not work
 	if saveResult.Error != nil {
 		return saveResult.Error
@@ -201,7 +201,7 @@ func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error {
 	}
 
 	// Delete product by its id
-	deleteResult := dbc.DB.Delete(&database.Product{}, productID)
+	deleteResult := dbc.DBHandle.Delete(&database.Product{}, productID)
 	return deleteResult.Error
 }
 
@@ -210,7 +210,7 @@ func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error {
 func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error {
 	// Update ExpireAt date
 	var dbProduct database.Product
-	getError := dbc.DB.First(&dbProduct, productID)
+	getError := dbc.DBHandle.First(&dbProduct, productID)
 	if getError.Error != nil {
 		return getError.Error
 	}
@@ -221,7 +221,7 @@ func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, exp
 
 	// Update values
 	dbProduct.ExpireAt = time.Time(expireAt.Timestamp)
-	saveResult := dbc.DB.Save(&dbProduct)
+	saveResult := dbc.DBHandle.Save(&dbProduct)
 	if saveResult.Error != nil {
 		return saveResult.Error
 	} else {

@@ -23,26 +23,26 @@ import (
 
 // ZerologMiddleware implements a gin.HandlerFunc and logs the output from gin
 func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
-	return func(c *gin.Context) {
+	return func(ctx *gin.Context) {
 		// Get start of request
 		start := time.Now()
 
 		// Process the request
-		c.Next()
+		ctx.Next()
 
 		// Log the request details
 		logger.Info().
-			Str("remote", c.Request.RemoteAddr).
-			Str("method", c.Request.Method).
-			Str("path", c.Request.URL.Path).
-			Int("status", c.Writer.Status()).
+			Str("remote", ctx.Request.RemoteAddr).
+			Str("method", ctx.Request.Method).
+			Str("path", ctx.Request.URL.Path).
+			Int("status", ctx.Writer.Status()).
 			Dur("duration", time.Since(start)).
 			Msg("Request handled")
 	}
 }
 
 // JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization (optional)
-func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB, userAware bool) (*jwt.GinJWTMiddleware, error) {
+func JWTMiddleware(configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, userAware bool) (*jwt.GinJWTMiddleware, error) {
 	return jwt.New(&jwt.GinJWTMiddleware{
 		// JWT configuration and timeouts
 		Realm:         static.TokenRealm,
@@ -64,23 +64,23 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB
 			return jwt.MapClaims{}
 		},
 		// Extract claims from context
-		IdentityHandler: func(c *gin.Context) any {
-			claims := jwt.ExtractClaims(c)
+		IdentityHandler: func(ctx *gin.Context) any {
+			claims := jwt.ExtractClaims(ctx)
 			return &authentication.User{
 				ID:       uint(claims[static.TokenIdentityKey].(float64)),
 				Username: claims[static.TokenUsernameKey].(string),
 			}
 		},
 		// Authenticate user from context
-		Authenticator: func(c *gin.Context) (any, error) {
+		Authenticator: func(ctx *gin.Context) (any, error) {
 			// Get and parse login credentials
 			var loginVals authentication.Login
-			if err := c.ShouldBind(&loginVals); err != nil {
+			if err := ctx.ShouldBind(&loginVals); err != nil {
 				return "", jwt.ErrMissingLoginValues
 			}
 
 			// Create database controller
-			dbController := controllers.DatabaseController{DB: db}
+			dbController := controllers.DatabaseController{DBHandle: dbHandle}
 			// Get user object by username
 			user, err := dbController.GetUserByUsername(loginVals.Username)
 			if err != nil {
@@ -97,7 +97,7 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB
 			}
 		},
 		// Authorizator checks if user is authorized to emit operation
-		Authorizator: func(data any, c *gin.Context) bool {
+		Authorizator: func(data any, ctx *gin.Context) bool {
 			// If middleware is not user-aware, exit
 			if !userAware {
 				return true
@@ -110,7 +110,7 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB
 			}
 
 			// Get and convert parameter 'id' from request
-			idParam := c.Param("id")
+			idParam := ctx.Param("id")
 			var convErr error
 			var productID int
 			if productID, convErr = strconv.Atoi(idParam); convErr != nil {
@@ -118,13 +118,13 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB
 			}
 
 			// Create database controller
-			dbController := controllers.DatabaseController{DB: db}
+			dbController := controllers.DatabaseController{DBHandle: dbHandle}
 			// Call database controller function that returns owner state
 			return dbController.UserIsProductOwner(user.ID, productID)
 		},
 		// Unauthorized implements the return function if user is not authorized
-		Unauthorized: func(c *gin.Context, code int, message string) {
-			c.JSON(code, gin.H{
+		Unauthorized: func(ctx *gin.Context, code int, message string) {
+			ctx.JSON(code, gin.H{
 				"code":    code,
 				"message": message,
 			})
@@ -133,7 +133,7 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB
 }
 
 // SetupRouter creates the gin engine and associated middleware
-func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConfiguration, db *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine {
+func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine {
 	// Generate new gin instance
 	engine := gin.New()
 
@@ -142,25 +142,25 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 
 	// Pass references to gin context
 	// Logging
-	engine.Use(func(c *gin.Context) {
-		c.Set("logger", logger)
-		c.Next()
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("logger", logger)
+		ctx.Next()
 	})
 
 	// Database
-	engine.Use(func(c *gin.Context) {
-		c.Set("db", db)
-		c.Next()
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("dbHandle", dbHandle)
+		ctx.Next()
 	})
 
 	// OpenFoodFactsAPI Controller
-	engine.Use(func(c *gin.Context) {
-		c.Set("offacntrl", offacntrl)
-		c.Next()
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("offacntrl", offacntrl)
+		ctx.Next()
 	})
 
 	// Setup JWT authentication middleware
-	jwtMiddleware, jwtAuthSetupErr := JWTMiddleware(configuration, db, false)
+	jwtMiddleware, jwtAuthSetupErr := JWTMiddleware(configuration, dbHandle, false)
 	if jwtAuthSetupErr != nil {
 		logger.Error().Msgf("Error setting up authentication middleware: %s", jwtAuthSetupErr.Error())
 		panic("Error setting up authentication middleware")
@@ -173,7 +173,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	}
 
 	// Setup JWT authentication and authorization middleware, aka user-aware
-	jwtUserAwareMiddleware, jwtAuthSetupErr := JWTMiddleware(configuration, db, true)
+	jwtUserAwareMiddleware, jwtAuthSetupErr := JWTMiddleware(configuration, dbHandle, true)
 	if jwtAuthSetupErr != nil {
 		logger.Error().Msgf("Error setting up user-aware authentication middleware: %s", jwtAuthSetupErr.Error())
 		panic("Error setting up user-aware authentication middleware")
@@ -212,10 +212,10 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)
 
 	// Catch-All handler
-	engine.NoRoute(jwtMiddleware.MiddlewareFunc(), func(c *gin.Context) {
-		claims := jwt.ExtractClaims(c)
+	engine.NoRoute(jwtMiddleware.MiddlewareFunc(), func(ctx *gin.Context) {
+		claims := jwt.ExtractClaims(ctx)
 		logger.Error().Msgf("NoRoute claims: %#v\n", claims)
-		c.JSON(http.StatusNotFound, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
 	})
 
 	// Return engine to caller

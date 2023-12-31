@@ -4,6 +4,7 @@ package auth
 import (
 	"net/http"
 
+	"gitlab.com/Isotop7/expiro/api"
 	"gitlab.com/Isotop7/expiro/controllers"
 	"gitlab.com/Isotop7/expiro/models/authentication"
 
@@ -23,26 +24,26 @@ import (
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/auth/signup [post]
-func Signup(c *gin.Context) {
+func Signup(ctx *gin.Context) {
 	// Get logger instance from context
-	logger, _ := c.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
 	// Get database instance from context
-	db, ok := c.MustGet("db").(*gorm.DB)
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !ok {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
 		return
 	}
 
 	// Create database controller object
-	dbController := controllers.DatabaseController{DB: db}
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
 
 	// Parse request body to Login
 	var login authentication.Login
-	if err := c.ShouldBindJSON(&login); err != nil {
+	if err := ctx.ShouldBindJSON(&login); err != nil {
 		logger.Error().Msgf("Error parsing body: %s", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
 
@@ -56,14 +57,14 @@ func Signup(c *gin.Context) {
 	// Check if user object is valid
 	if !user.IsValid() {
 		logger.Error().Msgf("User data was invalid: ID = '%d'; Username = '%s'", user.ID, user.Username)
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid user data"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid user data"})
 		return
 	}
 
 	// Check if user with username already exists
 	if dbController.UserExists(user) {
 		logger.Error().Msgf("User '%s' already exists", user.Username)
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid user data"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid user data"})
 		return
 	}
 
@@ -71,11 +72,11 @@ func Signup(c *gin.Context) {
 	createError := dbController.CreateUser(&user)
 	if createError != nil {
 		logger.Error().Msgf("User '%s' with ID '%d' could not be created. Error: %s", user.Username, user.ID, createError.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid user data"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid user data"})
 		return
 	} else {
 		logger.Info().Msgf("New User '%s' with ID '%d' created", user.Username, user.ID)
-		c.JSON(http.StatusOK, gin.H{"message": "User was created"})
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
 		return
 	}
 }

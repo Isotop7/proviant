@@ -50,6 +50,11 @@ apidoc:
 	cd ./src && \
 	go run github.com/swaggo/swag/cmd/swag@latest init -g api/api.go --parseDependency
 
+.PHONY: doc
+doc:
+	@make packagedoc
+	@make apidoc
+
 # ==================================================================================== #
 # App
 # ==================================================================================== #

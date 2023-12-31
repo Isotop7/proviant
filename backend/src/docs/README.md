@@ -74,7 +74,7 @@ DatabaseController is the object struct for interacting with the gorm\-backed da
 
 ```go
 type DatabaseController struct {
-    DB *gorm.DB
+    DBHandle *gorm.DB
 }
 ```
 
@@ -204,7 +204,7 @@ NotificationController is the object struct to generate and send notifications f
 type NotificationController struct {
     Logger        *zerolog.Logger
     Configuration configuration.NotificationConfiguration
-    DB            *gorm.DB
+    DBHandle      *gorm.DB
 }
 ```
 
@@ -227,18 +227,19 @@ func (nc NotificationController) SendMail(product database.Product) error
 
 
 <a name="OpenFoodFactsAPIController"></a>
-## type [OpenFoodFactsAPIController](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/controllers/openfoodfactsapicontroller.go#L18-L20>)
+## type [OpenFoodFactsAPIController](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/controllers/openfoodfactsapicontroller.go#L19-L22>)
 
 OpenFoodFactsAPIController is the object struct for interacting with the API of OpenFoodFacts It uses the given configuration for accessing the API
 
 ```go
 type OpenFoodFactsAPIController struct {
+    Logger        *zerolog.Logger
     Configuration configuration.OpenFoodFactsConfiguration
 }
 ```
 
 <a name="OpenFoodFactsAPIController.GetDataset"></a>
-### func \(OpenFoodFactsAPIController\) [GetDataset](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/controllers/openfoodfactsapicontroller.go#L23>)
+### func \(OpenFoodFactsAPIController\) [GetDataset](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/controllers/openfoodfactsapicontroller.go#L25>)
 
 ```go
 func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database.Product, error)
@@ -386,8 +387,8 @@ router contains the gin router definitions and maps requests to handlers
 
 ## Index
 
-- [func JWTMiddleware\(configuration \*configuration.ExpiroConfiguration, db \*gorm.DB, userAware bool\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
-- [func SetupRouter\(logger \*zerolog.Logger, configuration \*configuration.ExpiroConfiguration, db \*gorm.DB, offacntrl controllers.OpenFoodFactsAPIController\) \*gin.Engine](<#SetupRouter>)
+- [func JWTMiddleware\(configuration \*configuration.ExpiroConfiguration, dbHandle \*gorm.DB, userAware bool\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
+- [func SetupRouter\(logger \*zerolog.Logger, configuration \*configuration.ExpiroConfiguration, dbHandle \*gorm.DB, offacntrl controllers.OpenFoodFactsAPIController\) \*gin.Engine](<#SetupRouter>)
 - [func ZerologMiddleware\(logger \*zerolog.Logger\) gin.HandlerFunc](<#ZerologMiddleware>)
 
 
@@ -395,7 +396,7 @@ router contains the gin router definitions and maps requests to handlers
 ## func [JWTMiddleware](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/router/router.go#L45>)
 
 ```go
-func JWTMiddleware(configuration *configuration.ExpiroConfiguration, db *gorm.DB, userAware bool) (*jwt.GinJWTMiddleware, error)
+func JWTMiddleware(configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, userAware bool) (*jwt.GinJWTMiddleware, error)
 ```
 
 JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization \(optional\)
@@ -404,7 +405,7 @@ JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authoriza
 ## func [SetupRouter](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/router/router.go#L136>)
 
 ```go
-func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConfiguration, db *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine
+func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine
 ```
 
 SetupRouter creates the gin engine and associated middleware
@@ -428,14 +429,14 @@ auth contains authentication method handlers
 
 ## Index
 
-- [func Signup\(c \*gin.Context\)](<#Signup>)
+- [func Signup\(ctx \*gin.Context\)](<#Signup>)
 
 
 <a name="Signup"></a>
-## func [Signup](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/auth/auth.go#L26>)
+## func [Signup](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/auth/auth.go#L27>)
 
 ```go
-func Signup(c *gin.Context)
+func Signup(ctx *gin.Context)
 ```
 
 Signup creates a new user object in the database @Summary Creates a new user @Description Creates a new new user in the database @Tags user @Accept json @Produce json @Param login body authentication.Login true "Login" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/signup \[post\]
@@ -450,14 +451,14 @@ common implements non\-specifc handlers
 
 ## Index
 
-- [func GetHealth\(c \*gin.Context\)](<#GetHealth>)
+- [func GetHealth\(ctx \*gin.Context\)](<#GetHealth>)
 
 
 <a name="GetHealth"></a>
 ## func [GetHealth](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/common/health.go#L19>)
 
 ```go
-func GetHealth(c *gin.Context)
+func GetHealth(ctx *gin.Context)
 ```
 
 GetHealth returns the health status of the backend @Summary Gets health @Description Gets health status of the backend @Tags common @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Router /api/health \[get\]
@@ -472,20 +473,20 @@ v1 implements version 1 of the expiro backend API
 
 ## Index
 
-- [func CreateProduct\(c \*gin.Context\)](<#CreateProduct>)
-- [func DeleteProduct\(c \*gin.Context\)](<#DeleteProduct>)
-- [func GetExpired\(c \*gin.Context\)](<#GetExpired>)
-- [func GetProduct\(c \*gin.Context\)](<#GetProduct>)
-- [func GetProducts\(c \*gin.Context\)](<#GetProducts>)
-- [func SetExpireAt\(c \*gin.Context\)](<#SetExpireAt>)
-- [func UpdateProduct\(c \*gin.Context\)](<#UpdateProduct>)
+- [func CreateProduct\(ctx \*gin.Context\)](<#CreateProduct>)
+- [func DeleteProduct\(ctx \*gin.Context\)](<#DeleteProduct>)
+- [func GetExpired\(ctx \*gin.Context\)](<#GetExpired>)
+- [func GetProduct\(ctx \*gin.Context\)](<#GetProduct>)
+- [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
+- [func SetExpireAt\(ctx \*gin.Context\)](<#SetExpireAt>)
+- [func UpdateProduct\(ctx \*gin.Context\)](<#UpdateProduct>)
 
 
 <a name="CreateProduct"></a>
 ## func [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L151>)
 
 ```go
-func CreateProduct(c *gin.Context)
+func CreateProduct(ctx *gin.Context)
 ```
 
 CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[post\]
@@ -494,16 +495,16 @@ CreateProduct creates a new product of a user @Summary Creates a new product @De
 ## func [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L309>)
 
 ```go
-func DeleteProduct(c *gin.Context)
+func DeleteProduct(ctx *gin.Context)
 ```
 
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
 
 <a name="GetExpired"></a>
-## func [GetExpired](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L457>)
+## func [GetExpired](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L456>)
 
 ```go
-func GetExpired(c *gin.Context)
+func GetExpired(ctx *gin.Context)
 ```
 
 GetExpired returns the list of all expired products of a user @Summary Gets expired products @Description Gets a list of expired products of a user @Tags product @Accept json @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/expired \[get\]
@@ -512,7 +513,7 @@ GetExpired returns the list of all expired products of a user @Summary Gets expi
 ## func [GetProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L85>)
 
 ```go
-func GetProduct(c *gin.Context)
+func GetProduct(ctx *gin.Context)
 ```
 
 GetProduct return a single product of a user @Summary Returns a single product @Description Returns a single product of user @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[get\]
@@ -521,7 +522,7 @@ GetProduct return a single product of a user @Summary Returns a single product @
 ## func [GetProducts](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L30>)
 
 ```go
-func GetProducts(c *gin.Context)
+func GetProducts(ctx *gin.Context)
 ```
 
 GetProducts returns the products of a user @Summary Return a list of products @Description Return a list of products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[get\]
@@ -530,7 +531,7 @@ GetProducts returns the products of a user @Summary Return a list of products @D
 ## func [SetExpireAt](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L366>)
 
 ```go
-func SetExpireAt(c *gin.Context)
+func SetExpireAt(ctx *gin.Context)
 ```
 
 SetExpireAt updates the expire date of a product of a user @Summary Updates the expire date @Description Updates the expire date of a product @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param timestamp body database.Timestamp true "Timestamp" @Success 200 \{object\} database.ProductDTOExpire @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/expire \[post\]
@@ -539,7 +540,7 @@ SetExpireAt updates the expire date of a product of a user @Summary Updates the 
 ## func [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/api/v1/product.go#L228>)
 
 ```go
-func UpdateProduct(c *gin.Context)
+func UpdateProduct(ctx *gin.Context)
 ```
 
 UpdateProduct updates a product of a user @Summary Updates a product @Description Updates a product with new values @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.Product true "Product" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[patch\]
@@ -609,6 +610,7 @@ configuration defines structs and methods for expiros configuration and specific
 - [type DatabaseConfiguration](<#DatabaseConfiguration>)
 - [type ExpiroConfiguration](<#ExpiroConfiguration>)
   - [func \(ec ExpiroConfiguration\) ValidateDatabaseConfiguration\(\) error](<#ExpiroConfiguration.ValidateDatabaseConfiguration>)
+  - [func \(ec ExpiroConfiguration\) ValidateOpenFoodFactsConfiguration\(\) error](<#ExpiroConfiguration.ValidateOpenFoodFactsConfiguration>)
 - [type LoggingConfiguration](<#LoggingConfiguration>)
 - [type NotificationConfiguration](<#NotificationConfiguration>)
 - [type OpenFoodFactsConfiguration](<#OpenFoodFactsConfiguration>)
@@ -659,13 +661,22 @@ type ExpiroConfiguration struct {
 ```
 
 <a name="ExpiroConfiguration.ValidateDatabaseConfiguration"></a>
-### func \(ExpiroConfiguration\) [ValidateDatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L66>)
+### func \(ExpiroConfiguration\) [ValidateDatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L77>)
 
 ```go
 func (ec ExpiroConfiguration) ValidateDatabaseConfiguration() error
 ```
 
 ValidateDatabaseConfiguration checks the current database configuration for common errors
+
+<a name="ExpiroConfiguration.ValidateOpenFoodFactsConfiguration"></a>
+### func \(ExpiroConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L66>)
+
+```go
+func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error
+```
+
+ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
 
 <a name="LoggingConfiguration"></a>
 ## type [LoggingConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/backend/src/models/configuration/configuration.go#L28-L31>)

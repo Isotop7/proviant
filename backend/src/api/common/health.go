@@ -16,6 +16,6 @@ import (
 // @Produce      	json
 // @Success      	200  {object}  api.APIResponse
 // @Router       	/api/health [get]
-func GetHealth(c *gin.Context) {
-	c.JSON(http.StatusOK, api.APIResponse{Message: "ok"})
+func GetHealth(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: "ok"})
 }

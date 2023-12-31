@@ -27,47 +27,47 @@ import (
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products [get]
-func GetProducts(c *gin.Context) {
+func GetProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := c.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
 	// Get and parse parameter limit
-	limitParam := c.Query("limit")
+	limitParam := ctx.Query("limit")
 	var limit int
 	var parseError error
 	if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
 		logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
 		return
 	}
 
 	// Get database instance from context
-	db, ok := c.MustGet("db").(*gorm.DB)
-	if !ok {
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Failed to get database from context"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Failed to get database from context"})
 		return
 	}
 
 	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(c)
+	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DB: db}
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
 	// Get products of user from database with optional limit
 	products, productBulkErr := dbController.GetUserProductsBulk(userID, limit)
 	if productBulkErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
 		return
 	} else {
-		c.JSON(http.StatusOK, products)
+		ctx.JSON(http.StatusOK, products)
 		return
 	}
 }
@@ -82,56 +82,56 @@ func GetProducts(c *gin.Context) {
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/product/{id} [get]
-func GetProduct(c *gin.Context) {
+func GetProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := c.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
 	// Get and parse parameter id
-	idParam := c.Param("id")
+	idParam := ctx.Param("id")
 	var productID int
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
 	// Get database instance from context
-	db, ok := c.MustGet("db").(*gorm.DB)
-	if !ok {
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
 		return
 	}
 
 	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(c)
+	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DB: db}
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
 	// Get product from database
 	product, getError := dbController.GetProductByID(productID, userID)
 
 	switch getError {
 	// No error: return product
 	case nil:
-		c.JSON(http.StatusOK, product)
+		ctx.JSON(http.StatusOK, product)
 		return
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' for user was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' for user was not found", productID)})
 		return
 	// Unspecified error
 	default:
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	}
 }
@@ -148,32 +148,32 @@ func GetProduct(c *gin.Context) {
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/product/{id} [post]
-func CreateProduct(c *gin.Context) {
+func CreateProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := c.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
 	// Get database instance from context
-	db, ok := c.MustGet("db").(*gorm.DB)
-	if !ok {
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
 		return
 	}
 
 	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(c)
+	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims["id"].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
 	// Get and parse body to product
 	var product database.Product
-	if err := c.ShouldBindJSON(&product); err != nil {
+	if err := ctx.ShouldBindJSON(&product); err != nil {
 		logger.Error().Msgf("Error parsing body: %s", err.Error())
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
 
@@ -181,15 +181,15 @@ func CreateProduct(c *gin.Context) {
 	// TODO: Do we need this or can we change struct annotation to required?
 	if product.Barcode == "" {
 		logger.Error().Msgf("Body is missing barcode")
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
 		return
 	}
 
 	// Get OpenFoodFacts API controller from context
-	offacntrl, ok := c.MustGet("offacntrl").(controllers.OpenFoodFactsAPIController)
-	if !ok {
+	offacntrl, offaErr := ctx.MustGet("offacntrl").(controllers.OpenFoodFactsAPIController)
+	if !offaErr {
 		logger.Error().Msg("Failed to get controller from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get controller from context"})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get controller from context"})
 		return
 	}
 	// Get product data from API
@@ -200,15 +200,15 @@ func CreateProduct(c *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DB: db}
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
 	// Create product in database
 	createResult := dbController.CreateProduct(userID, &product)
 	if createResult != nil {
 		logger.Error().Msgf("Error creating product: %s", createResult)
-		c.JSON(http.StatusInternalServerError, gin.H{"message": createResult})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: createResult.Error()})
 		return
 	} else {
-		c.JSON(http.StatusCreated, product)
+		ctx.JSON(http.StatusCreated, product)
 		return
 	}
 }
@@ -225,42 +225,42 @@ func CreateProduct(c *gin.Context) {
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/product/{id} [patch]
-func UpdateProduct(c *gin.Context) {
+func UpdateProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := c.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
 	// Get and parse parameter id
-	idParam := c.Param("id")
+	idParam := ctx.Param("id")
 	var productID int
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
 	// Get database instance from context
-	db, ok := c.MustGet("db").(*gorm.DB)
-	if !ok {
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
 		return
 	}
 
 	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(c)
+	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
 	// Get and parse body to product
 	var product database.Product
-	if err := c.ShouldBindJSON(&product); err != nil {
+	if err := ctx.ShouldBindJSON(&product); err != nil {
 		logger.Error().Msgf("Error parsing body: %s", err.Error())
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
 
@@ -268,29 +268,29 @@ func UpdateProduct(c *gin.Context) {
 	// TODO: Do we need this or can we change struct annotation to required?
 	if product.Barcode == "" {
 		logger.Error().Msgf("Body is missing barcode")
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
 		return
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DB: db}
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
 	// Update product in database
 	updateErr := dbController.UpdateProduct(productID, userID, &product)
 
 	switch updateErr {
 	// No error => product was updates
 	case nil:
-		c.JSON(http.StatusOK, product)
+		ctx.JSON(http.StatusOK, product)
 		return
 	// Requested product was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	// Unspecified error
 	default:
 		logger.Error().Msgf("Error saving product: %s", updateErr)
-		c.JSON(http.StatusInternalServerError, gin.H{"message": updateErr})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: updateErr.Error()})
 		return
 	}
 }
@@ -306,47 +306,47 @@ func UpdateProduct(c *gin.Context) {
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/product/{id} [delete]
-func DeleteProduct(c *gin.Context) {
+func DeleteProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := c.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
 	// Get and parse parameter id
-	idParam := c.Param("id")
+	idParam := ctx.Param("id")
 	var productID int
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
 	// Get database instance from context
-	db, ok := c.MustGet("db").(*gorm.DB)
-	if !ok {
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
 		return
 	}
 
 	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(c)
+	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DB: db}
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
 	// Delete product from database
 	deleteResult := dbController.DeleteProduct(productID, userID)
 	if deleteResult != nil {
 		logger.Error().Msgf("Error deleting product: %s", deleteResult)
-		c.JSON(http.StatusInternalServerError, api.APIResponse{Message: deleteResult.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: deleteResult.Error()})
 		return
 	} else {
-		c.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was deleted", productID)})
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was deleted", productID)})
 		return
 	}
 }
@@ -363,53 +363,52 @@ func DeleteProduct(c *gin.Context) {
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/product/{id}/expire [post]
-func SetExpireAt(c *gin.Context) {
+func SetExpireAt(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := c.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
 	// Get and parse parameter id
-	idParam := c.Param("id")
+	idParam := ctx.Param("id")
 	var productID int
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
 	}
 
 	// Get database instance from context
-	db, ok := c.MustGet("db").(*gorm.DB)
-	if !ok {
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
 		return
 	}
 
 	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(c)
+	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
 	// Get and parse body to timestamp
 	var expireAt database.Timestamp
 	var bindErr error
-	if bindErr = c.ShouldBindJSON(&expireAt); bindErr != nil {
+	if bindErr = ctx.ShouldBindJSON(&expireAt); bindErr != nil {
 		logger.Error().Msgf("Error parsing body: %s", bindErr.Error())
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: bindErr.Error()})
-		fmt.Println(bindErr.Error())
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: bindErr.Error()})
 		return
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DB: db}
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
 	product, getErr := dbController.GetProductByID(productID, userID)
 	if getErr != nil {
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	}
 
@@ -424,22 +423,22 @@ func SetExpireAt(c *gin.Context) {
 			Barcode:  product.Barcode,
 			ExpireAt: expireAt.Timestamp,
 		}
-		c.JSON(http.StatusOK, expireDTO)
+		ctx.JSON(http.StatusOK, expireDTO)
 		return
 	// Product was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' for user was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' for user was not found", productID)})
 		return
 	// Unspecified error
 	default:
 		logger.Error().Msgf("Error saving product: %s", updateErr)
-		c.JSON(http.StatusInternalServerError, gin.H{"message": updateErr})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: updateErr.Error()})
 		return
 	}
 }
@@ -454,39 +453,39 @@ func SetExpireAt(c *gin.Context) {
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/expired [get]
-func GetExpired(c *gin.Context) {
+func GetExpired(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := c.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
 	// Get database instance from context
-	db, ok := c.MustGet("db").(*gorm.DB)
-	if !ok {
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
 		logger.Error().Msg("Failed to get database from context")
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to get database from context"})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
 		return
 	}
 
 	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(c)
+	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg("Error getting user id from JWT token")
-		c.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
 		return
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DB: db}
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
 	// Get expired products of user from database
 	products, getExpiredErr := dbController.GetProductsExpired(userID)
 
 	// Check for error or return products
 	if getExpiredErr != nil {
 		logger.Error().Msgf("Error getting expired products: %s", getExpiredErr)
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Error getting expired products"})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting expired products"})
 		return
 	} else {
-		c.JSON(http.StatusOK, products)
+		ctx.JSON(http.StatusOK, products)
 		return
 	}
 }

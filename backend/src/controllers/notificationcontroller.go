@@ -18,7 +18,7 @@ import (
 type NotificationController struct {
 	Logger        *zerolog.Logger
 	Configuration configuration.NotificationConfiguration
-	DB            *gorm.DB
+	DBHandle      *gorm.DB
 }
 
 // Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them.
@@ -29,7 +29,7 @@ func (nc NotificationController) Dispatch() {
 		for {
 			// Get products with pending notification
 			var notificationProducts []database.Product
-			getError := nc.DB.
+			getError := nc.DBHandle.
 				Where("expire_at < ?", time.Now()).
 				Where("notified_at < ?", time.Now().Add(-(sleepInterval))).
 				Find(&notificationProducts)
@@ -59,16 +59,16 @@ func (nc NotificationController) Dispatch() {
 }
 
 func (nc NotificationController) SendMail(product database.Product) error {
-	m := gomail.NewMessage()
+	mail := gomail.NewMessage()
 
 	// Set E-Mail sender
-	m.SetHeader("From", nc.Configuration.FromAddress)
+	mail.SetHeader("From", nc.Configuration.FromAddress)
 
 	// Set E-Mail receivers
-	m.SetHeader("To", "") //TODO: Get user mail
+	mail.SetHeader("To", "") //TODO: Get user mail
 
 	subject := fmt.Sprintf("expiro - Warning - Product '%d' expired", product.ID)
-	m.SetHeader("Subject", subject)
+	mail.SetHeader("Subject", subject)
 
 	// Generate email body from template
 	templ, templErr := template.ParseFiles("templates/expired.html")
@@ -94,10 +94,10 @@ func (nc NotificationController) SendMail(product database.Product) error {
 	body := bodyBuf.String()
 
 	// Set body of mail to generated template output
-	m.SetBody("text/html", body)
+	mail.SetBody("text/html", body)
 
 	// Settings for SMTP server
-	d := gomail.NewDialer(
+	mailDialer := gomail.NewDialer(
 		nc.Configuration.SMTP.Host,
 		nc.Configuration.SMTP.Port,
 		nc.Configuration.SMTP.User,
@@ -105,20 +105,20 @@ func (nc NotificationController) SendMail(product database.Product) error {
 	)
 
 	// Set ssl mode
-	d.SSL = nc.Configuration.SMTP.SSL
+	mailDialer.SSL = nc.Configuration.SMTP.SSL
 
 	// Send mail and return error
-	err := d.DialAndSend(m)
+	err := mailDialer.DialAndSend(mail)
 	return err
 }
 
-func (nc NotificationController) updateNotifiedAt(id uint) bool {
+func (nc NotificationController) updateNotifiedAt(productID uint) bool {
 	// Product by id
 	var dbProduct database.Product
-	selectErr := nc.DB.First(&dbProduct, id)
+	selectErr := nc.DBHandle.First(&dbProduct, productID)
 
 	if selectErr.Error != nil {
-		nc.Logger.Error().Msgf("Product with ID '%d' was not found in database", int(id))
+		nc.Logger.Error().Msgf("Product with ID '%d' was not found in database", int(productID))
 		return false
 	}
 
@@ -126,6 +126,6 @@ func (nc NotificationController) updateNotifiedAt(id uint) bool {
 	dbProduct.NotifiedAt = time.Now()
 
 	// Save changes to database
-	nc.DB.Save(&dbProduct)
+	nc.DBHandle.Save(&dbProduct)
 	return true
 }
