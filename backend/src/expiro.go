@@ -17,7 +17,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -92,19 +91,14 @@ func main() {
 
 	// Check if external database can be accessed
 	if dbErr != nil {
-		cLogger.Warn().Msgf("Database '%s' with on server '%s' could not be reached, falling back to SQLite", configuration.Database.Name, configuration.Database.Host)
-		// If not, try to open embedded database
-		db, dbErr = gorm.Open(sqlite.Open("expiro.db"), &gormConfig)
-		// If sqlite database also fails to start, panic
-		if err != nil {
-			panic(dbErr)
-		}
+		cLogger.Warn().Msgf("Database '%s' with on server '%s' could not be reached", configuration.Database.Name, configuration.Database.Host)
+		panic(dbErr)
 	}
 
 	// Run migrations for database and check for errors
 	migrationError := db.AutoMigrate(
-		&database.Product{},
 		&authentication.User{},
+		&database.Product{},
 	)
 	if migrationError != nil {
 		panic(migrationError)

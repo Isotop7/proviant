@@ -21,7 +21,7 @@
 
 - **Frontend:** ~~Razor~~, HTML, CSS
 - **Backend:** Go, Gin, Gorm
-- **Database:** MariaDB or SQLite (fallback)
+- **Database:** MariaDB
 
 ## Installation and Usage
 

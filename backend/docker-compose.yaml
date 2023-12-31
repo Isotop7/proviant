@@ -1,0 +1,47 @@
+services:
+  database:
+    image: mariadb:11.0
+    restart: always
+    environment:
+      - MARIADB_DATABASE=expiro
+      - MARIADB_ROOT_PASSWORD=expiro
+      - MARIADB_USER=expiro
+      - MARIADB_PASSWORD=supersecretpassword
+    volumes:
+      - expirodb:/var/lib/mysql
+
+  smtp:
+    image: rnwood/smtp4dev:latest
+    restart: always
+    ports:
+      - "81:80"
+    volumes:
+      - smtpdb:/smtp4dev
+
+  expiro:
+    build: ./
+    restart: always
+    ports: 
+      - "80:5050"
+    depends_on:
+      - database
+    environment:
+      - GIN_MODE=debug
+      - EXPIRO_LOGGING_ENABLED=true
+      - EXPIRO_LOGGING_FILE=logs/expiro.log
+      - EXPIRO_DATABASE_HOST=database
+      - EXPIRO_DATABASE_USER=expiro
+      - EXPIRO_DATABASE_PASSWORD=supersecretpassword
+      - EXPIRO_NOTIFICATION_SMTP_HOST=smtp
+      - EXPIRO_NOTIFICATION_FROMADDRESS=expiro@yourdomain.com
+    volumes:
+      - expirologs:/app/logs
+    links:
+      - database
+      - smtp
+
+volumes:
+  expirodb: {}
+  expirologs: {}
+  smtpdb: {}
+  
