@@ -62,6 +62,7 @@ type ExpiroConfiguration struct {
 	OpenFoodFacts OpenFoodFactsConfiguration
 }
 
+// ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
 func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error {
 	if ec.OpenFoodFacts.URL == "" {
 		return errors.New("empty API URL for OpenFoodFacts specified")
