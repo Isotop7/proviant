@@ -11,14 +11,13 @@ import (
 
 	"github.com/rs/zerolog"
 	gomail "gopkg.in/mail.v2"
-	"gorm.io/gorm"
 )
 
 // NotificationController is the object struct to generate and send notifications for expired products
 type NotificationController struct {
-	Logger        *zerolog.Logger
-	Configuration configuration.NotificationConfiguration
-	DBHandle      *gorm.DB
+	Logger             *zerolog.Logger
+	Configuration      configuration.NotificationConfiguration
+	DatabaseController *DatabaseController
 }
 
 // Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them.
@@ -27,29 +26,14 @@ func (nc NotificationController) Dispatch() {
 	sleepInterval := time.Hour * time.Duration(nc.Configuration.Interval)
 	go func() {
 		for {
-			// Get products with pending notification
-			var notificationProducts []database.Product
-			getError := nc.DBHandle.
-				Where("expire_at < ?", time.Now()).
-				Where("notified_at < ?", time.Now().Add(-(sleepInterval))).
-				Find(&notificationProducts)
-
-			if getError.Error != nil {
-				nc.Logger.Error().Msg(getError.Error.Error())
+			// Get affected products
+			notificationProducts, getError := nc.DatabaseController.GetProductsExpiredAndNotificationPending(sleepInterval)
+			if getError != nil {
+				nc.Logger.Error().Msg(getError.Error())
 			}
 
-			for _, product := range notificationProducts {
-				nc.Logger.Info().Msgf("Sending notification for product with id '%d' and barcode '%s'", product.ID, product.Barcode)
-				sendError := nc.SendMail(product)
-				if sendError != nil {
-					nc.Logger.Error().Msg(sendError.Error())
-				} else {
-					nc.Logger.Info().Msg("Notification send successfully")
-					if nc.updateNotifiedAt(product.ID) {
-						nc.Logger.Info().Msg("Property NotifiedAt was updated")
-					}
-				}
-			}
+			// Generate notifications and send them
+			nc.generateNotifications(&notificationProducts)
 
 			// Sleep
 			nc.Logger.Info().Msgf("NotificationController is now sleeping for %d hours", nc.Configuration.Interval)
@@ -58,15 +42,50 @@ func (nc NotificationController) Dispatch() {
 	}()
 }
 
-func (nc NotificationController) SendMail(product database.Product) error {
+// generateNotifications uses a list of products and generates a notification for it
+func (nc NotificationController) generateNotifications(notificationProducts *[]database.Product) {
+	// Loop through products
+	for _, product := range *notificationProducts {
+		// Get user object of product
+		mailAddress, getError := nc.DatabaseController.GetUserMailAddressByID(product.UserID)
+		if getError != nil {
+			nc.Logger.Error().Msg(getError.Error())
+		}
+
+		// Sending notification
+		nc.Logger.Info().Msgf("Sending notification for product with id '%d' and barcode '%s' to '%s'", product.ID, product.Barcode, mailAddress)
+		sendError := nc.sendMail(product, mailAddress)
+
+		// Check for error
+		if sendError != nil {
+			nc.Logger.Error().Msg(sendError.Error())
+			break
+		} else {
+			nc.Logger.Info().Msg("Notification send successfully")
+		}
+
+		// Update notifiedAt timestamp
+		updateErr := nc.DatabaseController.SetProductNotifiedAt(product.ID)
+		if updateErr != nil {
+			nc.Logger.Error().Msg(updateErr.Error())
+		} else {
+			nc.Logger.Info().Msg("Property NotifiedAt was updated")
+		}
+	}
+}
+
+// sendMail sends the notification for a product to a recipient
+func (nc NotificationController) sendMail(product database.Product, recipient string) error {
+	// Create new mail object
 	mail := gomail.NewMessage()
 
-	// Set E-Mail sender
+	// Set sender
 	mail.SetHeader("From", nc.Configuration.FromAddress)
 
-	// Set E-Mail receivers
-	mail.SetHeader("To", "") //TODO: Get user mail
+	// Set recipient
+	mail.SetHeader("To", recipient)
 
+	// Set header
 	subject := fmt.Sprintf("expiro - Warning - Product '%d' expired", product.ID)
 	mail.SetHeader("Subject", subject)
 
@@ -87,14 +106,13 @@ func (nc NotificationController) SendMail(product database.Product) error {
 		Barcode:     product.Barcode,
 		ExpireAt:    product.ExpireAt,
 	})
+	// Check for templating errors
 	if templExecErr != nil {
 		return templExecErr
 	}
 
-	body := bodyBuf.String()
-
 	// Set body of mail to generated template output
-	mail.SetBody("text/html", body)
+	mail.SetBody("text/html", bodyBuf.String())
 
 	// Settings for SMTP server
 	mailDialer := gomail.NewDialer(
@@ -110,22 +128,4 @@ func (nc NotificationController) SendMail(product database.Product) error {
 	// Send mail and return error
 	err := mailDialer.DialAndSend(mail)
 	return err
-}
-
-func (nc NotificationController) updateNotifiedAt(productID uint) bool {
-	// Product by id
-	var dbProduct database.Product
-	selectErr := nc.DBHandle.First(&dbProduct, productID)
-
-	if selectErr.Error != nil {
-		nc.Logger.Error().Msgf("Product with ID '%d' was not found in database", int(productID))
-		return false
-	}
-
-	// Update notified_at
-	dbProduct.NotifiedAt = time.Now()
-
-	// Save changes to database
-	nc.DBHandle.Save(&dbProduct)
-	return true
 }

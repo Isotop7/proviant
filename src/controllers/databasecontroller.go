@@ -85,6 +85,23 @@ func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) boo
 	return product.UserID == userID
 }
 
+// GetUserMailAddressByID returns the mail address of a user by his ID
+func (dbc DatabaseController) GetUserMailAddressByID(userID uint) (string, error) {
+	// Get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	// Check for database error
+	if userErr != nil {
+		return "", userErr
+	}
+
+	// Check if mail address of user is empty or return it
+	if user.MailAddress != "" {
+		return user.MailAddress, nil
+	} else {
+		return "", errors.ErrUserHasNoMailAddress
+	}
+}
+
 // GetUserProductsBulk returns an array of products of a user (based on user ID)
 // The returned dataset can be limitied by supplying 'limit'
 // If the database operations return an error, the error is also returned (otherwise nil)
@@ -229,6 +246,25 @@ func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, exp
 	}
 }
 
+// SetProductNotifiedAt sets the notified_at timestamp to the current time
+func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error {
+	// Update NotifiedAt date
+	var dbProduct database.Product
+	getError := dbc.DBHandle.First(&dbProduct, productID)
+	if getError.Error != nil {
+		return getError.Error
+	}
+
+	// Update value or return error
+	dbProduct.NotifiedAt = time.Now()
+	saveResult := dbc.DBHandle.Save(&dbProduct)
+	if saveResult.Error != nil {
+		return saveResult.Error
+	} else {
+		return nil
+	}
+}
+
 // GetProductsExpired returns an array of products of a user (based on user ID) that are already expired
 // If the database operations return an error, the error is also returned (otherwise nil)
 // If the user has no products assigned, the function returns an empty dataset
@@ -248,4 +284,22 @@ func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Produc
 		}
 	}
 	return expiredProducts, nil
+}
+
+// GetProductsExpiredAndNotificationPending returns an array of products which are expired and have a pending notification
+func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error) {
+	// Get products with pending notification
+	var notificationProducts []database.Product
+	// Get expired products with pending notification
+	getError := dbc.DBHandle.
+		Where("expire_at < ?", time.Now()).
+		Where("notified_at < ?", time.Now().Add(-(sleepInterval))).
+		Find(&notificationProducts)
+
+	// Check for error or return product list
+	if getError.Error != nil {
+		return []database.Product{}, getError.Error
+	} else {
+		return notificationProducts, nil
+	}
 }

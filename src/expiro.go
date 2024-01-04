@@ -121,9 +121,9 @@ func main() {
 		cLogger.Info().Msg("Notifications are disabled")
 	} else {
 		notificationController := controllers.NotificationController{
-			Logger:        &cLogger,
-			Configuration: configuration.Notification,
-			DBHandle:      dbHandle,
+			Logger:             &cLogger,
+			Configuration:      configuration.Notification,
+			DatabaseController: &controllers.DatabaseController{DBHandle: dbHandle},
 		}
 		// Dispatch notification handler goroutine
 		notificationController.Dispatch()

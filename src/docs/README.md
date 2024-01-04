@@ -22,11 +22,24 @@ import "gitlab.com/Isotop7/expiro/api"
 
 ## Index
 
+- [Variables](<#variables>)
 - [type APIResponse](<#APIResponse>)
 
 
+## Variables
+
+<a name="ResponseErrInvalidUserData"></a>
+
+```go
+var (
+    ResponseErrInvalidUserData         = APIResponse{Message: "Invalid user data"}
+    ResponseErrDatabaseContextNotFound = APIResponse{Message: "Failed to get database from context"}
+    ResponseErrUserIDFromToken         = APIResponse{Message: "Error getting user id from JWT token"}
+)
+```
+
 <a name="APIResponse"></a>
-## type [APIResponse](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/api.go#L23-L25>)
+## type [APIResponse](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/api.go#L29-L31>)
 
 APIResponse is the data model for a generic API response
 
@@ -53,16 +66,18 @@ controllers implements different controllers used for accessing different APIs, 
   - [func \(dbc DatabaseController\) GetNextUserID\(\) uint](<#DatabaseController.GetNextUserID>)
   - [func \(dbc DatabaseController\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetProductByID>)
   - [func \(dbc DatabaseController\) GetProductsExpired\(userID uint\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpired>)
+  - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
   - [func \(dbc DatabaseController\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#DatabaseController.GetUserByID>)
   - [func \(dbc DatabaseController\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#DatabaseController.GetUserByUsername>)
+  - [func \(dbc DatabaseController\) GetUserMailAddressByID\(userID uint\) \(string, error\)](<#DatabaseController.GetUserMailAddressByID>)
   - [func \(dbc DatabaseController\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulk>)
   - [func \(dbc DatabaseController\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#DatabaseController.SetProductExpireAt>)
+  - [func \(dbc DatabaseController\) SetProductNotifiedAt\(productID uint\) error](<#DatabaseController.SetProductNotifiedAt>)
   - [func \(dbc DatabaseController\) UpdateProduct\(productID int, userID uint, product \*database.Product\) error](<#DatabaseController.UpdateProduct>)
   - [func \(dbc DatabaseController\) UserExists\(user authentication.User\) bool](<#DatabaseController.UserExists>)
   - [func \(dbc DatabaseController\) UserIsProductOwner\(userID uint, productID int\) bool](<#DatabaseController.UserIsProductOwner>)
 - [type NotificationController](<#NotificationController>)
   - [func \(nc NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
-  - [func \(nc NotificationController\) SendMail\(product database.Product\) error](<#NotificationController.SendMail>)
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
 
@@ -79,7 +94,7 @@ type DatabaseController struct {
 ```
 
 <a name="DatabaseController.CreateProduct"></a>
-### func \(DatabaseController\) [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L142>)
+### func \(DatabaseController\) [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L159>)
 
 ```go
 func (dbc DatabaseController) CreateProduct(userID uint, product *database.Product) error
@@ -97,7 +112,7 @@ func (dbc DatabaseController) CreateUser(user *authentication.User) error
 CreateUser creates a new user based on a given user object Before creation, the user password is hashed with brcypt If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.DeleteProduct"></a>
-### func \(DatabaseController\) [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L196>)
+### func \(DatabaseController\) [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L213>)
 
 ```go
 func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error
@@ -115,7 +130,7 @@ func (dbc DatabaseController) GetNextUserID() uint
 GetNextUserID returns the next available user ID
 
 <a name="DatabaseController.GetProductByID"></a>
-### func \(DatabaseController\) [GetProductByID](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L115>)
+### func \(DatabaseController\) [GetProductByID](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L132>)
 
 ```go
 func (dbc DatabaseController) GetProductByID(productID int, userID uint) (database.Product, error)
@@ -124,13 +139,22 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 GetProductByID returns a product object \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.GetProductsExpired"></a>
-### func \(DatabaseController\) [GetProductsExpired](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L235>)
+### func \(DatabaseController\) [GetProductsExpired](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L271>)
 
 ```go
 func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Product, error)
 ```
 
 GetProductsExpired returns an array of products of a user \(based on user ID\) that are already expired If the database operations return an error, the error is also returned \(otherwise nil\) If the user has no products assigned, the function returns an empty dataset
+
+<a name="DatabaseController.GetProductsExpiredAndNotificationPending"></a>
+### func \(DatabaseController\) [GetProductsExpiredAndNotificationPending](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L290>)
+
+```go
+func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error)
+```
+
+GetProductsExpiredAndNotificationPending returns an array of products which are expired and have a pending notification
 
 <a name="DatabaseController.GetUserByID"></a>
 ### func \(DatabaseController\) [GetUserByID](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L30>)
@@ -150,8 +174,17 @@ func (dbc DatabaseController) GetUserByUsername(username string) (authentication
 
 GetUserByUsername uses a given username and returns the matching user object If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.GetUserMailAddressByID"></a>
+### func \(DatabaseController\) [GetUserMailAddressByID](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L89>)
+
+```go
+func (dbc DatabaseController) GetUserMailAddressByID(userID uint) (string, error)
+```
+
+GetUserMailAddressByID returns the mail address of a user by his ID
+
 <a name="DatabaseController.GetUserProductsBulk"></a>
-### func \(DatabaseController\) [GetUserProductsBulk](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L91>)
+### func \(DatabaseController\) [GetUserProductsBulk](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L108>)
 
 ```go
 func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
@@ -160,7 +193,7 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 GetUserProductsBulk returns an array of products of a user \(based on user ID\) The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.SetProductExpireAt"></a>
-### func \(DatabaseController\) [SetProductExpireAt](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L210>)
+### func \(DatabaseController\) [SetProductExpireAt](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L227>)
 
 ```go
 func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error
@@ -168,8 +201,17 @@ func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, exp
 
 SetProductExpireAt updates the expiry date of a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.SetProductNotifiedAt"></a>
+### func \(DatabaseController\) [SetProductNotifiedAt](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L250>)
+
+```go
+func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error
+```
+
+SetProductNotifiedAt sets the notified\_at timestamp to the current time
+
 <a name="DatabaseController.UpdateProduct"></a>
-### func \(DatabaseController\) [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L156>)
+### func \(DatabaseController\) [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/databasecontroller.go#L173>)
 
 ```go
 func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product *database.Product) error
@@ -196,35 +238,26 @@ func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) boo
 UserIsProductOwner checks if user \(based on user ID\) is the matching owner of a product \(based on product ID\)
 
 <a name="NotificationController"></a>
-## type [NotificationController](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/notificationcontroller.go#L18-L22>)
+## type [NotificationController](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/notificationcontroller.go#L17-L21>)
 
 NotificationController is the object struct to generate and send notifications for expired products
 
 ```go
 type NotificationController struct {
-    Logger        *zerolog.Logger
-    Configuration configuration.NotificationConfiguration
-    DBHandle      *gorm.DB
+    Logger             *zerolog.Logger
+    Configuration      configuration.NotificationConfiguration
+    DatabaseController *DatabaseController
 }
 ```
 
 <a name="NotificationController.Dispatch"></a>
-### func \(NotificationController\) [Dispatch](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/notificationcontroller.go#L26>)
+### func \(NotificationController\) [Dispatch](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/notificationcontroller.go#L25>)
 
 ```go
 func (nc NotificationController) Dispatch()
 ```
 
 Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them. The timeout can be configured with the Configuration struct of NotificationController
-
-<a name="NotificationController.SendMail"></a>
-### func \(NotificationController\) [SendMail](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/notificationcontroller.go#L61>)
-
-```go
-func (nc NotificationController) SendMail(product database.Product) error
-```
-
-
 
 <a name="OpenFoodFactsAPIController"></a>
 ## type [OpenFoodFactsAPIController](<https://gitlab.com/Isotop7/expiro/blob/main/src/controllers/openfoodfactsapicontroller.go#L19-L22>)
@@ -300,6 +333,9 @@ errors contains custom error definitions
 var (
     // ErrMismatcherUserID occurs if a given user id mismatches the user id of a product owner
     ErrMismatcherUserID = errors.New("mismatching user id of requested product")
+
+    // ErrUserHasNoMailAddress is thrown if a given user has no mail address
+    ErrUserHasNoMailAddress = errors.New("user has no mail address")
 )
 ```
 
@@ -573,22 +609,23 @@ type Login struct {
 ```
 
 <a name="User"></a>
-## type [User](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/authentication/user.go#L11-L17>)
+## type [User](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/authentication/user.go#L11-L18>)
 
 User is the struct for the database definition and the JWT claims A single user can own many products
 
 ```go
 type User struct {
     gorm.Model
-    ID       uint   `gorm:"primaryKey,unique"`
-    Username string `json:"username"`
-    Password string `json:"-"`
-    Products []database.Product
+    ID          uint   `gorm:"primaryKey,unique"`
+    Username    string `json:"username"`
+    MailAddress string `json:"mailAddress"`
+    Password    string `json:"-"`
+    Products    []database.Product
 }
 ```
 
 <a name="User.IsValid"></a>
-### func \(User\) [IsValid](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/authentication/user.go#L20>)
+### func \(User\) [IsValid](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/authentication/user.go#L21>)
 
 ```go
 func (u User) IsValid() bool
