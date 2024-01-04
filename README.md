@@ -19,8 +19,7 @@
 
 ## Technologies and Tools
 
-- **Frontend:** ~~Razor~~, HTML, CSS
-- **Backend:** Go, Gin, Gorm
+- **API:** Go, Gin, Gorm
 - **Database:** MariaDB
 
 ## Installation and Usage
@@ -30,17 +29,17 @@
 #### Executable
 
 1. Clone the repository: `git clone https://gitlab.com/Isotop7/expiro.git`
-2. Navigate to the project directory: `cd expiro/backend/src`
+2. Navigate to the project directory: `cd expiro/src`
 3. Build the application: `go build -o expiro-backend`
 4. Copy the config file `config.yaml.tmpl`, rename it to `config.yaml` and adjust it
-5. Run the server: `./expiro-server`
+5. Run the server: `./expiro`
 6. ~~Start frontend server~~
 
 #### Docker
 
-_TODO: Add compose file_
+`expiro` can be started with [docker compose](./docker-compose.yaml).
 
-`expiro` can be configured with environment variables:
+The app can be configured with environment variables:
 
 ```bash
 # Server configuration
@@ -74,15 +73,13 @@ EXPIRO_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"   # Ad
 EXPIRO_OPENFOODFACTS_TIMEOUT=5                                              # Timeout of API requests to OpenFoodFacts API
 ```
 
-### Frontend
+Additionally `Gin` supports a debug mode, which also can be set with a environment variable:
 
-### Client
-
-*TODO*
+```bash
+GIN_MODE=debug
+```
 
 ## What's missing?
-
-### Backend
 
 - Authentication: Add authentication on the Web UI so only you can edit and delete your digital fridge
 - Administrative Functions: Create and Update backend users
@@ -90,13 +87,7 @@ EXPIRO_OPENFOODFACTS_TIMEOUT=5                                              # Ti
 - Documentation: Provide screenshots and basic help guide
 - Automated testing: Provide automated testing for better code qualitxy
 
-### Client
-
-- `expiro-esp`: Reference implementation of a ESP microcontroller and a connected barcode scanner to check in products
-
 ## Documentation
-
-### Backend
 
 Documentation is generated with `gomarkdoc`
 
