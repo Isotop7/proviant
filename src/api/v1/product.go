@@ -44,8 +44,8 @@ func GetProducts(ctx *gin.Context) {
 	// Get database instance from context
 	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !dbErr {
-		logger.Error().Msg("Failed to get database from context")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Failed to get database from context"})
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -53,8 +53,8 @@ func GetProducts(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
-		logger.Error().Msg("Error getting user id from JWT token")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
 		return
 	}
 
@@ -99,8 +99,8 @@ func GetProduct(ctx *gin.Context) {
 	// Get database instance from context
 	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !dbErr {
-		logger.Error().Msg("Failed to get database from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -108,8 +108,8 @@ func GetProduct(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
-		logger.Error().Msg("Error getting user id from JWT token")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
 		return
 	}
 
@@ -155,8 +155,8 @@ func CreateProduct(ctx *gin.Context) {
 	// Get database instance from context
 	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !dbErr {
-		logger.Error().Msg("Failed to get database from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -164,8 +164,8 @@ func CreateProduct(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims["id"].(float64))
 	if userID <= 0 {
-		logger.Error().Msg("Error getting user id from JWT token")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
 		return
 	}
 
@@ -242,8 +242,8 @@ func UpdateProduct(ctx *gin.Context) {
 	// Get database instance from context
 	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !dbErr {
-		logger.Error().Msg("Failed to get database from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -251,8 +251,8 @@ func UpdateProduct(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
-		logger.Error().Msg("Error getting user id from JWT token")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
 		return
 	}
 
@@ -323,8 +323,8 @@ func DeleteProduct(ctx *gin.Context) {
 	// Get database instance from context
 	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !dbErr {
-		logger.Error().Msg("Failed to get database from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -332,8 +332,8 @@ func DeleteProduct(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
-		logger.Error().Msg("Error getting user id from JWT token")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
 		return
 	}
 
@@ -380,8 +380,8 @@ func SetExpireAt(ctx *gin.Context) {
 	// Get database instance from context
 	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !dbErr {
-		logger.Error().Msg("Failed to get database from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -389,8 +389,8 @@ func SetExpireAt(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
-		logger.Error().Msg("Error getting user id from JWT token")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
 		return
 	}
 
@@ -460,8 +460,8 @@ func GetExpired(ctx *gin.Context) {
 	// Get database instance from context
 	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !dbErr {
-		logger.Error().Msg("Failed to get database from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -469,8 +469,8 @@ func GetExpired(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
-		logger.Error().Msg("Error getting user id from JWT token")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting user id from JWT token"})
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
 		return
 	}
 

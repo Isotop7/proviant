@@ -19,6 +19,12 @@
 // @externalDocs.url          https://swagger.io/resources/open-api/
 package api
 
+var (
+	ResponseErrInvalidUserData         = APIResponse{Message: "Invalid user data"}
+	ResponseErrDatabaseContextNotFound = APIResponse{Message: "Failed to get database from context"}
+	ResponseErrUserIDFromToken         = APIResponse{Message: "Error getting user id from JWT token"}
+)
+
 // APIResponse is the data model for a generic API response
 type APIResponse struct {
 	Message string `json:"message"`

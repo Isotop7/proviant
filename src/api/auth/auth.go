@@ -31,8 +31,8 @@ func Signup(ctx *gin.Context) {
 	// Get database instance from context
 	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !ok {
-		logger.Error().Msg("Failed to get database from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get database from context"})
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -57,14 +57,14 @@ func Signup(ctx *gin.Context) {
 	// Check if user object is valid
 	if !user.IsValid() {
 		logger.Error().Msgf("User data was invalid: ID = '%d'; Username = '%s'", user.ID, user.Username)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid user data"})
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
 		return
 	}
 
 	// Check if user with username already exists
 	if dbController.UserExists(user) {
 		logger.Error().Msgf("User '%s' already exists", user.Username)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid user data"})
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
 		return
 	}
 
@@ -72,7 +72,7 @@ func Signup(ctx *gin.Context) {
 	createError := dbController.CreateUser(&user)
 	if createError != nil {
 		logger.Error().Msgf("User '%s' with ID '%d' could not be created. Error: %s", user.Username, user.ID, createError.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid user data"})
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
 		return
 	} else {
 		logger.Info().Msgf("New User '%s' with ID '%d' created", user.Username, user.ID)

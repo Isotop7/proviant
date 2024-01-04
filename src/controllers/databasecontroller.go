@@ -41,7 +41,7 @@ func (dbc DatabaseController) UserExists(user authentication.User) bool {
 	var dbUser authentication.User
 	// Username must be unique
 	selectErr := dbc.DBHandle.First(&dbUser, "username = ?", user.Username)
-	return !(selectErr.Error == gorm.ErrRecordNotFound)
+	return selectErr.Error != gorm.ErrRecordNotFound
 }
 
 // GetNextUserID returns the next available user ID
