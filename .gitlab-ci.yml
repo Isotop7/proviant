@@ -1,5 +1,9 @@
 image: golang:latest
 
+variables:
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+  GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+
 stages:
   - test
   - build
@@ -14,10 +18,20 @@ check:
     - go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
     - go test -race $(go list ./... | grep -v /vendor/)
     - go mod verify
+
+sonarcloud-check:
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  stage: test
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - sonar-scanner
   rules:
-  - changes:
-    - src/**/*
-    - .gitlab-ci.yml
+  - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 lint:
   image: docker:cli
@@ -29,10 +43,6 @@ lint:
   script:
     - cd ./src
     - docker run -t --rm -v $(pwd):/app -w /app $DOCKER_IMAGE_NAME golangci-lint run -v -E gocritic --timeout "3m"
-  rules:
-  - changes:
-    - src/**/*
-    - .gitlab-ci.yml
 
 compile:
   stage: build
@@ -40,10 +50,6 @@ compile:
     - cd ./src
     - mkdir -p release
     - go build -o release ./...
-  rules:
-  - changes:
-    - src/**/*
-    - .gitlab-ci.yml
 
 docker-build:
   image: docker:cli
@@ -64,10 +70,7 @@ docker-build:
         docker push "$CI_REGISTRY_IMAGE:latest"
       fi
   rules:
-  - changes:
-    - src/**/*
-    - .gitlab-ci.yml
-    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+  - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
 
 docker-build-private:
   image: docker:cli
@@ -90,7 +93,4 @@ docker-build-private:
         docker push "$CI_REGISTRY_IMAGE:latest"
       fi
   rules:
-  - changes:
-    - src/**/*
-    - .gitlab-ci.yml
-    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+  - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
