@@ -89,7 +89,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Gets health status of the backend
+      description: Gets health status of the API
       produces:
       - application/json
       responses:

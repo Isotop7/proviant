@@ -30,10 +30,9 @@
 
 1. Clone the repository: `git clone https://gitlab.com/Isotop7/expiro.git`
 2. Navigate to the project directory: `cd expiro/src`
-3. Build the application: `go build -o expiro-backend`
+3. Build the application: `go build -o expiro`
 4. Copy the config file `config.yaml.tmpl`, rename it to `config.yaml` and adjust it
 5. Run the server: `./expiro`
-6. ~~Start frontend server~~
 
 #### Docker
 
@@ -82,7 +81,7 @@ GIN_MODE=debug
 ## What's missing?
 
 - Authentication: Add authentication on the Web UI so only you can edit and delete your digital fridge
-- Administrative Functions: Create and Update backend users
+- Administrative Functions: Create and Update users
 - Personalize fridge: Assign products to users or user groups, send notifications to assigned entity
 - Documentation: Provide screenshots and basic help guide
 - Automated testing: Provide automated testing for better code qualitxy
@@ -91,8 +90,8 @@ GIN_MODE=debug
 
 Documentation is generated with `gomarkdoc`
 
-- [Package documentation](./backend/src/docs/README.md)
-- [Swagger definition](./backend/src/docs/swagger.yaml) 
+- [Package documentation](./src/docs/README.md)
+- [Swagger definition](./src/docs/swagger.yaml) 
 
 ## Contributing
 

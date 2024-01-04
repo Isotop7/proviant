@@ -5,10 +5,10 @@ stages:
   - build
   - distribute
 
-check-backend:
+check:
   stage: test
   script:
-    - cd ./backend/src
+    - cd ./src
     - go fmt $(go list ./... | grep -v /vendor/)
     - go vet $(go list ./... | grep -v /vendor/)
     - go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
@@ -16,10 +16,10 @@ check-backend:
     - go mod verify
   rules:
   - changes:
-    - backend/src/**/*
+    - src/**/*
     - .gitlab-ci.yml
 
-lint-backend:
+lint:
   image: docker:cli
   stage: test
   services:
@@ -27,25 +27,25 @@ lint-backend:
   variables:
     DOCKER_IMAGE_NAME: golangci/golangci-lint:v1.55.2
   script:
-    - cd ./backend/src
+    - cd ./src
     - docker run -t --rm -v $(pwd):/app -w /app $DOCKER_IMAGE_NAME golangci-lint run -v -E gocritic --timeout "3m"
   rules:
   - changes:
-    - backend/src/**/*
+    - src/**/*
     - .gitlab-ci.yml
 
-compile-backend:
+compile:
   stage: build
   script:
-    - cd ./backend/src
+    - cd ./src
     - mkdir -p release
     - go build -o release ./...
   rules:
   - changes:
-    - backend/src/**/*
+    - src/**/*
     - .gitlab-ci.yml
 
-docker-build-backend:
+docker-build:
   image: docker:cli
   stage: distribute
   services:
@@ -55,7 +55,7 @@ docker-build-backend:
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
   script:
-    - cd ./backend/src
+    - cd ./src
     - docker build --pull -t "$DOCKER_IMAGE_NAME" ../
     - docker push "$DOCKER_IMAGE_NAME"
     - |
@@ -65,11 +65,11 @@ docker-build-backend:
       fi
   rules:
   - changes:
-    - backend/src/**/*
+    - src/**/*
     - .gitlab-ci.yml
     if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
 
-docker-build-backend-private:
+docker-build-private:
   image: docker:cli
   stage: distribute
   services:
@@ -81,7 +81,7 @@ docker-build-backend-private:
   before_script:
     - docker login -u "$PRIVATE_REGISTRY_USER" -p "$PRIVATE_REGISTRY_PASSWORD" $PRIVATE_REGISTRY
   script:
-    - cd ./backend/src
+    - cd ./src
     - docker build --pull -t "$DOCKER_IMAGE_NAME" ../
     - docker push "$DOCKER_IMAGE_NAME"
     - |
@@ -91,6 +91,6 @@ docker-build-backend-private:
       fi
   rules:
   - changes:
-    - backend/src/**/*
+    - src/**/*
     - .gitlab-ci.yml
     if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"

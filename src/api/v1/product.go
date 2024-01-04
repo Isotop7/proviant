@@ -1,4 +1,4 @@
-// v1 implements version 1 of the expiro backend API
+// v1 implements version 1 of the expiro API
 package v1
 
 import (

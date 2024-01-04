@@ -8,9 +8,9 @@ import (
 	"gitlab.com/Isotop7/expiro/api"
 )
 
-// GetHealth returns the health status of the backend
+// GetHealth returns the health status of the API
 // @Summary      	Gets health
-// @Description  	Gets health status of the backend
+// @Description  	Gets health status of the API
 // @Tags         	common
 // @Accept			json
 // @Produce      	json
