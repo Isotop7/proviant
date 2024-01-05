@@ -1,4 +1,4 @@
-![Expiro](./res/icons/logo_transparent.png){width=100%}
+![Expiro](./res/icons/header_1.png){width=100%}
 
 ![License](https://img.shields.io/gitlab/license/Isotop7/expiro)
 ![Release](https://gitlab.com/Isotop7/expiro/-/badges/release.svg)
@@ -20,11 +20,10 @@
 - 📝 Track and log your products.
 - 📊 Add information from OpenFoodFacts API.
 - ⏰ Get reminders if products are due to expire.
-- 📱 Mobile-friendly responsive design for on-the-go usage.
 
 ## Technologies and Tools
 
-- **API:** Go, Gin, Gorm
+- **API:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html)
 - **Database:** MariaDB
 
 ## Installation and Usage
@@ -85,11 +84,7 @@ GIN_MODE=debug
 
 ## What's missing?
 
-- Authentication: Add authentication on the Web UI so only you can edit and delete your digital fridge
 - Administrative Functions: Create and Update users
-- Personalize fridge: Assign products to users or user groups, send notifications to assigned entity
-- Documentation: Provide screenshots and basic help guide
-- Automated testing: Provide automated testing for better code qualitxy
 
 ## Documentation
 
