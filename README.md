@@ -1,10 +1,15 @@
-![Expiro](./res/icons/header_3.png){width=100%}
+![Expiro](./res/icons/logo_transparent.png){width=100%}
 
 ![License](https://img.shields.io/gitlab/license/Isotop7/expiro)
 ![Release](https://gitlab.com/Isotop7/expiro/-/badges/release.svg)
 ![CI @ main](https://gitlab.com/Isotop7/expiro/badges/main/pipeline.svg)
 ![CI @ develop](https://gitlab.com/Isotop7/expiro/badges/develop/pipeline.svg)
 ![Golang version](https://img.shields.io/badge/Go-1.21-green)
+
+
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_expiro&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Isotop7_expiro)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_expiro&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Isotop7_expiro)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_expiro&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Isotop7_expiro)
 
 ⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is **expiro**
 
