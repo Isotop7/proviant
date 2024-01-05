@@ -88,7 +88,7 @@ GIN_MODE=debug
 
 ## Documentation
 
-Documentation is generated with `gomarkdoc`
+Documentation is generated with `gomarkdoc` and `swagger`:
 
 - [Package documentation](./src/docs/README.md)
 - [Swagger definition](./src/docs/swagger.yaml) 
