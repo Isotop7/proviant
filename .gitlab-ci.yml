@@ -18,6 +18,9 @@ check:
     - go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
     - go test -race $(go list ./... | grep -v /vendor/)
     - go mod verify
+  rules:
+  - changes: 
+    - ./src
 
 sonarcloud-check:
   image:
@@ -31,7 +34,9 @@ sonarcloud-check:
   script:
     - sonar-scanner
   rules:
-  - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
+  - changes: 
+    - ./src
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 lint:
   image: docker:cli
@@ -43,6 +48,10 @@ lint:
   script:
     - cd ./src
     - docker run -t --rm -v $(pwd):/app -w /app $DOCKER_IMAGE_NAME golangci-lint run -v -E gocritic --timeout "3m"
+  rules:
+  - changes: 
+    - ./src
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 compile:
   stage: build
@@ -50,6 +59,10 @@ compile:
     - cd ./src
     - mkdir -p release
     - go build -o release ./...
+  rules:
+  - changes: 
+    - ./src
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 docker-build:
   image: docker:cli
@@ -70,7 +83,10 @@ docker-build:
         docker push "$CI_REGISTRY_IMAGE:latest"
       fi
   rules:
-  - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+  - changes: 
+    - ./src
+    - ./Dockerfile
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 docker-build-private:
   image: docker:cli
@@ -93,4 +109,7 @@ docker-build-private:
         docker push "$CI_REGISTRY_IMAGE:latest"
       fi
   rules:
-  - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+  - changes: 
+    - ./src
+    - ./Dockerfile
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
