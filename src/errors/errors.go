@@ -19,6 +19,6 @@ var (
 	// ErrUserAwareAuthMiddlewareInit is thrown when the user-aware authentication middleware fails to initialize
 	ErrUserAwareAuthMiddlewareInit = errors.New("error initializing user-aware authentication middleware")
 
-	// ErrParseBody is thrown when a body can't be parsed
+	// ErrParseBody is thrown when a body fails to parse
 	ErrParseBody = errors.New("error parsing body")
 )
