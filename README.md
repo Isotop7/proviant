@@ -49,6 +49,8 @@ The app can be configured with environment variables:
 EXPIRO_SERVER_PORT=5050                                                     # Listening port of server
 EXPIRO_SERVER_AUTHENTICATION_TOKENPASSWORD="secret key"                     # Secret used for JSON Web Tokens
 EXPIRO_SERVER_AUTHENTICATION_TOKENLIFETIME=8                                # Lifetime of JSON Web Tokens
+EXPIRO_SERVER_CORS_ALLOWALLORIGINS=true                                     # Allow all requests to API
+EXPIRO_SERVER_CORS_ALLOWEDORIGINS="http://localhost https://myapi.com"      # Allow this list of hosts to access API
 
 # Database configuration
 EXPIRO_DATABASE_HOST="127.0.0.1"                                            # Database server IP or hostname
