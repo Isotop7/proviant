@@ -16,6 +16,6 @@ go.work
 
 ## Custom
 src/config.yaml
-test/*.httpie
+src/test/*.httpie
 .vscode/
 expiro.log
