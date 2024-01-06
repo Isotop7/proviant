@@ -336,6 +336,12 @@ var (
 
     // ErrUserHasNoMailAddress is thrown if a given user has no mail address
     ErrUserHasNoMailAddress = errors.New("user has no mail address")
+
+    // ErrNoBarcodeFoundInImage is thrown when no barcode can be read from an image
+    ErrNoBarcodeFoundInImage = errors.New("error reading barcode from image")
+
+    // ErrBarcodeDecodeTimeoutExceeded is thrown when decoding a barcode from an image takes longer than the allowed timeout
+    ErrBarcodeDecodeTimeoutExceeded = errors.New("barcode decoding timeout reached")
 )
 ```
 
@@ -429,7 +435,7 @@ router contains the gin router definitions and maps requests to handlers
 
 
 <a name="JWTMiddleware"></a>
-## func [JWTMiddleware](<https://gitlab.com/Isotop7/expiro/blob/main/src/router/router.go#L45>)
+## func [JWTMiddleware](<https://gitlab.com/Isotop7/expiro/blob/main/src/router/router.go#L47>)
 
 ```go
 func JWTMiddleware(configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, userAware bool) (*jwt.GinJWTMiddleware, error)
@@ -438,7 +444,7 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, dbHandle *g
 JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization \(optional\)
 
 <a name="SetupRouter"></a>
-## func [SetupRouter](<https://gitlab.com/Isotop7/expiro/blob/main/src/router/router.go#L136>)
+## func [SetupRouter](<https://gitlab.com/Isotop7/expiro/blob/main/src/router/router.go#L138>)
 
 ```go
 func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine
@@ -447,7 +453,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 SetupRouter creates the gin engine and associated middleware
 
 <a name="ZerologMiddleware"></a>
-## func [ZerologMiddleware](<https://gitlab.com/Isotop7/expiro/blob/main/src/router/router.go#L25>)
+## func [ZerologMiddleware](<https://gitlab.com/Isotop7/expiro/blob/main/src/router/router.go#L27>)
 
 ```go
 func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc
@@ -514,12 +520,13 @@ v1 implements version 1 of the expiro API
 - [func GetExpired\(ctx \*gin.Context\)](<#GetExpired>)
 - [func GetProduct\(ctx \*gin.Context\)](<#GetProduct>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
+- [func ScanProduct\(ctx \*gin.Context\)](<#ScanProduct>)
 - [func SetExpireAt\(ctx \*gin.Context\)](<#SetExpireAt>)
 - [func UpdateProduct\(ctx \*gin.Context\)](<#UpdateProduct>)
 
 
 <a name="CreateProduct"></a>
-## func [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L151>)
+## func [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L159>)
 
 ```go
 func CreateProduct(ctx *gin.Context)
@@ -528,7 +535,7 @@ func CreateProduct(ctx *gin.Context)
 CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[post\]
 
 <a name="DeleteProduct"></a>
-## func [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L309>)
+## func [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L317>)
 
 ```go
 func DeleteProduct(ctx *gin.Context)
@@ -537,7 +544,7 @@ func DeleteProduct(ctx *gin.Context)
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
 
 <a name="GetExpired"></a>
-## func [GetExpired](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L456>)
+## func [GetExpired](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L464>)
 
 ```go
 func GetExpired(ctx *gin.Context)
@@ -546,7 +553,7 @@ func GetExpired(ctx *gin.Context)
 GetExpired returns the list of all expired products of a user @Summary Gets expired products @Description Gets a list of expired products of a user @Tags product @Accept json @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/expired \[get\]
 
 <a name="GetProduct"></a>
-## func [GetProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L85>)
+## func [GetProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L93>)
 
 ```go
 func GetProduct(ctx *gin.Context)
@@ -555,7 +562,7 @@ func GetProduct(ctx *gin.Context)
 GetProduct return a single product of a user @Summary Returns a single product @Description Returns a single product of user @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[get\]
 
 <a name="GetProducts"></a>
-## func [GetProducts](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L30>)
+## func [GetProducts](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L38>)
 
 ```go
 func GetProducts(ctx *gin.Context)
@@ -563,8 +570,17 @@ func GetProducts(ctx *gin.Context)
 
 GetProducts returns the products of a user @Summary Return a list of products @Description Return a list of products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[get\]
 
+<a name="ScanProduct"></a>
+## func [ScanProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L511>)
+
+```go
+func ScanProduct(ctx *gin.Context)
+```
+
+ScanProduct returns a barcode based on an image @Summary Scan product @Description Returns the barcode of a product in an uploaded image @Tags product @Accept json @Produce json @Success 200 \{object\} database.ProductDTOBarcode @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/scan \[post\]
+
 <a name="SetExpireAt"></a>
-## func [SetExpireAt](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L366>)
+## func [SetExpireAt](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L374>)
 
 ```go
 func SetExpireAt(ctx *gin.Context)
@@ -573,7 +589,7 @@ func SetExpireAt(ctx *gin.Context)
 SetExpireAt updates the expire date of a product of a user @Summary Updates the expire date @Description Updates the expire date of a product @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param timestamp body database.Timestamp true "Timestamp" @Success 200 \{object\} database.ProductDTOExpire @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/expire \[post\]
 
 <a name="UpdateProduct"></a>
-## func [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L228>)
+## func [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/main/src/api/v1/product.go#L236>)
 
 ```go
 func UpdateProduct(ctx *gin.Context)
@@ -644,6 +660,7 @@ configuration defines structs and methods for expiros configuration and specific
 ## Index
 
 - [type AuthenticationConfiguration](<#AuthenticationConfiguration>)
+- [type CorsConfiguration](<#CorsConfiguration>)
 - [type DatabaseConfiguration](<#DatabaseConfiguration>)
 - [type ExpiroConfiguration](<#ExpiroConfiguration>)
   - [func \(ec ExpiroConfiguration\) ValidateDatabaseConfiguration\(\) error](<#ExpiroConfiguration.ValidateDatabaseConfiguration>)
@@ -667,6 +684,18 @@ type AuthenticationConfiguration struct {
 }
 ```
 
+<a name="CorsConfiguration"></a>
+## type [CorsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L22-L25>)
+
+CorsConfiguration contains all properties for the CORS configuration of the expiro server
+
+```go
+type CorsConfiguration struct {
+    AllowAllOrigins bool
+    AllowedOrigins  []string
+}
+```
+
 <a name="DatabaseConfiguration"></a>
 ## type [DatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L7-L13>)
 
@@ -683,7 +712,7 @@ type DatabaseConfiguration struct {
 ```
 
 <a name="ExpiroConfiguration"></a>
-## type [ExpiroConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L57-L63>)
+## type [ExpiroConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L64-L70>)
 
 ExpiroConfiguration is the configuration wrapper struct
 
@@ -698,7 +727,7 @@ type ExpiroConfiguration struct {
 ```
 
 <a name="ExpiroConfiguration.ValidateDatabaseConfiguration"></a>
-### func \(ExpiroConfiguration\) [ValidateDatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L77>)
+### func \(ExpiroConfiguration\) [ValidateDatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L84>)
 
 ```go
 func (ec ExpiroConfiguration) ValidateDatabaseConfiguration() error
@@ -707,7 +736,7 @@ func (ec ExpiroConfiguration) ValidateDatabaseConfiguration() error
 ValidateDatabaseConfiguration checks the current database configuration for common errors
 
 <a name="ExpiroConfiguration.ValidateOpenFoodFactsConfiguration"></a>
-### func \(ExpiroConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L66>)
+### func \(ExpiroConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L73>)
 
 ```go
 func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error
@@ -716,7 +745,7 @@ func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error
 ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
 
 <a name="LoggingConfiguration"></a>
-## type [LoggingConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L28-L31>)
+## type [LoggingConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L35-L38>)
 
 LoggingConfiguration contains all properties regarding the log configuration for zerolog
 
@@ -728,7 +757,7 @@ type LoggingConfiguration struct {
 ```
 
 <a name="NotificationConfiguration"></a>
-## type [NotificationConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L43-L48>)
+## type [NotificationConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L50-L55>)
 
 NotificationConfiguration contains all properties regarding the notification handler
 
@@ -742,7 +771,7 @@ type NotificationConfiguration struct {
 ```
 
 <a name="OpenFoodFactsConfiguration"></a>
-## type [OpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L51-L54>)
+## type [OpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L58-L61>)
 
 OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
 
@@ -754,7 +783,7 @@ type OpenFoodFactsConfiguration struct {
 ```
 
 <a name="SMTPConfiguration"></a>
-## type [SMTPConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L34-L40>)
+## type [SMTPConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L41-L47>)
 
 SMTPConfiguration contains all properties regarding the notification handler target
 
@@ -769,7 +798,7 @@ type SMTPConfiguration struct {
 ```
 
 <a name="ServerConfiguration"></a>
-## type [ServerConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L22-L25>)
+## type [ServerConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L28-L32>)
 
 ServerConfiguration contains all properties regarding the expiro server
 
@@ -777,6 +806,7 @@ ServerConfiguration contains all properties regarding the expiro server
 type ServerConfiguration struct {
     Port           int
     Authentication AuthenticationConfiguration
+    CORS           CorsConfiguration
 }
 ```
 
@@ -795,6 +825,7 @@ database contains the database specific definitions and models
   - [func \(d Date\) MarshalJSON\(\) \(\[\]byte, error\)](<#Date.MarshalJSON>)
   - [func \(d \*Date\) UnmarshalJSON\(b \[\]byte\) error](<#Date.UnmarshalJSON>)
 - [type Product](<#Product>)
+- [type ProductDTOBarcode](<#ProductDTOBarcode>)
 - [type ProductDTOExpire](<#ProductDTOExpire>)
 - [type Timestamp](<#Timestamp>)
 
@@ -852,6 +883,17 @@ type Product struct {
     ScannedAt   time.Time `json:"scannedAt"`
     NotifiedAt  time.Time `json:"notifiedAt"`
     UserID      uint      `json:"userID"`
+}
+```
+
+<a name="ProductDTOBarcode"></a>
+## type [ProductDTOBarcode](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/database/product.go#L31-L33>)
+
+ProductDTOBarcode is a simplified DTO only containing a barcode
+
+```go
+type ProductDTOBarcode struct {
+    Barcode string `json:"barcode"`
 }
 ```
 
@@ -958,6 +1000,9 @@ var (
 
     // Configuration for value lookup in token
     TokenLookup = "header: Authorization, query: token, cookie: jwt"
+
+    // BarcodeDecodingTimeout is the timoeut of the decoding operation in seconds
+    BarcodeDecodingTimeout = time.Second * time.Duration(5)
 )
 ```
 

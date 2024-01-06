@@ -2,9 +2,15 @@
 package v1
 
 import (
+	"context"
 	"fmt"
+	"image"
 	"net/http"
 	"strconv"
+
+	"image/draw"
+	_ "image/jpeg"
+	_ "image/png"
 
 	"gitlab.com/Isotop7/expiro/api"
 	"gitlab.com/Isotop7/expiro/controllers"
@@ -14,6 +20,8 @@ import (
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/makiuchi-d/gozxing"
+	"github.com/makiuchi-d/gozxing/oned"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
@@ -488,4 +496,110 @@ func GetExpired(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, products)
 		return
 	}
+}
+
+// ScanProduct returns a barcode based on an image
+// @Summary      	Scan product
+// @Description  	Returns the barcode of a product in an uploaded image
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Success      	200  {object}  database.ProductDTOBarcode
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/products/scan [post]
+func ScanProduct(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Create variables
+	var decodedBarcode string
+
+	// Create decoding context
+	decodingTimeout := static.BarcodeDecodingTimeout
+	decodingContext, cancel := context.WithTimeout(context.Background(), decodingTimeout)
+	defer cancel()
+	decodingProcessChannel := make(chan bool)
+
+	// Decode image
+	go func() {
+		// Read file from form
+		file, formErr := ctx.FormFile("image")
+		if formErr != nil {
+			logger.Error().Msgf("Error reading image from body: %s", formErr.Error())
+			ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
+			decodingProcessChannel <- false
+			return
+		}
+
+		// Open file from form
+		src, openErr := file.Open()
+		if openErr != nil {
+			logger.Error().Msgf("Error opening file: %s", openErr.Error())
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
+			decodingProcessChannel <- false
+			return
+		}
+
+		// Decode file from form as image
+		img, format, decodeErr := image.Decode(src)
+		if decodeErr != nil {
+			logger.Error().Msgf("Error decoding image as type %s: %s", format, decodeErr.Error())
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
+			decodingProcessChannel <- false
+			return
+		} else {
+			logger.Info().Msgf("Decoded image of type '%s' from body", format)
+		}
+
+		// Convert image to gray scale image
+		convertedImage := image.NewGray(img.Bounds())
+		draw.Draw(convertedImage, convertedImage.Bounds(), img, img.Bounds().Min, draw.Src)
+
+		// Convert gray scaled image to binary bitmap
+		bmp, bmpErr := gozxing.NewBinaryBitmapFromImage(convertedImage)
+		if bmpErr != nil {
+			logger.Error().Msgf("Error converting image to bitmap: %s", bmpErr.Error())
+			ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
+			decodingProcessChannel <- false
+			return
+		}
+
+		// Create EAN13 scanner and hints
+		scanner := oned.NewEAN13Reader()
+		hints := map[gozxing.DecodeHintType]interface{}{
+			gozxing.DecodeHintType_TRY_HARDER:             true,
+			gozxing.DecodeHintType_ALLOWED_EAN_EXTENSIONS: true,
+			gozxing.DecodeHintType_ALSO_INVERTED:          true,
+		}
+
+		// Decode image and try to find barcode
+		code, scanErr := scanner.Decode(bmp, hints)
+		if scanErr != nil {
+			logger.Error().Msgf("Error decoding image when finding barcode: %s", scanErr.Error())
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
+			return
+		} else {
+			decodedBarcode = code.GetText()
+		}
+		// Signal success
+		decodingProcessChannel <- true
+	}()
+
+	// Wait for success or timeout
+	select {
+	case <-decodingContext.Done():
+		// Timeout was reached, error is returned
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.ErrBarcodeDecodeTimeoutExceeded.Error()})
+		return
+	case success := <-decodingProcessChannel:
+		// Timeout was not reached and channel signaled success on decoding barcode
+		if success {
+			ctx.JSON(http.StatusOK, database.ProductDTOBarcode{Barcode: decodedBarcode})
+			return
+		}
+	}
+
+	// Return if timeout was not reached but channel did not signal success
+	ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
 }

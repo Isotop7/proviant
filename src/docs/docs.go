@@ -357,6 +357,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/scan": {
+            "post": {
+                "description": "Returns the barcode of a product in an uploaded image",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Scan product",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.ProductDTOBarcode"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/signup": {
             "post": {
                 "description": "Creates a new new user in the database",
@@ -469,6 +504,14 @@ const docTemplate = `{
                 },
                 "userID": {
                     "type": "integer"
+                }
+            }
+        },
+        "database.ProductDTOBarcode": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
                 }
             }
         },

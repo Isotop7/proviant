@@ -26,3 +26,8 @@ type ProductDTOExpire struct {
 	Barcode  string `json:"barcode"`
 	ExpireAt Date   `json:"expireAt"`
 }
+
+// ProductDTOBarcode is a simplified DTO only containing a barcode
+type ProductDTOBarcode struct {
+	Barcode string `json:"barcode"`
+}

@@ -44,6 +44,11 @@ definitions:
       userID:
         type: integer
     type: object
+  database.ProductDTOBarcode:
+    properties:
+      barcode:
+        type: string
+    type: object
   database.ProductDTOExpire:
     properties:
       barcode:
@@ -304,6 +309,29 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Gets expired products
+      tags:
+      - product
+  /api/v1/products/scan:
+    post:
+      consumes:
+      - application/json
+      description: Returns the barcode of a product in an uploaded image
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/database.ProductDTOBarcode'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Scan product
       tags:
       - product
   /auth/signup:

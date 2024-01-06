@@ -4,6 +4,7 @@ package router
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"gitlab.com/Isotop7/expiro/api/auth"
@@ -15,6 +16,7 @@ import (
 	"gitlab.com/Isotop7/expiro/models/configuration/static"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
@@ -140,6 +142,20 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	// Inject logging middleware
 	engine.Use(ZerologMiddleware(logger), gin.Recovery())
 
+	// Setup cors
+	corsConfig := cors.DefaultConfig()
+	// Check if any origin is allowed or set list
+	if configuration.Server.CORS.AllowAllOrigins {
+		corsConfig.AllowAllOrigins = true
+		logger.Info().Msg("Allowed all CORS origins")
+	} else {
+		corsConfig.AllowAllOrigins = false
+		corsConfig.AllowOrigins = configuration.Server.CORS.AllowedOrigins
+		logger.Info().Msgf("Allowed CORS origins: %s", strings.Join(configuration.Server.CORS.AllowedOrigins, "; "))
+	}
+	corsConfig.AllowCredentials = true
+	engine.Use(cors.New(corsConfig))
+
 	// Pass references to gin context
 	// Logging
 	engine.Use(func(ctx *gin.Context) {
@@ -202,6 +218,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	publicProductAPI.GET("", v1.GetProducts)
 	publicProductAPI.GET("/expired", v1.GetExpired)
 	publicProductAPI.POST("", v1.CreateProduct)
+	publicProductAPI.POST("/scan", v1.ScanProduct)
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")

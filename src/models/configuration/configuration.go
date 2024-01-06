@@ -18,10 +18,17 @@ type AuthenticationConfiguration struct {
 	TokenLifetime int
 }
 
+// CorsConfiguration contains all properties for the CORS configuration of the expiro server
+type CorsConfiguration struct {
+	AllowAllOrigins bool
+	AllowedOrigins  []string
+}
+
 // ServerConfiguration contains all properties regarding the expiro server
 type ServerConfiguration struct {
 	Port           int
 	Authentication AuthenticationConfiguration
+	CORS           CorsConfiguration
 }
 
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog

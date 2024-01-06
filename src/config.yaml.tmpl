@@ -4,6 +4,11 @@ server:
   authentication:
     tokenPassword: "secret key"
     tokenLifetime: 8
+  cors:
+    allowAllOrigins: false
+    allowedOrigins:
+      - "http://localhost"
+      - "http://myexpiro.instance"
 
 database:
   host: 127.0.0.1
