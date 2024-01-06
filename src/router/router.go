@@ -11,6 +11,7 @@ import (
 	"gitlab.com/Isotop7/expiro/api/common"
 	v1 "gitlab.com/Isotop7/expiro/api/v1"
 	"gitlab.com/Isotop7/expiro/controllers"
+	"gitlab.com/Isotop7/expiro/errors"
 	"gitlab.com/Isotop7/expiro/models/authentication"
 	"gitlab.com/Isotop7/expiro/models/configuration"
 	"gitlab.com/Isotop7/expiro/models/configuration/static"
@@ -184,21 +185,21 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	// Initialize JWT authentication middleware
 	jwtAuthMiddlewareInitErr := jwtMiddleware.MiddlewareInit()
 	if jwtAuthMiddlewareInitErr != nil {
-		logger.Error().Msg("Error initializing user-aware authentication middleware")
+		logger.Error().Msg("Error initializing authentication middleware")
 		panic("Error initializing authentication middleware")
 	}
 
 	// Setup JWT authentication and authorization middleware, aka user-aware
 	jwtUserAwareMiddleware, jwtAuthSetupErr := JWTMiddleware(configuration, dbHandle, true)
 	if jwtAuthSetupErr != nil {
-		logger.Error().Msgf("Error setting up user-aware authentication middleware: %s", jwtAuthSetupErr.Error())
-		panic("Error setting up user-aware authentication middleware")
+		logger.Error().Msgf("%s: %s", errors.ErrUserAwareAuthMiddlewareInit.Error(), jwtAuthSetupErr.Error())
+		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
 	}
 	// Initialize JWT authentication and authorization middleware
 	jwtAuthUserAwareMiddlewareInitErr := jwtUserAwareMiddleware.MiddlewareInit()
 	if jwtAuthUserAwareMiddlewareInitErr != nil {
-		logger.Error().Msg("Error initializing user-aware authentication middleware")
-		panic("Error initializing user-aware authentication middleware")
+		logger.Error().Msg(errors.ErrUserAwareAuthMiddlewareInit.Error())
+		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
 	}
 
 	// Map routes to handlers
