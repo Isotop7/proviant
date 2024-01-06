@@ -20,7 +20,7 @@ check:
     - go mod verify
   rules:
   - changes: 
-    - ./src/**/*
+    - src/**/*
 
 sonarcloud-check:
   image:
@@ -35,7 +35,7 @@ sonarcloud-check:
     - sonar-scanner
   rules:
   - changes: 
-    - ./src/**/*
+    - src/**/*
     if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 lint:
@@ -50,7 +50,7 @@ lint:
     - docker run -t --rm -v $(pwd):/app -w /app $DOCKER_IMAGE_NAME golangci-lint run -v -E gocritic --timeout "3m"
   rules:
   - changes: 
-    - ./src/**/*
+    - src/**/*
     if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 compile:
@@ -61,7 +61,7 @@ compile:
     - go build -o release ./...
   rules:
   - changes: 
-    - ./src/**/*
+    - src/**/*
     if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 docker-build:
@@ -84,8 +84,8 @@ docker-build:
       fi
   rules:
   - changes: 
-    - ./src/**/*
-    - ./Dockerfile
+    - src/**/*
+    - Dockerfile
     if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 docker-build-private:
@@ -110,6 +110,6 @@ docker-build-private:
       fi
   rules:
   - changes: 
-    - ./src/**/*
-    - ./Dockerfile
+    - src/**/*
+    - Dockerfile
     if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
