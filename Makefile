@@ -42,13 +42,13 @@ lint:
 .PHONY: packagedoc
 packagedoc:
 	cd ./src && \
-	go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest --output docs/README.md ./...
+	go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest --output ../docs/README.md ./...
 
 ## apidoc: generates API documentation
 .PHONY: apidoc
 apidoc:
 	cd ./src && \
-	go run github.com/swaggo/swag/cmd/swag@latest init -g api/api.go --parseDependency
+	go run github.com/swaggo/swag/cmd/swag@latest init -g api/api.go --parseDependency -o ../docs/
 
 .PHONY: doc
 doc:
