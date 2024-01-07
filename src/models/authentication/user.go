@@ -19,5 +19,5 @@ type User struct {
 
 // IsValid is a simple validator function to check for valid properties
 func (u User) IsValid() bool {
-	return u.ID > 0 && u.Username != "" && u.Password != "" && u.MailAddress != ""
+	return u.ID > 0 && u.Username != "" && u.Password != ""
 }
