@@ -77,3 +77,9 @@ rundocker:
 	@make dockerimage
 	cd ./src && \
 	docker run -t --rm -v ./config.yaml.tmpl:/app/config.yaml expiro:latest
+
+.PHONY: rundockerdebug
+rundockerdebug:
+	@make dockerimage
+	cd ./src && \
+	docker run -it --rm -v ./config.yaml.tmpl:/app/config.yaml --entrypoint /bin/sh expiro:latest
