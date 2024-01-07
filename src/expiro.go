@@ -49,12 +49,17 @@ func main() {
 	// Check if logging to file was enabled
 	if configuration.Logging.Enabled {
 		// Create multi writer for file and terminal logging
-		fileLogger, _ := os.OpenFile(
+		logFile, logFileOpenErr := os.OpenFile(
 			configuration.Logging.File,
 			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
 			0664,
 		)
-		multi := zerolog.MultiLevelWriter(fileLogger, zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime})
+		// Check of logfile could be opened
+		if logFileOpenErr != nil {
+			panic(logFileOpenErr.Error())
+		}
+		// Add logfile to logging writers
+		multi := zerolog.MultiLevelWriter(logFile, zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime})
 		cLogger = zerolog.New(multi).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
 	} else {
 		// Create writer to terminal
