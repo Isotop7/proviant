@@ -150,12 +150,11 @@ func GetProduct(ctx *gin.Context) {
 // @Tags         	product
 // @Accept			json
 // @Produce      	json
-// @Param        	id   path      int  true  "Product ID"
 // @Param			product	body	database.Product	true	"Product"
 // @Success      	201  {object}  database.Product
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
-// @Router       	/api/v1/product/{id} [post]
+// @Router       	/api/v1/products [post]
 func CreateProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)

@@ -194,40 +194,6 @@ paths:
       summary: Updates a product
       tags:
       - product
-    post:
-      consumes:
-      - application/json
-      description: Creates a new product of a user
-      parameters:
-      - description: Product ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Product
-        in: body
-        name: product
-        required: true
-        schema:
-          $ref: '#/definitions/database.Product'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/database.Product'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Creates a new product
-      tags:
-      - product
   /api/v1/product/{id}/expire:
     post:
       consumes:
@@ -284,6 +250,35 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Return a list of products
+      tags:
+      - product
+    post:
+      consumes:
+      - application/json
+      description: Creates a new product of a user
+      parameters:
+      - description: Product
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/database.Product'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/database.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Creates a new product
       tags:
       - product
   /api/v1/products/expired:

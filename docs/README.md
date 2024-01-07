@@ -500,16 +500,16 @@ v1 implements version 1 of the expiro API
 
 
 <a name="CreateProduct"></a>
-## func [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L159>)
+## func [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L158>)
 
 ```go
 func CreateProduct(ctx *gin.Context)
 ```
 
-CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[post\]
+CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
 
 <a name="DeleteProduct"></a>
-## func [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L315>)
+## func [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L314>)
 
 ```go
 func DeleteProduct(ctx *gin.Context)
@@ -518,7 +518,7 @@ func DeleteProduct(ctx *gin.Context)
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
 
 <a name="GetExpired"></a>
-## func [GetExpired](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L462>)
+## func [GetExpired](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L461>)
 
 ```go
 func GetExpired(ctx *gin.Context)
@@ -545,7 +545,7 @@ func GetProducts(ctx *gin.Context)
 GetProducts returns the products of a user @Summary Return a list of products @Description Return a list of products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[get\]
 
 <a name="ScanProduct"></a>
-## func [ScanProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L509>)
+## func [ScanProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L508>)
 
 ```go
 func ScanProduct(ctx *gin.Context)
@@ -554,7 +554,7 @@ func ScanProduct(ctx *gin.Context)
 ScanProduct returns a barcode based on an image @Summary Scan product @Description Returns the barcode of a product in an uploaded image @Tags product @Accept json @Produce json @Success 200 \{object\} database.ProductDTOBarcode @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/scan \[post\]
 
 <a name="SetExpireAt"></a>
-## func [SetExpireAt](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L372>)
+## func [SetExpireAt](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L371>)
 
 ```go
 func SetExpireAt(ctx *gin.Context)
@@ -563,7 +563,7 @@ func SetExpireAt(ctx *gin.Context)
 SetExpireAt updates the expire date of a product of a user @Summary Updates the expire date @Description Updates the expire date of a product @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param timestamp body database.Timestamp true "Timestamp" @Success 200 \{object\} database.ProductDTOExpire @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/expire \[post\]
 
 <a name="UpdateProduct"></a>
-## func [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L235>)
+## func [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L234>)
 
 ```go
 func UpdateProduct(ctx *gin.Context)
