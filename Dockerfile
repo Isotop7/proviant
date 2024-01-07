@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine as buildenv
+FROM golang:1.21-alpine AS buildenv
 WORKDIR /app
 
 COPY ./src/go.mod ./src/go.sum ./
