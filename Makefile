@@ -83,3 +83,11 @@ rundockerdebug:
 	@make dockerimage
 	cd ./src && \
 	docker run -it --rm -v ./config.yaml.tmpl:/app/config.yaml --entrypoint /bin/sh expiro:latest
+
+# ==================================================================================== #
+# Web
+# ==================================================================================== #
+
+.PHONY: css
+css:
+	npm run css
