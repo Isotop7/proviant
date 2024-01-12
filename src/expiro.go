@@ -140,7 +140,7 @@ func main() {
 	// Get server port or instead set default value
 	serverPort := configuration.Server.Port
 	if serverPort <= 0 {
-		serverPort = 5050
+		serverPort = 5114
 	}
 
 	// Start server

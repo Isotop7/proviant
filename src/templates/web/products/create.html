@@ -1,0 +1,31 @@
+<div class="w-auto p-5 text-center">
+	<h1>Product</h1>
+
+	<p>Create new product:</p>
+
+	<div class="input-group mb-3">
+		<span class="input-group-text" id="basic-addon1">Barcode</span>
+		<input
+			type="text"
+			class="form-control"
+			placeholder="Barcode"
+			aria-label="Barcode"
+			aria-describedby="basic-addon1"
+			bind:value={barcode}
+			required
+		/>
+	</div>
+	<div class="input-group mb-3">
+		<span class="input-group-text" id="basic-addon1">Expires At</span>
+		<input
+			type="date"
+			class="form-control"
+			placeholder="Expires At"
+			aria-label="ExpireAt"
+			aria-describedby="basic-addon1"
+			bind:value={expireAt}
+			required
+		/>
+	</div>
+	<button type="button" class="btn btn-outline-primary" on:click={CreateProduct}>Create</button>
+</div>

@@ -1,0 +1,33 @@
+<div class="w-auto p-5 text-center">
+	<div class="p-2">
+		<h1>Scan</h1>
+	</div>
+
+	<div class="p-3">
+		<p>Scan product as image</p>
+	</div>
+
+	<div class="p-4 mb-2">
+		<label for="upload" class="form-label">Image</label>
+		<input id="upload" class="form-control" type="file" accept="image/*" capture="environment" />
+		{#if selectedImage}
+			<img src={selectedImage} alt="Scan" />
+		{/if}
+	</div>
+	<div class="p-4 mb-2">
+		<button type="button" class="btn btn-outline-primary" on:click={handleScan}>Scan</button>
+		{#await promise}
+			<div class="m-3">Scanning file ...</div>
+		{:then _}
+			{#if barcode !== ''}
+				<div class="m-4 alert alert-success" role="alert">
+					Scanned barcode: {barcode}
+				</div>
+			{/if}
+		{:catch error}
+			<div class="m-4 alert alert-danger" role="alert">
+				{error.message}
+			</div>
+		{/await}
+	</div>
+</div>

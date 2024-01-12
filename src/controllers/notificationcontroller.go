@@ -13,6 +13,10 @@ import (
 	gomail "gopkg.in/mail.v2"
 )
 
+var (
+	mailTemplatePath = "templates/notification/expired.html"
+)
+
 // NotificationController is the object struct to generate and send notifications for expired products
 type NotificationController struct {
 	Logger             *zerolog.Logger
@@ -90,7 +94,7 @@ func (nc NotificationController) sendMail(product database.Product, recipient st
 	mail.SetHeader("Subject", subject)
 
 	// Generate email body from template
-	templ, templErr := template.ParseFiles("templates/expired.html")
+	templ, templErr := template.ParseFiles(mailTemplatePath)
 	if templErr != nil {
 		return templErr
 	}
