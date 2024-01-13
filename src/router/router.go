@@ -128,7 +128,7 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, dbHandle *g
 		},
 		// Unauthorized implements the return function if user is not authorized
 		Unauthorized: func(ctx *gin.Context, code int, message string) {
-			ctx.Redirect(code, "/web/auth")
+			ctx.Redirect(http.StatusTemporaryRedirect, "/web/auth")
 		},
 	})
 }
