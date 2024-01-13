@@ -18,8 +18,7 @@ go.work
 node_modules/
 
 # static assets
-src/static/css/*
-!src/static/css/auth.css
+src/static/css/main.css*
 src/static/js/bootstrap*
 
 ## Custom
