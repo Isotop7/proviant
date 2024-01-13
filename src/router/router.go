@@ -15,7 +15,7 @@ import (
 	"gitlab.com/Isotop7/expiro/models/authentication"
 	"gitlab.com/Isotop7/expiro/models/configuration"
 	"gitlab.com/Isotop7/expiro/models/configuration/static"
-	"gitlab.com/Isotop7/expiro/templates"
+	"gitlab.com/Isotop7/expiro/web"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-contrib/cors"
@@ -128,10 +128,7 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, dbHandle *g
 		},
 		// Unauthorized implements the return function if user is not authorized
 		Unauthorized: func(ctx *gin.Context, code int, message string) {
-			ctx.JSON(code, gin.H{
-				"code":    code,
-				"message": message,
-			})
+			ctx.Redirect(code, "/web/auth")
 		},
 	})
 }
@@ -231,38 +228,28 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)
 
 	// Web frontend routes
+	// Serve static files
 	engine.Static("/static", "./static")
+	// Create frontend handler with template cache
+	webFrontendHandler := web.Frontend{TemplateCache: configuration.TemplateCache}
 	webFrontend := engine.Group("/web")
-	webFrontend.GET("/", func(ctx *gin.Context) {
-		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "home.tmpl")
-	})
-	webFrontend.GET("/auth", func(ctx *gin.Context) {
-		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "auth.tmpl")
-	})
-	webFrontend.GET("/auth/login", func(ctx *gin.Context) {
-		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "authLogin.tmpl")
-	})
-	webFrontend.GET("/auth/register", func(ctx *gin.Context) {
-		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "authRegister.tmpl")
-	})
+	webFrontend.GET("/auth", webFrontendHandler.Auth)
+	webFrontend.GET("/auth/login", webFrontendHandler.AuthLogin)
+	webFrontend.GET("/auth/register", webFrontendHandler.AuthRegister)
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")
 	protectedWebFrontend.Use(jwtMiddleware.MiddlewareFunc())
-	protectedWebFrontend.GET("/user", func(ctx *gin.Context) {
-		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "user.tmpl")
-	})
-	protectedWebFrontend.GET("/user/settings", func(ctx *gin.Context) {
-		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "userSettings.tmpl")
-	})
-	protectedWebFrontend.GET("/products", func(ctx *gin.Context) {
-		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "products.tmpl")
-	})
-	protectedWebFrontend.GET("/products/create", func(ctx *gin.Context) {
-		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "productsCreate.tmpl")
-	})
-	protectedWebFrontend.GET("/products/scan", func(ctx *gin.Context) {
-		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "productsScan.tmpl")
+	protectedWebFrontend.GET("/", webFrontendHandler.Root)
+	protectedWebFrontend.GET("/user", webFrontendHandler.User)
+	protectedWebFrontend.GET("/user/settings", webFrontendHandler.UserSettings)
+	protectedWebFrontend.GET("/products", webFrontendHandler.Products)
+	protectedWebFrontend.GET("/products/create", webFrontendHandler.ProductsCreate)
+	protectedWebFrontend.GET("/products/scan", webFrontendHandler.ProductsScan)
+
+	// Static redirects
+	engine.GET("/", func(ctx *gin.Context) {
+		ctx.Redirect(http.StatusPermanentRedirect, "/web")
 	})
 
 	// Catch-All handler

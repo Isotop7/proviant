@@ -19,6 +19,7 @@ node_modules/
 
 # static assets
 src/static/css/*
+!src/static/css/auth.css
 src/static/js/*
 
 ## Custom

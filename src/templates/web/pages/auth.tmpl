@@ -1,5 +1,17 @@
 {{ define "content" }}
-<h3>
-    Authentication
-</h3>
+<main class="form-signin w-100 m-auto">
+    <form>
+        <img class="mx-auto" src="/static/icons/logo_transparent.png" alt="" width="240">
+        <h1 class="h3 mb-3 fw-normal">Sign in / Register</h1>
+        <div class="form-floating">
+            <input type="email" class="form-control" id="floatingInput" placeholder="name@example.com">
+            <label for="floatingInput">Username</label>
+        </div>
+        <div class="form-floating">
+            <input type="password" class="form-control" id="floatingPassword" placeholder="Password">
+            <label for="floatingPassword">Password</label>
+        </div>
+        <button class="btn btn-primary w-100 py-2" type="submit">Sign in</button>
+    </form>
+</main>
 {{ end }}

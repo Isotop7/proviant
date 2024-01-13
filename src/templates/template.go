@@ -27,6 +27,7 @@ func NewTemplateCache() (map[string]*template.Template, error) {
 
 		patterns := []string{
 			"web/layout/base.tmpl",
+			"web/layout/baseAuth.tmpl",
 			"web/partials/*.tmpl",
 			page,
 		}
@@ -43,7 +44,7 @@ func NewTemplateCache() (map[string]*template.Template, error) {
 	return cache, nil
 }
 
-func Render(ctx *gin.Context, tc map[string]*template.Template, status int, page string) {
+func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base string, page string) {
 	writer := ctx.Writer
 	ts, ok := tc[page]
 	if !ok {
@@ -55,7 +56,7 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, page
 	buf := new(bytes.Buffer)
 
 	// Check for errors
-	err := ts.ExecuteTemplate(buf, "base", nil)
+	err := ts.ExecuteTemplate(buf, base, nil)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
