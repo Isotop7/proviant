@@ -63,5 +63,9 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, page
 
 	// On success, set header and serve template
 	writer.WriteHeader(status)
-	buf.WriteTo(writer)
+	_, writeErr := buf.WriteTo(writer)
+	if writeErr != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
 }

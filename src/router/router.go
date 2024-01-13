@@ -232,7 +232,6 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 
 	// Web frontend routes
 	engine.Static("/static", "./static")
-	//engine.LoadHTMLGlob("templates/web/**/*")
 	webFrontend := engine.Group("/web")
 	webFrontend.GET("/", func(ctx *gin.Context) {
 		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "home.tmpl")
