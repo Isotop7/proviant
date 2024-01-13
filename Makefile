@@ -16,6 +16,7 @@ help:
 init:
 	npm install
 	@make css
+	mkdir ./src/static/js
 	cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js ./src/static/js/
 
 # ==================================================================================== #
