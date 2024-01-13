@@ -57,6 +57,7 @@ func JWTMiddleware(configuration *configuration.ExpiroConfiguration, dbHandle *g
 		TokenLookup:   static.TokenLookup,
 		TokenHeadName: static.TokenHeadName,
 		TimeFunc:      time.Now,
+		SendCookie:    true,
 		// Generate claims and return it to payload
 		PayloadFunc: func(data any) jwt.MapClaims {
 			if v, ok := data.(authentication.User); ok {
@@ -234,8 +235,6 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	webFrontendHandler := web.Frontend{TemplateCache: configuration.TemplateCache}
 	webFrontend := engine.Group("/web")
 	webFrontend.GET("/auth", webFrontendHandler.Auth)
-	webFrontend.GET("/auth/login", webFrontendHandler.AuthLogin)
-	webFrontend.GET("/auth/register", webFrontendHandler.AuthRegister)
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")
@@ -255,7 +254,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	// Catch-All handler
 	engine.NoRoute(jwtMiddleware.MiddlewareFunc(), func(ctx *gin.Context) {
 		claims := jwt.ExtractClaims(ctx)
-		logger.Error().Msgf("NoRoute claims: %#v\n", claims)
+		logger.Error().Msgf("NoRoute ('%s') claims: %#v\n", ctx.Request.RequestURI, claims)
 		ctx.JSON(http.StatusNotFound, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
 	})
 

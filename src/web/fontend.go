@@ -20,14 +20,6 @@ func (frontend *Frontend) Auth(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "auth.tmpl")
 }
 
-func (frontend *Frontend) AuthLogin(ctx *gin.Context) {
-	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "authLogin.tmpl")
-}
-
-func (frontend *Frontend) AuthRegister(ctx *gin.Context) {
-	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "authRegister.tmpl")
-}
-
 func (frontend *Frontend) User(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "user.tmpl")
 }
