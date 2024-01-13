@@ -1,0 +1,60 @@
+{{ define "nav" }}
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+	<div class="container-fluid">
+		<a class="navbar-brand" href="/web">
+			<img
+				src="/static/icons/favicon.png"
+				alt="expiro"
+				width="30"
+				height="24"
+				class="d-inline-block align-text-top"
+			/>
+			expiro
+		</a>
+		<div class="collapse navbar-collapse" id="navbarNavDropdown">
+			<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+				<li class="nav-item dropdown">
+					<a
+						class="nav-link dropdown-toggle"
+						href="/web/products"
+						role="button"
+						data-bs-toggle="dropdown"
+						aria-expanded="false"
+					>
+						Products
+					</a>
+					<ul class="dropdown-menu">
+						<li><a class="dropdown-item" href="/web/products">Overview</a></li>
+						<li><hr class="dropdown-divider"></li>
+						<li><a class="dropdown-item" href="/web/products/create">Create</a></li>
+						<li><a class="dropdown-item" href="/web/products/scan">Scan</a></li>
+					</ul>
+				</li>
+			</ul>
+			<ul class="navbar-nav">
+				<li class="nav-item dropdown">
+					<a
+						class="nav-link dropdown-toggle"
+						href="/web/auth"
+						role="button"
+						data-bs-toggle="dropdown"
+						aria-expanded="false"
+					>
+						Settings
+					</a>
+					<ul class="dropdown-menu">
+						<li><a class="dropdown-item" href="/web/user/settings">User</a></li>
+						<li><hr class="dropdown-divider"></li>
+						<li><a class="dropdown-item" href="/web/auth/register">Register</a></li>
+						<li><a class="dropdown-item" href="/web/auth/login">Login</a></li>
+					</ul>
+				</li>
+				<form class="d-flex" role="search">
+					<input class="form-control me-3" type="search" placeholder="..." aria-label="Search" />
+					<button class="btn btn-outline-success" type="submit">🔎</button>
+				</form>
+			</ul>
+		</div>
+	</div>
+</nav>
+{{ end }}

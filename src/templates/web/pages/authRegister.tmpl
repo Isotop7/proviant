@@ -1,3 +1,4 @@
+{{ define "content" }}
 <h2>Login</h2>
 <form>
 	<label>
@@ -8,5 +9,6 @@
 		Password:
 		<input type="password" bind:value={password} required />
 	</label>
-	<button type="submit" on:click={handleLogin}>Login</button>
+	<button type="submit" on:click={handleSignup} {disabled}>Signup</button>
 </form>
+{{ end }}

@@ -15,6 +15,7 @@ import (
 	"gitlab.com/Isotop7/expiro/models/authentication"
 	"gitlab.com/Isotop7/expiro/models/configuration"
 	"gitlab.com/Isotop7/expiro/models/configuration/static"
+	"gitlab.com/Isotop7/expiro/templates"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-contrib/cors"
@@ -228,6 +229,42 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	protectedProductAPI.PATCH("/:id", v1.UpdateProduct)
 	protectedProductAPI.DELETE("/:id", v1.DeleteProduct)
 	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)
+
+	// Web frontend routes
+	engine.Static("/static", "./static")
+	//engine.LoadHTMLGlob("templates/web/**/*")
+	webFrontend := engine.Group("/web")
+	webFrontend.GET("/", func(ctx *gin.Context) {
+		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "home.tmpl")
+	})
+	webFrontend.GET("/auth", func(ctx *gin.Context) {
+		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "auth.tmpl")
+	})
+	webFrontend.GET("/auth/login", func(ctx *gin.Context) {
+		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "authLogin.tmpl")
+	})
+	webFrontend.GET("/auth/register", func(ctx *gin.Context) {
+		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "authRegister.tmpl")
+	})
+
+	// Protected web frontend routes
+	protectedWebFrontend := engine.Group("/web")
+	protectedWebFrontend.Use(jwtMiddleware.MiddlewareFunc())
+	protectedWebFrontend.GET("/user", func(ctx *gin.Context) {
+		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "user.tmpl")
+	})
+	protectedWebFrontend.GET("/user/settings", func(ctx *gin.Context) {
+		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "userSettings.tmpl")
+	})
+	protectedWebFrontend.GET("/products", func(ctx *gin.Context) {
+		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "products.tmpl")
+	})
+	protectedWebFrontend.GET("/products/create", func(ctx *gin.Context) {
+		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "productsCreate.tmpl")
+	})
+	protectedWebFrontend.GET("/products/scan", func(ctx *gin.Context) {
+		templates.Render(ctx, configuration.TemplateCache, http.StatusOK, "productsScan.tmpl")
+	})
 
 	// Catch-All handler
 	engine.NoRoute(jwtMiddleware.MiddlewareFunc(), func(ctx *gin.Context) {

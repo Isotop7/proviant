@@ -17,6 +17,10 @@ go.work
 # npm
 node_modules/
 
+# static assets
+src/static/css/*
+src/static/js/*
+
 ## Custom
 src/config.yaml
 src/test/*.httpie

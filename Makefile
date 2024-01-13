@@ -8,6 +8,15 @@ help:
 	@echo 'Usage:'
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
 
+# ==================================================================================== #
+# Install/Setup
+# ==================================================================================== #
+
+.PHONY: init
+init:
+	npm install
+	@make css
+	cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js ./src/static/js/
 
 # ==================================================================================== #
 # QUALITY CONTROL
