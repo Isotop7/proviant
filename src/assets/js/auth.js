@@ -11,7 +11,7 @@ async function LoginRequest() {
     return response.json();
 };
 
-function Login(event) {
+function Login() {
     LoginRequest().then((response) => {
         if (response.code == 401) {
             console.log("Unauthorized");

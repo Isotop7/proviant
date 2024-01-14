@@ -100,4 +100,5 @@ rundockerdebug:
 
 .PHONY: css
 css:
+	cp ./node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/
 	npm run css
