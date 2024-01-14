@@ -4,8 +4,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>expiro</title>
-    <link rel="stylesheet" href="/static/css/main.css">
+    <title>{{ if .Title }}{{ .Title}}{{ else }}expiro{{ end }}</title>
+    <link rel="stylesheet" href="/assets/css/main.css">
   </head>
   <body class="has-navbar-fixed-top">
     {{template "nav" .}}
@@ -13,8 +13,8 @@
       {{template "content" .}}
     </main>
     {{template "footer" .}}
-    <script src="/static/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/main.js"></script>
+    <script src="/assets/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/main.js"></script>
   </body>
 </html>
 {{end}}

@@ -17,9 +17,9 @@ go.work
 # npm
 node_modules/
 
-# static assets
-src/static/css/main.css*
-src/static/js/bootstrap*
+# assets
+src/assets/css/main.css*
+src/assets/js/bootstrap*
 
 ## Custom
 src/config.yaml

@@ -10,6 +10,7 @@ import (
 	"gitlab.com/Isotop7/expiro/api/auth"
 	"gitlab.com/Isotop7/expiro/api/common"
 	v1 "gitlab.com/Isotop7/expiro/api/v1"
+	"gitlab.com/Isotop7/expiro/assets"
 	"gitlab.com/Isotop7/expiro/controllers"
 	"gitlab.com/Isotop7/expiro/errors"
 	"gitlab.com/Isotop7/expiro/models/authentication"
@@ -229,8 +230,8 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)
 
 	// Web frontend routes
-	// Serve static files
-	engine.Static("/static", "./static")
+	// Serve asset files
+	engine.StaticFS("/assets", http.FS(assets.AssetFiles))
 	// Create frontend handler with template cache
 	webFrontendHandler := web.Frontend{TemplateCache: configuration.TemplateCache}
 	webFrontend := engine.Group("/web")
@@ -254,7 +255,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	// Catch-All handler
 	engine.NoRoute(jwtMiddleware.MiddlewareFunc(), func(ctx *gin.Context) {
 		claims := jwt.ExtractClaims(ctx)
-		logger.Error().Msgf("NoRoute ('%s') claims: %#v\n", ctx.Request.RequestURI, claims)
+		logger.Error().Msgf("NoRoute ('%s') claims: %#v", ctx.Request.RequestURI, claims)
 		ctx.JSON(http.StatusNotFound, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
 	})
 

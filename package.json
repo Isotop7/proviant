@@ -1,9 +1,9 @@
 {
   "scripts": {
     "build": "npm run css",
-    "css-compile": "sass --style compressed --source-map --embed-sources --no-error-css --load-path=node_modules src/templates/scss/:src/static/css/",
+    "css-compile": "sass --style compressed --source-map --embed-sources --no-error-css --load-path=node_modules src/templates/scss/:src/assets/css/",
     "css-lint": "stylelint src/templates/scss/",
-    "css-prefix": "postcss --replace src/static/css/main.css --use autoprefixer --map",
+    "css-prefix": "postcss --replace src/assets/css/main.css --use autoprefixer --map",
     "css": "npm-run-all css-compile css-prefix",
     "test": "npm-run-all css-lint css"
   },

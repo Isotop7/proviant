@@ -44,7 +44,7 @@ func NewTemplateCache() (map[string]*template.Template, error) {
 	return cache, nil
 }
 
-func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base string, page string) {
+func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base string, page string, data map[string]any) {
 	writer := ctx.Writer
 	ts, ok := tc[page]
 	if !ok {
@@ -56,7 +56,7 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 	buf := new(bytes.Buffer)
 
 	// Check for errors
-	err := ts.ExecuteTemplate(buf, base, nil)
+	err := ts.ExecuteTemplate(buf, base, data)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
