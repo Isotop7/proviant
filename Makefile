@@ -98,7 +98,12 @@ rundockerdebug:
 # Web
 # ==================================================================================== #
 
+.PHONY: fonts
+fonts:
+	cp ./node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/
+	cp ./node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2 ./src/assets/fonts/
+
 .PHONY: css
 css:
-	cp ./node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/
+	@make fonts
 	npm run css
