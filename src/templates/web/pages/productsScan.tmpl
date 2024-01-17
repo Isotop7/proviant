@@ -1,35 +1,45 @@
 {{ define "content" }}
 <div class="w-auto p-5 text-center">
-	<div class="p-2">
-		<h1>Scan</h1>
+	<div class="py-5 text-center">
+		<h2>Scan product</h2>
 	</div>
 
-	<div class="p-3">
-		<p>Scan product as image</p>
-	</div>
-
-	<div class="p-4 mb-2">
-		<label for="upload" class="form-label">Image</label>
-		<input id="upload" class="form-control" type="file" accept="image/*" capture="environment" />
-		{#if selectedImage}
-			<img src={selectedImage} alt="Scan" />
-		{/if}
-	</div>
-	<div class="p-4 mb-2">
-		<button type="button" class="btn btn-outline-primary" on:click={handleScan}>Scan</button>
-		{#await promise}
-			<div class="m-3">Scanning file ...</div>
-		{:then _}
-			{#if barcode !== ''}
-				<div class="m-4 alert alert-success" role="alert">
-					Scanned barcode: {barcode}
+	<div class="row g-5 p-2">
+		<div class="col-md-7 col-lg-8 my-auto">
+			<div class="p-4 mb-2">
+				<div class="input-group mb-3">
+					<input id="upload" type="file" class="form-control" accept="image/*" capture="environment"
+						aria-label="Image" aria-describedby="btnScan">
+					<button class="btn btn-outline-primary" type="button" id="btnScan">Scan</button>
 				</div>
-			{/if}
-		{:catch error}
-			<div class="m-4 alert alert-danger" role="alert">
-				{error.message}
 			</div>
-		{/await}
+			<div id="scanResult" class="m-4 alert alert-success" role="alert" style="display: none;">
+				Scanned barcode: {barcode}
+			</div>
+		</div>
+		<div class="col-md-5 col-lg-4 order-md-last">
+			<ul id="productData" class="list-group mb-3">
+				<li class="list-group-item d-flex justify-content-between lh-sm">
+					<div>
+						<h6 class="my-2">Image</h6>
+					</div>
+					<span class="text-body-secondary"><img id="productInfoImage" height="160px"></span>
+				</li>
+				<li class="list-group-item d-flex justify-content-between lh-sm">
+					<div>
+						<h6 class="my-2">Product name</h6>
+						<small id="productInfoName" class="text-body-secondary"></small>
+					</div>
+				</li>
+				<li class="list-group-item d-flex justify-content-between lh-sm">
+					<div>
+						<h6 class="my-2">Generic name</h6>
+						<small id="productInfoGenericName" class="text-body-secondary"></small>
+					</div>
+				</li>
+			</ul>
+		</div>
 	</div>
 </div>
+<script src="/assets/js/productsScan.js"></script>
 {{ end }}
