@@ -13,6 +13,9 @@
 					<button class="btn btn-outline-primary" type="button" id="btnScan">Scan</button>
 				</div>
 			</div>
+			<div id="loadingSpinner" class="spinner-border text-primary" role="status" style="display: none;">
+				<span class="visually-hidden">Loading...</span>
+			</div>
 			<div id="scanResult" class="m-4 alert alert-success" role="alert" style="display: none;">
 			</div>
 		</div>
@@ -22,18 +25,30 @@
 					<div>
 						<h6 class="my-2">Image</h6>
 					</div>
-					<span class="text-body-secondary"><img id="productInfoImage"></span>
+					<span class="text-body-secondary">
+						<img id="productInfoImage">
+						<div class="spinner-grow spinner-grow-sm text-secondary" role="status" style="display: none;">
+							<span class="visually-hidden">Loading...</span>
+						</div>
+					</span>
 				</li>
 				<li class="list-group-item d-flex justify-content-between lh-sm">
 					<div>
 						<h6 class="my-2">Product name</h6>
-						<small id="productInfoName" class="text-body-secondary"></small>
+						<small id="productInfoName" class="text-body-secondary">
+						</small>
+						<div class="spinner-grow spinner-grow-sm text-secondary" role="status" style="display: none;">
+							<span class="visually-hidden">Loading...</span>
+						</div>
 					</div>
 				</li>
 				<li class="list-group-item d-flex justify-content-between lh-sm">
 					<div>
 						<h6 class="my-2">Generic name</h6>
 						<small id="productInfoGenericName" class="text-body-secondary"></small>
+						<div class="spinner-grow spinner-grow-sm text-secondary" role="status" style="display: none;">
+							<span class="visually-hidden">Loading...</span>
+						</div>
 					</div>
 				</li>
 			</ul>

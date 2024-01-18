@@ -30,6 +30,24 @@ function showProductData(product) {
     document.getElementById('productInfoGenericName').innerText = product.generic_name;
     document.getElementById('productData').style.display = '';
 }
+function toggleLoadingSpinner(state) {
+    if (state) {
+        document.getElementById('loadingSpinner').style.display = '';
+    } else {
+        document.getElementById('loadingSpinner').style.display = 'none';
+    }
+}
+function toggleGrowers(state) {
+    if (state) {
+        document.querySelectorAll('.spinner-grow.spinner-grow-sm.text-secondary').forEach((elem) => {
+            elem.style.display = '';
+        });
+    } else {
+        document.querySelectorAll('.spinner-grow.spinner-grow-sm.text-secondary').forEach((elem) => {
+            elem.style.display = 'none';
+        });
+    }
+}
 
 // Async functions
 async function queryProductInfoRequest(barcode) {
@@ -90,6 +108,8 @@ function queryProductInfo(barcode) {
     }
 }
 function handleScanButton() {
+    toggleLoadingSpinner(true);
+    toggleGrowers(true);
     scanProductRequest().then((response) => {
         let barcode = response.barcode;
         if (barcode == null) {
@@ -99,12 +119,17 @@ function handleScanButton() {
         showBarcode(barcode)
     }).catch((error) => {
         showError(error);
+    }).finally(() => {
+        toggleLoadingSpinner(false);
+        toggleGrowers(false);
     });
 }
 
 
 // Add event listeners
-window.addEventListener('load', hideScanResult);
+window.addEventListener('load', function() {
+    hideScanResult();
+});
 document.getElementById('upload').onchange = function() {
     clearProductInfo();
     hideScanResult();
