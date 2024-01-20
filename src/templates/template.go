@@ -69,7 +69,11 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 	if !ok {
 		mapErr := errors.New("error getting template")
 		logger.Error().Msg(mapErr.Error())
-		ctx.AbortWithError(http.StatusInternalServerError, mapErr)
+		// TODO: Render error site
+		abortErr := ctx.AbortWithError(http.StatusInternalServerError, mapErr)
+		if abortErr != nil {
+			logger.Error().Msg(abortErr.Error())
+		}
 		return
 	}
 
@@ -80,7 +84,11 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 	err := ts.ExecuteTemplate(buf, base, data)
 	if err != nil {
 		logger.Error().Msg(err.Error())
-		ctx.AbortWithError(http.StatusInternalServerError, err)
+		// TODO: Render error site
+		abortErr := ctx.AbortWithError(http.StatusInternalServerError, err)
+		if abortErr != nil {
+			logger.Error().Msg(abortErr.Error())
+		}
 		return
 	}
 
@@ -89,7 +97,11 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 	_, writeErr := buf.WriteTo(writer)
 	if writeErr != nil {
 		logger.Error().Msg(writeErr.Error())
-		ctx.AbortWithError(http.StatusInternalServerError, writeErr)
+		// TODO: Render error site
+		abortErr := ctx.AbortWithError(http.StatusInternalServerError, writeErr)
+		if abortErr != nil {
+			logger.Error().Msg(abortErr.Error())
+		}
 		return
 	}
 }
