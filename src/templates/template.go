@@ -3,16 +3,32 @@ package templates
 import (
 	"bytes"
 	"embed"
+	"errors"
 	"html/template"
 	"io/fs"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 )
 
 //go:embed "web"
 var TemplateFiles embed.FS
+
+func humanDate(t time.Time) string {
+	return t.Format("02.01.2006 15:04")
+}
+
+func hasPassed(t time.Time) bool {
+	return t.Before(time.Now())
+}
+
+var customTemplateFunctions = template.FuncMap{
+	"humanDate": humanDate,
+	"hasPassed": hasPassed,
+}
 
 func NewTemplateCache() (map[string]*template.Template, error) {
 	cache := map[string]*template.Template{}
@@ -32,7 +48,7 @@ func NewTemplateCache() (map[string]*template.Template, error) {
 			page,
 		}
 
-		ts, err := template.New(name).ParseFS(TemplateFiles, patterns...)
+		ts, err := template.New(name).Funcs(customTemplateFunctions).ParseFS(TemplateFiles, patterns...)
 		if err != nil {
 			return nil, err
 		}
@@ -45,10 +61,15 @@ func NewTemplateCache() (map[string]*template.Template, error) {
 }
 
 func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base string, page string, data map[string]any) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
 	writer := ctx.Writer
 	ts, ok := tc[page]
 	if !ok {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		mapErr := errors.New("error getting template")
+		logger.Error().Msg(mapErr.Error())
+		ctx.AbortWithError(http.StatusInternalServerError, mapErr)
 		return
 	}
 
@@ -58,7 +79,8 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 	// Check for errors
 	err := ts.ExecuteTemplate(buf, base, data)
 	if err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		logger.Error().Msg(err.Error())
+		ctx.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
@@ -66,7 +88,8 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 	writer.WriteHeader(status)
 	_, writeErr := buf.WriteTo(writer)
 	if writeErr != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		logger.Error().Msg(writeErr.Error())
+		ctx.AbortWithError(http.StatusInternalServerError, writeErr)
 		return
 	}
 }

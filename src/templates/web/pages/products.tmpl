@@ -1,5 +1,73 @@
 {{ define "content" }}
-<h5>
-    Products
-</h5>
+<div class="row justify-content-between my-2">
+    <div class="col-3">
+        <h3>
+            Products
+        </h3>
+    </div>
+    <div class="col-3">
+        <div class="btn-group" role="group" aria-label="Option buttons" id="optionButtonGroup">
+            <button type="button" id="btnView" class="btn btn-outline-secondary">
+                <i class="bi bi-eye"></i>
+            </button>
+            <button type="button" id="btnEdit" class="btn btn-outline-secondary">
+                <i class="bi bi-pencil-square"></i>
+            </button>
+            <button type="button" id="btnDelete" class="btn btn-outline-danger">
+                <i class="bi bi-trash3-fill"></i>
+            </button>
+        </div>
+    </div>
+</div>
+<hr>
+{{ if .Products }}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                <input class="form-check-input" type="checkbox" value="" id="checkbox-all">
+            </th>
+            <th scope="col">#</th>
+            <th scope="col">Name</th>
+            <th scope="col">Barcode</th>
+            <th scope="col">Scanned At</th>
+            <th scope="col">Expire At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{ range .Products }}
+        <tr>
+            <th scope="row">
+                <input class="form-check-input" type="checkbox" value="{{ .Model.ID }}" id="checkbox-{{ .Model.ID }}">
+            </th>
+            <th scope="row">{{ .Model.ID }}</th>
+            <td>{{ .ProductName }}</td>
+            <td>{{ .Barcode }}</td>
+            <td>{{ .ScannedAt | humanDate }}</td>
+            <td {{ if hasPassed .ExpireAt }}class="table-danger" {{ end }}>{{ .ExpireAt | humanDate }}</td>
+        </tr>
+        {{ end }}
+    </tbody>
+</table>
+
+<div class="toast-container position-fixed top-50 end-0 translate-middle-y p-3">
+    <div id="infoToast" class="toast text-bg-secondary" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <img src="/assets/icons/favicon.png" class="rounded me-2" alt="expiro">
+            <strong class="me-auto">expiro</strong>
+            <small>Information</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div id="infoToastBody" class="toast-body">
+        </div>
+    </div>
+</div>
+
+<script src="/assets/js/expiro.js"></script>
+<script src="/assets/js/products.js"></script>
+{{ else }}
+<div class="container">
+    Currently no products assigned!
+</div>
+{{ end }}
 {{ end }}

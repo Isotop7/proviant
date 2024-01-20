@@ -19,18 +19,6 @@ async function queryProductInfoRequest(barcode) {
     });
     return response.json();
 }
-async function createProductRequest(barcode, expireAt) {
-    let url = `${window.location.protocol}//${window.location.host}/api/v1/products`
-    let data = JSON.stringify({ barcode, expireAt })
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: data
-    })
-    return response;
-}
 // Function handlers
 function clearProductInfo() {
     document.getElementById('productData').style = 'display: none';
@@ -68,7 +56,7 @@ function createProduct() {
     try {
         let barcode = inputBarcode.value;
         let expireAt = inputExpireAt.valueAsDate.toISOString();
-        createProductRequest(barcode, expireAt).then((response) => {
+        expiro.createProductRequest(barcode, expireAt).then((response) => {
             // Show alert
             let alert = document.getElementById('alertCreateProductInfo')
             alert.style = ''
