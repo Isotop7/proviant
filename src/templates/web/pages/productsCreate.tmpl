@@ -1,66 +1,64 @@
 {{ define "content" }}
-<div class="w-auto p-5">
-	<div class="py-5 text-center">
-		<h2>Create new Product</h2>
-	</div>
+<div class="py-2 text-center">
+	<h2>Create new Product</h2>
+</div>
 
-	<div class="row g-5 p-2">
-		<div class="col-md-7 col-lg-8">
-			<h4>Product data</h4>
-			<form id="createProductForm" class="needs-validation" novalidate>
-				<div class="col-12">
-					<label for="barcode" class="form-label">Barcode</label>
-					<input type="number" class="form-control" id="barcode" placeholder="Barcode" required
-						min="1000000000000" max="9999999999999">
-					<small id="barcodeHelp" class="form-text text-muted">EAN-13 barcode on the product only</small>
-					<div class="invalid-feedback">
-						Barcode has to be a digit-only 13 character string
-					</div>
-					<div class="valid-feedback">
-						Barcode seems to be valid. Use the 'Get Info' button to query data of product
-					</div>
+<div class="row g-5 p-2">
+	<div class="col-md-7 col-lg-8">
+		<h4>Product data</h4>
+		<form id="createProductForm" class="needs-validation" novalidate>
+			<div class="col-12">
+				<label for="barcode" class="form-label">Barcode</label>
+				<input type="number" class="form-control" id="barcode" placeholder="Barcode" required
+					min="1000000000000" max="9999999999999">
+				<small id="barcodeHelp" class="form-text text-muted">EAN-13 barcode on the product only</small>
+				<div class="invalid-feedback">
+					Barcode has to be a digit-only 13 character string
 				</div>
-				<div class="col-12">
-					<label for="expireAt" class="form-label">Expires at</label>
-					<input type="date" class="form-control" id="expireAt" placeholder="Expires at" required>
-					<div class="invalid-feedback">
-						Please select the expiry date
-					</div>
+				<div class="valid-feedback">
+					Barcode seems to be valid. Use the 'Get Info' button to query data of product
 				</div>
-				<hr class="my-4">
-				<button id="btnCreateProduct" type="submit" class="w-100 btn btn-outline-primary btn-lg">Create</button>
-			</form>
-			<div class="my-3">
-				<div id="alertCreateProductInfo" class="alert" role="alert" style="display: none;">
+			</div>
+			<div class="col-12">
+				<label for="expireAt" class="form-label">Expires at</label>
+				<input type="date" class="form-control" id="expireAt" placeholder="Expires at" required>
+				<div class="invalid-feedback">
+					Please select the expiry date
 				</div>
+			</div>
+			<hr class="my-4">
+			<button id="btnCreateProduct" type="submit" class="w-100 btn btn-outline-primary btn-lg">Create</button>
+		</form>
+		<div class="my-3">
+			<div id="alertCreateProductInfo" class="alert" role="alert" style="display: none;">
 			</div>
 		</div>
-		<div class="col-md-5 col-lg-4 order-md-last">
-			<button type="button" id="btnQueryProductInfo"
-				class="w-100 btn btn-outline-primary btn-lg d-flex justify-content-between align-items-center mb-3">Get
-				info <i class="bi-arrow-repeat"></i></button>
-			<ul id="productData" class="list-group mb-3" style="display: none;">
-				<li class="list-group-item d-flex justify-content-between lh-sm">
-					<div>
-						<h6 class="my-2">Image</h6>
-					</div>
-					<span class="text-body-secondary"><img id="productInfoImage" height="160px"></span>
-				</li>
-				<li class="list-group-item d-flex justify-content-between lh-sm">
-					<div>
-						<h6 class="my-2">Product name</h6>
-						<small id="productInfoName" class="text-body-secondary"></small>
-					</div>
-				</li>
-				<li class="list-group-item d-flex justify-content-between lh-sm">
-					<div>
-						<h6 class="my-2">Generic name</h6>
-						<small id="productInfoGenericName" class="text-body-secondary"></small>
-					</div>
-				</li>
-			</ul>
-			<div id="alertQueryProductInfo" class="alert alert-warning" role="alert" style="display: none;">
-			</div>
+	</div>
+	<div class="col-md-5 col-lg-4 order-md-last">
+		<button type="button" id="btnQueryProductInfo"
+			class="w-100 btn btn-outline-primary btn-lg d-flex justify-content-between align-items-center mb-3">Get
+			info <i class="bi-arrow-repeat"></i></button>
+		<ul id="productData" class="list-group mb-3" style="display: none;">
+			<li class="list-group-item d-flex justify-content-between lh-sm">
+				<div>
+					<h6 class="my-2">Image</h6>
+				</div>
+				<span class="text-body-secondary"><img id="productInfoImage" height="160px"></span>
+			</li>
+			<li class="list-group-item d-flex justify-content-between lh-sm">
+				<div>
+					<h6 class="my-2">Product name</h6>
+					<small id="productInfoName" class="text-body-secondary"></small>
+				</div>
+			</li>
+			<li class="list-group-item d-flex justify-content-between lh-sm">
+				<div>
+					<h6 class="my-2">Generic name</h6>
+					<small id="productInfoGenericName" class="text-body-secondary"></small>
+				</div>
+			</li>
+		</ul>
+		<div id="alertQueryProductInfo" class="alert alert-warning" role="alert" style="display: none;">
 		</div>
 	</div>
 </div>

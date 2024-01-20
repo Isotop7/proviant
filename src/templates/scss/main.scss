@@ -86,6 +86,10 @@ $bootstrap-icons-font-dir: "../fonts";
     border-bottom: 2px solid var(--bs-tertiary-bg);
 }
 
+#content-wrapper {
+    padding-top: 100px;
+}
+
 #floatingInput {
     margin-bottom: -1px;
     border-bottom-right-radius: 0;
