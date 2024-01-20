@@ -246,6 +246,8 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	protectedWebFrontend.GET("/products", webFrontendHandler.Products)
 	protectedWebFrontend.GET("/products/create", webFrontendHandler.ProductsCreate)
 	protectedWebFrontend.GET("/products/scan", webFrontendHandler.ProductsScan)
+	protectedWebFrontend.GET("/products/:id/view", webFrontendHandler.ProductsView)
+	protectedWebFrontend.GET("/products/:id/edit", webFrontendHandler.ProductsEdit)
 
 	// Static redirects
 	engine.GET("/", func(ctx *gin.Context) {

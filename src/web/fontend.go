@@ -100,3 +100,17 @@ func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsScan.tmpl", pageData)
 }
+
+func (frontend *Frontend) ProductsView(ctx *gin.Context) {
+	pageData := map[string]any{
+		"Title": "View Product",
+	}
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsView.tmpl", pageData)
+}
+
+func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
+	pageData := map[string]any{
+		"Title": "Edit Product",
+	}
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
+}
