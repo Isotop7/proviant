@@ -25,7 +25,7 @@ var (
 	// ErrInvalidUserData is thrown when supplied user data is invalid
 	ErrInvalidUserData = errors.New("invalid user data")
 
-	//ErrDatabaseContextNotFound is thrown if database handle can't be found in context
+	// ErrDatabaseContextNotFound is thrown if database handle can't be found in context
 	ErrDatabaseContextNotFound = errors.New("failed to get database from context")
 
 	// ErrUserIDFromToken is thrown if no user id is found in token
