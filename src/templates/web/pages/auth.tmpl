@@ -1,17 +1,23 @@
 {{ define "content" }}
-<main class="form-signin w-100 m-auto">
+<main class="form-signin w-100 my-3 mx-auto">
     <form id="authData">
         <img class="mx-auto" src="/assets/icons/logo_transparent.png" alt="" width="240">
-        <h1 class="h3 mb-3 fw-normal">Sign in / Register</h1>
         <div class="form-floating">
-            <input type="text" class="form-control" id="floatingInput" placeholder="Username" autocomplete="username">
-            <label for="floatingInput">Username</label>
+            <input type="text" class="form-control" id="inputUsername" placeholder="Username" autocomplete="username">
+            <label for="inputUsername">Username</label>
         </div>
         <div class="form-floating">
-            <input type="password" class="form-control" id="floatingPassword" placeholder="Password" autocomplete="current-password">
-            <label for="floatingPassword">Password</label>
+            <input type="password" class="form-control" id="inputPassword" placeholder="Password"
+                autocomplete="current-password">
+            <label for="inputPassword">Password</label>
         </div>
-        <button id="auth" form="authData" class="btn btn-primary w-100 py-2" type="submit">Sign in</button>
+        <button id="btnAuth" form="authData" class="btn btn-outline-light w-100" type="submit">Sign in</button>
+        <hr class="my-4">
+        <div class="form-floating">
+            <input type="text" class="form-control" id="inputMailAddress" placeholder="Mail Address" autocomplete="mailAddress">
+            <label for="inputMailAddress">Mail Address</label>
+        </div>
+        <button id="btnRegister" form="authData" class="btn btn-outline-light w-100" type="submit">Register</button>
     </form>
 </main>
 {{ end }}

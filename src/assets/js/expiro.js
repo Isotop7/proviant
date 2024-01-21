@@ -29,5 +29,18 @@ expiro.deleteProduct = async function (productID) {
     return response;
 }
 
-// Export the namespace
-module.exports = expiro;
+expiro.loginUser = async function (username, password) {
+    let url = `${window.location.protocol}//${window.location.host}/auth/login`
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+    });
+    return response;
+}
+
+expiro.logoutUser = async function () {
+    document.cookie="jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;"
+}

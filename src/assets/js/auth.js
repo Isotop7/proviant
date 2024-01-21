@@ -1,39 +1,30 @@
-async function LoginRequest() {
-    let username =  authForm.elements.floatingInput.value;
-    let password =  authForm.elements.floatingPassword.value;
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
-    });
-    return response.json();
-};
-
 function Login() {
-    LoginRequest().then((response) => {
-        if (response.code == 401) {
-            console.log("Unauthorized");
+    let username = authForm.elements.inputUsername.value;
+    let password = authForm.elements.inputPassword.value;
+    expiro.loginUser(username, password).then((response) => {
+        switch (response.status) {
+            case 200:
+                window.location.href = `${window.location.protocol}//${window.location.host}/web`
+                break;
+            case 401:
+                console.log("Unauthorized");
             // TODO: Add html box and show result
             // TODO: Add optional signup method
-        } else if (response.code == 200) {
-            window.location.href = `${window.location.protocol}//${window.location.host}/web`
-        } else {
-            // TODO: Show unknown error in box
+                break;
+            default:
+                break
         }
     });
 }
 
-let authButton = document.querySelector("#auth")
+let authButton = document.getElementById("btnAuth")
 let authForm = document.forms["authData"]
-let url = `${window.location.protocol}//${window.location.host}/auth/login`
 
-authButton.onclick = function(event) {
+authButton.onclick = function (event) {
     event.preventDefault();
     Login();
 }
-authForm.onsubmit = function(event) {
+authForm.onsubmit = function (event) {
     event.preventDefault();
     Login();
 }
