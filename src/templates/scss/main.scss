@@ -57,7 +57,7 @@ $primary: $pink;
 @import "bootstrap/scss/list-group";
 @import "bootstrap/scss/close";
 @import "bootstrap/scss/toasts";
-// @import "bootstrap/scss/modal"; // Requires transitions
+@import "bootstrap/scss/modal"; // Requires transitions
 // @import "bootstrap/scss/tooltip";
 @import "bootstrap/scss/popover";
 // @import "bootstrap/scss/carousel";
@@ -90,7 +90,7 @@ $bootstrap-icons-font-dir: "../fonts";
     padding-top: 100px;
 }
 
-#floatingInput {
+#inputUsername {
     margin-bottom: -1px;
     border-bottom-right-radius: 0;
     border-bottom-left-radius: 0;

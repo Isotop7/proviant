@@ -1,6 +1,6 @@
 {{ define "content" }}
 <main class="form-signin w-100 my-3 mx-auto">
-    <form id="authData">
+    <form id="authData" novalidate>
         <img class="mx-auto" src="/assets/icons/logo_transparent.png" alt="" width="240">
         <div class="form-floating">
             <input type="text" class="form-control" id="inputUsername" placeholder="Username" autocomplete="username">
@@ -12,9 +12,12 @@
             <label for="inputPassword">Password</label>
         </div>
         <button id="btnAuth" form="authData" class="btn btn-outline-light w-100" type="submit">Sign in</button>
+        <div id="loginAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
+          </div>
         <hr class="my-4">
         <div class="form-floating">
-            <input type="text" class="form-control" id="inputMailAddress" placeholder="Mail Address" autocomplete="mailAddress">
+            <input type="text" class="form-control" id="inputMailAddress" placeholder="Mail Address"
+                autocomplete="mailAddress">
             <label for="inputMailAddress">Mail Address</label>
         </div>
         <button id="btnRegister" form="authData" class="btn btn-outline-light w-100" type="submit">Register</button>
