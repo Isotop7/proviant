@@ -41,8 +41,39 @@ func (frontend *Frontend) User(ctx *gin.Context) {
 }
 
 func (frontend *Frontend) UserSettings(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Extract user id
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		return
+	}
+
+	// Get database instance from context
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
+		return
+	}
+
+	// Create database controller object
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	// Get user object
+	user, userErr := dbController.GetUserByID(userID)
+	if userErr != nil {
+		logger.Error().Msg(api.ResponseErrInvalidUserData.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
+		return
+	}
+
 	pageData := map[string]any{
 		"Title": "User Settings",
+		"User":  user,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
 }

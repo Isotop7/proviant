@@ -1,11 +1,11 @@
 {{ define "content" }}
 <div class="row justify-content-between my-2">
-    <div class="col-3">
+    <div class="col">
         <h3>
             Products
         </h3>
     </div>
-    <div class="col-3">
+    <div class="col col-auto">
         <div class="btn-group" role="group" aria-label="Option buttons" id="optionButtonGroup">
             <button type="button" id="btnView" class="btn btn-outline-secondary">
                 <i class="bi bi-eye"></i>
@@ -17,6 +17,11 @@
                 <i class="bi bi-trash3-fill"></i>
             </button>
         </div>
+    </div>
+    <div class="col col-auto">
+        <button type="button" id="btnSync" class="btn btn-secondary">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
     </div>
 </div>
 <hr>

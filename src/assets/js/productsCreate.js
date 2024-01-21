@@ -56,7 +56,7 @@ function createProduct() {
     try {
         let barcode = inputBarcode.value;
         let expireAt = inputExpireAt.valueAsDate.toISOString();
-        expiro.createProductRequest(barcode, expireAt).then((response) => {
+        expiro.createProduct(barcode, expireAt).then((response) => {
             // Show alert
             let alert = document.getElementById('alertCreateProductInfo')
             alert.style = ''

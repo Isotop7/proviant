@@ -41,6 +41,18 @@ function getSelectedProducts() {
     return selectedIDs;
 }
 
+async function deleteProducts() {
+    let productIDs = getSelectedProducts();
+    if (productIDs.length <= 0) {
+        return;
+    }
+    for(productID of productIDs) {
+        await expiro.deleteProduct(productID).then((response) => {
+            console.error(response);
+        })
+    }
+}
+
 function handleButtonView() {
     if (multipleCheckboxesSelected()) {
         showToast("Viewing multiple products is not supported. Please select only one product!");
@@ -60,15 +72,8 @@ function handleButtonEdit() {
 }
 
 function handleButtonDelete() {
-    let productIDs = getSelectedProducts();
-    if (productIDs.length <= 0) {
-        return;
-    }
-    productIDs.forEach((productID) => {
-        expiro.deleteProduct(productID).then((response) => {
-            console.error(response);
-        })
-    });
+    deleteProducts();
+    //TODO: Fix reload timing error
     location.reload();
 }
 
@@ -85,3 +90,6 @@ document.getElementById("btnEdit").addEventListener("click", handleButtonEdit);
 document.getElementById("btnEdit").addEventListener("submit", handleButtonEdit);
 document.getElementById("btnDelete").addEventListener("click", handleButtonDelete);
 document.getElementById("btnDelete").addEventListener("submit", handleButtonDelete);
+document.getElementById("btnSync").addEventListener("click", () => {
+    location.reload();
+})

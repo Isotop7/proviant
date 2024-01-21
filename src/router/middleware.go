@@ -43,7 +43,13 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 }
 
 func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string) {
-	// Get database instance from context and fail if not found
+	// Redirect on unauthorized error
+	if code == http.StatusUnauthorized {
+		ctx.Redirect(http.StatusTemporaryRedirect, "/web/auth")
+		return
+	}
+
+	// Get template cache instance from context and fail if not found
 	templateCache, ok := ctx.MustGet("templateCache").(map[string]*template.Template)
 	if !ok {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
