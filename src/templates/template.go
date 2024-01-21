@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -69,11 +70,7 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 	if !ok {
 		mapErr := errors.New("error getting template")
 		logger.Error().Msg(mapErr.Error())
-		// TODO: Render error site
-		abortErr := ctx.AbortWithError(http.StatusInternalServerError, mapErr)
-		if abortErr != nil {
-			logger.Error().Msg(abortErr.Error())
-		}
+		RenderError(ctx, tc, http.StatusInternalServerError, mapErr.Error())
 		return
 	}
 
@@ -84,11 +81,7 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 	err := ts.ExecuteTemplate(buf, base, data)
 	if err != nil {
 		logger.Error().Msg(err.Error())
-		// TODO: Render error site
-		abortErr := ctx.AbortWithError(http.StatusInternalServerError, err)
-		if abortErr != nil {
-			logger.Error().Msg(abortErr.Error())
-		}
+		RenderError(ctx, tc, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -97,7 +90,53 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 	_, writeErr := buf.WriteTo(writer)
 	if writeErr != nil {
 		logger.Error().Msg(writeErr.Error())
-		// TODO: Render error site
+		RenderError(ctx, tc, http.StatusInternalServerError, writeErr.Error())
+		return
+	}
+}
+
+func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, message string) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	writer := ctx.Writer
+	ts, ok := tc["error.tmpl"]
+	if !ok {
+		mapErr := errors.New("error getting error template")
+		logger.Error().Msg(mapErr.Error())
+		abortErr := ctx.AbortWithError(http.StatusInternalServerError, mapErr)
+		if abortErr != nil {
+			logger.Error().Msg(abortErr.Error())
+		}
+		return
+	}
+
+	// Create temporary buffer for content
+	buf := new(bytes.Buffer)
+
+	// Create data map
+	data := map[string]any{
+		"Title":   fmt.Sprintf("Error %d", code),
+		"Code":    code,
+		"Message": message,
+	}
+
+	// Check for errors
+	tmplErr := ts.Execute(buf, data)
+	if tmplErr != nil {
+		logger.Error().Msg(tmplErr.Error())
+		abortErr := ctx.AbortWithError(http.StatusInternalServerError, tmplErr)
+		if abortErr != nil {
+			logger.Error().Msg(abortErr.Error())
+		}
+		return
+	}
+
+	// On success, set header and serve template
+	writer.WriteHeader(code)
+	_, writeErr := buf.WriteTo(writer)
+	if writeErr != nil {
+		logger.Error().Msg(writeErr.Error())
 		abortErr := ctx.AbortWithError(http.StatusInternalServerError, writeErr)
 		if abortErr != nil {
 			logger.Error().Msg(abortErr.Error())

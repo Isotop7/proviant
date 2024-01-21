@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog"
 	"gitlab.com/Isotop7/expiro/api"
 	"gitlab.com/Isotop7/expiro/controllers"
+	"gitlab.com/Isotop7/expiro/errors"
 	"gitlab.com/Isotop7/expiro/models/configuration/static"
 	"gitlab.com/Isotop7/expiro/templates"
 	"gorm.io/gorm"
@@ -53,9 +54,8 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	// Get database instance from context
 	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !dbErr {
-		//TODO: Show error
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrDatabaseContextNotFound)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
 		return
 	}
 
@@ -63,9 +63,8 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
-		// TODO: Show error
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
 		return
 	}
 
@@ -74,9 +73,9 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	// Get products of user from database with optional limit
 	products, productBulkErr := dbController.GetUserProductsBulk(userID, -1)
 	if productBulkErr != nil {
-		// TODO: Show error
 		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserNoProductsFound)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
 		return
 	}
 
