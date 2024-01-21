@@ -7,6 +7,7 @@ import (
 	"image"
 	"net/http"
 	"strconv"
+	"time"
 
 	"image/draw"
 	_ "image/jpeg"
@@ -202,6 +203,9 @@ func CreateProduct(ctx *gin.Context) {
 	var apiProduct database.Product
 	apiProduct, err := offacntrl.GetDataset(product.Barcode)
 	if err == nil {
+		// Preserve timestamps
+		apiProduct.ScannedAt = time.Now()
+		apiProduct.ExpireAt = product.ExpireAt
 		product = apiProduct
 	}
 
