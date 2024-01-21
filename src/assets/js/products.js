@@ -58,7 +58,11 @@ function handleButtonView() {
         showToast("Viewing multiple products is not supported. Please select only one product!");
     } else {
         let id = getSelectedProduct();
-        window.location.href = `${window.location.protocol}//${window.location.host}/web/products/${id}/view`;
+        if (id > 0) {
+            window.location.href = `${window.location.protocol}//${window.location.host}/web/products/${id}/view`;
+        } else {
+            showToast("You need to select one product");
+        }
     }
 }
 
@@ -67,7 +71,11 @@ function handleButtonEdit() {
         showToast("Editing multiple products is not supported. Please select only one product!");
     } else {
         let id = getSelectedProduct();
-        window.location.href = `${window.location.protocol}//${window.location.host}/web/products/${id}/edit`;
+        if (id > 0) {
+            window.location.href = `${window.location.protocol}//${window.location.host}/web/products/${id}/edit`;
+        } else {
+            showToast("You need to select one product");
+        }
     }
 }
 
