@@ -41,6 +41,24 @@ expiro.loginUser = async function (username, password) {
     return response;
 }
 
+expiro.signupUser = async function (username, mailAddress, password) {
+    let url = `${window.location.protocol}//${window.location.host}/auth/signup`
+    const apiCall = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, mailAddress, password })
+    });
+
+    const body = await apiCall.json();
+    let response = {
+        code: apiCall.status,
+        body: body.Message
+    }
+    return response;
+}
+
 expiro.logoutUser = async function () {
-    document.cookie="jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;"
+    document.cookie = "jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;"
 }
