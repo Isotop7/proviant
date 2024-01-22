@@ -47,16 +47,17 @@ func (dbc DatabaseController) UserExistsByUsername(user authentication.User) boo
 func (dbc DatabaseController) UserExistsByMailAddress(user authentication.User) bool {
 	var dbUser authentication.User
 	// Try to get first object with matching mailAddress
-	selectErr := dbc.DBHandle.First(&dbUser, "mailAddress = ?", user.MailAddress)
+	selectErr := dbc.DBHandle.First(&dbUser, "mail_address = ?", user.MailAddress)
 	// If no user is found, return false
 	return selectErr.Error != gorm.ErrRecordNotFound
 }
 
 // GetNextUserID returns the next available user ID
 func (dbc DatabaseController) GetNextUserID() uint {
+	// TODO: Do we really need this or can't we use db-based mechanisms
 	// Get next user id from database
 	var lastUser authentication.User
-	dbc.DBHandle.Order("id").Limit(1).Find(&lastUser)
+	dbc.DBHandle.Order("id DESC").Limit(1).Find(&lastUser)
 	return (lastUser.ID + 1)
 }
 

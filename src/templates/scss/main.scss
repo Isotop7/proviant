@@ -90,12 +90,12 @@ $bootstrap-icons-font-dir: "../fonts";
     padding-top: 100px;
 }
 
-#inputUsername {
+div.form-floating > input#inputUsername {
     margin-bottom: -1px;
     border-bottom-right-radius: 0;
     border-bottom-left-radius: 0;
 }
 
-#inputMailAddress {
+div.form-floating > input#inputMailAddress {
     margin-bottom: 10px;
 }

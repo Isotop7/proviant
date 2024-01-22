@@ -24,7 +24,6 @@ function clearLoginInputs() {
 }
 
 function clearSignupInputs() {
-    clearLoginInputs();
     inputMailAddress.value = "";
 }
 
@@ -101,13 +100,16 @@ function Signup() {
             case 200:
                 console.log(response.body);
                 // TODO: Add success info and button for reload
+                clearSignupInputs();
                 break;
             case 400:
                 showSignupError(`Invalid user data: ${response.body}`);
+                clearLoginInputs();
                 clearSignupInputs();
                 break;
             default:
                 showSignupError(`Signup error: ${response.body}`);
+                clearLoginInputs();
                 clearSignupInputs();
                 break;
         }
