@@ -400,12 +400,12 @@ const docTemplate = `{
                 "summary": "Creates a new user",
                 "parameters": [
                     {
-                        "description": "Login",
-                        "name": "login",
+                        "description": "Signup",
+                        "name": "signup",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authentication.Login"
+                            "$ref": "#/definitions/authentication.Signup"
                         }
                     }
                 ],
@@ -441,13 +441,17 @@ const docTemplate = `{
                 }
             }
         },
-        "authentication.Login": {
+        "authentication.Signup": {
             "type": "object",
             "required": [
+                "mailAddress",
                 "password",
                 "username"
             ],
             "properties": {
+                "mailAddress": {
+                    "type": "string"
+                },
                 "password": {
                     "type": "string"
                 },

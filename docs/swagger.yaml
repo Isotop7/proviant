@@ -5,13 +5,16 @@ definitions:
       message:
         type: string
     type: object
-  authentication.Login:
+  authentication.Signup:
     properties:
+      mailAddress:
+        type: string
       password:
         type: string
       username:
         type: string
     required:
+    - mailAddress
     - password
     - username
     type: object
@@ -335,12 +338,12 @@ paths:
       - application/json
       description: Creates a new new user in the database
       parameters:
-      - description: Login
+      - description: Signup
         in: body
-        name: login
+        name: signup
         required: true
         schema:
-          $ref: '#/definitions/authentication.Login'
+          $ref: '#/definitions/authentication.Signup'
       produces:
       - application/json
       responses:
