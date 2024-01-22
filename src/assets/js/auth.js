@@ -18,6 +18,16 @@ function hideSignupError() {
     signupAlert.style.display = "none";
 }
 
+function clearLoginInputs() {
+    usernameInput.value = "";
+    passwordInput.value = "";
+}
+
+function clearSignupInputs() {
+    clearLoginInputs();
+    inputMailAddress.value = "";
+}
+
 function Login() {
     let formIsValid = true;
     let username = authForm.elements.inputUsername.value;
@@ -47,9 +57,11 @@ function Login() {
                 break;
             case 401:
                 showLoginError("Authentication failed!");
+                clearLoginInputs();
                 break;
             default:
                 showLoginError(`Undefined authentication error: ${response}`)
+                clearLoginInputs();
                 break;
         }
     });
@@ -90,8 +102,13 @@ function Signup() {
                 console.log(response.body);
                 // TODO: Add success info and button for reload
                 break;
+            case 400:
+                showSignupError(`Invalid user data: ${response.body}`);
+                clearSignupInputs();
+                break;
             default:
-                showSignupError(`Signup error: ${response.body}`)
+                showSignupError(`Signup error: ${response.body}`);
+                clearSignupInputs();
                 break;
         }
     });
@@ -110,7 +127,7 @@ usernameInput.oninput = function () {
         usernameInput.classList.toggle("is-invalid");
     }
     if (loginAlert.style.display == "") {
-        hideError();
+        hideLoginError();
     }
     if (signupAlert.style.display == "") {
         hideSignupError();
@@ -121,7 +138,7 @@ passwordInput.oninput = function () {
         passwordInput.classList.toggle("is-invalid");
     }
     if (loginAlert.style.display == "") {
-        hideError();
+        hideLoginError();
     }
     if (signupAlert.style.display == "") {
         hideSignupError();

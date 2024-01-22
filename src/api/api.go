@@ -22,13 +22,19 @@ package api
 import "gitlab.com/Isotop7/expiro/errors"
 
 var (
-	ResponseErrInvalidUserData         = APIResponse{Message: errors.ErrInvalidUserData.Error()}
-	ResponseErrDatabaseContextNotFound = APIResponse{Message: errors.ErrDatabaseContextNotFound.Error()}
-	ResponseErrUserIDFromToken         = APIResponse{Message: errors.ErrUserIDFromToken.Error()}
-	ResponseErrUserNoProductsFound     = APIResponse{Message: errors.ErrUserNoProductsFound.Error()}
+	ResponseErrInvalidUserData           = APIResponse{Message: errors.ErrInvalidUserData.Error()}
+	ResponseErrUserWithUsernameExists    = APIResponse{Message: errors.ErrUserWithUsernameExists.Error()}
+	ResponseErrUserWithMailAddressExists = APIResponse{Message: errors.ErrUserWithMailAddressExists.Error()}
+	ResponseErrDatabaseContextNotFound   = APIResponse{Message: errors.ErrDatabaseContextNotFound.Error()}
+	ResponseErrUserIDFromToken           = APIResponse{Message: errors.ErrUserIDFromToken.Error()}
+	ResponseErrUserNoProductsFound       = APIResponse{Message: errors.ErrUserNoProductsFound.Error()}
 )
 
 // APIResponse is the data model for a generic API response
 type APIResponse struct {
 	Message string `json:"message"`
+}
+
+func FromError(err error) APIResponse {
+	return APIResponse{Message: err.Error()}
 }

@@ -54,7 +54,7 @@ expiro.signupUser = async function (username, mailAddress, password) {
     const body = await apiCall.json();
     let response = {
         code: apiCall.status,
-        body: body.Message
+        body: body.message
     }
     return response;
 }

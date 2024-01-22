@@ -34,14 +34,21 @@ func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, err
 	return user, selectErr.Error
 }
 
-// UserExists returns if a given user object exists in the database
-// The check is currently only based on the username property and returns the first found item
-func (dbc DatabaseController) UserExists(user authentication.User) bool {
-	// Check if user with username exists
+// UserExistsByUsername returns if a given user object exists in the database based on the property 'username'
+func (dbc DatabaseController) UserExistsByUsername(user authentication.User) bool {
 	var dbUser authentication.User
-	// Username must be unique
+	// Try to get first object with matching username
 	selectErr := dbc.DBHandle.First(&dbUser, "username = ?", user.Username)
-	// TODO: Also check mail address
+	// If no user is found, return false
+	return selectErr.Error != gorm.ErrRecordNotFound
+}
+
+// UserExistsByMailAddress returns if a given user object exists in the database based on the property 'mailAddress'
+func (dbc DatabaseController) UserExistsByMailAddress(user authentication.User) bool {
+	var dbUser authentication.User
+	// Try to get first object with matching mailAddress
+	selectErr := dbc.DBHandle.First(&dbUser, "mailAddress = ?", user.MailAddress)
+	// If no user is found, return false
 	return selectErr.Error != gorm.ErrRecordNotFound
 }
 

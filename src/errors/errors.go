@@ -25,6 +25,12 @@ var (
 	// ErrInvalidUserData is thrown when supplied user data is invalid
 	ErrInvalidUserData = errors.New("invalid user data")
 
+	// ErrUserWithUsernameExists is thrown when a user with the same username already exists
+	ErrUserWithUsernameExists = errors.New("user with this username already exists")
+
+	// ErrUserWithMailAddressExists is thrown when a user with the same mail address already exists
+	ErrUserWithMailAddressExists = errors.New("user with this mail address already exists")
+
 	// ErrDatabaseContextNotFound is thrown if database handle can't be found in context
 	ErrDatabaseContextNotFound = errors.New("failed to get database from context")
 
