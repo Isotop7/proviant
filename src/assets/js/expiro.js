@@ -31,13 +31,18 @@ expiro.deleteProduct = async function (productID) {
 
 expiro.loginUser = async function (username, password) {
     let url = `${window.location.protocol}//${window.location.host}/auth/login`
-    const response = await fetch(url, {
+    const apiCall = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({ username, password })
     });
+    let body = await apiCall.json();
+    let response = {
+        code: apiCall.status,
+        body: body.message
+    }
     return response;
 }
 

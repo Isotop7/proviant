@@ -18,6 +18,12 @@ function hideSignupError() {
     signupAlert.style.display = "none";
 }
 
+function showSignupSuccess(username) {
+    let toastBootstrap = bootstrap.Toast.getOrCreateInstance(infoToast)
+    infoToast.getElementsByClassName("toast-body")[0].innerHTML = `Hello <span class="fw-bold">${username}</span>!<br><br>Your signup succeeded and you should be able to log in and use expiro`
+    toastBootstrap.show()
+}
+
 function clearLoginInputs() {
     usernameInput.value = "";
     passwordInput.value = "";
@@ -37,7 +43,7 @@ function Login() {
             authForm.elements.inputUsername.classList.toggle("is-invalid");
         }
         formIsValid = false;
-    } 
+    }
     if (password == "") {
         if (!authForm.elements.inputPassword.classList.contains("is-invalid")) {
             authForm.elements.inputPassword.classList.toggle("is-invalid");
@@ -50,7 +56,7 @@ function Login() {
     }
 
     expiro.loginUser(username, password).then((response) => {
-        switch (response.status) {
+        switch (response.code) {
             case 200:
                 window.location.href = `${window.location.protocol}//${window.location.host}/web`;
                 break;
@@ -59,7 +65,7 @@ function Login() {
                 clearLoginInputs();
                 break;
             default:
-                showLoginError(`Undefined authentication error: ${response}`)
+                showLoginError(`Undefined authentication error: ${response.message}`)
                 clearLoginInputs();
                 break;
         }
@@ -77,7 +83,7 @@ function Signup() {
             authForm.elements.inputUsername.classList.toggle("is-invalid");
         }
         formIsValid = false;
-    } 
+    }
     if (password == "") {
         if (!authForm.elements.inputPassword.classList.contains("is-invalid")) {
             authForm.elements.inputPassword.classList.toggle("is-invalid");
@@ -98,8 +104,7 @@ function Signup() {
     expiro.signupUser(username, mailAddress, password).then((response) => {
         switch (response.code) {
             case 200:
-                console.log(response.body);
-                // TODO: Add success info and button for reload
+                showSignupSuccess(username);
                 clearSignupInputs();
                 break;
             case 400:
@@ -123,6 +128,7 @@ let passwordInput = authForm.elements.inputPassword;
 let loginAlert = document.getElementById("loginAlert");
 let signupAlert = document.getElementById("signupAlert");
 let btnSignup = document.getElementById("btnSignup");
+let infoToast = document.getElementById("infoToast");
 
 usernameInput.oninput = function () {
     if (usernameInput.value.length > 0 && usernameInput.classList.contains("is-invalid")) {
