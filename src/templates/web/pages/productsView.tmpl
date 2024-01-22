@@ -1,5 +1,73 @@
 {{ define "content" }}
-<h3>
-    Show product
-</h3>
+<div class="row my-2">
+    <div class="col">
+        <div class="card mb-3 text-bg-primary w-100">
+            <div class="row g-0">
+                <div class="col-md-3">
+                    <img src="{{- .Product.ImageURL -}}" class="img-fluid rounded-start p-1" alt="Image URL">
+                </div>
+                <div class="col-md-9">
+                    <div class="card-body">
+                        <div class="card-title display-6 mb-3 fw-semibold">
+                            {{- .Product.ProductName -}}
+                        </div>
+                        <div class="card-text my-3">
+                            <div class="row">
+                                <div class="col-4 fw-bold">
+                                    Barcode
+                                </div>
+                                <div class="col col-auto font-monospace">
+                                    {{- .Product.Barcode -}}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4 fw-bold">
+                                    Categories
+                                </div>
+                                <div class="col col-auto">
+                                    {{- .Product.Categories | badgifyCategories -}}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4 fw-bold">
+                                    Countries
+                                </div>
+                                <div class="col col-auto">
+                                    {{- .Product.Countries -}}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4 fw-bold">
+                                    Expire At
+                                </div>
+                                <div class="col col-auto {{ if hasPassed .Product.ExpireAt }}text-danger{{ end }}">
+                                    {{- .Product.ExpireAt | humanDate -}}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4 fw-bold">
+                                    Scanned At
+                                </div>
+                                <div class="col col-auto">
+                                    {{- .Product.ScannedAt | humanDate -}}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4 fw-bold">
+                                    Notified At
+                                </div>
+                                <div class="col col-auto">
+                                    {{- .Product.NotifiedAt | humanDate -}}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-text mt-4 text-end">
+                            <small>Last updated @ {{- .Product.Model.UpdatedAt | humanDate -}}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {{ end }}

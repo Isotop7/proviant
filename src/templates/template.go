@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -26,9 +27,22 @@ func hasPassed(t time.Time) bool {
 	return t.Before(time.Now())
 }
 
+func badgifyCategories(categories string) template.HTML {
+	output := ""
+	elements := strings.Split(categories, ",")
+	for _, elem := range elements {
+		contents := strings.Split(strings.TrimSpace(elem), ":")
+		lang := contents[0]
+		definition := contents[1]
+		output += fmt.Sprintf("<span class=\"badge bg-dark me-3\">%s</span>%s</br>", lang, definition)
+	}
+	return template.HTML(output)
+}
+
 var customTemplateFunctions = template.FuncMap{
-	"humanDate": humanDate,
-	"hasPassed": hasPassed,
+	"humanDate":         humanDate,
+	"hasPassed":         hasPassed,
+	"badgifyCategories": badgifyCategories,
 }
 
 func NewTemplateCache() (map[string]*template.Template, error) {
