@@ -19,12 +19,9 @@ $offcanvas-box-shadow: 0 1rem 3rem rgba(0, 0, 0, .175);
 
 // Customize some defaults
 $font-family-base: "DM Sans Variable";
-$pink: #ba278b;
+$pink: #FD0D6E;
 $purple: #a88dd9;
-//$white: #fafafa;
-$green: #27BA56;
 $border-radius: .7rem;
-$primary: $pink;
 
 // Required
 @import "bootstrap/scss/variables";
@@ -83,7 +80,7 @@ $bootstrap-icons-font-dir: "../fonts";
 .navbar {
     background-image: none;
     margin-bottom: 30px;
-    border-bottom: 2px solid var(--bs-tertiary-bg);
+    border-bottom: 6px solid var(--bs-primary);
 }
 
 #content-wrapper {

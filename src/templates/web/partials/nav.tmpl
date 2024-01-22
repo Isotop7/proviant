@@ -1,59 +1,107 @@
 {{ define "nav" }}
-<nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+<nav class="navbar navbar-expand-md navbar fixed-top">
 	<div class="container-fluid">
+		<!-- full size navigation -->
 		<a class="navbar-brand" href="/web">
-			<img src="/assets/icons/logo_transparent.png" alt="expiro" width="48"
-				class="d-inline-block align-text-top" />
+			<!--<img src="/assets/icons/logo_transparent.png" alt="expiro" width="48"
+				class="d-inline-block align-text-top" />-->
+			<span class="fs-3">expiro</span>
 		</a>
+		<div class="collapse navbar-collapse mx-4">
+			<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+				<li class="nav-item dropdown">
+					<a class="nav-link dropdown-toggle" href="/web/products" role="button" data-bs-toggle="dropdown"
+						aria-expanded="false">
+						Products
+					</a>
+					<ul class="dropdown-menu">
+						<li><a class="dropdown-item" href="/web/products">Overview</a></li>
+						<li>
+							<hr class="dropdown-divider">
+						</li>
+						<li><a class="dropdown-item" href="/web/products/create">Create</a></li>
+						<li><a class="dropdown-item" href="/web/products/scan">Scan</a></li>
+					</ul>
+				</li>
+			</ul>
+			<div class="navbar-nav me-auto mb-lg-0">
+				<form class="d-flex me-auto mb-2 mb-lg-0" role="search">
+					<div class="input-group">
+						<input class="form-control bg-dark-subtle" type="search" placeholder="..." aria-label="Search" />
+						<button class="btn btn-primary" type="submit">
+							<i class="bi bi-search"></i>
+						</button>
+					</div>
+				</form>
+			</div>
+			<ul class="navbar-nav">
+				<li class="nav-item dropdown" data-bs-placement="bottom-end">
+					<a class="nav-link" href="/web/auth" role="button" data-bs-toggle="dropdown"
+						aria-expanded="false">
+						<span class="fs-3">
+							<i class="bi bi-gear-wide-connected"></i>
+						</span>
+					</a>
+					<ul class="dropdown-menu dropdown-menu-end">
+						<li><a class="dropdown-item" href="/web/user/settings">User</a></li>
+						<li>
+							<hr class="dropdown-divider">
+						</li>
+						<li><a class="dropdown-item" onclick="expiro.logoutUser()" href="/web">Logout</a></li>
+					</ul>
+				</li>
+			</ul>
+		</div>
 		<button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar"
-			aria-controls="offcanvasNavbar2" aria-label="Toggle navigation">
+			aria-controls="offcanvasNavbar" aria-label="Toggle navigation">
 			<span class="navbar-toggler-icon"></span>
 		</button>
-		<div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="offcanvasNavbar"
-			aria-labelledby="offcanvasNavbarLabel">
-			<div class="offcanvas-header">
-				<h5 class="offcanvas-title" id="offcanvasNavbarLabel">Offcanvas</h5>
-				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
-					aria-label="Close"></button>
-			</div>
-			<div class="offcanvas-body">
-				<ul class="navbar-nav me-auto mb-2 mb-lg-0">
-					<li class="nav-item dropdown">
-						<a class="nav-link dropdown-toggle" href="/web/products" role="button" data-bs-toggle="dropdown"
-							aria-expanded="false">
-							Products
-						</a>
-						<ul class="dropdown-menu">
-							<li><a class="dropdown-item" href="/web/products">Overview</a></li>
-							<li>
-								<hr class="dropdown-divider">
-							</li>
-							<li><a class="dropdown-item" href="/web/products/create">Create</a></li>
-							<li><a class="dropdown-item" href="/web/products/scan">Scan</a></li>
-						</ul>
-					</li>
-				</ul>
-				<ul class="navbar-nav">
-					<li class="nav-item dropdown">
-						<a class="nav-link dropdown-toggle" href="/web/auth" role="button" data-bs-toggle="dropdown"
-							aria-expanded="false">
-							Settings
-						</a>
-						<ul class="dropdown-menu">
-							<li><a class="dropdown-item" href="/web/user/settings">User</a></li>
-							<li>
-								<hr class="dropdown-divider">
-							</li>
-							<li><a class="dropdown-item" onclick="expiro.logoutUser()" href="/web">Logout</a></li>
-						</ul>
-					</li>
-					<form class="d-flex mt-3 mt-lg-0" role="search">
-						<input class="form-control me-2" type="search" placeholder="..." aria-label="Search" />
-						<button class="btn btn-outline-success" type="submit">Search</button>
-					</form>
-				</ul>
-			</div>
-		</div>
 	</div>
 </nav>
+
+
+<!-- mobile navigation -->
+<div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="offcanvasNavbar"
+	aria-labelledby="offcanvasNavbarLabel">
+	<div class="offcanvas-header">
+		<a class="offcanvas-title" id="offcanvasNavbarLabel" href="/web">
+			<img src="/assets/icons/logo_transparent.png" alt="expiro" width="128"
+				class="d-inline-block align-text-top" />
+		</a>
+		<button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+	</div>
+	<div class="offcanvas-body">
+		<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+			<li class="nav-item dropdown">
+				<a class="nav-link dropdown-toggle" href="/web/products" role="button" data-bs-toggle="dropdown"
+					aria-expanded="false">
+					Products
+				</a>
+				<ul class="dropdown-menu">
+					<li><a class="dropdown-item" href="/web/products">Overview</a></li>
+					<li>
+						<hr class="dropdown-divider">
+					</li>
+					<li><a class="dropdown-item" href="/web/products/create">Create</a></li>
+					<li><a class="dropdown-item" href="/web/products/scan">Scan</a></li>
+				</ul>
+			</li>
+		</ul>
+		<ul class="navbar-nav dropdown">
+			<li class="nav-item dropdown">
+				<a class="nav-link dropdown-toggle" href="/web/auth" role="button" data-bs-toggle="dropdown"
+					aria-expanded="false">
+					Settings
+				</a>
+				<ul class="dropdown-menu">
+					<li><a class="dropdown-item" href="/web/user/settings">User</a></li>
+					<li>
+						<hr class="dropdown-divider">
+					</li>
+					<li><a class="dropdown-item" onclick="expiro.logoutUser()" href="/web">Logout</a></li>
+				</ul>
+			</li>
+		</ul>
+	</div>
+</div>
 {{ end }}
