@@ -5,6 +5,16 @@ definitions:
       message:
         type: string
     type: object
+  authentication.Login:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
   authentication.Signup:
     properties:
       mailAddress:
@@ -17,6 +27,25 @@ definitions:
     - mailAddress
     - password
     - username
+    type: object
+  authentication.User:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      mailAddress:
+        type: string
+      products:
+        items:
+          $ref: '#/definitions/database.Product'
+        type: array
+      updatedAt:
+        type: string
+      username:
+        type: string
     type: object
   database.Product:
     properties:
@@ -332,6 +361,66 @@ paths:
       summary: Scan product
       tags:
       - product
+  /api/v1/user:
+    patch:
+      consumes:
+      - application/json
+      description: Updates properties of a user
+      parameters:
+      - description: User
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/authentication.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authentication.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Updates a user object
+      tags:
+      - user
+  /api/v1/user/password:
+    post:
+      consumes:
+      - application/json
+      description: Updates password of a user
+      parameters:
+      - description: Login
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/authentication.Login'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Updates a user password
+      tags:
+      - user
   /auth/signup:
     post:
       consumes:
