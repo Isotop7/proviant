@@ -71,40 +71,40 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	// Setup JWT authentication middleware for API
 	jwtAPIMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorNotUserAware, UnauthorizedAPIFunc)
 	if jwtAPIAuthSetupErr != nil {
-		logger.Error().Msgf("Error setting up authentication middleware: %s", jwtAPIAuthSetupErr.Error())
-		panic("Error setting up authentication middleware")
+		logger.Error().Msg(jwtAPIAuthSetupErr.Error())
+		panic(jwtAPIAuthSetupErr.Error())
 	}
 	// Initialize JWT authentication middleware
 	jwtAuthMiddlewareInitErr := jwtAPIMiddleware.MiddlewareInit()
 	if jwtAuthMiddlewareInitErr != nil {
-		logger.Error().Msg("Error initializing authentication middleware")
-		panic("Error initializing authentication middleware")
+		logger.Error().Msg(jwtAuthMiddlewareInitErr.Error())
+		panic(jwtAuthMiddlewareInitErr.Error())
 	}
 
 	// Setup JWT authentication and authorization middleware, aka user-aware
 	jwtAPIUserAwareMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorUserAware, UnauthorizedAPIFunc)
 	if jwtAPIAuthSetupErr != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrUserAwareAuthMiddlewareInit.Error(), jwtAPIAuthSetupErr.Error())
-		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
+		logger.Error().Msg(jwtAPIAuthSetupErr.Error())
+		panic(jwtAPIAuthSetupErr.Error())
 	}
 	// Initialize JWT authentication and authorization middleware
 	jwtAuthUserAwareMiddlewareInitErr := jwtAPIUserAwareMiddleware.MiddlewareInit()
 	if jwtAuthUserAwareMiddlewareInitErr != nil {
-		logger.Error().Msg(errors.ErrUserAwareAuthMiddlewareInit.Error())
-		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
+		logger.Error().Msg(jwtAuthUserAwareMiddlewareInitErr.Error())
+		panic(jwtAuthUserAwareMiddlewareInitErr.Error())
 	}
 
 	// Setup JWT authentication middleware for Frontend
 	jwtFrontendMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorNotUserAware, UnauthorizedFrontendFunc)
 	if jwtFrontendAuthSetupErr != nil {
-		logger.Error().Msgf("Error setting up authentication middleware: %s", jwtAPIAuthSetupErr.Error())
-		panic("Error setting up authentication middleware")
+		logger.Error().Msg(jwtFrontendAuthSetupErr.Error())
+		panic(jwtFrontendAuthSetupErr.Error())
 	}
 	// Initialize JWT authentication middleware
 	jwtFrontendAuthMiddlewareInitErr := jwtFrontendMiddleware.MiddlewareInit()
 	if jwtFrontendAuthMiddlewareInitErr != nil {
-		logger.Error().Msg("Error initializing authentication middleware")
-		panic("Error initializing authentication middleware")
+		logger.Error().Msg(errors.ErrAuthMiddlewareInit.Error())
+		panic(errors.ErrAuthMiddlewareInit.Error())
 	}
 
 	// Setup JWT authentication and authorization middleware, aka user-aware

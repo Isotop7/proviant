@@ -8,13 +8,18 @@ expiro.debug = function () {
 expiro.createProduct = async function (barcode, expireAt) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/products`
     let data = JSON.stringify({ barcode, expireAt })
-    const response = await fetch(url, {
+    const apiCall = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: data
     })
+    const body = await apiCall.json();
+    let response = {
+        code: apiCall.status,
+        message: body.message
+    }
     return response;
 }
 

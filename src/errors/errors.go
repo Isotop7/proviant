@@ -31,6 +31,9 @@ var (
 	// ErrUserAwareAuthMiddlewareInit is thrown when the user-aware authentication middleware fails to initialize
 	ErrUserAwareAuthMiddlewareInit = errors.New("error initializing user-aware authentication middleware")
 
+	// ErrAuthMiddlewareInit is thrown when the authentication middleware fails to initialize
+	ErrAuthMiddlewareInit = errors.New("error initializing authentication middleware")
+
 	// ErrInvalidUserData is thrown when supplied user data is invalid
 	ErrInvalidUserData = errors.New("invalid user data")
 

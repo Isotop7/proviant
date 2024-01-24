@@ -8,16 +8,18 @@ let productInfoShown = false;
 // Async functions
 async function queryProductInfoRequest(barcode) {
     let openFoodFactsAPIRURL = `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=product_name,countries,generic_name,image_url`;
-    const response = await fetch(openFoodFactsAPIRURL, {
+    const apiCall = await fetch(openFoodFactsAPIRURL, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
         }
-    }).catch(() => {
-        document.getElementById('alertQueryProductInfo').style = '';
-        document.getElementById('alertQueryProductInfo').innerText = `Could not find product with barcode ${inputBarcode.value}!`
     });
-    return response.json();
+    let body = await apiCall.json();
+    let response = {
+        code: apiCall.status,
+        message: body.message
+    }
+    return response;
 }
 // Function handlers
 function clearProductInfo() {
@@ -32,23 +34,24 @@ function queryProductInfo() {
     if (!inputBarcode.checkValidity()) {
         return;
     }
-    try {
-        queryProductInfoRequest(inputBarcode.value).then((response) => {
-            // TODO: Catch error and trigger :invalid on barcode
-            if (response) {
-                let product = response.product;
+    queryProductInfoRequest(inputBarcode.value).then((response) => {
+        switch (response.code) {
+            case 200:
+                let product = response.message;
                 document.getElementById('productInfoImage').src = product.image_url;
                 document.getElementById('productInfoName').innerText = product.product_name;
                 document.getElementById('productInfoGenericName').innerText = product.generic_name;
                 document.getElementById('productData').style = '';
                 productInfoShown = true;
-            }
-        });
-    } catch (error) {
-        console.error("Error: " + error);
-        clearProductInfo();
-    }
+            default:
+                console.error("Error: " + response.message);
+                document.getElementById('alertQueryProductInfo').style = '';
+                document.getElementById('alertQueryProductInfo').innerText = `Could not find product with barcode ${inputBarcode.value}!`
+                break;
+        }
+    });
 }
+
 function createProduct() {                            
     if (!(inputBarcode.checkValidity() && inputExpireAt.checkValidity())) {
         return;
@@ -60,7 +63,7 @@ function createProduct() {
             // Show alert
             let alert = document.getElementById('alertCreateProductInfo')
             alert.style = ''
-            switch (response.status) {
+            switch (response.code) {
                 case 201:
                     alert.classList.remove(...alert.classList);
                     alert.classList.add("alert", "alert-success");
@@ -79,7 +82,7 @@ function createProduct() {
                 default:
                     alert.classList.remove(...alert.classList);
                     alert.classList.add("alert", "alert-danger");
-                    alert.innerText = `Undefined error: ${response}`;
+                    alert.innerText = `Undefined error: ${response.message}`;
                     break;
             }
         }).catch(error => {
@@ -93,9 +96,9 @@ function createProduct() {
 // Add event listeners
 window.addEventListener('load', function () {
     // Fetch all the forms we want to apply custom Bootstrap validation styles to
-    var forms = document.getElementsByClassName('needs-validation');
+    let forms = document.getElementsByClassName('needs-validation');
     // Loop over them and prevent submission
-    var validation = Array.prototype.filter.call(forms, function (form) {
+    Array.prototype.filter.call(forms, function (form) {
         form.addEventListener('submit', function (event) {
             if (form.checkValidity() === false) {
                 event.preventDefault();

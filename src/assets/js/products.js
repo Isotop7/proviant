@@ -9,7 +9,7 @@ function showToast(message) {
 function multipleCheckboxesSelected() {
     let counter = 0;
     let checkboxes = document.getElementsByClassName("form-check-input");
-    for (checkbox of checkboxes) {
+    for (let checkbox of checkboxes) {
         if (checkbox.checked) {
             counter++;
         }
@@ -22,7 +22,7 @@ function multipleCheckboxesSelected() {
 
 function getSelectedProduct() {
     let checkboxes = document.getElementsByClassName("form-check-input");
-    for (checkbox of checkboxes) {
+    for (let checkbox of checkboxes) {
         if (checkbox.checked) {
             return checkbox.value;
         }
@@ -33,7 +33,7 @@ function getSelectedProduct() {
 function getSelectedProducts() {
     let selectedIDs = [];
     let checkboxes = document.getElementsByClassName("form-check-input");
-    for (checkbox of checkboxes) {
+    for (let checkbox of checkboxes) {
         if (checkbox.checked) {
             selectedIDs.push(checkbox.value);
         }
@@ -46,7 +46,7 @@ async function deleteProducts() {
     if (productIDs.length <= 0) {
         return;
     }
-    for(productID of productIDs) {
+    for(let productID of productIDs) {
         await expiro.deleteProduct(productID).then((response) => {
             console.error(response);
         })
@@ -81,7 +81,6 @@ function handleButtonEdit() {
 
 function handleButtonDelete() {
     deleteProducts();
-    //TODO: Fix reload timing error
     location.reload();
 }
 
