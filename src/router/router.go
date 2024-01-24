@@ -139,6 +139,12 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 	publicProductAPI.POST("", v1.CreateProduct)
 	publicProductAPI.POST("/scan", v1.ScanProduct)
 
+	// Protected user routes
+	protectedUserAPI := engine.Group("/api/v1/user")
+	protectedUserAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	protectedUserAPI.PATCH("", v1.UpdateUser)
+	protectedUserAPI.POST("/password", v1.UpdateUserPassword)
+
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")
 	protectedProductAPI.Use(jwtAPIUserAwareMiddleware.MiddlewareFunc())

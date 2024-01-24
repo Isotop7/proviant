@@ -119,17 +119,21 @@ func (nc NotificationController) sendMail(product database.Product, recipient st
 	mail.SetBody("text/html", bodyBuf.String())
 
 	// Settings for SMTP server
-	mailDialer := gomail.NewDialer(
-		nc.Configuration.SMTP.Host,
-		nc.Configuration.SMTP.Port,
-		nc.Configuration.SMTP.User,
-		nc.Configuration.SMTP.Password,
-	)
+	mailDialer := gomail.Dialer{
+		Host: nc.Configuration.SMTP.Host,
+		Port: nc.Configuration.SMTP.Port,
+	}
+
+	if nc.Configuration.SMTP.User != "" && nc.Configuration.SMTP.Password != "" {
+		mailDialer.Username = nc.Configuration.SMTP.User
+		mailDialer.Password = nc.Configuration.SMTP.Password
+	}
 
 	// Set ssl mode
 	mailDialer.SSL = nc.Configuration.SMTP.SSL
 
 	// Send mail and return error
+
 	err := mailDialer.DialAndSend(mail)
 	return err
 }

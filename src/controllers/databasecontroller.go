@@ -75,6 +75,85 @@ func (dbc DatabaseController) CreateUser(user *authentication.User) error {
 	return createResult.Error
 }
 
+// UpdateUser gets a user (based on user ID) and updates its contents with the contents of a supplied reference to the updated user
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) UpdateUser(userID uint, user *authentication.User) error {
+	// Check if id is valid
+	if userID <= 0 {
+		return gorm.ErrNotImplemented
+	}
+
+	// Try to get user
+	var dbUser authentication.User
+	getError := dbc.DBHandle.First(&dbUser, userID)
+
+	// If database operation returned error, return it to the caller
+	if getError.Error != nil {
+		return getError.Error
+	}
+	// Check if supplied user matches the userID in the database object
+	if dbUser.ID != userID {
+		return errors.ErrMismatcherUserID
+	}
+
+	// Update values
+	dbUser.Username = user.Username
+	dbUser.MailAddress = user.MailAddress
+
+	// Save updated product
+	saveResult := dbc.DBHandle.Save(&dbUser)
+	// Return error if save did not work
+	if saveResult.Error != nil {
+		return saveResult.Error
+	} else {
+		return nil
+	}
+}
+
+// UpdateUserPassword gets a user (based on user ID) and updates its password with the contents of a supplied reference to the updated login data
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) UpdateUserPassword(userID uint, login *authentication.Login) error {
+	// Check if id is valid
+	if userID <= 0 {
+		return gorm.ErrNotImplemented
+	}
+
+	// Try to get user
+	var dbUser authentication.User
+	getError := dbc.DBHandle.First(&dbUser, userID)
+
+	// If database operation returned error, return it to the caller
+	if getError.Error != nil {
+		return getError.Error
+	}
+	// Check if supplied user matches the userID in the database object
+	if dbUser.ID != userID {
+		return errors.ErrMismatcherUserID
+	}
+
+	// Check if login is equivalent to database user
+	if dbUser.Username != login.Username {
+		return errors.ErrMismatchedUsername
+	}
+
+	// Generate hash from password
+	hashedPassword, hashError := bcrypt.GenerateFromPassword([]byte(login.Password), bcrypt.DefaultCost)
+	if hashError != nil {
+		return hashError
+	}
+	// Set password on database user
+	dbUser.Password = string(hashedPassword)
+
+	// Save updated user
+	saveResult := dbc.DBHandle.Save(&dbUser)
+	// Return error if save did not work
+	if saveResult.Error != nil {
+		return saveResult.Error
+	} else {
+		return nil
+	}
+}
+
 // UserIsProductOwner checks if user (based on user ID) is the matching owner of a product (based on product ID)
 func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) bool {
 	// Check for invalid product IDs

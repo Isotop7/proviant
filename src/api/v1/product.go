@@ -287,7 +287,7 @@ func UpdateProduct(ctx *gin.Context) {
 	updateErr := dbController.UpdateProduct(productID, userID, &product)
 
 	switch updateErr {
-	// No error => product was updates
+	// No error => product was updated
 	case nil:
 		ctx.JSON(http.StatusOK, product)
 		return

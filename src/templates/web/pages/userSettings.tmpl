@@ -27,13 +27,17 @@
     </div>
     <div class="row gx-5 p-3 my-3">
         <div class="col">
-            <div class="input-group">
-                <span class="input-group-text" id="basic-addon1">Username</span>
-                <input type="text" class="form-control" placeholder="Username" aria-label="Username"
-                    aria-describedby="basic-addon1" value="{{ .User.Username }}" id="inputUsername">
-                <span class="input-group-text" id="basic-addon2">Mail Address</span>
-                <input type="text" class="form-control" placeholder="Mail Address" aria-label="Mail Address"
-                    aria-describedby="basic-addon2" value="{{ .User.MailAddress }}" id="inputMailAddress">
+            <form id="userSettings" novalidate>
+                <div class="input-group">
+                    <span class="input-group-text" id="basic-addon1">Username</span>
+                    <input type="text" class="form-control" placeholder="Username" aria-label="Username"
+                        aria-describedby="basic-addon1" value="{{ .User.Username }}" id="inputUsername">
+                    <span class="input-group-text" id="basic-addon2">Mail Address</span>
+                    <input type="text" class="form-control" placeholder="Mail Address" aria-label="Mail Address"
+                        aria-describedby="basic-addon2" value="{{ .User.MailAddress }}" id="inputMailAddress">
+                </div>
+            </form>
+            <div id="updateAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
             </div>
         </div>
     </div>
@@ -47,13 +51,35 @@
     </div>
     <div class="row gx-5 p-3 my-3">
         <div class="col">
-            <div class="input-group">
-                <span class="input-group-text">Password</span>
-                <input type="password" aria-label="Password" class="form-control">
-                <input type="password" aria-label="Password Verification" class="form-control">
-                <button class="btn btn-outline-primary" type="button" id="btnUpdatePassword">Update Password</button>
+            <form id="passwordUpdate" novalidate>
+                <div class="input-group">
+                    <span class="input-group-text">Password</span>
+                    <input id="inputPassword" type="password" aria-label="Password" class="form-control" autocomplete="new-password">
+                    <input id="inputPasswordVerification" type="password" aria-label="Password Verification" class="form-control" autocomplete="new-password">
+                    <button class="btn btn-outline-primary" type="button" id="btnUpdatePassword">Update Password</button>
+                </div>
+            </form>
+            <div id="passwordAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
             </div>
         </div>
     </div>
 </div>
+
+<div id="modal" class="modal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">expiro</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="modalBody">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="btnModal">Reload</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="/assets/js/userSettings.js"></script>
 {{ end }}
