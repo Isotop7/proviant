@@ -43,7 +43,7 @@ func Signup(ctx *gin.Context) {
 	var signup authentication.Signup
 	if err := ctx.ShouldBindJSON(&signup); err != nil {
 		logger.Error().Msgf("Error parsing body: %s", err.Error())
-		ctx.JSON(http.StatusBadRequest, api.FromError(err))
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
 
@@ -51,7 +51,7 @@ func Signup(ctx *gin.Context) {
 	validationErr := signup.IsValid()
 	if validationErr != nil {
 		logger.Error().Msgf("User data was invalid: '%s'", validationErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.FromError(validationErr))
+		ctx.JSON(http.StatusBadRequest, api.Error(validationErr))
 		return
 	}
 

@@ -520,33 +520,34 @@ func ScanProduct(ctx *gin.Context) {
 	decodingTimeout := static.BarcodeDecodingTimeout
 	decodingContext, cancel := context.WithTimeout(context.Background(), decodingTimeout)
 	defer cancel()
+	// Create communication channel for go routine
 	decodingProcessChannel := make(chan bool)
 
-	// Decode image
+	// Decode image go routine
 	go func() {
-		// Read file from form
+		// Read file from form or signal error
 		file, formErr := ctx.FormFile("image")
 		if formErr != nil {
 			logger.Error().Msgf("Error reading image from body: %s", formErr.Error())
-			ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
+			ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrNoBarcodeFoundInImage))
 			decodingProcessChannel <- false
 			return
 		}
 
-		// Open file from form
+		// Open file from form or signal error
 		src, openErr := file.Open()
 		if openErr != nil {
 			logger.Error().Msgf("Error opening file: %s", openErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
 			decodingProcessChannel <- false
 			return
 		}
 
-		// Decode file from form as image
+		// Decode file from form as image or signal error
 		img, format, decodeErr := image.Decode(src)
 		if decodeErr != nil {
 			logger.Error().Msgf("Error decoding image as type %s: %s", format, decodeErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
 			decodingProcessChannel <- false
 			return
 		} else {
@@ -557,11 +558,11 @@ func ScanProduct(ctx *gin.Context) {
 		convertedImage := image.NewGray(img.Bounds())
 		draw.Draw(convertedImage, convertedImage.Bounds(), img, img.Bounds().Min, draw.Src)
 
-		// Convert gray scaled image to binary bitmap
+		// Convert gray scaled image to binary bitmap or signal error
 		bmp, bmpErr := gozxing.NewBinaryBitmapFromImage(convertedImage)
 		if bmpErr != nil {
 			logger.Error().Msgf("Error converting image to bitmap: %s", bmpErr.Error())
-			ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
+			ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrNoBarcodeFoundInImage))
 			decodingProcessChannel <- false
 			return
 		}
@@ -578,9 +579,10 @@ func ScanProduct(ctx *gin.Context) {
 		code, scanErr := scanner.Decode(bmp, hints)
 		if scanErr != nil {
 			logger.Error().Msgf("Error decoding image when finding barcode: %s", scanErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
 			return
 		} else {
+			// If barcode is found, return it
 			decodedBarcode = code.GetText()
 		}
 		// Signal success
@@ -591,7 +593,7 @@ func ScanProduct(ctx *gin.Context) {
 	select {
 	case <-decodingContext.Done():
 		// Timeout was reached, error is returned
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.ErrBarcodeDecodeTimeoutExceeded.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrBarcodeDecodeTimeoutExceeded))
 		return
 	case success := <-decodingProcessChannel:
 		// Timeout was not reached and channel signaled success on decoding barcode
@@ -602,5 +604,5 @@ func ScanProduct(ctx *gin.Context) {
 	}
 
 	// Return if timeout was not reached but channel did not signal success
-	ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrNoBarcodeFoundInImage.Error()})
+	ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
 }

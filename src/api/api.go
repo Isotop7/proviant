@@ -35,6 +35,7 @@ type APIResponse struct {
 	Message string `json:"message"`
 }
 
-func FromError(err error) APIResponse {
+// Error returns an API response object from a error object
+func Error(err error) APIResponse {
 	return APIResponse{Message: err.Error()}
 }
