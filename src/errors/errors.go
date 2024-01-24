@@ -10,6 +10,12 @@ var (
 	// ErrMismatchedUsername occurs if a username of a given user (by ID) mismatches a given login data
 	ErrMismatchedUsername = errors.New("mismatching username")
 
+	// ErrUsernameEmpty is thrown when the given username is too short
+	ErrUsernameEmpty = errors.New("username can't be empty")
+
+	// ErrPasswordTooShort is thrown when the given password is too short
+	ErrPasswordTooShort = errors.New("password must at least be 8 characters long")
+
 	// ErrUserHasNoMailAddress is thrown if a given user has no mail address
 	ErrUserHasNoMailAddress = errors.New("user has no mail address")
 
@@ -27,6 +33,9 @@ var (
 
 	// ErrInvalidUserData is thrown when supplied user data is invalid
 	ErrInvalidUserData = errors.New("invalid user data")
+
+	// ErrInvalidUserID is thrown when supplied user data is invalid
+	ErrInvalidUserID = errors.New("invalid user ID")
 
 	// ErrUserWithUsernameExists is thrown when a user with the same username already exists
 	ErrUserWithUsernameExists = errors.New("user with this username already exists")

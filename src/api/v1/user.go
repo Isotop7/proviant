@@ -3,7 +3,6 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"net/mail"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -56,10 +55,10 @@ func UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	// Check for valid user mail
-	_, mailParseErr := mail.ParseAddress(user.MailAddress)
-	if mailParseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(mailParseErr))
+	// Check for valid user data
+	validationErr := user.IsValid(true)
+	if validationErr != nil {
+		ctx.JSON(http.StatusBadRequest, api.Error(validationErr))
 		return
 	}
 
@@ -127,6 +126,14 @@ func UpdateUserPassword(ctx *gin.Context) {
 	if bindErr := ctx.ShouldBindJSON(&login); bindErr != nil {
 		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), bindErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+		return
+	}
+
+	// Check for valid login credentials
+	validationErr := login.IsValid()
+	if validationErr != nil {
+		logger.Error().Msg(validationErr.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(validationErr))
 		return
 	}
 
