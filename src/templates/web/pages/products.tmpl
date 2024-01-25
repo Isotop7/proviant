@@ -26,7 +26,7 @@
 </div>
 <hr>
 {{ if .Products }}
-<table class="table table-striped">
+<table class="table table-striped table-hover">
     <thead>
         <tr>
             <th>
@@ -37,11 +37,12 @@
             <th scope="col">Barcode</th>
             <th scope="col">Scanned At</th>
             <th scope="col">Expire At</th>
+            <th scope="col">Notified At</th>
         </tr>
     </thead>
     <tbody>
         {{ range .Products }}
-        <tr>
+        <tr onclick="let cb = document.getElementById('checkbox-{{ .Model.ID }}'); cb.checked = !cb.checked;">
             <th scope="row">
                 <input class="form-check-input" type="checkbox" value="{{ .Model.ID }}" id="checkbox-{{ .Model.ID }}">
             </th>
@@ -50,6 +51,7 @@
             <td>{{ .Barcode }}</td>
             <td>{{ .ScannedAt | humanDate }}</td>
             <td {{ if hasPassed .ExpireAt }}class="table-danger" {{ end }}>{{ .ExpireAt | humanDate }}</td>
+            <td>{{ .NotifiedAt | humanDate }}</td>
         </tr>
         {{ end }}
     </tbody>

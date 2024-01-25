@@ -1,5 +1,26 @@
 {{ define "content" }}
-<h3>
-    Home
-</h3>
+<div class="container row row-cols-1 row-cols-md-3 g-5">
+    {{ range .Tiles }}
+    <div class="col">
+        <div class="card h-100 text-body-secondary mb-3">
+            <div class="card-header">
+                {{ .Title }}
+            </div>
+            <div class="card-body">
+                <p class="card-title display-4 my-2 text-primary fw-bold">
+                    {{ .Hero }}
+                </p>
+                <p class="card-text fw-light">
+                    {{ .Body }}
+                </p>
+            </div>
+            <div class="card-footer">
+                <small class="text-body-secondary font-monospace">
+                    {{ .Footer }}
+                </small>
+            </div>
+        </div>
+    </div>
+    {{ end }}
+</div>
 {{ end }}

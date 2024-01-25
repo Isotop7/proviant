@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"fmt"
 	"time"
 
 	"gitlab.com/Isotop7/expiro/errors"
 	"gitlab.com/Isotop7/expiro/models/authentication"
 	"gitlab.com/Isotop7/expiro/models/database"
+	"gitlab.com/Isotop7/expiro/models/webparts"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -390,4 +392,64 @@ func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInte
 	} else {
 		return notificationProducts, nil
 	}
+}
+
+// GetUserHomeTiles creates a list of tiles with user statistics
+func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, error) {
+	// Create list of hometiles
+	homeTiles := []webparts.Tile{}
+
+	// Get count of products
+	productList, productCountErr := dbc.GetUserProductsBulk(userID, -1)
+	if productCountErr != nil {
+		return homeTiles, productCountErr
+	}
+	// Create tile
+	productCount := len(productList)
+	homeTiles = append(homeTiles, webparts.Tile{
+		Title:  "Amount of your products",
+		Hero:   fmt.Sprint(productCount),
+		Body:   fmt.Sprintf("You currently have %d products assigned", productCount),
+		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+	})
+
+	// Get last inserted product
+	var lastProduct database.Product
+	getError := dbc.DBHandle.
+		Where("user_id = ?", userID).
+		Where("deleted_at IS NULL").
+		Order("created_at DESC").
+		Limit(1).
+		Find(&lastProduct)
+	if getError.Error != nil {
+		return homeTiles, getError.Error
+	}
+	// Create tile
+	homeTiles = append(homeTiles, webparts.Tile{
+		Title:  "Last inserted product",
+		Hero:   fmt.Sprint(lastProduct.ProductName),
+		Body:   fmt.Sprintf("'%s' is the most recent product with barcode #%s", lastProduct.ProductName, lastProduct.Barcode),
+		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+	})
+
+	// Last notification
+	var lastNotifiedProduct database.Product
+	getNotifiedError := dbc.DBHandle.
+		Where("user_id = ?", userID).
+		Where("deleted_at IS NULL").
+		Order("notified_at DESC").
+		Limit(1).
+		Find(&lastNotifiedProduct)
+	if getNotifiedError.Error != nil {
+		return homeTiles, getNotifiedError.Error
+	}
+	// Create tile
+	homeTiles = append(homeTiles, webparts.Tile{
+		Title:  "Last notification",
+		Hero:   fmt.Sprint(lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04")),
+		Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04")),
+		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+	})
+
+	return homeTiles, nil
 }

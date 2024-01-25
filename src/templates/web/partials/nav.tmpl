@@ -1,20 +1,20 @@
 {{ define "nav" }}
-<nav class="navbar navbar-expand-md navbar fixed-top">
+<nav class="navbar navbar-expand-md navbar fixed-top bg-body-secondary">
 	<div class="container-fluid">
 		<!-- full size navigation -->
 		<a class="navbar-brand" href="/web">
 			<!--<img src="/assets/icons/logo_transparent.png" alt="expiro" width="48"
 				class="d-inline-block align-text-top" />-->
-			<span class="fs-3">expiro</span>
+			<span class="fs-3 fw-bold">expiro</span>
 		</a>
 		<div class="collapse navbar-collapse mx-4">
 			<ul class="navbar-nav me-auto mb-2 mb-lg-0">
 				<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle" href="/web/products" role="button" data-bs-toggle="dropdown"
+					<a class="nav-link dropdown-toggle fw-bold" href="/web/products" role="button" data-bs-toggle="dropdown"
 						aria-expanded="false">
 						Products
 					</a>
-					<ul class="dropdown-menu">
+					<ul class="dropdown-menu bg-body-secondary">
 						<li><a class="dropdown-item fw-bold" href="/web/products">Overview</a></li>
 						<li>
 							<hr class="dropdown-divider">
@@ -24,17 +24,17 @@
 					</ul>
 				</li>
 			</ul>
-			<div class="navbar-nav me-auto mb-lg-0">
+			<div class="navbar-nav me-5 mb-lg-0">
 				<form class="d-flex me-auto mb-2 mb-lg-0" role="search">
 					<div class="input-group">
-						<input class="form-control bg-dark-subtle" type="search" placeholder="..." aria-label="Search" />
+						<input class="form-control bg-dark-subtle text-center" type="search" placeholder="..." aria-label="Search" />
 						<button class="btn btn-primary" type="submit">
 							<i class="bi bi-search"></i>
 						</button>
 					</div>
 				</form>
 			</div>
-			<ul class="navbar-nav">
+			<ul class="navbar-nav ms-3">
 				<li class="nav-item dropdown" data-bs-placement="bottom-end">
 					<a class="nav-link" href="/web/auth" role="button" data-bs-toggle="dropdown"
 						aria-expanded="false">
@@ -42,7 +42,7 @@
 							<i class="bi bi-gear-wide-connected"></i>
 						</span>
 					</a>
-					<ul class="dropdown-menu dropdown-menu-end">
+					<ul class="dropdown-menu dropdown-menu-end bg-body-secondary">
 						<li><a class="dropdown-item fw-bold" href="/web/user/settings">User settings</a></li>
 						<li>
 							<hr class="dropdown-divider">
@@ -61,12 +61,13 @@
 
 
 <!-- mobile navigation -->
-<div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="offcanvasNavbar"
+<div class="offcanvas offcanvas-end text-bg-light" tabindex="-1" id="offcanvasNavbar"
 	aria-labelledby="offcanvasNavbarLabel">
 	<div class="offcanvas-header">
 		<a class="offcanvas-title" id="offcanvasNavbarLabel" href="/web">
-			<img src="/assets/icons/logo_transparent.png" alt="expiro" width="128"
-				class="d-inline-block align-text-top" />
+			<!--<img src="/assets/icons/logo_transparent.png" alt="expiro" width="128"
+				class="d-inline-block align-text-top" />-->
+			<span class="fs-3 fw-bold">expiro</span>
 		</a>
 		<button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
 	</div>

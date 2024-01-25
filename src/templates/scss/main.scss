@@ -22,6 +22,9 @@ $font-family-base: "DM Sans Variable";
 $pink: #FD0D6E;
 $purple: #a88dd9;
 $border-radius: .7rem;
+$card-border-width: 3px;
+$card-cap-bg:  rgba(var(--bs-body-color-rgb), .15);
+$card-bg:  rgba(var(--bs-body-color-rgb), .01);
 
 // Required
 @import "bootstrap/scss/variables";
@@ -77,9 +80,14 @@ $bootstrap-icons-font-dir: "../fonts";
 // Custom styles
 //
 .navbar {
+    background-color: var(--bs-body-bg);
     background-image: none;
     margin-bottom: 30px;
     border-bottom: 6px solid var(--bs-primary);
+}
+
+.navbar a {
+    color: var(--bs-primary) !important;
 }
 
 #content-wrapper {

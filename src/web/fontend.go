@@ -21,9 +21,41 @@ type Frontend struct {
 }
 
 func (frontend *Frontend) Root(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Extract user id
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		return
+	}
+
+	// Get database instance from context
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
+		return
+	}
+
+	// Create database controller object
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	// Get user tiles
+	homeTiles, homeTileErr := dbController.GetUserHomeTiles(userID)
+	if homeTileErr != nil {
+		logger.Error().Msg(homeTileErr.Error())
+	}
+
+	// Setup page data
 	pageData := map[string]any{
 		"Title": "Home",
+		"Tiles": homeTiles,
 	}
+
+	// Render website
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "home.tmpl", pageData)
 }
 
