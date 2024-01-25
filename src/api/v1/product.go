@@ -579,7 +579,7 @@ func ScanProduct(ctx *gin.Context) {
 		code, scanErr := scanner.Decode(bmp, hints)
 		if scanErr != nil {
 			logger.Error().Msgf("Error decoding image when finding barcode: %s", scanErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrNoBarcodeFoundInImage))
 			return
 		} else {
 			// If barcode is found, return it
