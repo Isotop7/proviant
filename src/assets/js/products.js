@@ -48,7 +48,12 @@ async function deleteProducts() {
     }
     for(let productID of productIDs) {
         await expiro.deleteProduct(productID).then((response) => {
-            console.error(response);
+            switch (response.code) {
+                case 200:
+                    console.log("Products deleted")
+                default:
+                    console.error(response.message)
+            }
         })
     }
 }
@@ -79,8 +84,8 @@ function handleButtonEdit() {
     }
 }
 
-function handleButtonDelete() {
-    deleteProducts();
+async function handleButtonDelete() {
+    await deleteProducts();
     location.reload();
 }
 

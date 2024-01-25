@@ -25,12 +25,17 @@ expiro.createProduct = async function (barcode, expireAt) {
 
 expiro.deleteProduct = async function (productID) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${productID}`
-    const response = await fetch(url, {
+    const apiCall = await fetch(url, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json'
         }
     })
+    const body = await apiCall.json();
+    let response = {
+        code: apiCall.status,
+        message: body.message
+    }
     return response;
 }
 
