@@ -23,6 +23,10 @@ func humanDate(t time.Time) string {
 	return t.Format("02.01.2006 15:04")
 }
 
+func today() string {
+	return time.Now().Format("2006-01-02")
+}
+
 func hasPassed(t time.Time) bool {
 	return t.Before(time.Now())
 }
@@ -41,6 +45,7 @@ func badgifyCategories(categories string) template.HTML {
 
 var customTemplateFunctions = template.FuncMap{
 	"humanDate":         humanDate,
+	"today":             today,
 	"hasPassed":         hasPassed,
 	"badgifyCategories": badgifyCategories,
 }
