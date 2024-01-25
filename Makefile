@@ -18,6 +18,8 @@ init:
 	@make css
 	mkdir -p ./src/assets/js
 	cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* ./src/assets/js/
+	cd src/
+	go get -u
 
 # ==================================================================================== #
 # QUALITY CONTROL
