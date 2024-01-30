@@ -84,6 +84,11 @@ function handleButtonEdit() {
     }
 }
 
+function toggleCheckbox(checkboxId) {
+    let checkbox = document.getElementById(checkboxId);
+    checkbox.checked = !checkbox.checked;
+}
+
 async function handleButtonDelete() {
     await deleteProducts();
     location.reload();
@@ -92,7 +97,6 @@ async function handleButtonDelete() {
 document.getElementById("checkbox-all").addEventListener("change", () => {
     let checkboxes = document.getElementsByClassName("form-check-input");
     for (checkbox of checkboxes) {
-        console.log("Changed checkbox " + checkbox.id);
         checkbox.checked = document.getElementById("checkbox-all").checked;
     }
 });
