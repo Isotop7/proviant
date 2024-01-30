@@ -36,9 +36,22 @@ func badgifyCategories(categories string) template.HTML {
 	elements := strings.Split(categories, ",")
 	for _, elem := range elements {
 		contents := strings.Split(strings.TrimSpace(elem), ":")
-		lang := contents[0]
-		definition := contents[1]
-		output += fmt.Sprintf("<span class=\"badge bg-dark me-3\">%s</span>%s</br>", lang, definition)
+		if len(contents) == 2 {
+			lang := contents[0]
+			definition := contents[1]
+			output += fmt.Sprintf("<span class=\"badge bg-dark me-3\">%s</span>%s</br>", lang, definition)
+		} else {
+			output += fmt.Sprintf("%s</br>", elem)
+		}
+	}
+	return template.HTML(output)
+}
+
+func splitString(source string) template.HTML {
+	output := ""
+	elements := strings.Split(source, ",")
+	for _, elem := range elements {
+		output += fmt.Sprintf("%s</br>", elem)
 	}
 	return template.HTML(output)
 }
@@ -48,6 +61,7 @@ var customTemplateFunctions = template.FuncMap{
 	"today":             today,
 	"hasPassed":         hasPassed,
 	"badgifyCategories": badgifyCategories,
+	"splitString":       splitString,
 }
 
 func NewTemplateCache() (map[string]*template.Template, error) {

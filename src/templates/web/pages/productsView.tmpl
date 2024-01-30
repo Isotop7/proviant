@@ -3,11 +3,11 @@
     <div class="col">
         <div class="mb-3 text-bg-tertiary w-100">
             <div class="row g-0">
-                <div class="col-md-3 me-auto">
+                <div class="col-md-3 m-auto">
                     <img src="{{- .Product.ImageURL -}}" class="img-fluid rounded-start p-1" alt="Image URL">
                 </div>
-                <div class="m-auto col-md-6">
-                    <div class="display-1 mb-3 fw-semibold">
+                <div class="ms-auto col-md-6">
+                    <div class="display-1 mb-4 fw-semibold">
                         {{- .Product.ProductName -}}
                     </div>
                     <div class="row">
@@ -31,7 +31,7 @@
                             Countries
                         </div>
                         <div class="col col-auto">
-                            {{- .Product.Countries -}}
+                            {{- .Product.Countries | splitString -}}
                         </div>
                     </div>
                     <div class="row">
