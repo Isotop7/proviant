@@ -17,7 +17,7 @@ async function queryProductInfoRequest(barcode) {
     let body = await apiCall.json();
     let response = {
         code: apiCall.status,
-        message: body.message
+        message: body.product
     }
     return response;
 }
@@ -43,6 +43,7 @@ function queryProductInfo() {
                 document.getElementById('productInfoGenericName').innerText = product.generic_name;
                 document.getElementById('productData').style = '';
                 productInfoShown = true;
+                break;
             default:
                 console.error("Error: " + response.message);
                 document.getElementById('alertQueryProductInfo').style = '';

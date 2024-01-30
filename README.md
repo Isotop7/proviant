@@ -23,7 +23,7 @@
 
 ## Technologies and Tools
 
-- **API:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html)
+- **Web:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html)
 - **Database:** MariaDB
 
 ## Installation and Usage
@@ -93,7 +93,21 @@ GIN_MODE=debug
 Documentation is generated with `gomarkdoc` and `swagger`:
 
 - [Package documentation](./docs/README.md)
-- [Swagger definition](./docs/swagger.yaml) 
+- [Swagger definition](./docs/swagger.yaml)
+
+## Screenshots
+
+- Login and Signup page for multi user mode
+
+![Login](./docs/screenshots/login.png)
+
+- Portal view with activity tiles
+
+![Portal](./docs/screenshots/portal.png)
+
+- Create product and query data from OpenFoodFactAPI
+
+![Create product](./docs/screenshots/create.png)
 
 ## Contributing
 
