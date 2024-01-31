@@ -23,6 +23,10 @@ func humanDate(t time.Time) string {
 	return t.Format("02.01.2006 15:04")
 }
 
+func inputDate(t time.Time) string {
+	return t.Format("2006-01-02")
+}
+
 func today() string {
 	return time.Now().Format("2006-01-02")
 }
@@ -58,6 +62,7 @@ func splitString(source string) template.HTML {
 
 var customTemplateFunctions = template.FuncMap{
 	"humanDate":         humanDate,
+	"inputDate":         inputDate,
 	"today":             today,
 	"hasPassed":         hasPassed,
 	"badgifyCategories": badgifyCategories,

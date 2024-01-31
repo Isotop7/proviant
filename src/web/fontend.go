@@ -214,8 +214,50 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 }
 
 func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get and parse parameter id
+	idParam := ctx.Param("id")
+	var productID int
+	var convErr error
+	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
+		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, convErr.Error())
+		return
+	}
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		return
+	}
+
+	// Create database controller
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	// Get products of user from database with optional limit
+	product, productErr := dbController.GetProductByID(productID, userID)
+	if productErr != nil {
+		logger.Error().Msgf("Error getting product: %s", productErr)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserNoProductsFound)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
+		return
+	}
+
 	pageData := map[string]any{
-		"Title": "Edit Product",
+		"Title":   "Products",
+		"Product": product,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
 }
