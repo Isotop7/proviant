@@ -34,28 +34,15 @@
                             {{- .Product.Countries | splitString -}}
                         </div>
                     </div>
-                    <div class="row">
+                    <div class="row mt-4" style="color: var(--bs-pink)">
                         <div class="col-4 fw-bold">
-                            Expire At
+                            <i class="bi bi-trash3 me-3"></i>{{- .Product.ExpireAt | humanDate -}}
                         </div>
-                        <div class="col col-auto {{ if hasPassed .Product.ExpireAt }}text-danger{{ end }}">
-                            {{- .Product.ExpireAt | humanDate -}}
-                        </div>
-                    </div>
-                    <div class="row">
                         <div class="col-4 fw-bold">
-                            Scanned At
+                            <i class="bi bi-upc-scan me-3"></i>{{- .Product.ScannedAt | humanDate -}}
                         </div>
-                        <div class="col col-auto">
-                            {{- .Product.ScannedAt | humanDate -}}
-                        </div>
-                    </div>
-                    <div class="row">
                         <div class="col-4 fw-bold">
-                            Notified At
-                        </div>
-                        <div class="col col-auto">
-                            {{- .Product.NotifiedAt | humanDate -}}
+                            <i class="bi bi-bell me-3"></i>{{- .Product.NotifiedAt | humanDate -}}
                         </div>
                     </div>
                 </div>

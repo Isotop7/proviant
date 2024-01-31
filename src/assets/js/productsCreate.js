@@ -30,8 +30,11 @@ function clearProductInfo() {
     productInfoShown = false;
 }
 function queryProductInfo() {
+    toggleLoadingSpinner(true);
     clearProductInfo();
     if (!inputBarcode.checkValidity()) {
+        document.getElementById('createProductForm').classList.add('was-validated');
+        toggleLoadingSpinner(false);
         return;
     }
     queryProductInfoRequest(inputBarcode.value).then((response) => {
@@ -50,9 +53,9 @@ function queryProductInfo() {
                 document.getElementById('alertQueryProductInfo').innerText = `Could not find product with barcode ${inputBarcode.value}!`
                 break;
         }
+        toggleLoadingSpinner(false);
     });
 }
-
 function createProduct() {                            
     if (!(inputBarcode.checkValidity() && inputExpireAt.checkValidity())) {
         return;
@@ -91,6 +94,13 @@ function createProduct() {
         });
     } catch (error) {
         console.error("Error: " + error);
+    }
+}
+function toggleLoadingSpinner(state) {
+    if (state) {
+        document.getElementById('loadingSpinner').style.display = '';
+    } else {
+        document.getElementById('loadingSpinner').style.display = 'none';
     }
 }
 
