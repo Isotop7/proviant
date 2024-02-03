@@ -19,7 +19,7 @@ function editProduct() {
         return;
     }
     // Get form values
-    let productID = parseInt(labelProductID.innerText);
+    let productID = parseInt(labelProductID.innerText.trim());
     let product = {
         "ID": productID,
         "productName": inputProductName.value.trim(),
