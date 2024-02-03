@@ -19,13 +19,23 @@
 // @externalDocs.url          https://swagger.io/resources/open-api/
 package api
 
+import "gitlab.com/Isotop7/expiro/errors"
+
 var (
-	ResponseErrInvalidUserData         = APIResponse{Message: "Invalid user data"}
-	ResponseErrDatabaseContextNotFound = APIResponse{Message: "Failed to get database from context"}
-	ResponseErrUserIDFromToken         = APIResponse{Message: "Error getting user id from JWT token"}
+	ResponseErrInvalidUserData           = APIResponse{Message: errors.ErrInvalidUserData.Error()}
+	ResponseErrUserWithUsernameExists    = APIResponse{Message: errors.ErrUserWithUsernameExists.Error()}
+	ResponseErrUserWithMailAddressExists = APIResponse{Message: errors.ErrUserWithMailAddressExists.Error()}
+	ResponseErrDatabaseContextNotFound   = APIResponse{Message: errors.ErrDatabaseContextNotFound.Error()}
+	ResponseErrUserIDFromToken           = APIResponse{Message: errors.ErrUserIDFromToken.Error()}
+	ResponseErrUserNoProductsFound       = APIResponse{Message: errors.ErrUserNoProductsFound.Error()}
 )
 
 // APIResponse is the data model for a generic API response
 type APIResponse struct {
 	Message string `json:"message"`
+}
+
+// Error returns an API response object from a error object
+func Error(err error) APIResponse {
+	return APIResponse{Message: err.Error()}
 }

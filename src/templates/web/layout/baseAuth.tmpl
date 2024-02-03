@@ -1,0 +1,21 @@
+{{define "baseAuth"}}
+<!doctype html>
+<html lang="de" data-bs-theme="dark">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ if .Title }}{{ .Title}}{{ else }}expiro{{ end }}</title>
+    <link rel="stylesheet" href="/assets/css/main.css">
+    <link rel="stylesheet" href="/assets/css/auth.css">
+    <script src="/assets/js/expiro.js"></script>
+</head>
+
+<body class="d-flex bg-body-tertiary">
+    {{template "content" .}}
+    <script src="/assets/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/auth.js"></script>
+</body>
+
+</html>
+{{end}}

@@ -13,6 +13,10 @@ import (
 	gomail "gopkg.in/mail.v2"
 )
 
+var (
+	mailTemplatePath = "templates/notification/expired.html"
+)
+
 // NotificationController is the object struct to generate and send notifications for expired products
 type NotificationController struct {
 	Logger             *zerolog.Logger
@@ -90,7 +94,7 @@ func (nc NotificationController) sendMail(product database.Product, recipient st
 	mail.SetHeader("Subject", subject)
 
 	// Generate email body from template
-	templ, templErr := template.ParseFiles("templates/expired.html")
+	templ, templErr := template.ParseFiles(mailTemplatePath)
 	if templErr != nil {
 		return templErr
 	}
@@ -115,17 +119,21 @@ func (nc NotificationController) sendMail(product database.Product, recipient st
 	mail.SetBody("text/html", bodyBuf.String())
 
 	// Settings for SMTP server
-	mailDialer := gomail.NewDialer(
-		nc.Configuration.SMTP.Host,
-		nc.Configuration.SMTP.Port,
-		nc.Configuration.SMTP.User,
-		nc.Configuration.SMTP.Password,
-	)
+	mailDialer := gomail.Dialer{
+		Host: nc.Configuration.SMTP.Host,
+		Port: nc.Configuration.SMTP.Port,
+	}
+
+	if nc.Configuration.SMTP.User != "" && nc.Configuration.SMTP.Password != "" {
+		mailDialer.Username = nc.Configuration.SMTP.User
+		mailDialer.Password = nc.Configuration.SMTP.Password
+	}
 
 	// Set ssl mode
 	mailDialer.SSL = nc.Configuration.SMTP.SSL
 
 	// Send mail and return error
+
 	err := mailDialer.DialAndSend(mail)
 	return err
 }

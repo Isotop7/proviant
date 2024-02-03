@@ -1,7 +1,10 @@
 // configuration defines structs and methods for expiros configuration and specific parts of it
 package configuration
 
-import "errors"
+import (
+	"errors"
+	"html/template"
+)
 
 // DatabaseConfiguration contains all properties regarding the database connection
 type DatabaseConfiguration struct {
@@ -67,6 +70,7 @@ type ExpiroConfiguration struct {
 	Logging       LoggingConfiguration
 	Notification  NotificationConfiguration
 	OpenFoodFacts OpenFoodFactsConfiguration
+	TemplateCache map[string]*template.Template
 }
 
 // ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API

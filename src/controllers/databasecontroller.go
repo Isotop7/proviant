@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"fmt"
 	"time"
 
 	"gitlab.com/Isotop7/expiro/errors"
 	"gitlab.com/Isotop7/expiro/models/authentication"
 	"gitlab.com/Isotop7/expiro/models/database"
+	"gitlab.com/Isotop7/expiro/models/webparts"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -34,21 +36,30 @@ func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, err
 	return user, selectErr.Error
 }
 
-// UserExists returns if a given user object exists in the database
-// The check is currently only based on the username property and returns the first found item
-func (dbc DatabaseController) UserExists(user authentication.User) bool {
-	// Check if user with username exists
+// UserExistsByUsername returns if a given user object exists in the database based on the property 'username'
+func (dbc DatabaseController) UserExistsByUsername(user authentication.User) bool {
 	var dbUser authentication.User
-	// Username must be unique
+	// Try to get first object with matching username
 	selectErr := dbc.DBHandle.First(&dbUser, "username = ?", user.Username)
+	// If no user is found, return false
+	return selectErr.Error != gorm.ErrRecordNotFound
+}
+
+// UserExistsByMailAddress returns if a given user object exists in the database based on the property 'mailAddress'
+func (dbc DatabaseController) UserExistsByMailAddress(user authentication.User) bool {
+	var dbUser authentication.User
+	// Try to get first object with matching mailAddress
+	selectErr := dbc.DBHandle.First(&dbUser, "mail_address = ?", user.MailAddress)
+	// If no user is found, return false
 	return selectErr.Error != gorm.ErrRecordNotFound
 }
 
 // GetNextUserID returns the next available user ID
 func (dbc DatabaseController) GetNextUserID() uint {
+	// TODO: Do we really need this or can't we use db-based mechanisms
 	// Get next user id from database
 	var lastUser authentication.User
-	dbc.DBHandle.Order("id").Limit(1).Find(&lastUser)
+	dbc.DBHandle.Order("id DESC").Limit(1).Find(&lastUser)
 	return (lastUser.ID + 1)
 }
 
@@ -64,6 +75,85 @@ func (dbc DatabaseController) CreateUser(user *authentication.User) error {
 	user.Password = string(hashedPassword)
 	createResult := dbc.DBHandle.Create(user)
 	return createResult.Error
+}
+
+// UpdateUser gets a user (based on user ID) and updates its contents with the contents of a supplied reference to the updated user
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) UpdateUser(userID uint, user *authentication.User) error {
+	// Check if id is valid
+	if userID <= 0 {
+		return gorm.ErrNotImplemented
+	}
+
+	// Try to get user
+	var dbUser authentication.User
+	getError := dbc.DBHandle.First(&dbUser, userID)
+
+	// If database operation returned error, return it to the caller
+	if getError.Error != nil {
+		return getError.Error
+	}
+	// Check if supplied user matches the userID in the database object
+	if dbUser.ID != userID {
+		return errors.ErrMismatcherUserID
+	}
+
+	// Update values
+	dbUser.Username = user.Username
+	dbUser.MailAddress = user.MailAddress
+
+	// Save updated product
+	saveResult := dbc.DBHandle.Save(&dbUser)
+	// Return error if save did not work
+	if saveResult.Error != nil {
+		return saveResult.Error
+	} else {
+		return nil
+	}
+}
+
+// UpdateUserPassword gets a user (based on user ID) and updates its password with the contents of a supplied reference to the updated login data
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) UpdateUserPassword(userID uint, login *authentication.Login) error {
+	// Check if id is valid
+	if userID <= 0 {
+		return gorm.ErrNotImplemented
+	}
+
+	// Try to get user
+	var dbUser authentication.User
+	getError := dbc.DBHandle.First(&dbUser, userID)
+
+	// If database operation returned error, return it to the caller
+	if getError.Error != nil {
+		return getError.Error
+	}
+	// Check if supplied user matches the userID in the database object
+	if dbUser.ID != userID {
+		return errors.ErrMismatcherUserID
+	}
+
+	// Check if login is equivalent to database user
+	if dbUser.Username != login.Username {
+		return errors.ErrMismatchedUsername
+	}
+
+	// Generate hash from password
+	hashedPassword, hashError := bcrypt.GenerateFromPassword([]byte(login.Password), bcrypt.DefaultCost)
+	if hashError != nil {
+		return hashError
+	}
+	// Set password on database user
+	dbUser.Password = string(hashedPassword)
+
+	// Save updated user
+	saveResult := dbc.DBHandle.Save(&dbUser)
+	// Return error if save did not work
+	if saveResult.Error != nil {
+		return saveResult.Error
+	} else {
+		return nil
+	}
 }
 
 // UserIsProductOwner checks if user (based on user ID) is the matching owner of a product (based on product ID)
@@ -170,7 +260,7 @@ func (dbc DatabaseController) CreateProduct(userID uint, product *database.Produ
 
 // UpdateProduct gets a product (based on product ID) of a user (based on user ID) and updates its contents with the contents of a supplied reference to the updated product
 // If the database operations return an error, the error is also returned (otherwise nil)
-func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product *database.Product) error {
+func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product *database.ProductDTOPatch) error {
 	// Check if id is valid
 	if productID <= 0 {
 		return gorm.ErrNotImplemented
@@ -190,13 +280,11 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	}
 
 	// Update values
-	dbProduct.Barcode = product.Barcode
 	dbProduct.ProductName = product.ProductName
 	dbProduct.Categories = product.Categories
 	dbProduct.Countries = product.Countries
 	dbProduct.ImageURL = product.ImageURL
 	dbProduct.ExpireAt = product.ExpireAt
-	dbProduct.NotifiedAt = product.NotifiedAt
 
 	// Save updated product
 	saveResult := dbc.DBHandle.Save(&dbProduct)
@@ -302,4 +390,64 @@ func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInte
 	} else {
 		return notificationProducts, nil
 	}
+}
+
+// GetUserHomeTiles creates a list of tiles with user statistics
+func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, error) {
+	// Create list of hometiles
+	homeTiles := []webparts.Tile{}
+
+	// Get count of products
+	productList, productCountErr := dbc.GetUserProductsBulk(userID, -1)
+	if productCountErr != nil {
+		return homeTiles, productCountErr
+	}
+	// Create tile
+	productCount := len(productList)
+	homeTiles = append(homeTiles, webparts.Tile{
+		Title:  "Amount of your products",
+		Hero:   fmt.Sprint(productCount),
+		Body:   fmt.Sprintf("You currently have %d products assigned", productCount),
+		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+	})
+
+	// Get last inserted product
+	var lastProduct database.Product
+	getError := dbc.DBHandle.
+		Where("user_id = ?", userID).
+		Where("deleted_at IS NULL").
+		Order("created_at DESC").
+		Limit(1).
+		Find(&lastProduct)
+	if getError.Error != nil {
+		return homeTiles, getError.Error
+	}
+	// Create tile
+	homeTiles = append(homeTiles, webparts.Tile{
+		Title:  "Last inserted product",
+		Hero:   fmt.Sprint(lastProduct.ProductName),
+		Body:   fmt.Sprintf("'%s' is the most recent product with barcode #%s", lastProduct.ProductName, lastProduct.Barcode),
+		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+	})
+
+	// Last notification
+	var lastNotifiedProduct database.Product
+	getNotifiedError := dbc.DBHandle.
+		Where("user_id = ?", userID).
+		Where("deleted_at IS NULL").
+		Order("notified_at DESC").
+		Limit(1).
+		Find(&lastNotifiedProduct)
+	if getNotifiedError.Error != nil {
+		return homeTiles, getNotifiedError.Error
+	}
+	// Create tile
+	homeTiles = append(homeTiles, webparts.Tile{
+		Title:  "Last notification",
+		Hero:   fmt.Sprint(lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04")),
+		Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04")),
+		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+	})
+
+	return homeTiles, nil
 }

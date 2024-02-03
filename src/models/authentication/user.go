@@ -1,6 +1,9 @@
 package authentication
 
 import (
+	"net/mail"
+
+	"gitlab.com/Isotop7/expiro/errors"
 	"gitlab.com/Isotop7/expiro/models/database"
 
 	"gorm.io/gorm"
@@ -18,6 +21,25 @@ type User struct {
 }
 
 // IsValid is a simple validator function to check for valid properties
-func (u User) IsValid() bool {
-	return u.ID > 0 && u.Username != "" && u.Password != ""
+func (user User) IsValid(skipPassword bool) error {
+	if user.ID < 1 {
+		return errors.ErrInvalidUserID
+	}
+
+	if len(user.Username) == 0 {
+		return errors.ErrUsernameEmpty
+	}
+
+	if !skipPassword {
+		if len(user.Password) < 8 {
+			return errors.ErrPasswordTooShort
+		}
+	}
+
+	_, mailParseErr := mail.ParseAddress(user.MailAddress)
+	if mailParseErr != nil {
+		return mailParseErr
+	}
+
+	return nil
 }

@@ -1,0 +1,79 @@
+{{ define "content" }}
+<div class="row justify-content-between my-2">
+    <div class="col">
+        <h2>
+            Products
+        </h2>
+    </div>
+    <div class="col col-auto">
+        <div class="btn-group" role="group" aria-label="Option buttons" id="optionButtonGroup">
+            <button type="button" id="btnView" class="btn btn-outline-secondary">
+                <i class="bi bi-eye"></i>
+            </button>
+            <button type="button" id="btnEdit" class="btn btn-outline-secondary">
+                <i class="bi bi-pencil-square"></i>
+            </button>
+            <button type="button" id="btnDelete" class="btn btn-outline-danger">
+                <i class="bi bi-trash3-fill"></i>
+            </button>
+        </div>
+    </div>
+    <div class="col col-auto">
+        <button type="button" id="btnSync" class="btn btn-primary">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+</div>
+<hr>
+{{ if .Products }}
+<table class="table table-borderless" style="--bs-table-bg: inherit;">
+    <thead>
+        <tr>
+            <th>
+                <input class="form-check-input" type="checkbox" value="" id="checkbox-all">
+            </th>
+            <th scope="col">#</th>
+            <th scope="col">Name</th>
+            <th scope="col">Barcode</th>
+            <th scope="col">Scanned At</th>
+            <th scope="col">Expire At</th>
+            <th scope="col">Notified At</th>
+        </tr>
+    </thead>
+    <tbody class="table-group-divider">
+        {{ range .Products }}
+        <tr onclick="toggleCheckbox('checkbox-{{ .Model.ID }}')">
+            <th scope="row">
+                <input class="form-check-input" type="checkbox" value="{{ .Model.ID }}" id="checkbox-{{ .Model.ID }}" onclick="toggleCheckbox('checkbox-{{ .Model.ID }}')">
+            </th>
+            <th scope="row">{{ .Model.ID }}</th>
+            <td>{{ .ProductName }}</td>
+            <td>{{ .Barcode }}</td>
+            <td>{{ .ScannedAt | humanDate }}</td>
+            <td {{ if hasPassed .ExpireAt }}class="text-danger text-decoration-underline" {{ end }}>{{ .ExpireAt | humanDate }}</td>
+            <td>{{ .NotifiedAt | humanDate }}</td>
+        </tr>
+        {{ end }}
+    </tbody>
+</table>
+
+<div class="toast-container position-fixed top-50 end-0 translate-middle-y p-3">
+    <div id="infoToast" class="toast text-bg-secondary" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <img src="/assets/icons/favicon.png" class="rounded me-2" alt="expiro">
+            <strong class="me-auto">expiro</strong>
+            <small>Information</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div id="infoToastBody" class="toast-body">
+        </div>
+    </div>
+</div>
+
+<script src="/assets/js/products.js"></script>
+{{ else }}
+<div class="container">
+    Currently no products assigned!
+</div>
+{{ end }}
+{{ end }}

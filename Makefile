@@ -8,6 +8,18 @@ help:
 	@echo 'Usage:'
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
 
+# ==================================================================================== #
+# Install/Setup
+# ==================================================================================== #
+
+.PHONY: init
+init:
+	npm install
+	@make css
+	mkdir -p ./src/assets/js
+	cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* ./src/assets/js/
+	cd src/
+	go get -u
 
 # ==================================================================================== #
 # QUALITY CONTROL
@@ -83,3 +95,17 @@ rundockerdebug:
 	@make dockerimage
 	cd ./src && \
 	docker run -it --rm -v ./config.yaml.tmpl:/app/config.yaml --entrypoint /bin/sh expiro:latest
+
+# ==================================================================================== #
+# Web
+# ==================================================================================== #
+
+.PHONY: fonts
+fonts:
+	cp ./node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/
+	cp ./node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2 ./src/assets/fonts/
+
+.PHONY: css
+css:
+	@make fonts
+	npm run css

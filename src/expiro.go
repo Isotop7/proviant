@@ -13,6 +13,7 @@ import (
 	"gitlab.com/Isotop7/expiro/models/configuration"
 	"gitlab.com/Isotop7/expiro/models/database"
 	"gitlab.com/Isotop7/expiro/router"
+	"gitlab.com/Isotop7/expiro/templates"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
@@ -134,13 +135,21 @@ func main() {
 		notificationController.Dispatch()
 	}
 
+	// Setup template cache
+	templateCache, err := templates.NewTemplateCache()
+	if err != nil {
+		cLogger.Error().Msg(err.Error())
+		panic(err)
+	}
+	configuration.TemplateCache = templateCache
+
 	// Call function to setup router and pass references
 	expiroEngine := router.SetupRouter(&cLogger, &configuration, dbHandle, offacntrl)
 
 	// Get server port or instead set default value
 	serverPort := configuration.Server.Port
 	if serverPort <= 0 {
-		serverPort = 5050
+		serverPort = 5114
 	}
 
 	// Start server

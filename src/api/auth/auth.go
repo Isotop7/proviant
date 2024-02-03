@@ -19,7 +19,7 @@ import (
 // @Tags         	user
 // @Accept			json
 // @Produce      	json
-// @Param			login	body	authentication.Login	true	"Login"
+// @Param			signup	body	authentication.Signup	true	"Signup"
 // @Success      	200  {object}  api.APIResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
@@ -40,31 +40,40 @@ func Signup(ctx *gin.Context) {
 	dbController := controllers.DatabaseController{DBHandle: dbHandle}
 
 	// Parse request body to Login
-	var login authentication.Login
-	if err := ctx.ShouldBindJSON(&login); err != nil {
+	var signup authentication.Signup
+	if err := ctx.ShouldBindJSON(&signup); err != nil {
 		logger.Error().Msgf("Error parsing body: %s", err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		return
+	}
+
+	// Check if signup object is valid
+	validationErr := signup.IsValid()
+	if validationErr != nil {
+		logger.Error().Msgf("User data was invalid: '%s'", validationErr.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(validationErr))
 		return
 	}
 
 	// Create new user object
 	user := authentication.User{
-		ID:       dbController.GetNextUserID(),
-		Username: login.Username,
-		Password: login.Password,
-	}
-
-	// Check if user object is valid
-	if !user.IsValid() {
-		logger.Error().Msgf("User data was invalid: ID = '%d'; Username = '%s'", user.ID, user.Username)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
-		return
+		ID:          dbController.GetNextUserID(),
+		Username:    signup.Username,
+		Password:    signup.Password,
+		MailAddress: signup.MailAddress,
 	}
 
 	// Check if user with username already exists
-	if dbController.UserExists(user) {
+	if dbController.UserExistsByUsername(user) {
 		logger.Error().Msgf("User '%s' already exists", user.Username)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithUsernameExists)
+		return
+	}
+
+	// Check if user with mail address already exists
+	if dbController.UserExistsByMailAddress(user) {
+		logger.Error().Msgf("User with mail address '%s' already exists", user.MailAddress)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithMailAddressExists)
 		return
 	}
 

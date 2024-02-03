@@ -24,6 +24,7 @@ import "gitlab.com/Isotop7/expiro/api"
 
 - [Variables](<#variables>)
 - [type APIResponse](<#APIResponse>)
+  - [func Error\(err error\) APIResponse](<#Error>)
 
 
 ## Variables
@@ -32,14 +33,17 @@ import "gitlab.com/Isotop7/expiro/api"
 
 ```go
 var (
-    ResponseErrInvalidUserData         = APIResponse{Message: "Invalid user data"}
-    ResponseErrDatabaseContextNotFound = APIResponse{Message: "Failed to get database from context"}
-    ResponseErrUserIDFromToken         = APIResponse{Message: "Error getting user id from JWT token"}
+    ResponseErrInvalidUserData           = APIResponse{Message: errors.ErrInvalidUserData.Error()}
+    ResponseErrUserWithUsernameExists    = APIResponse{Message: errors.ErrUserWithUsernameExists.Error()}
+    ResponseErrUserWithMailAddressExists = APIResponse{Message: errors.ErrUserWithMailAddressExists.Error()}
+    ResponseErrDatabaseContextNotFound   = APIResponse{Message: errors.ErrDatabaseContextNotFound.Error()}
+    ResponseErrUserIDFromToken           = APIResponse{Message: errors.ErrUserIDFromToken.Error()}
+    ResponseErrUserNoProductsFound       = APIResponse{Message: errors.ErrUserNoProductsFound.Error()}
 )
 ```
 
 <a name="APIResponse"></a>
-## type [APIResponse](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/api.go#L29-L31>)
+## type [APIResponse](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/api.go#L34-L36>)
 
 APIResponse is the data model for a generic API response
 
@@ -47,6 +51,34 @@ APIResponse is the data model for a generic API response
 type APIResponse struct {
     Message string `json:"message"`
 }
+```
+
+<a name="Error"></a>
+### func [Error](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/api.go#L39>)
+
+```go
+func Error(err error) APIResponse
+```
+
+Error returns an API response object from a error object
+
+# assets
+
+```go
+import "gitlab.com/Isotop7/expiro/assets"
+```
+
+## Index
+
+- [Variables](<#variables>)
+
+
+## Variables
+
+<a name="AssetFiles"></a>
+
+```go
+var AssetFiles embed.FS
 ```
 
 # controllers
@@ -69,12 +101,16 @@ controllers implements different controllers used for accessing different APIs, 
   - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
   - [func \(dbc DatabaseController\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#DatabaseController.GetUserByID>)
   - [func \(dbc DatabaseController\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#DatabaseController.GetUserByUsername>)
+  - [func \(dbc DatabaseController\) GetUserHomeTiles\(userID uint\) \(\[\]webparts.Tile, error\)](<#DatabaseController.GetUserHomeTiles>)
   - [func \(dbc DatabaseController\) GetUserMailAddressByID\(userID uint\) \(string, error\)](<#DatabaseController.GetUserMailAddressByID>)
   - [func \(dbc DatabaseController\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulk>)
   - [func \(dbc DatabaseController\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#DatabaseController.SetProductExpireAt>)
   - [func \(dbc DatabaseController\) SetProductNotifiedAt\(productID uint\) error](<#DatabaseController.SetProductNotifiedAt>)
   - [func \(dbc DatabaseController\) UpdateProduct\(productID int, userID uint, product \*database.Product\) error](<#DatabaseController.UpdateProduct>)
-  - [func \(dbc DatabaseController\) UserExists\(user authentication.User\) bool](<#DatabaseController.UserExists>)
+  - [func \(dbc DatabaseController\) UpdateUser\(userID uint, user \*authentication.User\) error](<#DatabaseController.UpdateUser>)
+  - [func \(dbc DatabaseController\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#DatabaseController.UpdateUserPassword>)
+  - [func \(dbc DatabaseController\) UserExistsByMailAddress\(user authentication.User\) bool](<#DatabaseController.UserExistsByMailAddress>)
+  - [func \(dbc DatabaseController\) UserExistsByUsername\(user authentication.User\) bool](<#DatabaseController.UserExistsByUsername>)
   - [func \(dbc DatabaseController\) UserIsProductOwner\(userID uint, productID int\) bool](<#DatabaseController.UserIsProductOwner>)
 - [type NotificationController](<#NotificationController>)
   - [func \(nc NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
@@ -83,7 +119,7 @@ controllers implements different controllers used for accessing different APIs, 
 
 
 <a name="DatabaseController"></a>
-## type [DatabaseController](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L15-L17>)
+## type [DatabaseController](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L17-L19>)
 
 DatabaseController is the object struct for interacting with the gorm\-backed database
 
@@ -94,7 +130,7 @@ type DatabaseController struct {
 ```
 
 <a name="DatabaseController.CreateProduct"></a>
-### func \(DatabaseController\) [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L159>)
+### func \(DatabaseController\) [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L249>)
 
 ```go
 func (dbc DatabaseController) CreateProduct(userID uint, product *database.Product) error
@@ -103,7 +139,7 @@ func (dbc DatabaseController) CreateProduct(userID uint, product *database.Produ
 CreateProduct creates a product in the database and connects it to the user If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.CreateUser"></a>
-### func \(DatabaseController\) [CreateUser](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L58>)
+### func \(DatabaseController\) [CreateUser](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L69>)
 
 ```go
 func (dbc DatabaseController) CreateUser(user *authentication.User) error
@@ -112,7 +148,7 @@ func (dbc DatabaseController) CreateUser(user *authentication.User) error
 CreateUser creates a new user based on a given user object Before creation, the user password is hashed with brcypt If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.DeleteProduct"></a>
-### func \(DatabaseController\) [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L213>)
+### func \(DatabaseController\) [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L303>)
 
 ```go
 func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error
@@ -121,7 +157,7 @@ func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error
 DeleteProduct deletes a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.GetNextUserID"></a>
-### func \(DatabaseController\) [GetNextUserID](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L48>)
+### func \(DatabaseController\) [GetNextUserID](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L58>)
 
 ```go
 func (dbc DatabaseController) GetNextUserID() uint
@@ -130,7 +166,7 @@ func (dbc DatabaseController) GetNextUserID() uint
 GetNextUserID returns the next available user ID
 
 <a name="DatabaseController.GetProductByID"></a>
-### func \(DatabaseController\) [GetProductByID](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L132>)
+### func \(DatabaseController\) [GetProductByID](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L222>)
 
 ```go
 func (dbc DatabaseController) GetProductByID(productID int, userID uint) (database.Product, error)
@@ -139,7 +175,7 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 GetProductByID returns a product object \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.GetProductsExpired"></a>
-### func \(DatabaseController\) [GetProductsExpired](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L271>)
+### func \(DatabaseController\) [GetProductsExpired](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L361>)
 
 ```go
 func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Product, error)
@@ -148,7 +184,7 @@ func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Produc
 GetProductsExpired returns an array of products of a user \(based on user ID\) that are already expired If the database operations return an error, the error is also returned \(otherwise nil\) If the user has no products assigned, the function returns an empty dataset
 
 <a name="DatabaseController.GetProductsExpiredAndNotificationPending"></a>
-### func \(DatabaseController\) [GetProductsExpiredAndNotificationPending](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L290>)
+### func \(DatabaseController\) [GetProductsExpiredAndNotificationPending](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L380>)
 
 ```go
 func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error)
@@ -157,7 +193,7 @@ func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInte
 GetProductsExpiredAndNotificationPending returns an array of products which are expired and have a pending notification
 
 <a name="DatabaseController.GetUserByID"></a>
-### func \(DatabaseController\) [GetUserByID](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L30>)
+### func \(DatabaseController\) [GetUserByID](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L32>)
 
 ```go
 func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, error)
@@ -166,7 +202,7 @@ func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, err
 GetUserByID uses a given user ID and returns the matching user object If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.GetUserByUsername"></a>
-### func \(DatabaseController\) [GetUserByUsername](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L21>)
+### func \(DatabaseController\) [GetUserByUsername](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L23>)
 
 ```go
 func (dbc DatabaseController) GetUserByUsername(username string) (authentication.User, error)
@@ -174,8 +210,17 @@ func (dbc DatabaseController) GetUserByUsername(username string) (authentication
 
 GetUserByUsername uses a given username and returns the matching user object If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.GetUserHomeTiles"></a>
+### func \(DatabaseController\) [GetUserHomeTiles](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L398>)
+
+```go
+func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, error)
+```
+
+GetUserHomeTiles creates a list of tiles with user statistics
+
 <a name="DatabaseController.GetUserMailAddressByID"></a>
-### func \(DatabaseController\) [GetUserMailAddressByID](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L89>)
+### func \(DatabaseController\) [GetUserMailAddressByID](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L179>)
 
 ```go
 func (dbc DatabaseController) GetUserMailAddressByID(userID uint) (string, error)
@@ -184,7 +229,7 @@ func (dbc DatabaseController) GetUserMailAddressByID(userID uint) (string, error
 GetUserMailAddressByID returns the mail address of a user by his ID
 
 <a name="DatabaseController.GetUserProductsBulk"></a>
-### func \(DatabaseController\) [GetUserProductsBulk](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L108>)
+### func \(DatabaseController\) [GetUserProductsBulk](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L198>)
 
 ```go
 func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
@@ -193,7 +238,7 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 GetUserProductsBulk returns an array of products of a user \(based on user ID\) The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.SetProductExpireAt"></a>
-### func \(DatabaseController\) [SetProductExpireAt](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L227>)
+### func \(DatabaseController\) [SetProductExpireAt](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L317>)
 
 ```go
 func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error
@@ -202,7 +247,7 @@ func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, exp
 SetProductExpireAt updates the expiry date of a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.SetProductNotifiedAt"></a>
-### func \(DatabaseController\) [SetProductNotifiedAt](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L250>)
+### func \(DatabaseController\) [SetProductNotifiedAt](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L340>)
 
 ```go
 func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error
@@ -211,7 +256,7 @@ func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error
 SetProductNotifiedAt sets the notified\_at timestamp to the current time
 
 <a name="DatabaseController.UpdateProduct"></a>
-### func \(DatabaseController\) [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L173>)
+### func \(DatabaseController\) [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L263>)
 
 ```go
 func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product *database.Product) error
@@ -219,17 +264,44 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 
 UpdateProduct gets a product \(based on product ID\) of a user \(based on user ID\) and updates its contents with the contents of a supplied reference to the updated product If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.UserExists"></a>
-### func \(DatabaseController\) [UserExists](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L39>)
+<a name="DatabaseController.UpdateUser"></a>
+### func \(DatabaseController\) [UpdateUser](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L82>)
 
 ```go
-func (dbc DatabaseController) UserExists(user authentication.User) bool
+func (dbc DatabaseController) UpdateUser(userID uint, user *authentication.User) error
 ```
 
-UserExists returns if a given user object exists in the database The check is currently only based on the username property and returns the first found item
+UpdateUser gets a user \(based on user ID\) and updates its contents with the contents of a supplied reference to the updated user If the database operations return an error, the error is also returned \(otherwise nil\)
+
+<a name="DatabaseController.UpdateUserPassword"></a>
+### func \(DatabaseController\) [UpdateUserPassword](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L117>)
+
+```go
+func (dbc DatabaseController) UpdateUserPassword(userID uint, login *authentication.Login) error
+```
+
+UpdateUserPassword gets a user \(based on user ID\) and updates its password with the contents of a supplied reference to the updated login data If the database operations return an error, the error is also returned \(otherwise nil\)
+
+<a name="DatabaseController.UserExistsByMailAddress"></a>
+### func \(DatabaseController\) [UserExistsByMailAddress](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L49>)
+
+```go
+func (dbc DatabaseController) UserExistsByMailAddress(user authentication.User) bool
+```
+
+UserExistsByMailAddress returns if a given user object exists in the database based on the property 'mailAddress'
+
+<a name="DatabaseController.UserExistsByUsername"></a>
+### func \(DatabaseController\) [UserExistsByUsername](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L40>)
+
+```go
+func (dbc DatabaseController) UserExistsByUsername(user authentication.User) bool
+```
+
+UserExistsByUsername returns if a given user object exists in the database based on the property 'username'
 
 <a name="DatabaseController.UserIsProductOwner"></a>
-### func \(DatabaseController\) [UserIsProductOwner](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L70>)
+### func \(DatabaseController\) [UserIsProductOwner](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/databasecontroller.go#L160>)
 
 ```go
 func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) bool
@@ -238,7 +310,7 @@ func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) boo
 UserIsProductOwner checks if user \(based on user ID\) is the matching owner of a product \(based on product ID\)
 
 <a name="NotificationController"></a>
-## type [NotificationController](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/notificationcontroller.go#L17-L21>)
+## type [NotificationController](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/notificationcontroller.go#L21-L25>)
 
 NotificationController is the object struct to generate and send notifications for expired products
 
@@ -251,7 +323,7 @@ type NotificationController struct {
 ```
 
 <a name="NotificationController.Dispatch"></a>
-### func \(NotificationController\) [Dispatch](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/notificationcontroller.go#L25>)
+### func \(NotificationController\) [Dispatch](<https://gitlab.com/Isotop7/expiro/blob/develop/src/controllers/notificationcontroller.go#L29>)
 
 ```go
 func (nc NotificationController) Dispatch()
@@ -302,8 +374,20 @@ var (
     // ErrMismatcherUserID occurs if a given user id mismatches the user id of a product owner
     ErrMismatcherUserID = errors.New("mismatching user id of requested product")
 
+    // ErrMismatchedUsername occurs if a username of a given user (by ID) mismatches a given login data
+    ErrMismatchedUsername = errors.New("mismatching username")
+
+    // ErrUsernameEmpty is thrown when the given username is too short
+    ErrUsernameEmpty = errors.New("username can't be empty")
+
+    // ErrPasswordTooShort is thrown when the given password is too short
+    ErrPasswordTooShort = errors.New("password must at least be 8 characters long")
+
     // ErrUserHasNoMailAddress is thrown if a given user has no mail address
     ErrUserHasNoMailAddress = errors.New("user has no mail address")
+
+    // ErrUserNoProductsFound is thrown if user products can't be retrieved
+    ErrUserNoProductsFound = errors.New("error getting products of user")
 
     // ErrNoBarcodeFoundInImage is thrown when no barcode can be read from an image
     ErrNoBarcodeFoundInImage = errors.New("error reading barcode from image")
@@ -313,6 +397,27 @@ var (
 
     // ErrUserAwareAuthMiddlewareInit is thrown when the user-aware authentication middleware fails to initialize
     ErrUserAwareAuthMiddlewareInit = errors.New("error initializing user-aware authentication middleware")
+
+    // ErrAuthMiddlewareInit is thrown when the authentication middleware fails to initialize
+    ErrAuthMiddlewareInit = errors.New("error initializing authentication middleware")
+
+    // ErrInvalidUserData is thrown when supplied user data is invalid
+    ErrInvalidUserData = errors.New("invalid user data")
+
+    // ErrInvalidUserID is thrown when supplied user data is invalid
+    ErrInvalidUserID = errors.New("invalid user ID")
+
+    // ErrUserWithUsernameExists is thrown when a user with the same username already exists
+    ErrUserWithUsernameExists = errors.New("user with this username already exists")
+
+    // ErrUserWithMailAddressExists is thrown when a user with the same mail address already exists
+    ErrUserWithMailAddressExists = errors.New("user with this mail address already exists")
+
+    // ErrDatabaseContextNotFound is thrown if database handle can't be found in context
+    ErrDatabaseContextNotFound = errors.New("failed to get database from context")
+
+    // ErrUserIDFromToken is thrown if no user id is found in token
+    ErrUserIDFromToken = errors.New("error getting user id from JWT token")
 
     // ErrParseBody is thrown when a body fails to parse
     ErrParseBody = errors.New("error parsing body")
@@ -403,22 +508,44 @@ router contains the gin router definitions and maps requests to handlers
 
 ## Index
 
-- [func JWTMiddleware\(configuration \*configuration.ExpiroConfiguration, dbHandle \*gorm.DB, userAware bool\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
+- [func AuthorizatorNotUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorNotUserAware>)
+- [func AuthorizatorUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorUserAware>)
+- [func JWTMiddleware\(configuration \*configuration.ExpiroConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
 - [func SetupRouter\(logger \*zerolog.Logger, configuration \*configuration.ExpiroConfiguration, dbHandle \*gorm.DB, offacntrl controllers.OpenFoodFactsAPIController\) \*gin.Engine](<#SetupRouter>)
+- [func UnauthorizedAPIFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedAPIFunc>)
+- [func UnauthorizedFrontendFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedFrontendFunc>)
 - [func ZerologMiddleware\(logger \*zerolog.Logger\) gin.HandlerFunc](<#ZerologMiddleware>)
 
 
-<a name="JWTMiddleware"></a>
-## func [JWTMiddleware](<https://gitlab.com/Isotop7/expiro/blob/develop/src/router/router.go#L48>)
+<a name="AuthorizatorNotUserAware"></a>
+## func [AuthorizatorNotUserAware](<https://gitlab.com/Isotop7/expiro/blob/develop/src/router/middleware.go#L87>)
 
 ```go
-func JWTMiddleware(configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, userAware bool) (*jwt.GinJWTMiddleware, error)
+func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool
+```
+
+
+
+<a name="AuthorizatorUserAware"></a>
+## func [AuthorizatorUserAware](<https://gitlab.com/Isotop7/expiro/blob/develop/src/router/middleware.go#L61>)
+
+```go
+func AuthorizatorUserAware(data any, ctx *gin.Context) bool
+```
+
+
+
+<a name="JWTMiddleware"></a>
+## func [JWTMiddleware](<https://gitlab.com/Isotop7/expiro/blob/develop/src/router/middleware.go#L93-L97>)
+
+```go
+func JWTMiddleware(configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, authorizatorFunc func(data any, ctx *gin.Context) bool, unauthorizedFunc func(ctx *gin.Context, code int, message string)) (*jwt.GinJWTMiddleware, error)
 ```
 
 JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization \(optional\)
 
 <a name="SetupRouter"></a>
-## func [SetupRouter](<https://gitlab.com/Isotop7/expiro/blob/develop/src/router/router.go#L139>)
+## func [SetupRouter](<https://gitlab.com/Isotop7/expiro/blob/develop/src/router/router.go#L25>)
 
 ```go
 func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine
@@ -426,14 +553,193 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConf
 
 SetupRouter creates the gin engine and associated middleware
 
+<a name="UnauthorizedAPIFunc"></a>
+## func [UnauthorizedAPIFunc](<https://gitlab.com/Isotop7/expiro/blob/develop/src/router/middleware.go#L41>)
+
+```go
+func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string)
+```
+
+
+
+<a name="UnauthorizedFrontendFunc"></a>
+## func [UnauthorizedFrontendFunc](<https://gitlab.com/Isotop7/expiro/blob/develop/src/router/middleware.go#L45>)
+
+```go
+func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string)
+```
+
+
+
 <a name="ZerologMiddleware"></a>
-## func [ZerologMiddleware](<https://gitlab.com/Isotop7/expiro/blob/develop/src/router/router.go#L28>)
+## func [ZerologMiddleware](<https://gitlab.com/Isotop7/expiro/blob/develop/src/router/middleware.go#L22>)
 
 ```go
 func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc
 ```
 
 ZerologMiddleware implements a gin.HandlerFunc and logs the output from gin
+
+# templates
+
+```go
+import "gitlab.com/Isotop7/expiro/templates"
+```
+
+## Index
+
+- [Variables](<#variables>)
+- [func NewTemplateCache\(\) \(map\[string\]\*template.Template, error\)](<#NewTemplateCache>)
+- [func Render\(ctx \*gin.Context, tc map\[string\]\*template.Template, status int, base string, page string, data map\[string\]any\)](<#Render>)
+- [func RenderError\(ctx \*gin.Context, tc map\[string\]\*template.Template, code int, message string\)](<#RenderError>)
+
+
+## Variables
+
+<a name="TemplateFiles"></a>
+
+```go
+var TemplateFiles embed.FS
+```
+
+<a name="NewTemplateCache"></a>
+## func [NewTemplateCache](<https://gitlab.com/Isotop7/expiro/blob/develop/src/templates/template.go#L53>)
+
+```go
+func NewTemplateCache() (map[string]*template.Template, error)
+```
+
+
+
+<a name="Render"></a>
+## func [Render](<https://gitlab.com/Isotop7/expiro/blob/develop/src/templates/template.go#L83>)
+
+```go
+func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base string, page string, data map[string]any)
+```
+
+
+
+<a name="RenderError"></a>
+## func [RenderError](<https://gitlab.com/Isotop7/expiro/blob/develop/src/templates/template.go#L117>)
+
+```go
+func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, message string)
+```
+
+
+
+# web
+
+```go
+import "gitlab.com/Isotop7/expiro/web"
+```
+
+## Index
+
+- [type Frontend](<#Frontend>)
+  - [func \(frontend \*Frontend\) Auth\(ctx \*gin.Context\)](<#Frontend.Auth>)
+  - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
+  - [func \(frontend \*Frontend\) ProductsCreate\(ctx \*gin.Context\)](<#Frontend.ProductsCreate>)
+  - [func \(frontend \*Frontend\) ProductsEdit\(ctx \*gin.Context\)](<#Frontend.ProductsEdit>)
+  - [func \(frontend \*Frontend\) ProductsScan\(ctx \*gin.Context\)](<#Frontend.ProductsScan>)
+  - [func \(frontend \*Frontend\) ProductsView\(ctx \*gin.Context\)](<#Frontend.ProductsView>)
+  - [func \(frontend \*Frontend\) Root\(ctx \*gin.Context\)](<#Frontend.Root>)
+  - [func \(frontend \*Frontend\) User\(ctx \*gin.Context\)](<#Frontend.User>)
+  - [func \(frontend \*Frontend\) UserSettings\(ctx \*gin.Context\)](<#Frontend.UserSettings>)
+
+
+<a name="Frontend"></a>
+## type [Frontend](<https://gitlab.com/Isotop7/expiro/blob/develop/src/web/fontend.go#L19-L21>)
+
+
+
+```go
+type Frontend struct {
+    TemplateCache map[string]*template.Template
+}
+```
+
+<a name="Frontend.Auth"></a>
+### func \(\*Frontend\) [Auth](<https://gitlab.com/Isotop7/expiro/blob/develop/src/web/fontend.go#L62>)
+
+```go
+func (frontend *Frontend) Auth(ctx *gin.Context)
+```
+
+
+
+<a name="Frontend.Products"></a>
+### func \(\*Frontend\) [Products](<https://gitlab.com/Isotop7/expiro/blob/develop/src/web/fontend.go#L114>)
+
+```go
+func (frontend *Frontend) Products(ctx *gin.Context)
+```
+
+
+
+<a name="Frontend.ProductsCreate"></a>
+### func \(\*Frontend\) [ProductsCreate](<https://gitlab.com/Isotop7/expiro/blob/develop/src/web/fontend.go#L153>)
+
+```go
+func (frontend *Frontend) ProductsCreate(ctx *gin.Context)
+```
+
+
+
+<a name="Frontend.ProductsEdit"></a>
+### func \(\*Frontend\) [ProductsEdit](<https://gitlab.com/Isotop7/expiro/blob/develop/src/web/fontend.go#L216>)
+
+```go
+func (frontend *Frontend) ProductsEdit(ctx *gin.Context)
+```
+
+
+
+<a name="Frontend.ProductsScan"></a>
+### func \(\*Frontend\) [ProductsScan](<https://gitlab.com/Isotop7/expiro/blob/develop/src/web/fontend.go#L160>)
+
+```go
+func (frontend *Frontend) ProductsScan(ctx *gin.Context)
+```
+
+
+
+<a name="Frontend.ProductsView"></a>
+### func \(\*Frontend\) [ProductsView](<https://gitlab.com/Isotop7/expiro/blob/develop/src/web/fontend.go#L167>)
+
+```go
+func (frontend *Frontend) ProductsView(ctx *gin.Context)
+```
+
+
+
+<a name="Frontend.Root"></a>
+### func \(\*Frontend\) [Root](<https://gitlab.com/Isotop7/expiro/blob/develop/src/web/fontend.go#L23>)
+
+```go
+func (frontend *Frontend) Root(ctx *gin.Context)
+```
+
+
+
+<a name="Frontend.User"></a>
+### func \(\*Frontend\) [User](<https://gitlab.com/Isotop7/expiro/blob/develop/src/web/fontend.go#L69>)
+
+```go
+func (frontend *Frontend) User(ctx *gin.Context)
+```
+
+
+
+<a name="Frontend.UserSettings"></a>
+### func \(\*Frontend\) [UserSettings](<https://gitlab.com/Isotop7/expiro/blob/develop/src/web/fontend.go#L76>)
+
+```go
+func (frontend *Frontend) UserSettings(ctx *gin.Context)
+```
+
+
 
 # auth
 
@@ -455,7 +761,7 @@ auth contains authentication method handlers
 func Signup(ctx *gin.Context)
 ```
 
-Signup creates a new user object in the database @Summary Creates a new user @Description Creates a new new user in the database @Tags user @Accept json @Produce json @Param login body authentication.Login true "Login" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/signup \[post\]
+Signup creates a new user object in the database @Summary Creates a new user @Description Creates a new new user in the database @Tags user @Accept json @Produce json @Param signup body authentication.Signup true "Signup" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/signup \[post\]
 
 # common
 
@@ -497,10 +803,12 @@ v1 implements version 1 of the expiro API
 - [func ScanProduct\(ctx \*gin.Context\)](<#ScanProduct>)
 - [func SetExpireAt\(ctx \*gin.Context\)](<#SetExpireAt>)
 - [func UpdateProduct\(ctx \*gin.Context\)](<#UpdateProduct>)
+- [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
+- [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
 
 
 <a name="CreateProduct"></a>
-## func [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L158>)
+## func [CreateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L159>)
 
 ```go
 func CreateProduct(ctx *gin.Context)
@@ -509,7 +817,7 @@ func CreateProduct(ctx *gin.Context)
 CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
 
 <a name="DeleteProduct"></a>
-## func [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L314>)
+## func [DeleteProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L318>)
 
 ```go
 func DeleteProduct(ctx *gin.Context)
@@ -518,7 +826,7 @@ func DeleteProduct(ctx *gin.Context)
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
 
 <a name="GetExpired"></a>
-## func [GetExpired](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L461>)
+## func [GetExpired](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L465>)
 
 ```go
 func GetExpired(ctx *gin.Context)
@@ -527,7 +835,7 @@ func GetExpired(ctx *gin.Context)
 GetExpired returns the list of all expired products of a user @Summary Gets expired products @Description Gets a list of expired products of a user @Tags product @Accept json @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/expired \[get\]
 
 <a name="GetProduct"></a>
-## func [GetProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L93>)
+## func [GetProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L94>)
 
 ```go
 func GetProduct(ctx *gin.Context)
@@ -536,7 +844,7 @@ func GetProduct(ctx *gin.Context)
 GetProduct return a single product of a user @Summary Returns a single product @Description Returns a single product of user @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[get\]
 
 <a name="GetProducts"></a>
-## func [GetProducts](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L38>)
+## func [GetProducts](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L39>)
 
 ```go
 func GetProducts(ctx *gin.Context)
@@ -545,7 +853,7 @@ func GetProducts(ctx *gin.Context)
 GetProducts returns the products of a user @Summary Return a list of products @Description Return a list of products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[get\]
 
 <a name="ScanProduct"></a>
-## func [ScanProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L508>)
+## func [ScanProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L512>)
 
 ```go
 func ScanProduct(ctx *gin.Context)
@@ -554,7 +862,7 @@ func ScanProduct(ctx *gin.Context)
 ScanProduct returns a barcode based on an image @Summary Scan product @Description Returns the barcode of a product in an uploaded image @Tags product @Accept json @Produce json @Success 200 \{object\} database.ProductDTOBarcode @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/scan \[post\]
 
 <a name="SetExpireAt"></a>
-## func [SetExpireAt](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L371>)
+## func [SetExpireAt](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L375>)
 
 ```go
 func SetExpireAt(ctx *gin.Context)
@@ -563,13 +871,31 @@ func SetExpireAt(ctx *gin.Context)
 SetExpireAt updates the expire date of a product of a user @Summary Updates the expire date @Description Updates the expire date of a product @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param timestamp body database.Timestamp true "Timestamp" @Success 200 \{object\} database.ProductDTOExpire @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/expire \[post\]
 
 <a name="UpdateProduct"></a>
-## func [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L234>)
+## func [UpdateProduct](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/product.go#L238>)
 
 ```go
 func UpdateProduct(ctx *gin.Context)
 ```
 
 UpdateProduct updates a product of a user @Summary Updates a product @Description Updates a product with new values @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.Product true "Product" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[patch\]
+
+<a name="UpdateUser"></a>
+## func [UpdateUser](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/user.go#L29>)
+
+```go
+func UpdateUser(ctx *gin.Context)
+```
+
+UpdateUser updates a user @Summary Updates a user object @Description Updates properties of a user @Tags user @Accept json @Produce json @Param user body authentication.User true "User" @Success 200 \{object\} authentication.User @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user \[patch\]
+
+<a name="UpdateUserPassword"></a>
+## func [UpdateUserPassword](<https://gitlab.com/Isotop7/expiro/blob/develop/src/api/v1/user.go#L103>)
+
+```go
+func UpdateUserPassword(ctx *gin.Context)
+```
+
+UpdateUserPassword updates a user password @Summary Updates a user password @Description Updates password of a user @Tags user @Accept json @Produce json @Param login body authentication.Login true "Login" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/password \[post\]
 
 # authentication
 
@@ -582,12 +908,15 @@ authentication provides models and methods for logins
 ## Index
 
 - [type Login](<#Login>)
+  - [func \(login \*Login\) IsValid\(\) error](<#Login.IsValid>)
+- [type Signup](<#Signup>)
+  - [func \(signup \*Signup\) IsValid\(\) error](<#Signup.IsValid>)
 - [type User](<#User>)
-  - [func \(u User\) IsValid\(\) bool](<#User.IsValid>)
+  - [func \(user User\) IsValid\(skipPassword bool\) error](<#User.IsValid>)
 
 
 <a name="Login"></a>
-## type [Login](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/authentication/login.go#L4-L7>)
+## type [Login](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/authentication/login.go#L6-L9>)
 
 Login is derived from User and primarily used for sign in
 
@@ -598,8 +927,39 @@ type Login struct {
 }
 ```
 
+<a name="Login.IsValid"></a>
+### func \(\*Login\) [IsValid](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/authentication/login.go#L12>)
+
+```go
+func (login *Login) IsValid() error
+```
+
+IsValid checks if the given login instance is valid
+
+<a name="Signup"></a>
+## type [Signup](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/authentication/signup.go#L10-L14>)
+
+Signup is derived from User and Login and primarily used for registration
+
+```go
+type Signup struct {
+    Username    string `form:"username" json:"username" binding:"required"`
+    Password    string `form:"password" json:"password" binding:"required"`
+    MailAddress string `form:"mailAddress" json:"mailAddress" binding:"required"`
+}
+```
+
+<a name="Signup.IsValid"></a>
+### func \(\*Signup\) [IsValid](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/authentication/signup.go#L17>)
+
+```go
+func (signup *Signup) IsValid() error
+```
+
+IsValid checks if the given signup instance is valid
+
 <a name="User"></a>
-## type [User](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/authentication/user.go#L11-L18>)
+## type [User](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/authentication/user.go#L14-L21>)
 
 User is the struct for the database definition and the JWT claims A single user can own many products
 
@@ -615,10 +975,10 @@ type User struct {
 ```
 
 <a name="User.IsValid"></a>
-### func \(User\) [IsValid](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/authentication/user.go#L21>)
+### func \(User\) [IsValid](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/authentication/user.go#L24>)
 
 ```go
-func (u User) IsValid() bool
+func (user User) IsValid(skipPassword bool) error
 ```
 
 IsValid is a simple validator function to check for valid properties
@@ -647,7 +1007,7 @@ configuration defines structs and methods for expiros configuration and specific
 
 
 <a name="AuthenticationConfiguration"></a>
-## type [AuthenticationConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L16-L19>)
+## type [AuthenticationConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L19-L22>)
 
 AuthenticationConfiguration contains all properties regarding the JSON Web Tokens
 
@@ -659,7 +1019,7 @@ type AuthenticationConfiguration struct {
 ```
 
 <a name="CorsConfiguration"></a>
-## type [CorsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L22-L25>)
+## type [CorsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L25-L28>)
 
 CorsConfiguration contains all properties for the CORS configuration of the expiro server
 
@@ -671,7 +1031,7 @@ type CorsConfiguration struct {
 ```
 
 <a name="DatabaseConfiguration"></a>
-## type [DatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L7-L13>)
+## type [DatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L10-L16>)
 
 DatabaseConfiguration contains all properties regarding the database connection
 
@@ -686,7 +1046,7 @@ type DatabaseConfiguration struct {
 ```
 
 <a name="ExpiroConfiguration"></a>
-## type [ExpiroConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L64-L70>)
+## type [ExpiroConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L67-L74>)
 
 ExpiroConfiguration is the configuration wrapper struct
 
@@ -697,11 +1057,12 @@ type ExpiroConfiguration struct {
     Logging       LoggingConfiguration
     Notification  NotificationConfiguration
     OpenFoodFacts OpenFoodFactsConfiguration
+    TemplateCache map[string]*template.Template
 }
 ```
 
 <a name="ExpiroConfiguration.ValidateDatabaseConfiguration"></a>
-### func \(ExpiroConfiguration\) [ValidateDatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L84>)
+### func \(ExpiroConfiguration\) [ValidateDatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L88>)
 
 ```go
 func (ec ExpiroConfiguration) ValidateDatabaseConfiguration() error
@@ -710,7 +1071,7 @@ func (ec ExpiroConfiguration) ValidateDatabaseConfiguration() error
 ValidateDatabaseConfiguration checks the current database configuration for common errors
 
 <a name="ExpiroConfiguration.ValidateOpenFoodFactsConfiguration"></a>
-### func \(ExpiroConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L73>)
+### func \(ExpiroConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L77>)
 
 ```go
 func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error
@@ -719,7 +1080,7 @@ func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error
 ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
 
 <a name="LoggingConfiguration"></a>
-## type [LoggingConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L35-L38>)
+## type [LoggingConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L38-L41>)
 
 LoggingConfiguration contains all properties regarding the log configuration for zerolog
 
@@ -731,7 +1092,7 @@ type LoggingConfiguration struct {
 ```
 
 <a name="NotificationConfiguration"></a>
-## type [NotificationConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L50-L55>)
+## type [NotificationConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L53-L58>)
 
 NotificationConfiguration contains all properties regarding the notification handler
 
@@ -745,7 +1106,7 @@ type NotificationConfiguration struct {
 ```
 
 <a name="OpenFoodFactsConfiguration"></a>
-## type [OpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L58-L61>)
+## type [OpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L61-L64>)
 
 OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
 
@@ -757,7 +1118,7 @@ type OpenFoodFactsConfiguration struct {
 ```
 
 <a name="SMTPConfiguration"></a>
-## type [SMTPConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L41-L47>)
+## type [SMTPConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L44-L50>)
 
 SMTPConfiguration contains all properties regarding the notification handler target
 
@@ -772,7 +1133,7 @@ type SMTPConfiguration struct {
 ```
 
 <a name="ServerConfiguration"></a>
-## type [ServerConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L28-L32>)
+## type [ServerConfiguration](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/configuration/configuration.go#L31-L35>)
 
 ServerConfiguration contains all properties regarding the expiro server
 
@@ -938,6 +1299,33 @@ type OpenFoodFactsAPIDataset struct {
         GenericName string `json:"generic_name"`
         ImageURL    string `json:"image_url"`
     }   `json:"product"`
+}
+```
+
+# webparts
+
+```go
+import "gitlab.com/Isotop7/expiro/models/webparts"
+```
+
+web contains models for web entities
+
+## Index
+
+- [type Tile](<#Tile>)
+
+
+<a name="Tile"></a>
+## type [Tile](<https://gitlab.com/Isotop7/expiro/blob/develop/src/models/webparts/tile.go#L5-L10>)
+
+Tile is a wrapper for a card content on the home page
+
+```go
+type Tile struct {
+    Title  string
+    Hero   string
+    Body   string
+    Footer string
 }
 ```
 
