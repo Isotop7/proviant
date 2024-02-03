@@ -1,13 +1,14 @@
 {{ define "content" }}
 <div class="py-2">
     <h2>Edit product
-        <span class="badge bg-primary ms-3">#{{- .Product.ID -}}</span>
+        <span class="badge bg-primary ms-3">#<span id="labelProductID">{{- .Product.ID -}}</span>
+        </span>
     </h2>
 </div>
 
 <div class="row my-3 w-100">
     <div class="col col-9 g-3">
-        <form>
+        <form id="editProductForm" class="needs-validation" novalidate>
             <div class="row my-3">
                 <div class="col col-3 fw-bold">
                     <label for="inputBarcode" class="form-label col-form-label">Barcode</label>
@@ -89,15 +90,19 @@
                         value="{{- .Product.UpdatedAt | humanDate -}}" disabled readonly>
                 </div>
             </div>
-        </form>
-        <div class="row my-3">
-            <div class="col col-3">
-                <button class="btn btn-outline-primary w-100 my-3" type="submit">
-                    <i class="bi bi-floppy me-2"></i>
-                    Update Product
-                </button>
+            <div class="row my-3">
+                <div class="col col-3">
+                    <button id="btnUpdateProduct" class="btn btn-outline-primary w-100 my-3" type="submit">
+                        <i class="bi bi-floppy me-2"></i>
+                        Update Product
+                    </button>
+                </div>
+                <div class="col col-9">
+                    <div id="alertEditProduct" class="alert alert-warning" role="alert" style="display: none;">
+                    </div>
+                </div>
             </div>
-        </div>
+        </form>
     </div>
     <div class="col col-3 m-auto p-5">
         <img id="imgProduct" src="{{- .Product.ImageURL -}}" class="img-fluid" alt="Image URL">

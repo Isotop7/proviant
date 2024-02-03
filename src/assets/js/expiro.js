@@ -23,6 +23,24 @@ expiro.createProduct = async function (barcode, expireAt) {
     return response;
 }
 
+expiro.editProduct = async function (product) {
+    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${product.ID}`
+    let data = JSON.stringify(product)
+    const apiCall = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: data
+    })
+    const body = await apiCall.json();
+    let response = {
+        code: apiCall.status,
+        message: body.message
+    }
+    return response;
+}
+
 expiro.deleteProduct = async function (productID) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${productID}`
     const apiCall = await fetch(url, {

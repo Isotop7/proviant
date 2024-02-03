@@ -31,3 +31,13 @@ type ProductDTOExpire struct {
 type ProductDTOBarcode struct {
 	Barcode string `json:"barcode"`
 }
+
+// ProductDTOPatch is a simplified DTO only containing the patchable elements
+type ProductDTOPatch struct {
+	ID          uint      `json:"ID"`
+	ProductName string    `json:"productName"`
+	Categories  string    `json:"categories"`
+	Countries   string    `json:"countries"`
+	ImageURL    string    `json:"imageUrl"`
+	ExpireAt    time.Time `json:"expireAt"`
+}

@@ -267,17 +267,10 @@ func UpdateProduct(ctx *gin.Context) {
 	}
 
 	// Get and parse body to product
-	var product database.Product
+	var product database.ProductDTOPatch
 	if err := ctx.ShouldBindJSON(&product); err != nil {
 		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
-		return
-	}
-
-	// Check for required parameters
-	if product.Barcode == "" {
-		logger.Error().Msgf("Body is missing barcode")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
 		return
 	}
 

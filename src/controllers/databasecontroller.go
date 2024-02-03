@@ -260,7 +260,7 @@ func (dbc DatabaseController) CreateProduct(userID uint, product *database.Produ
 
 // UpdateProduct gets a product (based on product ID) of a user (based on user ID) and updates its contents with the contents of a supplied reference to the updated product
 // If the database operations return an error, the error is also returned (otherwise nil)
-func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product *database.Product) error {
+func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product *database.ProductDTOPatch) error {
 	// Check if id is valid
 	if productID <= 0 {
 		return gorm.ErrNotImplemented
@@ -280,13 +280,11 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	}
 
 	// Update values
-	dbProduct.Barcode = product.Barcode
 	dbProduct.ProductName = product.ProductName
 	dbProduct.Categories = product.Categories
 	dbProduct.Countries = product.Countries
 	dbProduct.ImageURL = product.ImageURL
 	dbProduct.ExpireAt = product.ExpireAt
-	dbProduct.NotifiedAt = product.NotifiedAt
 
 	// Save updated product
 	saveResult := dbc.DBHandle.Save(&dbProduct)
