@@ -1,0 +1,26 @@
+{{ define "content" }}
+<div class="py-2">
+    <h2>Search results</h2>
+</div>
+
+<div class="row">
+{{ if .SearchQuery }} <!-- TODO: Add as label -->
+<p>
+    Query: {{ .SearchParameter }} -> "{{ .SearchQuery }}"
+</p>
+{{ else }}
+<p>
+    No query specified
+</p>
+{{ end }}
+</div>
+
+{{ range .Products }} <!-- TODO: Add custom list rows -->
+<div class="row">
+    <p>
+        {{ .ProductName }}
+    </p>
+</div>
+{{ end }}
+
+{{ end }}

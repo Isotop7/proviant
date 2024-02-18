@@ -138,7 +138,6 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	products, productBulkErr := dbController.GetUserProductsBulk(userID, -1)
 	if productBulkErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserNoProductsFound)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
 		return
 	}
@@ -201,7 +200,6 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	product, productErr := dbController.GetProductByID(productID, userID)
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserNoProductsFound)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
 		return
 	}
@@ -250,7 +248,6 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	product, productErr := dbController.GetProductByID(productID, userID)
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserNoProductsFound)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
 		return
 	}
@@ -260,4 +257,70 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 		"Product": product,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
+}
+
+func (frontend *Frontend) Search(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Helper variables
+	searchParameterEnum := controllers.InvalidParameter
+	var searchParameter string
+	var searchQuery string
+	// Parse all query parameters, get first, run function with it
+	queryParams := ctx.Request.URL.Query()
+
+	// Loop through params and check for valid param
+	for param := range queryParams {
+		enumParam := controllers.SearchParameterEnumFromString(param)
+		if enumParam != controllers.InvalidParameter {
+			// If valid parameter is found, assign vars and exit loop
+			searchParameterEnum = enumParam
+			searchParameter = param
+			searchQuery = queryParams[param][0]
+			break
+		}
+	}
+
+	if searchParameterEnum == controllers.InvalidParameter {
+		// If no supported parameter was found, exit
+		logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrProductSearchInvalidQuery.Error())
+		return
+	}
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		return
+	}
+
+	// Create database controller
+	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	// Get products of user from database with optional limit
+	products, productErr := dbController.SearchProducts(searchQuery, searchParameterEnum, userID)
+	if productErr != nil {
+		logger.Error().Msgf("Error getting products: %s", productErr)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
+		return
+	}
+
+	pageData := map[string]any{
+		"Title":           "Search results",
+		"SearchParameter": searchParameter,
+		"SearchQuery":     searchQuery,
+		"Products":        products,
+	}
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "search.tmpl", pageData)
 }

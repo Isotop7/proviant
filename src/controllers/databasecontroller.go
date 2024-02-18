@@ -18,6 +18,28 @@ type DatabaseController struct {
 	DBHandle *gorm.DB
 }
 
+// SearchParameterEnum is a int value specifying a valid search parameter
+type SearchParameterEnum int
+
+const (
+	InvalidParameter SearchParameterEnum = iota
+	ProductName
+	Barcode
+)
+
+// SearchParameterEnumFromString parses and converts a given string to the matching enum value
+// If the enum value can't be matched, enum value 'InvalidParameter' is used
+func SearchParameterEnumFromString(str string) SearchParameterEnum {
+	switch str {
+	case "productName":
+		return ProductName
+	case "barcode":
+		return Barcode
+	default:
+		return InvalidParameter
+	}
+}
+
 // GetUserByUsername uses a given username and returns the matching user object
 // If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) GetUserByUsername(username string) (authentication.User, error) {
@@ -242,6 +264,42 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 
 	// Return database product
 	return product, nil
+}
+
+// SearchProducts returns an array of products of a user matching a search paramater and a query
+func (dbc DatabaseController) SearchProducts(searchQuery string, searchParameter SearchParameterEnum, userID uint) ([]database.Product, error) {
+	// Get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return []database.Product{}, userErr
+	}
+
+	// Get all user products
+	var foundProducts []database.Product
+	preloadedDataset := dbc.DBHandle.
+		Where("user_id = ?", user.ID).
+		Where("deleted_at IS NULL")
+
+	// Transform search query
+	searchQuery = fmt.Sprintf("%%%s%%", searchQuery)
+
+	// Get matching products of preloaded set based on search parameter
+	switch searchParameter {
+	case ProductName:
+		preloadedDataset = preloadedDataset.Where("product_name LIKE ?", searchQuery)
+	case Barcode:
+		preloadedDataset = preloadedDataset.Where("barcode LIKE ?", searchQuery)
+	default:
+		return []database.Product{}, errors.ErrDatabaseInvalidSearchParameter
+	}
+
+	// Cast found set to returned array or return error
+	findErr := preloadedDataset.Find(&foundProducts)
+	if findErr.Error != nil {
+		return []database.Product{}, findErr.Error
+	} else {
+		return foundProducts, nil
+	}
 }
 
 // CreateProduct creates a product in the database and connects it to the user

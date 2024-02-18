@@ -49,8 +49,14 @@ var (
 	// ErrDatabaseContextNotFound is thrown if database handle can't be found in context
 	ErrDatabaseContextNotFound = errors.New("failed to get database from context")
 
+	// ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
+	ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
+
 	// ErrUserIDFromToken is thrown if no user id is found in token
 	ErrUserIDFromToken = errors.New("error getting user id from JWT token")
+
+	// ErrProductSearchInvalidQuery is thrown if a search is ommited but no valid parameter is supplied
+	ErrProductSearchInvalidQuery = errors.New("invalid search query specified")
 
 	// ErrParseBody is thrown when a body fails to parse
 	ErrParseBody = errors.New("error parsing body")
