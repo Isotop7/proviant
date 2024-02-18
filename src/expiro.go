@@ -9,6 +9,7 @@ import (
 
 	"gitlab.com/Isotop7/expiro/controllers"
 	dbController "gitlab.com/Isotop7/expiro/controllers/database"
+	"gitlab.com/Isotop7/expiro/errors"
 	"gitlab.com/Isotop7/expiro/logging"
 	"gitlab.com/Isotop7/expiro/models/authentication"
 	"gitlab.com/Isotop7/expiro/models/configuration"
@@ -19,6 +20,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -79,27 +81,12 @@ func main() {
 		cLogger.Info().Msg("Database configuration is valid")
 	}
 
-	// Generate database URI
-	databaseURI := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		configuration.Database.User,
-		configuration.Database.Password,
-		configuration.Database.Host,
-		configuration.Database.Port,
-		configuration.Database.Name)
-
-	// Generate gorm config
-	var dbErr error
-	var dbHandle *gorm.DB
-	gormConfig := gorm.Config{}
-	// Create Zerolog adapter and pass it to gorm config
-	gormConfig.Logger = logging.ZerologAdapter{LoggingSink: &cLogger}
-	// Open database handle
-	dbHandle, dbErr = gorm.Open(mysql.Open(databaseURI), &gormConfig)
-
-	// Check if external database can be accessed
-	if dbErr != nil {
-		cLogger.Warn().Msgf("Database '%s' with on server '%s' could not be reached", configuration.Database.Name, configuration.Database.Host)
-		panic(dbErr)
+	// Setup database connection handle
+	dbHandle, setupErr := SetupDatabase(cLogger, configuration.Database)
+	if setupErr != nil {
+		panic(setupErr)
+	} else if dbHandle == nil {
+		panic("Error getting database handle")
 	}
 
 	// Run migrations for database and check for errors
@@ -158,4 +145,45 @@ func main() {
 	if runErr != nil {
 		panic(runErr)
 	}
+}
+
+func SetupDatabase(logger zerolog.Logger, configuration configuration.DatabaseConfiguration) (*gorm.DB, error) {
+	// Generate gorm config
+	var dbErr error
+	var dbHandle *gorm.DB
+	gormConfig := gorm.Config{}
+	// Create Zerolog adapter and pass it to gorm config
+	gormConfig.Logger = logging.ZerologAdapter{LoggingSink: &logger}
+
+	switch configuration.SelectedEngine {
+	case dbController.MariaDB:
+		// Generate database URI
+		databaseURI := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			configuration.MariaDB.User,
+			configuration.MariaDB.Password,
+			configuration.MariaDB.Host,
+			configuration.MariaDB.Port,
+			configuration.MariaDB.Name)
+		// Open database handle
+		dbHandle, dbErr = gorm.Open(mysql.Open(databaseURI), &gormConfig)
+
+		// Check if database can be accessed
+		if dbErr != nil {
+			logger.Warn().Msgf("Database '%s' on server '%s' could not be reached", configuration.MariaDB.Name, configuration.MariaDB.Host)
+			return nil, dbErr
+		}
+	case dbController.SQLite:
+		// Create file and handle
+		dbHandle, dbErr = gorm.Open(sqlite.Open(configuration.SQLite.Filepath), &gormConfig)
+
+		// Check if database can be accessed
+		if dbErr != nil {
+			logger.Warn().Msgf("Database on path '%s' could not be opened", configuration.SQLite.Filepath)
+			return nil, dbErr
+		}
+	case dbController.InvalidEngine:
+		return nil, errors.ErrDatabaseInvalidEngine
+	}
+
+	return dbHandle, nil
 }

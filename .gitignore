@@ -26,3 +26,4 @@ src/config.yaml
 src/test/*.httpie
 .vscode/
 expiro.log
+src/data

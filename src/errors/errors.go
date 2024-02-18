@@ -46,12 +46,6 @@ var (
 	// ErrUserWithMailAddressExists is thrown when a user with the same mail address already exists
 	ErrUserWithMailAddressExists = errors.New("user with this mail address already exists")
 
-	// ErrDatabaseContextNotFound is thrown if database handle can't be found in context
-	ErrDatabaseContextNotFound = errors.New("failed to get database from context")
-
-	// ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
-	ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
-
 	// ErrUserIDFromToken is thrown if no user id is found in token
 	ErrUserIDFromToken = errors.New("error getting user id from JWT token")
 
@@ -60,4 +54,43 @@ var (
 
 	// ErrParseBody is thrown when a body fails to parse
 	ErrParseBody = errors.New("error parsing body")
+
+	/*
+	 * Database related errors
+	 */
+	// ErrDatabaseInvalidEngine is thrown if an invalid database engine is selected
+	ErrDatabaseInvalidEngine = errors.New("no valid database engine selected")
+
+	// ErrDatabaseContextNotFound is thrown if database handle can't be found in context
+	ErrDatabaseContextNotFound = errors.New("failed to get database from context")
+
+	// ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
+	ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
+
+	// ErrDatabaseMariaDBEmptyHost is thrown if an empty MariaDB host was specified
+	ErrDatabaseMariaDBEmptyHost = errors.New("empty MariaDB host specified")
+
+	// ErrDatabaseMariaDBEmptyUser is thrown if an empty MariaDB user was specified
+	ErrDatabaseMariaDBEmptyUser = errors.New("empty MariaDB user specified")
+
+	// ErrDatabaseMariaDBEmptyPassword is thrown if an empty MariaDB password was specified
+	ErrDatabaseMariaDBEmptyPassword = errors.New("empty MariaDB password specified")
+
+	// ErrDatabaseMariaDBEmptyName is thrown if an empty MariaDB database name was specified
+	ErrDatabaseMariaDBEmptyName = errors.New("empty MariaDB database name specified")
+
+	// ErrDatabaseMariaDBInvalidPort is thrown if an invalid MariaDB database port was specified
+	ErrDatabaseMariaDBInvalidPort = errors.New("no valid MariaDB database port specified")
+
+	// ErrDatabaseSQLiteInvalidPath is thrown if no valid SQLite database path was specified
+	ErrDatabaseSQLiteInvalidPath = errors.New("no valid SQLite database path specified")
+
+	/*
+	 * OpenFoodFacts related errors
+	 */
+	// ErrOpenFoodFactsAPIEmptyUrl is thrown if an empty url for the OpenFoodFacts API was specified
+	ErrOpenFoodFactsAPIEmptyUrl = errors.New("empty API URL for OpenFoodFacts specified")
+
+	// ErrOpenFoodFactsAPIInvalidTimeout is thrown if an invalid API timeout was supplied
+	ErrOpenFoodFactsAPIInvalidTimeout = errors.New("invalid timeout for OpenFoodFacts API specified")
 )

@@ -11,12 +11,9 @@ server:
       - "http://myexpiro.instance"
 
 database:
-  engine: mariadb
-  host: 127.0.0.1
-  port: 3306
-  name: expiro
-  user: root
-  password: password
+  engine: sqlite
+  sqlite:
+    filepath: "data/expiro.db"
 
 logging:
   enabled: true

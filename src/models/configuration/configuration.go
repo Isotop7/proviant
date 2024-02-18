@@ -2,20 +2,31 @@
 package configuration
 
 import (
-	"errors"
 	"html/template"
 
 	"gitlab.com/Isotop7/expiro/controllers/database"
+	"gitlab.com/Isotop7/expiro/errors"
 )
 
-// DatabaseConfiguration contains all properties regarding the database connection
-type DatabaseConfiguration struct {
-	Engine   string
+type DatabaseMariaDBConfiguration struct {
 	Host     string
 	Port     int
 	Name     string
 	User     string
 	Password string
+}
+
+type DatabaseSQLiteConfiguration struct {
+	Filepath string
+}
+
+// DatabaseConfiguration contains all properties regarding the database connection
+type DatabaseConfiguration struct {
+	Engine  string
+	MariaDB DatabaseMariaDBConfiguration
+	SQLite  DatabaseSQLiteConfiguration
+	// Additional, non parsed vars
+	SelectedEngine database.SupportedEngines
 }
 
 // AuthenticationConfiguration contains all properties regarding the JSON Web Tokens
@@ -79,33 +90,42 @@ type ExpiroConfiguration struct {
 // ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
 func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error {
 	if ec.OpenFoodFacts.URL == "" {
-		return errors.New("empty API URL for OpenFoodFacts specified")
+		return errors.ErrOpenFoodFactsAPIEmptyUrl
 	}
 	if ec.OpenFoodFacts.Timeout <= 0 {
-		return errors.New("invalid timeout for OpenFoodFacts API specified")
+		return errors.ErrOpenFoodFactsAPIInvalidTimeout
 	}
 	return nil
 }
 
 // ValidateDatabaseConfiguration checks the current database configuration for common errors
-func (ec ExpiroConfiguration) ValidateDatabaseConfiguration() error {
-	if dbEngine := database.SupportedEnginesFromString(ec.Database.Engine); dbEngine == database.InvalidEngine {
-		return errors.New("no valid database engine selected")
+func (ec *ExpiroConfiguration) ValidateDatabaseConfiguration() error {
+	ec.Database.SelectedEngine = database.SupportedEnginesFromString(ec.Database.Engine)
+	if ec.Database.SelectedEngine == database.InvalidEngine {
+		return errors.ErrDatabaseInvalidEngine
 	}
-	if ec.Database.Host == "" {
-		return errors.New("no database host specified")
-	}
-	if ec.Database.User == "" {
-		return errors.New("no database user specified")
-	}
-	if ec.Database.Password == "" {
-		return errors.New("no database password specified")
-	}
-	if ec.Database.Name == "" {
-		return errors.New("no database name specified")
-	}
-	if ec.Database.Port <= 0 {
-		return errors.New("no valid database port specified")
+
+	switch ec.Database.SelectedEngine {
+	case database.MariaDB:
+		if ec.Database.MariaDB.Host == "" {
+			return errors.ErrDatabaseMariaDBEmptyHost
+		}
+		if ec.Database.MariaDB.User == "" {
+			return errors.ErrDatabaseMariaDBEmptyUser
+		}
+		if ec.Database.MariaDB.Password == "" {
+			return errors.ErrDatabaseMariaDBEmptyPassword
+		}
+		if ec.Database.MariaDB.Name == "" {
+			return errors.ErrDatabaseMariaDBEmptyName
+		}
+		if ec.Database.MariaDB.Port <= 0 {
+			return errors.ErrDatabaseMariaDBInvalidPort
+		}
+	case database.SQLite:
+		if ec.Database.SQLite.Filepath == "" {
+			return errors.ErrDatabaseSQLiteInvalidPath
+		}
 	}
 	return nil
 }
