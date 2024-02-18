@@ -53,11 +53,16 @@ EXPIRO_SERVER_CORS_ALLOWALLORIGINS=true                                     # Al
 EXPIRO_SERVER_CORS_ALLOWEDORIGINS="http://localhost https://myapi.com"      # Allow this list of hosts to access API
 
 # Database configuration
-EXPIRO_DATABASE_HOST="127.0.0.1"                                            # Database server IP or hostname
-EXPIRO_DATABASE_PORT=3306                                                   # Database server port
-EXPIRO_DATABASE_NAME="expiro"                                               # Database name
-EXPIRO_DATABASE_USER="expiro"                                               # Database user
-EXPIRO_DATABASE_PASSWORD="password"                                         # Database user password
+## SQLite
+EXPIRO_ENGINE="sqlite"                                                              # Use sqlite
+EXPIRO_SQLITE_FILEPATH="data/expiro.db"                                             # Path to database file, this folder needs to exist
+## MariaDB
+EXPIRO_ENGINE="mariadb"                                                             # Use mariadb
+EXPIRO_MARIADB_DATABASE_HOST="127.0.0.1"                                            # Database server IP or hostname
+EXPIRO_MARIADB_DATABASE_PORT=3306                                                   # Database server port
+EXPIRO_MARIADB_DATABASE_NAME="expiro"                                               # Database name
+EXPIRO_MARIADB_DATABASE_USER="expiro"                                               # Database user
+EXPIRO_MARIADB_DATABASE_PASSWORD="password"                                         # Database user password
 
 # Logging configuration
 EXPIRO_LOGGING_ENABLED=true                                                 # Enable file logging
