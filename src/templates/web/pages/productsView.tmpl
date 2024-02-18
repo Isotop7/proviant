@@ -45,10 +45,10 @@
                     <i class="bi bi-trash3 me-3"></i>{{- .Product.ExpireAt | humanDate -}}
                 </div>
                 <div class="col-4 fw-bold">
-                    <i class="bi bi-upc-scan me-3"></i>{{- .Product.ScannedAt | humanDate -}}
+                    <i class="bi bi-upc-scan me-3"></i>{{- .Product.ScannedAt | humanDateTime -}}
                 </div>
                 <div class="col-4 fw-bold">
-                    <i class="bi bi-bell me-3"></i>{{- .Product.NotifiedAt | humanDate -}}
+                    <i class="bi bi-bell me-3"></i>{{- .Product.NotifiedAt | humanDateTime -}}
                 </div>
             </div>
         </div>

@@ -49,9 +49,9 @@
             <th scope="row">{{ .Model.ID }}</th>
             <td>{{ .ProductName }}</td>
             <td>{{ .Barcode }}</td>
-            <td>{{ .ScannedAt | humanDate }}</td>
+            <td>{{ .ScannedAt | humanDateTime }}</td>
             <td {{ if hasPassed .ExpireAt }}class="text-danger text-decoration-underline" {{ end }}>{{ .ExpireAt | humanDate }}</td>
-            <td>{{ .NotifiedAt | humanDate }}</td>
+            <td>{{ .NotifiedAt | humanDateTime }}</td>
         </tr>
         {{ end }}
     </tbody>

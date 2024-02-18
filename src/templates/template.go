@@ -19,8 +19,12 @@ import (
 //go:embed "web"
 var TemplateFiles embed.FS
 
-func humanDate(t time.Time) string {
+func humanDateTime(t time.Time) string {
 	return t.Format("02.01.2006 15:04")
+}
+
+func humanDate(t time.Time) string {
+	return t.Format("02.01.2006")
 }
 
 func inputDate(t time.Time) string {
@@ -62,6 +66,7 @@ func splitString(source string) template.HTML {
 
 var customTemplateFunctions = template.FuncMap{
 	"humanDate":         humanDate,
+	"humanDateTime":     humanDateTime,
 	"inputDate":         inputDate,
 	"today":             today,
 	"hasPassed":         hasPassed,

@@ -69,7 +69,7 @@
                 </div>
                 <div class="col col-9">
                     <input type="datetime" class="form-control" id="inputScannedAt"
-                        value="{{- .Product.ScannedAt | humanDate -}}" disabled readonly>
+                        value="{{- .Product.ScannedAt | humanDateTime -}}" disabled readonly>
                 </div>
             </div>
             <div class="row my-3">
@@ -78,7 +78,7 @@
                 </div>
                 <div class="col col-9">
                     <input type="datetime" class="form-control" id="inputNotifiedAt"
-                        value="{{- .Product.NotifiedAt | humanDate -}}" disabled readonly>
+                        value="{{- .Product.NotifiedAt | humanDateTime -}}" disabled readonly>
                 </div>
             </div>
             <div class="row my-3">
@@ -87,7 +87,7 @@
                 </div>
                 <div class="col col-9">
                     <input type="datetime" class="form-control" id="inputUpdatedAt"
-                        value="{{- .Product.UpdatedAt | humanDate -}}" disabled readonly>
+                        value="{{- .Product.UpdatedAt | humanDateTime -}}" disabled readonly>
                 </div>
             </div>
             <div class="row my-3">

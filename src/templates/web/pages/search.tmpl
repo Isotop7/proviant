@@ -1,25 +1,53 @@
 {{ define "content" }}
-<div class="py-2">
-    <h2>Search results</h2>
+<div class="py-2 d-flex justify-content-between align-items-center">
+    <div class="p-2 flex-grow">
+        <h2>
+            Search results
+        </h2>
+    </div>
+    <div class="p-2">
+        {{ if .SearchQuery }}
+        <span class="fs-6 badge bg-primary">
+            {{ .SearchParameter }} ~ "{{ .SearchQuery }}"
+        </span>
+        {{ else }}
+        <span class="fs-6 badge bg-primary">
+            No query specified
+        </span>
+        {{ end }}
+    </div>
 </div>
 
-<div class="row">
-{{ if .SearchQuery }} <!-- TODO: Add as label -->
-<p>
-    Query: {{ .SearchParameter }} -> "{{ .SearchQuery }}"
-</p>
+{{ if .Products }}
+<div class="row my-4">
+    <div class="list-group list-group-numbered">
+        {{ range .Products }}
+        <a href="/web/products/{{ .ID }}/view" class="list-group-item list-group-item-action">
+            <div class="row">
+                <div class="col-9">
+                    <div class="">
+                        <h5 class="mb-1">{{ .ProductName }}</h5>
+                    </div>
+                    <p>Created: {{ .CreatedAt | humanDateTime }} / Expire At: {{ .ExpireAt | humanDate }}</p>
+                    <small class="font-monospace">
+                        <i class="bi bi-upc-scan me-2"></i>{{ .Barcode }}
+                    </small>
+                </div>
+                <div class="col-3 d-flex justify-content-end">
+                    <img height="80px" src="{{ .ImageURL }}">
+                </div>
+            </div>
+        </a>
+        {{ end }}
+    </div>
+</div>
 {{ else }}
-<p>
-    No query specified
-</p>
-{{ end }}
-</div>
-
-{{ range .Products }} <!-- TODO: Add custom list rows -->
-<div class="row">
-    <p>
-        {{ .ProductName }}
-    </p>
+<div class="row my-2">
+    <div class="w-100 mt-5 d-flex justify-content-center align-items-center">
+        <p class="font-monospace fs-4">
+            No products found!
+        </p>
+    </div>
 </div>
 {{ end }}
 
