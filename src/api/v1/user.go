@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gitlab.com/Isotop7/expiro/api"
-	"gitlab.com/Isotop7/expiro/controllers"
+	"gitlab.com/Isotop7/expiro/controllers/database"
 	"gitlab.com/Isotop7/expiro/errors"
 	"gitlab.com/Isotop7/expiro/models/authentication"
 	"gitlab.com/Isotop7/expiro/models/configuration/static"
@@ -63,7 +63,7 @@ func UpdateUser(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 
 	// Force set user id from token
 	user.ID = userID
@@ -138,7 +138,7 @@ func UpdateUserPassword(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 
 	// Update user in database
 	updateErr := dbController.UpdateUserPassword(userID, &login)

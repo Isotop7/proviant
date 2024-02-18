@@ -6,8 +6,9 @@ import (
 	"html/template"
 	"time"
 
+	dbController "gitlab.com/Isotop7/expiro/controllers/database"
 	"gitlab.com/Isotop7/expiro/models/configuration"
-	"gitlab.com/Isotop7/expiro/models/database"
+	dbModel "gitlab.com/Isotop7/expiro/models/database"
 
 	"github.com/rs/zerolog"
 	gomail "gopkg.in/mail.v2"
@@ -21,7 +22,7 @@ var (
 type NotificationController struct {
 	Logger             *zerolog.Logger
 	Configuration      configuration.NotificationConfiguration
-	DatabaseController *DatabaseController
+	DatabaseController *dbController.DatabaseController
 }
 
 // Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them.
@@ -47,7 +48,7 @@ func (nc NotificationController) Dispatch() {
 }
 
 // generateNotifications uses a list of products and generates a notification for it
-func (nc NotificationController) generateNotifications(notificationProducts *[]database.Product) {
+func (nc NotificationController) generateNotifications(notificationProducts *[]dbModel.Product) {
 	// Loop through products
 	for _, product := range *notificationProducts {
 		// Get user object of product
@@ -79,7 +80,7 @@ func (nc NotificationController) generateNotifications(notificationProducts *[]d
 }
 
 // sendMail sends the notification for a product to a recipient
-func (nc NotificationController) sendMail(product database.Product, recipient string) error {
+func (nc NotificationController) sendMail(product dbModel.Product, recipient string) error {
 	// Create new mail object
 	mail := gomail.NewMessage()
 

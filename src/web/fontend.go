@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gitlab.com/Isotop7/expiro/api"
-	"gitlab.com/Isotop7/expiro/controllers"
+	"gitlab.com/Isotop7/expiro/controllers/database"
 	"gitlab.com/Isotop7/expiro/errors"
 	"gitlab.com/Isotop7/expiro/models/configuration/static"
 	"gitlab.com/Isotop7/expiro/templates"
@@ -42,7 +42,7 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 	}
 
 	// Create database controller object
-	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get user tiles
 	homeTiles, homeTileErr := dbController.GetUserHomeTiles(userID)
 	if homeTileErr != nil {
@@ -95,7 +95,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	}
 
 	// Create database controller object
-	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get user object
 	user, userErr := dbController.GetUserByID(userID)
 	if userErr != nil {
@@ -133,7 +133,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get products of user from database with optional limit
 	products, productBulkErr := dbController.GetUserProductsBulk(userID, -1)
 	if productBulkErr != nil {
@@ -195,7 +195,7 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get products of user from database with optional limit
 	product, productErr := dbController.GetProductByID(productID, userID)
 	if productErr != nil {
@@ -243,7 +243,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get products of user from database with optional limit
 	product, productErr := dbController.GetProductByID(productID, userID)
 	if productErr != nil {
@@ -264,7 +264,7 @@ func (frontend *Frontend) Search(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
 	// Helper variables
-	searchParameterEnum := controllers.InvalidParameter
+	searchParameterEnum := database.InvalidParameter
 	var searchParameter string
 	var searchQuery string
 	// Parse all query parameters, get first, run function with it
@@ -272,8 +272,8 @@ func (frontend *Frontend) Search(ctx *gin.Context) {
 
 	// Loop through params and check for valid param
 	for param := range queryParams {
-		enumParam := controllers.SearchParameterEnumFromString(param)
-		if enumParam != controllers.InvalidParameter {
+		enumParam := database.SearchParameterEnumFromString(param)
+		if enumParam != database.InvalidParameter {
 			// If valid parameter is found, assign vars and exit loop
 			searchParameterEnum = enumParam
 			searchParameter = param
@@ -282,7 +282,7 @@ func (frontend *Frontend) Search(ctx *gin.Context) {
 		}
 	}
 
-	if searchParameterEnum == controllers.InvalidParameter {
+	if searchParameterEnum == database.InvalidParameter {
 		// If no supported parameter was found, exit
 		logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrProductSearchInvalidQuery.Error())
@@ -307,7 +307,7 @@ func (frontend *Frontend) Search(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get products of user from database with optional limit
 	products, productErr := dbController.SearchProducts(searchQuery, searchParameterEnum, userID)
 	if productErr != nil {

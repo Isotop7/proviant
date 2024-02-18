@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"gitlab.com/Isotop7/expiro/api"
-	"gitlab.com/Isotop7/expiro/controllers"
+	"gitlab.com/Isotop7/expiro/controllers/database"
 	"gitlab.com/Isotop7/expiro/models/authentication"
 
 	"github.com/gin-gonic/gin"
@@ -37,7 +37,7 @@ func Signup(ctx *gin.Context) {
 	}
 
 	// Create database controller object
-	dbController := controllers.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 
 	// Parse request body to Login
 	var signup authentication.Signup

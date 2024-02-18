@@ -4,10 +4,13 @@ package configuration
 import (
 	"errors"
 	"html/template"
+
+	"gitlab.com/Isotop7/expiro/controllers/database"
 )
 
 // DatabaseConfiguration contains all properties regarding the database connection
 type DatabaseConfiguration struct {
+	Engine   string
 	Host     string
 	Port     int
 	Name     string
@@ -86,6 +89,9 @@ func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error {
 
 // ValidateDatabaseConfiguration checks the current database configuration for common errors
 func (ec ExpiroConfiguration) ValidateDatabaseConfiguration() error {
+	if dbEngine := database.SupportedEnginesFromString(ec.Database.Engine); dbEngine == database.InvalidEngine {
+		return errors.New("no valid database engine selected")
+	}
 	if ec.Database.Host == "" {
 		return errors.New("no database host specified")
 	}

@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"gitlab.com/Isotop7/expiro/controllers"
+	dbController "gitlab.com/Isotop7/expiro/controllers/database"
 	"gitlab.com/Isotop7/expiro/logging"
 	"gitlab.com/Isotop7/expiro/models/authentication"
 	"gitlab.com/Isotop7/expiro/models/configuration"
-	"gitlab.com/Isotop7/expiro/models/database"
+	dbModel "gitlab.com/Isotop7/expiro/models/database"
 	"gitlab.com/Isotop7/expiro/router"
 	"gitlab.com/Isotop7/expiro/templates"
 
@@ -104,7 +105,7 @@ func main() {
 	// Run migrations for database and check for errors
 	migrationError := dbHandle.AutoMigrate(
 		&authentication.User{},
-		&database.Product{},
+		&dbModel.Product{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
@@ -129,7 +130,7 @@ func main() {
 		notificationController := controllers.NotificationController{
 			Logger:             &cLogger,
 			Configuration:      configuration.Notification,
-			DatabaseController: &controllers.DatabaseController{DBHandle: dbHandle},
+			DatabaseController: &dbController.DatabaseController{DBHandle: dbHandle},
 		}
 		// Dispatch notification handler goroutine
 		notificationController.Dispatch()
