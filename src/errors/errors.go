@@ -89,7 +89,7 @@ var (
 	 * OpenFoodFacts related errors
 	 */
 	// ErrOpenFoodFactsAPIEmptyUrl is thrown if an empty url for the OpenFoodFacts API was specified
-	ErrOpenFoodFactsAPIEmptyUrl = errors.New("empty API URL for OpenFoodFacts specified")
+	ErrOpenFoodFactsAPIEmptyURL = errors.New("empty API URL for OpenFoodFacts specified")
 
 	// ErrOpenFoodFactsAPIInvalidTimeout is thrown if an invalid API timeout was supplied
 	ErrOpenFoodFactsAPIInvalidTimeout = errors.New("invalid timeout for OpenFoodFacts API specified")

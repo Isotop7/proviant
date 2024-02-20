@@ -18,7 +18,6 @@ import (
 	dbController "gitlab.com/Isotop7/expiro/controllers/database"
 	"gitlab.com/Isotop7/expiro/errors"
 	"gitlab.com/Isotop7/expiro/models/configuration/static"
-	"gitlab.com/Isotop7/expiro/models/database"
 	dbModel "gitlab.com/Isotop7/expiro/models/database"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -202,7 +201,7 @@ func CreateProduct(ctx *gin.Context) {
 		return
 	}
 	// Get product data from API
-	var apiProduct database.Product
+	var apiProduct dbModel.Product
 	apiProduct, err := offacntrl.GetDataset(product.Barcode)
 	if err == nil {
 		// Preserve timestamps
@@ -269,7 +268,7 @@ func UpdateProduct(ctx *gin.Context) {
 	}
 
 	// Get and parse body to product
-	var product database.ProductDTOPatch
+	var product dbModel.ProductDTOPatch
 	if err := ctx.ShouldBindJSON(&product); err != nil {
 		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
@@ -399,7 +398,7 @@ func SetExpireAt(ctx *gin.Context) {
 	}
 
 	// Get and parse body to timestamp
-	var expireAt database.Timestamp
+	var expireAt dbModel.Timestamp
 	var bindErr error
 	if bindErr = ctx.ShouldBindJSON(&expireAt); bindErr != nil {
 		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), bindErr.Error())
@@ -422,7 +421,7 @@ func SetExpireAt(ctx *gin.Context) {
 	switch updateErr {
 	// No error => product was updated and dto is returned
 	case nil:
-		expireDTO := database.ProductDTOExpire{
+		expireDTO := dbModel.ProductDTOExpire{
 			ID:       product.ID,
 			Barcode:  product.Barcode,
 			ExpireAt: expireAt.Timestamp,
@@ -593,7 +592,7 @@ func ScanProduct(ctx *gin.Context) {
 	case success := <-decodingProcessChannel:
 		// Timeout was not reached and channel signaled success on decoding barcode
 		if success {
-			ctx.JSON(http.StatusOK, database.ProductDTOBarcode{Barcode: decodedBarcode})
+			ctx.JSON(http.StatusOK, dbModel.ProductDTOBarcode{Barcode: decodedBarcode})
 			return
 		}
 	}
