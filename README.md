@@ -24,7 +24,7 @@
 ## Technologies and Tools
 
 - **Web:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html)
-- **Database:** MariaDB
+- **Database:** MariaDB or SQLite
 
 ## Installation and Usage
 
@@ -35,7 +35,7 @@
 1. Clone the repository: `git clone https://gitlab.com/Isotop7/expiro.git`
 2. Navigate to the project directory: `cd expiro/src`
 3. Build the application: `go build -o expiro`
-4. Copy the config file `config.yaml.tmpl`, rename it to `config.yaml` and adjust it
+4. Copy the desired config file `config.yaml.[mariadb|sqlite].tmpl`, rename it to `config.yaml` and adjust it
 5. Run the server: `./expiro`
 
 #### Docker
