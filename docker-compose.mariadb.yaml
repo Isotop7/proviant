@@ -29,6 +29,7 @@ services:
       - GIN_MODE=debug
       - EXPIRO_LOGGING_ENABLED=true
       - EXPIRO_LOGGING_FILE=logs/expiro.log
+      - EXPIRO_ENGINE=sqlite
       - EXPIRO_DATABASE_HOST=database
       - EXPIRO_DATABASE_USER=expiro
       - EXPIRO_DATABASE_PASSWORD=supersecretpassword

@@ -40,7 +40,10 @@
 
 #### Docker
 
-`expiro` can be started with [docker compose](./docker-compose.yaml).
+`expiro` can be started with `docker compose`
+
+- [External MariaDB database](./docker-compose.mariadb.yaml)
+- [Internal SQLite database](./docker-compose.sqlite.yaml)
 
 The app can be configured with environment variables:
 
