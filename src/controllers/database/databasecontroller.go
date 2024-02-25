@@ -460,8 +460,13 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	if productCountErr != nil {
 		return homeTiles, productCountErr
 	}
-	// Create tile
+	// Check for products
 	productCount := len(productList)
+	// If no products are assigned, there is nothing to show
+	if productCount == 0 {
+		return homeTiles, nil
+	}
+	// Create tile
 	homeTiles = append(homeTiles, webparts.Tile{
 		Title:  "Amount of your products",
 		Hero:   fmt.Sprint(productCount),
