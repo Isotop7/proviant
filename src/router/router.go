@@ -5,15 +5,15 @@ import (
 	"net/http"
 	"strings"
 
-	"gitlab.com/Isotop7/expiro/api/auth"
-	"gitlab.com/Isotop7/expiro/api/common"
-	v1 "gitlab.com/Isotop7/expiro/api/v1"
-	"gitlab.com/Isotop7/expiro/assets"
-	"gitlab.com/Isotop7/expiro/controllers"
-	"gitlab.com/Isotop7/expiro/errors"
-	"gitlab.com/Isotop7/expiro/models/configuration"
-	"gitlab.com/Isotop7/expiro/templates"
-	"gitlab.com/Isotop7/expiro/web"
+	"gitlab.com/Isotop7/proviant/api/auth"
+	"gitlab.com/Isotop7/proviant/api/common"
+	v1 "gitlab.com/Isotop7/proviant/api/v1"
+	"gitlab.com/Isotop7/proviant/assets"
+	"gitlab.com/Isotop7/proviant/controllers"
+	"gitlab.com/Isotop7/proviant/errors"
+	"gitlab.com/Isotop7/proviant/models/configuration"
+	"gitlab.com/Isotop7/proviant/templates"
+	"gitlab.com/Isotop7/proviant/web"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -22,7 +22,7 @@ import (
 )
 
 // SetupRouter creates the gin engine and associated middleware
-func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine {
+func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine {
 	// Generate new gin instance
 	engine := gin.New()
 

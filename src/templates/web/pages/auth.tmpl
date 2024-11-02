@@ -4,7 +4,7 @@
         aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
         <div class="toast-header">
             <img src="/assets/icons/favicon.png" class="rounded me-2" alt="...">
-            <strong class="me-auto">expiro</strong>
+            <strong class="me-auto">proviant</strong>
             <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
         <div class="toast-body">
@@ -12,7 +12,11 @@
     </div>
 
     <form id="authData" novalidate>
-        <img class="mx-auto" src="/assets/icons/logo_transparent.png" alt="" width="240">
+        <div class="mx-auto my-5 text-center">
+            <h1 class="logo-font ">
+                Proviant
+            </h1>
+        </div>
         <div class="form-floating">
             <input type="text" class="form-control" id="inputUsername" placeholder="Username" autocomplete="username">
             <label for="inputUsername">Username</label>
@@ -22,16 +26,16 @@
                 autocomplete="current-password">
             <label for="inputPassword">Password</label>
         </div>
-        <button id="btnAuth" form="authData" class="btn btn-outline-light w-100" type="submit">Sign in</button>
+        <button id="btnAuth" form="authData" class="btn btn-info w-100" type="submit">Sign in</button>
         <div id="loginAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
         </div>
-        <hr class="my-4">
+        <hr class="my-4 border-3 border-dark">
         <div class="form-floating">
             <input type="text" class="form-control" id="inputMailAddress" placeholder="Mail Address"
                 autocomplete="mailAddress">
             <label for="inputMailAddress">Mail Address</label>
         </div>
-        <button id="btnSignup" form="authData" class="btn btn-outline-light w-100" type="submit">Sign up</button>
+        <button id="btnSignup" form="authData" class="btn btn-info w-100" type="submit">Sign up</button>
         <div id="signupAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
         </div>
     </form>

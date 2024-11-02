@@ -72,7 +72,7 @@ doc:
 
 .PHONY: dockerimage
 dockerimage:
-	docker build --no-cache --tag=expiro ./
+	docker build --no-cache --tag=proviant ./
 
 # ==================================================================================== #
 # App
@@ -81,19 +81,19 @@ dockerimage:
 .PHONY: run
 run:
 	cd ./src && \
-	go run expiro.go
+	go run proviant.go
 
 .PHONY: rundocker
 rundocker:
 	@make dockerimage
 	cd ./src && \
-	docker run -t --rm -p 5114:5114 -v ./config.yaml.sqlite.tmpl:/app/config.yaml expiro:latest
+	docker run -t --rm -p 5114:5114 -v ./config.yaml.sqlite.tmpl:/app/config.yaml proviant:latest
 
 .PHONY: rundockerdebug
 rundockerdebug:
 	@make dockerimage
 	cd ./src && \
-	docker run -it --rm -v ./config.yaml.sqlite.tmpl:/app/config.yaml --entrypoint /bin/sh expiro:latest
+	docker run -it --rm -v ./config.yaml.sqlite.tmpl:/app/config.yaml --entrypoint /bin/sh proviant:latest
 
 # ==================================================================================== #
 # Web

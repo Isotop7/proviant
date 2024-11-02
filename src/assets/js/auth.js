@@ -20,7 +20,7 @@ function hideSignupError() {
 
 function showSignupSuccess(username) {
     let toastBootstrap = bootstrap.Toast.getOrCreateInstance(infoToast)
-    infoToast.getElementsByClassName("toast-body")[0].innerHTML = `Hello <span class="fw-bold">${username}</span>!<br><br>Your signup succeeded and you should be able to log in and use expiro`
+    infoToast.getElementsByClassName("toast-body")[0].innerHTML = `Hello <span class="fw-bold">${username}</span>!<br><br>Your signup succeeded and you should be able to log in and use proviant`
     toastBootstrap.show()
 }
 
@@ -55,7 +55,7 @@ function Login() {
         return;
     }
 
-    expiro.loginUser(username, password).then((response) => {
+    proviant.loginUser(username, password).then((response) => {
         switch (response.code) {
             case 200:
                 window.location.href = `${window.location.protocol}//${window.location.host}/web`;
@@ -101,7 +101,7 @@ function Signup() {
         return;
     }
 
-    expiro.signupUser(username, mailAddress, password).then((response) => {
+    proviant.signupUser(username, mailAddress, password).then((response) => {
         switch (response.code) {
             case 200:
                 showSignupSuccess(username);

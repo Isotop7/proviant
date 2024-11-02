@@ -113,13 +113,13 @@ info:
   contact:
     email: hendrik@hr94.de
     name: Isotop7
-    url: https://gitlab.com/Isotop7/expiro
-  description: expiro is a simple and intuitive application to track your bought products
-    and their expiration date to prevent waste of food.
+    url: https://gitlab.com/Isotop7/proviant
+  description: proviant is a simple and intuitive application to track your bought
+    products and their expiration date to prevent waste of food.
   license:
     name: MIT
-    url: https://gitlab.com/Isotop7/expiro/-/blob/main/LICENSE
-  title: expiro
+    url: https://gitlab.com/Isotop7/proviant/-/blob/main/LICENSE
+  title: proviant
   version: 0.2.0
 paths:
   /api/health:

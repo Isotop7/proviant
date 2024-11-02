@@ -50,7 +50,7 @@ function UpdateSettings() {
         return;
     }
 
-    expiro.updateUser(username, mailAddress).then((response) => {
+    proviant.updateUser(username, mailAddress).then((response) => {
         switch (response.code) {
             case 200:
                 console.error(response.message)
@@ -114,13 +114,13 @@ function UpdatePassword() {
         return;
     }
 
-    expiro.updateUserPassword(username, password).then((response) => {
+    proviant.updateUserPassword(username, password).then((response) => {
         switch (response.code) {
             case 200:
                 console.error(response.message)
                 ShowSuccessModal("Password update complete. Please log out to use changed password.", function (event) {
                     event.preventDefault();
-                    expiro.logoutUser();
+                    proviant.logoutUser();
                     location.reload();
                 })
                 break;

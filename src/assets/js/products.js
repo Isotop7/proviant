@@ -47,7 +47,7 @@ async function deleteProducts() {
         return;
     }
     for(let productID of productIDs) {
-        await expiro.deleteProduct(productID).then((response) => {
+        await proviant.deleteProduct(productID).then((response) => {
             switch (response.code) {
                 case 200:
                     console.log("Products deleted")

@@ -1,4 +1,4 @@
-// v1 implements version 1 of the expiro API
+// v1 implements version 1 of the proviant API
 package v1
 
 import (
@@ -13,12 +13,12 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 
-	"gitlab.com/Isotop7/expiro/api"
-	"gitlab.com/Isotop7/expiro/controllers"
-	dbController "gitlab.com/Isotop7/expiro/controllers/database"
-	"gitlab.com/Isotop7/expiro/errors"
-	"gitlab.com/Isotop7/expiro/models/configuration/static"
-	dbModel "gitlab.com/Isotop7/expiro/models/database"
+	"gitlab.com/Isotop7/proviant/api"
+	"gitlab.com/Isotop7/proviant/controllers"
+	dbController "gitlab.com/Isotop7/proviant/controllers/database"
+	"gitlab.com/Isotop7/proviant/errors"
+	"gitlab.com/Isotop7/proviant/models/configuration/static"
+	dbModel "gitlab.com/Isotop7/proviant/models/database"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"

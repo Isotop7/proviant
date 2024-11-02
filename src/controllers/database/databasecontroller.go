@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/Isotop7/expiro/errors"
-	"gitlab.com/Isotop7/expiro/models/authentication"
-	"gitlab.com/Isotop7/expiro/models/database"
-	"gitlab.com/Isotop7/expiro/models/webparts"
+	"gitlab.com/Isotop7/proviant/errors"
+	"gitlab.com/Isotop7/proviant/models/authentication"
+	"gitlab.com/Isotop7/proviant/models/database"
+	"gitlab.com/Isotop7/proviant/models/webparts"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"

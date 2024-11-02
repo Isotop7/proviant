@@ -9,15 +9,15 @@ RUN npm install && \
     npm run css && \
     cp node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/ && \
 	cp node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2 ./src/assets/fonts/
-RUN cd src && CGO_ENABLED=1 GOOS=linux CGO_CFLAGS="-D_LARGEFILE64_SOURCE" go build -v -o ../expiro
+RUN cd src && CGO_ENABLED=1 GOOS=linux CGO_CFLAGS="-D_LARGEFILE64_SOURCE" go build -v -o ../proviant
 
 FROM alpine:3.20
 WORKDIR /app
 
-COPY --from=buildenv /app/expiro /app/expiro
+COPY --from=buildenv /app/proviant /app/proviant
 RUN mkdir /app/data
 COPY ./src/config.yaml.sqlite.tmpl /app/config.yaml
 ENV GIN_MODE=release
 EXPOSE 5050
 
-ENTRYPOINT [ "/app/expiro" ]
+ENTRYPOINT [ "/app/proviant" ]

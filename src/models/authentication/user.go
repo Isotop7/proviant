@@ -3,8 +3,8 @@ package authentication
 import (
 	"net/mail"
 
-	"gitlab.com/Isotop7/expiro/errors"
-	"gitlab.com/Isotop7/expiro/models/database"
+	"gitlab.com/Isotop7/proviant/errors"
+	"gitlab.com/Isotop7/proviant/models/database"
 
 	"gorm.io/gorm"
 )

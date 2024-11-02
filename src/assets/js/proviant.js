@@ -1,11 +1,11 @@
-const expiro = {};
+const proviant = {};
 
 // Define a public method
-expiro.debug = function () {
-    console.log('Expiro loaded');
+proviant.debug = function () {
+    console.log('Proviant loaded');
 };
 
-expiro.createProduct = async function (barcode, expireAt) {
+proviant.createProduct = async function (barcode, expireAt) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/products`
     let data = JSON.stringify({ barcode, expireAt })
     const apiCall = await fetch(url, {
@@ -23,7 +23,7 @@ expiro.createProduct = async function (barcode, expireAt) {
     return response;
 }
 
-expiro.editProduct = async function (product) {
+proviant.editProduct = async function (product) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${product.ID}`
     let data = JSON.stringify(product)
     const apiCall = await fetch(url, {
@@ -41,7 +41,7 @@ expiro.editProduct = async function (product) {
     return response;
 }
 
-expiro.deleteProduct = async function (productID) {
+proviant.deleteProduct = async function (productID) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${productID}`
     const apiCall = await fetch(url, {
         method: 'DELETE',
@@ -57,7 +57,7 @@ expiro.deleteProduct = async function (productID) {
     return response;
 }
 
-expiro.loginUser = async function (username, password) {
+proviant.loginUser = async function (username, password) {
     let url = `${window.location.protocol}//${window.location.host}/auth/login`
     const apiCall = await fetch(url, {
         method: 'POST',
@@ -74,7 +74,7 @@ expiro.loginUser = async function (username, password) {
     return response;
 }
 
-expiro.signupUser = async function (username, mailAddress, password) {
+proviant.signupUser = async function (username, mailAddress, password) {
     let url = `${window.location.protocol}//${window.location.host}/auth/signup`
     const apiCall = await fetch(url, {
         method: 'POST',
@@ -92,7 +92,7 @@ expiro.signupUser = async function (username, mailAddress, password) {
     return response;
 }
 
-expiro.updateUser = async function (username, mailAddress) {
+proviant.updateUser = async function (username, mailAddress) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/user`
     const apiCall = await fetch(url, {
         method: 'PATCH',
@@ -110,7 +110,7 @@ expiro.updateUser = async function (username, mailAddress) {
     return response;
 }
 
-expiro.updateUserPassword = async function (username, password) {
+proviant.updateUserPassword = async function (username, password) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/user/password`
     const apiCall = await fetch(url, {
         method: 'POST',
@@ -128,6 +128,6 @@ expiro.updateUserPassword = async function (username, password) {
     return response;
 }
 
-expiro.logoutUser = function () {
+proviant.logoutUser = function () {
     document.cookie = "jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;"
 }

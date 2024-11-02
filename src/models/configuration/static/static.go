@@ -1,11 +1,11 @@
-// static implements "constants" used in expiro
+// static implements "constants" used in proviant
 package static
 
 import "time"
 
 var (
 	// Realm of tokens
-	TokenRealm = "expiro"
+	TokenRealm = "proviant"
 
 	// Name of identity key in tokens
 	TokenIdentityKey = "id"

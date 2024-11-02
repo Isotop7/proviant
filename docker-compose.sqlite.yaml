@@ -7,27 +7,27 @@ services:
     volumes:
       - smtpdb:/smtp4dev
 
-  expiro:
+  proviant:
     build: ./
     restart: always
     ports: 
       - "80:5050"
     environment:
       - GIN_MODE=debug
-      - EXPIRO_LOGGING_ENABLED=true
-      - EXPIRO_LOGGING_FILE=logs/expiro.log
-      - EXPIRO_ENGINE=sqlite
-      - EXPIRO_SQLITE_FILEPATH=data/expiro.db
-      - EXPIRO_NOTIFICATION_SMTP_HOST=smtp
-      - EXPIRO_NOTIFICATION_FROMADDRESS=expiro@yourdomain.com
+      - PROVIANT_LOGGING_ENABLED=true
+      - PROVIANT_LOGGING_FILE=logs/proviant.log
+      - PROVIANT_ENGINE=sqlite
+      - PROVIANT_SQLITE_FILEPATH=data/proviant.db
+      - PROVIANT_NOTIFICATION_SMTP_HOST=smtp
+      - PROVIANT_NOTIFICATION_FROMADDRESS=proviant@yourdomain.com
     volumes:
-      - expirologs:/app/logs
-      - expirodb:/app/data
+      - proviantlogs:/app/logs
+      - proviantdb:/app/data
     links:
       - smtp
 
 volumes:
-  expirodb: {}
-  expirologs: {}
+  proviantdb: {}
+  proviantlogs: {}
   smtpdb: {}
   

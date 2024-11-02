@@ -1,16 +1,16 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "expiro is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food.",
-        "title": "expiro",
+        "description": "proviant is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food.",
+        "title": "proviant",
         "contact": {
             "name": "Isotop7",
-            "url": "https://gitlab.com/Isotop7/expiro",
+            "url": "https://gitlab.com/Isotop7/proviant",
             "email": "hendrik@hr94.de"
         },
         "license": {
             "name": "MIT",
-            "url": "https://gitlab.com/Isotop7/expiro/-/blob/main/LICENSE"
+            "url": "https://gitlab.com/Isotop7/proviant/-/blob/main/LICENSE"
         },
         "version": "0.2.0"
     },

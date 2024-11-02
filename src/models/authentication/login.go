@@ -1,6 +1,6 @@
 package authentication
 
-import "gitlab.com/Isotop7/expiro/errors"
+import "gitlab.com/Isotop7/proviant/errors"
 
 // Login is derived from User and primarily used for sign in
 type Login struct {

@@ -1,14 +1,14 @@
 // api contains the complete API definitions
-// @title           expiro
+// @title           proviant
 // @version         0.2.0
-// @description     expiro is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food.
+// @description     proviant is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food.
 
 // @contact.name   Isotop7
-// @contact.url    https://gitlab.com/Isotop7/expiro
+// @contact.url    https://gitlab.com/Isotop7/proviant
 // @contact.email  hendrik@hr94.de
 
 // @license.name  MIT
-// @license.url   https://gitlab.com/Isotop7/expiro/-/blob/main/LICENSE
+// @license.url   https://gitlab.com/Isotop7/proviant/-/blob/main/LICENSE
 
 // @host      localhost:5050
 // @BasePath  /
@@ -19,7 +19,7 @@
 // @externalDocs.url          https://swagger.io/resources/open-api/
 package api
 
-import "gitlab.com/Isotop7/expiro/errors"
+import "gitlab.com/Isotop7/proviant/errors"
 
 var (
 	ResponseErrInvalidUserData           = APIResponse{Message: errors.ErrInvalidUserData.Error()}

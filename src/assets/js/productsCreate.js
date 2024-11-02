@@ -63,7 +63,7 @@ function createProduct() {
     try {
         let barcode = inputBarcode.value;
         let expireAt = inputExpireAt.valueAsDate.toISOString();
-        expiro.createProduct(barcode, expireAt).then((response) => {
+        proviant.createProduct(barcode, expireAt).then((response) => {
             // Show alert
             let alert = document.getElementById('alertCreateProductInfo')
             alert.style = ''

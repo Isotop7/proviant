@@ -8,20 +8,20 @@ server:
     allowAllOrigins: false
     allowedOrigins:
       - "http://localhost"
-      - "http://myexpiro.instance"
+      - "http://myproviant.instance"
 
 database:
   engine: mariadb
   mariadb:
     host: 127.0.0.1
     port: 3306
-    name: expiro
+    name: proviant
     user: root
     password: password
 
 logging:
   enabled: true
-  file: "expiro.log"
+  file: "proviant.log"
 
 notification:
   enabled: true

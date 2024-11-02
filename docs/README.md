@@ -3,10 +3,10 @@
 # src
 
 ```go
-import "gitlab.com/Isotop7/expiro"
+import "gitlab.com/Isotop7/proviant"
 ```
 
-expiro is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food
+proviant is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food
 
 ## Index
 
@@ -25,7 +25,7 @@ func SetupDatabase(logger zerolog.Logger, configuration configuration.DatabaseCo
 # api
 
 ```go
-import "gitlab.com/Isotop7/expiro/api"
+import "gitlab.com/Isotop7/proviant/api"
 ```
 
 @externalDocs.description OpenAPI @externalDocs.url https://swagger.io/resources/open-api/
@@ -75,7 +75,7 @@ Error returns an API response object from a error object
 # assets
 
 ```go
-import "gitlab.com/Isotop7/expiro/assets"
+import "gitlab.com/Isotop7/proviant/assets"
 ```
 
 ## Index
@@ -94,7 +94,7 @@ var AssetFiles embed.FS
 # controllers
 
 ```go
-import "gitlab.com/Isotop7/expiro/controllers"
+import "gitlab.com/Isotop7/proviant/controllers"
 ```
 
 controllers implements different controllers used for accessing different APIs, objects and datasources
@@ -153,7 +153,7 @@ GetDataset gets data from OpenFoodFacts by its API. The search parameter is the 
 # errors
 
 ```go
-import "gitlab.com/Isotop7/expiro/errors"
+import "gitlab.com/Isotop7/proviant/errors"
 ```
 
 errors contains custom error definitions
@@ -264,7 +264,7 @@ var (
 # logging
 
 ```go
-import "gitlab.com/Isotop7/expiro/logging"
+import "gitlab.com/Isotop7/proviant/logging"
 ```
 
 Provides custom logging facilites
@@ -338,7 +338,7 @@ Warn logs a warning message.
 # router
 
 ```go
-import "gitlab.com/Isotop7/expiro/router"
+import "gitlab.com/Isotop7/proviant/router"
 ```
 
 router contains the gin router definitions and maps requests to handlers
@@ -347,8 +347,8 @@ router contains the gin router definitions and maps requests to handlers
 
 - [func AuthorizatorNotUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorNotUserAware>)
 - [func AuthorizatorUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorUserAware>)
-- [func JWTMiddleware\(configuration \*configuration.ExpiroConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
-- [func SetupRouter\(logger \*zerolog.Logger, configuration \*configuration.ExpiroConfiguration, dbHandle \*gorm.DB, offacntrl controllers.OpenFoodFactsAPIController\) \*gin.Engine](<#SetupRouter>)
+- [func JWTMiddleware\(configuration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
+- [func SetupRouter\(logger \*zerolog.Logger, configuration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl controllers.OpenFoodFactsAPIController\) \*gin.Engine](<#SetupRouter>)
 - [func UnauthorizedAPIFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedAPIFunc>)
 - [func UnauthorizedFrontendFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedFrontendFunc>)
 - [func ZerologMiddleware\(logger \*zerolog.Logger\) gin.HandlerFunc](<#ZerologMiddleware>)
@@ -376,7 +376,7 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool
 ## func [JWTMiddleware](<https://gitlab.com/Isotop7/expiro/blob/main/src/router/middleware.go#L93-L97>)
 
 ```go
-func JWTMiddleware(configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, authorizatorFunc func(data any, ctx *gin.Context) bool, unauthorizedFunc func(ctx *gin.Context, code int, message string)) (*jwt.GinJWTMiddleware, error)
+func JWTMiddleware(configuration *configuration.ProviantConfiguration, dbHandle *gorm.DB, authorizatorFunc func(data any, ctx *gin.Context) bool, unauthorizedFunc func(ctx *gin.Context, code int, message string)) (*jwt.GinJWTMiddleware, error)
 ```
 
 JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization \(optional\)
@@ -385,7 +385,7 @@ JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authoriza
 ## func [SetupRouter](<https://gitlab.com/Isotop7/expiro/blob/main/src/router/router.go#L25>)
 
 ```go
-func SetupRouter(logger *zerolog.Logger, configuration *configuration.ExpiroConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine
+func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine
 ```
 
 SetupRouter creates the gin engine and associated middleware
@@ -420,7 +420,7 @@ ZerologMiddleware implements a gin.HandlerFunc and logs the output from gin
 # templates
 
 ```go
-import "gitlab.com/Isotop7/expiro/templates"
+import "gitlab.com/Isotop7/proviant/templates"
 ```
 
 ## Index
@@ -469,7 +469,7 @@ func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, m
 # web
 
 ```go
-import "gitlab.com/Isotop7/expiro/web"
+import "gitlab.com/Isotop7/proviant/web"
 ```
 
 ## Index
@@ -591,7 +591,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context)
 # auth
 
 ```go
-import "gitlab.com/Isotop7/expiro/api/auth"
+import "gitlab.com/Isotop7/proviant/api/auth"
 ```
 
 auth contains authentication method handlers
@@ -613,7 +613,7 @@ Signup creates a new user object in the database @Summary Creates a new user @De
 # common
 
 ```go
-import "gitlab.com/Isotop7/expiro/api/common"
+import "gitlab.com/Isotop7/proviant/api/common"
 ```
 
 common implements non\-specifc handlers
@@ -635,10 +635,10 @@ GetHealth returns the health status of the API @Summary Gets health @Description
 # v1
 
 ```go
-import "gitlab.com/Isotop7/expiro/api/v1"
+import "gitlab.com/Isotop7/proviant/api/v1"
 ```
 
-v1 implements version 1 of the expiro API
+v1 implements version 1 of the proviant API
 
 ## Index
 
@@ -747,7 +747,7 @@ UpdateUserPassword updates a user password @Summary Updates a user password @Des
 # database
 
 ```go
-import "gitlab.com/Isotop7/expiro/controllers/database"
+import "gitlab.com/Isotop7/proviant/controllers/database"
 ```
 
 ## Index
@@ -1039,7 +1039,7 @@ SupportedEnginesFromString parses and converts a given string to the matching en
 # authentication
 
 ```go
-import "gitlab.com/Isotop7/expiro/models/authentication"
+import "gitlab.com/Isotop7/proviant/models/authentication"
 ```
 
 authentication provides models and methods for logins
@@ -1125,10 +1125,10 @@ IsValid is a simple validator function to check for valid properties
 # configuration
 
 ```go
-import "gitlab.com/Isotop7/expiro/models/configuration"
+import "gitlab.com/Isotop7/proviant/models/configuration"
 ```
 
-configuration defines structs and methods for expiros configuration and specific parts of it
+configuration defines structs and methods for proviants configuration and specific parts of it
 
 ## Index
 
@@ -1137,12 +1137,12 @@ configuration defines structs and methods for expiros configuration and specific
 - [type DatabaseConfiguration](<#DatabaseConfiguration>)
 - [type DatabaseMariaDBConfiguration](<#DatabaseMariaDBConfiguration>)
 - [type DatabaseSQLiteConfiguration](<#DatabaseSQLiteConfiguration>)
-- [type ExpiroConfiguration](<#ExpiroConfiguration>)
-  - [func \(ec \*ExpiroConfiguration\) ValidateDatabaseConfiguration\(\) error](<#ExpiroConfiguration.ValidateDatabaseConfiguration>)
-  - [func \(ec ExpiroConfiguration\) ValidateOpenFoodFactsConfiguration\(\) error](<#ExpiroConfiguration.ValidateOpenFoodFactsConfiguration>)
 - [type LoggingConfiguration](<#LoggingConfiguration>)
 - [type NotificationConfiguration](<#NotificationConfiguration>)
 - [type OpenFoodFactsConfiguration](<#OpenFoodFactsConfiguration>)
+- [type ProviantConfiguration](<#ProviantConfiguration>)
+  - [func \(ec \*ProviantConfiguration\) ValidateDatabaseConfiguration\(\) error](<#ProviantConfiguration.ValidateDatabaseConfiguration>)
+  - [func \(ec ProviantConfiguration\) ValidateOpenFoodFactsConfiguration\(\) error](<#ProviantConfiguration.ValidateOpenFoodFactsConfiguration>)
 - [type SMTPConfiguration](<#SMTPConfiguration>)
 - [type ServerConfiguration](<#ServerConfiguration>)
 
@@ -1162,7 +1162,7 @@ type AuthenticationConfiguration struct {
 <a name="CorsConfiguration"></a>
 ## type [CorsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L39-L42>)
 
-CorsConfiguration contains all properties for the CORS configuration of the expiro server
+CorsConfiguration contains all properties for the CORS configuration of the proviant server
 
 ```go
 type CorsConfiguration struct {
@@ -1212,40 +1212,6 @@ type DatabaseSQLiteConfiguration struct {
 }
 ```
 
-<a name="ExpiroConfiguration"></a>
-## type [ExpiroConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L81-L88>)
-
-ExpiroConfiguration is the configuration wrapper struct
-
-```go
-type ExpiroConfiguration struct {
-    Database      DatabaseConfiguration
-    Server        ServerConfiguration
-    Logging       LoggingConfiguration
-    Notification  NotificationConfiguration
-    OpenFoodFacts OpenFoodFactsConfiguration
-    TemplateCache map[string]*template.Template
-}
-```
-
-<a name="ExpiroConfiguration.ValidateDatabaseConfiguration"></a>
-### func \(\*ExpiroConfiguration\) [ValidateDatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L102>)
-
-```go
-func (ec *ExpiroConfiguration) ValidateDatabaseConfiguration() error
-```
-
-ValidateDatabaseConfiguration checks the current database configuration for common errors
-
-<a name="ExpiroConfiguration.ValidateOpenFoodFactsConfiguration"></a>
-### func \(ExpiroConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L91>)
-
-```go
-func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error
-```
-
-ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
-
 <a name="LoggingConfiguration"></a>
 ## type [LoggingConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L52-L55>)
 
@@ -1284,6 +1250,40 @@ type OpenFoodFactsConfiguration struct {
 }
 ```
 
+<a name="ProviantConfiguration"></a>
+## type [ProviantConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L81-L88>)
+
+ProviantConfiguration is the configuration wrapper struct
+
+```go
+type ProviantConfiguration struct {
+    Database      DatabaseConfiguration
+    Server        ServerConfiguration
+    Logging       LoggingConfiguration
+    Notification  NotificationConfiguration
+    OpenFoodFacts OpenFoodFactsConfiguration
+    TemplateCache map[string]*template.Template
+}
+```
+
+<a name="ProviantConfiguration.ValidateDatabaseConfiguration"></a>
+### func \(\*ProviantConfiguration\) [ValidateDatabaseConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L102>)
+
+```go
+func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error
+```
+
+ValidateDatabaseConfiguration checks the current database configuration for common errors
+
+<a name="ProviantConfiguration.ValidateOpenFoodFactsConfiguration"></a>
+### func \(ProviantConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L91>)
+
+```go
+func (ec ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error
+```
+
+ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
+
 <a name="SMTPConfiguration"></a>
 ## type [SMTPConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L58-L64>)
 
@@ -1302,7 +1302,7 @@ type SMTPConfiguration struct {
 <a name="ServerConfiguration"></a>
 ## type [ServerConfiguration](<https://gitlab.com/Isotop7/expiro/blob/main/src/models/configuration/configuration.go#L45-L49>)
 
-ServerConfiguration contains all properties regarding the expiro server
+ServerConfiguration contains all properties regarding the proviant server
 
 ```go
 type ServerConfiguration struct {
@@ -1315,7 +1315,7 @@ type ServerConfiguration struct {
 # database
 
 ```go
-import "gitlab.com/Isotop7/expiro/models/database"
+import "gitlab.com/Isotop7/proviant/models/database"
 ```
 
 database contains the database specific definitions and models
@@ -1443,7 +1443,7 @@ type Timestamp struct {
 # external
 
 ```go
-import "gitlab.com/Isotop7/expiro/models/external"
+import "gitlab.com/Isotop7/proviant/models/external"
 ```
 
 external provides model definitions from external parties
@@ -1489,7 +1489,7 @@ type OpenFoodFactsAPIDataset struct {
 # webparts
 
 ```go
-import "gitlab.com/Isotop7/expiro/models/webparts"
+import "gitlab.com/Isotop7/proviant/models/webparts"
 ```
 
 web contains models for web entities
@@ -1516,10 +1516,10 @@ type Tile struct {
 # static
 
 ```go
-import "gitlab.com/Isotop7/expiro/models/configuration/static"
+import "gitlab.com/Isotop7/proviant/models/configuration/static"
 ```
 
-static implements "constants" used in expiro
+static implements "constants" used in proviant
 
 ## Index
 
@@ -1533,7 +1533,7 @@ static implements "constants" used in expiro
 ```go
 var (
     // Realm of tokens
-    TokenRealm = "expiro"
+    TokenRealm = "proviant"
 
     // Name of identity key in tokens
     TokenIdentityKey = "id"

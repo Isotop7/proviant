@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/Isotop7/expiro/models/configuration"
-	"gitlab.com/Isotop7/expiro/models/database"
-	"gitlab.com/Isotop7/expiro/models/external"
+	"gitlab.com/Isotop7/proviant/models/configuration"
+	"gitlab.com/Isotop7/proviant/models/database"
+	"gitlab.com/Isotop7/proviant/models/external"
 )
 
 // OpenFoodFactsAPIController is the object struct for interacting with the API of OpenFoodFacts

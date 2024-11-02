@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.com/Isotop7/expiro/api"
+	"gitlab.com/Isotop7/proviant/api"
 )
 
 // GetHealth returns the health status of the API

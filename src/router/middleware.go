@@ -9,11 +9,11 @@ import (
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gitlab.com/Isotop7/expiro/controllers/database"
-	"gitlab.com/Isotop7/expiro/models/authentication"
-	"gitlab.com/Isotop7/expiro/models/configuration"
-	"gitlab.com/Isotop7/expiro/models/configuration/static"
-	"gitlab.com/Isotop7/expiro/templates"
+	"gitlab.com/Isotop7/proviant/controllers/database"
+	"gitlab.com/Isotop7/proviant/models/authentication"
+	"gitlab.com/Isotop7/proviant/models/configuration"
+	"gitlab.com/Isotop7/proviant/models/configuration/static"
+	"gitlab.com/Isotop7/proviant/templates"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -91,7 +91,7 @@ func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool {
 
 // JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization (optional)
 func JWTMiddleware(
-	configuration *configuration.ExpiroConfiguration,
+	configuration *configuration.ProviantConfiguration,
 	dbHandle *gorm.DB,
 	authorizatorFunc func(data any, ctx *gin.Context) bool,
 	unauthorizedFunc func(ctx *gin.Context, code int, message string)) (*jwt.GinJWTMiddleware, error) {

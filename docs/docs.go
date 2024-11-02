@@ -11,12 +11,12 @@ const docTemplate = `{
         "title": "{{.Title}}",
         "contact": {
             "name": "Isotop7",
-            "url": "https://gitlab.com/Isotop7/expiro",
+            "url": "https://gitlab.com/Isotop7/proviant",
             "email": "hendrik@hr94.de"
         },
         "license": {
             "name": "MIT",
-            "url": "https://gitlab.com/Isotop7/expiro/-/blob/main/LICENSE"
+            "url": "https://gitlab.com/Isotop7/proviant/-/blob/main/LICENSE"
         },
         "version": "{{.Version}}"
     },
@@ -703,8 +703,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:5050",
 	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "expiro",
-	Description:      "expiro is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food.",
+	Title:            "proviant",
+	Description:      "proviant is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

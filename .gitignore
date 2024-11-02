@@ -25,5 +25,5 @@ src/assets/js/bootstrap*
 src/config.yaml
 src/test/*.httpie
 .vscode/
-expiro.log
+proviant.log
 src/data

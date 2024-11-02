@@ -1,11 +1,11 @@
-// configuration defines structs and methods for expiros configuration and specific parts of it
+// configuration defines structs and methods for proviants configuration and specific parts of it
 package configuration
 
 import (
 	"html/template"
 
-	"gitlab.com/Isotop7/expiro/controllers/database"
-	"gitlab.com/Isotop7/expiro/errors"
+	"gitlab.com/Isotop7/proviant/controllers/database"
+	"gitlab.com/Isotop7/proviant/errors"
 )
 
 type DatabaseMariaDBConfiguration struct {
@@ -35,13 +35,13 @@ type AuthenticationConfiguration struct {
 	TokenLifetime int
 }
 
-// CorsConfiguration contains all properties for the CORS configuration of the expiro server
+// CorsConfiguration contains all properties for the CORS configuration of the proviant server
 type CorsConfiguration struct {
 	AllowAllOrigins bool
 	AllowedOrigins  []string
 }
 
-// ServerConfiguration contains all properties regarding the expiro server
+// ServerConfiguration contains all properties regarding the proviant server
 type ServerConfiguration struct {
 	Port           int
 	Authentication AuthenticationConfiguration
@@ -77,8 +77,8 @@ type OpenFoodFactsConfiguration struct {
 	Timeout int
 }
 
-// ExpiroConfiguration is the configuration wrapper struct
-type ExpiroConfiguration struct {
+// ProviantConfiguration is the configuration wrapper struct
+type ProviantConfiguration struct {
 	Database      DatabaseConfiguration
 	Server        ServerConfiguration
 	Logging       LoggingConfiguration
@@ -88,7 +88,7 @@ type ExpiroConfiguration struct {
 }
 
 // ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
-func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error {
+func (ec ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error {
 	if ec.OpenFoodFacts.URL == "" {
 		return errors.ErrOpenFoodFactsAPIEmptyURL
 	}
@@ -99,7 +99,7 @@ func (ec ExpiroConfiguration) ValidateOpenFoodFactsConfiguration() error {
 }
 
 // ValidateDatabaseConfiguration checks the current database configuration for common errors
-func (ec *ExpiroConfiguration) ValidateDatabaseConfiguration() error {
+func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error {
 	ec.Database.SelectedEngine = database.SupportedEnginesFromString(ec.Database.Engine)
 	if ec.Database.SelectedEngine == database.InvalidEngine {
 		return errors.ErrDatabaseInvalidEngine

@@ -29,7 +29,7 @@ function editProduct() {
         "expireAt": inputExpireAt.valueAsDate.toISOString()
     };
     // Edit product
-    expiro.editProduct(product).then((response) => {
+    proviant.editProduct(product).then((response) => {
         // Get and show alert
         let alert = document.getElementById('alertEditProduct');
         alert.style.display = '';

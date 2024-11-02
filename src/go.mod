@@ -1,4 +1,4 @@
-module gitlab.com/Isotop7/expiro
+module gitlab.com/Isotop7/proviant
 
 go 1.21
 

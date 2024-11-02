@@ -4,9 +4,9 @@ package auth
 import (
 	"net/http"
 
-	"gitlab.com/Isotop7/expiro/api"
-	"gitlab.com/Isotop7/expiro/controllers/database"
-	"gitlab.com/Isotop7/expiro/models/authentication"
+	"gitlab.com/Isotop7/proviant/api"
+	"gitlab.com/Isotop7/proviant/controllers/database"
+	"gitlab.com/Isotop7/proviant/models/authentication"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"

@@ -1,19 +1,19 @@
-![Expiro](./res/icons/header_1.png){width=100%}
+![Proviant](./res/icons/header_1.png){width=100%}
 
-![License](https://img.shields.io/gitlab/license/Isotop7/expiro)
-![Release](https://gitlab.com/Isotop7/expiro/-/badges/release.svg)
-![CI @ main](https://gitlab.com/Isotop7/expiro/badges/main/pipeline.svg)
-![CI @ develop](https://gitlab.com/Isotop7/expiro/badges/develop/pipeline.svg)
+![License](https://img.shields.io/gitlab/license/Isotop7/proviant)
+![Release](https://gitlab.com/Isotop7/proviant/-/badges/release.svg)
+![CI @ main](https://gitlab.com/Isotop7/proviant/badges/main/pipeline.svg)
+![CI @ develop](https://gitlab.com/Isotop7/proviant/badges/develop/pipeline.svg)
 ![Golang version](https://img.shields.io/badge/Go-1.21-green)
 
 
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_expiro&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Isotop7_expiro)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_expiro&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Isotop7_expiro)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_expiro&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Isotop7_expiro)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
 
-⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is **expiro**
+⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is **proviant**
 
-📚 **expiro** is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food 🥗
+📚 **proviant** is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food 🥗
 
 ## Features
 
@@ -32,15 +32,15 @@
 
 #### Executable
 
-1. Clone the repository: `git clone https://gitlab.com/Isotop7/expiro.git`
-2. Navigate to the project directory: `cd expiro/src`
-3. Build the application: `go build -o expiro`
+1. Clone the repository: `git clone https://gitlab.com/Isotop7/proviant.git`
+2. Navigate to the project directory: `cd proviant/src`
+3. Build the application: `go build -o proviant`
 4. Copy the desired config file `config.yaml.[mariadb|sqlite].tmpl`, rename it to `config.yaml` and adjust it
-5. Run the server: `./expiro`
+5. Run the server: `./proviant`
 
 #### Docker
 
-`expiro` can be started with `docker compose`
+`proviant` can be started with `docker compose`
 
 - [External MariaDB database](./docker-compose.mariadb.yaml)
 - [Internal SQLite database](./docker-compose.sqlite.yaml)
@@ -49,41 +49,41 @@ The app can be configured with environment variables:
 
 ```bash
 # Server configuration
-EXPIRO_SERVER_PORT=5050                                                     # Listening port of server
-EXPIRO_SERVER_AUTHENTICATION_TOKENPASSWORD="secret key"                     # Secret used for JSON Web Tokens
-EXPIRO_SERVER_AUTHENTICATION_TOKENLIFETIME=8                                # Lifetime of JSON Web Tokens
-EXPIRO_SERVER_CORS_ALLOWALLORIGINS=true                                     # Allow all requests to API
-EXPIRO_SERVER_CORS_ALLOWEDORIGINS="http://localhost https://myapi.com"      # Allow this list of hosts to access API
+PROVIANT_SERVER_PORT=5050                                                     # Listening port of server
+PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD="secret key"                     # Secret used for JSON Web Tokens
+PROVIANT_SERVER_AUTHENTICATION_TOKENLIFETIME=8                                # Lifetime of JSON Web Tokens
+PROVIANT_SERVER_CORS_ALLOWALLORIGINS=true                                     # Allow all requests to API
+PROVIANT_SERVER_CORS_ALLOWEDORIGINS="http://localhost https://myapi.com"      # Allow this list of hosts to access API
 
 # Database configuration
 ## SQLite
-EXPIRO_ENGINE="sqlite"                                                              # Use sqlite
-EXPIRO_SQLITE_FILEPATH="data/expiro.db"                                             # Path to database file, this folder needs to exist
+PROVIANT_ENGINE="sqlite"                                                              # Use sqlite
+PROVIANT_SQLITE_FILEPATH="data/proviant.db"                                             # Path to database file, this folder needs to exist
 ## MariaDB
-EXPIRO_ENGINE="mariadb"                                                             # Use mariadb
-EXPIRO_MARIADB_DATABASE_HOST="127.0.0.1"                                            # Database server IP or hostname
-EXPIRO_MARIADB_DATABASE_PORT=3306                                                   # Database server port
-EXPIRO_MARIADB_DATABASE_NAME="expiro"                                               # Database name
-EXPIRO_MARIADB_DATABASE_USER="expiro"                                               # Database user
-EXPIRO_MARIADB_DATABASE_PASSWORD="password"                                         # Database user password
+PROVIANT_ENGINE="mariadb"                                                             # Use mariadb
+PROVIANT_MARIADB_DATABASE_HOST="127.0.0.1"                                            # Database server IP or hostname
+PROVIANT_MARIADB_DATABASE_PORT=3306                                                   # Database server port
+PROVIANT_MARIADB_DATABASE_NAME="proviant"                                               # Database name
+PROVIANT_MARIADB_DATABASE_USER="proviant"                                               # Database user
+PROVIANT_MARIADB_DATABASE_PASSWORD="password"                                         # Database user password
 
 # Logging configuration
-EXPIRO_LOGGING_ENABLED=true                                                 # Enable file logging
-EXPIRO_LOGGING_FILE="expiro.log"                                            # Path to log file
+PROVIANT_LOGGING_ENABLED=true                                                 # Enable file logging
+PROVIANT_LOGGING_FILE="proviant.log"                                            # Path to log file
 
 # Notification configuration
-EXPIRO_NOTIFICATION_ENABLED=true                                            # Enable notifications
-EXPIRO_NOTIFICATION_INTERVAL=12                                             # Interval in hours when notifications should be send
-EXPIRO_NOTIFICATION_FROMADDRESS="sender@local.net"                          # Sender address for notifications
-EXPIRO_NOTIFICATION_SMTP_HOST="127.0.0.1"                                   # Host or IP address of SMTP server
-EXPIRO_NOTIFICATION_SMTP_PORT=25                                            # Port of SMTP server
-EXPIRO_NOTIFICATION_SMTP_SSL=false                                          # Enables/disables SSL
-EXPIRO_NOTIFICATION_SMTP_USER="user"                                        # Username used for sending notifications via SMTP server
-EXPIRO_NOTIFICATION_SMTP_PASSWORD="password"                                # Password used for sending notifications via SMTP server
+PROVIANT_NOTIFICATION_ENABLED=true                                            # Enable notifications
+PROVIANT_NOTIFICATION_INTERVAL=12                                             # Interval in hours when notifications should be send
+PROVIANT_NOTIFICATION_FROMADDRESS="sender@local.net"                          # Sender address for notifications
+PROVIANT_NOTIFICATION_SMTP_HOST="127.0.0.1"                                   # Host or IP address of SMTP server
+PROVIANT_NOTIFICATION_SMTP_PORT=25                                            # Port of SMTP server
+PROVIANT_NOTIFICATION_SMTP_SSL=false                                          # Enables/disables SSL
+PROVIANT_NOTIFICATION_SMTP_USER="user"                                        # Username used for sending notifications via SMTP server
+PROVIANT_NOTIFICATION_SMTP_PASSWORD="password"                                # Password used for sending notifications via SMTP server
 
 # OpenFoodFacts configuration
-EXPIRO_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"   # Address of API backend of OpenFoodFacts
-EXPIRO_OPENFOODFACTS_TIMEOUT=5                                              # Timeout of API requests to OpenFoodFacts API
+PROVIANT_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"   # Address of API backend of OpenFoodFacts
+PROVIANT_OPENFOODFACTS_TIMEOUT=5                                              # Timeout of API requests to OpenFoodFacts API
 ```
 
 Additionally `Gin` supports a debug mode, which also can be set with a environment variable:

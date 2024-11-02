@@ -1,4 +1,4 @@
-// expiro is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food
+// proviant is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food
 package main
 
 import (
@@ -7,15 +7,15 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/Isotop7/expiro/controllers"
-	dbController "gitlab.com/Isotop7/expiro/controllers/database"
-	"gitlab.com/Isotop7/expiro/errors"
-	"gitlab.com/Isotop7/expiro/logging"
-	"gitlab.com/Isotop7/expiro/models/authentication"
-	"gitlab.com/Isotop7/expiro/models/configuration"
-	dbModel "gitlab.com/Isotop7/expiro/models/database"
-	"gitlab.com/Isotop7/expiro/router"
-	"gitlab.com/Isotop7/expiro/templates"
+	"gitlab.com/Isotop7/proviant/controllers"
+	dbController "gitlab.com/Isotop7/proviant/controllers/database"
+	"gitlab.com/Isotop7/proviant/errors"
+	"gitlab.com/Isotop7/proviant/logging"
+	"gitlab.com/Isotop7/proviant/models/authentication"
+	"gitlab.com/Isotop7/proviant/models/configuration"
+	dbModel "gitlab.com/Isotop7/proviant/models/database"
+	"gitlab.com/Isotop7/proviant/router"
+	"gitlab.com/Isotop7/proviant/templates"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
@@ -24,14 +24,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// main is the main function used on start of expiro
+// main is the main function used on start of proviant
 func main() {
 	// Setup config path
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	// Read environment
-	viper.SetEnvPrefix("EXPIRO")
+	viper.SetEnvPrefix("PROVIANT")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
@@ -42,7 +42,7 @@ func main() {
 	}
 
 	// Unmarshal yaml to configuration struct
-	configuration := configuration.ExpiroConfiguration{}
+	configuration := configuration.ProviantConfiguration{}
 	err := viper.Unmarshal(&configuration)
 	if err != nil {
 		panic(err)
@@ -132,7 +132,7 @@ func main() {
 	configuration.TemplateCache = templateCache
 
 	// Call function to setup router and pass references
-	expiroEngine := router.SetupRouter(&cLogger, &configuration, dbHandle, offacntrl)
+	proviantEngine := router.SetupRouter(&cLogger, &configuration, dbHandle, offacntrl)
 
 	// Get server port or instead set default value
 	serverPort := configuration.Server.Port
@@ -141,7 +141,7 @@ func main() {
 	}
 
 	// Start server
-	runErr := expiroEngine.Run(fmt.Sprintf(":%d", serverPort))
+	runErr := proviantEngine.Run(fmt.Sprintf(":%d", serverPort))
 	if runErr != nil {
 		panic(runErr)
 	}

@@ -6,9 +6,9 @@ import (
 	"html/template"
 	"time"
 
-	dbController "gitlab.com/Isotop7/expiro/controllers/database"
-	"gitlab.com/Isotop7/expiro/models/configuration"
-	dbModel "gitlab.com/Isotop7/expiro/models/database"
+	dbController "gitlab.com/Isotop7/proviant/controllers/database"
+	"gitlab.com/Isotop7/proviant/models/configuration"
+	dbModel "gitlab.com/Isotop7/proviant/models/database"
 
 	"github.com/rs/zerolog"
 	gomail "gopkg.in/mail.v2"
@@ -91,7 +91,7 @@ func (nc NotificationController) sendMail(product dbModel.Product, recipient str
 	mail.SetHeader("To", recipient)
 
 	// Set header
-	subject := fmt.Sprintf("expiro - Warning - Product '%d' expired", product.ID)
+	subject := fmt.Sprintf("proviant - Warning - Product '%d' expired", product.ID)
 	mail.SetHeader("Subject", subject)
 
 	// Generate email body from template
