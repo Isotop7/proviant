@@ -1,5 +1,5 @@
 {{ define "content" }}
-<div class="row justify-content-between my-2">
+<div class="row justify-content-between p-3">
     <div class="col">
         <h2>
             Products
@@ -46,11 +46,19 @@
             <th scope="row">
                 <input class="form-check-input" type="checkbox" value="{{ .Model.ID }}" id="checkbox-{{ .Model.ID }}" onclick="toggleCheckbox('checkbox-{{ .Model.ID }}')">
             </th>
-            <th scope="row">{{ .Model.ID }}</th>
-            <td>{{ .ProductName }}</td>
+            <th scope="row">
+                <a href="/web/products/{{ .Model.ID }}/view">
+                    {{ .Model.ID }}
+                </a>
+            </th>
+            <td>
+                <a href="/web/products/{{ .Model.ID }}/view">
+                    {{ .ProductName }}
+                </a>
+            </td>
             <td>{{ .Barcode }}</td>
             <td>{{ .ScannedAt | humanDateTime }}</td>
-            <td {{ if hasPassed .ExpireAt }}class="text-danger text-decoration-underline" {{ end }}>{{ .ExpireAt | humanDate }}</td>
+            <td {{ if hasPassed .ExpireAt }}class="text-danger" {{ end }}>{{ .ExpireAt | humanDate }}</td>
             <td>{{ .NotifiedAt | humanDateTime }}</td>
         </tr>
         {{ end }}
