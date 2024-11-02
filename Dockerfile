@@ -1,14 +1,17 @@
-FROM golang:1.21-alpine AS buildenv
+FROM golang:1.23-alpine AS buildenv
 WORKDIR /app
 
-RUN apk add --no-cache --update go gcc g++
+RUN apk add --no-cache --update go gcc g++ npm
 COPY ./src/go.mod ./src/go.sum ./
 RUN go mod download
-COPY ./src/*.go ./
-COPY ./src ./
-RUN CGO_ENABLED=1 GOOS=linux CGO_CFLAGS="-D_LARGEFILE64_SOURCE" go build -v -o expiro
+COPY ./ ./
+RUN npm install && \
+    npm run css && \
+    cp node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/ && \
+	cp node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2 ./src/assets/fonts/
+RUN cd src && CGO_ENABLED=1 GOOS=linux CGO_CFLAGS="-D_LARGEFILE64_SOURCE" go build -v -o ../expiro
 
-FROM alpine:3.19
+FROM alpine:3.20
 WORKDIR /app
 
 COPY --from=buildenv /app/expiro /app/expiro

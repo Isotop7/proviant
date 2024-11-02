@@ -87,13 +87,13 @@ run:
 rundocker:
 	@make dockerimage
 	cd ./src && \
-	docker run -t --rm -v ./config.yaml.tmpl:/app/config.yaml expiro:latest
+	docker run -t --rm -p 5114:5114 -v ./config.yaml.sqlite.tmpl:/app/config.yaml expiro:latest
 
 .PHONY: rundockerdebug
 rundockerdebug:
 	@make dockerimage
 	cd ./src && \
-	docker run -it --rm -v ./config.yaml.tmpl:/app/config.yaml --entrypoint /bin/sh expiro:latest
+	docker run -it --rm -v ./config.yaml.sqlite.tmpl:/app/config.yaml --entrypoint /bin/sh expiro:latest
 
 # ==================================================================================== #
 # Web
