@@ -4,7 +4,7 @@
     {{ range .Tiles }}
     <div class="col">
         <div class="card h-100 text-body-secondary mb-3">
-            <div class="card-header">
+            <div class="card-header fw-bold">
                 {{ .Title }}
             </div>
             <div class="card-body">
@@ -15,11 +15,11 @@
                     {{ .Body }}
                 </p>
             </div>
-            <div class="card-footer">
+            <!--<div class="card-footer">
                 <small>
                     {{ .Footer }}
                 </small>
-            </div>
+            </div>-->
         </div>
     </div>
     {{ end }}
