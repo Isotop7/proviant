@@ -4,7 +4,7 @@
 ![Release](https://gitlab.com/Isotop7/proviant/-/badges/release.svg)
 ![CI @ main](https://gitlab.com/Isotop7/proviant/badges/main/pipeline.svg)
 ![CI @ develop](https://gitlab.com/Isotop7/proviant/badges/develop/pipeline.svg)
-![Golang version](https://img.shields.io/badge/Go-1.21-green)
+![Golang version](https://img.shields.io/badge/Go-1.23-green)
 
 
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
