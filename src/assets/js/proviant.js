@@ -58,7 +58,7 @@ proviant.deleteProduct = async function (productID) {
 }
 
 proviant.loginUser = async function (username, password) {
-    let url = `${window.location.protocol}//${window.location.host}/auth/login`
+    const url = `${window.location.protocol}//${window.location.host}/auth/login`
     const apiCall = await fetch(url, {
         method: 'POST',
         headers: {
@@ -66,8 +66,14 @@ proviant.loginUser = async function (username, password) {
         },
         body: JSON.stringify({ username, password })
     });
-    let body = await apiCall.json();
-    let response = {
+    if (!apiCall.ok) {
+        return {
+            code: apiCall.status,
+            body: "Error logging in"
+        }
+    }
+    const body = await apiCall.json();
+    const response = {
         code: apiCall.status,
         body: body.message
     }
@@ -75,7 +81,7 @@ proviant.loginUser = async function (username, password) {
 }
 
 proviant.signupUser = async function (username, mailAddress, password) {
-    let url = `${window.location.protocol}//${window.location.host}/auth/signup`
+    const url = `${window.location.protocol}//${window.location.host}/auth/signup`
     const apiCall = await fetch(url, {
         method: 'POST',
         headers: {
@@ -83,9 +89,14 @@ proviant.signupUser = async function (username, mailAddress, password) {
         },
         body: JSON.stringify({ username, mailAddress, password })
     });
-
+    if (!apiCall.ok) {
+        return {
+            code: apiCall.status,
+            body: "Error signing up"
+        }
+    }
     const body = await apiCall.json();
-    let response = {
+    const response = {
         code: apiCall.status,
         body: body.message
     }
