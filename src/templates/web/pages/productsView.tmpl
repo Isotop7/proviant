@@ -1,7 +1,7 @@
 {{ define "content" }}
 <div class="my-3 text-bg-tertiary w-100">
     <div class="row g-0">
-        <div class="col-md-2 m-auto">
+        <div class="col-md-2 m-auto p-3">
             <img src="{{- .Product.ImageURL -}}" class="img-fluid" alt="Image URL">
         </div>
         <div class="ms-auto col-md-10 pb-4 border-bottom border-primary border-2">
@@ -31,7 +31,7 @@
                     Categories
                 </div>
                 <div class="col col-auto">
-                    {{- .Product.Categories | badgifyCategories -}}
+                    {{- badgifyCategories .Product.Categories 5 -}}
                 </div>
             </div>
             <div class="row my-2">

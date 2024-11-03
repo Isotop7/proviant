@@ -39,11 +39,14 @@ func hasPassed(t time.Time) bool {
 	return t.Before(time.Now())
 }
 
-func badgifyCategories(categories string) template.HTML {
+func badgifyCategories(categories string, limit int) template.HTML {
 	output := ""
 	elements := strings.Split(categories, ",")
-	for _, elem := range elements {
+	for idx, elem := range elements {
 		contents := strings.Split(strings.TrimSpace(elem), ":")
+		if idx == limit {
+			break
+		}
 		if len(contents) == 2 {
 			lang := contents[0]
 			definition := contents[1]
