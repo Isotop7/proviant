@@ -3,23 +3,26 @@
 	<div class="col">
 		<h2>Scan product</h2>
 	</div>
-	
+
 	<div class="row g-5 p-2">
-		<div class="col-md-7 col-lg-8 my-auto">
-			<div class="p-4 mb-2">
-				<div class="input-group mb-3">
-					<input id="upload" type="file" class="form-control" accept="image/*" capture="environment"
-						aria-label="Image" aria-describedby="btnScan">
-					<button class="btn btn-outline-primary" type="button" id="btnScan">Scan</button>
+		<div class="col-md-7 col-lg-8 my-auto text-center">
+			<div>
+				<div class="btn-group mb-3">
+					<button class="btn btn-primary fs-5" type="button" id="btnLiveScan">
+						<i class="bi bi-upc-scan px-2"></i>
+					</button>
+					<button class="btn btn-primary fs-5" type="button" id="btnStopLiveScan" disabled>
+						<i class="bi bi-stop-circle px-2"></i>
+					</button>
 				</div>
 			</div>
-			<div id="loadingSpinner" class="spinner-border text-primary" role="status" style="display: none;">
+			<div id="loadingSpinner" class="spinner-border text-primary m-2" role="status" style="display: none;">
 				<span class="visually-hidden">Loading...</span>
 			</div>
-			<div id="scanResult" class="m-4 alert alert-success" role="alert" style="display: none;">
-			</div>
+			<div class="m-auto" id="barcode-reader"></div>
 		</div>
-		<div class="col-md-5 col-lg-4 order-md-last">
+		<div class="col-md-5 col-lg-4 order-md-last mt-0">
+			<div id="scanResult" class="m-4 alert alert-success" role="alert" style="display: none;"></div>
 			<ul id="productData" class="list-group mb-3">
 				<li class="list-group-item d-flex justify-content-between lh-sm">
 					<div>
@@ -46,7 +49,8 @@
 					<div>
 						<h6 class="my-2">Generic name</h6>
 						<small id="productInfoGenericName" class="text-body-secondary"></small>
-						<div class="spinner-grow spinner-grow-sm text-secondary" role="status" style="display: none;">
+						<div class="spinner-grow spinner-grow-sm text-secondary m-2" role="status"
+							style="display: none;">
 							<span class="visually-hidden">Loading...</span>
 						</div>
 					</div>
@@ -56,5 +60,6 @@
 	</div>
 </div>
 
+<script src="/assets/js/html5-qrcode.min.js"></script>
 <script src="/assets/js/productsScan.js"></script>
 {{ end }}

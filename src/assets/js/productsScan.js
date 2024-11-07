@@ -1,6 +1,9 @@
 // Get elements
 let foundBarcodeWrapper = document.getElementById("foundBarcode");
 let productDataWrapper = document.getElementById("productData");
+const html5QrCode = new Html5Qrcode("barcode-reader",
+    { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13] }
+);
 
 // UI functions
 function showError(error) {
@@ -37,6 +40,20 @@ function toggleLoadingSpinner(state) {
         document.getElementById('loadingSpinner').style.display = 'none';
     }
 }
+function toggleBtnLiveScan(state) {
+    if (state) {
+        document.getElementById('btnLiveScan').disabled = false;
+    } else {
+        document.getElementById('btnLiveScan').disabled = true;
+    }
+}
+function toggleBtnStopLiveScan(state) {
+    if (state) {
+        document.getElementById('btnStopLiveScan').disabled = false;
+    } else {
+        document.getElementById('btnStopLiveScan').disabled = true;
+    }
+}
 function toggleGrowers(state) {
     if (state) {
         document.querySelectorAll('.spinner-grow.spinner-grow-sm.text-secondary').forEach((elem) => {
@@ -62,41 +79,12 @@ async function queryProductInfoRequest(barcode) {
     });
     return response.json();
 }
-async function scanProductRequest() {
-    let uploadElement = document.getElementById('upload');
-    if (uploadElement == null) {
-        throw new Error('No image selected');
-    }
-    let fileList = uploadElement.files;
-    if (fileList.length == 0) {
-        throw new Error('No image found');
-    }
-    let file = fileList[0];
-    const formData = new FormData();
-    formData.append('image', file);
-    try {
-        let url = `${window.location.protocol}//${window.location.host}/api/v1/products/scan`
-        const response = await fetch(url, {
-            method: 'POST',
-            body: formData
-        });
-
-        if (response.ok) {
-            return response.json();
-        } else {
-            throw new Error('Scanning failed');
-        }
-    } catch (error) {
-        throw error;
-    }
-}
 // Function handlers
 function queryProductInfo(barcode) {
     clearProductInfo();
     try {
         queryProductInfoRequest(barcode).then((response) => {
             let product = response.product;
-            console.error(product);
             showProductData(product);
         }).catch((error) => {
             showError("Error: " + error);
@@ -107,38 +95,43 @@ function queryProductInfo(barcode) {
         clearProductInfo();
     }
 }
-function handleScanButton() {
+function handleLiveScanButton() {
     toggleLoadingSpinner(true);
     toggleGrowers(true);
-    scanProductRequest().then((response) => {
-        let barcode = response.barcode;
-        if (barcode == null) {
-            showError('No barcode found');
+    toggleBtnStopLiveScan(true);
+    toggleBtnLiveScan(false);
+    html5QrCode.start(
+        { facingMode: "environment" },
+        {
+            fps: 10,
+            qrbox: { width: 240, height: 100 }
+        },
+        (decodedText) => {
+            queryProductInfo(decodedText);
+            showBarcode(decodedText)
+            toggleLoadingSpinner(false);
+            toggleGrowers(false);
         }
-        queryProductInfo(barcode);
-        showBarcode(barcode)
-    }).catch((error) => {
-        showError(error);
-    }).finally(() => {
-        toggleLoadingSpinner(false);
-        toggleGrowers(false);
-    });
+    );
+}
+function handleStopLiveScanButton() {
+    toggleLoadingSpinner(false);
+    toggleGrowers(false);
+    toggleBtnStopLiveScan(false);
+    toggleBtnLiveScan(true);
+    html5QrCode.stop();
+    html5QrCode.clear();
 }
 
-
 // Add event listeners
-window.addEventListener('load', function() {
+window.addEventListener('load', function () {
     hideScanResult();
 });
-document.getElementById('upload').onchange = function() {
-    clearProductInfo();
-    hideScanResult();
-};
-document.getElementById('btnScan').onclick = function (event) {
+document.getElementById('btnLiveScan').onclick = function (event) {
     event.preventDefault();
-    handleScanButton();
-};
-document.getElementById('btnScan').onsubmit = function (event) {
+    handleLiveScanButton();
+}
+document.getElementById('btnStopLiveScan').onclick = function (event) {
     event.preventDefault();
-    handleScanButton();
-};
+    handleStopLiveScanButton();
+}
