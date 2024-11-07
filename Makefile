@@ -16,6 +16,7 @@ help:
 init:
 	npm install
 	@make css
+	@make js
 	mkdir -p ./src/assets/js
 	cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* ./src/assets/js/
 	cd src/ && go get -u
@@ -108,3 +109,9 @@ fonts:
 css:
 	@make fonts
 	npm run css
+
+.PHONY: js
+js:
+	cp ./node_modules/html5-qrcode/html5-qrcode.min.js ./src/assets/js/
+	cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js ./src/assets/js/
+	cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js.map ./src/assets/js/
