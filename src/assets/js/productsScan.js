@@ -1,25 +1,20 @@
 // Get elements
-let foundBarcodeWrapper = document.getElementById("foundBarcode");
-let productDataWrapper = document.getElementById("productData");
-const html5QrCode = new Html5Qrcode("barcode-reader",
+let foundBarcodeWrapper = document.getElementById('foundBarcode');
+let productDataWrapper = document.getElementById('productData');
+let inputBarcode = document.getElementById('barcode');
+const html5QrCode = new Html5Qrcode('barcode-reader',
     { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13] }
 );
 
 // UI functions
 function showError(error) {
-    document.getElementById('scanResult').classList = '';
-    document.getElementById('scanResult').classList.add('mx-4', 'my-1', 'alert', 'alert-danger', 'font-monospace');
-    document.getElementById('scanResult').innerText = error;
-    document.getElementById('scanResult').style.display = '';
+    inputBarcode.value = '';
+    inputBarcode.style.backgroundColor = 'var(--bs-warning)';
+    console.error(error);
 }
 function showBarcode(barcode) {
-    document.getElementById('scanResult').classList = '';
-    document.getElementById('scanResult').classList.add('mx-4', 'my-1', 'alert', 'alert-success');
-    document.getElementById('scanResult').innerHTML = `Found barcode: <span class="font-monospace" id="foundBarcode">${barcode}</span>`
-    document.getElementById('scanResult').style.display = '';
-}
-function hideScanResult() {
-    document.getElementById('scanResult').style.display = 'none'
+    inputBarcode.value = barcode;
+    inputBarcode.style.backgroundColor = 'var(--bs-success)';
 }
 function clearProductInfo() {
     document.getElementById('productInfoImage').src = '';
@@ -33,25 +28,35 @@ function showProductData(product) {
     document.getElementById('productInfoGenericName').innerText = product.generic_name;
     document.getElementById('productData').style.display = '';
 }
-function toggleLoadingSpinner(state) {
+
+// UI toggle functions
+function toggleBtnScan(state) {
+    const btnScan = document.getElementById('btnScan');
     if (state) {
-        document.getElementById('loadingSpinner').style.display = '';
+        btnScan.dataset.action = 'scan';
+        btnScan.innerHTML = '<i class="bi bi-upc-scan px-2"></i>Scan';
     } else {
-        document.getElementById('loadingSpinner').style.display = 'none';
+        btnScan.dataset.action = 'stop';
+        btnScan.innerHTML = '<i class="bi bi-stop-circle px-2"></i>Stop';
     }
 }
-function toggleBtnLiveScan(state) {
+function toggleBtnAddProduct(state) {
     if (state) {
-        document.getElementById('btnLiveScan').disabled = false;
+        document.getElementById('btnAddProduct').disabled = false;
     } else {
-        document.getElementById('btnLiveScan').disabled = true;
+        document.getElementById('btnAddProduct').disabled = true;
     }
 }
-function toggleBtnStopLiveScan(state) {
+function togglePlaceholders(state) {
+    const placeholders = document.querySelectorAll('.placeholder');
     if (state) {
-        document.getElementById('btnStopLiveScan').disabled = false;
+        placeholders.forEach(element => {
+            element.style.display = '';
+        });
     } else {
-        document.getElementById('btnStopLiveScan').disabled = true;
+        placeholders.forEach(element => {
+            element.style.display = 'none';
+        });
     }
 }
 function toggleGrowers(state) {
@@ -65,6 +70,17 @@ function toggleGrowers(state) {
         });
     }
 }
+function clearScanUI() {
+    toggleGrowers(false);
+    toggleBtnScan(true);
+    toggleBtnAddProduct(true);
+    togglePlaceholders(false);
+    document.getElementById('barcode-reader-wrapper').classList.remove('py-4');
+    if (html5QrCode.getState() == Html5QrcodeScannerState.SCANNING) {
+        html5QrCode.stop();
+        html5QrCode.clear();
+    }
+};
 
 // Async functions
 async function queryProductInfoRequest(barcode) {
@@ -87,51 +103,80 @@ function queryProductInfo(barcode) {
             let product = response.product;
             showProductData(product);
         }).catch((error) => {
-            showError("Error: " + error);
+            showError('Error: ' + error);
             clearProductInfo();
         });
     } catch (error) {
-        showError("Error: " + error);
+        showError('Error: ' + error);
         clearProductInfo();
     }
 }
-function handleLiveScanButton() {
-    toggleLoadingSpinner(true);
-    toggleGrowers(true);
-    toggleBtnStopLiveScan(true);
-    toggleBtnLiveScan(false);
-    html5QrCode.start(
-        { facingMode: "environment" },
-        {
-            fps: 10,
-            qrbox: { width: 240, height: 100 }
-        },
-        (decodedText) => {
-            queryProductInfo(decodedText);
-            showBarcode(decodedText)
-            toggleLoadingSpinner(false);
-            toggleGrowers(false);
-        }
-    );
+function storeBarcode(barcode) {
+    document.getElementById('barcode').dataset.barcode = barcode;
+    document.getElementById('barcode').value = barcode;
 }
-function handleStopLiveScanButton() {
-    toggleLoadingSpinner(false);
-    toggleGrowers(false);
-    toggleBtnStopLiveScan(false);
-    toggleBtnLiveScan(true);
-    html5QrCode.stop();
-    html5QrCode.clear();
-}
+
+// Button handlers
+function handleScanButton() {
+    const btnScan = document.getElementById('btnScan');
+    if (btnScan.dataset.action == 'scan') {
+        toggleGrowers(true);
+        toggleBtnScan(false);
+        document.getElementById('barcode-reader-wrapper').classList.add('py-4');
+        html5QrCode.start(
+            { facingMode: 'environment' },
+            {
+                fps: 10,
+                qrbox: { width: 240, height: 100 }
+            },
+            (decodedText) => {
+                queryProductInfo(decodedText);
+                showBarcode(decodedText)
+                storeBarcode(decodedText);
+                clearScanUI();
+            }
+        );
+    } else if (btnScan.dataset.action == 'stop') {
+        clearScanUI();
+    } else {
+        console.error('Undefined data-action ' + btnScan.dataset.action);
+    }
+};
+// Input handlers
+function handleChangedBarcode() {
+    if (!(inputBarcode.checkValidity())) {
+        return;
+    }
+    const barcode = document.getElementById('barcode').value;
+    queryProductInfo(barcode);
+    showBarcode(barcode)
+    storeBarcode(barcode);
+    clearScanUI();
+};
 
 // Add event listeners
 window.addEventListener('load', function () {
-    hideScanResult();
-});
-document.getElementById('btnLiveScan').onclick = function (event) {
+    // Fetch all the forms we want to apply custom Bootstrap validation styles to
+    let forms = document.getElementsByClassName('needs-validation');
+    // Loop over them and prevent submission
+    Array.prototype.filter.call(forms, function (form) {
+        form.addEventListener('submit', function (event) {
+            if (form.checkValidity() === false) {
+                event.preventDefault();
+                event.stopPropagation();
+            } else {
+                createProduct();
+                event.preventDefault();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+}, false);
+document.getElementById('barcode').addEventListener('input', function (event) {
     event.preventDefault();
-    handleLiveScanButton();
-}
-document.getElementById('btnStopLiveScan').onclick = function (event) {
+    handleChangedBarcode();
+})
+document.getElementById('btnScan').onclick = function (event) {
     event.preventDefault();
-    handleStopLiveScanButton();
-}
+    handleScanButton();
+};
