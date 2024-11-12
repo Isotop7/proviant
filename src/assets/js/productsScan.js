@@ -25,7 +25,9 @@ function clearProductInfo() {
 function showProductData(product) {
     document.getElementById('productInfoImage').src = product.image_url;
     document.getElementById('productInfoName').innerText = product.product_name;
-    document.getElementById('productInfoGenericName').innerText = product.generic_name;
+    if (product.generic_name != 'undefined' && product.generic_name != null) {
+        document.getElementById('productInfoGenericName').innerText = product.generic_name;
+    }
     document.getElementById('productData').style.display = '';
 }
 
