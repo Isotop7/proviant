@@ -10,13 +10,9 @@ async function deleteProduct(productID) {
 }
 
 document.querySelectorAll('.btn-product-delete').forEach(button => {
-    button.addEventListener('click', async function() {
-      const productId = this.getAttribute('data-id');
-      await deleteProduct(productId);
-      location.reload();
+    button.addEventListener('click', async function () {
+        const productId = this.getAttribute('data-id');
+        await deleteProduct(productId);
+        location.reload();
     });
-  });
-
-document.getElementById("btnSync").addEventListener("click", () => {
-    location.reload();
-})
+});

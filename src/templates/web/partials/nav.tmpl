@@ -1,33 +1,28 @@
 {{ define "nav" }}
-<nav class="navbar navbar-expand-md navbar fixed-top bg-body-secondary">
-	<div class="container-fluid">
-		<!-- full size navigation -->
+<nav class="navbar navbar-expand-lg navbar fixed-top bg-body-secondary">
+	<div class="container">
 		<a class="navbar-brand" href="/web">
-			<!--<img src="/assets/icons/logo_transparent.png" alt="proviant" width="48"
-				class="d-inline-block align-text-top" />-->
 			<span class="logo-font fs-3 fw-bold me-2">proviant</span>
 		</a>
-		<div class="fs-5 collapse navbar-collapse mx-4">
-			<ul class="navbar-nav me-auto mb-2 mb-lg-0">
-				<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle fw-bold" href="/web/products" role="button" data-bs-toggle="dropdown"
-						aria-expanded="false">
-						Products
-					</a>
-					<ul class="dropdown-menu bg-body-secondary">
-						<li><a class="dropdown-item fw-bold" href="/web/products">Overview</a></li>
-						<li>
-							<hr class="dropdown-divider">
-						</li>
-						<li><a class="dropdown-item" href="/web/products/create">Create</a></li>
-						<li><a class="dropdown-item" href="/web/products/scan">Scan</a></li>
-					</ul>
+		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+			aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+		<div class="collapse navbar-collapse mx-4" id="navbarNav">
+			<ul class="navbar-nav me-auto">
+				<li class="nav-item">
+					<a class="nav-link" href="/web/products">Overview</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" href="/web/products/create">Add product</a>
 				</li>
 			</ul>
-			<div class="navbar-nav me-5 mb-lg-0">
+
+			<div class="navbar-nav  me-5 mb-lg-0">
 				<form class="d-flex me-auto mb-2 mb-lg-0" role="search">
 					<div class="input-group">
-						<input id="inputSearch" class="form-control bg-dark-subtle text-center" type="search" placeholder="..." aria-label="Search" />
+						<input id="inputSearch" class="form-control bg-dark-subtle text-center" type="search"
+							placeholder="..." aria-label="Search" />
 						<button id="btnSearch" class="btn btn-primary" type="submit">
 							<i class="bi bi-search"></i>
 						</button>
@@ -36,8 +31,7 @@
 			</div>
 			<ul class="navbar-nav ms-3">
 				<li class="nav-item dropdown" data-bs-placement="bottom-end">
-					<a class="nav-link" href="/web/auth" role="button" data-bs-toggle="dropdown"
-						aria-expanded="false">
+					<a class="nav-link" href="/web/auth" role="button" data-bs-toggle="dropdown" aria-expanded="false">
 						<span class="fs-3">
 							<i class="bi bi-gear-wide-connected"></i>
 						</span>
@@ -52,10 +46,6 @@
 				</li>
 			</ul>
 		</div>
-		<button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar"
-			aria-controls="offcanvasNavbar" aria-label="Toggle navigation">
-			<span class="navbar-toggler-icon"></span>
-		</button>
 	</div>
 </nav>
 
