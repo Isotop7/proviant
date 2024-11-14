@@ -104,6 +104,7 @@ rundockerdebug:
 fonts:
 	cp ./node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/
 	cp ./node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2 ./src/assets/fonts/
+	cp ./node_modules/@fontsource/pacifico/files/pacifico-latin-*.woff2 ./src/assets/fonts/
 
 .PHONY: css
 css:

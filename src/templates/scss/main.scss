@@ -8,25 +8,10 @@ $offcanvas-box-shadow: 0 1rem 3rem rgba(0, 0, 0, .175);
 @import "bootstrap/scss/functions";
 
 // Include fonts;
-@font-face {
-    font-family: 'DM Sans Variable';
-    font-style: normal;
-    font-display: swap;
-    font-weight: 100 1000;
-    src: url(/assets/fonts/dm-sans-latin-wght-normal.woff2) format('woff2-variations');
-    unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
-}
-
-@font-face {
-    font-family: 'Logo Font';
-    font-style: normal;
-    font-display: regular;
-    font-weight: 400;
-    src: url(/assets/fonts/LondrinaShadow-Regular.ttf) format('truetype');
-}
+@import "./fonts.scss";
 
 // Customize some defaults
-$font-family-base: "DM Sans Variable";
+$font-family-base: 'DM Sans Variable', sans-serif;
 $card-cap-bg:  rgba(var(--bs-body-color-rgb), .15);
 $card-bg:  rgba(var(--bs-body-color-rgb), .01);
 $list-group-border-width: 2px;
@@ -111,10 +96,8 @@ $bootstrap-icons-font-dir: "../fonts";
 }
 
 .logo-font {
-    font-family: 'Logo Font';
-    font-size: 4rem;
-    font-weight: bold;
-    color: var(--bs-secondary);
+    font-family: 'Pacifico';
+    color: var(--bs-primary);
 }
 
 #content-wrapper {
