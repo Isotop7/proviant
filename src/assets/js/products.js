@@ -1,11 +1,3 @@
-function showToast(message) {
-    let infoToast = document.getElementById('infoToast');
-    let infoToastBody = document.getElementById('infoToastBody');
-    infoToastBody.innerText = message;
-    let toastBootstrap = bootstrap.Toast.getOrCreateInstance(infoToast);
-    toastBootstrap.show();
-}
-
 async function deleteProduct(productID) {
     await proviant.deleteProduct(productID).then((response) => {
         switch (response.code) {
