@@ -2,23 +2,23 @@
 <nav class="navbar navbar-expand-lg navbar fixed-top bg-body-secondary">
 	<div class="container">
 		<a class="navbar-brand" href="/web">
-			<span class="logo-font fs-3 fw-bold me-2">proviant</span>
+			<span class="logo-font fs-3 fw-bold me-5">proviant</span>
 		</a>
-		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-			aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navigation"
+			aria-controls="navigation" aria-expanded="false" aria-label="Toggle navigation">
 			<span class="navbar-toggler-icon"></span>
 		</button>
-		<div class="collapse navbar-collapse mx-4" id="navbarNav">
+		<div class="collapse navbar-collapse" id="navigation">
 			<ul class="navbar-nav me-auto">
 				<li class="nav-item">
-					<a class="nav-link" href="/web/products">Overview</a>
+					<a class="nav-link" href="/web/products">All Products</a>
 				</li>
 				<li class="nav-item">
 					<a class="nav-link" href="/web/products/create">Add product</a>
 				</li>
 			</ul>
 
-			<div class="navbar-nav  me-5 mb-lg-0">
+			<div class="navbar-nav me-5 mb-lg-0 d-none d-lg-block">
 				<form class="d-flex me-auto mb-2 mb-lg-0" role="search">
 					<div class="input-group">
 						<input id="inputSearch" class="form-control bg-dark-subtle text-center" type="search"
@@ -29,7 +29,7 @@
 					</div>
 				</form>
 			</div>
-			<ul class="navbar-nav ms-3">
+			<ul class="navbar-nav d-none d-lg-block">
 				<li class="nav-item dropdown" data-bs-placement="bottom-end">
 					<a class="nav-link" href="/web/auth" role="button" data-bs-toggle="dropdown" aria-expanded="false">
 						<span class="fs-3">
@@ -45,54 +45,15 @@
 					</ul>
 				</li>
 			</ul>
+			<ul class="navbar-nav ms-auto d-lg-none">
+				<li class="nav-item">
+                    <a class="nav-link" href="/web/user/settings">User settings</a>
+                </li>
+                <li>
+					<a class="nav-link" onclick="proviant.logoutUser()" href="/web">Logout</a>
+				</li>
+			</ul>
 		</div>
 	</div>
 </nav>
-
-
-<!-- mobile navigation -->
-<div class="offcanvas offcanvas-end bg-body-secondary" tabindex="-1" id="offcanvasNavbar"
-	aria-labelledby="offcanvasNavbarLabel">
-	<div class="offcanvas-header">
-		<a class="offcanvas-title text-decoration-none" id="offcanvasNavbarLabel" href="/web">
-			<!--<img src="/assets/icons/logo_transparent.png" alt="proviant" width="128"
-				class="d-inline-block align-text-top" />-->
-			<span class="fs-3 fw-bold">proviant</span>
-		</a>
-		<button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-	</div>
-	<div class="offcanvas-body">
-		<ul class="navbar-nav me-auto mb-2 mb-lg-0">
-			<li class="nav-item dropdown">
-				<a class="nav-link dropdown-toggle" href="/web/products" role="button" data-bs-toggle="dropdown"
-					aria-expanded="false">
-					Products
-				</a>
-				<ul class="dropdown-menu bg-body-secondary">
-					<li><a class="dropdown-item" href="/web/products">Overview</a></li>
-					<li>
-						<hr class="dropdown-divider">
-					</li>
-					<li><a class="dropdown-item" href="/web/products/scan">Scan</a></li>
-					<li><a class="dropdown-item" href="/web/products/create">Create</a></li>
-				</ul>
-			</li>
-		</ul>
-		<ul class="navbar-nav dropdown">
-			<li class="nav-item dropdown">
-				<a class="nav-link dropdown-toggle" href="/web/auth" role="button" data-bs-toggle="dropdown"
-					aria-expanded="false">
-					Settings
-				</a>
-				<ul class="dropdown-menu bg-body-secondary">
-					<li><a class="dropdown-item" href="/web/user/settings">User</a></li>
-					<li>
-						<hr class="dropdown-divider">
-					</li>
-					<li><a class="dropdown-item" onclick="proviant.logoutUser()" href="/web">Logout</a></li>
-				</ul>
-			</li>
-		</ul>
-	</div>
-</div>
 {{ end }}
