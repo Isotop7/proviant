@@ -1,108 +1,208 @@
 // Get elements
-let queryInfoButton = document.getElementById('btnQueryProductInfo');
-let createProductButton = document.getElementById('btnCreateProduct');
+let foundBarcodeWrapper = document.getElementById('foundBarcode');
+let productDataWrapper = document.getElementById('productData');
 let inputBarcode = document.getElementById('barcode');
 let inputExpireAt = document.getElementById('expireAt');
-let productInfoShown = false;
+const html5QrCode = new Html5Qrcode('barcode-reader',
+    { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13] }
+);
+
+// UI functions
+function showError(error) {
+    inputBarcode.value = '';
+    inputBarcode.style.backgroundColor = 'var(--bs-warning)';
+    console.error(error);
+}
+function showBarcode(barcode) {
+    inputBarcode.value = barcode;
+    inputBarcode.style.backgroundColor = 'var(--bs-success)';
+}
+function showAlert(isSuccess, message) {
+    const alertElement = document.getElementById('productAlert');
+    const alertMessage = document.getElementById('alertMessage');
+    
+    if (isSuccess) {
+        alertElement.classList.remove('alert-danger');
+        alertElement.classList.add('alert-success');
+        alertMessage.textContent = message || "Product created successfully!";
+    } else {
+        alertElement.classList.remove('alert-success');
+        alertElement.classList.add('alert-danger');
+        alertMessage.textContent = message || "Failed to create product. Please try again.";
+    }
+    
+    alertElement.classList.remove('d-none');
+}
+function clearProductInfo() {
+    document.getElementById('productInfoImage').src = '';
+    document.getElementById('productInfoImage').style.height = '160px';
+    document.getElementById('productInfoName').innerText = '';
+    document.getElementById('productInfoGenericName').innerText = '';
+}
+function showProductData(product) {
+    document.getElementById('productInfoImage').src = product.image_url;
+    document.getElementById('productInfoName').innerText = product.product_name;
+    if (product.generic_name != 'undefined' && product.generic_name != null) {
+        document.getElementById('productInfoGenericName').innerText = product.generic_name;
+    }
+    document.getElementById('productData').style.display = '';
+}
+
+// UI toggle functions
+function toggleBtnScan(state) {
+    const btnScan = document.getElementById('btnScan');
+    if (state) {
+        btnScan.dataset.action = 'scan';
+        btnScan.innerHTML = '<i class="bi bi-upc-scan px-2"></i>Scan';
+    } else {
+        btnScan.dataset.action = 'stop';
+        btnScan.innerHTML = '<i class="bi bi-stop-circle px-2"></i>Stop';
+    }
+}
+function toggleBtnAddProduct(state) {
+    if (state) {
+        document.getElementById('btnAddProduct').disabled = false;
+    } else {
+        document.getElementById('btnAddProduct').disabled = true;
+    }
+}
+function togglePlaceholders(state) {
+    const placeholders = document.querySelectorAll('.placeholder');
+    if (state) {
+        placeholders.forEach(element => {
+            element.style.display = '';
+        });
+    } else {
+        placeholders.forEach(element => {
+            element.style.display = 'none';
+        });
+    }
+}
+function toggleGrowers(state) {
+    if (state) {
+        document.querySelectorAll('.spinner-grow.spinner-grow-sm.text-secondary').forEach((elem) => {
+            elem.style.display = '';
+        });
+    } else {
+        document.querySelectorAll('.spinner-grow.spinner-grow-sm.text-secondary').forEach((elem) => {
+            elem.style.display = 'none';
+        });
+    }
+}
+function clearScanUI() {
+    toggleGrowers(false);
+    toggleBtnScan(true);
+    toggleBtnAddProduct(true);
+    togglePlaceholders(false);
+    document.getElementById('barcode-reader-wrapper').classList.remove('py-4');
+    if (html5QrCode.getState() == Html5QrcodeScannerState.SCANNING) {
+        html5QrCode.stop();
+        html5QrCode.clear();
+    }
+};
 
 // Async functions
 async function queryProductInfoRequest(barcode) {
     let openFoodFactsAPIRURL = `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=product_name,countries,generic_name,image_url`;
-    const apiCall = await fetch(openFoodFactsAPIRURL, {
+    const response = await fetch(openFoodFactsAPIRURL, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
         }
+    }).catch(() => {
+        showError(`Could not find product with barcode ${inputBarcode.value}!`);
     });
-    let body = await apiCall.json();
-    let response = {
-        code: apiCall.status,
-        message: body.product
-    }
-    return response;
+    return response.json();
 }
 // Function handlers
-function clearProductInfo() {
-    document.getElementById('productData').style = 'display: none';
-    document.getElementById('productInfoImage').src = '';
-    document.getElementById('productInfoName').innerText = '';
-    document.getElementById('productInfoGenericName').innerText = '';
-    productInfoShown = false;
-}
-function queryProductInfo() {
-    toggleLoadingSpinner(true);
+function queryProductInfo(barcode) {
     clearProductInfo();
-    if (!inputBarcode.checkValidity()) {
-        document.getElementById('createProductForm').classList.add('was-validated');
-        toggleLoadingSpinner(false);
-        return;
+    try {
+        queryProductInfoRequest(barcode).then((response) => {
+            let product = response.product;
+            showProductData(product);
+        }).catch((error) => {
+            showError('Error: ' + error);
+            clearProductInfo();
+        });
+    } catch (error) {
+        showError('Error: ' + error);
+        clearProductInfo();
     }
-    queryProductInfoRequest(inputBarcode.value).then((response) => {
-        switch (response.code) {
-            case 200:
-                let product = response.message;
-                document.getElementById('productInfoImage').src = product.image_url;
-                document.getElementById('productInfoName').innerText = product.product_name;
-                document.getElementById('productInfoGenericName').innerText = product.generic_name;
-                document.getElementById('productData').style = '';
-                productInfoShown = true;
-                break;
-            default:
-                console.error("Error: " + response.message);
-                document.getElementById('alertQueryProductInfo').style = '';
-                document.getElementById('alertQueryProductInfo').innerText = `Could not find product with barcode ${inputBarcode.value}!`
-                break;
-        }
-        toggleLoadingSpinner(false);
-    });
 }
-function createProduct() {                            
+function storeBarcode(barcode) {
+    document.getElementById('barcode').dataset.barcode = barcode;
+    document.getElementById('barcode').value = barcode;
+}
+
+// Button handlers
+function handleScanButton() {
+    const btnScan = document.getElementById('btnScan');
+    if (btnScan.dataset.action == 'scan') {
+        toggleGrowers(true);
+        toggleBtnScan(false);
+        document.getElementById('barcode-reader-wrapper').classList.add('py-4');
+        html5QrCode.start(
+            { facingMode: 'environment' },
+            {
+                fps: 10,
+                qrbox: { width: 240, height: 100 }
+            },
+            (decodedText) => {
+                queryProductInfo(decodedText);
+                showBarcode(decodedText)
+                storeBarcode(decodedText);
+                clearScanUI();
+            }
+        );
+    } else if (btnScan.dataset.action == 'stop') {
+        clearScanUI();
+    } else {
+        console.error('Undefined data-action ' + btnScan.dataset.action);
+    }
+};
+function handleBtnAddProduct() {
     if (!(inputBarcode.checkValidity() && inputExpireAt.checkValidity())) {
         return;
     }
+    
     try {
-        let barcode = inputBarcode.value;
-        let expireAt = inputExpireAt.valueAsDate.toISOString();
+        const barcode = document.getElementById('barcode').value;
+        const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
         proviant.createProduct(barcode, expireAt).then((response) => {
-            // Show alert
-            let alert = document.getElementById('alertCreateProductInfo')
-            alert.style = ''
             switch (response.code) {
                 case 201:
-                    alert.classList.remove(...alert.classList);
-                    alert.classList.add("alert", "alert-success");
-                    alert.innerText = `Product with barcode '${barcode}' was created successfully`;
+                    showAlert(true, `Product with barcode '${barcode}' was created successfully`);
                     break;
                 case 400:
-                    alert.classList.remove(...alert.classList);
-                    alert.classList.add("alert", "alert-warning");
-                    alert.innerText = 'Request contained invalid data';
+                    showAlert(false, 'Request contained invalid data');
                     break;
                 case 500:
-                    alert.classList.remove(...alert.classList);
-                    alert.classList.add("alert", "alert-danger");
-                    alert.innerText = 'Backend server error';
+                    showAlert(false, 'Backend server error');
                     break;
                 default:
-                    alert.classList.remove(...alert.classList);
-                    alert.classList.add("alert", "alert-danger");
-                    alert.innerText = `Undefined error: ${response.message}`;
+                    showAlert(false, `Undefined error: ${response.message}`);
                     break;
             }
         }).catch(error => {
-            console.error("Error: " + error);
+            showAlert(false, `Error: ${error}`);
         });
     } catch (error) {
-        console.error("Error: " + error);
+        showAlert(false, `Error: ${error}`);
     }
-}
-function toggleLoadingSpinner(state) {
-    if (state) {
-        document.getElementById('loadingSpinner').style.display = '';
-    } else {
-        document.getElementById('loadingSpinner').style.display = 'none';
+};
+
+// Input handlers
+function handleChangedBarcode() {
+    if (!(inputBarcode.checkValidity())) {
+        return;
     }
-}
+    const barcode = document.getElementById('barcode').value;
+    queryProductInfo(barcode);
+    showBarcode(barcode)
+    storeBarcode(barcode);
+    clearScanUI();
+};
 
 // Add event listeners
 window.addEventListener('load', function () {
@@ -122,22 +222,22 @@ window.addEventListener('load', function () {
         }, false);
     });
 }, false);
-window.addEventListener('load', () => {
-    document.getElementById('productData').style = 'display: none';
-    document.getElementById('alertQueryProductInfo').style = 'display: none';
+document.addEventListener("DOMContentLoaded", () => {
+    const alertElement = document.getElementById('productAlert');
+    alertElement.addEventListener('close.bs.alert', function (event) {
+        event.preventDefault();
+        alertElement.classList.add('d-none');
+    });
 });
-inputBarcode.onchange = function () {
-    if (productInfoShown) {
-        clearProductInfo();
-    } else {
-        document.getElementById('alertQueryProductInfo').style = 'display: none';
-    }
-};
-queryInfoButton.onclick = function (event) {
+document.getElementById('barcode').addEventListener('input', function (event) {
     event.preventDefault();
-    queryProductInfo();
-};
-queryInfoButton.onsubmit = function (event) {
+    handleChangedBarcode();
+})
+document.getElementById('btnAddProduct').onclick = function (event) {
+    event.preventDefault()
+    handleBtnAddProduct();
+}
+document.getElementById('btnScan').onclick = function (event) {
     event.preventDefault();
-    queryProductInfo();
+    handleScanButton();
 };

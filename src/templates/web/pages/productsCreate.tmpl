@@ -1,77 +1,102 @@
 {{ define "content" }}
 <div class="row justify-content-between p-3">
-	<div class="col">
-		<h2>
-			Create new Product
-		</h2>
+
+	<div id="productAlert" class="alert alert-dismissible fade show d-none" role="alert">
+		<span id="alertMessage"></span>
+		<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 	</div>
-	
-	<div class="row g-5 p-2">
-		<div class="col-md-4 col-lg-5">
-			<form id="createProductForm" class="needs-validation" novalidate>
-				<div class="col-12">
-					<label for="barcode" class="form-label">Barcode</label>
-					<input type="number" class="form-control" id="barcode" placeholder="Barcode" required
-						min="1000000000000" max="9999999999999">
-					<small id="barcodeHelp" class="form-text text-muted">EAN-13 barcode on the product only</small>
-					<div class="invalid-feedback">
-						Barcode has to be a digit-only 13 character string
+
+	<div class="text-center mb-4">
+		<h2>Create product</h2>
+		<p class="text-muted">Scan or enter a barcode to add a product</p>
+	</div>
+
+	<div class="card p-3 mb-4">
+		<div class="row g-2">
+			<div class="col-9">
+				<form id="formBarcodeInput" class="needs-validation" novalidate>
+					<div class="input-group">
+						<div class="input-group-text" id="btnGroupAddon">#</div>
+						<input type="number" class="form-control" id="barcode" placeholder="Barcode" data-barcode=""
+							aria-describedby="btnGroupAddon" min="1000000000000" max="9999999999999">
+						<div class="invalid-feedback">
+							Barcode has to be a digit-only 13 character string
+						</div>
+						<div class="valid-feedback">
+							Barcode seems to be valid. Use the 'Get Info' button to query data of product
+						</div>
 					</div>
-					<div class="valid-feedback">
-						Barcode seems to be valid. Use the 'Get Info' button to query data of product
+				</form>
+			</div>
+			<div class="col-3">
+				<button class="btn btn-primary w-100" type="button" id="btnScan" data-action="scan">
+					<i class="bi bi-upc-scan px-2"></i>
+					Scan
+				</button>
+			</div>
+		</div>
+		<div class="row m-auto" id="barcode-reader-wrapper">
+			<div id="barcode-reader" style="width: 560px;"></div>
+		</div>
+	</div>
+
+	<div class="card">
+		<div class="card-header bg-primary text-white">
+			Scanned Products
+		</div>
+		<ul class="list-group list-group-flush" id="productData">
+			<li class="list-group-item text-center">
+				<span class="text-body-secondary">
+					<img id="productInfoImage">
+					<div class="fs-2 placeholder">
+						<i class="bi bi-image-fill"></i>
+					</div>
+					<div class="spinner-grow spinner-grow-sm text-secondary" role="status" style="display: none;">
+						<span class="visually-hidden">Loading...</span>
+					</div>
+				</span>
+			</li>
+			<li class="list-group-item d-flex justify-content-between lh-sm">
+				<div>
+					<h6 class="my-2">Product name</h6>
+					<small id="productInfoName" class="text-body-secondary">
+					</small>
+					<div class="spinner-grow spinner-grow-sm text-secondary" role="status" style="display: none;">
+						<span class="visually-hidden">Loading...</span>
 					</div>
 				</div>
-				<div class="col-12">
+			</li>
+			<li class="list-group-item d-flex justify-content-between lh-sm">
+				<div>
+					<h6 class="my-2">Generic name</h6>
+					<small id="productInfoGenericName" class="text-body-secondary"></small>
+					<div class="spinner-grow spinner-grow-sm text-secondary m-2" role="status" style="display: none;">
+						<span class="visually-hidden">Loading...</span>
+					</div>
+				</div>
+			</li>
+			<li class="list-group-item">
+				<form id="formExpireAt" class="needs-validation" novalidate>
 					<label for="expireAt" class="form-label">Expires at</label>
 					<input type="date" class="form-control" id="expireAt" placeholder="Expires at" value="{{ today }}"
 						required>
 					<div class="invalid-feedback">
 						Please select the expiry date
 					</div>
-				</div>
-				<hr class="my-4">
-				<div class="btn-group w-100" role="group" aria-label="Basic example">
-					<button id="btnCreateProduct" type="submit" class="btn btn-outline-primary btn-lg">
+				</form>
+			</li>
+			<li class="list-group-item ">
+				<div class="text-center">
+					<button id="btnAddProduct" type="submit" class="btn btn-outline-primary">
 						<i class="bi bi-plus-circle-dotted me-2"></i>
 						Create
 					</button>
-					<button id="btnQueryProductInfo" type="button" class="btn btn-outline-primary btn-lg">
-						Get info
-						<i class="bi bi-arrow-repeat ms-2"></i>
-					</button>
 				</div>
-			</form>
-			<div class="my-3">
-				<div id="alertCreateProductInfo" class="alert" role="alert" style="display: none;">
-				</div>
-			</div>
-		</div>
-		<div class="col-md-8 col-lg-7 order-md-last align-middle h-100">
-			<div id="alertQueryProductInfo" class="alert alert-warning" role="alert" style="display: none;">
-			</div>
-	
-			<div class="position-relative">
-				<div id="loadingSpinner" class="spinner-border text-primary position-absolute top-0 start-50" role="status" style="display: none;">
-					<span class="visually-hidden">Loading...</span>
-				</div>
-			</div>
-	
-			<div id="productData" class="card mb-3" style="display: none;">
-				<div class="row g-1">
-					<div class="col-md-8 p-4">
-						<div class="card-body">
-							<h4 id="productInfoName" class="card-title"></h4>
-							<p id="productInfoGenericName" class="card-text text-secondary"></p>
-						</div>
-					</div>
-					<div class="col-md-4 p-4">
-						<img id="productInfoImage" class="img-fluid rounded-end">
-					</div>
-				</div>
-			</div>
-		</div>
+			</li>
+		</ul>
 	</div>
 </div>
 
-<script src="/assets/js/productsCreate.js"></script>
+<script src="/assets/js/html5-qrcode.min.js"></script>
+<script src="/assets/js/productsScan.js"></script>
 {{ end }}
