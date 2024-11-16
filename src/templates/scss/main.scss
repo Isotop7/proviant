@@ -95,9 +95,17 @@ $bootstrap-icons-font-dir: "../fonts";
     border-bottom: 6px solid var(--bs-primary);
 }
 
+.navbar-nav .nav-link i {
+    transition: color 0.2s ease;
+}
+
+.navbar-nav .nav-link:hover i {
+    color: var(--bs-info);
+}
+
 .logo-font {
     font-family: 'Pacifico';
-    color: var(--bs-primary);
+    color: var(--bs-info);
 }
 
 #content-wrapper {
@@ -122,4 +130,16 @@ td a,th a {
 .form-check-input:checked {
     background-color: var(--bs-primary);
     border-color: var(--bs-primary)
+}
+
+.product-card-img-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.product-card-img {
+    max-height: 160px;
+    object-fit: cover;
 }
