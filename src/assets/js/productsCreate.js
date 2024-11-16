@@ -15,7 +15,7 @@ function showError(error) {
 }
 function showBarcode(barcode) {
     inputBarcode.value = barcode;
-    inputBarcode.style.backgroundColor = 'var(--bs-success)';
+    inputBarcode.classList.add('border-success');
 }
 function showAlert(isSuccess, message) {
     const alertElement = document.getElementById('productAlert');
@@ -195,6 +195,9 @@ function handleBtnAddProduct() {
 // Input handlers
 function handleChangedBarcode() {
     if (!(inputBarcode.checkValidity())) {
+        if (inputBarcode.classList.contains('border-success')) {
+        inputBarcode.classList.remove('border-success')
+        }
         return;
     }
     const barcode = document.getElementById('barcode').value;
