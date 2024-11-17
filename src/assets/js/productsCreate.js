@@ -106,6 +106,7 @@ function clearScanUI() {
         html5QrCode.clear();
     }
 };
+const formatProductDataAsOption = (product) => `${product.productName}: Created: ${proviant.formatDate(product.CreatedAt)}; Expire at: ${proviant.formatDate(product.expireAt)}; Notified at: ${proviant.formatDate(product.notifiedAt)}`;
 function setProductOptionsState(productState, products) {
     // Get all elements
     const btnAdd = document.getElementById('btnAddProduct');
@@ -140,7 +141,7 @@ function setProductOptionsState(productState, products) {
             products.forEach(product => {
                 const option = document.createElement("option");
                 option.value = product.id; // Set the value to the instance ID
-                option.textContent = `${product.productName}: Created: ${proviant.formatDate(product.CreatedAt)}; Expire at: ${proviant.formatDate(product.expireAt)}; Notified at: ${proviant.formatDate(product.notifiedAt)}`
+                option.textContent = formatProductDataAsOption(product);
                 instanceDropdown.appendChild(option);
             });
             break;
