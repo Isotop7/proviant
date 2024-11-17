@@ -239,6 +239,25 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 	}
 }
 
+// GetUserProductsBulkByBarcode returns an array of products of a user (based on user ID) matching a barcode
+// The returned dataset can be limitied by supplying 'limit'
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error) {
+	// Get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return []database.Product{}, userErr
+	}
+	// Get user with products preloaded
+	var userWithData authentication.User
+	findErr := dbc.DBHandle.Preload("Products", "user_id = ? and barcode = ?", user.ID, barcode).Find(&userWithData, user.ID)
+	if findErr.Error != nil {
+		return []database.Product{}, findErr.Error
+	}
+
+	return userWithData.Products, nil
+}
+
 // GetProductByID returns a product object (based on product ID) of a user (based on user ID)
 // If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) GetProductByID(productID int, userID uint) (database.Product, error) {

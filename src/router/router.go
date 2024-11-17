@@ -110,7 +110,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	// Setup JWT authentication and authorization middleware, aka user-aware
 	jwtFrontendUserAwareMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorUserAware, UnauthorizedFrontendFunc)
 	if jwtFrontendAuthSetupErr != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrUserAwareAuthMiddlewareInit.Error(), jwtAPIAuthSetupErr.Error())
+		logger.Error().Msgf("%s: %s", errors.ErrUserAwareAuthMiddlewareInit.Error(), jwtFrontendAuthSetupErr.Error())
 		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
 	}
 	// Initialize JWT authentication and authorization middleware
@@ -138,6 +138,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	publicProductAPI.GET("/expired", v1.GetExpired)
 	publicProductAPI.POST("", v1.CreateProduct)
 	publicProductAPI.POST("/scan", v1.ScanProduct)
+	publicProductAPI.GET("/byBarcode/:barcode", v1.GetProductsByBarcode)
 
 	// Protected user routes
 	protectedUserAPI := engine.Group("/api/v1/user")

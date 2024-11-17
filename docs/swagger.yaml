@@ -361,6 +361,35 @@ paths:
       summary: Scan product
       tags:
       - product
+  /api/v1/productsByBarcode:
+    get:
+      description: Returns a list of products of user matching the given barcode
+      parameters:
+      - description: Barcode
+        in: path
+        name: barcode
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/database.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Returns a list of products
+      tags:
+      - product
   /api/v1/user:
     patch:
       consumes:
