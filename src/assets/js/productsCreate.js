@@ -39,6 +39,10 @@ function showAlert(isSuccess, message) {
 
     alertElement.classList.remove('d-none');
 }
+function dismissAlert() {
+    const alertElement = document.getElementById('productAlert');
+    alertElement.classList.add('d-none');
+}
 function clearProductInfo() {
     document.getElementById('productInfoImage').src = '';
     document.getElementById('productInfoImage').style.height = '160px';
@@ -290,6 +294,7 @@ function handleChangedBarcode() {
     storeBarcode(barcode);
     clearScanUI();
     checkBarcode(barcode);
+    dismissAlert();
 };
 
 // Add event listeners
