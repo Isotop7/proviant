@@ -87,10 +87,29 @@
 			</li>
 			<li class="list-group-item ">
 				<div class="text-center">
-					<button id="btnAddProduct" type="submit" class="btn btn-primary">
-						<i class="bi bi-plus-circle-dotted me-2"></i>
-						Create
-					</button>
+					<select class="form-select mb-3 d-none" id="instanceDropdown"></select>
+					<div class="btn-toolbar product-btn-toolbar" role="toolbar" aria-label="">
+						<div class="btn-group me-4">
+							<button id="btnAddProduct" type="submit" class="btn btn-primary">
+								<i class="bi bi-plus-circle-dotted me-2"></i>
+								Create new
+							</button>
+							<button id="btnShowProduct" type="submit" class="btn btn-primary" disabled>
+								<i class="bi bi-eye me-2"></i>
+								Show product
+							</button>
+							<button id="btnDeleteProduct" type="submit" class="btn btn-warning" disabled>
+								<i class="bi bi-trash me-2"></i>
+								Delete product
+							</button>
+						</div>
+						<div class="btn-group">
+							<button id="btnShowProducts" type="submit" class="btn btn-primary" disabled>
+								<i class="bi bi-collection me-2"></i>
+								Show all
+							</button>
+						</div>
+					</div>
 				</div>
 			</li>
 		</ul>

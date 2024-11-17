@@ -7,6 +7,12 @@ const html5QrCode = new Html5Qrcode('barcode-reader',
     { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13] }
 );
 
+const ProductState = Object.freeze({
+    INVALID: 'invalid',
+    NEW: 'new',
+    PRESENT: 'present'
+});
+
 // UI functions
 function showError(error) {
     inputBarcode.value = '';
@@ -20,7 +26,7 @@ function showBarcode(barcode) {
 function showAlert(isSuccess, message) {
     const alertElement = document.getElementById('productAlert');
     const alertMessage = document.getElementById('alertMessage');
-    
+
     if (isSuccess) {
         alertElement.classList.remove('alert-danger');
         alertElement.classList.add('alert-success');
@@ -30,7 +36,7 @@ function showAlert(isSuccess, message) {
         alertElement.classList.add('alert-danger');
         alertMessage.textContent = message || "Failed to create product. Please try again.";
     }
-    
+
     alertElement.classList.remove('d-none');
 }
 function clearProductInfo() {
@@ -100,6 +106,54 @@ function clearScanUI() {
         html5QrCode.clear();
     }
 };
+function setProductOptionsState(productState, products) {
+    // Get all elements
+    const btnAdd = document.getElementById('btnAddProduct');
+    const btnShow = document.getElementById('btnShowProduct')
+    const btnDelete = document.getElementById('btnDeleteProduct');
+    const btnShowAll = document.getElementById('btnShowProducts');
+    const instanceDropdown = document.getElementById('instanceDropdown');
+
+    // Clear all states
+    btnAdd.disabled = true;
+    btnShow.disabled = true;
+    btnDelete.disabled = true;
+    btnShowAll.disabled = true;
+    instanceDropdown.classList.add('d-none');
+    instanceDropdown.innerHTML = "";
+
+    switch (productState) {
+        case ProductState.NEW:
+            btnAdd.disabled = false;
+            btnShow.disabled = true;
+            btnDelete.disabled = true;
+            btnShowAll.disabled = true;
+            instanceDropdown.classList.add('d-none');
+            break;
+        case ProductState.PRESENT:
+            btnAdd.disabled = false;
+            btnShow.disabled = false;
+            btnDelete.disabled = false;
+            btnShowAll.disabled = false;
+            instanceDropdown.classList.remove('d-none');
+            // Add new options based on the array
+            products.forEach(product => {
+                const option = document.createElement("option");
+                option.value = product.id; // Set the value to the instance ID
+                option.textContent = `${product.productName}: Created: ${proviant.formatDate(product.CreatedAt)}; Expire at: ${proviant.formatDate(product.expireAt)}; Notified at: ${proviant.formatDate(product.notifiedAt)}`
+                instanceDropdown.appendChild(option);
+            });
+            break;
+        default:
+            btnAdd.disabled = false;
+            btnShow.disabled = true;
+            btnDelete.disabled = true;
+            btnShowAll.disabled = true;
+            instanceDropdown.classList.add('d-none');
+            console.error(`Invalid product state '${productState}'`);
+            break;
+    }
+}
 
 // Async functions
 async function queryProductInfoRequest(barcode) {
@@ -165,7 +219,7 @@ function handleBtnAddProduct() {
     if (!(inputBarcode.checkValidity() && inputExpireAt.checkValidity())) {
         return;
     }
-    
+
     try {
         const barcode = document.getElementById('barcode').value;
         const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
@@ -191,6 +245,38 @@ function handleBtnAddProduct() {
         showAlert(false, `Error: ${error}`);
     }
 };
+function checkBarcode(barcode) {
+    try {
+        proviant.getProductsByBarcode(barcode).then((response) => {
+            switch (response.code) {
+                case 200:
+                    const products = response.message;
+                    if (products.length > 0) {
+                        setProductOptionsState(ProductState.PRESENT, products);
+                    } else {
+                        setProductOptionsState(ProductState.NEW, []);
+                    }
+                    break;
+                case 400:
+                    setProductOptionsState(ProductState.NEW, []);
+                    showAlert(false, 'Request contained invalid data');
+                    break;
+                case 500:
+                    setProductOptionsState(ProductState.NEW, []);
+                    showAlert(false, 'Backend server error');
+                    break;
+                default:
+                    setProductOptionsState(ProductState.NEW, []);
+                    showAlert(false, `Undefined error: ${response.message}`);
+                    break;
+            }
+        }).catch(error => {
+            console.error(error);
+        })
+    } catch (error) {
+        console.error(error);
+    }
+};
 
 // Input handlers
 function handleChangedBarcode() {
@@ -202,6 +288,7 @@ function handleChangedBarcode() {
     showBarcode(barcode)
     storeBarcode(barcode);
     clearScanUI();
+    checkBarcode(barcode);
 };
 
 // Add event listeners
@@ -234,8 +321,20 @@ document.getElementById('barcode').addEventListener('input', function (event) {
     handleChangedBarcode();
 })
 document.getElementById('btnAddProduct').onclick = function (event) {
-    event.preventDefault()
+    event.preventDefault();
     handleBtnAddProduct();
+}
+document.getElementById('btnShowProduct').onclick = function (event) {
+    event.preventDefault();
+    //TODO: Get current select instance in option and open it
+}
+document.getElementById('btnDeleteProduct').onclick = function (event) {
+    event.preventDefault();
+    //TODO: Show modal and delete product on confirmation, reload page
+}
+document.getElementById('btnShowProducts').onclick = function (event) {
+    event.preventDefault();
+    //TODO: Redirect to search site with preseeded value for barcode
 }
 document.getElementById('btnScan').onclick = function (event) {
     event.preventDefault();
