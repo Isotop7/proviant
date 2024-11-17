@@ -78,11 +78,10 @@ func (dbc DatabaseController) UserExistsByMailAddress(user authentication.User) 
 
 // GetNextUserID returns the next available user ID
 func (dbc DatabaseController) GetNextUserID() uint {
-	// TODO: Do we really need this or can't we use db-based mechanisms
 	// Get next user id from database
-	var lastUser authentication.User
-	dbc.DBHandle.Order("id DESC").Limit(1).Find(&lastUser)
-	return (lastUser.ID + 1)
+	var maxID uint
+	dbc.DBHandle.Model(&authentication.User{}).Select("MAX(id)").Scan(&maxID)
+	return (maxID + 1)
 }
 
 // CreateUser creates a new user based on a given user object
