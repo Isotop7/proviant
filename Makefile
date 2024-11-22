@@ -112,6 +112,7 @@ icons:
 	cp ./res/icons/proviant_logo_256.png ./src/assets/icons/
 	cp ./res/icons/proviant_logo.ico ./src/assets/icons/favicon.ico
 	cp ./res/icons/proviant_logo_256.png ./src/assets/icons/favicon.png
+	cp ./res/icons/proviant_hero.png ./src/assets/icons/hero.png
 
 .PHONY: css
 css:

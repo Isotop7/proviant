@@ -6,6 +6,11 @@ img {
   display: block;
 }
 
+#icon {
+  height: 64px;
+  width: 64px;
+}
+
 .form-signin {
   max-width: 330px;
   padding: 1rem;

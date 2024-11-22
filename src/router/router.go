@@ -124,6 +124,11 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	// Health routes
 	engine.GET("/health", common.GetHealth)
 
+	// Favicon redirect
+	engine.GET("/favicon.ico", func(ctx *gin.Context) {
+		ctx.Redirect(http.StatusPermanentRedirect, "/assets/icons/favicon.ico")
+	})
+
 	// Authentication routes
 	engine.POST("/auth/login", jwtAPIMiddleware.LoginHandler)
 
