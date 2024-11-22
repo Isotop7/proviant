@@ -193,6 +193,44 @@ function storeBarcode(barcode) {
     document.getElementById('barcode').dataset.barcode = barcode;
     document.getElementById('barcode').value = barcode;
 }
+function setDeleteModalBody () {
+    const instanceDropdown = document.getElementById('instanceDropdown');
+    const productData = instanceDropdown[instanceDropdown.selectedIndex].innerText;
+    const deleteButtonModalBody = document.getElementById('deleteModalBody');
+    deleteButtonModalBody.innerHTML = `Do you want to delete the following product:</br></br>${productData.replaceAll(';','</br>')}`;
+}
+function checkBarcode(barcode) {
+    try {
+        proviant.getProductsByBarcode(barcode).then((response) => {
+            switch (response.code) {
+                case 200:
+                    const products = response.message;
+                    if (products.length > 0) {
+                        setProductOptionsState(ProductState.PRESENT, products);
+                    } else {
+                        setProductOptionsState(ProductState.NEW, []);
+                    }
+                    break;
+                case 400:
+                    setProductOptionsState(ProductState.NEW, []);
+                    showAlert(false, 'Request contained invalid data');
+                    break;
+                case 500:
+                    setProductOptionsState(ProductState.NEW, []);
+                    showAlert(false, 'Backend server error');
+                    break;
+                default:
+                    setProductOptionsState(ProductState.NEW, []);
+                    showAlert(false, `Undefined error: ${response.message}`);
+                    break;
+            }
+        }).catch(error => {
+            console.error(error);
+        })
+    } catch (error) {
+        console.error(error);
+    }
+};
 
 // Button handlers
 function handleScanButton() {
@@ -257,12 +295,6 @@ function handleBtnShowProduct() {
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
     window.location = `/web/products/${productId}/view`;
 }
-function setDeleteModalBody () {
-    const instanceDropdown = document.getElementById('instanceDropdown');
-    const productData = instanceDropdown[instanceDropdown.selectedIndex].innerText;
-    const deleteButtonModalBody = document.getElementById('deleteModalBody');
-    deleteButtonModalBody.innerHTML = `Do you want to delete the following product:</br></br>${productData.replaceAll(';','</br>')}`;
-}
 function handleBtnDeleteProduct() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
@@ -279,38 +311,10 @@ function handleBtnDeleteProduct() {
         }
     });
 }
-function checkBarcode(barcode) {
-    try {
-        proviant.getProductsByBarcode(barcode).then((response) => {
-            switch (response.code) {
-                case 200:
-                    const products = response.message;
-                    if (products.length > 0) {
-                        setProductOptionsState(ProductState.PRESENT, products);
-                    } else {
-                        setProductOptionsState(ProductState.NEW, []);
-                    }
-                    break;
-                case 400:
-                    setProductOptionsState(ProductState.NEW, []);
-                    showAlert(false, 'Request contained invalid data');
-                    break;
-                case 500:
-                    setProductOptionsState(ProductState.NEW, []);
-                    showAlert(false, 'Backend server error');
-                    break;
-                default:
-                    setProductOptionsState(ProductState.NEW, []);
-                    showAlert(false, `Undefined error: ${response.message}`);
-                    break;
-            }
-        }).catch(error => {
-            console.error(error);
-        })
-    } catch (error) {
-        console.error(error);
-    }
-};
+function handleBtnShowProducts() {
+    const barcode = document.getElementById('barcode').value;
+    window.location = `/web/products/search?barcode=${barcode}`;
+}
 
 // Input handlers
 function handleChangedBarcode() {
@@ -372,7 +376,7 @@ document.getElementById('btnDeleteProduct').onclick = function (event) {
 }
 document.getElementById('btnShowProducts').onclick = function (event) {
     event.preventDefault();
-    //TODO: Redirect to search site with preseeded value for barcode
+    handleBtnShowProducts();
 }
 document.getElementById('btnScan').onclick = function (event) {
     event.preventDefault();
