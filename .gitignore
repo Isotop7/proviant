@@ -22,7 +22,6 @@ src/assets/css/main.css*
 src/assets/css/fonts.css*
 src/assets/js/bootstrap*
 src/assets/js/html5-qrcode.min.js
-src/assets/icons/*
 
 ## Custom
 src/config.yaml
