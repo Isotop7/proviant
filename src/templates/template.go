@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-//go:embed "web"
+//go:embed "web" "notification"
 var TemplateFiles embed.FS
 
 func humanDateTime(t time.Time) string {

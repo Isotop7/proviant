@@ -9,13 +9,10 @@ import (
 	dbController "gitlab.com/Isotop7/proviant/controllers/database"
 	"gitlab.com/Isotop7/proviant/models/configuration"
 	dbModel "gitlab.com/Isotop7/proviant/models/database"
+	"gitlab.com/Isotop7/proviant/templates"
 
 	"github.com/rs/zerolog"
 	gomail "gopkg.in/mail.v2"
-)
-
-var (
-	mailTemplatePath = "templates/notification/expired.html"
 )
 
 // NotificationController is the object struct to generate and send notifications for expired products
@@ -95,7 +92,7 @@ func (nc NotificationController) sendMail(product dbModel.Product, recipient str
 	mail.SetHeader("Subject", subject)
 
 	// Generate email body from template
-	templ, templErr := template.ParseFiles(mailTemplatePath)
+	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/expired.html")
 	if templErr != nil {
 		return templErr
 	}
