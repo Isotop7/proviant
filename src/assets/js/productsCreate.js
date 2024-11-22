@@ -37,11 +37,11 @@ function showAlert(isSuccess, message) {
         alertMessage.textContent = message || "Failed to create product. Please try again.";
     }
 
-    alertElement.classList.remove('d-none');
+    alertElement.classList.add('show');
 }
 function dismissAlert() {
     const alertElement = document.getElementById('productAlert');
-    alertElement.classList.add('d-none');
+    alertElement.classList.remove('show');
 }
 function clearProductInfo() {
     document.getElementById('productInfoImage').src = '';
@@ -225,6 +225,8 @@ function handleBtnAddProduct() {
         return;
     }
 
+    dismissAlert();
+
     try {
         const barcode = document.getElementById('barcode').value;
         const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
@@ -319,7 +321,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const alertElement = document.getElementById('productAlert');
     alertElement.addEventListener('close.bs.alert', function (event) {
         event.preventDefault();
-        alertElement.classList.add('d-none');
+        alertElement.classList.remove('show');
     });
 });
 document.getElementById('barcode').addEventListener('input', function (event) {
