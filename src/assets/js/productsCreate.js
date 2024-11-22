@@ -110,19 +110,19 @@ function clearScanUI() {
         html5QrCode.clear();
     }
 };
-const formatProductDataAsOption = (product) => `${product.productName}: Created: ${proviant.formatDate(product.CreatedAt)}; Expire at: ${proviant.formatDate(product.expireAt)}; Notified at: ${proviant.formatDate(product.notifiedAt)}`;
+const formatProductDataAsOption = (product) => `${product.productName}; Created: ${proviant.formatDate(product.CreatedAt)}; Expire at: ${proviant.formatDate(product.expireAt)}; Notified at: ${proviant.formatDate(product.notifiedAt)}`;
 function setProductOptionsState(productState, products) {
     // Get all elements
     const btnAdd = document.getElementById('btnAddProduct');
     const btnShow = document.getElementById('btnShowProduct')
-    const btnDelete = document.getElementById('btnDeleteProduct');
+    const btnDeleteModal = document.getElementById('btnDeleteProductModal');
     const btnShowAll = document.getElementById('btnShowProducts');
     const instanceDropdown = document.getElementById('instanceDropdown');
 
     // Clear all states
     btnAdd.disabled = true;
     btnShow.disabled = true;
-    btnDelete.disabled = true;
+    btnDeleteModal.disabled = true;
     btnShowAll.disabled = true;
     instanceDropdown.classList.add('d-none');
     instanceDropdown.innerHTML = "";
@@ -131,20 +131,20 @@ function setProductOptionsState(productState, products) {
         case ProductState.NEW:
             btnAdd.disabled = false;
             btnShow.disabled = true;
-            btnDelete.disabled = true;
+            btnDeleteModal.disabled = true;
             btnShowAll.disabled = true;
             instanceDropdown.classList.add('d-none');
             break;
         case ProductState.PRESENT:
             btnAdd.disabled = false;
             btnShow.disabled = false;
-            btnDelete.disabled = false;
+            btnDeleteModal.disabled = false;
             btnShowAll.disabled = false;
             instanceDropdown.classList.remove('d-none');
             // Add new options based on the array
             products.forEach(product => {
                 const option = document.createElement("option");
-                option.value = product.id; // Set the value to the instance ID
+                option.value = product.ID; // Set the value to the instance ID
                 option.textContent = formatProductDataAsOption(product);
                 instanceDropdown.appendChild(option);
             });
@@ -152,7 +152,7 @@ function setProductOptionsState(productState, products) {
         default:
             btnAdd.disabled = false;
             btnShow.disabled = true;
-            btnDelete.disabled = true;
+            btnDeleteModal.disabled = true;
             btnShowAll.disabled = true;
             instanceDropdown.classList.add('d-none');
             console.error(`Invalid product state '${productState}'`);
@@ -252,6 +252,33 @@ function handleBtnAddProduct() {
         showAlert(false, `Error: ${error}`);
     }
 };
+function handleBtnShowProduct() {
+    const instanceDropdown = document.getElementById('instanceDropdown');
+    const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
+    window.location = `/web/products/${productId}/view`;
+}
+function setDeleteModalBody () {
+    const instanceDropdown = document.getElementById('instanceDropdown');
+    const productData = instanceDropdown[instanceDropdown.selectedIndex].innerText;
+    const deleteButtonModalBody = document.getElementById('deleteModalBody');
+    deleteButtonModalBody.innerHTML = `Do you want to delete the following product:</br></br>${productData.replaceAll(';','</br>')}`;
+}
+function handleBtnDeleteProduct() {
+    const instanceDropdown = document.getElementById('instanceDropdown');
+    const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
+    
+    proviant.deleteProduct(productId).then((response) => {
+        console.log(response.code);
+        switch (response.code) {
+            case 200:
+                window.location.reload();
+                break;
+            default:
+                showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
+                break;
+        }
+    });
+}
 function checkBarcode(barcode) {
     try {
         proviant.getProductsByBarcode(barcode).then((response) => {
@@ -334,11 +361,14 @@ document.getElementById('btnAddProduct').onclick = function (event) {
 }
 document.getElementById('btnShowProduct').onclick = function (event) {
     event.preventDefault();
-    //TODO: Get current select instance in option and open it
+    handleBtnShowProduct();
 }
+document.getElementById('deleteModal').addEventListener('show.bs.modal', (event) => {
+    setDeleteModalBody();
+});
 document.getElementById('btnDeleteProduct').onclick = function (event) {
     event.preventDefault();
-    //TODO: Show modal and delete product on confirmation, reload page
+    handleBtnDeleteProduct();
 }
 document.getElementById('btnShowProducts').onclick = function (event) {
     event.preventDefault();
