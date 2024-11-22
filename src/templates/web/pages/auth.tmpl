@@ -1,43 +1,45 @@
 {{ define "content" }}
-<main class="form-signin w-100 my-3 mx-auto">
-    <div id="infoToast" class="toast m-4 position-absolute top-0 end-0 bg-success text-dark" role="alert"
-        aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
-        <div class="toast-header">
-            <img src="/assets/icons/favicon.png" class="rounded me-2" alt="...">
-            <strong class="me-auto">proviant</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body">
-        </div>
-    </div>
 
-    <form id="authData" novalidate>
-        <div class="mx-auto my-5 text-center">
-            <h1 class="logo-font ">
-                Proviant
-            </h1>
+<div class="container vh-100 d-flex justify-content-center">
+    <main class="form-signin">
+        <div id="infoToast" class="toast m-4 position-absolute top-0 end-0 bg-success text-dark" role="alert"
+            aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
+            <div class="toast-header">
+                <img src="/assets/icons/proviant_logo_256.png" id="icon" class="rounded me-2" alt="proviant">
+                <strong class="me-auto">proviant</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+            </div>
         </div>
-        <div class="form-floating">
-            <input type="text" class="form-control" id="inputUsername" placeholder="Username" autocomplete="username">
-            <label for="inputUsername">Username</label>
-        </div>
-        <div class="form-floating">
-            <input type="password" class="form-control" id="inputPassword" placeholder="Password"
-                autocomplete="current-password">
-            <label for="inputPassword">Password</label>
-        </div>
-        <button id="btnAuth" form="authData" class="btn btn-info w-100" type="submit">Sign in</button>
-        <div id="loginAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
-        </div>
-        <hr class="my-4 border-3 border-dark">
-        <div class="form-floating">
-            <input type="text" class="form-control" id="inputMailAddress" placeholder="Mail Address"
-                autocomplete="mailAddress">
-            <label for="inputMailAddress">Mail Address</label>
-        </div>
-        <button id="btnSignup" form="authData" class="btn btn-info w-100" type="submit">Sign up</button>
-        <div id="signupAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
-        </div>
-    </form>
-</main>
+    
+        <form id="authData" novalidate>
+            <div class="mx-auto my-5 text-center">
+                <img src="/assets/icons/hero.png" class="img-fluid" alt="proviant">
+            </div>
+            <div class="form-floating">
+                <input type="text" class="form-control" id="inputUsername" placeholder="Username" autocomplete="username">
+                <label for="inputUsername">Username</label>
+            </div>
+            <div class="form-floating">
+                <input type="password" class="form-control" id="inputPassword" placeholder="Password"
+                    autocomplete="current-password">
+                <label for="inputPassword">Password</label>
+            </div>
+            <button id="btnAuth" form="authData" class="btn btn-info w-100" type="submit">Sign in</button>
+            <div id="loginAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
+            </div>
+            <hr class="my-4 border-3 border-dark">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="inputMailAddress" placeholder="Mail Address"
+                    autocomplete="mailAddress">
+                <label for="inputMailAddress">Mail Address</label>
+            </div>
+            <button id="btnSignup" form="authData" class="btn btn-info w-100" type="submit">Sign up</button>
+            <div id="signupAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
+            </div>
+        </form>
+    </main>
+</div>
+
 {{ end }}

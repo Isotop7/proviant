@@ -440,7 +440,7 @@ var TemplateFiles embed.FS
 ```
 
 <a name="NewTemplateCache"></a>
-## func [NewTemplateCache](<https://gitlab.com/Isotop7/proviant/blob/main/src/templates/template.go#L77>)
+## func [NewTemplateCache](<https://gitlab.com/Isotop7/proviant/blob/main/src/templates/template.go#L80>)
 
 ```go
 func NewTemplateCache() (map[string]*template.Template, error)
@@ -449,7 +449,7 @@ func NewTemplateCache() (map[string]*template.Template, error)
 
 
 <a name="Render"></a>
-## func [Render](<https://gitlab.com/Isotop7/proviant/blob/main/src/templates/template.go#L107>)
+## func [Render](<https://gitlab.com/Isotop7/proviant/blob/main/src/templates/template.go#L110>)
 
 ```go
 func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base string, page string, data map[string]any)
@@ -458,7 +458,7 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 
 
 <a name="RenderError"></a>
-## func [RenderError](<https://gitlab.com/Isotop7/proviant/blob/main/src/templates/template.go#L141>)
+## func [RenderError](<https://gitlab.com/Isotop7/proviant/blob/main/src/templates/template.go#L144>)
 
 ```go
 func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, message string)
@@ -647,6 +647,7 @@ v1 implements version 1 of the proviant API
 - [func GetExpired\(ctx \*gin.Context\)](<#GetExpired>)
 - [func GetProduct\(ctx \*gin.Context\)](<#GetProduct>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
+- [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
 - [func ScanProduct\(ctx \*gin.Context\)](<#ScanProduct>)
 - [func SetExpireAt\(ctx \*gin.Context\)](<#SetExpireAt>)
 - [func UpdateProduct\(ctx \*gin.Context\)](<#UpdateProduct>)
@@ -655,7 +656,7 @@ v1 implements version 1 of the proviant API
 
 
 <a name="CreateProduct"></a>
-## func [CreateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L160>)
+## func [CreateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L231>)
 
 ```go
 func CreateProduct(ctx *gin.Context)
@@ -664,7 +665,7 @@ func CreateProduct(ctx *gin.Context)
 CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
 
 <a name="DeleteProduct"></a>
-## func [DeleteProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L312>)
+## func [DeleteProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L383>)
 
 ```go
 func DeleteProduct(ctx *gin.Context)
@@ -673,7 +674,7 @@ func DeleteProduct(ctx *gin.Context)
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
 
 <a name="GetExpired"></a>
-## func [GetExpired](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L459>)
+## func [GetExpired](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L530>)
 
 ```go
 func GetExpired(ctx *gin.Context)
@@ -699,8 +700,17 @@ func GetProducts(ctx *gin.Context)
 
 GetProducts returns the products of a user @Summary Return a list of products @Description Return a list of products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[get\]
 
+<a name="GetProductsByBarcode"></a>
+## func [GetProductsByBarcode](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L159>)
+
+```go
+func GetProductsByBarcode(ctx *gin.Context)
+```
+
+GetProductsByBarcode returns a list of products of a user matching a barcode @Summary Returns a list of products @Description Returns a list of products of user matching the given barcode @Tags product @Produce json @Param barcode path int true "Barcode" @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/productsByBarcode \[get\]
+
 <a name="ScanProduct"></a>
-## func [ScanProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L506>)
+## func [ScanProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L577>)
 
 ```go
 func ScanProduct(ctx *gin.Context)
@@ -709,7 +719,7 @@ func ScanProduct(ctx *gin.Context)
 ScanProduct returns a barcode based on an image @Summary Scan product @Description Returns the barcode of a product in an uploaded image @Tags product @Accept json @Produce json @Success 200 \{object\} database.ProductDTOBarcode @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/scan \[post\]
 
 <a name="SetExpireAt"></a>
-## func [SetExpireAt](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L369>)
+## func [SetExpireAt](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L440>)
 
 ```go
 func SetExpireAt(ctx *gin.Context)
@@ -718,7 +728,7 @@ func SetExpireAt(ctx *gin.Context)
 SetExpireAt updates the expire date of a product of a user @Summary Updates the expire date @Description Updates the expire date of a product @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param timestamp body database.Timestamp true "Timestamp" @Success 200 \{object\} database.ProductDTOExpire @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/expire \[post\]
 
 <a name="UpdateProduct"></a>
-## func [UpdateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L239>)
+## func [UpdateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L310>)
 
 ```go
 func UpdateProduct(ctx *gin.Context)
@@ -765,6 +775,7 @@ import "gitlab.com/Isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetUserHomeTiles\(userID uint\) \(\[\]webparts.Tile, error\)](<#DatabaseController.GetUserHomeTiles>)
   - [func \(dbc DatabaseController\) GetUserMailAddressByID\(userID uint\) \(string, error\)](<#DatabaseController.GetUserMailAddressByID>)
   - [func \(dbc DatabaseController\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulk>)
+  - [func \(dbc DatabaseController\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulkByBarcode>)
   - [func \(dbc DatabaseController\) SearchProducts\(searchQuery string, searchParameter SearchParameterEnum, userID uint\) \(\[\]database.Product, error\)](<#DatabaseController.SearchProducts>)
   - [func \(dbc DatabaseController\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#DatabaseController.SetProductExpireAt>)
   - [func \(dbc DatabaseController\) SetProductNotifiedAt\(productID uint\) error](<#DatabaseController.SetProductNotifiedAt>)
@@ -792,7 +803,7 @@ type DatabaseController struct {
 ```
 
 <a name="DatabaseController.CreateProduct"></a>
-### func \(DatabaseController\) [CreateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L307>)
+### func \(DatabaseController\) [CreateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L326>)
 
 ```go
 func (dbc DatabaseController) CreateProduct(userID uint, product *database.Product) error
@@ -810,7 +821,7 @@ func (dbc DatabaseController) CreateUser(user *authentication.User) error
 CreateUser creates a new user based on a given user object Before creation, the user password is hashed with brcypt If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.DeleteProduct"></a>
-### func \(DatabaseController\) [DeleteProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L359>)
+### func \(DatabaseController\) [DeleteProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L378>)
 
 ```go
 func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error
@@ -828,7 +839,7 @@ func (dbc DatabaseController) GetNextUserID() uint
 GetNextUserID returns the next available user ID
 
 <a name="DatabaseController.GetProductByID"></a>
-### func \(DatabaseController\) [GetProductByID](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L244>)
+### func \(DatabaseController\) [GetProductByID](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L263>)
 
 ```go
 func (dbc DatabaseController) GetProductByID(productID int, userID uint) (database.Product, error)
@@ -837,7 +848,7 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 GetProductByID returns a product object \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.GetProductsExpired"></a>
-### func \(DatabaseController\) [GetProductsExpired](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L417>)
+### func \(DatabaseController\) [GetProductsExpired](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L436>)
 
 ```go
 func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Product, error)
@@ -846,7 +857,7 @@ func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Produc
 GetProductsExpired returns an array of products of a user \(based on user ID\) that are already expired If the database operations return an error, the error is also returned \(otherwise nil\) If the user has no products assigned, the function returns an empty dataset
 
 <a name="DatabaseController.GetProductsExpiredAndNotificationPending"></a>
-### func \(DatabaseController\) [GetProductsExpiredAndNotificationPending](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L436>)
+### func \(DatabaseController\) [GetProductsExpiredAndNotificationPending](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L455>)
 
 ```go
 func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error)
@@ -873,7 +884,7 @@ func (dbc DatabaseController) GetUserByUsername(username string) (authentication
 GetUserByUsername uses a given username and returns the matching user object If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.GetUserHomeTiles"></a>
-### func \(DatabaseController\) [GetUserHomeTiles](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L454>)
+### func \(DatabaseController\) [GetUserHomeTiles](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L473>)
 
 ```go
 func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, error)
@@ -899,8 +910,17 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 
 GetUserProductsBulk returns an array of products of a user \(based on user ID\) The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.GetUserProductsBulkByBarcode"></a>
+### func \(DatabaseController\) [GetUserProductsBulkByBarcode](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L245>)
+
+```go
+func (dbc DatabaseController) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
+```
+
+GetUserProductsBulkByBarcode returns an array of products of a user \(based on user ID\) matching a barcode The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
+
 <a name="DatabaseController.SearchProducts"></a>
-### func \(DatabaseController\) [SearchProducts](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L270>)
+### func \(DatabaseController\) [SearchProducts](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L289>)
 
 ```go
 func (dbc DatabaseController) SearchProducts(searchQuery string, searchParameter SearchParameterEnum, userID uint) ([]database.Product, error)
@@ -909,7 +929,7 @@ func (dbc DatabaseController) SearchProducts(searchQuery string, searchParameter
 SearchProducts returns an array of products of a user matching a search paramater and a query
 
 <a name="DatabaseController.SetProductExpireAt"></a>
-### func \(DatabaseController\) [SetProductExpireAt](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L373>)
+### func \(DatabaseController\) [SetProductExpireAt](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L392>)
 
 ```go
 func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error
@@ -918,7 +938,7 @@ func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, exp
 SetProductExpireAt updates the expiry date of a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.SetProductNotifiedAt"></a>
-### func \(DatabaseController\) [SetProductNotifiedAt](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L396>)
+### func \(DatabaseController\) [SetProductNotifiedAt](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L415>)
 
 ```go
 func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error
@@ -927,7 +947,7 @@ func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error
 SetProductNotifiedAt sets the notified\_at timestamp to the current time
 
 <a name="DatabaseController.UpdateProduct"></a>
-### func \(DatabaseController\) [UpdateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L321>)
+### func \(DatabaseController\) [UpdateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L340>)
 
 ```go
 func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product *database.ProductDTOPatch) error

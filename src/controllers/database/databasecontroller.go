@@ -78,11 +78,10 @@ func (dbc DatabaseController) UserExistsByMailAddress(user authentication.User) 
 
 // GetNextUserID returns the next available user ID
 func (dbc DatabaseController) GetNextUserID() uint {
-	// TODO: Do we really need this or can't we use db-based mechanisms
 	// Get next user id from database
-	var lastUser authentication.User
-	dbc.DBHandle.Order("id DESC").Limit(1).Find(&lastUser)
-	return (lastUser.ID + 1)
+	var maxID uint
+	dbc.DBHandle.Model(&authentication.User{}).Select("MAX(id)").Scan(&maxID)
+	return (maxID + 1)
 }
 
 // CreateUser creates a new user based on a given user object
@@ -237,6 +236,25 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 	} else {
 		return userWithData.Products[:limit], nil
 	}
+}
+
+// GetUserProductsBulkByBarcode returns an array of products of a user (based on user ID) matching a barcode
+// The returned dataset can be limitied by supplying 'limit'
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error) {
+	// Get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return []database.Product{}, userErr
+	}
+	// Get user with products preloaded
+	var userWithData authentication.User
+	findErr := dbc.DBHandle.Preload("Products", "user_id = ? and barcode = ?", user.ID, barcode).Find(&userWithData, user.ID)
+	if findErr.Error != nil {
+		return []database.Product{}, findErr.Error
+	}
+
+	return userWithData.Products, nil
 }
 
 // GetProductByID returns a product object (based on product ID) of a user (based on user ID)

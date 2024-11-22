@@ -17,28 +17,15 @@
 </div>
 
 {{ if .Products }}
-<div class="row my-4">
-    <div class="list-group list-group-numbered">
-        {{ range .Products }}
-        <a href="/web/products/{{ .ID }}/view" class="list-group-item list-group-item-action">
-            <div class="row">
-                <div class="col-9">
-                    <div class="">
-                        <h5 class="mb-1">{{ .ProductName }}</h5>
-                    </div>
-                    <p>Created: {{ .CreatedAt | humanDateTime }} / Expire At: {{ .ExpireAt | humanDate }}</p>
-                    <small class="font-monospace">
-                        <i class="bi bi-upc-scan me-2"></i>{{ .Barcode }}
-                    </small>
-                </div>
-                <div class="col-3 d-flex justify-content-end">
-                    <img height="80px" src="{{ .ImageURL }}">
-                </div>
-            </div>
-        </a>
-        {{ end }}
-    </div>
+
+<div class="row row-cols-1 row-cols-lg-2 g-5">
+    {{ range .Products }}
+
+        {{ template "productCard" . }}
+
+    {{ end }}
 </div>
+
 {{ else }}
 <div class="row my-2">
     <div class="w-100 mt-5 text-center">
