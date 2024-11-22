@@ -33,10 +33,11 @@
 #### Executable
 
 1. Clone the repository: `git clone https://gitlab.com/Isotop7/proviant.git`
-2. Navigate to the project directory: `cd proviant/src`
-3. Build the application: `go build -o proviant`
-4. Copy the desired config file `config.yaml.[mariadb|sqlite].tmpl`, rename it to `config.yaml` and adjust it
-5. Run the server: `./proviant`
+2. Setup node_modules and assets: `make init`
+3. Navigate to the project directory: `cd proviant/src`
+4. Build the application: `go build -o proviant`
+5. Copy the desired config file `config.yaml.[mariadb|sqlite].tmpl`, rename it to `config.yaml` and adjust it
+6. Run the server: `./proviant`
 
 #### Docker
 
@@ -95,6 +96,7 @@ GIN_MODE=debug
 ## What's missing?
 
 - Administrative Functions: Create and Update users
+- Everything that's still an issue 😅
 
 ## Documentation
 
@@ -116,6 +118,10 @@ Documentation is generated with `gomarkdoc` and `swagger`:
 - Create product and query data from OpenFoodFactAPI
 
 ![Create product](./docs/screenshots/create.png)
+
+- Search all products based on parameters
+
+![Search products](./docs/screenshots/search.png)
 
 ## Contributing
 
