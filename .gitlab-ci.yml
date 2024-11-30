@@ -36,7 +36,7 @@ sonarcloud-check:
   rules:
   - changes: 
     - src/**/*
-    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 lint:
   image: docker:cli
@@ -51,7 +51,7 @@ lint:
   rules:
   - changes: 
     - src/**/*
-    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 compile:
   stage: build
@@ -62,7 +62,7 @@ compile:
   rules:
   - changes: 
     - src/**/*
-    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 docker-build:
   image: docker:cli
@@ -86,7 +86,7 @@ docker-build:
   - changes: 
     - src/**/*
     - Dockerfile
-    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
 docker-build-private:
   image: docker:cli
@@ -112,4 +112,4 @@ docker-build-private:
   - changes: 
     - src/**/*
     - Dockerfile
-    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
+    if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "main" || $CI_PIPELINE_SOURCE == "merge_request_event"
