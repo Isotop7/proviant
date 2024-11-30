@@ -2,6 +2,13 @@
 # HELPERS
 # ==================================================================================== #
 
+## Get container runtime
+CONTAINER_RUNTIME := $(shell command -v podman 2>/dev/null || command -v $(CONTAINER_RUNTIME) 2>/dev/null)
+# Verify the container runtime is set
+ifeq ($(CONTAINER_RUNTIME),)
+$(error No container runtime found. Please install podman or $(CONTAINER_RUNTIME).)
+endif
+
 ## help: print this help message
 .PHONY: help
 help:
@@ -45,7 +52,7 @@ audit:
 .PHONY: lint
 lint:
 	cd ./src && \
-	docker run -t --rm -v ./:/app -w /app golangci/golangci-lint:v1.55.2 golangci-lint run -v -E gocritic --timeout "3m"
+	$(CONTAINER_RUNTIME) run -t --rm -v ./:/app -w /app golangci/golangci-lint:latest golangci-lint run -v -E gocritic --timeout "3m"
 
 # ==================================================================================== #
 # Documentation
@@ -72,9 +79,9 @@ doc:
 # Package
 # ==================================================================================== #
 
-.PHONY: dockerimage
-dockerimage:
-	docker build --no-cache --tag=proviant ./
+.PHONY: $(CONTAINER_RUNTIME)image
+$(CONTAINER_RUNTIME)image:
+	$(CONTAINER_RUNTIME) build --no-cache --tag=proviant ./
 
 # ==================================================================================== #
 # App
@@ -85,17 +92,17 @@ run:
 	cd ./src && \
 	go run proviant.go
 
-.PHONY: rundocker
-rundocker:
-	@make dockerimage
+.PHONY: run$(CONTAINER_RUNTIME)
+run$(CONTAINER_RUNTIME):
+	@make $(CONTAINER_RUNTIME)image
 	cd ./src && \
-	docker run -t --rm -p 5114:5114 -v ./config.yaml.sqlite.tmpl:/app/config.yaml proviant:latest
+	$(CONTAINER_RUNTIME) run -t --rm -p 5114:5114 -v ./config.yaml.sqlite.tmpl:/app/config.yaml proviant:latest
 
-.PHONY: rundockerdebug
-rundockerdebug:
-	@make dockerimage
+.PHONY: run$(CONTAINER_RUNTIME)debug
+run$(CONTAINER_RUNTIME)debug:
+	@make $(CONTAINER_RUNTIME)image
 	cd ./src && \
-	docker run -it --rm -v ./config.yaml.sqlite.tmpl:/app/config.yaml --entrypoint /bin/sh proviant:latest
+	$(CONTAINER_RUNTIME) run -it --rm -v ./config.yaml.sqlite.tmpl:/app/config.yaml --entrypoint /bin/sh proviant:latest
 
 # ==================================================================================== #
 # Web
