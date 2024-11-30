@@ -11,6 +11,7 @@ import (
 	dbController "gitlab.com/Isotop7/proviant/controllers/database"
 	"gitlab.com/Isotop7/proviant/errors"
 	"gitlab.com/Isotop7/proviant/logging"
+	"gitlab.com/Isotop7/proviant/migrations"
 	"gitlab.com/Isotop7/proviant/models/authentication"
 	"gitlab.com/Isotop7/proviant/models/configuration"
 	dbModel "gitlab.com/Isotop7/proviant/models/database"
@@ -91,11 +92,18 @@ func main() {
 
 	// Run migrations for database and check for errors
 	migrationError := dbHandle.AutoMigrate(
+		&dbModel.Household{},
 		&authentication.User{},
 		&dbModel.Product{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
+	}
+
+	// Run migrations for breaking changes
+	breakingMigrationsError := migrations.RunBreakingDatabaseMigrations(cLogger, dbHandle)
+	if breakingMigrationsError != nil {
+		panic(breakingMigrationsError)
 	}
 
 	// Check API controller config and create instance

@@ -81,7 +81,7 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
 	// Create database controller
 	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Call database controller function that returns owner state
-	return dbController.UserIsProductOwner(user.ID, productID)
+	return dbController.UserHasProductAccess(user.ID, productID)
 }
 
 func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool {
