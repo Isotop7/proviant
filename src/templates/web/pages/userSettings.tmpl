@@ -39,6 +39,35 @@
         </div>
     </div>
     <hr>
+    <div class="row g-5 p-3 align-items-center justify-content-between">
+        <div class="col">
+            <h4>
+                Household
+            </h4>
+        </div>
+        <div class="col col-auto">
+            <button type="button" class="btn btn-outline-primary" id="btnUpdateHouseholdDetails" disabled>
+                Update
+            </button>
+        </div>
+    </div>
+    <div class="row gx-5 p-3 my-3">
+        <div class="col">
+            <form id="userHouseholdSettings" novalidate>
+                <div class="input-group">
+                    <span class="input-group-text" id="label-householdId">ID</span>
+                    <input type="number" class="form-control" placeholder="1" aria-label="HouseholdId"
+                        aria-describedby="label-householdId" value="{{ .Household.ID }}" id="inputHouseholdID">
+                    <span class="input-group-text" id="label-householdName">Name</span>
+                    <input type="text" class="form-control" placeholder="1" aria-label="HouseholdName"
+                        aria-describedby="label-householdName" value="{{ .Household.Name }}" id="inputHouseholdName">
+                </div>
+            </form>
+            <div id="updateHouseholdAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
+            </div>
+        </div>
+    </div>
+    <hr>
     <div class="row g-5 p-3">
         <div class="col">
             <h4>

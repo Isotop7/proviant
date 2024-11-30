@@ -49,29 +49,31 @@ func (nc NotificationController) generateNotifications(notificationProducts *[]d
 	// Loop through products
 	for _, product := range *notificationProducts {
 		// Get user object of product
-		mailAddress, getError := nc.DatabaseController.GetUserMailAddressByID(product.UserID)
+		mailAddresses, getError := nc.DatabaseController.GetHouseholdMembersMailAddressesByID(product.HouseholdID) //TODO: Iterate through users and send mail
 		if getError != nil {
 			nc.Logger.Error().Msg(getError.Error())
 		}
 
-		// Sending notification
-		nc.Logger.Info().Msgf("Sending notification for product with id '%d' and barcode '%s' to '%s'", product.ID, product.Barcode, mailAddress)
-		sendError := nc.sendMail(product, mailAddress)
+		for _, mailAddress := range mailAddresses {
+			// Sending notification
+			nc.Logger.Info().Msgf("Sending notification for product with id '%d' and barcode '%s' to '%s'", product.ID, product.Barcode, mailAddress)
+			sendError := nc.sendMail(product, mailAddress)
 
-		// Check for error
-		if sendError != nil {
-			nc.Logger.Error().Msg(sendError.Error())
-			break
-		} else {
-			nc.Logger.Info().Msg("Notification send successfully")
-		}
+			// Check for error
+			if sendError != nil {
+				nc.Logger.Error().Msg(sendError.Error())
+				break
+			} else {
+				nc.Logger.Info().Msg("Notification send successfully")
+			}
 
-		// Update notifiedAt timestamp
-		updateErr := nc.DatabaseController.SetProductNotifiedAt(product.ID)
-		if updateErr != nil {
-			nc.Logger.Error().Msg(updateErr.Error())
-		} else {
-			nc.Logger.Info().Msg("Property NotifiedAt was updated")
+			// Update notifiedAt timestamp
+			updateErr := nc.DatabaseController.SetProductNotifiedAt(product.ID)
+			if updateErr != nil {
+				nc.Logger.Error().Msg(updateErr.Error())
+			} else {
+				nc.Logger.Info().Msg("Property NotifiedAt was updated")
+			}
 		}
 	}
 }

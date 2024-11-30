@@ -17,7 +17,8 @@ type User struct {
 	Username    string `json:"username"`
 	MailAddress string `json:"mailAddress"`
 	Password    string `json:"-"`
-	Products    []database.Product
+	HouseholdID uint   `gorm:"index"`
+	Household   database.Household
 }
 
 // IsValid is a simple validator function to check for valid properties

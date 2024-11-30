@@ -48,11 +48,20 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 	if homeTileErr != nil {
 		logger.Error().Msg(homeTileErr.Error())
 	}
+	// Get user household
+	var hasHousehold bool
+	userHouseholdID, userErr := dbController.GetUserHouseholdByID(userID)
+	if userErr != nil {
+		logger.Error().Msg(userErr.Error())
+	}
+	hasHousehold = userHouseholdID > 0
 
 	// Setup page data
 	pageData := map[string]any{
-		"Title": "Home",
-		"Tiles": homeTiles,
+		"Title":        "Home",
+		"Tiles":        homeTiles,
+		"HasHousehold": hasHousehold,
+		"Household":    userHouseholdID,
 	}
 
 	// Render website
@@ -103,10 +112,18 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
 		return
 	}
+	// Get household object
+	household, householdErr := dbController.GetHouseholdByID(user.HouseholdID)
+	if householdErr != nil {
+		logger.Error().Msg(api.ResponseErrInvalidUserData.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
+		return
+	}
 
 	pageData := map[string]any{
-		"Title": "User Settings",
-		"User":  user,
+		"Title":     "User Settings",
+		"User":      user,
+		"Household": household,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
 }

@@ -53,9 +53,27 @@ func (dbc DatabaseController) GetUserByUsername(username string) (authentication
 // If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, error) {
 	var user authentication.User
-	// Gets first user with matching username
+	// Gets first user with matching id
 	selectErr := dbc.DBHandle.First(&user, userID)
 	return user, selectErr.Error
+}
+
+// GetUserHouseholdByID uses a given user ID and returns the connected household id
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) GetUserHouseholdByID(userID uint) (uint, error) {
+	var user authentication.User
+	// Gets first user with matching id
+	selectErr := dbc.DBHandle.First(&user, userID)
+	return user.HouseholdID, selectErr.Error
+}
+
+// GetHouseholdByID uses a given household ID and returns the matching household object
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) GetHouseholdByID(householdID uint) (database.Household, error) {
+	var household database.Household
+	// Gets first household with matching id
+	selectErr := dbc.DBHandle.First(&household, householdID)
+	return household, selectErr.Error
 }
 
 // UserExistsByUsername returns if a given user object exists in the database based on the property 'username'
@@ -88,14 +106,39 @@ func (dbc DatabaseController) GetNextUserID() uint {
 // Before creation, the user password is hashed with brcypt
 // If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) CreateUser(user *authentication.User) error {
+	// Start a database transaction
+	tx := dbc.DBHandle.Begin()
+
+	// Create a new household
+	household := database.Household{
+		Name: fmt.Sprintf("%s's Household", user.Username),
+	}
+	if err := tx.Create(&household).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	// Create new database user
 	hashedPassword, hashError := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if hashError != nil {
 		return hashError
 	}
 	user.Password = string(hashedPassword)
-	createResult := dbc.DBHandle.Create(user)
-	return createResult.Error
+	user.HouseholdID = household.ID
+	if err := tx.Create(&user).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Set created user as household admin
+	if err := tx.Model(&household).Update("admin_id", user.ID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Commit the transaction
+	tx.Commit()
+	return nil
 }
 
 // UpdateUser gets a user (based on user ID) and updates its contents with the contents of a supplied reference to the updated user
@@ -177,8 +220,8 @@ func (dbc DatabaseController) UpdateUserPassword(userID uint, login *authenticat
 	}
 }
 
-// UserIsProductOwner checks if user (based on user ID) is the matching owner of a product (based on product ID)
-func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) bool {
+// UserHasProductAccess checks if user (based on user ID) is the matching owner of a product (based on product ID)
+func (dbc DatabaseController) UserHasProductAccess(userID uint, productID int) bool {
 	// Check for invalid product IDs
 	if productID <= 0 {
 		return false
@@ -192,25 +235,39 @@ func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) boo
 		return false
 	}
 
-	// Return if given userID matches database assigned userID
-	return product.UserID == userID
+	// Get user by ID
+	var user authentication.User
+	getError = dbc.DBHandle.First(&user, userID)
+	// Failsafe - If error is found, return false
+	if getError.Error != nil {
+		return false
+	}
+
+	return user.HouseholdID == product.HouseholdID
 }
 
-// GetUserMailAddressByID returns the mail address of a user by his ID
-func (dbc DatabaseController) GetUserMailAddressByID(userID uint) (string, error) {
-	// Get user object from database
-	user, userErr := dbc.GetUserByID(userID)
+// GetHouseholdMembersMailAddressesByID returns the mail addresses of all users of a household
+func (dbc DatabaseController) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error) {
+	var mailAddresses []string
+	// Check for household
+	_, householdErr := dbc.GetHouseholdByID(householdID)
 	// Check for database error
-	if userErr != nil {
-		return "", userErr
+	if householdErr != nil {
+		return mailAddresses, householdErr
 	}
 
-	// Check if mail address of user is empty or return it
-	if user.MailAddress != "" {
-		return user.MailAddress, nil
-	} else {
-		return "", errors.ErrUserHasNoMailAddress
+	// Find users with matching id
+	var users []authentication.User
+	findErr := dbc.DBHandle.Where("household_id = ?", householdID).Find(&users)
+	if findErr != nil {
+		return mailAddresses, findErr.Error
 	}
+
+	// Loop through household members and add mail addresses
+	for _, user := range users {
+		mailAddresses = append(mailAddresses, user.MailAddress)
+	}
+	return mailAddresses, nil
 }
 
 // GetUserProductsBulk returns an array of products of a user (based on user ID)
@@ -222,20 +279,26 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 	if userErr != nil {
 		return []database.Product{}, userErr
 	}
-	// Get user with products preloaded
-	var userWithData authentication.User
-	findErr := dbc.DBHandle.Preload("Products", "user_id = ?", user.ID).Find(&userWithData, user.ID)
-	if findErr.Error != nil {
-		return []database.Product{}, findErr.Error
+
+	if user.HouseholdID == 0 {
+		return []database.Product{}, errors.ErrInvalidUserData
 	}
 
-	// If no limit is supplied, return full set
-	// If limit is supplied, return limited set
-	if limit <= 0 {
-		return userWithData.Products, nil
-	} else {
-		return userWithData.Products[:limit], nil
+	// Get household with products preloaded
+	var products []database.Product
+	query := dbc.DBHandle.Where("household_id = ?", user.HouseholdID)
+
+	// Apply limit if specified
+	if limit > 0 {
+		query = query.Limit(limit)
 	}
+
+	// Execute query
+	queryErr := query.Find(&products).Error
+	if queryErr != nil {
+		return []database.Product{}, queryErr
+	}
+	return products, nil
 }
 
 // GetUserProductsBulkByBarcode returns an array of products of a user (based on user ID) matching a barcode
@@ -247,14 +310,21 @@ func (dbc DatabaseController) GetUserProductsBulkByBarcode(userID uint, barcode 
 	if userErr != nil {
 		return []database.Product{}, userErr
 	}
-	// Get user with products preloaded
-	var userWithData authentication.User
-	findErr := dbc.DBHandle.Preload("Products", "user_id = ? and barcode = ?", user.ID, barcode).Find(&userWithData, user.ID)
-	if findErr.Error != nil {
-		return []database.Product{}, findErr.Error
+
+	if user.HouseholdID == 0 {
+		return []database.Product{}, errors.ErrInvalidUserData
 	}
 
-	return userWithData.Products, nil
+	// Get household with products preloaded
+	var products []database.Product
+	query := dbc.DBHandle.Where("household_id = ? and barcode = ?", user.HouseholdID, barcode)
+
+	// Execute query
+	queryErr := query.Find(&products).Error
+	if queryErr != nil {
+		return []database.Product{}, queryErr
+	}
+	return products, nil
 }
 
 // GetProductByID returns a product object (based on product ID) of a user (based on user ID)
@@ -268,18 +338,23 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 	var product database.Product
 	getError := dbc.DBHandle.First(&product, productID)
 
-	// Check if error occured while getting produc
+	// Check if error occured while getting product
 	if getError.Error != nil {
 		// Return empty set and database error
 		return database.Product{}, getError.Error
 	}
 
-	// Check if userID of database product matches the userID of the current user
-	if product.UserID != userID {
+	// Get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return database.Product{}, userErr
+	}
+
+	// Check if household id of the product is different than household id of the user
+	if product.HouseholdID != user.HouseholdID {
 		// Return empty set and custom error
 		return database.Product{}, errors.ErrMismatcherUserID
 	}
-
 	// Return database product
 	return product, nil
 }
@@ -295,7 +370,7 @@ func (dbc DatabaseController) SearchProducts(searchQuery string, searchParameter
 	// Get all user products
 	var foundProducts []database.Product
 	preloadedDataset := dbc.DBHandle.
-		Where("user_id = ?", user.ID).
+		Where("household_id = ?", user.HouseholdID).
 		Where("deleted_at IS NULL")
 
 	// Transform search query
@@ -328,10 +403,12 @@ func (dbc DatabaseController) CreateProduct(userID uint, product *database.Produ
 	if userErr != nil {
 		return userErr
 	}
-	user.Products = append(user.Products, *product)
+
+	// Set household id
+	*&product.HouseholdID = user.HouseholdID
 	// Create new product
-	saveErr := dbc.DBHandle.Save(&user)
-	return saveErr.Error
+	createErr := dbc.DBHandle.Create(&product)
+	return createErr.Error
 }
 
 // UpdateProduct gets a product (based on product ID) of a user (based on user ID) and updates its contents with the contents of a supplied reference to the updated product
@@ -350,8 +427,16 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	if getError.Error != nil {
 		return getError.Error
 	}
-	// Check if supplied user matches the userID in the database object
-	if dbProduct.UserID != userID {
+
+	// Try to get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return userErr
+	}
+
+	// Check if supplied user is allowed to patch the product
+	// TODO: Check on middleware possible?
+	if dbProduct.HouseholdID != user.HouseholdID {
 		return errors.ErrMismatcherUserID
 	}
 
@@ -395,8 +480,15 @@ func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, exp
 	if getError.Error != nil {
 		return getError.Error
 	}
-	// Check if supplied user matches the userID in the database object
-	if dbProduct.UserID != userID {
+
+	// Try to get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return userErr
+	}
+
+	// Check if supplied user is allowed to update product
+	if dbProduct.HouseholdID != user.HouseholdID {
 		return errors.ErrMismatcherUserID
 	}
 
@@ -473,6 +565,12 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	// Create list of hometiles
 	homeTiles := []webparts.Tile{}
 
+	// Try to get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return homeTiles, userErr
+	}
+
 	// Get count of products
 	productList, productCountErr := dbc.GetUserProductsBulk(userID, -1)
 	if productCountErr != nil {
@@ -495,7 +593,7 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	// Get last inserted product
 	var lastProduct database.Product
 	getError := dbc.DBHandle.
-		Where("user_id = ?", userID).
+		Where("household_id = ?", user.HouseholdID).
 		Where("deleted_at IS NULL").
 		Order("created_at DESC").
 		Limit(1).
@@ -514,7 +612,7 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	// Last notification
 	var lastNotifiedProduct database.Product
 	getNotifiedError := dbc.DBHandle.
-		Where("user_id = ?", userID).
+		Where("household_id = ?", user.HouseholdID).
 		Where("deleted_at IS NULL").
 		Order("notified_at DESC").
 		Limit(1).
