@@ -144,6 +144,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	publicProductAPI.POST("", v1.CreateProduct)
 	publicProductAPI.POST("/scan", v1.ScanProduct)
 	publicProductAPI.GET("/byBarcode/:barcode", v1.GetProductsByBarcode)
+	publicProductAPI.GET("/search", v1.SearchProducts)
 
 	// Protected user routes
 	protectedUserAPI := engine.Group("/api/v1/user")
