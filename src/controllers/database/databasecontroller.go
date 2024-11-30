@@ -31,7 +31,7 @@ const (
 // If the enum value can't be matched, enum value 'InvalidParameter' is used
 func SearchParameterEnumFromString(str string) SearchParameterEnum {
 	switch str {
-	case "productName":
+	case "product_name":
 		return ProductName
 	case "barcode":
 		return Barcode
@@ -360,7 +360,7 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 }
 
 // SearchProducts returns an array of products of a user matching a search paramater and a query
-func (dbc DatabaseController) SearchProducts(searchQuery string, searchParameter SearchParameterEnum, userID uint) ([]database.Product, error) {
+func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue string, sort string, order string, userID uint) ([]database.Product, error) {
 	// Get user object from database
 	user, userErr := dbc.GetUserByID(userID)
 	if userErr != nil {
@@ -374,17 +374,20 @@ func (dbc DatabaseController) SearchProducts(searchQuery string, searchParameter
 		Where("deleted_at IS NULL")
 
 	// Transform search query
-	searchQuery = fmt.Sprintf("%%%s%%", searchQuery)
+	queryValue = fmt.Sprintf("%%%s%%", queryValue)
 
 	// Get matching products of preloaded set based on search parameter
-	switch searchParameter {
+	switch queryParam {
 	case ProductName:
-		preloadedDataset = preloadedDataset.Where("product_name LIKE ?", searchQuery)
+		preloadedDataset = preloadedDataset.Where("product_name LIKE ?", queryValue)
 	case Barcode:
-		preloadedDataset = preloadedDataset.Where("barcode LIKE ?", searchQuery)
+		preloadedDataset = preloadedDataset.Where("barcode LIKE ?", queryValue)
 	default:
 		return []database.Product{}, errors.ErrDatabaseInvalidSearchParameter
 	}
+
+	// Order dataset
+	preloadedDataset = preloadedDataset.Order(fmt.Sprintf("%s %s", sort, order))
 
 	// Cast found set to returned array or return error
 	findErr := preloadedDataset.Find(&foundProducts)

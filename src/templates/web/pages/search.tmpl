@@ -1,42 +1,47 @@
 {{ define "content" }}
+
+<style>
+    .card {
+        min-height: 150px;
+    }
+
+    .card-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+</style>
+
 <div class="row justify-content-between p-3">
+
     <div class="text-center mb-4">
-        <h2>Search results</h2>
-        <p class="text-muted">
-            {{ if .SearchQuery }}
-            <span class="fs-6 badge bg-primary">
-                {{ .SearchParameter }} ~ "{{ .SearchQuery }}"
-            </span>
-            {{ else }}
-            <span class="fs-6 badge bg-primary">
-                No query specified
-            </span>
-            {{ end }}
-        </p>
+		<h2>Search product</h2>
+		<p class="text-muted">Select and build search query to show products</p>
+	</div>
+
+    <div class="search-bar">
+        <select id="search-param" class="form-select">
+            <option value="product_name">Product Name</option>
+            <option value="barcode">Barcode</option>
+        </select>
+        <input type="text" id="search-query" class="form-control" placeholder="Search..." />
+        <select id="sort-param" class="form-select">
+            <option value="created_at">Created At</option>
+            <option value="expire_at">Expire At</option>
+            <option value="scanned_at">Scanned At</option>
+            <option value="notified_at">Notified At</option>
+        </select>
+        <select id="sort-order" class="form-select">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+        </select>
+        <button id="search-btn" class="btn btn-primary">Search</button>
     </div>
 </div>
 
-{{ if .Products }}
-
-<div class="row row-cols-1 row-cols-lg-2 g-5">
-    {{ range .Products }}
-
-        {{ template "productCard" . }}
-
-    {{ end }}
+<div id="product-list" class="row row-cols-1 row-cols-lg-2 g-5">
+    <!-- Products will be rendered here -->
 </div>
 
-{{ else }}
-<div class="row my-2">
-    <div class="w-100 mt-5 text-center">
-        <div class="fs-1 text-warning my-4">
-            <i class="bi bi-emoji-dizzy-fill me-2"></i>
-        </div>
-        <p class="font-monospace fs-4">
-            No products found!
-        </p>
-    </div>
-</div>
-{{ end }}
-
+<script src="/assets/js/productsSearch.js"></script>
 {{ end }}
