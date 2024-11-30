@@ -405,7 +405,7 @@ func (dbc DatabaseController) CreateProduct(userID uint, product *database.Produ
 	}
 
 	// Set household id
-	*&product.HouseholdID = user.HouseholdID
+	product.HouseholdID = user.HouseholdID
 	// Create new product
 	createErr := dbc.DBHandle.Create(&product)
 	return createErr.Error
