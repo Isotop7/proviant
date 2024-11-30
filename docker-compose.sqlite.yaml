@@ -1,0 +1,33 @@
+services:
+  smtp:
+    image: rnwood/smtp4dev:latest
+    restart: always
+    ports:
+      - "81:80"
+    volumes:
+      - smtpdb:/smtp4dev
+
+  proviant:
+    build: ./
+    restart: always
+    ports: 
+      - "80:5050"
+    environment:
+      - GIN_MODE=debug
+      - PROVIANT_LOGGING_ENABLED=true
+      - PROVIANT_LOGGING_FILE=logs/proviant.log
+      - PROVIANT_ENGINE=sqlite
+      - PROVIANT_SQLITE_FILEPATH=data/proviant.db
+      - PROVIANT_NOTIFICATION_SMTP_HOST=smtp
+      - PROVIANT_NOTIFICATION_FROMADDRESS=proviant@yourdomain.com
+    volumes:
+      - proviantlogs:/app/logs
+      - proviantdb:/app/data
+    links:
+      - smtp
+
+volumes:
+  proviantdb: {}
+  proviantlogs: {}
+  smtpdb: {}
+  

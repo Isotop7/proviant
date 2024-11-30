@@ -1,0 +1,154 @@
+// Toggle global options
+$enable-gradients: true;
+$enable-shadows: true;
+
+$offcanvas-box-shadow: 0 1rem 3rem rgba(0, 0, 0, .175);
+
+// Include functions first
+@import "bootstrap/scss/functions";
+
+// Include fonts;
+@import "./fonts.scss";
+
+// Customize some defaults
+$font-family-base: 'DM Sans Variable', sans-serif;
+$card-cap-bg:  rgba(var(--bs-body-color-rgb), .15);
+$card-bg:  rgba(var(--bs-body-color-rgb), .01);
+$list-group-border-width: 2px;
+$line-height-base: 2;
+
+// Colors
+// Minimal Slate Theme
+$primary: #577590; // Slate Blue
+$secondary: #a3a5b3; // Cool Gray
+$info: #a8dadc; // Soft Teal
+$light: #f1faee; // Light Cream
+$dark: #1d3557; // Dark Slate Blue
+$gray: #d1d9e6; // Light Gray
+$success: #66a182; // Muted Green
+$warning: #e8c547; // Soft Yellow
+$danger: #ef476f; // Bright Red
+$link-color: #457b9d; // Slate Blue
+
+// Additional colors
+$body-bg: #f5f7fa; // Light Gray Background
+$body-color: #2a2a2a; // Dark Text
+$border-color: #e1e5ec; // Light Border Gray
+$shadow-color: rgba(30, 45, 60, 0.15); // Soft Shadow
+
+// Required
+@import "bootstrap/scss/variables";
+@import "bootstrap/scss/variables-dark";
+@import "bootstrap/scss/maps";
+@import "bootstrap/scss/mixins";
+@import "bootstrap/scss/utilities";
+@import "bootstrap/scss/root";
+@import "bootstrap/scss/reboot";
+
+@import "bootstrap/scss/type";
+@import "bootstrap/scss/images";
+@import "bootstrap/scss/containers";
+@import "bootstrap/scss/grid";
+@import "bootstrap/scss/tables";
+@import "bootstrap/scss/forms";
+@import "bootstrap/scss/buttons";
+@import "bootstrap/scss/transitions";
+@import "bootstrap/scss/dropdown";
+@import "bootstrap/scss/button-group";
+@import "bootstrap/scss/nav";
+@import "bootstrap/scss/navbar"; // Requires nav
+@import "bootstrap/scss/card";
+// @import "bootstrap/scss/breadcrumb";
+// @import "bootstrap/scss/accordion";
+// @import "bootstrap/scss/pagination";
+@import "bootstrap/scss/badge";
+@import "bootstrap/scss/alert";
+// @import "bootstrap/scss/progress";
+@import "bootstrap/scss/list-group";
+@import "bootstrap/scss/close";
+@import "bootstrap/scss/toasts";
+@import "bootstrap/scss/modal"; // Requires transitions
+// @import "bootstrap/scss/tooltip";
+@import "bootstrap/scss/popover";
+// @import "bootstrap/scss/carousel";
+@import "bootstrap/scss/spinners";
+@import "bootstrap/scss/offcanvas"; // Requires transitions
+// @import "bootstrap/scss/placeholders";
+
+// Helpers
+@import "bootstrap/scss/helpers";
+
+// Utilities
+@import "bootstrap/scss/utilities/api";
+
+// Icons
+$bootstrap-icons-font-dir: "../fonts";
+@import "bootstrap-icons/font/bootstrap-icons.scss";
+
+//
+// Custom styles
+//
+.navbar {
+    //background-color: var(--bs-body-bg);
+    background-image: none;
+    margin-bottom: 30px;
+    border-bottom: 6px solid var(--bs-primary);
+}
+
+.navbar-nav .nav-link i {
+    transition: color 0.2s ease;
+}
+
+.navbar-nav .nav-link:hover i {
+    color: var(--bs-info);
+}
+
+.logo-font {
+    font-family: 'Pacifico';
+    color: var(--bs-info);
+}
+
+#content-wrapper {
+    padding-top: 100px;
+}
+
+div.form-floating > input#inputUsername {
+    margin-bottom: -1px;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+div.form-floating > input#inputMailAddress {
+    margin-bottom: 10px;
+}
+
+td a,th a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.form-check-input:checked {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary)
+}
+
+.product-card-img-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.product-card-img {
+    max-height: 160px;
+    object-fit: cover;
+}
+
+.product-btn-toolbar {
+    display: inline;
+}
+
+.nav-proviant-logo {
+    height: 48px;
+    width: 48px;
+}

@@ -1,68 +1,137 @@
-![Expiro](./res/icons/header_3.png){width=100%}
+![Proviant](./res/icons/header_1.png){width=100%}
 
-![License](https://img.shields.io/gitlab/license/Isotop7/expiro)
-![Release](https://gitlab.com/Isotop7/expiro/-/badges/release.svg)
-![CI @ main](https://gitlab.com/Isotop7/expiro/badges/main/pipeline.svg)
-![CI @ develop](https://gitlab.com/Isotop7/expiro/badges/develop/pipeline.svg)
-![Golang version](https://img.shields.io/badge/Go-1.21-green)
+![License](https://img.shields.io/gitlab/license/Isotop7/proviant)
+![Release](https://gitlab.com/Isotop7/proviant/-/badges/release.svg)
+![CI @ main](https://gitlab.com/Isotop7/proviant/badges/main/pipeline.svg)
+![CI @ develop](https://gitlab.com/Isotop7/proviant/badges/develop/pipeline.svg)
+![Golang version](https://img.shields.io/badge/Go-1.23-green)
 
-⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is **expiro**
 
-📚 **expiro** is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food 🥗
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
 
-## 🚀 Features
+⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is **proviant**
+
+📚 **proviant** is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food 🥗
+
+## Features
 
 - 📝 Track and log your products.
 - 📊 Add information from OpenFoodFacts API.
 - ⏰ Get reminders if products are due to expire.
-- 📱 Mobile-friendly responsive design for on-the-go usage.
 
-## 🛠️ Technologies and Tools
+## Technologies and Tools
 
-- **Frontend:** ~~Razor~~, HTML, CSS
-- **Backend:** Go, Gin, Gorm
-- **Database:** MariaDB or SQLite (fallback)
+- **Web:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html)
+- **Database:** MariaDB or SQLite
 
-## 📦 Installation and Usage
+## Installation and Usage
 
-### 🔙 Backend
+### Backend
 
-1. Clone the repository: `git clone https://gitlab.com/Isotop7/expiro.git`
-2. Navigate to the project directory: `cd expiro/backend/src`
-3. Build the application: `go build -o expiro-backend`
-4. Copy the config file `config.yaml.tmpl`, rename it to `config.yaml` and adjust it
-5. Run the server: `./expiro-server`
-6. ~~Start frontend server~~
+#### Executable
 
-### 🖼️ Frontend
+1. Clone the repository: `git clone https://gitlab.com/Isotop7/proviant.git`
+2. Setup node_modules and assets: `make init`
+3. Navigate to the project directory: `cd proviant/src`
+4. Build the application: `go build -o proviant`
+5. Copy the desired config file `config.yaml.[mariadb|sqlite].tmpl`, rename it to `config.yaml` and adjust it
+6. Run the server: `./proviant`
 
-### 💻 Client
+#### Docker
 
-*TODO*
+`proviant` can be started with `docker compose`
 
-## 😥 What's missing?
+- [External MariaDB database](./docker-compose.mariadb.yaml)
+- [Internal SQLite database](./docker-compose.sqlite.yaml)
 
-### 🔙 Backend
+The app can be configured with environment variables:
 
-- Authentication: Add authentication on the Web UI so only you can edit and delete your digital fridge
-- Administrative Functions: Create and Update backend users
-- Personalize fridge: Assign products to users or user groups, send notifications to assigned entity
-- Documentation: Provide screenshots and basic help guide
-- Automated testing: Provide automated testing for better code qualitxy
+```bash
+# Server configuration
+PROVIANT_SERVER_PORT=5050                                                     # Listening port of server
+PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD="secret key"                     # Secret used for JSON Web Tokens
+PROVIANT_SERVER_AUTHENTICATION_TOKENLIFETIME=8                                # Lifetime of JSON Web Tokens
+PROVIANT_SERVER_CORS_ALLOWALLORIGINS=true                                     # Allow all requests to API
+PROVIANT_SERVER_CORS_ALLOWEDORIGINS="http://localhost https://myapi.com"      # Allow this list of hosts to access API
 
-### 💻 Client
+# Database configuration
+## SQLite
+PROVIANT_ENGINE="sqlite"                                                              # Use sqlite
+PROVIANT_SQLITE_FILEPATH="data/proviant.db"                                             # Path to database file, this folder needs to exist
+## MariaDB
+PROVIANT_ENGINE="mariadb"                                                             # Use mariadb
+PROVIANT_MARIADB_DATABASE_HOST="127.0.0.1"                                            # Database server IP or hostname
+PROVIANT_MARIADB_DATABASE_PORT=3306                                                   # Database server port
+PROVIANT_MARIADB_DATABASE_NAME="proviant"                                               # Database name
+PROVIANT_MARIADB_DATABASE_USER="proviant"                                               # Database user
+PROVIANT_MARIADB_DATABASE_PASSWORD="password"                                         # Database user password
 
-- `expiro-esp`: Reference implementation of a ESP microcontroller and a connected barcode scanner to check in products
+# Logging configuration
+PROVIANT_LOGGING_ENABLED=true                                                 # Enable file logging
+PROVIANT_LOGGING_FILE="proviant.log"                                            # Path to log file
 
-## 🤝 Contributing
+# Notification configuration
+PROVIANT_NOTIFICATION_ENABLED=true                                            # Enable notifications
+PROVIANT_NOTIFICATION_INTERVAL=12                                             # Interval in hours when notifications should be send
+PROVIANT_NOTIFICATION_FROMADDRESS="sender@local.net"                          # Sender address for notifications
+PROVIANT_NOTIFICATION_SMTP_HOST="127.0.0.1"                                   # Host or IP address of SMTP server
+PROVIANT_NOTIFICATION_SMTP_PORT=25                                            # Port of SMTP server
+PROVIANT_NOTIFICATION_SMTP_SSL=false                                          # Enables/disables SSL
+PROVIANT_NOTIFICATION_SMTP_USER="user"                                        # Username used for sending notifications via SMTP server
+PROVIANT_NOTIFICATION_SMTP_PASSWORD="password"                                # Password used for sending notifications via SMTP server
+
+# OpenFoodFacts configuration
+PROVIANT_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"   # Address of API backend of OpenFoodFacts
+PROVIANT_OPENFOODFACTS_TIMEOUT=5                                              # Timeout of API requests to OpenFoodFacts API
+```
+
+Additionally `Gin` supports a debug mode, which also can be set with a environment variable:
+
+```bash
+GIN_MODE=debug
+```
+
+## What's missing?
+
+- Administrative Functions: Create and Update users
+- Everything that's still an issue 😅
+
+## Documentation
+
+Documentation is generated with `gomarkdoc` and `swagger`:
+
+- [Package documentation](./docs/README.md)
+- [Swagger definition](./docs/swagger.yaml)
+
+## Screenshots
+
+- Login and Signup page for multi user mode
+
+![Login](./docs/screenshots/login.png)
+
+- Portal view with activity tiles
+
+![Portal](./docs/screenshots/portal.png)
+
+- Create product and query data from OpenFoodFactAPI
+
+![Create product](./docs/screenshots/create.png)
+
+- Search all products based on parameters
+
+![Search products](./docs/screenshots/search.png)
+
+## Contributing
 
 Contributions are welcome! Fork the repository, make your changes, and submit a pull request.
 
-## 📄 License
+## License
 
 This project is licensed under the [MIT License](LICENSE).
 
-## 👤 Author
+## Author
 
 - GitLab: [@Isotop7](https://gitlab.com/Isotop7)
 - LinkedIn: [Hendrik Röder](https://www.linkedin.com/in/hendrik-r%C3%B6der-9b8483198/)

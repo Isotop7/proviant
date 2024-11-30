@@ -1,0 +1,48 @@
+services:
+  database:
+    image: mariadb:11.0
+    restart: always
+    environment:
+      - MARIADB_DATABASE=proviant
+      - MARIADB_ROOT_PASSWORD=proviant
+      - MARIADB_USER=proviant
+      - MARIADB_PASSWORD=supersecretpassword
+    volumes:
+      - proviantdb:/var/lib/mysql
+
+  smtp:
+    image: rnwood/smtp4dev:latest
+    restart: always
+    ports:
+      - "81:80"
+    volumes:
+      - smtpdb:/smtp4dev
+
+  proviant:
+    build: ./
+    restart: always
+    ports: 
+      - "80:5050"
+    depends_on:
+      - database
+    environment:
+      - GIN_MODE=debug
+      - PROVIANT_LOGGING_ENABLED=true
+      - PROVIANT_LOGGING_FILE=logs/proviant.log
+      - PROVIANT_ENGINE=sqlite
+      - PROVIANT_DATABASE_HOST=database
+      - PROVIANT_DATABASE_USER=proviant
+      - PROVIANT_DATABASE_PASSWORD=supersecretpassword
+      - PROVIANT_NOTIFICATION_SMTP_HOST=smtp
+      - PROVIANT_NOTIFICATION_FROMADDRESS=proviant@yourdomain.com
+    volumes:
+      - proviantlogs:/app/logs
+    links:
+      - database
+      - smtp
+
+volumes:
+  proviantdb: {}
+  proviantlogs: {}
+  smtpdb: {}
+  

@@ -1,0 +1,8 @@
+config.yaml*
+.gitignore
+.gitlab-ci.yml
+LICENSE
+Makefile
+README.md
+res/
+.vscode

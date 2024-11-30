@@ -1,0 +1,486 @@
+basePath: /
+definitions:
+  api.APIResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  authentication.Login:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  authentication.Signup:
+    properties:
+      mailAddress:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - mailAddress
+    - password
+    - username
+    type: object
+  authentication.User:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      mailAddress:
+        type: string
+      products:
+        items:
+          $ref: '#/definitions/database.Product'
+        type: array
+      updatedAt:
+        type: string
+      username:
+        type: string
+    type: object
+  database.Product:
+    properties:
+      barcode:
+        type: string
+      categories:
+        type: string
+      countries:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      expireAt:
+        type: string
+      id:
+        type: integer
+      imageUrl:
+        type: string
+      notifiedAt:
+        type: string
+      productName:
+        type: string
+      scannedAt:
+        type: string
+      updatedAt:
+        type: string
+      userID:
+        type: integer
+    type: object
+  database.ProductDTOBarcode:
+    properties:
+      barcode:
+        type: string
+    type: object
+  database.ProductDTOExpire:
+    properties:
+      barcode:
+        type: string
+      expireAt:
+        type: string
+      id:
+        type: integer
+    type: object
+  database.Timestamp:
+    properties:
+      timestamp:
+        type: string
+    required:
+    - timestamp
+    type: object
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:5050
+info:
+  contact:
+    email: hendrik@hr94.de
+    name: Isotop7
+    url: https://gitlab.com/Isotop7/proviant
+  description: proviant is a simple and intuitive application to track your bought
+    products and their expiration date to prevent waste of food.
+  license:
+    name: MIT
+    url: https://gitlab.com/Isotop7/proviant/-/blob/main/LICENSE
+  title: proviant
+  version: 0.2.0
+paths:
+  /api/health:
+    get:
+      consumes:
+      - application/json
+      description: Gets health status of the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Gets health
+      tags:
+      - common
+  /api/v1/product/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a product of a user
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Deletes a product
+      tags:
+      - product
+    get:
+      description: Returns a single product of user
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/database.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Returns a single product
+      tags:
+      - product
+    patch:
+      consumes:
+      - application/json
+      description: Updates a product with new values
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Product
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/database.Product'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/database.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Updates a product
+      tags:
+      - product
+  /api/v1/product/{id}/expire:
+    post:
+      consumes:
+      - application/json
+      description: Updates the expire date of a product
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Timestamp
+        in: body
+        name: timestamp
+        required: true
+        schema:
+          $ref: '#/definitions/database.Timestamp'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/database.ProductDTOExpire'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Updates the expire date
+      tags:
+      - product
+  /api/v1/products:
+    get:
+      description: Return a list of products of user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/database.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Return a list of products
+      tags:
+      - product
+    post:
+      consumes:
+      - application/json
+      description: Creates a new product of a user
+      parameters:
+      - description: Product
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/database.Product'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/database.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Creates a new product
+      tags:
+      - product
+  /api/v1/products/expired:
+    get:
+      consumes:
+      - application/json
+      description: Gets a list of expired products of a user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/database.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Gets expired products
+      tags:
+      - product
+  /api/v1/products/scan:
+    post:
+      consumes:
+      - application/json
+      description: Returns the barcode of a product in an uploaded image
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/database.ProductDTOBarcode'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Scan product
+      tags:
+      - product
+  /api/v1/productsByBarcode:
+    get:
+      description: Returns a list of products of user matching the given barcode
+      parameters:
+      - description: Barcode
+        in: path
+        name: barcode
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/database.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Returns a list of products
+      tags:
+      - product
+  /api/v1/user:
+    patch:
+      consumes:
+      - application/json
+      description: Updates properties of a user
+      parameters:
+      - description: User
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/authentication.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authentication.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Updates a user object
+      tags:
+      - user
+  /api/v1/user/password:
+    post:
+      consumes:
+      - application/json
+      description: Updates password of a user
+      parameters:
+      - description: Login
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/authentication.Login'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Updates a user password
+      tags:
+      - user
+  /auth/signup:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new new user in the database
+      parameters:
+      - description: Signup
+        in: body
+        name: signup
+        required: true
+        schema:
+          $ref: '#/definitions/authentication.Signup'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Creates a new user
+      tags:
+      - user
+securityDefinitions:
+  JSON Web Token:
+    type: basic
+swagger: "2.0"

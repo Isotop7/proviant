@@ -1,0 +1,28 @@
+{{define "base"}}
+<!doctype html>
+<html lang="de" data-bs-theme="dark" class="h-100">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ if .Title }}proviant - {{ .Title}}{{ else }}proviant{{ end }}</title>
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script src="/assets/js/proviant.js"></script>
+</head>
+
+<body class="d-flex flex-column h-100">
+  <header>
+    {{template "nav" .}}
+  </header>
+  <main class="flex-shrink-0">
+    <div id="content-wrapper" class="container">
+      {{template "content" .}}
+    </div>
+  </main>
+  {{template "footer" .}}
+  <script src="/assets/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/main.js"></script>
+</body>
+
+</html>
+{{end}}

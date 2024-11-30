@@ -1,0 +1,58 @@
+{{ define "content" }}
+
+{{ if .HasHousehold }}
+
+{{ if .Tiles }}
+<div class="container row row-cols-1 row-cols-md-3 g-5 p-3">
+    {{ range .Tiles }}
+    <div class="col">
+        <div class="card h-100 text-body-secondary mb-3">
+            <div class="card-header fw-bold">
+                {{ .Title }}
+            </div>
+            <div class="card-body">
+                <p class="card-title display-5 my-2 text-primary fw-bold">
+                    {{ .Hero }}
+                </p>
+                <p class="card-text fs-5 fw-light">
+                    {{ .Body }}
+                </p>
+            </div>
+            <!--<div class="card-footer">
+                <small>
+                    {{ .Footer }}
+                </small>
+            </div>-->
+        </div>
+    </div>
+    {{ end }}
+</div>
+{{ else }}
+
+{{ template "noproducts" . }}
+
+{{ end }}
+
+{{ else }}
+
+<div class="container row text-center">
+    <p class="fs-1">
+        <i class="bi bi-emoji-dizzy-fill my-5 text-primary"></i>
+    </p>
+    <p class="fs-2 my-2">
+        Oh no!
+    </p>
+    <p class="my-3">
+        You are not connected to any household. Switch to the user settings to connect to a household or create a new one.
+    </p>
+    <div class="my-4">
+        <a class="btn btn-outline-primary" href="/web/user/settings">
+            <i class="bi bi-cart-plus-fill me-2"></i>
+            Connect to household
+        </a>
+    </div>
+</div>
+
+{{ end }}
+
+{{ end }}

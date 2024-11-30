@@ -1,0 +1,35 @@
+---
+server:
+  port: 5114
+  authentication:
+    tokenPassword: "secret key"
+    tokenLifetime: 8
+  cors:
+    allowAllOrigins: false
+    allowedOrigins:
+      - "http://localhost"
+      - "http://myproviant.instance"
+
+database:
+  engine: sqlite
+  sqlite:
+    filepath: "data/proviant.db"
+
+logging:
+  enabled: true
+  file: "proviant.log"
+
+notification:
+  enabled: true
+  interval: 12
+  fromAddress: sender@local.net
+  smtp:
+    host: 127.0.0.1
+    port: 25
+    ssl: false
+    user: user
+    password: password
+
+openfoodfacts:
+  url: https://world.openfoodfacts.org/api/v2/product
+  timeout: 5

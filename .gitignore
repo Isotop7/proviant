@@ -1,4 +1,31 @@
-doc/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+.DS_Store
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Go workspace file
+go.work
+
+# npm
+node_modules/
+
+# assets
+src/assets/css/main.css*
+src/assets/css/fonts.css*
+src/assets/js/bootstrap*
+src/assets/js/html5-qrcode.min.js
+
+## Custom
+src/config.yaml
+src/test/*.httpie
 .vscode/
-expiro.log
-backend/test/*.httpie
+proviant.log
+src/data
