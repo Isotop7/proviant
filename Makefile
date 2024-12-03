@@ -52,7 +52,7 @@ audit:
 .PHONY: lint
 lint:
 	cd ./src && \
-	$(CONTAINER_RUNTIME) run -t --rm -v ./:/app -w /app golangci/golangci-lint:latest golangci-lint run -v -E gocritic --timeout "3m"
+	$(CONTAINER_RUNTIME) run -t --rm -v ./:/app:Z -w /app golangci/golangci-lint:v1.62 golangci-lint run -v -E gocritic --timeout "3m"
 
 # ==================================================================================== #
 # Documentation
@@ -79,8 +79,8 @@ doc:
 # Package
 # ==================================================================================== #
 
-.PHONY: $(CONTAINER_RUNTIME)image
-$(CONTAINER_RUNTIME)image:
+.PHONY: containerimage
+containerimage:
 	$(CONTAINER_RUNTIME) build --no-cache --tag=proviant ./
 
 # ==================================================================================== #
@@ -92,17 +92,17 @@ run:
 	cd ./src && \
 	go run proviant.go
 
-.PHONY: run$(CONTAINER_RUNTIME)
-run$(CONTAINER_RUNTIME):
-	@make $(CONTAINER_RUNTIME)image
+.PHONY: runcontainer
+runcontainer:
+	@make containerimage
 	cd ./src && \
-	$(CONTAINER_RUNTIME) run -t --rm -p 5114:5114 -v ./config.yaml.sqlite.tmpl:/app/config.yaml proviant:latest
+	$(CONTAINER_RUNTIME) run -t --rm -p 5114:5114 -v ./config.yaml.sqlite.tmpl:/app/config.yaml:Z proviant:latest
 
-.PHONY: run$(CONTAINER_RUNTIME)debug
-run$(CONTAINER_RUNTIME)debug:
-	@make $(CONTAINER_RUNTIME)image
+.PHONY: runcontainerdebug
+runcontainerdebug:
+	@make containerimage
 	cd ./src && \
-	$(CONTAINER_RUNTIME) run -it --rm -v ./config.yaml.sqlite.tmpl:/app/config.yaml --entrypoint /bin/sh proviant:latest
+	$(CONTAINER_RUNTIME) run -it --rm -v ./config.yaml.sqlite.tmpl:/app/config.yaml:Z --entrypoint /bin/sh proviant:latest
 
 # ==================================================================================== #
 # Web

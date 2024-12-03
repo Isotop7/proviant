@@ -15,7 +15,7 @@ import (
 
 	"gitlab.com/Isotop7/proviant/api"
 	"gitlab.com/Isotop7/proviant/controllers"
-	dbController "gitlab.com/Isotop7/proviant/controllers/database"
+	"gitlab.com/Isotop7/proviant/controllers/database"
 	"gitlab.com/Isotop7/proviant/errors"
 	"gitlab.com/Isotop7/proviant/models/configuration/static"
 	dbModel "gitlab.com/Isotop7/proviant/models/database"
@@ -69,7 +69,7 @@ func GetProducts(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get products of user from database with optional limit
 	products, productBulkErr := dbController.GetUserProductsBulk(userID, limit)
 	if productBulkErr != nil {
@@ -124,7 +124,7 @@ func GetProduct(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get product from database
 	product, getError := dbController.GetProductByID(productID, userID)
 
@@ -195,7 +195,7 @@ func GetProductsByBarcode(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get product from database
 	products, getError := dbController.GetUserProductsBulkByBarcode(userID, barcode)
 
@@ -282,7 +282,7 @@ func CreateProduct(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Create product in database
 	createResult := dbController.CreateProduct(userID, &product)
 	if createResult != nil {
@@ -347,7 +347,7 @@ func UpdateProduct(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Update product in database
 	updateErr := dbController.UpdateProduct(productID, userID, &product)
 
@@ -412,7 +412,7 @@ func DeleteProduct(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Delete product from database
 	deleteResult := dbController.DeleteProduct(productID, userID)
 	if deleteResult != nil {
@@ -478,7 +478,7 @@ func SetExpireAt(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	product, getErr := dbController.GetProductByID(productID, userID)
 	if getErr != nil {
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
@@ -549,7 +549,7 @@ func GetExpired(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get expired products of user from database
 	products, getExpiredErr := dbController.GetProductsExpired(userID)
 
@@ -670,4 +670,62 @@ func ScanProduct(ctx *gin.Context) {
 
 	// Return if timeout was not reached but channel did not signal success
 	ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+}
+
+// SearchProducts returns a list of products based on an query
+// @Summary      	Search products
+// @Description  	Returns a list of products based on a query
+// @Tags         	product
+// @Produce      	json
+// @Param        	id   	path	int					true  	"Product ID"
+// @Success      	200  {object}  []database.Product
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/products/search [GET]
+func SearchProducts(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get search parameters
+	var queryParam = ctx.DefaultQuery("queryParam", "product_name")
+	var queryValue = ctx.DefaultQuery("queryValue", "")
+	var sort = ctx.DefaultQuery("sort", "product_name")
+	var order = ctx.DefaultQuery("order", "asc")
+
+	enumParam := database.SearchParameterEnumFromString(queryParam)
+	if enumParam == database.InvalidParameter {
+		// If no supported parameter was found, exit
+		logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "No valid search parameters found"})
+		return
+	}
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	// Create database controller
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	// Get products of user from database with optional limit
+	products, productErr := dbController.SearchProducts(enumParam, queryValue, sort, order, userID)
+	if productErr != nil {
+		logger.Error().Msgf("Error getting products: %s", productErr)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, products)
 }

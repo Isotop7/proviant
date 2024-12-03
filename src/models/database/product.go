@@ -17,8 +17,8 @@ type Product struct {
 	ExpireAt    time.Time `json:"expireAt"`
 	ScannedAt   time.Time `json:"scannedAt"`
 	NotifiedAt  time.Time `json:"notifiedAt"`
-	HouseholdID uint      `gorm:"index, not null"`
-	Household   Household
+	HouseholdID uint      `gorm:"index, not null" json:"-"`
+	Household   Household `json:"-"`
 }
 
 // ProductDTOExpire is a simplified DTO for product expiration
