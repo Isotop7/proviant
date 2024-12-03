@@ -44,7 +44,7 @@ lint:
   services:
     - docker:dind
   variables:
-    DOCKER_IMAGE_NAME: golangci/golangci-lint:v1.61
+    DOCKER_IMAGE_NAME: golangci/golangci-lint:v1.62
   script:
     - cd ./src
     - docker run -t --rm -v $(pwd):/app -w /app $DOCKER_IMAGE_NAME golangci-lint run -v -E gocritic --timeout "3m"
