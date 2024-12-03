@@ -145,7 +145,9 @@ function renderProducts(products) {
 function renderNoProductsMessage() {
     const productList = document.getElementById("product-list");
     productList.innerHTML = `
-        <div class="alert alert-warning">No products found.</div>
+        <div class="mx-auto">
+            <div class="alert alert-warning text-center">No products found.</div>
+        </div>
     `;
 }
 
@@ -153,7 +155,9 @@ function renderNoProductsMessage() {
 function renderErrorMessage() {
     const productList = document.getElementById("product-list");
     productList.innerHTML = `
-        <div class="alert alert-danger">An error occurred while fetching products.</div>
+        <div class="mx-auto">
+            <div class="alert alert-danger text-center">An error occurred while fetching products.</div>
+        </div>
     `;
 }
 
