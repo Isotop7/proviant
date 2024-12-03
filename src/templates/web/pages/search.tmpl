@@ -12,30 +12,45 @@
     }
 </style>
 
-<div class="row justify-content-between p-3">
-
+<div class="row justify-content-between g-5 p-3">
     <div class="text-center mb-4">
-		<h2>Search product</h2>
-		<p class="text-muted">Select and build search query to show products</p>
-	</div>
+        <h2>Search product</h2>
+        <p class="text-muted">Select and build search query to show products</p>
+    </div>
+</div>
 
-    <div class="search-bar">
+<div class="row mb-4">
+    <div class="search-bar input-group mb-2 mb-md-0 w-100 w-md-auto">
+        <span class="input-group-text" id="addon-wrapping">
+            <i class="bi bi-key"></i>
+        </span>
         <select id="search-param" class="form-select">
             <option value="product_name">Product Name</option>
             <option value="barcode">Barcode</option>
         </select>
+        <span class="input-group-text" id="addon-wrapping">=</span>
         <input type="text" id="search-query" class="form-control" placeholder="Search..." />
-        <select id="sort-param" class="form-select">
-            <option value="created_at">Created At</option>
-            <option value="expire_at">Expire At</option>
-            <option value="scanned_at">Scanned At</option>
-            <option value="notified_at">Notified At</option>
-        </select>
-        <select id="sort-order" class="form-select">
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-        </select>
-        <button id="search-btn" class="btn btn-primary">Search</button>
+        <button class="btn btn-outline-secondary dropdown-toggle mb-md-0 w-md-auto" type="button" data-bs-toggle="collapse" data-bs-target="#advanced-filters" aria-expanded="false" aria-controls="advanced-filters">
+            <i class="bi bi-funnel"></i>
+        </button>
+        <button id="search-btn" class="btn btn-primary rounded-end">
+            <i class="bi bi-search me-2"></i>
+        </button>
+        <div id="advanced-filters" class="collapse w-100">
+            <div class="input-group my-2">
+                <span class="input-group-text">Order by</span>
+                <select id="sort-param" class="form-select">
+                    <option value="created_at">Created At</option>
+                    <option value="expire_at">Expire At</option>
+                    <option value="scanned_at">Scanned At</option>
+                    <option value="notified_at">Notified At</option>
+                </select>
+                <select id="sort-order" class="form-select">
+                    <option value="asc">↑ Ascending</option>
+                    <option value="desc">↓ Descending</option>
+                </select>
+            </div>
+        </div>
     </div>
 </div>
 
