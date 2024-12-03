@@ -52,7 +52,7 @@ audit:
 .PHONY: lint
 lint:
 	cd ./src && \
-	$(CONTAINER_RUNTIME) run -t --rm -v ./:/app -w /app golangci/golangci-lint:latest golangci-lint run -v -E gocritic --timeout "3m"
+	$(CONTAINER_RUNTIME) run -t --rm -v ./:/app:Z -w /app golangci/golangci-lint:v1.62 golangci-lint run -v -E gocritic --timeout "3m"
 
 # ==================================================================================== #
 # Documentation
