@@ -16,7 +16,6 @@ import (
 	"gitlab.com/Isotop7/proviant/api"
 	"gitlab.com/Isotop7/proviant/controllers"
 	"gitlab.com/Isotop7/proviant/controllers/database"
-	dbController "gitlab.com/Isotop7/proviant/controllers/database"
 	"gitlab.com/Isotop7/proviant/errors"
 	"gitlab.com/Isotop7/proviant/models/configuration/static"
 	dbModel "gitlab.com/Isotop7/proviant/models/database"
@@ -70,7 +69,7 @@ func GetProducts(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get products of user from database with optional limit
 	products, productBulkErr := dbController.GetUserProductsBulk(userID, limit)
 	if productBulkErr != nil {
@@ -125,7 +124,7 @@ func GetProduct(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get product from database
 	product, getError := dbController.GetProductByID(productID, userID)
 
@@ -196,7 +195,7 @@ func GetProductsByBarcode(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get product from database
 	products, getError := dbController.GetUserProductsBulkByBarcode(userID, barcode)
 
@@ -283,7 +282,7 @@ func CreateProduct(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Create product in database
 	createResult := dbController.CreateProduct(userID, &product)
 	if createResult != nil {
@@ -348,7 +347,7 @@ func UpdateProduct(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Update product in database
 	updateErr := dbController.UpdateProduct(productID, userID, &product)
 
@@ -413,7 +412,7 @@ func DeleteProduct(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Delete product from database
 	deleteResult := dbController.DeleteProduct(productID, userID)
 	if deleteResult != nil {
@@ -479,7 +478,7 @@ func SetExpireAt(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	product, getErr := dbController.GetProductByID(productID, userID)
 	if getErr != nil {
 		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
@@ -550,7 +549,7 @@ func GetExpired(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := dbController.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Get expired products of user from database
 	products, getExpiredErr := dbController.GetProductsExpired(userID)
 
