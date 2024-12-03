@@ -4,5 +4,5 @@ config.yaml*
 LICENSE
 Makefile
 README.md
-res/
+res/icons/*.xcf
 .vscode
