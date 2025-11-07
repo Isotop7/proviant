@@ -17,9 +17,29 @@
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-					<button id="btnDeleteProduct" type="submit" class="btn btn-warning">
-						<i class="bi bi-trash me-2"></i>
+					<button id="btnDeleteProduct" type="submit" class="btn btn-danger">
+						<i class="bi bi-trash-3 me-2"></i>
 						Delete product
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="archiveModal" tabindex="-1" aria-labelledby="archiveModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h1 class="modal-title fs-5" id="archiveModal">Archive product?</h1>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div id="archiveModalBody" class="modal-body">
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+					<button id="btnArchiveProduct" type="submit" class="btn btn-warning">
+						<i class="bi bi-archive me-2"></i>
+						Archive product
 					</button>
 				</div>
 			</div>
@@ -118,9 +138,14 @@
 								<i class="bi bi-eye me-2"></i>
 								Show product
 							</button>
-							<button id="btnDeleteProductModal" type="button" class="btn btn-warning"
+							<button id="btnArchiveProductModal" type="button" class="btn btn-warning"
+								data-bs-toggle="modal" data-bs-target="#archiveModal" disabled>
+								<i class="bi bi-archive me-2"></i>
+								Archive product
+							</button>
+							<button id="btnDeleteProductModal" type="button" class="btn btn-danger"
 								data-bs-toggle="modal" data-bs-target="#deleteModal" disabled>
-								<i class="bi bi-trash me-2"></i>
+								<i class="bi bi-trash-3 me-2"></i>
 								Delete product
 							</button>
 						</div>

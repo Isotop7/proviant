@@ -13,6 +13,7 @@ async function fetchProducts(queryParam, queryValue, sortParam, sortOrder) {
         // Check if products exist
         if (data && data.length > 0) {
             renderProducts(data);
+            setEventListeners();
         } else {
             renderNoProductsMessage();
         }
@@ -51,10 +52,10 @@ badgifyCategories = function (categories, limit) {
 
 // Render expire at
 colorExpiry = function (date) {
-    if (new Date(date) < Date.now()) { 
-        return "bg-danger" 
-    } else { 
-        return "bg-primary" 
+    if (new Date(date) < Date.now()) {
+        return "bg-danger"
+    } else {
+        return "bg-primary"
     }
 }
 
@@ -131,8 +132,11 @@ function renderProducts(products) {
                         <a class="btn btn-outline-info" href="/web/products/${product.ID}/edit">
                             <i class="bi bi-pencil-square me-2"></i>Edit
                         </a>
-                        <button class="btn btn-outline-warning btn-product-delete" data-id="${product.ID}">
-                            <i class="bi bi-trash2 me-2"></i>Delete
+                        <button class="btn btn-outline-warning btn-product-archive" data-id="${product.ID}">
+                            <i class="bi bi-archive me-2"></i>Archive
+                        </button>
+                        <button class="btn btn-outline-danger btn-product-delete" data-id="${product.ID}">
+                            <i class="bi bi-trash3 me-2"></i>Delete
                         </button>
                     </div>
                 </div>
@@ -149,6 +153,40 @@ function renderNoProductsMessage() {
             <div class="alert alert-warning text-center">No products found.</div>
         </div>
     `;
+}
+
+// Async handler function for deletion calls
+async function deleteProduct(productID, archiveOnly) {
+    await proviant.deleteProduct(productID, archiveOnly).then((response) => {
+        switch (response.code) {
+            case 200:
+                console.log("Product deleted")
+            default:
+                console.error(response.message)
+        }
+    });
+}
+
+// Set event listeners for product actions
+function setEventListeners() {
+    const archiveButtons = document.querySelectorAll(".btn-product-archive");
+    const deleteButtons = document.querySelectorAll(".btn-product-delete");
+
+    archiveButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            const productId = button.getAttribute("data-id");
+            deleteProduct(productId, true);
+            location.reload();
+        });
+    });
+
+    deleteButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            const productId = button.getAttribute("data-id");
+            deleteProduct(productId, false);
+            location.reload();
+        });
+    });
 }
 
 // Render error message
