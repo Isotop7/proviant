@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -44,10 +45,24 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 			queryChannel <- false
 			return
 		}
-		defer resp.Body.Close()
+
+		// Read the response body
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			offacntrl.Logger.Error().Msgf("Error reading response body: %s", err)
+			queryChannel <- false
+			return
+		}
+
+		// Anonymous function to close response body
+		defer func() {
+		    if err := resp.Body.Close(); err != nil {
+		        offacntrl.Logger.Error().Msgf("Error closing response body: %s", err)
+		    }
+		}()
 
 		// Parse the response and populate the dataset struct
-		if err := json.NewDecoder(resp.Body).Decode(&dataset); err != nil {
+		if err := json.Unmarshal(body, &dataset); err != nil {
 			offacntrl.Logger.Error().Msgf("Error decoding response: %s", err)
 		}
 		queryChannel <- true
