@@ -1477,7 +1477,11 @@ type Product struct {
 ```
 
 <a name="ProductDTOBarcode"></a>
+<<<<<<< HEAD
 ## type [ProductDTOBarcode](<https://gitlab.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L32-L34>)
+=======
+## type ProductDTOBarcode
+>>>>>>> 5641a90 (add soft delete update docs)
 
 ProductDTOBarcode is a simplified DTO only containing a barcode
 

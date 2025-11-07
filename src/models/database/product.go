@@ -9,16 +9,17 @@ import (
 // Product is the database model of a product
 type Product struct {
 	gorm.Model
-	Barcode     string    `json:"barcode"`
-	ProductName string    `json:"productName"`
-	Categories  string    `json:"categories"`
-	Countries   string    `json:"countries"`
-	ImageURL    string    `json:"imageUrl"`
-	ExpireAt    time.Time `json:"expireAt"`
-	ScannedAt   time.Time `json:"scannedAt"`
-	NotifiedAt  time.Time `json:"notifiedAt"`
-	HouseholdID uint      `gorm:"index, not null" json:"-"`
-	Household   Household `json:"-"`
+	Barcode     string    		`json:"barcode"`
+	ProductName string    		`json:"productName"`
+	Categories  string    		`json:"categories"`
+	Countries   string    		`json:"countries"`
+	ImageURL    string    		`json:"imageUrl"`
+	ExpireAt    time.Time 		`json:"expireAt"`
+	ScannedAt   time.Time 		`json:"scannedAt"`
+	NotifiedAt  time.Time 		`json:"notifiedAt"`
+	DeletedAt   gorm.DeletedAt 	`gorm:"index"`
+	HouseholdID uint      		`gorm:"index, not null" json:"-"`
+	Household   Household 		`json:"-"`
 }
 
 // ProductDTOExpire is a simplified DTO for product expiration
