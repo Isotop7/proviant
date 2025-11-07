@@ -385,6 +385,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/search": {
+            "get": {
+                "description": "Returns a list of products based on a query",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Search products",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/database.Product"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/productsByBarcode": {
             "get": {
                 "description": "Returns a list of products of user matching the given barcode",
@@ -620,22 +664,48 @@ const docTemplate = `{
                 "deletedAt": {
                     "$ref": "#/definitions/gorm.DeletedAt"
                 },
+                "household": {
+                    "$ref": "#/definitions/database.Household"
+                },
+                "householdID": {
+                    "type": "integer"
+                },
                 "id": {
                     "type": "integer"
                 },
                 "mailAddress": {
                     "type": "string"
                 },
-                "products": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/database.Product"
-                    }
-                },
                 "updatedAt": {
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "database.Household": {
+            "type": "object",
+            "properties": {
+                "adminID": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updatedAt": {
                     "type": "string"
                 }
             }
@@ -678,9 +748,6 @@ const docTemplate = `{
                 },
                 "updatedAt": {
                     "type": "string"
-                },
-                "userID": {
-                    "type": "integer"
                 }
             }
         },

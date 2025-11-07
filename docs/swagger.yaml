@@ -34,17 +34,34 @@ definitions:
         type: string
       deletedAt:
         $ref: '#/definitions/gorm.DeletedAt'
+      household:
+        $ref: '#/definitions/database.Household'
+      householdID:
+        type: integer
       id:
         type: integer
       mailAddress:
         type: string
-      products:
-        items:
-          $ref: '#/definitions/database.Product'
-        type: array
       updatedAt:
         type: string
       username:
+        type: string
+    type: object
+  database.Household:
+    properties:
+      adminID:
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updatedAt:
         type: string
     type: object
   database.Product:
@@ -73,8 +90,6 @@ definitions:
         type: string
       updatedAt:
         type: string
-      userID:
-        type: integer
     type: object
   database.ProductDTOBarcode:
     properties:
@@ -359,6 +374,35 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Scan product
+      tags:
+      - product
+  /api/v1/products/search:
+    get:
+      description: Returns a list of products based on a query
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/database.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Search products
       tags:
       - product
   /api/v1/productsByBarcode:
