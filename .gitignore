@@ -24,6 +24,7 @@ src/assets/js/bootstrap*
 src/assets/js/html5-qrcode.min.js
 
 ## Custom
+src/proviant
 src/config.yaml
 src/test/*.httpie
 .vscode/

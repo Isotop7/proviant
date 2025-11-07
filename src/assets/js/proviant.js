@@ -105,16 +105,17 @@ proviant.signupUser = async function (username, mailAddress, password) {
         },
         body: JSON.stringify({ username, mailAddress, password })
     });
-    if (!apiCall.ok) {
-        return {
-            code: apiCall.status,
-            body: "Error signing up"
-        }
-    }
     const body = await apiCall.json();
     const response = {
         code: apiCall.status,
         body: body.message
+    }
+
+    if (!apiCall.ok) {
+        return {
+            code: apiCall.status,
+            body: `${body.message}`
+        }
     }
     return response;
 }
