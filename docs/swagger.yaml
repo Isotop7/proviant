@@ -163,6 +163,10 @@ paths:
         name: id
         required: true
         type: integer
+      - description: Archive only
+        in: query
+        name: archiveOnly
+        type: boolean
       produces:
       - application/json
       responses:
