@@ -17,6 +17,7 @@ const ProductState = Object.freeze({
 function showError(error) {
     inputBarcode.value = '';
     inputBarcode.style.backgroundColor = 'var(--bs-warning)';
+    inputBarcode.style.color = 'var(--bs-warning-text)';
     console.error(error);
 }
 function showBarcode(barcode) {
@@ -116,6 +117,7 @@ function setProductOptionsState(productState, products) {
     const btnAdd = document.getElementById('btnAddProduct');
     const btnShow = document.getElementById('btnShowProduct')
     const btnDeleteModal = document.getElementById('btnDeleteProductModal');
+    const btnArchiveModal = document.getElementById('btnArchiveProductModal');
     const btnShowAll = document.getElementById('btnShowProducts');
     const instanceDropdown = document.getElementById('instanceDropdown');
 
@@ -123,6 +125,7 @@ function setProductOptionsState(productState, products) {
     btnAdd.disabled = true;
     btnShow.disabled = true;
     btnDeleteModal.disabled = true;
+    btnArchiveModal.disabled = true;
     btnShowAll.disabled = true;
     instanceDropdown.classList.add('d-none');
     instanceDropdown.innerHTML = "";
@@ -132,6 +135,7 @@ function setProductOptionsState(productState, products) {
             btnAdd.disabled = false;
             btnShow.disabled = true;
             btnDeleteModal.disabled = true;
+            btnArchiveModal.disabled = true;
             btnShowAll.disabled = true;
             instanceDropdown.classList.add('d-none');
             break;
@@ -139,6 +143,7 @@ function setProductOptionsState(productState, products) {
             btnAdd.disabled = false;
             btnShow.disabled = false;
             btnDeleteModal.disabled = false;
+            btnArchiveModal.disabled = false;
             btnShowAll.disabled = false;
             instanceDropdown.classList.remove('d-none');
             // Add new options based on the array
@@ -153,6 +158,7 @@ function setProductOptionsState(productState, products) {
             btnAdd.disabled = false;
             btnShow.disabled = true;
             btnDeleteModal.disabled = true;
+            btnArchiveModal.disabled = true;
             btnShowAll.disabled = true;
             instanceDropdown.classList.add('d-none');
             console.error(`Invalid product state '${productState}'`);
@@ -198,6 +204,12 @@ function setDeleteModalBody () {
     const productData = instanceDropdown[instanceDropdown.selectedIndex].innerText;
     const deleteButtonModalBody = document.getElementById('deleteModalBody');
     deleteButtonModalBody.innerHTML = `Do you want to delete the following product:</br></br>${productData.replaceAll(';','</br>')}`;
+}
+function setArchiveModalBody () {
+    const instanceDropdown = document.getElementById('instanceDropdown');
+    const productData = instanceDropdown[instanceDropdown.selectedIndex].innerText;
+    const archiveButtonModalBody = document.getElementById('archiveModalBody');
+    archiveButtonModalBody.innerHTML = `Do you want to archive the following product:</br></br>${productData.replaceAll(';','</br>')}`;
 }
 function checkBarcode(barcode) {
     try {
@@ -298,8 +310,8 @@ function handleBtnShowProduct() {
 function handleBtnDeleteProduct() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
-    
-    proviant.deleteProduct(productId).then((response) => {
+
+    proviant.deleteProduct(productId, false).then((response) => {
         console.log(response.code);
         switch (response.code) {
             case 200:
@@ -307,6 +319,22 @@ function handleBtnDeleteProduct() {
                 break;
             default:
                 showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
+                break;
+        }
+    });
+}
+function handleBtnArchiveProduct() {
+    const instanceDropdown = document.getElementById('instanceDropdown');
+    const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
+
+    proviant.deleteProduct(productId, true).then((response) => {
+        console.log(response.code);
+        switch (response.code) {
+            case 200:
+                window.location.reload();
+                break;
+            default:
+                showAlert(false, `Error archiving product with ID ${productId}: ${response.message}`);
                 break;
         }
     });
@@ -320,7 +348,7 @@ function handleBtnShowProducts() {
 function handleChangedBarcode() {
     if (!(inputBarcode.checkValidity())) {
         if (inputBarcode.classList.contains('border-success')) {
-        inputBarcode.classList.remove('border-success')
+            inputBarcode.classList.remove('border-success')
         }
         return;
     }
@@ -373,9 +401,16 @@ document.getElementById('btnShowProduct').onclick = function (event) {
 document.getElementById('deleteModal').addEventListener('show.bs.modal', (event) => {
     setDeleteModalBody();
 });
+document.getElementById('archiveModal').addEventListener('show.bs.modal', (event) => {
+    setArchiveModalBody();
+});
 document.getElementById('btnDeleteProduct').onclick = function (event) {
     event.preventDefault();
     handleBtnDeleteProduct();
+}
+document.getElementById('btnArchiveProduct').onclick = function (event) {
+    event.preventDefault();
+    handleBtnArchiveProduct();
 }
 document.getElementById('btnShowProducts').onclick = function (event) {
     event.preventDefault();

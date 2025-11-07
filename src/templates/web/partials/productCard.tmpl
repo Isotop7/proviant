@@ -81,8 +81,11 @@
             <a class="btn btn-outline-info" href="/web/products/{{ .ID }}/edit">
                 <i class="bi bi-pencil-square me-2"></i>Edit
             </a>
-            <button class="btn btn-outline-warning btn-product-delete" data-id="{{ .ID }}">
-                <i class="bi bi-trash2 me-2"></i>Delete
+            <button class="btn btn-outline-warning btn-product-archive" data-id="{{ .ID }}">
+                <i class="bi bi-archive me-2"></i>Archive
+            </button>
+            <button class="btn btn-outline-danger btn-product-delete" data-id="{{ .ID }}">
+                <i class="bi bi-trash3 me-2"></i>Delete
             </button>
         </div>
     </div>
