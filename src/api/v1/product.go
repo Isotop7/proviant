@@ -376,6 +376,7 @@ func UpdateProduct(ctx *gin.Context) {
 // @Accept			json
 // @Produce      	json
 // @Param        	id   	path	int					true  	"Product ID"
+// @Param        	archiveOnly	query	bool				false	"Archive only"
 // @Success      	200  {object}  api.APIResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
@@ -392,6 +393,23 @@ func DeleteProduct(ctx *gin.Context) {
 		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
 		return
+	}
+
+	var archiveOnly bool
+	var parseError error
+	// Get and parse parameter archiveOnly
+	archiveOnlyParam, archiveOnlyParamExists := ctx.GetQuery("archiveOnly")
+	// Check if archiveOnlyParam is supplied
+	if !archiveOnlyParamExists {
+		// Default to hard deletion
+		archiveOnly = false
+	} else {
+		// Try to parse archiveOnlyParam as a boolean
+		if archiveOnly, parseError = strconv.ParseBool(archiveOnlyParam); parseError != nil {
+			logger.Warn().Msgf("Invalid archiveOnly '%s' was specified", archiveOnlyParam)
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("archiveOnly '%s' is invalid", archiveOnlyParam)})
+			return
+		}
 	}
 
 	// Get database instance from context
@@ -414,7 +432,7 @@ func DeleteProduct(ctx *gin.Context) {
 	// Create database controller
 	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Delete product from database
-	deleteResult := dbController.DeleteProduct(productID, userID)
+	deleteResult := dbController.DeleteProduct(productID, userID, archiveOnly)
 	if deleteResult != nil {
 		logger.Error().Msgf("Error deleting product: %s", deleteResult)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: deleteResult.Error()})

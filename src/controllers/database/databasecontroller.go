@@ -462,15 +462,21 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 
 // DeleteProduct deletes a product (based on product ID) of a user (based on user ID)
 // If the database operations return an error, the error is also returned (otherwise nil)
-func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error {
+func (dbc DatabaseController) DeleteProduct(productID int, userID uint, archiveOnly bool) error {
 	// Get product and check for correct userID
 	_, getError := dbc.GetProductByID(productID, userID)
 	if getError != nil {
 		return getError
 	}
 
-	// Delete product by its id
-	deleteResult := dbc.DBHandle.Delete(&database.Product{}, productID)
+	var deleteResult *gorm.DB
+	if archiveOnly {
+		// Archive product by its id
+		deleteResult = dbc.DBHandle.Delete(&database.Product{}, productID)
+	} else {
+		// Delete product by its id
+		deleteResult = dbc.DBHandle.Unscoped().Delete(&database.Product{}, productID)
+	}
 	return deleteResult.Error
 }
 

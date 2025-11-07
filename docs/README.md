@@ -692,7 +692,7 @@ CreateProduct creates a new product of a user @Summary Creates a new product @De
 func DeleteProduct(ctx *gin.Context)
 ```
 
-DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
+DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param archiveOnly query bool false "Archive only" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
 
 <a name="GetExpired"></a>
 ## func [GetExpired](<https://gitlab.com/Isotop7/proviant/blob/develop/src/api/v1/product.go#L530>)
@@ -795,7 +795,7 @@ import "gitlab.com/Isotop7/proviant/controllers/database"
 - [type DatabaseController](<#DatabaseController>)
   - [func \(dbc DatabaseController\) CreateProduct\(userID uint, product \*database.Product\) error](<#DatabaseController.CreateProduct>)
   - [func \(dbc DatabaseController\) CreateUser\(user \*authentication.User\) error](<#DatabaseController.CreateUser>)
-  - [func \(dbc DatabaseController\) DeleteProduct\(productID int, userID uint\) error](<#DatabaseController.DeleteProduct>)
+  - [func \(dbc DatabaseController\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#DatabaseController.DeleteProduct>)
   - [func \(dbc DatabaseController\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#DatabaseController.GetHouseholdByID>)
   - [func \(dbc DatabaseController\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#DatabaseController.GetHouseholdMembersMailAddressesByID>)
   - [func \(dbc DatabaseController\) GetNextUserID\(\) uint](<#DatabaseController.GetNextUserID>)
@@ -856,7 +856,7 @@ CreateUser creates a new user based on a given user object Before creation, the 
 ### func \(DatabaseController\) [DeleteProduct](<https://gitlab.com/Isotop7/proviant/blob/develop/src/controllers/database/databasecontroller.go#L465>)
 
 ```go
-func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error
+func (dbc DatabaseController) DeleteProduct(productID int, userID uint, archiveOnly bool) error
 ```
 
 DeleteProduct deletes a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
