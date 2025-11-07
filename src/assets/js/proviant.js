@@ -59,9 +59,7 @@ proviant.editProduct = async function (product) {
 
 proviant.deleteProduct = async function (productID, archiveOnly) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${productID}`
-    if (archiveOnly) {
-        url += '?archiveOnly=true';
-    }
+    if (archiveOnly) { url += '?archiveOnly=true'; }
     console.log(`Delete: ${url}`);
     const apiCall = await fetch(url, {
         method: 'DELETE',
