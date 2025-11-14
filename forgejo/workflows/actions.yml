@@ -1,0 +1,107 @@
+name: Actions
+
+env:
+  GO_VERSION: 1.25
+
+on:
+  push:
+  issues:
+    types: [opened, edited]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check:
+    runs-on: docker
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Check code format and vet
+        run: |
+          cd ./src
+          go fmt $(go list ./... | grep -v /vendor/)
+          go vet $(go list ./... | grep -v /vendor/)
+      - name: Run static analysis
+        run: |
+          cd ./src
+          go get honnef.co/go/tools/cmd/staticcheck@latest
+          go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
+      - name: Test code
+        run: |
+          cd ./src
+          go test -race $(go list ./... | grep -v /vendor/)
+      - name: Verify modules
+        run: |
+          cd ./src
+          go mod verify
+  sonarcloud-check:
+    needs: check
+    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  lint:
+    needs: check
+    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Lint code
+        run: |
+          cd ./src
+          docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.62 golangci-lint run -v -E gocritic --timeout "3m"
+  compile:
+    needs: lint
+    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Compile code
+        run: |
+          cd ./src
+          mkdir -p release
+          go build -o release ./...
+  docker-build:
+    needs: compile
+    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src
+          push: true
+          tags: |
+            ${{ secrets.CI_REGISTRY_IMAGE }}:${{ forgejo.ref_name }}
+            ${{ secrets.CI_REGISTRY_IMAGE }}:latest
+      - name: Build and push private Docker image
+        env:
+          CI_REGISTRY_IMAGE: ${{ secrets.PRIVATE_REGISTRY }}/${{ forgejo.repository }}
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src
+          push: true
+          tags: |
+            ${{ env.CI_REGISTRY_IMAGE }}:${{ forgejo.ref_name }}
+            ${{ env.CI_REGISTRY_IMAGE }}:latest
