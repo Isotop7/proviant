@@ -166,6 +166,44 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }
 
+func (frontend *Frontend) ProductsArchived(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		return
+	}
+
+	// Create database controller
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	// Get archived products of user from database with optional limit
+	archivedProducts, productBulkErr := dbController.GetUserArchivedProductsBulk(userID, -1)
+	if productBulkErr != nil {
+		logger.Error().Msgf("Error getting archivedproducts of user: %s", productBulkErr)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
+		return
+	}
+
+	pageData := map[string]any{
+		"Title":    "ArchivedProducts",
+		"Products": archivedProducts,
+	}
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsArchived.tmpl", pageData)
+}
+
 func (frontend *Frontend) ProductsCreate(ctx *gin.Context) {
 	pageData := map[string]any{
 		"Title": "Create product",
