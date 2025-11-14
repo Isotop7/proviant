@@ -105,7 +105,7 @@ function renderProducts(products) {
                     <ul class="list-group list-group-flush d-flex justify-content-between">
                         <li class="list-group-item d-flex justify-content-evenly align-items-center">
                             <div class="ms-2 me-auto">
-                                <i class="bi bi-trash3 me-3"></i>
+                                <i class="bi bi-calendar-x me-3"></i>
                             </div>
                             <span class="badge rounded-pill ${colorExpiry(product.expireAt)}">
                                 ${new Date(product.expireAt).toLocaleString("de-DE")}
@@ -136,7 +136,7 @@ function renderProducts(products) {
                             <i class="bi bi-archive me-2"></i>Archive
                         </button>
                         <button class="btn btn-outline-danger btn-product-delete" data-id="${product.ID}">
-                            <i class="bi bi-trash3 me-2"></i>Delete
+                            <i class="bi bi-calendar-x me-2"></i>Delete
                         </button>
                     </div>
                 </div>
