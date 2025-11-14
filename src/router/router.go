@@ -140,6 +140,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	publicProductAPI := engine.Group("/api/v1/products")
 	publicProductAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
 	publicProductAPI.GET("", v1.GetProducts)
+	publicProductAPI.GET("/archived", v1.GetArchivedProducts)
 	publicProductAPI.GET("/expired", v1.GetExpired)
 	publicProductAPI.POST("", v1.CreateProduct)
 	publicProductAPI.POST("/scan", v1.ScanProduct)
@@ -175,6 +176,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	publicWebFrontend.GET("/user", webFrontendHandler.User)
 	publicWebFrontend.GET("/user/settings", webFrontendHandler.UserSettings)
 	publicWebFrontend.GET("/products", webFrontendHandler.Products)
+	publicWebFrontend.GET("/products/archived", webFrontendHandler.ProductsArchived)
 	publicWebFrontend.GET("/products/create", webFrontendHandler.ProductsCreate)
 	publicWebFrontend.GET("/products/search", webFrontendHandler.Search)
 

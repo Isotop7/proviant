@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
 //go:embed "web" "notification"
@@ -21,6 +22,10 @@ var TemplateFiles embed.FS
 
 func humanDateTime(t time.Time) string {
 	return t.Format("02.01.2006, 15:04")
+}
+
+func humanDateTimeFromSQL(t gorm.DeletedAt) string {
+	return t.Time.Format("02.01.2006, 15:04")
 }
 
 func humanDate(t time.Time) string {
@@ -68,13 +73,14 @@ func splitString(source string) template.HTML {
 }
 
 var customTemplateFunctions = template.FuncMap{
-	"humanDate":         humanDate,
-	"humanDateTime":     humanDateTime,
-	"inputDate":         inputDate,
-	"today":             today,
-	"hasPassed":         hasPassed,
-	"badgifyCategories": badgifyCategories,
-	"splitString":       splitString,
+	"humanDate":         	humanDate,
+	"humanDateTime":    	humanDateTime,
+	"humanDateTimeFromSQL":	humanDateTimeFromSQL,
+	"inputDate":         	inputDate,
+	"today":             	today,
+	"hasPassed":         	hasPassed,
+	"badgifyCategories":	badgifyCategories,
+	"splitString":      	splitString,
 }
 
 func NewTemplateCache() (map[string]*template.Template, error) {

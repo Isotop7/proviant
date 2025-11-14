@@ -301,6 +301,37 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 	return products, nil
 }
 
+// GetUserArchivedProductsBulk returns an array of archived products of a user (based on user ID)
+// The returned dataset can be limitied by supplying 'limit'
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error) {
+	// Get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return []database.Product{}, userErr
+	}
+
+	if user.HouseholdID == 0 {
+		return []database.Product{}, errors.ErrInvalidUserData
+	}
+
+	// Get household with products preloaded
+	var products []database.Product
+	query := dbc.DBHandle.Unscoped().Where("deleted_at IS NOT NULL").Where("household_id = ?", user.HouseholdID)
+
+	// Apply limit if specified
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	// Execute query
+	queryErr := query.Find(&products).Error
+	if queryErr != nil {
+		return []database.Product{}, queryErr
+	}
+	return products, nil
+}
+
 // GetUserProductsBulkByBarcode returns an array of products of a user (based on user ID) matching a barcode
 // The returned dataset can be limitied by supplying 'limit'
 // If the database operations return an error, the error is also returned (otherwise nil)

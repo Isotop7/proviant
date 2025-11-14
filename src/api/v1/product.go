@@ -82,6 +82,60 @@ func GetProducts(ctx *gin.Context) {
 	}
 }
 
+// GetArchivedProducts returns the archived products of a user
+// @Summary      Return a list of archived products
+// @Description  Return a list of archived products of user
+// @Tags         product
+// @Produce      json
+// @Success      200  {object}  []database.Product
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/products/archived [get]
+func GetArchivedProducts(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get and parse parameter limit
+	limitParam := ctx.Query("limit")
+	var limit int
+	var parseError error
+	if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
+		logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
+		return
+	}
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	// Create database controller
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	// Get products of user from database with optional limit
+	products, productBulkErr := dbController.GetUserArchivedProductsBulk(userID, limit)
+	if productBulkErr != nil {
+		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
+		return
+	} else {
+		ctx.JSON(http.StatusOK, products)
+		return
+	}
+}
+
 // GetProduct return a single product of a user
 // @Summary      Returns a single product
 // @Description  Returns a single product of user
