@@ -74,6 +74,22 @@ proviant.deleteProduct = async function (productID, archiveOnly) {
     return response;
 }
 
+proviant.restoreProduct = async function (productID) {
+    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${productID}/restore`
+    const apiCall = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    const body = await apiCall.json();
+    let response = {
+        code: apiCall.status,
+        message: body.message
+    }
+    return response;
+}
+
 proviant.loginUser = async function (username, password) {
     const url = `${window.location.protocol}//${window.location.host}/auth/login`
     const apiCall = await fetch(url, {

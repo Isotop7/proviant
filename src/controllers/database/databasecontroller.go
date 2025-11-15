@@ -390,6 +390,38 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 	return product, nil
 }
 
+// GetArchivedProductByID returns an archived product object (based on product ID) of a user (based on user ID)
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) GetArchivedProductByID(productID int, userID uint) (database.Product, error) {
+	// Get single product by ID
+	if productID <= 0 {
+		return database.Product{}, gorm.ErrNotImplemented
+	}
+	// Parse product to var
+	var product database.Product
+	getError := dbc.DBHandle.Unscoped().First(&product, productID)
+
+	// Check if error occured while getting product
+	if getError.Error != nil {
+		// Return empty set and database error
+		return database.Product{}, getError.Error
+	}
+
+	// Get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return database.Product{}, userErr
+	}
+
+	// Check if household id of the product is different than household id of the user
+	if product.HouseholdID != user.HouseholdID {
+		// Return empty set and custom error
+		return database.Product{}, errors.ErrMismatcherUserID
+	}
+	// Return database product
+	return product, nil
+}
+
 // SearchProducts returns an array of products of a user matching a search paramater and a query
 func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue string, sort string, order string, userID uint) ([]database.Product, error) {
 	// Get user object from database
@@ -509,6 +541,37 @@ func (dbc DatabaseController) DeleteProduct(productID int, userID uint, archiveO
 		deleteResult = dbc.DBHandle.Unscoped().Delete(&database.Product{}, productID)
 	}
 	return deleteResult.Error
+}
+
+// RestoreProduct restores a product (based on product ID) of a user (based on user ID)
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) RestoreProduct(productID int, userID uint) error {
+	// Get product and check for correct userID
+	product, getError := dbc.GetArchivedProductByID(productID, userID)
+	if getError != nil {
+		return getError
+	}
+
+	// Reset deletedAt field
+	product.DeletedAt = gorm.DeletedAt{}
+
+	// Save changes to db
+	saveResult := dbc.DBHandle.Save(&product)
+	return saveResult.Error
+}
+
+// PermanentDeleteProduct deletes a product (based on product ID) of a user (based on user ID) permanently
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) PermanentlyDeleteProduct(productID int, userID uint) error {
+	// Get product and check for correct userID
+	_, getError := dbc.GetProductByID(productID, userID)
+	if getError != nil {
+		return getError
+	}
+
+	// Permanently delete product by its id
+	permanentlyDeleteResult := dbc.DBHandle.Unscoped().Delete(&database.Product{}, productID)
+	return permanentlyDeleteResult.Error
 }
 
 // SetProductExpireAt updates the expiry date of a product (based on product ID) of a user (based on user ID)
