@@ -497,6 +497,62 @@ func DeleteProduct(ctx *gin.Context) {
 	}
 }
 
+// RestoreProduct restores an archived product of a user
+// @Summary      	Restores a product
+// @Description  	Restores an archived product of a user
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Param        	id   	path	int					true  	"Product ID"
+// @Success      	200  {object}  api.APIResponse
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/product/{id}/restore [post]
+func RestoreProduct(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get and parse parameter id
+	idParam := ctx.Param("id")
+	var productID int
+	var convErr error
+	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
+		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
+		return
+	}
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	// Create database controller
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	// Delete product from database
+	restoreResult := dbController.RestoreProduct(productID, userID)
+	if restoreResult != nil {
+		logger.Error().Msgf("Error restoring product: %s", restoreResult)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: restoreResult.Error()})
+		return
+	} else {
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was restored", productID)})
+		return
+	}
+}
+
 // SetExpireAt updates the expire date of a product of a user
 // @Summary      	Updates the expire date
 // @Description  	Updates the expire date of a product
