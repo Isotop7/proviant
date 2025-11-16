@@ -113,7 +113,7 @@ func NewTemplateCache() (map[string]*template.Template, error) {
 	return cache, nil
 }
 
-func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base string, page string, data map[string]any) {
+func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base, page string, data map[string]any) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 

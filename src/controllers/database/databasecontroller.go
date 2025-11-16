@@ -77,7 +77,7 @@ func (dbc DatabaseController) GetHouseholdByID(householdID uint) (database.House
 }
 
 // UserExistsByUsername returns if a given user object exists in the database based on the property 'username'
-func (dbc DatabaseController) UserExistsByUsername(user authentication.User) bool {
+func (dbc DatabaseController) UserExistsByUsername(user *authentication.User) bool {
 	var dbUser authentication.User
 	// Try to get first object with matching username
 	selectErr := dbc.DBHandle.First(&dbUser, "username = ?", user.Username)
@@ -86,7 +86,7 @@ func (dbc DatabaseController) UserExistsByUsername(user authentication.User) boo
 }
 
 // UserExistsByMailAddress returns if a given user object exists in the database based on the property 'mailAddress'
-func (dbc DatabaseController) UserExistsByMailAddress(user authentication.User) bool {
+func (dbc DatabaseController) UserExistsByMailAddress(user *authentication.User) bool {
 	var dbUser authentication.User
 	// Try to get first object with matching mailAddress
 	selectErr := dbc.DBHandle.First(&dbUser, "mail_address = ?", user.MailAddress)
@@ -423,7 +423,7 @@ func (dbc DatabaseController) GetArchivedProductByID(productID int, userID uint)
 }
 
 // SearchProducts returns an array of products of a user matching a search paramater and a query
-func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue string, sort string, order string, userID uint) ([]database.Product, error) {
+func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue, sort, order string, userID uint) ([]database.Product, error) {
 	// Get user object from database
 	user, userErr := dbc.GetUserByID(userID)
 	if userErr != nil {
@@ -693,7 +693,7 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	// Create tile
 	homeTiles = append(homeTiles, webparts.Tile{
 		Title:  "Last inserted product",
-		Hero:   fmt.Sprint(lastProduct.ProductName),
+		Hero:   lastProduct.ProductName,
 		Body:   fmt.Sprintf("'%s' is the most recent product with barcode #%s", lastProduct.ProductName, lastProduct.Barcode),
 		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
 	})
@@ -712,7 +712,7 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	// Create tile
 	homeTiles = append(homeTiles, webparts.Tile{
 		Title:  "Last notification",
-		Hero:   fmt.Sprint(lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04")),
+		Hero:   lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04"),
 		Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04")),
 		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
 	})

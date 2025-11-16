@@ -10,7 +10,7 @@ type Login struct {
 
 // IsValid checks if the given login instance is valid
 func (login *Login) IsValid() error {
-	if len(login.Username) == 0 {
+	if login.Username == "" {
 		return errors.ErrUsernameEmpty
 	}
 

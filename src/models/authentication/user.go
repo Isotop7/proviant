@@ -27,7 +27,7 @@ func (user User) IsValid(skipPassword bool) error {
 		return errors.ErrInvalidUserID
 	}
 
-	if len(user.Username) == 0 {
+	if user.Username == "" {
 		return errors.ErrUsernameEmpty
 	}
 

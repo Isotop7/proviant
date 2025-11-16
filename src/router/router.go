@@ -22,7 +22,7 @@ import (
 )
 
 // SetupRouter creates the gin engine and associated middleware
-func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine {
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine {
 	// Generate new gin instance
 	engine := gin.New()
 
@@ -32,13 +32,13 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	// Setup cors
 	corsConfig := cors.DefaultConfig()
 	// Check if any origin is allowed or set list
-	if configuration.Server.CORS.AllowAllOrigins {
+	if proviantConfiguration.Server.CORS.AllowAllOrigins {
 		corsConfig.AllowAllOrigins = true
 		logger.Info().Msg("Allowed all CORS origins")
 	} else {
 		corsConfig.AllowAllOrigins = false
-		corsConfig.AllowOrigins = configuration.Server.CORS.AllowedOrigins
-		logger.Info().Msgf("Allowed CORS origins: %s", strings.Join(configuration.Server.CORS.AllowedOrigins, "; "))
+		corsConfig.AllowOrigins = proviantConfiguration.Server.CORS.AllowedOrigins
+		logger.Info().Msgf("Allowed CORS origins: %s", strings.Join(proviantConfiguration.Server.CORS.AllowedOrigins, "; "))
 	}
 	corsConfig.AllowCredentials = true
 	engine.Use(cors.New(corsConfig))
@@ -64,12 +64,12 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 
 	// Template cache
 	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("templateCache", configuration.TemplateCache)
+		ctx.Set("templateCache", proviantConfiguration.TemplateCache)
 		ctx.Next()
 	})
 
 	// Setup JWT authentication middleware for API
-	jwtAPIMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorNotUserAware, UnauthorizedAPIFunc)
+	jwtAPIMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedAPIFunc)
 	if jwtAPIAuthSetupErr != nil {
 		logger.Error().Msg(jwtAPIAuthSetupErr.Error())
 		panic(jwtAPIAuthSetupErr.Error())
@@ -82,7 +82,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	}
 
 	// Setup JWT authentication and authorization middleware, aka user-aware
-	jwtAPIUserAwareMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorUserAware, UnauthorizedAPIFunc)
+	jwtAPIUserAwareMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorUserAware, UnauthorizedAPIFunc)
 	if jwtAPIAuthSetupErr != nil {
 		logger.Error().Msg(jwtAPIAuthSetupErr.Error())
 		panic(jwtAPIAuthSetupErr.Error())
@@ -95,7 +95,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	}
 
 	// Setup JWT authentication middleware for Frontend
-	jwtFrontendMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorNotUserAware, UnauthorizedFrontendFunc)
+	jwtFrontendMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedFrontendFunc)
 	if jwtFrontendAuthSetupErr != nil {
 		logger.Error().Msg(jwtFrontendAuthSetupErr.Error())
 		panic(jwtFrontendAuthSetupErr.Error())
@@ -108,7 +108,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	}
 
 	// Setup JWT authentication and authorization middleware, aka user-aware
-	jwtFrontendUserAwareMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorUserAware, UnauthorizedFrontendFunc)
+	jwtFrontendUserAwareMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorUserAware, UnauthorizedFrontendFunc)
 	if jwtFrontendAuthSetupErr != nil {
 		logger.Error().Msgf("%s: %s", errors.ErrUserAwareAuthMiddlewareInit.Error(), jwtFrontendAuthSetupErr.Error())
 		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
@@ -166,7 +166,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	// Serve asset files
 	engine.StaticFS("/assets", http.FS(assets.AssetFiles))
 	// Create frontend handler with template cache
-	webFrontendHandler := web.Frontend{TemplateCache: configuration.TemplateCache}
+	webFrontendHandler := web.Frontend{TemplateCache: proviantConfiguration.TemplateCache}
 	webFrontend := engine.Group("/web")
 	webFrontend.GET("/auth", webFrontendHandler.Auth)
 

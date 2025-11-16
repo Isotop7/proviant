@@ -43,8 +43,8 @@ func main() {
 	}
 
 	// Unmarshal yaml to configuration struct
-	configuration := configuration.ProviantConfiguration{}
-	err := viper.Unmarshal(&configuration)
+	proviantConfiguration := configuration.ProviantConfiguration{}
+	err := viper.Unmarshal(&proviantConfiguration)
 	if err != nil {
 		panic(err)
 	}
@@ -52,12 +52,12 @@ func main() {
 	// Setup logging
 	var cLogger zerolog.Logger
 	// Check if logging to file was enabled
-	if configuration.Logging.Enabled {
+	if proviantConfiguration.Logging.Enabled {
 		// Create multi writer for file and terminal logging
 		logFile, logFileOpenErr := os.OpenFile(
-			configuration.Logging.File,
+			proviantConfiguration.Logging.File,
 			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
-			0664,
+			0o664,
 		)
 		// Check of logfile could be opened
 		if logFileOpenErr != nil {
@@ -75,7 +75,7 @@ func main() {
 	cLogger.Info().Msg("Logging initialized")
 
 	// Validate database parameters
-	dbValidErr := configuration.ValidateDatabaseConfiguration()
+	dbValidErr := proviantConfiguration.ValidateDatabaseConfiguration()
 	if dbValidErr != nil {
 		panic(dbValidErr)
 	} else {
@@ -83,7 +83,7 @@ func main() {
 	}
 
 	// Setup database connection handle
-	dbHandle, setupErr := SetupDatabase(cLogger, configuration.Database)
+	dbHandle, setupErr := SetupDatabase(cLogger, proviantConfiguration.Database)
 	if setupErr != nil {
 		panic(setupErr)
 	} else if dbHandle == nil {
@@ -107,24 +107,24 @@ func main() {
 	}
 
 	// Check API controller config and create instance
-	validateErr := configuration.ValidateOpenFoodFactsConfiguration()
+	validateErr := proviantConfiguration.ValidateOpenFoodFactsConfiguration()
 	if validateErr != nil {
 		panic("URL for OpenFoodFactsAPI not set")
 	} else {
 		cLogger.Info().Msg("OpenFoodFacts configuration is valid")
 	}
 	offacntrl := controllers.OpenFoodFactsAPIController{
-		Configuration: configuration.OpenFoodFacts,
+		Configuration: proviantConfiguration.OpenFoodFacts,
 		Logger:        &cLogger,
 	}
 
 	// Setup NotificationController if notifications are enabled
-	if !configuration.Notification.Enabled {
+	if !proviantConfiguration.Notification.Enabled {
 		cLogger.Info().Msg("Notifications are disabled")
 	} else {
 		notificationController := controllers.NotificationController{
 			Logger:             &cLogger,
-			Configuration:      configuration.Notification,
+			Configuration:      proviantConfiguration.Notification,
 			DatabaseController: &dbController.DatabaseController{DBHandle: dbHandle},
 		}
 		// Dispatch notification handler goroutine
@@ -137,13 +137,13 @@ func main() {
 		cLogger.Error().Msg(err.Error())
 		panic(err)
 	}
-	configuration.TemplateCache = templateCache
+	proviantConfiguration.TemplateCache = templateCache
 
 	// Call function to setup router and pass references
-	proviantEngine := router.SetupRouter(&cLogger, &configuration, dbHandle, offacntrl)
+	proviantEngine := router.SetupRouter(&cLogger, &proviantConfiguration, dbHandle, offacntrl)
 
 	// Get server port or instead set default value
-	serverPort := configuration.Server.Port
+	serverPort := proviantConfiguration.Server.Port
 	if serverPort <= 0 {
 		serverPort = 5114
 	}
