@@ -1,4 +1,4 @@
-name: Actions
+name: CI
 
 env:
   GO_VERSION: 1.25
