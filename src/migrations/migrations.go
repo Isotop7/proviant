@@ -41,7 +41,7 @@ func assignHouseholdsToUsers(db *gorm.DB) error {
 	return nil
 }
 
-func RunBreakingDatabaseMigrations(logger zerolog.Logger, db *gorm.DB) error {
+func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 	// Migrations version 0.2.0
 	logger.Info().Msg("Running database migrations for version 0.2.0")
 	if err := assignHouseholdsToUsers(db); err != nil {
