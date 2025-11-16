@@ -34,7 +34,7 @@ jobs:
   #      run: |
   #        cd ./src
   #        go mod verify
-  lint:
+  golangci-lint:
     #needs: check
     runs-on: docker
     steps:
