@@ -73,14 +73,14 @@ func splitString(source string) template.HTML {
 }
 
 var customTemplateFunctions = template.FuncMap{
-	"humanDate":         	humanDate,
-	"humanDateTime":    	humanDateTime,
-	"humanDateTimeFromSQL":	humanDateTimeFromSQL,
-	"inputDate":         	inputDate,
-	"today":             	today,
-	"hasPassed":         	hasPassed,
-	"badgifyCategories":	badgifyCategories,
-	"splitString":      	splitString,
+	"humanDate":            humanDate,
+	"humanDateTime":        humanDateTime,
+	"humanDateTimeFromSQL": humanDateTimeFromSQL,
+	"inputDate":            inputDate,
+	"today":                today,
+	"hasPassed":            hasPassed,
+	"badgifyCategories":    badgifyCategories,
+	"splitString":          splitString,
 }
 
 func NewTemplateCache() (map[string]*template.Template, error) {

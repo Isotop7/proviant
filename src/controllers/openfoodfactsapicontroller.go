@@ -56,9 +56,9 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 
 		// Anonymous function to close response body
 		defer func() {
-		    if err := resp.Body.Close(); err != nil {
-		        offacntrl.Logger.Error().Msgf("Error closing response body: %s", err)
-		    }
+			if err := resp.Body.Close(); err != nil {
+				offacntrl.Logger.Error().Msgf("Error closing response body: %s", err)
+			}
 		}()
 
 		// Parse the response and populate the dataset struct
