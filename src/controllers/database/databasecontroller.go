@@ -229,7 +229,7 @@ func (dbc DatabaseController) UserHasProductAccess(userID uint, productID int) b
 
 	// Get single product by ID
 	var product database.Product
-	getError := dbc.DBHandle.First(&product, productID)
+	getError := dbc.DBHandle.Unscoped().First(&product, productID)
 	// Failsafe - If error is found, return false
 	if getError.Error != nil {
 		return false
