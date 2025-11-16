@@ -257,15 +257,15 @@ func (dbc DatabaseController) GetHouseholdMembersMailAddressesByID(householdID u
 	}
 
 	// Find users with matching id
-	var users []authentication.User
+	var users []*authentication.User
 	findErr := dbc.DBHandle.Where("household_id = ?", householdID).Find(&users)
 	if findErr != nil {
 		return mailAddresses, findErr.Error
 	}
 
 	// Loop through household members and add mail addresses
-	for _, user := range users {
-		mailAddresses = append(mailAddresses, user.MailAddress)
+	for idx := range users {
+		mailAddresses = append(mailAddresses, users[idx].MailAddress)
 	}
 	return mailAddresses, nil
 }
@@ -613,19 +613,19 @@ func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error {
 // GetProductsExpired returns an array of products of a user (based on user ID) that are already expired
 // If the database operations return an error, the error is also returned (otherwise nil)
 // If the user has no products assigned, the function returns an empty dataset
-func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Product, error) {
+func (dbc DatabaseController) GetProductsExpired(userID uint) ([]*database.Product, error) {
 	// Get all user products
 	userProducts, getBulkErr := dbc.GetUserProductsBulk(userID, 0)
 	if getBulkErr != nil {
-		return []database.Product{}, getBulkErr
+		return []*database.Product{}, getBulkErr
 	}
 
 	// Get all currently expired products
-	expiredProducts := []database.Product{}
+	var expiredProducts []*database.Product
 	timestamp := time.Now()
-	for _, p := range userProducts {
-		if p.ExpireAt.After(timestamp) {
-			expiredProducts = append(expiredProducts, p)
+	for idx := range userProducts {
+		if userProducts[idx].ExpireAt.After(timestamp) {
+			expiredProducts = append(expiredProducts, &userProducts[idx])
 		}
 	}
 	return expiredProducts, nil

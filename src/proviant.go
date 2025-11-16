@@ -50,7 +50,7 @@ func main() {
 	}
 
 	// Setup logging
-	var cLogger zerolog.Logger
+	var cLogger *zerolog.Logger
 	// Check if logging to file was enabled
 	if proviantConfiguration.Logging.Enabled {
 		// Create multi writer for file and terminal logging
@@ -65,12 +65,14 @@ func main() {
 		}
 		// Add logfile to logging writers
 		multi := zerolog.MultiLevelWriter(logFile, zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime})
-		cLogger = zerolog.New(multi).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
+		logFileLogger := zerolog.New(multi).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
+		cLogger = &logFileLogger
 	} else {
 		// Create writer to terminal
-		cLogger = zerolog.New(
+		terminalLogger := zerolog.New(
 			zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime},
 		).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
+		cLogger = &terminalLogger
 	}
 	cLogger.Info().Msg("Logging initialized")
 
@@ -101,7 +103,7 @@ func main() {
 	}
 
 	// Run migrations for breaking changes
-	breakingMigrationsError := migrations.RunBreakingDatabaseMigrations(cLogger, dbHandle)
+	breakingMigrationsError := migrations.RunBreakingDatabaseMigrations(*cLogger, dbHandle)
 	if breakingMigrationsError != nil {
 		panic(breakingMigrationsError)
 	}
@@ -115,7 +117,7 @@ func main() {
 	}
 	offacntrl := controllers.OpenFoodFactsAPIController{
 		Configuration: proviantConfiguration.OpenFoodFacts,
-		Logger:        &cLogger,
+		Logger:        cLogger,
 	}
 
 	// Setup NotificationController if notifications are enabled
@@ -123,7 +125,7 @@ func main() {
 		cLogger.Info().Msg("Notifications are disabled")
 	} else {
 		notificationController := controllers.NotificationController{
-			Logger:             &cLogger,
+			Logger:             cLogger,
 			Configuration:      proviantConfiguration.Notification,
 			DatabaseController: &dbController.DatabaseController{DBHandle: dbHandle},
 		}
@@ -140,7 +142,7 @@ func main() {
 	proviantConfiguration.TemplateCache = templateCache
 
 	// Call function to setup router and pass references
-	proviantEngine := router.SetupRouter(&cLogger, &proviantConfiguration, dbHandle, offacntrl)
+	proviantEngine := router.SetupRouter(cLogger, &proviantConfiguration, dbHandle, offacntrl)
 
 	// Get server port or instead set default value
 	serverPort := proviantConfiguration.Server.Port
@@ -155,13 +157,13 @@ func main() {
 	}
 }
 
-func SetupDatabase(logger zerolog.Logger, configuration configuration.DatabaseConfiguration) (*gorm.DB, error) {
+func SetupDatabase(logger *zerolog.Logger, configuration configuration.DatabaseConfiguration) (*gorm.DB, error) {
 	// Generate gorm config
 	var dbErr error
 	var dbHandle *gorm.DB
 	gormConfig := gorm.Config{}
 	// Create Zerolog adapter and pass it to gorm config
-	gormConfig.Logger = logging.ZerologAdapter{LoggingSink: &logger}
+	gormConfig.Logger = logging.ZerologAdapter{LoggingSink: logger}
 
 	switch configuration.SelectedEngine {
 	case dbController.MariaDB:
