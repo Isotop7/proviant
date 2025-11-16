@@ -85,7 +85,7 @@ func main() {
 	}
 
 	// Setup database connection handle
-	dbHandle, setupErr := SetupDatabase(cLogger, proviantConfiguration.Database)
+	dbHandle, setupErr := SetupDatabase(cLogger, &proviantConfiguration.Database)
 	if setupErr != nil {
 		panic(setupErr)
 	} else if dbHandle == nil {
@@ -103,7 +103,7 @@ func main() {
 	}
 
 	// Run migrations for breaking changes
-	breakingMigrationsError := migrations.RunBreakingDatabaseMigrations(*cLogger, dbHandle)
+	breakingMigrationsError := migrations.RunBreakingDatabaseMigrations(cLogger, dbHandle)
 	if breakingMigrationsError != nil {
 		panic(breakingMigrationsError)
 	}
@@ -157,7 +157,7 @@ func main() {
 	}
 }
 
-func SetupDatabase(logger *zerolog.Logger, configuration configuration.DatabaseConfiguration) (*gorm.DB, error) {
+func SetupDatabase(logger *zerolog.Logger, databaseConiguration *configuration.DatabaseConfiguration) (*gorm.DB, error) {
 	// Generate gorm config
 	var dbErr error
 	var dbHandle *gorm.DB
@@ -165,30 +165,30 @@ func SetupDatabase(logger *zerolog.Logger, configuration configuration.DatabaseC
 	// Create Zerolog adapter and pass it to gorm config
 	gormConfig.Logger = logging.ZerologAdapter{LoggingSink: logger}
 
-	switch configuration.SelectedEngine {
+	switch databaseConiguration.SelectedEngine {
 	case dbController.MariaDB:
 		// Generate database URI
 		databaseURI := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-			configuration.MariaDB.User,
-			configuration.MariaDB.Password,
-			configuration.MariaDB.Host,
-			configuration.MariaDB.Port,
-			configuration.MariaDB.Name)
+			databaseConiguration.MariaDB.User,
+			databaseConiguration.MariaDB.Password,
+			databaseConiguration.MariaDB.Host,
+			databaseConiguration.MariaDB.Port,
+			databaseConiguration.MariaDB.Name)
 		// Open database handle
 		dbHandle, dbErr = gorm.Open(mysql.Open(databaseURI), &gormConfig)
 
 		// Check if database can be accessed
 		if dbErr != nil {
-			logger.Warn().Msgf("Database '%s' on server '%s' could not be reached", configuration.MariaDB.Name, configuration.MariaDB.Host)
+			logger.Warn().Msgf("Database '%s' on server '%s' could not be reached", databaseConiguration.MariaDB.Name, databaseConiguration.MariaDB.Host)
 			return nil, dbErr
 		}
 	case dbController.SQLite:
 		// Create file and handle
-		dbHandle, dbErr = gorm.Open(sqlite.Open(configuration.SQLite.Filepath), &gormConfig)
+		dbHandle, dbErr = gorm.Open(sqlite.Open(databaseConiguration.SQLite.Filepath), &gormConfig)
 
 		// Check if database can be accessed
 		if dbErr != nil {
-			logger.Warn().Msgf("Database on path '%s' could not be opened", configuration.SQLite.Filepath)
+			logger.Warn().Msgf("Database on path '%s' could not be opened", databaseConiguration.SQLite.Filepath)
 			return nil, dbErr
 		}
 	case dbController.InvalidEngine:
