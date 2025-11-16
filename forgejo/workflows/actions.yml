@@ -2,22 +2,18 @@ name: Actions
 
 env:
   GO_VERSION: 1.25
+  GOLANGCI_LINT_VERSION: v2.6.1
 
-on:
-  push:
-  issues:
-    types: [opened, edited]
-  pull_request:
-    types: [opened, synchronize, reopened]
+on: [push]
 
 jobs:
   check:
     runs-on: docker
     steps:
       - name: checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Check code format and vet
@@ -43,7 +39,7 @@ jobs:
     if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
     runs-on: docker
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: SonarCloud Scan
@@ -55,19 +51,19 @@ jobs:
     if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
     runs-on: docker
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Lint code
         run: |
           cd ./src
-          docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.62 golangci-lint run -v -E gocritic --timeout "3m"
+          docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:${{ env.GOLANGCI_LINT_VERSION }} golangci-lint run -v -E gocritic --timeout "3m"
   compile:
     needs: lint
     if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
     runs-on: docker
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup Go
@@ -84,24 +80,29 @@ jobs:
     if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
     runs-on: docker
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - name: Login to Codeberg registry
+        uses: docker/login-action@v3
+        with:
+          registry: codeberg.org
+          username: ${{ secrets.CODEBERG_REGISTRY_USERNAME }}
+          password: ${{ secrets.CODEBERG_REGISTRY_PASSWORD }}
+      - name: Login to private registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.PRIVATE_REGISTRY_URL }}
+          username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
+          password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: ./src
           push: true
           tags: |
-            ${{ secrets.CI_REGISTRY_IMAGE }}:${{ forgejo.ref_name }}
-            ${{ secrets.CI_REGISTRY_IMAGE }}:latest
-      - name: Build and push private Docker image
-        env:
-          CI_REGISTRY_IMAGE: ${{ secrets.PRIVATE_REGISTRY }}/${{ forgejo.repository }}
-        uses: docker/build-push-action@v4
-        with:
-          context: ./src
-          push: true
-          tags: |
-            ${{ env.CI_REGISTRY_IMAGE }}:${{ forgejo.ref_name }}
-            ${{ env.CI_REGISTRY_IMAGE }}:latest
+            codeberg.org/${{ forgejo.repository }}:${{ forgejo.ref_name }}
+            codeberg.org/${{ forgejo.repository }}:latest
+            ${{ secrets.PRIVATE_REGISTRY_IMAGE }}:${{ forgejo.ref_name }}
+            ${{ secrets.PRIVATE_REGISTRY_IMAGE }}:latest
