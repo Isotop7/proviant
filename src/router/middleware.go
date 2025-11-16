@@ -91,16 +91,16 @@ func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool {
 
 // JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization (optional)
 func JWTMiddleware(
-	configuration *configuration.ProviantConfiguration,
+	proviantConfiguration *configuration.ProviantConfiguration,
 	dbHandle *gorm.DB,
 	authorizatorFunc func(data any, ctx *gin.Context) bool,
 	unauthorizedFunc func(ctx *gin.Context, code int, message string)) (*jwt.GinJWTMiddleware, error) {
 	return jwt.New(&jwt.GinJWTMiddleware{
 		// JWT configuration and timeouts
 		Realm:         static.TokenRealm,
-		Key:           []byte(configuration.Server.Authentication.TokenPassword),
-		Timeout:       (time.Duration(configuration.Server.Authentication.TokenLifetime) * time.Hour),
-		MaxRefresh:    (time.Duration(configuration.Server.Authentication.TokenLifetime) * time.Hour),
+		Key:           []byte(proviantConfiguration.Server.Authentication.TokenPassword),
+		Timeout:       (time.Duration(proviantConfiguration.Server.Authentication.TokenLifetime) * time.Hour),
+		MaxRefresh:    (time.Duration(proviantConfiguration.Server.Authentication.TokenLifetime) * time.Hour),
 		IdentityKey:   static.TokenIdentityKey,
 		TokenLookup:   static.TokenLookup,
 		TokenHeadName: static.TokenHeadName,

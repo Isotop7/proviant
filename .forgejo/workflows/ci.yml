@@ -2,7 +2,7 @@ name: CI
 
 env:
   GO_VERSION: 1.25
-  GOLANGCI_LINT_VERSION: v2.6.1
+  GOLANGCI_LINT_VERSION: v2.6.2
 
 on: [push]
 
@@ -10,7 +10,7 @@ jobs:
   check:
     runs-on: docker
     steps:
-      - name: checkout code
+      - name: Checkout code
         uses: actions/checkout@v5
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -34,36 +34,42 @@ jobs:
         run: |
           cd ./src
           go mod verify
-  sonarcloud-check:
+  golangci-lint:
     needs: check
+    runs-on: docker
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: golangci-lint
+        uses: https://github.com/golangci/golangci-lint-action@v8
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          working-directory: src
+  sonarcloud-check:
+    needs: lint
     if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
     runs-on: docker
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout code
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: SonarCloud Scan
+      - name: Run SonarCloud scan
         uses: sonarsource/sonarcloud-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-  lint:
-    needs: check
-    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
-    runs-on: docker
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - name: Lint code
-        run: |
-          cd ./src
-          docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:${{ env.GOLANGCI_LINT_VERSION }} golangci-lint run -v -E gocritic --timeout "3m"
   compile:
     needs: lint
     if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
     runs-on: docker
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout code
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup Go
@@ -75,9 +81,9 @@ jobs:
           cd ./src
           mkdir -p release
           go build -o release ./...
-  docker-build:
+  docker-build-and-push:
     needs: compile
-    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
+    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main'
     runs-on: docker
     steps:
       - name: Checkout code
@@ -96,6 +102,8 @@ jobs:
           registry: ${{ secrets.PRIVATE_REGISTRY_URL }}
           username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
           password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:

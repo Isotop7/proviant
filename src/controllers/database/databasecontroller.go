@@ -77,7 +77,7 @@ func (dbc DatabaseController) GetHouseholdByID(householdID uint) (database.House
 }
 
 // UserExistsByUsername returns if a given user object exists in the database based on the property 'username'
-func (dbc DatabaseController) UserExistsByUsername(user authentication.User) bool {
+func (dbc DatabaseController) UserExistsByUsername(user *authentication.User) bool {
 	var dbUser authentication.User
 	// Try to get first object with matching username
 	selectErr := dbc.DBHandle.First(&dbUser, "username = ?", user.Username)
@@ -86,7 +86,7 @@ func (dbc DatabaseController) UserExistsByUsername(user authentication.User) boo
 }
 
 // UserExistsByMailAddress returns if a given user object exists in the database based on the property 'mailAddress'
-func (dbc DatabaseController) UserExistsByMailAddress(user authentication.User) bool {
+func (dbc DatabaseController) UserExistsByMailAddress(user *authentication.User) bool {
 	var dbUser authentication.User
 	// Try to get first object with matching mailAddress
 	selectErr := dbc.DBHandle.First(&dbUser, "mail_address = ?", user.MailAddress)
@@ -257,15 +257,15 @@ func (dbc DatabaseController) GetHouseholdMembersMailAddressesByID(householdID u
 	}
 
 	// Find users with matching id
-	var users []authentication.User
+	var users []*authentication.User
 	findErr := dbc.DBHandle.Where("household_id = ?", householdID).Find(&users)
 	if findErr != nil {
 		return mailAddresses, findErr.Error
 	}
 
 	// Loop through household members and add mail addresses
-	for _, user := range users {
-		mailAddresses = append(mailAddresses, user.MailAddress)
+	for idx := range users {
+		mailAddresses = append(mailAddresses, users[idx].MailAddress)
 	}
 	return mailAddresses, nil
 }
@@ -423,7 +423,7 @@ func (dbc DatabaseController) GetArchivedProductByID(productID int, userID uint)
 }
 
 // SearchProducts returns an array of products of a user matching a search paramater and a query
-func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue string, sort string, order string, userID uint) ([]database.Product, error) {
+func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue, sort, order string, userID uint) ([]database.Product, error) {
 	// Get user object from database
 	user, userErr := dbc.GetUserByID(userID)
 	if userErr != nil {
@@ -560,20 +560,6 @@ func (dbc DatabaseController) RestoreProduct(productID int, userID uint) error {
 	return saveResult.Error
 }
 
-// PermanentDeleteProduct deletes a product (based on product ID) of a user (based on user ID) permanently
-// If the database operations return an error, the error is also returned (otherwise nil)
-func (dbc DatabaseController) PermanentlyDeleteProduct(productID int, userID uint) error {
-	// Get product and check for correct userID
-	_, getError := dbc.GetProductByID(productID, userID)
-	if getError != nil {
-		return getError
-	}
-
-	// Permanently delete product by its id
-	permanentlyDeleteResult := dbc.DBHandle.Unscoped().Delete(&database.Product{}, productID)
-	return permanentlyDeleteResult.Error
-}
-
 // SetProductExpireAt updates the expiry date of a product (based on product ID) of a user (based on user ID)
 // If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error {
@@ -627,19 +613,19 @@ func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error {
 // GetProductsExpired returns an array of products of a user (based on user ID) that are already expired
 // If the database operations return an error, the error is also returned (otherwise nil)
 // If the user has no products assigned, the function returns an empty dataset
-func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Product, error) {
+func (dbc DatabaseController) GetProductsExpired(userID uint) ([]*database.Product, error) {
 	// Get all user products
 	userProducts, getBulkErr := dbc.GetUserProductsBulk(userID, 0)
 	if getBulkErr != nil {
-		return []database.Product{}, getBulkErr
+		return []*database.Product{}, getBulkErr
 	}
 
 	// Get all currently expired products
-	expiredProducts := []database.Product{}
+	var expiredProducts []*database.Product
 	timestamp := time.Now()
-	for _, p := range userProducts {
-		if p.ExpireAt.After(timestamp) {
-			expiredProducts = append(expiredProducts, p)
+	for idx := range userProducts {
+		if userProducts[idx].ExpireAt.After(timestamp) {
+			expiredProducts = append(expiredProducts, &userProducts[idx])
 		}
 	}
 	return expiredProducts, nil
@@ -707,7 +693,7 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	// Create tile
 	homeTiles = append(homeTiles, webparts.Tile{
 		Title:  "Last inserted product",
-		Hero:   fmt.Sprint(lastProduct.ProductName),
+		Hero:   lastProduct.ProductName,
 		Body:   fmt.Sprintf("'%s' is the most recent product with barcode #%s", lastProduct.ProductName, lastProduct.Barcode),
 		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
 	})
@@ -726,7 +712,7 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	// Create tile
 	homeTiles = append(homeTiles, webparts.Tile{
 		Title:  "Last notification",
-		Hero:   fmt.Sprint(lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04")),
+		Hero:   lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04"),
 		Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04")),
 		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
 	})

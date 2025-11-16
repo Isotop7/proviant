@@ -43,21 +43,21 @@ func main() {
 	}
 
 	// Unmarshal yaml to configuration struct
-	configuration := configuration.ProviantConfiguration{}
-	err := viper.Unmarshal(&configuration)
+	proviantConfiguration := configuration.ProviantConfiguration{}
+	err := viper.Unmarshal(&proviantConfiguration)
 	if err != nil {
 		panic(err)
 	}
 
 	// Setup logging
-	var cLogger zerolog.Logger
+	var cLogger *zerolog.Logger
 	// Check if logging to file was enabled
-	if configuration.Logging.Enabled {
+	if proviantConfiguration.Logging.Enabled {
 		// Create multi writer for file and terminal logging
 		logFile, logFileOpenErr := os.OpenFile(
-			configuration.Logging.File,
+			proviantConfiguration.Logging.File,
 			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
-			0664,
+			0o664,
 		)
 		// Check of logfile could be opened
 		if logFileOpenErr != nil {
@@ -65,17 +65,19 @@ func main() {
 		}
 		// Add logfile to logging writers
 		multi := zerolog.MultiLevelWriter(logFile, zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime})
-		cLogger = zerolog.New(multi).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
+		logFileLogger := zerolog.New(multi).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
+		cLogger = &logFileLogger
 	} else {
 		// Create writer to terminal
-		cLogger = zerolog.New(
+		terminalLogger := zerolog.New(
 			zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime},
 		).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
+		cLogger = &terminalLogger
 	}
 	cLogger.Info().Msg("Logging initialized")
 
 	// Validate database parameters
-	dbValidErr := configuration.ValidateDatabaseConfiguration()
+	dbValidErr := proviantConfiguration.ValidateDatabaseConfiguration()
 	if dbValidErr != nil {
 		panic(dbValidErr)
 	} else {
@@ -83,7 +85,7 @@ func main() {
 	}
 
 	// Setup database connection handle
-	dbHandle, setupErr := SetupDatabase(cLogger, configuration.Database)
+	dbHandle, setupErr := SetupDatabase(cLogger, &proviantConfiguration.Database)
 	if setupErr != nil {
 		panic(setupErr)
 	} else if dbHandle == nil {
@@ -107,24 +109,24 @@ func main() {
 	}
 
 	// Check API controller config and create instance
-	validateErr := configuration.ValidateOpenFoodFactsConfiguration()
+	validateErr := proviantConfiguration.ValidateOpenFoodFactsConfiguration()
 	if validateErr != nil {
 		panic("URL for OpenFoodFactsAPI not set")
 	} else {
 		cLogger.Info().Msg("OpenFoodFacts configuration is valid")
 	}
 	offacntrl := controllers.OpenFoodFactsAPIController{
-		Configuration: configuration.OpenFoodFacts,
-		Logger:        &cLogger,
+		Configuration: proviantConfiguration.OpenFoodFacts,
+		Logger:        cLogger,
 	}
 
 	// Setup NotificationController if notifications are enabled
-	if !configuration.Notification.Enabled {
+	if !proviantConfiguration.Notification.Enabled {
 		cLogger.Info().Msg("Notifications are disabled")
 	} else {
 		notificationController := controllers.NotificationController{
-			Logger:             &cLogger,
-			Configuration:      configuration.Notification,
+			Logger:             cLogger,
+			Configuration:      proviantConfiguration.Notification,
 			DatabaseController: &dbController.DatabaseController{DBHandle: dbHandle},
 		}
 		// Dispatch notification handler goroutine
@@ -137,13 +139,13 @@ func main() {
 		cLogger.Error().Msg(err.Error())
 		panic(err)
 	}
-	configuration.TemplateCache = templateCache
+	proviantConfiguration.TemplateCache = templateCache
 
 	// Call function to setup router and pass references
-	proviantEngine := router.SetupRouter(&cLogger, &configuration, dbHandle, offacntrl)
+	proviantEngine := router.SetupRouter(cLogger, &proviantConfiguration, dbHandle, offacntrl)
 
 	// Get server port or instead set default value
-	serverPort := configuration.Server.Port
+	serverPort := proviantConfiguration.Server.Port
 	if serverPort <= 0 {
 		serverPort = 5114
 	}
@@ -155,38 +157,38 @@ func main() {
 	}
 }
 
-func SetupDatabase(logger zerolog.Logger, configuration configuration.DatabaseConfiguration) (*gorm.DB, error) {
+func SetupDatabase(logger *zerolog.Logger, databaseConiguration *configuration.DatabaseConfiguration) (*gorm.DB, error) {
 	// Generate gorm config
 	var dbErr error
 	var dbHandle *gorm.DB
 	gormConfig := gorm.Config{}
 	// Create Zerolog adapter and pass it to gorm config
-	gormConfig.Logger = logging.ZerologAdapter{LoggingSink: &logger}
+	gormConfig.Logger = logging.ZerologAdapter{LoggingSink: logger}
 
-	switch configuration.SelectedEngine {
+	switch databaseConiguration.SelectedEngine {
 	case dbController.MariaDB:
 		// Generate database URI
 		databaseURI := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-			configuration.MariaDB.User,
-			configuration.MariaDB.Password,
-			configuration.MariaDB.Host,
-			configuration.MariaDB.Port,
-			configuration.MariaDB.Name)
+			databaseConiguration.MariaDB.User,
+			databaseConiguration.MariaDB.Password,
+			databaseConiguration.MariaDB.Host,
+			databaseConiguration.MariaDB.Port,
+			databaseConiguration.MariaDB.Name)
 		// Open database handle
 		dbHandle, dbErr = gorm.Open(mysql.Open(databaseURI), &gormConfig)
 
 		// Check if database can be accessed
 		if dbErr != nil {
-			logger.Warn().Msgf("Database '%s' on server '%s' could not be reached", configuration.MariaDB.Name, configuration.MariaDB.Host)
+			logger.Warn().Msgf("Database '%s' on server '%s' could not be reached", databaseConiguration.MariaDB.Name, databaseConiguration.MariaDB.Host)
 			return nil, dbErr
 		}
 	case dbController.SQLite:
 		// Create file and handle
-		dbHandle, dbErr = gorm.Open(sqlite.Open(configuration.SQLite.Filepath), &gormConfig)
+		dbHandle, dbErr = gorm.Open(sqlite.Open(databaseConiguration.SQLite.Filepath), &gormConfig)
 
 		// Check if database can be accessed
 		if dbErr != nil {
-			logger.Warn().Msgf("Database on path '%s' could not be opened", configuration.SQLite.Filepath)
+			logger.Warn().Msgf("Database on path '%s' could not be opened", databaseConiguration.SQLite.Filepath)
 			return nil, dbErr
 		}
 	case dbController.InvalidEngine:

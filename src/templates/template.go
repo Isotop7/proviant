@@ -73,14 +73,14 @@ func splitString(source string) template.HTML {
 }
 
 var customTemplateFunctions = template.FuncMap{
-	"humanDate":         	humanDate,
-	"humanDateTime":    	humanDateTime,
-	"humanDateTimeFromSQL":	humanDateTimeFromSQL,
-	"inputDate":         	inputDate,
-	"today":             	today,
-	"hasPassed":         	hasPassed,
-	"badgifyCategories":	badgifyCategories,
-	"splitString":      	splitString,
+	"humanDate":            humanDate,
+	"humanDateTime":        humanDateTime,
+	"humanDateTimeFromSQL": humanDateTimeFromSQL,
+	"inputDate":            inputDate,
+	"today":                today,
+	"hasPassed":            hasPassed,
+	"badgifyCategories":    badgifyCategories,
+	"splitString":          splitString,
 }
 
 func NewTemplateCache() (map[string]*template.Template, error) {
@@ -113,7 +113,7 @@ func NewTemplateCache() (map[string]*template.Template, error) {
 	return cache, nil
 }
 
-func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base string, page string, data map[string]any) {
+func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base, page string, data map[string]any) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 

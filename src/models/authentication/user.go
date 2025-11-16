@@ -22,12 +22,12 @@ type User struct {
 }
 
 // IsValid is a simple validator function to check for valid properties
-func (user User) IsValid(skipPassword bool) error {
+func (user *User) IsValid(skipPassword bool) error {
 	if user.ID < 1 {
 		return errors.ErrInvalidUserID
 	}
 
-	if len(user.Username) == 0 {
+	if user.Username == "" {
 		return errors.ErrUsernameEmpty
 	}
 
