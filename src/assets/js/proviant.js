@@ -57,10 +57,27 @@ proviant.editProduct = async function (product) {
     return response;
 }
 
-proviant.deleteProduct = async function (productID) {
+proviant.deleteProduct = async function (productID, archiveOnly) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${productID}`
+    if (archiveOnly) { url += '?archiveOnly=true'; }
     const apiCall = await fetch(url, {
         method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    const body = await apiCall.json();
+    let response = {
+        code: apiCall.status,
+        message: body.message
+    }
+    return response;
+}
+
+proviant.restoreProduct = async function (productID) {
+    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${productID}/restore`
+    const apiCall = await fetch(url, {
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         }
@@ -105,16 +122,17 @@ proviant.signupUser = async function (username, mailAddress, password) {
         },
         body: JSON.stringify({ username, mailAddress, password })
     });
-    if (!apiCall.ok) {
-        return {
-            code: apiCall.status,
-            body: "Error signing up"
-        }
-    }
     const body = await apiCall.json();
     const response = {
         code: apiCall.status,
         body: body.message
+    }
+
+    if (!apiCall.ok) {
+        return {
+            code: apiCall.status,
+            body: `${body.message}`
+        }
     }
     return response;
 }

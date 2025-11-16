@@ -82,6 +82,60 @@ func GetProducts(ctx *gin.Context) {
 	}
 }
 
+// GetArchivedProducts returns the archived products of a user
+// @Summary      Return a list of archived products
+// @Description  Return a list of archived products of user
+// @Tags         product
+// @Produce      json
+// @Success      200  {object}  []database.Product
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/products/archived [get]
+func GetArchivedProducts(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get and parse parameter limit
+	limitParam := ctx.Query("limit")
+	var limit int
+	var parseError error
+	if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
+		logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
+		return
+	}
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	// Create database controller
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	// Get products of user from database with optional limit
+	products, productBulkErr := dbController.GetUserArchivedProductsBulk(userID, limit)
+	if productBulkErr != nil {
+		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
+		return
+	} else {
+		ctx.JSON(http.StatusOK, products)
+		return
+	}
+}
+
 // GetProduct return a single product of a user
 // @Summary      Returns a single product
 // @Description  Returns a single product of user
@@ -376,11 +430,85 @@ func UpdateProduct(ctx *gin.Context) {
 // @Accept			json
 // @Produce      	json
 // @Param        	id   	path	int					true  	"Product ID"
+// @Param        	archiveOnly	query	bool				false	"Archive only"
 // @Success      	200  {object}  api.APIResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/product/{id} [delete]
 func DeleteProduct(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get and parse parameter id
+	idParam := ctx.Param("id")
+	var productID int
+	var convErr error
+	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
+		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
+		return
+	}
+
+	var archiveOnly bool
+	var parseError error
+	// Get and parse parameter archiveOnly
+	archiveOnlyParam, archiveOnlyParamExists := ctx.GetQuery("archiveOnly")
+	// Check if archiveOnlyParam is supplied
+	if !archiveOnlyParamExists {
+		// Default to hard deletion
+		archiveOnly = false
+	} else {
+		// Try to parse archiveOnlyParam as a boolean
+		if archiveOnly, parseError = strconv.ParseBool(archiveOnlyParam); parseError != nil {
+			logger.Warn().Msgf("Invalid archiveOnly '%s' was specified", archiveOnlyParam)
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("archiveOnly '%s' is invalid", archiveOnlyParam)})
+			return
+		}
+	}
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	// Create database controller
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	// Delete product from database
+	deleteResult := dbController.DeleteProduct(productID, userID, archiveOnly)
+	if deleteResult != nil {
+		logger.Error().Msgf("Error deleting product: %s", deleteResult)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: deleteResult.Error()})
+		return
+	} else {
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was deleted", productID)})
+		return
+	}
+}
+
+// RestoreProduct restores an archived product of a user
+// @Summary      	Restores a product
+// @Description  	Restores an archived product of a user
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Param        	id   	path	int					true  	"Product ID"
+// @Success      	200  {object}  api.APIResponse
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/product/{id}/restore [post]
+func RestoreProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
@@ -414,13 +542,13 @@ func DeleteProduct(ctx *gin.Context) {
 	// Create database controller
 	dbController := database.DatabaseController{DBHandle: dbHandle}
 	// Delete product from database
-	deleteResult := dbController.DeleteProduct(productID, userID)
-	if deleteResult != nil {
-		logger.Error().Msgf("Error deleting product: %s", deleteResult)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: deleteResult.Error()})
+	restoreResult := dbController.RestoreProduct(productID, userID)
+	if restoreResult != nil {
+		logger.Error().Msgf("Error restoring product: %s", restoreResult)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: restoreResult.Error()})
 		return
 	} else {
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was deleted", productID)})
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was restored", productID)})
 		return
 	}
 }

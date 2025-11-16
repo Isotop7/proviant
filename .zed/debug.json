@@ -1,0 +1,13 @@
+[
+  {
+      "label": "Debug proviant",
+      "adapter": "Delve",
+      "request": "launch",
+      "mode": "debug",
+      // For Delve, the program can be a package name
+      "program": "./src/proviant.go",
+      "cwd": "${ZED_WORKTREE_ROOT}/src"
+      // "args": [],
+      // "buildFlags": [],
+    }
+]
