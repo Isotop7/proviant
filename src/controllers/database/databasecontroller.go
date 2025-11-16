@@ -527,7 +527,7 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 // If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) DeleteProduct(productID int, userID uint, archiveOnly bool) error {
 	// Get product and check for correct userID
-	_, getError := dbc.GetProductByID(productID, userID)
+	_, getError := dbc.GetArchivedProductByID(productID, userID)
 	if getError != nil {
 		return getError
 	}
