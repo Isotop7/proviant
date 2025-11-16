@@ -15,7 +15,7 @@ type Signup struct {
 
 // IsValid checks if the given signup instance is valid
 func (signup *Signup) IsValid() error {
-	if len(signup.Username) == 0 {
+	if signup.Username == "" {
 		return errors.ErrUsernameEmpty
 	}
 

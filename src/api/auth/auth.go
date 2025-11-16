@@ -64,14 +64,14 @@ func Signup(ctx *gin.Context) {
 	}
 
 	// Check if user with username already exists
-	if dbController.UserExistsByUsername(user) {
+	if dbController.UserExistsByUsername(&user) {
 		logger.Error().Msgf("User '%s' already exists", user.Username)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithUsernameExists)
 		return
 	}
 
 	// Check if user with mail address already exists
-	if dbController.UserExistsByMailAddress(user) {
+	if dbController.UserExistsByMailAddress(&user) {
 		logger.Error().Msgf("User with mail address '%s' already exists", user.MailAddress)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithMailAddressExists)
 		return
