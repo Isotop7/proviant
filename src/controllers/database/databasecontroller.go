@@ -560,7 +560,7 @@ func (dbc DatabaseController) RestoreProduct(productID int, userID uint) error {
 	return saveResult.Error
 }
 
-// PermanentDeleteProduct deletes a product (based on product ID) of a user (based on user ID) permanently
+// PermanentlyDeleteProduct deletes a product (based on product ID) of a user (based on user ID) permanently
 // If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) PermanentlyDeleteProduct(productID int, userID uint) error {
 	// Get product and check for correct userID
