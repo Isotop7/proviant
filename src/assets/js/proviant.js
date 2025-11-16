@@ -77,7 +77,7 @@ proviant.deleteProduct = async function (productID, archiveOnly) {
 proviant.restoreProduct = async function (productID) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${productID}/restore`
     const apiCall = await fetch(url, {
-        method: 'GET',
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         }

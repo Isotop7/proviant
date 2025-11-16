@@ -159,7 +159,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	protectedProductAPI.GET("/:id", v1.GetProduct)
 	protectedProductAPI.PATCH("/:id", v1.UpdateProduct)
 	protectedProductAPI.DELETE("/:id", v1.DeleteProduct)
-	protectedProductAPI.GET("/:id/restore", v1.RestoreProduct)
+	protectedProductAPI.POST("/:id/restore", v1.RestoreProduct)
 	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)
 
 	// Web frontend routes
