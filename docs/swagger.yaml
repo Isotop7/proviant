@@ -280,6 +280,35 @@ paths:
       summary: Updates the expire date
       tags:
       - product
+  /api/v1/product/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restores an archived product of a user
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Restores a product
+      tags:
+      - product
   /api/v1/products:
     get:
       description: Return a list of products of user
@@ -330,6 +359,29 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Creates a new product
+      tags:
+      - product
+  /api/v1/products/archived:
+    get:
+      description: Return a list of archived products of user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/database.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Return a list of archived products
       tags:
       - product
   /api/v1/products/expired:
