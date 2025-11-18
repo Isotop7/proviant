@@ -68,7 +68,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   compile:
     needs: lint
-    if: forgejo.ref == 'refs/heads/main'
+    if: forgejo.ref == 'refs/heads/main' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
     runs-on: self-hosted
     steps:
       - name: Checkout code
