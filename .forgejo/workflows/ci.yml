@@ -3,7 +3,7 @@ name: CI
 env:
   GO_VERSION: 1.25
   GOLANGCI_LINT_VERSION: v2.6.2
-  FORGEJO_REGISTRY: data.forgejo.org
+  CODEBERG_REGISTRY: codeberg.org
 
 on: [push]
 
@@ -97,7 +97,7 @@ jobs:
       - name: Login to Codeberg registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.FORGEJO_REGISTRY }}
+          registry: ${{ env.CODEBERG_REGISTRY }}
           username: ${{ secrets.CODEBERG_REGISTRY_USERNAME }}
           password: ${{ secrets.CODEBERG_REGISTRY_PASSWORD }}
       - name: Login to private registry
@@ -112,7 +112,7 @@ jobs:
           context: ./src
           push: true
           tags: |
-            ${{ env.FORGEJO_REGISTRY }}/${{ forgejo.repository }}:${{ forgejo.ref_name }}
-            ${{ env.FORGEJO_REGISTRY }}/${{ forgejo.repository }}:latest
+            ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:${{ forgejo.ref_name }}
+            ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:latest
             ${{ secrets.PRIVATE_REGISTRY_IMAGE }}:${{ forgejo.ref_name }}
             ${{ secrets.PRIVATE_REGISTRY_IMAGE }}:latest
