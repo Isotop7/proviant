@@ -4,6 +4,7 @@ env:
   GO_VERSION: 1.25
   GOLANGCI_LINT_VERSION: v2.6.2
   CODEBERG_REGISTRY: codeberg.org
+  PRIVATE_REGISTRY: registry.hr94.de
 
 on: [push]
 
@@ -67,7 +68,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   compile:
     needs: lint
-    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
+    if: forgejo.ref == 'refs/heads/main'
     runs-on: self-hosted
     steps:
       - name: Checkout code
@@ -103,16 +104,17 @@ jobs:
       - name: Login to private registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.PRIVATE_REGISTRY_URL }}
+          registry: ${{ env.PRIVATE_REGISTRY }}
           username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
           password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: ./src
+          file: ./Dockerfile
           push: true
           tags: |
             ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:${{ forgejo.ref_name }}
             ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:latest
-            ${{ secrets.PRIVATE_REGISTRY_IMAGE }}:${{ forgejo.ref_name }}
-            ${{ secrets.PRIVATE_REGISTRY_IMAGE }}:latest
+            ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:${{ forgejo.ref_name }}
+            ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:latest
