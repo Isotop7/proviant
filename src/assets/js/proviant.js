@@ -74,6 +74,40 @@ proviant.deleteProduct = async function (productID, archiveOnly) {
     return response;
 }
 
+proviant.bulkDeleteProducts = async function (productIDs) {
+    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/bulkDelete`
+    const apiCall = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ productIDs })
+    })
+    const body = await apiCall.json();
+    let response = {
+        code: apiCall.status,
+        message: body.message
+    }
+    return response;
+}
+
+proviant.bulkArchiveProducts = async function (productIDs) {
+    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/bulkArchive`
+    const apiCall = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ productIDs })
+    })
+    const body = await apiCall.json();
+    let response = {
+        code: apiCall.status,
+        message: body.message
+    }
+    return response;
+}
+
 proviant.restoreProduct = async function (productID) {
     let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${productID}/restore`
     const apiCall = await fetch(url, {

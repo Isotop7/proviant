@@ -156,17 +156,16 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Deletes a product of a user
+      description: Archives a list of products of a user
       parameters:
-      - description: Product ID
-        in: path
-        name: id
+      - description: Product IDs
+        in: body
+        name: productIDs
         required: true
-        type: integer
-      - description: Archive only
-        in: query
-        name: archiveOnly
-        type: boolean
+        schema:
+          items:
+            type: integer
+          type: array
       produces:
       - application/json
       responses:
@@ -182,7 +181,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/api.APIResponse'
-      summary: Deletes a product
+      summary: Archives a list of products
       tags:
       - product
     get:
