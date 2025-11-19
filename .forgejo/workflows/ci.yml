@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
-      - name: Check code format and vet
+      - name: Vet code
         run: |
           cd ./src
           go vet $(go list ./... | grep -v /vendor/)
@@ -30,7 +30,7 @@ jobs:
         run: |
           cd ./src
           go mod verify
-      - name: golangci-lint
+      - name: Lint code
         uses: https://github.com/golangci/golangci-lint-action@v8
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
