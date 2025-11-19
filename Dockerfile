@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine AS buildenv
+FROM golang:1.24-alpine AS buildenv
 WORKDIR /app
 
 RUN apk add --no-cache --update go gcc g++ npm
@@ -19,7 +19,7 @@ RUN npm install && \
     cd src && \
     CGO_ENABLED=1 GOOS=linux CGO_CFLAGS="-D_LARGEFILE64_SOURCE" go build -v -o ../proviant
 
-FROM alpine:3.20
+FROM alpine:3.22
 WORKDIR /app
 
 COPY --from=buildenv /app/proviant /app/proviant
