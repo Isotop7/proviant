@@ -18,10 +18,6 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
-      - name: Test code
-        run: |
-          cd ./src
-          go test -race $(go list ./... | grep -v /vendor/)
       - name: Verify modules
         run: |
           cd ./src
@@ -31,6 +27,10 @@ jobs:
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: src
+      - name: Test code
+        run: |
+          cd ./src
+          go test -race $(go list ./... | grep -v /vendor/)
       - name: Compile code
         run: |
           cd ./src
