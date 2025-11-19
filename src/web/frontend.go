@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"strconv"
 
+	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/configuration/static"
+	"codeberg.org/isotop7/proviant/templates"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gitlab.com/Isotop7/proviant/api"
-	"gitlab.com/Isotop7/proviant/controllers/database"
-	"gitlab.com/Isotop7/proviant/errors"
-	"gitlab.com/Isotop7/proviant/models/configuration/static"
-	"gitlab.com/Isotop7/proviant/templates"
 	"gorm.io/gorm"
 )
 

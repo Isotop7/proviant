@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/Isotop7/proviant/errors"
-	"gitlab.com/Isotop7/proviant/models/authentication"
-	"gitlab.com/Isotop7/proviant/models/database"
-	"gitlab.com/Isotop7/proviant/models/webparts"
+	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/models/webparts"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"

@@ -3,9 +3,9 @@ package migrations
 import (
 	"fmt"
 
+	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/models/database"
 	"github.com/rs/zerolog"
-	"gitlab.com/Isotop7/proviant/models/authentication"
-	"gitlab.com/Isotop7/proviant/models/database"
 	"gorm.io/gorm"
 )
 

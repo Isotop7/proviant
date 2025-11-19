@@ -11,12 +11,12 @@ const docTemplate = `{
         "title": "{{.Title}}",
         "contact": {
             "name": "Isotop7",
-            "url": "https://gitlab.com/Isotop7/proviant",
+            "url": "https://codeberg.org/isotop7/proviant",
             "email": "hendrik@hr94.de"
         },
         "license": {
             "name": "MIT",
-            "url": "https://gitlab.com/Isotop7/proviant/-/blob/main/LICENSE"
+            "url": "https://codeberg.org/isotop7/proviant/-/blob/main/LICENSE"
         },
         "version": "{{.Version}}"
     },

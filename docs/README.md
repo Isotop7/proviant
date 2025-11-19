@@ -3,7 +3,7 @@
 # src
 
 ```go
-import "gitlab.com/Isotop7/proviant"
+import "codeberg.org/isotop7/proviant"
 ```
 
 proviant is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food
@@ -25,7 +25,7 @@ func SetupDatabase(logger *zerolog.Logger, databaseConiguration *configuration.D
 # api
 
 ```go
-import "gitlab.com/Isotop7/proviant/api"
+import "codeberg.org/isotop7/proviant/api"
 ```
 
 @externalDocs.description OpenAPI @externalDocs.url https://swagger.io/resources/open-api/
@@ -75,7 +75,7 @@ Error returns an API response object from a error object
 # assets
 
 ```go
-import "gitlab.com/Isotop7/proviant/assets"
+import "codeberg.org/isotop7/proviant/assets"
 ```
 
 ## Index
@@ -94,7 +94,7 @@ var AssetFiles embed.FS
 # controllers
 
 ```go
-import "gitlab.com/Isotop7/proviant/controllers"
+import "codeberg.org/isotop7/proviant/controllers"
 ```
 
 controllers implements different controllers used for accessing different APIs, objects and datasources
@@ -153,7 +153,7 @@ GetDataset gets data from OpenFoodFacts by its API. The search parameter is the 
 # errors
 
 ```go
-import "gitlab.com/Isotop7/proviant/errors"
+import "codeberg.org/isotop7/proviant/errors"
 ```
 
 errors contains custom error definitions
@@ -264,7 +264,7 @@ var (
 # logging
 
 ```go
-import "gitlab.com/Isotop7/proviant/logging"
+import "codeberg.org/isotop7/proviant/logging"
 ```
 
 Provides custom logging facilites
@@ -338,7 +338,7 @@ Warn logs a warning message.
 # migrations
 
 ```go
-import "gitlab.com/Isotop7/proviant/migrations"
+import "codeberg.org/isotop7/proviant/migrations"
 ```
 
 ## Index
@@ -358,7 +358,7 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error
 # router
 
 ```go
-import "gitlab.com/Isotop7/proviant/router"
+import "codeberg.org/isotop7/proviant/router"
 ```
 
 router contains the gin router definitions and maps requests to handlers
@@ -440,7 +440,7 @@ ZerologMiddleware implements a gin.HandlerFunc and logs the output from gin
 # templates
 
 ```go
-import "gitlab.com/Isotop7/proviant/templates"
+import "codeberg.org/isotop7/proviant/templates"
 ```
 
 ## Index
@@ -489,7 +489,7 @@ func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, m
 # web
 
 ```go
-import "gitlab.com/Isotop7/proviant/web"
+import "codeberg.org/isotop7/proviant/web"
 ```
 
 ## Index
@@ -621,7 +621,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context)
 # auth
 
 ```go
-import "gitlab.com/Isotop7/proviant/api/auth"
+import "codeberg.org/isotop7/proviant/api/auth"
 ```
 
 auth contains authentication method handlers
@@ -643,7 +643,7 @@ Signup creates a new user object in the database @Summary Creates a new user @De
 # common
 
 ```go
-import "gitlab.com/Isotop7/proviant/api/common"
+import "codeberg.org/isotop7/proviant/api/common"
 ```
 
 common implements non\-specifc handlers
@@ -665,7 +665,7 @@ GetHealth returns the health status of the API @Summary Gets health @Description
 # v1
 
 ```go
-import "gitlab.com/Isotop7/proviant/api/v1"
+import "codeberg.org/isotop7/proviant/api/v1"
 ```
 
 v1 implements version 1 of the proviant API
@@ -817,7 +817,7 @@ UpdateUserPassword updates a user password @Summary Updates a user password @Des
 # database
 
 ```go
-import "gitlab.com/Isotop7/proviant/controllers/database"
+import "codeberg.org/isotop7/proviant/controllers/database"
 ```
 
 ## Index
@@ -1169,7 +1169,7 @@ SupportedEnginesFromString parses and converts a given string to the matching en
 # authentication
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/authentication"
+import "codeberg.org/isotop7/proviant/models/authentication"
 ```
 
 authentication provides models and methods for logins
@@ -1256,7 +1256,7 @@ IsValid is a simple validator function to check for valid properties
 # configuration
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/configuration"
+import "codeberg.org/isotop7/proviant/models/configuration"
 ```
 
 configuration defines structs and methods for proviants configuration and specific parts of it
@@ -1446,7 +1446,7 @@ type ServerConfiguration struct {
 # database
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/database"
+import "codeberg.org/isotop7/proviant/models/database"
 ```
 
 database contains the database specific definitions and models
@@ -1591,7 +1591,7 @@ type Timestamp struct {
 # external
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/external"
+import "codeberg.org/isotop7/proviant/models/external"
 ```
 
 external provides model definitions from external parties
@@ -1637,7 +1637,7 @@ type OpenFoodFactsAPIDataset struct {
 # webparts
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/webparts"
+import "codeberg.org/isotop7/proviant/models/webparts"
 ```
 
 web contains models for web entities
@@ -1664,7 +1664,7 @@ type Tile struct {
 # static
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/configuration/static"
+import "codeberg.org/isotop7/proviant/models/configuration/static"
 ```
 
 static implements "constants" used in proviant

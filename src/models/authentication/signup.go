@@ -3,7 +3,7 @@ package authentication
 import (
 	"net/mail"
 
-	"gitlab.com/Isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/errors"
 )
 
 // Signup is derived from User and Login and primarily used for registration

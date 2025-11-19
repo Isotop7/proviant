@@ -6,10 +6,10 @@ import (
 	"html/template"
 	"time"
 
-	dbController "gitlab.com/Isotop7/proviant/controllers/database"
-	"gitlab.com/Isotop7/proviant/models/configuration"
-	dbModel "gitlab.com/Isotop7/proviant/models/database"
-	"gitlab.com/Isotop7/proviant/templates"
+	dbController "codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/models/configuration"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/templates"
 
 	"github.com/rs/zerolog"
 	gomail "gopkg.in/mail.v2"

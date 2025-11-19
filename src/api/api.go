@@ -4,11 +4,11 @@
 // @description     proviant is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food.
 
 // @contact.name   Isotop7
-// @contact.url    https://gitlab.com/Isotop7/proviant
+// @contact.url    https://codeberg.org/isotop7/proviant
 // @contact.email  hendrik@hr94.de
 
 // @license.name  MIT
-// @license.url   https://gitlab.com/Isotop7/proviant/-/blob/main/LICENSE
+// @license.url   https://codeberg.org/isotop7/proviant/-/blob/main/LICENSE
 
 // @host      localhost:5050
 // @BasePath  /
@@ -19,7 +19,7 @@
 // @externalDocs.url          https://swagger.io/resources/open-api/
 package api
 
-import "gitlab.com/Isotop7/proviant/errors"
+import "codeberg.org/isotop7/proviant/errors"
 
 var (
 	ResponseErrInvalidUserData           = APIResponse{Message: errors.ErrInvalidUserData.Error()}
