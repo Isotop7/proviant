@@ -40,19 +40,18 @@ tidy:
 	go fmt ./... && \
 	go mod tidy -v
 
-## audit: run quality control checks
-.PHONY: audit
-audit:
+## test: runs code tests
+.PHONY: test
+test:
 	cd ./src && \
-	go vet ./... && \
-	go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./... && \
 	go test -race -vet=off ./... && \
 	go mod verify
 
-.PHONY: lint
-lint:
+## check: runs quality control checks
+.PHONY: check
+check:
 	cd ./src && \
-	$(CONTAINER_RUNTIME) run -t --rm -v ./:/app:Z -w /app golangci/golangci-lint:v2.6.1 golangci-lint run -v -E gocritic --timeout "3m"
+	$(CONTAINER_RUNTIME) run -t --rm -v ./:/app:Z -v ../.golangci.yml:/tmp/.golangci.yml:Z -w /app golangci/golangci-lint:v2.6.2 golangci-lint run -v -c /tmp/.golangci.yml
 
 # ==================================================================================== #
 # Documentation
