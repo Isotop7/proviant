@@ -128,12 +128,12 @@ info:
   contact:
     email: hendrik@hr94.de
     name: Isotop7
-    url: https://gitlab.com/Isotop7/proviant
+    url: https://codeberg.org/isotop7/proviant
   description: proviant is a simple and intuitive application to track your bought
     products and their expiration date to prevent waste of food.
   license:
     name: MIT
-    url: https://gitlab.com/Isotop7/proviant/-/blob/main/LICENSE
+    url: https://codeberg.org/isotop7/proviant/-/blob/main/LICENSE
   title: proviant
   version: 0.2.0
 paths:

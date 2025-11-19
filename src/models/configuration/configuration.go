@@ -4,8 +4,8 @@ package configuration
 import (
 	"html/template"
 
-	"gitlab.com/Isotop7/proviant/controllers/database"
-	"gitlab.com/Isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/errors"
 )
 
 type DatabaseMariaDBConfiguration struct {

@@ -4,9 +4,9 @@ package auth
 import (
 	"net/http"
 
-	"gitlab.com/Isotop7/proviant/api"
-	"gitlab.com/Isotop7/proviant/controllers/database"
-	"gitlab.com/Isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/models/authentication"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"

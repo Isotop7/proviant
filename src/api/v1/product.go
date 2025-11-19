@@ -13,12 +13,12 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 
-	"gitlab.com/Isotop7/proviant/api"
-	"gitlab.com/Isotop7/proviant/controllers"
-	"gitlab.com/Isotop7/proviant/controllers/database"
-	"gitlab.com/Isotop7/proviant/errors"
-	"gitlab.com/Isotop7/proviant/models/configuration/static"
-	dbModel "gitlab.com/Isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers"
+	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/configuration/static"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
