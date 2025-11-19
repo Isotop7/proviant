@@ -5,6 +5,7 @@ linters:
 
   enable:
     - gocritic
+    - staticcheck
 
   disable: []
 
