@@ -672,6 +672,8 @@ v1 implements version 1 of the proviant API
 
 ## Index
 
+- [func BulkArchiveProducts\(ctx \*gin.Context\)](<#BulkArchiveProducts>)
+- [func BulkDeleteProducts\(ctx \*gin.Context\)](<#BulkDeleteProducts>)
 - [func CreateProduct\(ctx \*gin.Context\)](<#CreateProduct>)
 - [func DeleteProduct\(ctx \*gin.Context\)](<#DeleteProduct>)
 - [func GetArchivedProducts\(ctx \*gin.Context\)](<#GetArchivedProducts>)
@@ -687,6 +689,24 @@ v1 implements version 1 of the proviant API
 - [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
 - [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
 
+
+<a name="BulkArchiveProducts"></a>
+## func BulkArchiveProducts
+
+```go
+func BulkArchiveProducts(ctx *gin.Context)
+```
+
+BulkArchiveProducts archives a list of products of a user @Summary Archives a list of products @Description Archives a list of products of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
+
+<a name="BulkDeleteProducts"></a>
+## func BulkDeleteProducts
+
+```go
+func BulkDeleteProducts(ctx *gin.Context)
+```
+
+BulkDeleteProducts deletes a list of products of a user @Summary Deletes a list of products @Description Deletes a list of products of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
 
 <a name="CreateProduct"></a>
 ## func CreateProduct
@@ -822,7 +842,11 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 
 ## Index
 
+- [type BulkOperationError](<#BulkOperationError>)
+  - [func \(b \*BulkOperationError\) Error\(\) string](<#BulkOperationError.Error>)
 - [type DatabaseController](<#DatabaseController>)
+  - [func \(dbc DatabaseController\) BulkArchiveProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkArchiveProducts>)
+  - [func \(dbc DatabaseController\) BulkDeleteProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkDeleteProducts>)
   - [func \(dbc DatabaseController\) CreateProduct\(userID uint, product \*database.Product\) error](<#DatabaseController.CreateProduct>)
   - [func \(dbc DatabaseController\) CreateUser\(user \*authentication.User\) error](<#DatabaseController.CreateUser>)
   - [func \(dbc DatabaseController\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#DatabaseController.DeleteProduct>)
@@ -856,6 +880,26 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func SupportedEnginesFromString\(str string\) SupportedEngines](<#SupportedEnginesFromString>)
 
 
+<a name="BulkOperationError"></a>
+## type BulkOperationError
+
+BulkOperationError is an error type for bulk operations
+
+```go
+type BulkOperationError struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="BulkOperationError.Error"></a>
+### func \(\*BulkOperationError\) Error
+
+```go
+func (b *BulkOperationError) Error() string
+```
+
+Error returns a string representation of the error
+
 <a name="DatabaseController"></a>
 ## type DatabaseController
 
@@ -866,6 +910,24 @@ type DatabaseController struct {
     DBHandle *gorm.DB
 }
 ```
+
+<a name="DatabaseController.BulkArchiveProducts"></a>
+### func \(DatabaseController\) BulkArchiveProducts
+
+```go
+func (dbc DatabaseController) BulkArchiveProducts(productIDs []int, userID uint) []BulkOperationError
+```
+
+BulkDeleteProducts deletes a list of products \(based on product ID\) of a user \(based on user ID\) given as a slice of product IDs If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+
+<a name="DatabaseController.BulkDeleteProducts"></a>
+### func \(DatabaseController\) BulkDeleteProducts
+
+```go
+func (dbc DatabaseController) BulkDeleteProducts(productIDs []int, userID uint) []BulkOperationError
+```
+
+BulkDeleteProducts deletes a list of products \(based on product ID\) of a user \(based on user ID\) given as a slice of product IDs If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
 
 <a name="DatabaseController.CreateProduct"></a>
 ### func \(DatabaseController\) CreateProduct
@@ -1165,6 +1227,28 @@ func SupportedEnginesFromString(str string) SupportedEngines
 ```
 
 SupportedEnginesFromString parses and converts a given string to the matching enum value If the enum value can't be matched, enum value 'InvalidEngine' is used
+
+# api
+
+```go
+import "codeberg.org/isotop7/proviant/models/api"
+```
+
+## Index
+
+- [type BulkProductsAPIModel](<#BulkProductsAPIModel>)
+
+
+<a name="BulkProductsAPIModel"></a>
+## type BulkProductsAPIModel
+
+
+
+```go
+type BulkProductsAPIModel struct {
+    ProductIDs []string `json:"productIDs"`
+}
+```
 
 # authentication
 

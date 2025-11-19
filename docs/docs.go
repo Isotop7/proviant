@@ -87,7 +87,7 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Deletes a product of a user",
+                "description": "Archives a list of products of a user",
                 "consumes": [
                     "application/json"
                 ],
@@ -97,20 +97,19 @@ const docTemplate = `{
                 "tags": [
                     "product"
                 ],
-                "summary": "Deletes a product",
+                "summary": "Archives a list of products",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "Product ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Archive only",
-                        "name": "archiveOnly",
-                        "in": "query"
+                        "description": "Product IDs",
+                        "name": "productIDs",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
                     }
                 ],
                 "responses": {
