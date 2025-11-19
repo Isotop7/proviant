@@ -1,11 +1,10 @@
 ![Proviant](./res/icons/header_1.png){width=100%}
 
-![License](https://img.shields.io/gitlab/license/Isotop7/proviant)
-![Release](https://gitlab.com/Isotop7/proviant/-/badges/release.svg)
-![CI @ main](https://gitlab.com/Isotop7/proviant/badges/main/pipeline.svg)
-![CI @ develop](https://gitlab.com/Isotop7/proviant/badges/develop/pipeline.svg)
-![Golang version](https://img.shields.io/badge/Go-1.23-green)
-
+![Golang version](https://img.shields.io/badge/Go-1.24-green)
+![CI status](https://codeberg.org/isotop7/proviant/badges/workflows/ci.yml/badge.svg)
+![Release state](https://codeberg.org/isotop7/proviant/badges/release.svg)
+![Open issues](https://codeberg.org/isotop7/proviant/badges/issues/open.svg)
+![Open pull requests](https://codeberg.org/isotop7/proviant/badges/pulls/open.svg)
 
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
@@ -32,7 +31,7 @@
 
 #### Executable
 
-1. Clone the repository: `git clone https://gitlab.com/Isotop7/proviant.git`
+1. Clone the repository: `git clone https://codeberg.org/isotop7/proviant.git`
 2. Setup node_modules and assets: `make init`
 3. Navigate to the project directory: `cd proviant/src`
 4. Build the application: `go build -o proviant`
@@ -133,7 +132,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Author
 
-- GitLab: [@Isotop7](https://gitlab.com/Isotop7)
+- GitLab: [@Isotop7](https://codeberg.org/isotop7)
 - LinkedIn: [Hendrik Röder](https://www.linkedin.com/in/hendrik-r%C3%B6der-9b8483198/)
 
 ---
