@@ -512,7 +512,6 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	}
 
 	// Check if supplied user is allowed to patch the product
-	// TODO: Check on middleware possible?
 	if dbProduct.HouseholdID != user.HouseholdID {
 		return errors.ErrMismatcherUserID
 	}
