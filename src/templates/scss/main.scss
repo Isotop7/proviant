@@ -58,22 +58,17 @@ $shadow-color: rgba(30, 45, 60, 0.15); // Soft Shadow
 @import "bootstrap/scss/nav";
 @import "bootstrap/scss/navbar"; // Requires nav
 @import "bootstrap/scss/card";
-// @import "bootstrap/scss/breadcrumb";
-// @import "bootstrap/scss/accordion";
-// @import "bootstrap/scss/pagination";
+@import "bootstrap/scss/pagination";
 @import "bootstrap/scss/badge";
 @import "bootstrap/scss/alert";
-// @import "bootstrap/scss/progress";
+@import "bootstrap/scss/progress";
 @import "bootstrap/scss/list-group";
 @import "bootstrap/scss/close";
 @import "bootstrap/scss/toasts";
 @import "bootstrap/scss/modal"; // Requires transitions
-// @import "bootstrap/scss/tooltip";
 @import "bootstrap/scss/popover";
-// @import "bootstrap/scss/carousel";
 @import "bootstrap/scss/spinners";
 @import "bootstrap/scss/offcanvas"; // Requires transitions
-// @import "bootstrap/scss/placeholders";
 
 // Helpers
 @import "bootstrap/scss/helpers";
@@ -89,7 +84,6 @@ $bootstrap-icons-font-dir: "../fonts";
 // Custom styles
 //
 .navbar {
-    //background-color: var(--bs-body-bg);
     background-image: none;
     margin-bottom: 30px;
     border-bottom: 6px solid var(--bs-primary);
@@ -104,7 +98,7 @@ $bootstrap-icons-font-dir: "../fonts";
 }
 
 .logo-font {
-    font-family: 'Pacifico';
+    font-family: 'Pacifico', cursive;
     color: var(--bs-info);
 }
 
