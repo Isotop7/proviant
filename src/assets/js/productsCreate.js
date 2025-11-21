@@ -39,6 +39,7 @@ function showAlert(isSuccess, message) {
     }
 
     alertElement.classList.add('show');
+    setTimeout(() => dismissAlert(), 3000);
 }
 function dismissAlert() {
     const alertElement = document.getElementById('productAlert');
@@ -263,11 +264,14 @@ function handleScanButton() {
                 storeBarcode(decodedText);
                 clearScanUI();
             }
-        );
+        ).catch(error => {
+            showAlert(false, error);
+            clearScanUI();
+        });
     } else if (btnScan.dataset.action == 'stop') {
         clearScanUI();
     } else {
-        console.error('Undefined data-action ' + btnScan.dataset.action);
+        showAlert(false, `Undefined data-action '${btnScan.dataset.action}'`);
     }
 };
 function handleBtnAddProduct() {
@@ -279,6 +283,9 @@ function handleBtnAddProduct() {
 
     try {
         const barcode = document.getElementById('barcode').value;
+        if (barcode === '') {
+            throw new Error('Barcode cannot be empty');
+        }
         const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
         proviant.createProduct(barcode, expireAt).then((response) => {
             switch (response.code) {
@@ -296,10 +303,10 @@ function handleBtnAddProduct() {
                     break;
             }
         }).catch(error => {
-            showAlert(false, `Error: ${error}`);
+            showAlert(false, error);
         });
     } catch (error) {
-        showAlert(false, `Error: ${error}`);
+        showAlert(false, error);
     }
 };
 function handleBtnShowProduct() {
