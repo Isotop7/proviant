@@ -182,18 +182,13 @@ async function queryProductInfoRequest(barcode) {
 // Function handlers
 function queryProductInfo(barcode) {
     clearProductInfo();
-    try {
-        queryProductInfoRequest(barcode).then((response) => {
-            let product = response.product;
-            showProductData(product);
-        }).catch((error) => {
-            showError('Error: ' + error);
-            clearProductInfo();
-        });
-    } catch (error) {
+    queryProductInfoRequest(barcode).then((response) => {
+        let product = response.product;
+        showProductData(product);
+    }).catch((error) => {
         showError('Error: ' + error);
         clearProductInfo();
-    }
+    });
 }
 function storeBarcode(barcode) {
     document.getElementById('barcode').dataset.barcode = barcode;
