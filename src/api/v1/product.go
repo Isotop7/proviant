@@ -509,7 +509,7 @@ func DeleteProduct(ctx *gin.Context) {
 // @Success      	200  {object}  api.APIResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
-// @Router       	/api/v1/product/{id} [delete]
+// @Router       	/api/v1/product/bulkDelete [delete]
 func BulkDeleteProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
@@ -585,7 +585,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 // @Success      	200  {object}  api.APIResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
-// @Router       	/api/v1/product/{id} [delete]
+// @Router       	/api/v1/product/bulkArchive [delete]
 func BulkArchiveProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
@@ -629,7 +629,7 @@ func BulkArchiveProducts(ctx *gin.Context) {
 
 	// Create database controller
 	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Delete product from database
+	// Bulk archive products
 	bulkArchiveError := dbController.BulkArchiveProducts(convertedProductIDs, userID)
 	// Check for errors
 	if len(bulkArchiveError) > 0 {
@@ -703,6 +703,82 @@ func RestoreProduct(ctx *gin.Context) {
 		return
 	} else {
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was restored", productID)})
+		return
+	}
+}
+
+// BulkRestoreProducts restores a list of products of a user
+// @Summary      	Restores a list of product
+// @Description  	Restores a list of product of a user
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Param			productIDs	body	[]int				true	"Product IDs"
+// @Success      	200  {object}  api.APIResponse
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/product/bulkRestore [post]
+func BulkRestoreProducts(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get and parse body to list of product IDs
+	var products apiModel.BulkProductsAPIModel
+	if err := ctx.ShouldBindJSON(&products); err != nil {
+		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		return
+	}
+
+	// Try to get int values
+	var convertedProductIDs []int
+	for _, id := range products.ProductIDs {
+		if productID, convErr := strconv.Atoi(id); convErr != nil {
+			logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), convErr.Error())
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
+			return
+		} else {
+			convertedProductIDs = append(convertedProductIDs, productID)
+		}
+	}
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	// Create database controller
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	// Bulk restore products
+	bulkRestoreError := dbController.BulkRestoreProducts(convertedProductIDs, userID)
+	// Check for errors
+	if len(bulkRestoreError) > 0 {
+		// If error is not nil, log error and return error response as one string
+		var errorOutput string
+		for _, bulkRestoreResult := range bulkRestoreError {
+			errorOutput += bulkRestoreResult.Error()
+		}
+		logger.Error().Msg(errorOutput)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errorOutput})
+		return
+	} else {
+		strProductIDs := make([]string, len(convertedProductIDs))
+	    for i, v := range convertedProductIDs {
+	        strProductIDs[i] = strconv.Itoa(v)
+	    }
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were restored", strings.Join(strProductIDs, ";"))})
 		return
 	}
 }

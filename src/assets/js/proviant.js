@@ -124,6 +124,23 @@ proviant.restoreProduct = async function (productID) {
     return response;
 }
 
+proviant.bulkRestoreProducts = async function (productIDs) {
+    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/bulkRestore`
+    const apiCall = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ productIDs })
+    })
+    const body = await apiCall.json();
+    let response = {
+        code: apiCall.status,
+        message: body.message
+    }
+    return response;
+}
+
 proviant.loginUser = async function (username, password) {
     const url = `${window.location.protocol}//${window.location.host}/auth/login`
     const apiCall = await fetch(url, {
