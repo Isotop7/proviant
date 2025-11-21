@@ -183,18 +183,13 @@ async function queryProductInfoRequest(barcode) {
 // Function handlers
 function queryProductInfo(barcode) {
     clearProductInfo();
-    try {
-        queryProductInfoRequest(barcode).then((response) => {
-            let product = response.product;
-            showProductData(product);
-        }).catch((error) => {
-            showError('Error: ' + error);
-            clearProductInfo();
-        });
-    } catch (error) {
+    queryProductInfoRequest(barcode).then((response) => {
+        let product = response.product;
+        showProductData(product);
+    }).catch((error) => {
         showError('Error: ' + error);
         clearProductInfo();
-    }
+    });
 }
 function storeBarcode(barcode) {
     document.getElementById('barcode').dataset.barcode = barcode;
@@ -213,36 +208,32 @@ function setArchiveModalBody () {
     archiveButtonModalBody.innerHTML = `Do you want to archive the following product:</br></br>${productData.replaceAll(';','</br>')}`;
 }
 function checkBarcode(barcode) {
-    try {
-        proviant.getProductsByBarcode(barcode).then((response) => {
-            switch (response.code) {
-                case 200:
-                    const products = response.message;
-                    if (products.length > 0) {
-                        setProductOptionsState(ProductState.PRESENT, products);
-                    } else {
-                        setProductOptionsState(ProductState.NEW, []);
-                    }
-                    break;
-                case 400:
-                    setProductOptionsState(ProductState.NEW, []);
-                    showAlert(false, 'Request contained invalid data');
-                    break;
-                case 500:
-                    setProductOptionsState(ProductState.NEW, []);
-                    showAlert(false, 'Backend server error');
-                    break;
-                default:
-                    setProductOptionsState(ProductState.NEW, []);
-                    showAlert(false, `Undefined error: ${response.message}`);
-                    break;
-            }
-        }).catch(error => {
-            console.error(error);
-        })
-    } catch (error) {
-        console.error(error);
+  proviant.getProductsByBarcode(barcode).then((response) => {
+    switch (response.code) {
+      case 200:
+        const products = response.message;
+        if (products.length > 0) {
+          setProductOptionsState(ProductState.PRESENT, products);
+        } else {
+          setProductOptionsState(ProductState.NEW, []);
+        }
+        break;
+      case 400:
+        setProductOptionsState(ProductState.NEW, []);
+        showAlert(false, 'Request contained invalid data');
+        break;
+      case 500:
+        setProductOptionsState(ProductState.NEW, []);
+        showAlert(false, 'Backend server error');
+        break;
+      default:
+        setProductOptionsState(ProductState.NEW, []);
+        showAlert(false, `Undefined error: ${response.message}`);
+        break;
     }
+  }).catch(error => {
+    console.error(error);
+  });
 };
 
 // Button handlers
