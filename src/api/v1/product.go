@@ -157,8 +157,8 @@ func GetProduct(ctx *gin.Context) {
 	var productID int
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
+		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, idParam)})
 		return
 	}
 
@@ -196,7 +196,7 @@ func GetProduct(ctx *gin.Context) {
 		return
 	// Unspecified error
 	default:
-		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
+		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	}
@@ -372,8 +372,8 @@ func UpdateProduct(ctx *gin.Context) {
 	var productID int
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
+		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, idParam)})
 		return
 	}
 
@@ -414,7 +414,7 @@ func UpdateProduct(ctx *gin.Context) {
 		return
 	// Requested product was not found
 	case gorm.ErrRecordNotFound:
-		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
+		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	// Unspecified error
@@ -446,8 +446,8 @@ func DeleteProduct(ctx *gin.Context) {
 	var productID int
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
+		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, idParam)})
 		return
 	}
 
@@ -671,8 +671,8 @@ func RestoreProduct(ctx *gin.Context) {
 	var productID int
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
+		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, idParam)})
 		return
 	}
 
@@ -804,8 +804,8 @@ func SetExpireAt(ctx *gin.Context) {
 	var productID int
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("ID '%s' is invalid", idParam)})
+		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, idParam)})
 		return
 	}
 
@@ -839,7 +839,7 @@ func SetExpireAt(ctx *gin.Context) {
 	dbController := database.DatabaseController{DBHandle: dbHandle}
 	product, getErr := dbController.GetProductByID(productID, userID)
 	if getErr != nil {
-		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
+		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	}
@@ -859,7 +859,7 @@ func SetExpireAt(ctx *gin.Context) {
 		return
 	// Product was not found
 	case gorm.ErrRecordNotFound:
-		logger.Error().Msgf("Product with ID '%d' was not found in database", productID)
+		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
 		return
 	// User id from claims not matching user id of product in database
