@@ -22,7 +22,6 @@ async function bulkArchiveProducts(productIDs) {
 
 function handleCardClickEffect(cardId) {
     const card = document.getElementById(cardId);
-    console.log(cardId);
     if (card) {
         card.classList.add('card-clicked');
         setTimeout(() => card.classList.remove('card-clicked'), 100);
@@ -61,6 +60,25 @@ document.querySelectorAll('#archive-product').forEach(button => {
     });
 });
 
+document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+    checkbox.addEventListener('change', async function () {
+      const cardId = `card-${this.id.split('-')[1]}`;
+      const card = document.getElementById(cardId);
+      const checkbox = document.getElementById(`checkbox-${this.id.split('-')[1]}`);
+      if (card) {
+        document.getElementById(cardId).classList.toggle('border-info')
+        checkbox.checked = !checkbox.checked;
+      }
+    });
+    checkbox.addEventListener('click', async function () {
+      const cardId = `card-${this.id.split('-')[1]}`;
+      const card = document.getElementById(cardId);
+      if (card) {
+        document.getElementById(cardId).classList.toggle('border-info')
+      }
+    });
+});
+
 document.querySelectorAll('.card').forEach(card => {
     card.addEventListener('click', async function () {
       const cardId = this.id;
@@ -70,7 +88,7 @@ document.querySelectorAll('.card').forEach(card => {
           checkbox.checked = !checkbox.checked;
           document.getElementById(cardId).classList.toggle('border-info')
           handleSelect();
+          handleCardClickEffect(cardId);
       }
-      handleCardClickEffect(cardId);
     });
 });
