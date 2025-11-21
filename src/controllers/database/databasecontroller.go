@@ -40,6 +40,17 @@ func SearchParameterEnumFromString(str string) SearchParameterEnum {
 	}
 }
 
+// BulkOperationError is an error type for bulk operations
+type BulkOperationError struct {
+	productID int
+	error     error
+}
+
+// Error returns a string representation of the error
+func (b *BulkOperationError) Error() string {
+	return fmt.Sprintf("Error bulk deleting product '%d', error: %v", b.productID, b.error)
+}
+
 // GetUserByUsername uses a given username and returns the matching user object
 // If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) GetUserByUsername(username string) (authentication.User, error) {
@@ -543,6 +554,42 @@ func (dbc DatabaseController) DeleteProduct(productID int, userID uint, archiveO
 	return deleteResult.Error
 }
 
+// BulkDeleteProducts deletes a list of products (based on product ID) of a user (based on user ID) given as a slice of product IDs
+// If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+func (dbc DatabaseController) BulkDeleteProducts(productIDs []int, userID uint) []BulkOperationError {
+	bulkErrors := []BulkOperationError{}
+	for _, productID := range productIDs {
+		// Get product and check for correct userID
+		_, getError := dbc.GetArchivedProductByID(productID, userID)
+		if getError != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+		deleteResult := dbc.DBHandle.Unscoped().Delete(&database.Product{}, productID)
+		if deleteResult.Error != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+	}
+	return bulkErrors
+}
+
+// BulkDeleteProducts deletes a list of products (based on product ID) of a user (based on user ID) given as a slice of product IDs
+// If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+func (dbc DatabaseController) BulkArchiveProducts(productIDs []int, userID uint) []BulkOperationError {
+	bulkErrors := []BulkOperationError{}
+	for _, productID := range productIDs {
+		// Get product and check for correct userID
+		_, getError := dbc.GetArchivedProductByID(productID, userID)
+		if getError != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+		deleteResult := dbc.DBHandle.Delete(&database.Product{}, productID)
+		if deleteResult.Error != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+	}
+	return bulkErrors
+}
+
 // RestoreProduct restores a product (based on product ID) of a user (based on user ID)
 // If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) RestoreProduct(productID int, userID uint) error {
@@ -558,6 +605,27 @@ func (dbc DatabaseController) RestoreProduct(productID int, userID uint) error {
 	// Save changes to db
 	saveResult := dbc.DBHandle.Save(&product)
 	return saveResult.Error
+}
+
+// BulkRestoreProducts restores a list of products (based on product ID) of a user (based on user ID) given as a slice of product IDs
+// If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+func (dbc DatabaseController) BulkRestoreProducts(productIDs []int, userID uint) []BulkOperationError {
+	bulkErrors := []BulkOperationError{}
+	for _, productID := range productIDs {
+		// Get product and check for correct userID
+		product, getError := dbc.GetArchivedProductByID(productID, userID)
+		if getError != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+		// Reset deletedAt field
+		product.DeletedAt = gorm.DeletedAt{}
+		// Save changes to db
+		saveResult := dbc.DBHandle.Save(&product)
+		if saveResult.Error != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+	}
+	return bulkErrors
 }
 
 // SetProductExpireAt updates the expiry date of a product (based on product ID) of a user (based on user ID)

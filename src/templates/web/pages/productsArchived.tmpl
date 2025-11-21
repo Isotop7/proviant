@@ -9,6 +9,10 @@
     </div>
 </div>
 
+<div class="py-3 my-2 d-flex justify-content-end">
+        {{ template "productArchiveOptionBar" . }}
+</div>
+
 <div class="row row-cols-1 row-cols-lg-2 g-5">
     {{ range .Products }}
 
@@ -21,7 +25,7 @@
 
 {{ else }}
 
-{{ template "noproducts" . }}
+{{ template "emptyArchive" . }}
 
 {{ end }}
 

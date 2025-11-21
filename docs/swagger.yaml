@@ -309,6 +309,102 @@ paths:
       summary: Restores a product
       tags:
       - product
+  /api/v1/product/bulkArchive:
+    delete:
+      consumes:
+      - application/json
+      description: Archives a list of products of a user
+      parameters:
+      - description: Product IDs
+        in: body
+        name: productIDs
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Archives a list of products
+      tags:
+      - product
+  /api/v1/product/bulkDelete:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a list of products of a user
+      parameters:
+      - description: Product IDs
+        in: body
+        name: productIDs
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Deletes a list of products
+      tags:
+      - product
+  /api/v1/product/bulkRestore:
+    post:
+      consumes:
+      - application/json
+      description: Restores a list of product of a user
+      parameters:
+      - description: Product IDs
+        in: body
+        name: productIDs
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Restores a list of product
+      tags:
+      - product
   /api/v1/products:
     get:
       description: Return a list of products of user
