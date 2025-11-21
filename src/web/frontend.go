@@ -227,7 +227,7 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	var productID int
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
+		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, convErr.Error())
 		return
 	}
@@ -275,7 +275,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	var productID int
 	var convErr error
 	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf("Requested ID '%s' is invalid", idParam)
+		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, convErr.Error())
 		return
 	}
