@@ -1,37 +1,87 @@
-async function deleteProduct(productID, archiveOnly) {
-    await proviant.deleteProduct(productID, archiveOnly).then((response) => {
-        switch (response.code) {
-            case 200:
-                console.log("Product deleted")
-            default:
-                console.error(response.message)
-        }
-    });
+async function bulkDeleteProducts(productIDs) {
+  await proviant.bulkDeleteProducts(productIDs).then((response) => {
+      switch (response.code) {
+          case 200:
+              console.log("Products archived")
+          default:
+              console.error(response.message)
+      }
+  });
 }
 
-async function restoreProduct(productID) {
-    await proviant.restoreProduct(productID).then((response) => {
-        switch (response.code) {
-            case 200:
-                console.log("Product restored")
-            default:
-                console.error(response.message)
-        }
-    });
+async function bulkRestoreProducts(productIDs) {
+  await proviant.bulkRestoreProducts(productIDs).then((response) => {
+      switch (response.code) {
+          case 200:
+              console.log("Products restored")
+          default:
+              console.error(response.message)
+      }
+  });
 }
 
-document.querySelectorAll('.btn-product-delete').forEach(button => {
+function handleCardClickEffect(cardId) {
+    const card = document.getElementById(cardId);
+    if (card) {
+        card.classList.add('card-clicked');
+        setTimeout(() => card.classList.remove('card-clicked'), 100);
+    }
+}
+
+async function handleSelect() {
+    const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
+    if (selectedProducts.length == 1) {
+      document.getElementById('edit-product').disabled = false;
+    } else {
+      document.getElementById('edit-product').disabled = true;
+    }
+}
+
+document.querySelectorAll('#delete-product').forEach(button => {
     button.addEventListener('click', async function () {
-        const productId = this.getAttribute('data-id');
-        await deleteProduct(productId, false);
+        const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
+        await bulkDeleteProducts(selectedProducts);
         location.reload();
     });
 });
 
-document.querySelectorAll('.btn-product-restore').forEach(button => {
+document.querySelectorAll('#restore-product').forEach(button => {
     button.addEventListener('click', async function () {
-        const productId = this.getAttribute('data-id');
-        await restoreProduct(productId);
+        const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
+        await bulkRestoreProducts(selectedProducts);
         location.reload();
+    });
+});
+
+document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+    checkbox.addEventListener('change', async function () {
+      const cardId = `card-${this.id.split('-')[1]}`;
+      const card = document.getElementById(cardId);
+      const checkbox = document.getElementById(`checkbox-${this.id.split('-')[1]}`);
+      if (card) {
+        document.getElementById(cardId).classList.toggle('border-info')
+        checkbox.checked = !checkbox.checked;
+      }
+    });
+    checkbox.addEventListener('click', async function () {
+      const cardId = `card-${this.id.split('-')[1]}`;
+      const card = document.getElementById(cardId);
+      if (card) {
+        document.getElementById(cardId).classList.toggle('border-info')
+      }
+    });
+});
+
+document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', async function () {
+      const cardId = this.id;
+      const productId = cardId.split('-')[1];
+      const checkbox = document.getElementById(`checkbox-${productId}`);
+      if (checkbox) {
+          checkbox.checked = !checkbox.checked;
+          document.getElementById(cardId).classList.toggle('border-info')
+          handleSelect();
+          handleCardClickEffect(cardId);
+      }
     });
 });

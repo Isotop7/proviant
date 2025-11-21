@@ -674,6 +674,7 @@ v1 implements version 1 of the proviant API
 
 - [func BulkArchiveProducts\(ctx \*gin.Context\)](<#BulkArchiveProducts>)
 - [func BulkDeleteProducts\(ctx \*gin.Context\)](<#BulkDeleteProducts>)
+- [func BulkRestoreProducts\(ctx \*gin.Context\)](<#BulkRestoreProducts>)
 - [func CreateProduct\(ctx \*gin.Context\)](<#CreateProduct>)
 - [func DeleteProduct\(ctx \*gin.Context\)](<#DeleteProduct>)
 - [func GetArchivedProducts\(ctx \*gin.Context\)](<#GetArchivedProducts>)
@@ -697,7 +698,7 @@ v1 implements version 1 of the proviant API
 func BulkArchiveProducts(ctx *gin.Context)
 ```
 
-BulkArchiveProducts archives a list of products of a user @Summary Archives a list of products @Description Archives a list of products of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
+BulkArchiveProducts archives a list of products of a user @Summary Archives a list of products @Description Archives a list of products of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/bulkArchive \[delete\]
 
 <a name="BulkDeleteProducts"></a>
 ## func BulkDeleteProducts
@@ -706,7 +707,16 @@ BulkArchiveProducts archives a list of products of a user @Summary Archives a li
 func BulkDeleteProducts(ctx *gin.Context)
 ```
 
-BulkDeleteProducts deletes a list of products of a user @Summary Deletes a list of products @Description Deletes a list of products of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
+BulkDeleteProducts deletes a list of products of a user @Summary Deletes a list of products @Description Deletes a list of products of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/bulkDelete \[delete\]
+
+<a name="BulkRestoreProducts"></a>
+## func BulkRestoreProducts
+
+```go
+func BulkRestoreProducts(ctx *gin.Context)
+```
+
+BulkRestoreProducts restores a list of products of a user @Summary Restores a list of product @Description Restores a list of product of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/bulkRestore \[post\]
 
 <a name="CreateProduct"></a>
 ## func CreateProduct
@@ -847,6 +857,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 - [type DatabaseController](<#DatabaseController>)
   - [func \(dbc DatabaseController\) BulkArchiveProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkArchiveProducts>)
   - [func \(dbc DatabaseController\) BulkDeleteProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkDeleteProducts>)
+  - [func \(dbc DatabaseController\) BulkRestoreProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkRestoreProducts>)
   - [func \(dbc DatabaseController\) CreateProduct\(userID uint, product \*database.Product\) error](<#DatabaseController.CreateProduct>)
   - [func \(dbc DatabaseController\) CreateUser\(user \*authentication.User\) error](<#DatabaseController.CreateUser>)
   - [func \(dbc DatabaseController\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#DatabaseController.DeleteProduct>)
@@ -928,6 +939,15 @@ func (dbc DatabaseController) BulkDeleteProducts(productIDs []int, userID uint) 
 ```
 
 BulkDeleteProducts deletes a list of products \(based on product ID\) of a user \(based on user ID\) given as a slice of product IDs If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+
+<a name="DatabaseController.BulkRestoreProducts"></a>
+### func \(DatabaseController\) BulkRestoreProducts
+
+```go
+func (dbc DatabaseController) BulkRestoreProducts(productIDs []int, userID uint) []BulkOperationError
+```
+
+BulkRestoreProducts restores a list of products \(based on product ID\) of a user \(based on user ID\) given as a slice of product IDs If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
 
 <a name="DatabaseController.CreateProduct"></a>
 ### func \(DatabaseController\) CreateProduct

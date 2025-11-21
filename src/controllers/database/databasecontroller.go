@@ -607,6 +607,27 @@ func (dbc DatabaseController) RestoreProduct(productID int, userID uint) error {
 	return saveResult.Error
 }
 
+// BulkRestoreProducts restores a list of products (based on product ID) of a user (based on user ID) given as a slice of product IDs
+// If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+func (dbc DatabaseController) BulkRestoreProducts(productIDs []int, userID uint) []BulkOperationError {
+	bulkErrors := []BulkOperationError{}
+	for _, productID := range productIDs {
+		// Get product and check for correct userID
+		product, getError := dbc.GetArchivedProductByID(productID, userID)
+		if getError != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+		// Reset deletedAt field
+		product.DeletedAt = gorm.DeletedAt{}
+		// Save changes to db
+		saveResult := dbc.DBHandle.Save(&product)
+		if saveResult.Error != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+	}
+	return bulkErrors
+}
+
 // SetProductExpireAt updates the expiry date of a product (based on product ID) of a user (based on user ID)
 // If the database operations return an error, the error is also returned (otherwise nil)
 func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error {
