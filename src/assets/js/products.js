@@ -20,6 +20,15 @@ async function bulkArchiveProducts(productIDs) {
   });
 }
 
+function handleCardClickEffect(cardId) {
+    const card = document.getElementById(cardId);
+    console.log(cardId);
+    if (card) {
+        card.classList.add('card-clicked');
+        setTimeout(() => card.classList.remove('card-clicked'), 100);
+    }
+}
+
 async function handleSelect() {
     const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
     if (selectedProducts.length == 1) {
@@ -27,16 +36,6 @@ async function handleSelect() {
     } else {
       document.getElementById('edit-product').disabled = true;
     }
-
-    const cards = Array.from(document.querySelectorAll('.card')).map(card => card.id);
-    cards.forEach(cardId => {
-      let id = cardId.split('-')[1];
-      if (selectedProducts.includes(id)) {
-        document.getElementById(cardId).classList.add('border-info');
-      } else {
-        document.getElementById(cardId).classList.remove('border-info');
-      }
-    });
 }
 
 document.querySelectorAll('#edit-product').forEach(button => {
@@ -62,8 +61,16 @@ document.querySelectorAll('#archive-product').forEach(button => {
     });
 });
 
-document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-    checkbox.addEventListener('change', async function () {
-      handleSelect();
+document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', async function () {
+      const cardId = this.id;
+      const productId = cardId.split('-')[1];
+      const checkbox = document.getElementById(`checkbox-${productId}`);
+      if (checkbox) {
+          checkbox.checked = !checkbox.checked;
+          document.getElementById(cardId).classList.toggle('border-info')
+          handleSelect();
+      }
+      handleCardClickEffect(cardId);
     });
 });

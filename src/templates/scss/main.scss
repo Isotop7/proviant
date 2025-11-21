@@ -152,3 +152,10 @@ td a,th a {
     height: 48px;
     width: 48px;
 }
+
+.card {
+    transition: transform 0.06s ease;
+}
+.card.card-clicked {
+    transform: scale(0.98);
+}
