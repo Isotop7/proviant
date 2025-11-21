@@ -1,7 +1,7 @@
 FROM golang:1.24-alpine AS buildenv
 WORKDIR /app
 
-RUN apk add --no-cache --update go gcc g++ npm
+RUN apk add --no-cache --update g++ gcc go npm
 COPY ./src/go.mod ./src/go.sum ./
 RUN go mod download
 COPY ./ ./
