@@ -192,12 +192,12 @@ func GetProduct(ctx *gin.Context) {
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' for user was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductForUserNotFound, productID)})
 		return
 	// Unspecified error
 	default:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductNotFound, productID)})
 		return
 	}
 }
@@ -308,7 +308,7 @@ func CreateProduct(ctx *gin.Context) {
 	// Get and parse body to product
 	var product dbModel.Product
 	if err := ctx.ShouldBindJSON(&product); err != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
@@ -397,7 +397,7 @@ func UpdateProduct(ctx *gin.Context) {
 	// Get and parse body to product
 	var product dbModel.ProductDTOPatch
 	if err := ctx.ShouldBindJSON(&product); err != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
@@ -517,7 +517,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel
 	if err := ctx.ShouldBindJSON(&products); err != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
@@ -526,7 +526,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 	var convertedProductIDs []int
 	for _, id := range products.ProductIDs {
 		if productID, convErr := strconv.Atoi(id); convErr != nil {
-			logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), convErr.Error())
+			logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
 			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
 			return
 		} else {
@@ -593,7 +593,7 @@ func BulkArchiveProducts(ctx *gin.Context) {
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel
 	if err := ctx.ShouldBindJSON(&products); err != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
@@ -602,7 +602,7 @@ func BulkArchiveProducts(ctx *gin.Context) {
 	var convertedProductIDs []int
 	for _, id := range products.ProductIDs {
 		if productID, convErr := strconv.Atoi(id); convErr != nil {
-			logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), convErr.Error())
+			logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
 			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
 			return
 		} else {
@@ -725,7 +725,7 @@ func BulkRestoreProducts(ctx *gin.Context) {
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel
 	if err := ctx.ShouldBindJSON(&products); err != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
@@ -734,7 +734,7 @@ func BulkRestoreProducts(ctx *gin.Context) {
 	var convertedProductIDs []int
 	for _, id := range products.ProductIDs {
 		if productID, convErr := strconv.Atoi(id); convErr != nil {
-			logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), convErr.Error())
+			logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
 			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
 			return
 		} else {
@@ -830,7 +830,7 @@ func SetExpireAt(ctx *gin.Context) {
 	var expireAt dbModel.Timestamp
 	var bindErr error
 	if bindErr = ctx.ShouldBindJSON(&expireAt); bindErr != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), bindErr.Error())
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: bindErr.Error()})
 		return
 	}
@@ -992,7 +992,7 @@ func ScanProduct(ctx *gin.Context) {
 
 		// Create EAN13 scanner and hints
 		scanner := oned.NewEAN13Reader()
-		hints := map[gozxing.DecodeHintType]interface{}{
+		hints := map[gozxing.DecodeHintType]any{
 			gozxing.DecodeHintType_TRY_HARDER:             true,
 			gozxing.DecodeHintType_ALLOWED_EAN_EXTENSIONS: true,
 			gozxing.DecodeHintType_ALSO_INVERTED:          true,

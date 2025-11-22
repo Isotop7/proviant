@@ -1,25 +1,19 @@
 async function bulkDeleteProducts(productIDs) {
   await proviant.bulkDeleteProducts(productIDs).then((response) => {
-      switch (response.code) {
-          case 200:
-              console.log("Products archived")
-              break;
-          default:
-              console.error(response.message)
-              break;
+      if (response.code == 200) {
+        console.log("Products archived")
+      } else {
+        console.error(response.message)
       }
   });
 }
 
 async function bulkRestoreProducts(productIDs) {
   await proviant.bulkRestoreProducts(productIDs).then((response) => {
-      switch (response.code) {
-          case 200:
-              console.log("Products restored")
-              break;
-          default:
-              console.error(response.message)
-              break;
+      if (response.code == 200) {
+        console.log("Products restored")
+      } else {
+        console.error(response.message)
       }
   });
 }
