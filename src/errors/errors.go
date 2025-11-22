@@ -60,6 +60,10 @@ var (
 
 	// Message format template for invalid ID
 	FormatInvalidRequestId = "Requested ID '%s' is invalid"
+
+	// Message format template for product not found
+	FormatProductWithIDNotFound = "Product with id '%d' was not found"
+
 	/*
 	 * Database related errors
 	 */

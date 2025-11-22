@@ -415,7 +415,7 @@ func UpdateProduct(ctx *gin.Context) {
 	// Requested product was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
 		return
 	// Unspecified error
 	default:
@@ -840,7 +840,7 @@ func SetExpireAt(ctx *gin.Context) {
 	product, getErr := dbController.GetProductByID(productID, userID)
 	if getErr != nil {
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
 		return
 	}
 
@@ -860,7 +860,7 @@ func SetExpireAt(ctx *gin.Context) {
 	// Product was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
 		return
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
