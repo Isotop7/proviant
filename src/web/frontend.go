@@ -318,5 +318,5 @@ func (frontend *Frontend) Search(ctx *gin.Context) {
 	pageData := map[string]any{
 		"Title": "Search products",
 	}
-	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "search.tmpl", pageData)
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsSearch.tmpl", pageData)
 }

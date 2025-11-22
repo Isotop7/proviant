@@ -3,8 +3,10 @@ async function bulkDeleteProducts(productIDs) {
       switch (response.code) {
           case 200:
               console.log("Products archived")
+              break;
           default:
               console.error(response.message)
+              break;
       }
   });
 }
@@ -14,8 +16,10 @@ async function bulkRestoreProducts(productIDs) {
       switch (response.code) {
           case 200:
               console.log("Products restored")
+              break;
           default:
               console.error(response.message)
+              break;
       }
   });
 }

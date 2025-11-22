@@ -6,7 +6,7 @@ proviant.debug = function () {
 };
 
 proviant.createProduct = async function (barcode, expireAt) {
-    let url = `${window.location.protocol}//${window.location.host}/api/v1/products`
+    let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`
     let data = JSON.stringify({ barcode, expireAt })
     const apiCall = await fetch(url, {
         method: 'POST',
@@ -24,7 +24,7 @@ proviant.createProduct = async function (barcode, expireAt) {
 }
 
 proviant.getProductsByBarcode = async function (barcode) {
-    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/byBarcode/${barcode}`
+    let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/byBarcode/${barcode}`
     const apiCall = await fetch(url, {
         method: 'GET',
         headers: {
@@ -40,7 +40,7 @@ proviant.getProductsByBarcode = async function (barcode) {
 }
 
 proviant.editProduct = async function (product) {
-    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${product.ID}`
+    let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${product.ID}`
     let data = JSON.stringify(product)
     const apiCall = await fetch(url, {
         method: 'PATCH',
@@ -58,7 +58,7 @@ proviant.editProduct = async function (product) {
 }
 
 proviant.deleteProduct = async function (productID, archiveOnly) {
-    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${productID}`
+    let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}`
     if (archiveOnly) { url += '?archiveOnly=true'; }
     const apiCall = await fetch(url, {
         method: 'DELETE',
@@ -75,7 +75,7 @@ proviant.deleteProduct = async function (productID, archiveOnly) {
 }
 
 proviant.bulkDeleteProducts = async function (productIDs) {
-    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/bulkDelete`
+    let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkDelete`
     const apiCall = await fetch(url, {
         method: 'DELETE',
         headers: {
@@ -92,7 +92,7 @@ proviant.bulkDeleteProducts = async function (productIDs) {
 }
 
 proviant.bulkArchiveProducts = async function (productIDs) {
-    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/bulkArchive`
+    let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkArchive`
     const apiCall = await fetch(url, {
         method: 'DELETE',
         headers: {
@@ -109,7 +109,7 @@ proviant.bulkArchiveProducts = async function (productIDs) {
 }
 
 proviant.restoreProduct = async function (productID) {
-    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/${productID}/restore`
+    let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/restore`
     const apiCall = await fetch(url, {
         method: 'POST',
         headers: {
@@ -125,7 +125,7 @@ proviant.restoreProduct = async function (productID) {
 }
 
 proviant.bulkRestoreProducts = async function (productIDs) {
-    let url = `${window.location.protocol}//${window.location.host}/api/v1/products/bulkRestore`
+    let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkRestore`
     const apiCall = await fetch(url, {
         method: 'POST',
         headers: {
@@ -142,7 +142,7 @@ proviant.bulkRestoreProducts = async function (productIDs) {
 }
 
 proviant.loginUser = async function (username, password) {
-    const url = `${window.location.protocol}//${window.location.host}/auth/login`
+    const url = `${globalThis.location.protocol}//${globalThis.location.host}/auth/login`
     const apiCall = await fetch(url, {
         method: 'POST',
         headers: {
@@ -165,7 +165,7 @@ proviant.loginUser = async function (username, password) {
 }
 
 proviant.signupUser = async function (username, mailAddress, password) {
-    const url = `${window.location.protocol}//${window.location.host}/auth/signup`
+    const url = `${globalThis.location.protocol}//${globalThis.location.host}/auth/signup`
     const apiCall = await fetch(url, {
         method: 'POST',
         headers: {
@@ -189,7 +189,7 @@ proviant.signupUser = async function (username, mailAddress, password) {
 }
 
 proviant.updateUser = async function (username, mailAddress) {
-    let url = `${window.location.protocol}//${window.location.host}/api/v1/user`
+    let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user`
     const apiCall = await fetch(url, {
         method: 'PATCH',
         headers: {
@@ -207,7 +207,7 @@ proviant.updateUser = async function (username, mailAddress) {
 }
 
 proviant.updateUserPassword = async function (username, password) {
-    let url = `${window.location.protocol}//${window.location.host}/api/v1/user/password`
+    let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/password`
     const apiCall = await fetch(url, {
         method: 'POST',
         headers: {
@@ -238,4 +238,40 @@ proviant.formatDate = function (timestamp) {
     const seconds = String(date.getSeconds()).padStart(2, "0");
 
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+// Render categories
+proviant.badgifyCategories = function (categories, limit) {
+    let output = "";
+    // Split categories
+    const categoriesArray = categories.split(",");
+    for (let index = 0; index < categoriesArray.length; index++) {
+        // Get element and split
+        const category = categoriesArray[index].trim();
+        const contents = category.split(":");
+
+        // early return
+        if (index == limit) {
+            break;
+        }
+
+        // Check if language was found
+        if (contents.length == 2) {
+            const lang = contents[0].trim()
+            const definition = contents[1].trim()
+            output += `<span class="badge bg-dark me-3">${lang}</span>${definition}</br>`
+        } else {
+            output += `${category}</br>`;
+        }
+    }
+    return output;
+}
+
+// Render expire at
+proviant.colorExpiry = function (date) {
+    if (new Date(date) < Date.now()) {
+        return "bg-danger"
+    } else {
+        return "bg-primary"
+    }
 }

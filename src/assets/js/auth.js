@@ -58,7 +58,7 @@ function Login() {
     proviant.loginUser(username, password).then((response) => {
         switch (response.code) {
             case 200:
-                window.location.href = `${window.location.protocol}//${window.location.host}/web`;
+                globalThis.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/web`;
                 break;
             case 401:
                 showLoginError("Authentication failed!");
