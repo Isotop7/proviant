@@ -110,7 +110,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Setup JWT authentication and authorization middleware, aka user-aware
 	jwtFrontendUserAwareMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorUserAware, UnauthorizedFrontendFunc)
 	if jwtFrontendAuthSetupErr != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrUserAwareAuthMiddlewareInit.Error(), jwtFrontendAuthSetupErr.Error())
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrUserAwareAuthMiddlewareInit.Error(), jwtFrontendAuthSetupErr.Error())
 		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
 	}
 	// Initialize JWT authentication and authorization middleware

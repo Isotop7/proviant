@@ -46,6 +46,11 @@ type BulkOperationError struct {
 	error     error
 }
 
+// PreferredTimeFormat is the preferred time format for database operations
+const PreferredTimeFormat = "02.01.2006 15:04"
+
+const GeneratedPrefix = "Generated @ %s"
+
 // Error returns a string representation of the error
 func (b *BulkOperationError) Error() string {
 	return fmt.Sprintf("Error bulk deleting product '%d', error: %v", b.productID, b.error)
@@ -743,7 +748,7 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 		Title:  "Amount of your products",
 		Hero:   fmt.Sprint(productCount),
 		Body:   fmt.Sprintf("You currently have %d products assigned", productCount),
-		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
 	})
 
 	// Get last inserted product
@@ -762,7 +767,7 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 		Title:  "Last inserted product",
 		Hero:   lastProduct.ProductName,
 		Body:   fmt.Sprintf("'%s' is the most recent product with barcode #%s", lastProduct.ProductName, lastProduct.Barcode),
-		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
 	})
 
 	// Last notification
@@ -779,9 +784,9 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	// Create tile
 	homeTiles = append(homeTiles, webparts.Tile{
 		Title:  "Last notification",
-		Hero:   lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04"),
-		Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04")),
-		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+		Hero:   lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat),
+		Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat)),
+		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
 	})
 
 	return homeTiles, nil

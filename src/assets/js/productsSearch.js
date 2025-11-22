@@ -122,14 +122,11 @@ function renderNoProductsMessage() {
 // Async handler function for deletion calls
 async function deleteProduct(productID, archiveOnly) {
     await proviant.deleteProduct(productID, archiveOnly).then((response) => {
-        switch (response.code) {
-          case 200:
-            console.log("Product deleted")
-            break;
-          default:
-            console.error(response.message)
-            break;
-        }
+      if (response.code == 200) {
+        console.log("Product deleted")
+      } else {
+        console.error(response.message)
+      }
     });
 }
 
@@ -166,14 +163,14 @@ function renderErrorMessage() {
 }
 
 // Event listener for the search button
-document.getElementById("search-btn").addEventListener("click", () => {
+document.getElementById("search-btn").addEventListener("click", async () => {
     const queryParam = document.getElementById("search-param").value;
     const queryValue = document.getElementById("search-query").value;
     const sortParam = document.getElementById("sort-param").value;
     const sortOrder = document.getElementById("sort-order").value;
 
-    fetchProducts(queryParam, queryValue, sortParam, sortOrder);
+    await fetchProducts(queryParam, queryValue, sortParam, sortOrder);
 });
 
 // Fetch initial products on page load
-fetchProducts();
+await fetchProducts();
