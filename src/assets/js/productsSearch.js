@@ -23,42 +23,6 @@ async function fetchProducts(queryParam, queryValue, sortParam, sortOrder) {
     }
 }
 
-// Render categories
-badgifyCategories = function (categories, limit) {
-    output = "";
-    // Split categories
-    categories = categories.split(",");
-    for (let index = 0; index < categories.length; index++) {
-        // Get element and split
-        const category = categories[index].trim();
-        const contents = category.split(":");
-
-        // early return
-        if (index == limit) {
-            break;
-        }
-
-        // Check if language was found
-        if (contents.length == 2) {
-            lang = contents[0].trim()
-            definition = contents[1].trim()
-            output += `<span class="badge bg-dark me-3">${lang}</span>${definition}</br>`
-        } else {
-            output += `${category}</br>`;
-        }
-    }
-    return output;
-}
-
-// Render expire at
-colorExpiry = function (date) {
-    if (new Date(date) < Date.now()) {
-        return "bg-danger"
-    } else {
-        return "bg-primary"
-    }
-}
-
 // Render product list
 function renderProducts(products) {
     const productList = document.getElementById("product-list");
@@ -96,7 +60,7 @@ function renderProducts(products) {
                                 </div>
                                 <div class="card-text">
                                     <p>
-                                        ${badgifyCategories(product.categories, 5)}
+                                        ${proviant.badgifyCategories(product.categories, 5)}
                                     </p>
                                 </div>
                             </div>
@@ -107,7 +71,7 @@ function renderProducts(products) {
                             <div class="ms-2 me-auto">
                                 <i class="bi bi-calendar-x me-3"></i>
                             </div>
-                            <span class="badge rounded-pill ${colorExpiry(product.expireAt)}">
+                            <span class="badge rounded-pill ${proviant.colorExpiry(product.expireAt)}">
                                 ${new Date(product.expireAt).toLocaleString("de-DE")}
                             </span>
                         </li>
@@ -159,10 +123,12 @@ function renderNoProductsMessage() {
 async function deleteProduct(productID, archiveOnly) {
     await proviant.deleteProduct(productID, archiveOnly).then((response) => {
         switch (response.code) {
-            case 200:
-                console.log("Product deleted")
-            default:
-                console.error(response.message)
+          case 200:
+            console.log("Product deleted")
+            break;
+          default:
+            console.error(response.message)
+            break;
         }
     });
 }
@@ -174,7 +140,7 @@ function setEventListeners() {
 
     archiveButtons.forEach(button => {
         button.addEventListener("click", () => {
-            const productId = button.getAttribute("data-id");
+            const productId = button.dataset.id;
             deleteProduct(productId, true);
             location.reload();
         });
@@ -182,7 +148,7 @@ function setEventListeners() {
 
     deleteButtons.forEach(button => {
         button.addEventListener("click", () => {
-            const productId = button.getAttribute("data-id");
+            const productId = button.dataset.id;
             deleteProduct(productId, false);
             location.reload();
         });
