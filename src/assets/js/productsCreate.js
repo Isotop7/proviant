@@ -210,9 +210,8 @@ function checkBarcode(barcode) {
   proviant.getProductsByBarcode(barcode).then((response) => {
     switch (response.code) {
       case 200:
-        const products = response.message;
-        if (products.length > 0) {
-          setProductOptionsState(ProductState.PRESENT, products);
+        if (response.message.length > 0) {
+          setProductOptionsState(ProductState.PRESENT, response.message);
         } else {
           setProductOptionsState(ProductState.NEW, []);
         }
@@ -303,14 +302,10 @@ function handleBtnDeleteProduct() {
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
 
     proviant.deleteProduct(productId, false).then((response) => {
-        console.log(response.code);
-        switch (response.code) {
-            case 200:
-                globalThis.location.reload();
-                break;
-            default:
-                showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
-                break;
+        if (response.code == 200) {
+          globalThis.location.reload();
+        } else {
+          showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
         }
     });
 }
@@ -319,15 +314,11 @@ function handleBtnArchiveProduct() {
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
 
     proviant.deleteProduct(productId, true).then((response) => {
-        console.log(response.code);
-        switch (response.code) {
-            case 200:
-                globalThis.location.reload();
-                break;
-            default:
-                showAlert(false, `Error archiving product with ID ${productId}: ${response.message}`);
-                break;
-        }
+      if (response.code == 200) {
+        globalThis.location.reload();
+      } else {
+        showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
+      }
     });
 }
 function handleBtnShowProducts() {
