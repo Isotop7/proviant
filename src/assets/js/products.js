@@ -3,8 +3,10 @@ async function bulkDeleteProducts(productIDs) {
       switch (response.code) {
           case 200:
               console.log("Products archived")
+              break;
           default:
               console.error(response.message)
+              break;
       }
   });
 }
@@ -14,8 +16,10 @@ async function bulkArchiveProducts(productIDs) {
       switch (response.code) {
           case 200:
               console.log("Products archived")
+              break;
           default:
               console.error(response.message)
+              break;
       }
   });
 }
@@ -40,7 +44,7 @@ async function handleSelect() {
 document.querySelectorAll('#edit-product').forEach(button => {
     button.addEventListener('click', async function () {
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        window.location.href = `${window.location.protocol}//${window.location.host}/web/products/${selectedProducts[0]}/edit`;
+        globalThis.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/web/products/${selectedProducts[0]}/edit`;
     });
 });
 

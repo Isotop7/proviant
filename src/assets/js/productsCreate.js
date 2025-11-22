@@ -303,7 +303,7 @@ function handleBtnAddProduct() {
 function handleBtnShowProduct() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
-    window.location = `/web/products/${productId}/view`;
+    globalThis.location = `/web/products/${productId}/view`;
 }
 function handleBtnDeleteProduct() {
     const instanceDropdown = document.getElementById('instanceDropdown');
@@ -313,7 +313,7 @@ function handleBtnDeleteProduct() {
         console.log(response.code);
         switch (response.code) {
             case 200:
-                window.location.reload();
+                globalThis.location.reload();
                 break;
             default:
                 showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
@@ -329,7 +329,7 @@ function handleBtnArchiveProduct() {
         console.log(response.code);
         switch (response.code) {
             case 200:
-                window.location.reload();
+                globalThis.location.reload();
                 break;
             default:
                 showAlert(false, `Error archiving product with ID ${productId}: ${response.message}`);
@@ -339,7 +339,7 @@ function handleBtnArchiveProduct() {
 }
 function handleBtnShowProducts() {
     const barcode = document.getElementById('barcode').value;
-    window.location = `/web/products/search?barcode=${barcode}`;
+    globalThis.location = `/web/products/search?barcode=${barcode}`;
 }
 
 // Input handlers
@@ -360,7 +360,7 @@ function handleChangedBarcode() {
 };
 
 // Add event listeners
-window.addEventListener('load', function () {
+globalThis.addEventListener('load', function () {
     // Fetch all the forms we want to apply custom Bootstrap validation styles to
     let forms = document.getElementsByClassName('needs-validation');
     // Loop over them and prevent submission
