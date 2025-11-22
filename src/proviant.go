@@ -69,7 +69,7 @@ func setupDatabase(logger *zerolog.Logger, databaseConfiguration *configuration.
 }
 
 // setupNotificationController initializes the notification controller and starts the notification handler goroutine.
-func setupNotificationController(logger *zerolog.Logger, proviantConfiguration configuration.ProviantConfiguration, dbHandle *gorm.DB) {
+func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB) {
 	// Check if notifications are enabled
 	if !proviantConfiguration.Notification.Enabled {
 		logger.Info().Msg("Notifications are disabled")
@@ -86,7 +86,7 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration c
 }
 
 // setupConfig initializes the configuration and returns a ProviantConfiguration instance.
-func setupConfig() configuration.ProviantConfiguration {
+func setupConfig() *configuration.ProviantConfiguration {
 	// Set configuration file path
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -106,11 +106,11 @@ func setupConfig() configuration.ProviantConfiguration {
 	if err := viper.Unmarshal(&config); err != nil {
 		panic(err)
 	}
-	return config
+	return &config
 }
 
 // setupLogging initializes the logging and returns a zerolog.Logger instance.
-func setupLogging(config configuration.ProviantConfiguration) *zerolog.Logger {
+func setupLogging(config *configuration.ProviantConfiguration) *zerolog.Logger {
 	if config.Logging.Enabled {
 		// Create multi writer for file and terminal logger
 		logFile, logFileOpenErr := os.OpenFile(
@@ -201,7 +201,7 @@ func main() {
 	}
 
 	// Check API controller config and create instance
-	validateAPIs(&proviantConfiguration)
+	validateAPIs(proviantConfiguration)
 	offacntrl := controllers.OpenFoodFactsAPIController{
 		Configuration: proviantConfiguration.OpenFoodFacts,
 		Logger:        logger,
@@ -218,5 +218,5 @@ func main() {
 	}
 	proviantConfiguration.TemplateCache = templateCache
 
-	startProviantServer(logger, &proviantConfiguration, dbHandle, &offacntrl)
+	startProviantServer(logger, proviantConfiguration, dbHandle, &offacntrl)
 }
