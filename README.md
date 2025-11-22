@@ -22,7 +22,7 @@
 
 ## Technologies and Tools
 
-- **Web:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html)
+- **Web:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html), [Bootstrap](https://getbootstrap.com/)
 - **Database:** MariaDB or SQLite
 
 ## Installation and Usage
@@ -132,7 +132,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Author
 
-- GitLab: [@Isotop7](https://codeberg.org/isotop7)
+- Codeberg: [@Isotop7](https://codeberg.org/isotop7)
 - LinkedIn: [Hendrik Röder](https://www.linkedin.com/in/hendrik-r%C3%B6der-9b8483198/)
 
 ---
