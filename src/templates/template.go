@@ -72,6 +72,37 @@ func splitString(source string) template.HTML {
 	return template.HTML(output)
 }
 
+var flagMap = map[string]string{
+	"en": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+	"de": "🇩🇪",
+	"fr": "🇫🇷",
+	"es": "🇪🇸",
+	"it": "🇮🇹",
+	"pt": "🇵🇹",
+	"ja": "🇯🇵",
+	"zh": "🇨🇳",
+	"ko": "🇰🇷",
+	"nl": "🇳🇱",
+}
+
+func emojifyFlag(source string) string {
+	sourceParts := strings.Split(source, ":")
+	flag := flagMap[strings.ToLower(sourceParts[0])]
+	// If no flag was found in hash map, use the language code as a fallback
+	if flag == "" {
+		flag = sourceParts[0]
+	}
+	return fmt.Sprintf("%s:%s</br>", flag, sourceParts[1])
+}
+
+func flagReplace(source string) template.HTML {
+	output := ""
+	for elements := range strings.SplitSeq(source, ",") {
+		output += emojifyFlag(elements)
+	}
+	return template.HTML(output)
+}
+
 var customTemplateFunctions = template.FuncMap{
 	"humanDate":            humanDate,
 	"humanDateTime":        humanDateTime,
@@ -81,6 +112,7 @@ var customTemplateFunctions = template.FuncMap{
 	"hasPassed":            hasPassed,
 	"badgifyCategories":    badgifyCategories,
 	"splitString":          splitString,
+	"flagReplace":          flagReplace,
 }
 
 func NewTemplateCache() (map[string]*template.Template, error) {

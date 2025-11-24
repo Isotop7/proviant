@@ -39,7 +39,7 @@
                     Countries
                 </div>
                 <div class="col col-auto">
-                    {{- .Product.Countries | splitString -}}
+                    {{- flagReplace .Product.Countries -}}
                 </div>
             </div>
             <div class="row mt-4 my-2" style="color: var(--bs-pink)">
