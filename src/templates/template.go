@@ -45,7 +45,7 @@ func hasPassed(t time.Time) bool {
 }
 
 func badgifyCategories(categories string, limit int) template.HTML {
-	output := ""
+	var output strings.Builder
 	elements := strings.Split(categories, ",")
 	for idx, elem := range elements {
 		contents := strings.Split(strings.TrimSpace(elem), ":")
@@ -55,21 +55,27 @@ func badgifyCategories(categories string, limit int) template.HTML {
 		if len(contents) == 2 {
 			lang := contents[0]
 			definition := contents[1]
-			output += fmt.Sprintf("<span class=\"badge bg-dark me-3\">%s</span>%s</br>", lang, definition)
+			output.WriteString("<span class=\"badge bg-dark me-3\">")
+			output.WriteString(lang)
+			output.WriteString("</span>")
+			output.WriteString(definition)
+			output.WriteString("<br>")
 		} else {
-			output += fmt.Sprintf("%s</br>", elem)
+			output.WriteString(elem)
+			output.WriteString("<br>")
 		}
 	}
-	return template.HTML(output)
+	return template.HTML(output.String())
 }
 
 func splitString(source string) template.HTML {
-	output := ""
+	var output strings.Builder
 	elements := strings.Split(source, ",")
 	for _, elem := range elements {
-		output += fmt.Sprintf("%s</br>", elem)
+		output.WriteString(elem)
+		output.WriteString("<br>")
 	}
-	return template.HTML(output)
+	return template.HTML(output.String())
 }
 
 var flagMap = map[string]string{
@@ -104,21 +110,32 @@ var flagMap = map[string]string{
 }
 
 func emojifyFlag(source string) string {
+	var output strings.Builder
 	sourceParts := strings.Split(source, ":")
+	// If string cannot be split into two parts, return the original string
+	if len(sourceParts) < 2 {
+		return source
+	}
+	// Get the flag from the hash map
 	flag := flagMap[strings.ToLower(sourceParts[0])]
 	// If no flag was found in hash map, use the language code as a fallback
 	if flag == "" {
 		flag = sourceParts[0]
 	}
-	return fmt.Sprintf("%s:%s</br>", flag, sourceParts[1])
+	// Build the output string
+	output.WriteString(flag)
+	output.WriteString(":")
+	output.WriteString(sourceParts[1])
+	output.WriteString("<br>")
+	return output.String()
 }
 
 func flagReplace(source string) template.HTML {
-	output := ""
+	var output strings.Builder
 	for elements := range strings.SplitSeq(source, ",") {
-		output += emojifyFlag(elements)
+		output.WriteString(emojifyFlag(elements))
 	}
-	return template.HTML(output)
+	return template.HTML(output.String())
 }
 
 var customTemplateFunctions = template.FuncMap{
