@@ -182,7 +182,6 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products", webFrontendHandler.Products)
 	publicWebFrontend.GET("/products/archived", webFrontendHandler.ProductsArchived)
 	publicWebFrontend.GET("/products/create", webFrontendHandler.ProductsCreate)
-	publicWebFrontend.GET("/products/search", webFrontendHandler.Search)
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")
