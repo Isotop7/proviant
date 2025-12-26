@@ -1,15 +1,19 @@
 {{ define "content" }}
 
-{{ if .Products }}
-
 <div class="row justify-content-between p-3">
     <div class="text-center mb-2">
         <h2>My products</h2>
         <p class="text-muted">
-            Select one or more products to edit or delete.</br>You can also archive products to keep them in your history.
+            Select one or more products to edit or delete.<br>
+            You can also archive products to keep them in your history.<br>
+            Use the search bar to filter your products by name or barcode.
         </p>
     </div>
 </div>
+
+{{ template "searchBar" . }}
+
+{{ if .Products }}
 
 <div class="py-3 my-2 d-flex justify-content-end">
         {{ template "productOptionBar" . }}
