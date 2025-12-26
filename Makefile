@@ -51,7 +51,7 @@ test:
 .PHONY: check
 check:
 	cd ./src && \
-	$(CONTAINER_RUNTIME) run -t --rm -v ./:/app:Z -v ../.golangci.yml:/tmp/.golangci.yml:Z -w /app golangci/golangci-lint:v2.6.2 golangci-lint run -v -c /tmp/.golangci.yml
+	$(CONTAINER_RUNTIME) run -t --rm -v ./:/app:Z -v ../.golangci.yml:/tmp/.golangci.yml:Z -w /app golangci/golangci-lint:v2.7.2 golangci-lint run -v -c /tmp/.golangci.yml
 
 # ==================================================================================== #
 # Documentation

@@ -10,16 +10,6 @@ proviant is a simple and intuitive application to track your bought products and
 
 ## Index
 
-- [func SetupDatabase\(logger \*zerolog.Logger, databaseConiguration \*configuration.DatabaseConfiguration\) \(\*gorm.DB, error\)](<#SetupDatabase>)
-
-
-<a name="SetupDatabase"></a>
-## func SetupDatabase
-
-```go
-func SetupDatabase(logger *zerolog.Logger, databaseConiguration *configuration.DatabaseConfiguration) (*gorm.DB, error)
-```
-
 
 
 # api
@@ -220,6 +210,15 @@ var (
     // ErrParseBody is thrown when a body fails to parse
     ErrParseBody = errors.New("error parsing body")
 
+    // Message format template for generic error
+    FormatGenericError = "%s: %s"
+
+    // Message format template for invalid ID
+    FormatInvalidRequestId = "Requested ID '%s' is invalid"
+
+    // Message format template for product not found
+    FormatProductWithIDNotFound = "Product with id '%d' was not found"
+
     /*
      * Database related errors
      */
@@ -249,6 +248,12 @@ var (
 
     // ErrDatabaseSQLiteInvalidPath is thrown if no valid SQLite database path was specified
     ErrDatabaseSQLiteInvalidPath = errors.New("no valid SQLite database path specified")
+
+    // Message format template for product not found
+    FormatProductNotFound = "Product with ID '%d' was not found in database"
+
+    // Message format template for product not found for user
+    FormatProductForUserNotFound = "Product with ID '%d' for user was not found"
 
     /*
      * OpenFoodFacts related errors
@@ -368,7 +373,7 @@ router contains the gin router definitions and maps requests to handlers
 - [func AuthorizatorNotUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorNotUserAware>)
 - [func AuthorizatorUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorUserAware>)
 - [func JWTMiddleware\(proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
-- [func SetupRouter\(logger \*zerolog.Logger, proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl controllers.OpenFoodFactsAPIController\) \*gin.Engine](<#SetupRouter>)
+- [func SetupRouter\(logger \*zerolog.Logger, proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl \*controllers.OpenFoodFactsAPIController\) \*gin.Engine](<#SetupRouter>)
 - [func UnauthorizedAPIFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedAPIFunc>)
 - [func UnauthorizedFrontendFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedFrontendFunc>)
 - [func ZerologMiddleware\(logger \*zerolog.Logger\) gin.HandlerFunc](<#ZerologMiddleware>)
@@ -405,7 +410,7 @@ JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authoriza
 ## func SetupRouter
 
 ```go
-func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController) *gin.Engine
 ```
 
 SetupRouter creates the gin engine and associated middleware
@@ -503,7 +508,6 @@ import "codeberg.org/isotop7/proviant/web"
   - [func \(frontend \*Frontend\) ProductsScan\(ctx \*gin.Context\)](<#Frontend.ProductsScan>)
   - [func \(frontend \*Frontend\) ProductsView\(ctx \*gin.Context\)](<#Frontend.ProductsView>)
   - [func \(frontend \*Frontend\) Root\(ctx \*gin.Context\)](<#Frontend.Root>)
-  - [func \(frontend \*Frontend\) Search\(ctx \*gin.Context\)](<#Frontend.Search>)
   - [func \(frontend \*Frontend\) User\(ctx \*gin.Context\)](<#Frontend.User>)
   - [func \(frontend \*Frontend\) UserSettings\(ctx \*gin.Context\)](<#Frontend.UserSettings>)
 
@@ -587,15 +591,6 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context)
 
 ```go
 func (frontend *Frontend) Root(ctx *gin.Context)
-```
-
-
-
-<a name="Frontend.Search"></a>
-### func \(\*Frontend\) Search
-
-```go
-func (frontend *Frontend) Search(ctx *gin.Context)
 ```
 
 
@@ -852,6 +847,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 
 ## Index
 
+- [Constants](<#constants>)
 - [type BulkOperationError](<#BulkOperationError>)
   - [func \(b \*BulkOperationError\) Error\(\) string](<#BulkOperationError.Error>)
 - [type DatabaseController](<#DatabaseController>)
@@ -890,6 +886,20 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 - [type SupportedEngines](<#SupportedEngines>)
   - [func SupportedEnginesFromString\(str string\) SupportedEngines](<#SupportedEnginesFromString>)
 
+
+## Constants
+
+<a name="GeneratedPrefix"></a>
+
+```go
+const GeneratedPrefix = "Generated @ %s"
+```
+
+<a name="PreferredTimeFormat"></a>PreferredTimeFormat is the preferred time format for database operations
+
+```go
+const PreferredTimeFormat = "02.01.2006 15:04"
+```
 
 <a name="BulkOperationError"></a>
 ## type BulkOperationError
