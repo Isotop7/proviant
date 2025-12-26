@@ -330,7 +330,7 @@ function handleBtnArchiveProduct() {
 }
 function handleBtnShowProducts() {
     const barcode = document.getElementById('barcode').value;
-    globalThis.location = `/web/products/search?barcode=${barcode}`;
+    globalThis.location = `/web/products?queryParam=barcode&queryValue=${barcode}`;
 }
 
 // Input handlers

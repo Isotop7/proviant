@@ -20,7 +20,6 @@
             <option value="product_name" {{ if eq .QueryParam "product_name" }}selected{{ end }}>Product Name</option>
             <option value="barcode" {{ if eq .QueryParam "barcode" }}selected{{ end }}>Barcode</option>
         </select>
-        <span class="input-group-text" id="addon-wrapping">=</span>
         <input type="text" id="search-query" class="form-control" placeholder="Search..." value="{{ .QueryValue }}" />
         <button class="btn btn-outline-secondary dropdown-toggle mb-md-0 w-md-auto" type="button" data-bs-toggle="collapse" data-bs-target="#advanced-filters">
             <i class="bi bi-funnel"></i>
