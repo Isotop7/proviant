@@ -91,8 +91,8 @@ document.querySelectorAll('.card').forEach(card => {
     });
 });
 
-// Event listener for search button
-document.getElementById("search-btn").addEventListener("click", () => {
+// Function to perform search
+function performSearch() {
     const queryParam = document.getElementById("search-param").value;
     const queryValue = document.getElementById("search-query").value;
     const sortParam = document.getElementById("sort-param").value;
@@ -107,6 +107,18 @@ document.getElementById("search-btn").addEventListener("click", () => {
     }).toString();
 
     window.location.href = `/web/products?${queryString}`;
+}
+
+// Event listener for Enter key on search input
+document.getElementById("search-query").addEventListener("keypress", (event) => {
+    if (event.key === "Enter") {
+        performSearch();
+    }
+});
+
+// Event listener for search button
+document.getElementById("search-btn").addEventListener("click", () => {
+    performSearch();
 });
 
 // Event listener for Show All button
