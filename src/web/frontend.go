@@ -180,12 +180,12 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	}
 
 	pageData := map[string]any{
-		"Title":       "Products",
-		"Products":    products,
-		"QueryParam":   queryParam,
-		"QueryValue":   queryValue,
-		"Sort":        sort,
-		"Order":       order,
+		"Title":      "Products",
+		"Products":   products,
+		"QueryParam": queryParam,
+		"QueryValue": queryValue,
+		"Sort":       sort,
+		"Order":      order,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }
