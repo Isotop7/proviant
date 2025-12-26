@@ -9,6 +9,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/templates"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -149,19 +150,42 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
+	// Get query parameters
+	queryParam := ctx.Query("queryParam")
+	queryValue := ctx.Query("queryValue")
+	sort := ctx.DefaultQuery("sort", "created_at")
+	order := ctx.DefaultQuery("order", "asc")
+
 	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get products of user from database with optional limit
-	products, productBulkErr := dbController.GetUserProductsBulk(userID, -1)
-	if productBulkErr != nil {
-		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
+
+	var products []dbModel.Product
+	var productErr error
+
+	if queryParam != "" && queryValue != "" {
+		enumParam := database.SearchParameterEnumFromString(queryParam)
+		if enumParam == database.InvalidParameter {
+			logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
+			templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrProductSearchInvalidQuery.Error())
+			return
+		}
+		products, productErr = dbController.SearchProducts(enumParam, queryValue, sort, order, userID)
+	} else {
+		products, productErr = dbController.GetUserProductsBulk(userID, -1)
+	}
+
+	if productErr != nil {
+		logger.Error().Msgf("Error getting products of user: %s", productErr)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
 		return
 	}
 
 	pageData := map[string]any{
-		"Title":    "Products",
-		"Products": products,
+		"Title":       "Products",
+		"Products":    products,
+		"QueryParam":   queryParam,
+		"QueryValue":   queryValue,
+		"Sort":        sort,
+		"Order":       order,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }
@@ -312,11 +336,4 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 		"Product": product,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
-}
-
-func (frontend *Frontend) Search(ctx *gin.Context) {
-	pageData := map[string]any{
-		"Title": "Search products",
-	}
-	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsSearch.tmpl", pageData)
 }
