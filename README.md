@@ -92,6 +92,10 @@ Additionally `Gin` supports a debug mode, which also can be set with a environme
 GIN_MODE=debug
 ```
 
+## Changelog
+
+User-facing important changes are documented in the [CHANGELOG.md](./CHANGELOG.md) file.
+
 ## What's missing?
 
 - Administrative Functions: Create and Update users
