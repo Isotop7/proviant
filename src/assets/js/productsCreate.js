@@ -17,6 +17,7 @@ const ProductState = Object.freeze({
 function showError(error) {
     inputBarcode.value = '';
     inputBarcode.style.backgroundColor = 'var(--bs-warning)';
+    inputBarcode.style.color = 'var(--bs-warning-text)';
     console.error(error);
 }
 function showBarcode(barcode) {
@@ -38,6 +39,7 @@ function showAlert(isSuccess, message) {
     }
 
     alertElement.classList.add('show');
+    setTimeout(() => dismissAlert(), 3000);
 }
 function dismissAlert() {
     const alertElement = document.getElementById('productAlert');
@@ -116,6 +118,7 @@ function setProductOptionsState(productState, products) {
     const btnAdd = document.getElementById('btnAddProduct');
     const btnShow = document.getElementById('btnShowProduct')
     const btnDeleteModal = document.getElementById('btnDeleteProductModal');
+    const btnArchiveModal = document.getElementById('btnArchiveProductModal');
     const btnShowAll = document.getElementById('btnShowProducts');
     const instanceDropdown = document.getElementById('instanceDropdown');
 
@@ -123,6 +126,7 @@ function setProductOptionsState(productState, products) {
     btnAdd.disabled = true;
     btnShow.disabled = true;
     btnDeleteModal.disabled = true;
+    btnArchiveModal.disabled = true;
     btnShowAll.disabled = true;
     instanceDropdown.classList.add('d-none');
     instanceDropdown.innerHTML = "";
@@ -132,6 +136,7 @@ function setProductOptionsState(productState, products) {
             btnAdd.disabled = false;
             btnShow.disabled = true;
             btnDeleteModal.disabled = true;
+            btnArchiveModal.disabled = true;
             btnShowAll.disabled = true;
             instanceDropdown.classList.add('d-none');
             break;
@@ -139,6 +144,7 @@ function setProductOptionsState(productState, products) {
             btnAdd.disabled = false;
             btnShow.disabled = false;
             btnDeleteModal.disabled = false;
+            btnArchiveModal.disabled = false;
             btnShowAll.disabled = false;
             instanceDropdown.classList.remove('d-none');
             // Add new options based on the array
@@ -153,6 +159,7 @@ function setProductOptionsState(productState, products) {
             btnAdd.disabled = false;
             btnShow.disabled = true;
             btnDeleteModal.disabled = true;
+            btnArchiveModal.disabled = true;
             btnShowAll.disabled = true;
             instanceDropdown.classList.add('d-none');
             console.error(`Invalid product state '${productState}'`);
@@ -176,18 +183,13 @@ async function queryProductInfoRequest(barcode) {
 // Function handlers
 function queryProductInfo(barcode) {
     clearProductInfo();
-    try {
-        queryProductInfoRequest(barcode).then((response) => {
-            let product = response.product;
-            showProductData(product);
-        }).catch((error) => {
-            showError('Error: ' + error);
-            clearProductInfo();
-        });
-    } catch (error) {
+    queryProductInfoRequest(barcode).then((response) => {
+        let product = response.product;
+        showProductData(product);
+    }).catch((error) => {
         showError('Error: ' + error);
         clearProductInfo();
-    }
+    });
 }
 function storeBarcode(barcode) {
     document.getElementById('barcode').dataset.barcode = barcode;
@@ -199,37 +201,38 @@ function setDeleteModalBody () {
     const deleteButtonModalBody = document.getElementById('deleteModalBody');
     deleteButtonModalBody.innerHTML = `Do you want to delete the following product:</br></br>${productData.replaceAll(';','</br>')}`;
 }
+function setArchiveModalBody () {
+    const instanceDropdown = document.getElementById('instanceDropdown');
+    const productData = instanceDropdown[instanceDropdown.selectedIndex].innerText;
+    const archiveButtonModalBody = document.getElementById('archiveModalBody');
+    archiveButtonModalBody.innerHTML = `Do you want to archive the following product:</br></br>${productData.replaceAll(';','</br>')}`;
+}
 function checkBarcode(barcode) {
-    try {
-        proviant.getProductsByBarcode(barcode).then((response) => {
-            switch (response.code) {
-                case 200:
-                    const products = response.message;
-                    if (products.length > 0) {
-                        setProductOptionsState(ProductState.PRESENT, products);
-                    } else {
-                        setProductOptionsState(ProductState.NEW, []);
-                    }
-                    break;
-                case 400:
-                    setProductOptionsState(ProductState.NEW, []);
-                    showAlert(false, 'Request contained invalid data');
-                    break;
-                case 500:
-                    setProductOptionsState(ProductState.NEW, []);
-                    showAlert(false, 'Backend server error');
-                    break;
-                default:
-                    setProductOptionsState(ProductState.NEW, []);
-                    showAlert(false, `Undefined error: ${response.message}`);
-                    break;
-            }
-        }).catch(error => {
-            console.error(error);
-        })
-    } catch (error) {
-        console.error(error);
+  proviant.getProductsByBarcode(barcode).then((response) => {
+    switch (response.code) {
+      case 200:
+        if (response.message.length > 0) {
+          setProductOptionsState(ProductState.PRESENT, response.message);
+        } else {
+          setProductOptionsState(ProductState.NEW, []);
+        }
+        break;
+      case 400:
+        setProductOptionsState(ProductState.NEW, []);
+        showAlert(false, 'Request contained invalid data');
+        break;
+      case 500:
+        setProductOptionsState(ProductState.NEW, []);
+        showAlert(false, 'Backend server error');
+        break;
+      default:
+        setProductOptionsState(ProductState.NEW, []);
+        showAlert(false, `Undefined error: ${response.message}`);
+        break;
     }
+  }).catch(error => {
+    console.error(error);
+  });
 };
 
 // Button handlers
@@ -251,11 +254,14 @@ function handleScanButton() {
                 storeBarcode(decodedText);
                 clearScanUI();
             }
-        );
+        ).catch(error => {
+            showAlert(false, error);
+            clearScanUI();
+        });
     } else if (btnScan.dataset.action == 'stop') {
         clearScanUI();
     } else {
-        console.error('Undefined data-action ' + btnScan.dataset.action);
+        showAlert(false, `Undefined data-action '${btnScan.dataset.action}'`);
     }
 };
 function handleBtnAddProduct() {
@@ -267,6 +273,9 @@ function handleBtnAddProduct() {
 
     try {
         const barcode = document.getElementById('barcode').value;
+        if (barcode === '') {
+            throw new Error('Barcode cannot be empty');
+        }
         const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
         proviant.createProduct(barcode, expireAt).then((response) => {
             switch (response.code) {
@@ -284,43 +293,51 @@ function handleBtnAddProduct() {
                     break;
             }
         }).catch(error => {
-            showAlert(false, `Error: ${error}`);
+            showAlert(false, error);
         });
     } catch (error) {
-        showAlert(false, `Error: ${error}`);
+        showAlert(false, error);
     }
 };
 function handleBtnShowProduct() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
-    window.location = `/web/products/${productId}/view`;
+    globalThis.location = `/web/products/${productId}/view`;
 }
 function handleBtnDeleteProduct() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
-    
-    proviant.deleteProduct(productId).then((response) => {
-        console.log(response.code);
-        switch (response.code) {
-            case 200:
-                window.location.reload();
-                break;
-            default:
-                showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
-                break;
+
+    proviant.deleteProduct(productId, false).then((response) => {
+        if (response.code == 200) {
+          globalThis.location.reload();
+        } else {
+          showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
         }
+    });
+}
+function handleBtnArchiveProduct() {
+    const instanceDropdown = document.getElementById('instanceDropdown');
+    const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
+
+    proviant.deleteProduct(productId, true).then((response) => {
+      if (response.code == 200) {
+        globalThis.location.reload();
+      } else {
+        showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
+      }
     });
 }
 function handleBtnShowProducts() {
     const barcode = document.getElementById('barcode').value;
-    window.location = `/web/products/search?barcode=${barcode}`;
+    globalThis.location = `/web/products?queryParam=barcode&queryValue=${barcode}`;
 }
 
 // Input handlers
 function handleChangedBarcode() {
     if (!(inputBarcode.checkValidity())) {
         if (inputBarcode.classList.contains('border-success')) {
-        inputBarcode.classList.remove('border-success')
+            inputBarcode.classList.remove('border-success')
         }
         return;
     }
@@ -334,7 +351,7 @@ function handleChangedBarcode() {
 };
 
 // Add event listeners
-window.addEventListener('load', function () {
+globalThis.addEventListener('load', function () {
     // Fetch all the forms we want to apply custom Bootstrap validation styles to
     let forms = document.getElementsByClassName('needs-validation');
     // Loop over them and prevent submission
@@ -373,9 +390,16 @@ document.getElementById('btnShowProduct').onclick = function (event) {
 document.getElementById('deleteModal').addEventListener('show.bs.modal', (event) => {
     setDeleteModalBody();
 });
+document.getElementById('archiveModal').addEventListener('show.bs.modal', (event) => {
+    setArchiveModalBody();
+});
 document.getElementById('btnDeleteProduct').onclick = function (event) {
     event.preventDefault();
     handleBtnDeleteProduct();
+}
+document.getElementById('btnArchiveProduct').onclick = function (event) {
+    event.preventDefault();
+    handleBtnArchiveProduct();
 }
 document.getElementById('btnShowProducts').onclick = function (event) {
     event.preventDefault();

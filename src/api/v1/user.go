@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"net/http"
 
+	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/models/configuration/static"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gitlab.com/Isotop7/proviant/api"
-	"gitlab.com/Isotop7/proviant/controllers/database"
-	"gitlab.com/Isotop7/proviant/errors"
-	"gitlab.com/Isotop7/proviant/models/authentication"
-	"gitlab.com/Isotop7/proviant/models/configuration/static"
 	"gorm.io/gorm"
 )
 
@@ -50,7 +50,7 @@ func UpdateUser(ctx *gin.Context) {
 	// Get and parse body to user
 	var user authentication.User
 	if bindErr := ctx.ShouldBindJSON(&user); bindErr != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), bindErr.Error())
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
 		return
 	}
@@ -124,7 +124,7 @@ func UpdateUserPassword(ctx *gin.Context) {
 	// Get and parse body to user
 	var login authentication.Login
 	if bindErr := ctx.ShouldBindJSON(&login); bindErr != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), bindErr.Error())
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
 		return
 	}

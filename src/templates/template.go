@@ -14,13 +14,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
 //go:embed "web" "notification"
 var TemplateFiles embed.FS
 
 func humanDateTime(t time.Time) string {
-	return t.Format("02.01.2006 15:04")
+	return t.Format("02.01.2006, 15:04")
+}
+
+func humanDateTimeFromSQL(t gorm.DeletedAt) string {
+	return t.Time.Format("02.01.2006, 15:04")
 }
 
 func humanDate(t time.Time) string {
@@ -40,7 +45,7 @@ func hasPassed(t time.Time) bool {
 }
 
 func badgifyCategories(categories string, limit int) template.HTML {
-	output := ""
+	var output strings.Builder
 	elements := strings.Split(categories, ",")
 	for idx, elem := range elements {
 		contents := strings.Split(strings.TrimSpace(elem), ":")
@@ -50,31 +55,99 @@ func badgifyCategories(categories string, limit int) template.HTML {
 		if len(contents) == 2 {
 			lang := contents[0]
 			definition := contents[1]
-			output += fmt.Sprintf("<span class=\"badge bg-dark me-3\">%s</span>%s</br>", lang, definition)
+			output.WriteString("<span class=\"badge bg-dark me-3\">")
+			output.WriteString(lang)
+			output.WriteString("</span>")
+			output.WriteString(definition)
+			output.WriteString("<br>")
 		} else {
-			output += fmt.Sprintf("%s</br>", elem)
+			output.WriteString(elem)
+			output.WriteString("<br>")
 		}
 	}
-	return template.HTML(output)
+	return template.HTML(output.String())
 }
 
 func splitString(source string) template.HTML {
-	output := ""
+	var output strings.Builder
 	elements := strings.Split(source, ",")
 	for _, elem := range elements {
-		output += fmt.Sprintf("%s</br>", elem)
+		output.WriteString(elem)
+		output.WriteString("<br>")
 	}
-	return template.HTML(output)
+	return template.HTML(output.String())
+}
+
+var flagMap = map[string]string{
+	"ad": "🇦🇩", "ae": "🇦🇪", "af": "🇦🇫", "ag": "🇦🇬", "ai": "🇦🇮", "al": "🇦🇱", "am": "🇦🇲", "ao": "🇦🇴", "aq": "🇦🇶", "ar": "🇦🇷",
+	"as": "🇦🇸", "at": "🇦🇹", "au": "🇦🇺", "aw": "🇦🇼", "ax": "🇦🇽", "az": "🇦🇿", "ba": "🇧🇦", "bb": "🇧🇧", "bd": "🇧🇩", "be": "🇧🇪",
+	"bf": "🇧🇫", "bg": "🇧🇬", "bh": "🇧🇭", "bi": "🇧🇮", "bj": "🇧🇯", "bl": "🇧🇱", "bm": "🇧🇲", "bn": "🇧🇳", "bo": "🇧🇴", "bq": "🇧🇶",
+	"br": "🇧🇷", "bs": "🇧🇸", "bt": "🇧🇹", "bv": "🇧🇻", "bw": "🇧🇼", "by": "🇧🇾", "bz": "🇧🇿", "ca": "🇨🇦", "cc": "🇨🇨", "cd": "🇨🇩",
+	"cf": "🇨🇫", "cg": "🇨🇬", "ch": "🇨🇭", "ci": "🇨🇮", "ck": "🇨🇰", "cl": "🇨🇱", "cm": "🇨🇲", "cn": "🇨🇳", "co": "🇨🇴", "cr": "🇨🇷",
+	"cu": "🇨🇺", "cv": "🇨🇻", "cw": "🇨🇼", "cx": "🇨🇽", "cy": "🇨🇾", "cz": "🇨🇿", "de": "🇩🇪", "dj": "🇩🇯", "dk": "🇩🇰", "dm": "🇩🇲",
+	"do": "🇩🇴", "dz": "🇩🇿", "ec": "🇪🇨", "ee": "🇪🇪", "eg": "🇪🇬", "eh": "🇪🇭", "er": "🇪🇷", "es": "🇪🇸", "et": "🇪🇹", "fi": "🇫🇮",
+	"fj": "🇫🇯", "fk": "🇫🇰", "fm": "🇫🇲", "fo": "🇫", "fr": "🇫🇷", "ga": "🇬🇦", "gb": "🇬🇧", "gd": "🇬🇩", "ge": "🇬🇪", "gf": "🇬🇫",
+	"gg": "🇬🇬", "gh": "🇬🇭", "gi": "🇬🇮", "gl": "🇬🇱", "gm": "🇬🇲", "gn": "🇬🇳", "gp": "🇬🇵", "gq": "🇬🇶", "gr": "🇬🇷", "gs": "🇬🇸",
+	"gt": "🇬🇹", "gu": "🇬🇺", "gw": "🇬🇼", "gy": "🇬🇾", "hk": "🇭🇰", "hm": "🇭🇲", "hn": "🇭🇳", "hr": "🇭🇷", "ht": "🇭🇹", "hu": "🇭🇺",
+	"id": "🇮🇩", "ie": "🇮🇪", "il": "🇮🇱", "im": "🇮🇲", "in": "🇮🇳", "io": "🇮🇴", "iq": "🇮🇶", "ir": "🇮🇷", "is": "🇮🇸", "it": "🇮🇹",
+	"je": "🇯🇪", "jm": "🇯🇲", "jo": "🇯🇴", "jp": "🇯🇵", "ke": "🇰🇪", "kg": "🇰🇬", "kh": "🇰🇭", "ki": "🇰🇮", "km": "🇰🇲", "kn": "🇰🇳",
+	"kp": "🇰🇵", "kr": "🇰🇷", "kw": "🇰🇼", "ky": "🇰🇾", "kz": "🇰🇿", "la": "🇱🇦", "lb": "🇱🇧", "lc": "🇱🇨", "li": "🇱🇮", "lk": "🇱🇰",
+	"lr": "🇱🇷", "ls": "🇱🇸", "lt": "🇱🇹", "lu": "🇱🇺", "lv": "🇱🇻", "ly": "🇱🇾", "ma": "🇲🇦", "mc": "🇲🇨", "md": "🇲🇩", "me": "🇲🇪",
+	"mf": "🇲🇫", "mg": "🇲🇬", "mh": "🇲🇭", "mk": "🇲🇰", "ml": "🇲🇱", "mm": "🇲🇲", "mn": "🇲🇳", "mo": "🇲🇴", "mp": "🇲🇵", "mq": "🇲🇶",
+	"mr": "🇲🇷", "ms": "🇲🇸", "mt": "🇲🇹", "mu": "🇲🇺", "mv": "🇲🇻", "mw": "🇲🇼", "mx": "🇲🇽", "my": "🇲🇾", "mz": "🇲🇿", "na": "🇳🇦",
+	"nc": "🇳🇨", "ne": "🇳🇪", "nf": "🇳🇫", "ng": "🇳🇬", "ni": "🇳🇮", "nl": "🇳🇱", "no": "🇳", "np": "🇳🇵", "nr": "🇳🇷", "nu": "🇳🇺",
+	"nz": "🇳🇿", "om": "🇴🇲", "pa": "🇵🇦", "pe": "🇵🇪", "pf": "🇵🇫", "pg": "🇵🇬", "ph": "🇵🇭", "pk": "🇵🇰", "pl": "🇵🇱", "pm": "🇵🇲",
+	"pn": "🇵🇳", "pr": "🇵🇷", "ps": "🇵🇸", "pt": "🇵🇹", "pw": "🇵🇼", "py": "🇵🇾", "qa": "🇶🇦", "re": "🇷🇪", "ro": "🇷🇴", "rs": "🇷🇸",
+	"ru": "🇷", "rw": "🇷🇼", "sa": "🇸🇦", "sb": "🇸🇧", "sc": "🇸🇨", "sd": "🇸🇩", "se": "🇸🇪", "sg": "🇸🇬", "sh": "🇸🇭", "si": "🇸🇮",
+	"sj": "🇸🇯", "sk": "🇸🇰", "sl": "🇸🇱", "sm": "🇸🇲", "sn": "🇸🇳", "so": "🇸🇴", "sr": "🇸🇷", "ss": "🇸🇸", "st": "🇸🇹", "sv": "🇸🇻",
+	"sx": "🇸🇽", "sy": "🇸🇾", "sz": "🇸🇿", "tc": "🇹🇨", "td": "🇹🇩", "tf": "🇹🇫", "tg": "🇹🇬", "th": "🇹🇭", "tj": "🇹🇯", "tk": "🇹🇰",
+	"tl": "🇹🇱", "tm": "🇹🇲", "tn": "🇹🇳", "to": "🇹", "tr": "🇹🇷", "tt": "🇹🇹", "tv": "🇹🇻", "tw": "🇹🇼", "tz": "🇹🇿", "ua": "🇺🇦",
+	"ug": "🇺🇬", "um": "🇺🇲", "us": "🇺🇸", "uy": "🇺🇾", "uz": "🇺🇿", "va": "🇻🇦", "vc": "🇻🇨", "ve": "🇻🇪", "vg": "🇻🇬", "vi": "🇻🇮",
+	"vn": "🇻🇳", "vu": "🇻🇺", "wf": "🇼🇫", "ws": "🇼🇸", "ye": "🇾🇪", "yt": "🇾🇹", "za": "🇿🇦", "zm": "🇿🇲", "zw": "🇿🇼",
+	"en":       "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+	"wales":    "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+	"scotland": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+}
+
+func emojifyFlag(source string) string {
+	var output strings.Builder
+	sourceParts := strings.Split(source, ":")
+	// If string cannot be split into two parts, return the original string
+	if len(sourceParts) < 2 {
+		return source
+	}
+	// Get the flag from the hash map
+	flag := flagMap[strings.ToLower(sourceParts[0])]
+	// If no flag was found in hash map, use the language code as a fallback
+	if flag == "" {
+		flag = sourceParts[0]
+	}
+	// Build the output string
+	output.WriteString(flag)
+	output.WriteString(":")
+	output.WriteString(sourceParts[1])
+	output.WriteString("<br>")
+	return output.String()
+}
+
+func flagReplace(source string) template.HTML {
+	var output strings.Builder
+	for elements := range strings.SplitSeq(source, ",") {
+		output.WriteString(emojifyFlag(elements))
+	}
+	return template.HTML(output.String())
 }
 
 var customTemplateFunctions = template.FuncMap{
-	"humanDate":         humanDate,
-	"humanDateTime":     humanDateTime,
-	"inputDate":         inputDate,
-	"today":             today,
-	"hasPassed":         hasPassed,
-	"badgifyCategories": badgifyCategories,
-	"splitString":       splitString,
+	"humanDate":            humanDate,
+	"humanDateTime":        humanDateTime,
+	"humanDateTimeFromSQL": humanDateTimeFromSQL,
+	"inputDate":            inputDate,
+	"today":                today,
+	"hasPassed":            hasPassed,
+	"badgifyCategories":    badgifyCategories,
+	"splitString":          splitString,
+	"flagReplace":          flagReplace,
 }
 
 func NewTemplateCache() (map[string]*template.Template, error) {
@@ -107,7 +180,7 @@ func NewTemplateCache() (map[string]*template.Template, error) {
 	return cache, nil
 }
 
-func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base string, page string, data map[string]any) {
+func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base, page string, data map[string]any) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 

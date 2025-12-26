@@ -3,7 +3,7 @@ package authentication
 import (
 	"net/mail"
 
-	"gitlab.com/Isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/errors"
 )
 
 // Signup is derived from User and Login and primarily used for registration
@@ -15,7 +15,7 @@ type Signup struct {
 
 // IsValid checks if the given signup instance is valid
 func (signup *Signup) IsValid() error {
-	if len(signup.Username) == 0 {
+	if signup.Username == "" {
 		return errors.ErrUsernameEmpty
 	}
 

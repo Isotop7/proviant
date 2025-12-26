@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/Isotop7/proviant/errors"
-	"gitlab.com/Isotop7/proviant/models/authentication"
-	"gitlab.com/Isotop7/proviant/models/database"
-	"gitlab.com/Isotop7/proviant/models/webparts"
+	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/models/webparts"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -31,13 +31,29 @@ const (
 // If the enum value can't be matched, enum value 'InvalidParameter' is used
 func SearchParameterEnumFromString(str string) SearchParameterEnum {
 	switch str {
-	case "productName":
+	case "product_name":
 		return ProductName
 	case "barcode":
 		return Barcode
 	default:
 		return InvalidParameter
 	}
+}
+
+// BulkOperationError is an error type for bulk operations
+type BulkOperationError struct {
+	productID int
+	error     error
+}
+
+// PreferredTimeFormat is the preferred time format for database operations
+const PreferredTimeFormat = "02.01.2006 15:04"
+
+const GeneratedPrefix = "Generated @ %s"
+
+// Error returns a string representation of the error
+func (b *BulkOperationError) Error() string {
+	return fmt.Sprintf("Error bulk deleting product '%d', error: %v", b.productID, b.error)
 }
 
 // GetUserByUsername uses a given username and returns the matching user object
@@ -77,7 +93,7 @@ func (dbc DatabaseController) GetHouseholdByID(householdID uint) (database.House
 }
 
 // UserExistsByUsername returns if a given user object exists in the database based on the property 'username'
-func (dbc DatabaseController) UserExistsByUsername(user authentication.User) bool {
+func (dbc DatabaseController) UserExistsByUsername(user *authentication.User) bool {
 	var dbUser authentication.User
 	// Try to get first object with matching username
 	selectErr := dbc.DBHandle.First(&dbUser, "username = ?", user.Username)
@@ -86,7 +102,7 @@ func (dbc DatabaseController) UserExistsByUsername(user authentication.User) boo
 }
 
 // UserExistsByMailAddress returns if a given user object exists in the database based on the property 'mailAddress'
-func (dbc DatabaseController) UserExistsByMailAddress(user authentication.User) bool {
+func (dbc DatabaseController) UserExistsByMailAddress(user *authentication.User) bool {
 	var dbUser authentication.User
 	// Try to get first object with matching mailAddress
 	selectErr := dbc.DBHandle.First(&dbUser, "mail_address = ?", user.MailAddress)
@@ -229,7 +245,7 @@ func (dbc DatabaseController) UserHasProductAccess(userID uint, productID int) b
 
 	// Get single product by ID
 	var product database.Product
-	getError := dbc.DBHandle.First(&product, productID)
+	getError := dbc.DBHandle.Unscoped().First(&product, productID)
 	// Failsafe - If error is found, return false
 	if getError.Error != nil {
 		return false
@@ -257,15 +273,15 @@ func (dbc DatabaseController) GetHouseholdMembersMailAddressesByID(householdID u
 	}
 
 	// Find users with matching id
-	var users []authentication.User
+	var users []*authentication.User
 	findErr := dbc.DBHandle.Where("household_id = ?", householdID).Find(&users)
 	if findErr != nil {
 		return mailAddresses, findErr.Error
 	}
 
 	// Loop through household members and add mail addresses
-	for _, user := range users {
-		mailAddresses = append(mailAddresses, user.MailAddress)
+	for idx := range users {
+		mailAddresses = append(mailAddresses, users[idx].MailAddress)
 	}
 	return mailAddresses, nil
 }
@@ -287,6 +303,37 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 	// Get household with products preloaded
 	var products []database.Product
 	query := dbc.DBHandle.Where("household_id = ?", user.HouseholdID)
+
+	// Apply limit if specified
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	// Execute query
+	queryErr := query.Find(&products).Error
+	if queryErr != nil {
+		return []database.Product{}, queryErr
+	}
+	return products, nil
+}
+
+// GetUserArchivedProductsBulk returns an array of archived products of a user (based on user ID)
+// The returned dataset can be limitied by supplying 'limit'
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error) {
+	// Get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return []database.Product{}, userErr
+	}
+
+	if user.HouseholdID == 0 {
+		return []database.Product{}, errors.ErrInvalidUserData
+	}
+
+	// Get household with products preloaded
+	var products []database.Product
+	query := dbc.DBHandle.Unscoped().Where("deleted_at IS NOT NULL").Where("household_id = ?", user.HouseholdID)
 
 	// Apply limit if specified
 	if limit > 0 {
@@ -359,8 +406,40 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 	return product, nil
 }
 
+// GetArchivedProductByID returns an archived product object (based on product ID) of a user (based on user ID)
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) GetArchivedProductByID(productID int, userID uint) (database.Product, error) {
+	// Get single product by ID
+	if productID <= 0 {
+		return database.Product{}, gorm.ErrNotImplemented
+	}
+	// Parse product to var
+	var product database.Product
+	getError := dbc.DBHandle.Unscoped().First(&product, productID)
+
+	// Check if error occured while getting product
+	if getError.Error != nil {
+		// Return empty set and database error
+		return database.Product{}, getError.Error
+	}
+
+	// Get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return database.Product{}, userErr
+	}
+
+	// Check if household id of the product is different than household id of the user
+	if product.HouseholdID != user.HouseholdID {
+		// Return empty set and custom error
+		return database.Product{}, errors.ErrMismatcherUserID
+	}
+	// Return database product
+	return product, nil
+}
+
 // SearchProducts returns an array of products of a user matching a search paramater and a query
-func (dbc DatabaseController) SearchProducts(searchQuery string, searchParameter SearchParameterEnum, userID uint) ([]database.Product, error) {
+func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue, sort, order string, userID uint) ([]database.Product, error) {
 	// Get user object from database
 	user, userErr := dbc.GetUserByID(userID)
 	if userErr != nil {
@@ -374,17 +453,20 @@ func (dbc DatabaseController) SearchProducts(searchQuery string, searchParameter
 		Where("deleted_at IS NULL")
 
 	// Transform search query
-	searchQuery = fmt.Sprintf("%%%s%%", searchQuery)
+	queryValue = fmt.Sprintf("%%%s%%", queryValue)
 
 	// Get matching products of preloaded set based on search parameter
-	switch searchParameter {
+	switch queryParam {
 	case ProductName:
-		preloadedDataset = preloadedDataset.Where("product_name LIKE ?", searchQuery)
+		preloadedDataset = preloadedDataset.Where("product_name LIKE ?", queryValue)
 	case Barcode:
-		preloadedDataset = preloadedDataset.Where("barcode LIKE ?", searchQuery)
+		preloadedDataset = preloadedDataset.Where("barcode LIKE ?", queryValue)
 	default:
 		return []database.Product{}, errors.ErrDatabaseInvalidSearchParameter
 	}
+
+	// Order dataset
+	preloadedDataset = preloadedDataset.Order(fmt.Sprintf("%s %s", sort, order))
 
 	// Cast found set to returned array or return error
 	findErr := preloadedDataset.Find(&foundProducts)
@@ -435,7 +517,6 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	}
 
 	// Check if supplied user is allowed to patch the product
-	// TODO: Check on middleware possible?
 	if dbProduct.HouseholdID != user.HouseholdID {
 		return errors.ErrMismatcherUserID
 	}
@@ -459,16 +540,96 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 
 // DeleteProduct deletes a product (based on product ID) of a user (based on user ID)
 // If the database operations return an error, the error is also returned (otherwise nil)
-func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error {
+func (dbc DatabaseController) DeleteProduct(productID int, userID uint, archiveOnly bool) error {
 	// Get product and check for correct userID
-	_, getError := dbc.GetProductByID(productID, userID)
+	_, getError := dbc.GetArchivedProductByID(productID, userID)
 	if getError != nil {
 		return getError
 	}
 
-	// Delete product by its id
-	deleteResult := dbc.DBHandle.Delete(&database.Product{}, productID)
+	var deleteResult *gorm.DB
+	if archiveOnly {
+		// Archive product by its id
+		deleteResult = dbc.DBHandle.Delete(&database.Product{}, productID)
+	} else {
+		// Delete product by its id
+		deleteResult = dbc.DBHandle.Unscoped().Delete(&database.Product{}, productID)
+	}
 	return deleteResult.Error
+}
+
+// BulkDeleteProducts deletes a list of products (based on product ID) of a user (based on user ID) given as a slice of product IDs
+// If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+func (dbc DatabaseController) BulkDeleteProducts(productIDs []int, userID uint) []BulkOperationError {
+	bulkErrors := []BulkOperationError{}
+	for _, productID := range productIDs {
+		// Get product and check for correct userID
+		_, getError := dbc.GetArchivedProductByID(productID, userID)
+		if getError != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+		deleteResult := dbc.DBHandle.Unscoped().Delete(&database.Product{}, productID)
+		if deleteResult.Error != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+	}
+	return bulkErrors
+}
+
+// BulkDeleteProducts deletes a list of products (based on product ID) of a user (based on user ID) given as a slice of product IDs
+// If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+func (dbc DatabaseController) BulkArchiveProducts(productIDs []int, userID uint) []BulkOperationError {
+	bulkErrors := []BulkOperationError{}
+	for _, productID := range productIDs {
+		// Get product and check for correct userID
+		_, getError := dbc.GetArchivedProductByID(productID, userID)
+		if getError != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+		deleteResult := dbc.DBHandle.Delete(&database.Product{}, productID)
+		if deleteResult.Error != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+	}
+	return bulkErrors
+}
+
+// RestoreProduct restores a product (based on product ID) of a user (based on user ID)
+// If the database operations return an error, the error is also returned (otherwise nil)
+func (dbc DatabaseController) RestoreProduct(productID int, userID uint) error {
+	// Get product and check for correct userID
+	product, getError := dbc.GetArchivedProductByID(productID, userID)
+	if getError != nil {
+		return getError
+	}
+
+	// Reset deletedAt field
+	product.DeletedAt = gorm.DeletedAt{}
+
+	// Save changes to db
+	saveResult := dbc.DBHandle.Save(&product)
+	return saveResult.Error
+}
+
+// BulkRestoreProducts restores a list of products (based on product ID) of a user (based on user ID) given as a slice of product IDs
+// If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+func (dbc DatabaseController) BulkRestoreProducts(productIDs []int, userID uint) []BulkOperationError {
+	bulkErrors := []BulkOperationError{}
+	for _, productID := range productIDs {
+		// Get product and check for correct userID
+		product, getError := dbc.GetArchivedProductByID(productID, userID)
+		if getError != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+		// Reset deletedAt field
+		product.DeletedAt = gorm.DeletedAt{}
+		// Save changes to db
+		saveResult := dbc.DBHandle.Save(&product)
+		if saveResult.Error != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+		}
+	}
+	return bulkErrors
 }
 
 // SetProductExpireAt updates the expiry date of a product (based on product ID) of a user (based on user ID)
@@ -524,19 +685,19 @@ func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error {
 // GetProductsExpired returns an array of products of a user (based on user ID) that are already expired
 // If the database operations return an error, the error is also returned (otherwise nil)
 // If the user has no products assigned, the function returns an empty dataset
-func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Product, error) {
+func (dbc DatabaseController) GetProductsExpired(userID uint) ([]*database.Product, error) {
 	// Get all user products
 	userProducts, getBulkErr := dbc.GetUserProductsBulk(userID, 0)
 	if getBulkErr != nil {
-		return []database.Product{}, getBulkErr
+		return []*database.Product{}, getBulkErr
 	}
 
 	// Get all currently expired products
-	expiredProducts := []database.Product{}
+	var expiredProducts []*database.Product
 	timestamp := time.Now()
-	for _, p := range userProducts {
-		if p.ExpireAt.After(timestamp) {
-			expiredProducts = append(expiredProducts, p)
+	for idx := range userProducts {
+		if userProducts[idx].ExpireAt.After(timestamp) {
+			expiredProducts = append(expiredProducts, &userProducts[idx])
 		}
 	}
 	return expiredProducts, nil
@@ -587,7 +748,7 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 		Title:  "Amount of your products",
 		Hero:   fmt.Sprint(productCount),
 		Body:   fmt.Sprintf("You currently have %d products assigned", productCount),
-		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
 	})
 
 	// Get last inserted product
@@ -604,9 +765,9 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	// Create tile
 	homeTiles = append(homeTiles, webparts.Tile{
 		Title:  "Last inserted product",
-		Hero:   fmt.Sprint(lastProduct.ProductName),
+		Hero:   lastProduct.ProductName,
 		Body:   fmt.Sprintf("'%s' is the most recent product with barcode #%s", lastProduct.ProductName, lastProduct.Barcode),
-		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
 	})
 
 	// Last notification
@@ -623,9 +784,9 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	// Create tile
 	homeTiles = append(homeTiles, webparts.Tile{
 		Title:  "Last notification",
-		Hero:   fmt.Sprint(lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04")),
-		Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format("02.01.2006 15:04")),
-		Footer: fmt.Sprintf("Generated @ %s", time.Now().Format("02.01.2006 15:04")),
+		Hero:   lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat),
+		Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat)),
+		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
 	})
 
 	return homeTiles, nil

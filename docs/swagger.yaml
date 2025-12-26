@@ -34,17 +34,34 @@ definitions:
         type: string
       deletedAt:
         $ref: '#/definitions/gorm.DeletedAt'
+      household:
+        $ref: '#/definitions/database.Household'
+      householdID:
+        type: integer
       id:
         type: integer
       mailAddress:
         type: string
-      products:
-        items:
-          $ref: '#/definitions/database.Product'
-        type: array
       updatedAt:
         type: string
       username:
+        type: string
+    type: object
+  database.Household:
+    properties:
+      adminID:
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updatedAt:
         type: string
     type: object
   database.Product:
@@ -73,8 +90,6 @@ definitions:
         type: string
       updatedAt:
         type: string
-      userID:
-        type: integer
     type: object
   database.ProductDTOBarcode:
     properties:
@@ -113,12 +128,12 @@ info:
   contact:
     email: hendrik@hr94.de
     name: Isotop7
-    url: https://gitlab.com/Isotop7/proviant
+    url: https://codeberg.org/isotop7/proviant
   description: proviant is a simple and intuitive application to track your bought
     products and their expiration date to prevent waste of food.
   license:
     name: MIT
-    url: https://gitlab.com/Isotop7/proviant/-/blob/main/LICENSE
+    url: https://codeberg.org/isotop7/proviant/-/blob/main/LICENSE
   title: proviant
   version: 0.2.0
 paths:
@@ -148,6 +163,10 @@ paths:
         name: id
         required: true
         type: integer
+      - description: Archive only
+        in: query
+        name: archiveOnly
+        type: boolean
       produces:
       - application/json
       responses:
@@ -261,6 +280,131 @@ paths:
       summary: Updates the expire date
       tags:
       - product
+  /api/v1/product/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restores an archived product of a user
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Restores a product
+      tags:
+      - product
+  /api/v1/product/bulkArchive:
+    delete:
+      consumes:
+      - application/json
+      description: Archives a list of products of a user
+      parameters:
+      - description: Product IDs
+        in: body
+        name: productIDs
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Archives a list of products
+      tags:
+      - product
+  /api/v1/product/bulkDelete:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a list of products of a user
+      parameters:
+      - description: Product IDs
+        in: body
+        name: productIDs
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Deletes a list of products
+      tags:
+      - product
+  /api/v1/product/bulkRestore:
+    post:
+      consumes:
+      - application/json
+      description: Restores a list of product of a user
+      parameters:
+      - description: Product IDs
+        in: body
+        name: productIDs
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Restores a list of product
+      tags:
+      - product
   /api/v1/products:
     get:
       description: Return a list of products of user
@@ -313,6 +457,29 @@ paths:
       summary: Creates a new product
       tags:
       - product
+  /api/v1/products/archived:
+    get:
+      description: Return a list of archived products of user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/database.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Return a list of archived products
+      tags:
+      - product
   /api/v1/products/expired:
     get:
       consumes:
@@ -359,6 +526,35 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Scan product
+      tags:
+      - product
+  /api/v1/products/search:
+    get:
+      description: Returns a list of products based on a query
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/database.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Search products
       tags:
       - product
   /api/v1/productsByBarcode:

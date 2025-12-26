@@ -4,9 +4,9 @@ package auth
 import (
 	"net/http"
 
-	"gitlab.com/Isotop7/proviant/api"
-	"gitlab.com/Isotop7/proviant/controllers/database"
-	"gitlab.com/Isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/models/authentication"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -64,14 +64,14 @@ func Signup(ctx *gin.Context) {
 	}
 
 	// Check if user with username already exists
-	if dbController.UserExistsByUsername(user) {
+	if dbController.UserExistsByUsername(&user) {
 		logger.Error().Msgf("User '%s' already exists", user.Username)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithUsernameExists)
 		return
 	}
 
 	// Check if user with mail address already exists
-	if dbController.UserExistsByMailAddress(user) {
+	if dbController.UserExistsByMailAddress(&user) {
 		logger.Error().Msgf("User with mail address '%s' already exists", user.MailAddress)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithMailAddressExists)
 		return

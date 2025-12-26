@@ -3,29 +3,19 @@
 # src
 
 ```go
-import "gitlab.com/Isotop7/proviant"
+import "codeberg.org/isotop7/proviant"
 ```
 
 proviant is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food
 
 ## Index
 
-- [func SetupDatabase\(logger zerolog.Logger, configuration configuration.DatabaseConfiguration\) \(\*gorm.DB, error\)](<#SetupDatabase>)
-
-
-<a name="SetupDatabase"></a>
-## func [SetupDatabase](<https://gitlab.com/Isotop7/proviant/blob/main/src/proviant.go#L150>)
-
-```go
-func SetupDatabase(logger zerolog.Logger, configuration configuration.DatabaseConfiguration) (*gorm.DB, error)
-```
-
 
 
 # api
 
 ```go
-import "gitlab.com/Isotop7/proviant/api"
+import "codeberg.org/isotop7/proviant/api"
 ```
 
 @externalDocs.description OpenAPI @externalDocs.url https://swagger.io/resources/open-api/
@@ -53,7 +43,7 @@ var (
 ```
 
 <a name="APIResponse"></a>
-## type [APIResponse](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/api.go#L34-L36>)
+## type APIResponse
 
 APIResponse is the data model for a generic API response
 
@@ -64,7 +54,7 @@ type APIResponse struct {
 ```
 
 <a name="Error"></a>
-### func [Error](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/api.go#L39>)
+### func Error
 
 ```go
 func Error(err error) APIResponse
@@ -75,7 +65,7 @@ Error returns an API response object from a error object
 # assets
 
 ```go
-import "gitlab.com/Isotop7/proviant/assets"
+import "codeberg.org/isotop7/proviant/assets"
 ```
 
 ## Index
@@ -94,7 +84,7 @@ var AssetFiles embed.FS
 # controllers
 
 ```go
-import "gitlab.com/Isotop7/proviant/controllers"
+import "codeberg.org/isotop7/proviant/controllers"
 ```
 
 controllers implements different controllers used for accessing different APIs, objects and datasources
@@ -102,13 +92,13 @@ controllers implements different controllers used for accessing different APIs, 
 ## Index
 
 - [type NotificationController](<#NotificationController>)
-  - [func \(nc NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
+  - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
 
 
 <a name="NotificationController"></a>
-## type [NotificationController](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/notificationcontroller.go#L22-L26>)
+## type NotificationController
 
 NotificationController is the object struct to generate and send notifications for expired products
 
@@ -121,16 +111,16 @@ type NotificationController struct {
 ```
 
 <a name="NotificationController.Dispatch"></a>
-### func \(NotificationController\) [Dispatch](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/notificationcontroller.go#L30>)
+### func \(\*NotificationController\) Dispatch
 
 ```go
-func (nc NotificationController) Dispatch()
+func (nc *NotificationController) Dispatch()
 ```
 
 Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them. The timeout can be configured with the Configuration struct of NotificationController
 
 <a name="OpenFoodFactsAPIController"></a>
-## type [OpenFoodFactsAPIController](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/openfoodfactsapicontroller.go#L19-L22>)
+## type OpenFoodFactsAPIController
 
 OpenFoodFactsAPIController is the object struct for interacting with the API of OpenFoodFacts It uses the given configuration for accessing the API
 
@@ -142,7 +132,7 @@ type OpenFoodFactsAPIController struct {
 ```
 
 <a name="OpenFoodFactsAPIController.GetDataset"></a>
-### func \(OpenFoodFactsAPIController\) [GetDataset](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/openfoodfactsapicontroller.go#L25>)
+### func \(OpenFoodFactsAPIController\) GetDataset
 
 ```go
 func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database.Product, error)
@@ -153,7 +143,7 @@ GetDataset gets data from OpenFoodFacts by its API. The search parameter is the 
 # errors
 
 ```go
-import "gitlab.com/Isotop7/proviant/errors"
+import "codeberg.org/isotop7/proviant/errors"
 ```
 
 errors contains custom error definitions
@@ -220,6 +210,15 @@ var (
     // ErrParseBody is thrown when a body fails to parse
     ErrParseBody = errors.New("error parsing body")
 
+    // Message format template for generic error
+    FormatGenericError = "%s: %s"
+
+    // Message format template for invalid ID
+    FormatInvalidRequestId = "Requested ID '%s' is invalid"
+
+    // Message format template for product not found
+    FormatProductWithIDNotFound = "Product with id '%d' was not found"
+
     /*
      * Database related errors
      */
@@ -250,6 +249,12 @@ var (
     // ErrDatabaseSQLiteInvalidPath is thrown if no valid SQLite database path was specified
     ErrDatabaseSQLiteInvalidPath = errors.New("no valid SQLite database path specified")
 
+    // Message format template for product not found
+    FormatProductNotFound = "Product with ID '%d' was not found in database"
+
+    // Message format template for product not found for user
+    FormatProductForUserNotFound = "Product with ID '%d' for user was not found"
+
     /*
      * OpenFoodFacts related errors
      */
@@ -264,7 +269,7 @@ var (
 # logging
 
 ```go
-import "gitlab.com/Isotop7/proviant/logging"
+import "codeberg.org/isotop7/proviant/logging"
 ```
 
 Provides custom logging facilites
@@ -280,7 +285,7 @@ Provides custom logging facilites
 
 
 <a name="ZerologAdapter"></a>
-## type [ZerologAdapter](<https://gitlab.com/Isotop7/proviant/blob/main/src/logging/logging.go#L18-L20>)
+## type ZerologAdapter
 
 ZerologAdapter is a custom GORM logger that logs messages using zerolog.
 
@@ -291,7 +296,7 @@ type ZerologAdapter struct {
 ```
 
 <a name="ZerologAdapter.Error"></a>
-### func \(ZerologAdapter\) [Error](<https://gitlab.com/Isotop7/proviant/blob/main/src/logging/logging.go#L38>)
+### func \(ZerologAdapter\) Error
 
 ```go
 func (l ZerologAdapter) Error(ctx context.Context, msg string, data ...any)
@@ -300,7 +305,7 @@ func (l ZerologAdapter) Error(ctx context.Context, msg string, data ...any)
 Error logs an error message.
 
 <a name="ZerologAdapter.Info"></a>
-### func \(ZerologAdapter\) [Info](<https://gitlab.com/Isotop7/proviant/blob/main/src/logging/logging.go#L28>)
+### func \(ZerologAdapter\) Info
 
 ```go
 func (l ZerologAdapter) Info(ctx context.Context, msg string, data ...any)
@@ -309,7 +314,7 @@ func (l ZerologAdapter) Info(ctx context.Context, msg string, data ...any)
 Info logs an info message.
 
 <a name="ZerologAdapter.LogMode"></a>
-### func \(ZerologAdapter\) [LogMode](<https://gitlab.com/Isotop7/proviant/blob/main/src/logging/logging.go#L23>)
+### func \(ZerologAdapter\) LogMode
 
 ```go
 func (l ZerologAdapter) LogMode(level logger.LogLevel) logger.Interface
@@ -318,7 +323,7 @@ func (l ZerologAdapter) LogMode(level logger.LogLevel) logger.Interface
 LogMode sets the log mode for the logger.
 
 <a name="ZerologAdapter.Trace"></a>
-### func \(ZerologAdapter\) [Trace](<https://gitlab.com/Isotop7/proviant/blob/main/src/logging/logging.go#L43>)
+### func \(ZerologAdapter\) Trace
 
 ```go
 func (l ZerologAdapter) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error)
@@ -327,7 +332,7 @@ func (l ZerologAdapter) Trace(ctx context.Context, begin time.Time, fc func() (s
 Trace logs a trace message.
 
 <a name="ZerologAdapter.Warn"></a>
-### func \(ZerologAdapter\) [Warn](<https://gitlab.com/Isotop7/proviant/blob/main/src/logging/logging.go#L33>)
+### func \(ZerologAdapter\) Warn
 
 ```go
 func (l ZerologAdapter) Warn(ctx context.Context, msg string, data ...any)
@@ -335,10 +340,30 @@ func (l ZerologAdapter) Warn(ctx context.Context, msg string, data ...any)
 
 Warn logs a warning message.
 
+# migrations
+
+```go
+import "codeberg.org/isotop7/proviant/migrations"
+```
+
+## Index
+
+- [func RunBreakingDatabaseMigrations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RunBreakingDatabaseMigrations>)
+
+
+<a name="RunBreakingDatabaseMigrations"></a>
+## func RunBreakingDatabaseMigrations
+
+```go
+func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+
+
 # router
 
 ```go
-import "gitlab.com/Isotop7/proviant/router"
+import "codeberg.org/isotop7/proviant/router"
 ```
 
 router contains the gin router definitions and maps requests to handlers
@@ -347,15 +372,15 @@ router contains the gin router definitions and maps requests to handlers
 
 - [func AuthorizatorNotUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorNotUserAware>)
 - [func AuthorizatorUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorUserAware>)
-- [func JWTMiddleware\(configuration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
-- [func SetupRouter\(logger \*zerolog.Logger, configuration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl controllers.OpenFoodFactsAPIController\) \*gin.Engine](<#SetupRouter>)
+- [func JWTMiddleware\(proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
+- [func SetupRouter\(logger \*zerolog.Logger, proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl \*controllers.OpenFoodFactsAPIController\) \*gin.Engine](<#SetupRouter>)
 - [func UnauthorizedAPIFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedAPIFunc>)
 - [func UnauthorizedFrontendFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedFrontendFunc>)
 - [func ZerologMiddleware\(logger \*zerolog.Logger\) gin.HandlerFunc](<#ZerologMiddleware>)
 
 
 <a name="AuthorizatorNotUserAware"></a>
-## func [AuthorizatorNotUserAware](<https://gitlab.com/Isotop7/proviant/blob/main/src/router/middleware.go#L87>)
+## func AuthorizatorNotUserAware
 
 ```go
 func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool
@@ -364,7 +389,7 @@ func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool
 
 
 <a name="AuthorizatorUserAware"></a>
-## func [AuthorizatorUserAware](<https://gitlab.com/Isotop7/proviant/blob/main/src/router/middleware.go#L61>)
+## func AuthorizatorUserAware
 
 ```go
 func AuthorizatorUserAware(data any, ctx *gin.Context) bool
@@ -373,25 +398,25 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool
 
 
 <a name="JWTMiddleware"></a>
-## func [JWTMiddleware](<https://gitlab.com/Isotop7/proviant/blob/main/src/router/middleware.go#L93-L97>)
+## func JWTMiddleware
 
 ```go
-func JWTMiddleware(configuration *configuration.ProviantConfiguration, dbHandle *gorm.DB, authorizatorFunc func(data any, ctx *gin.Context) bool, unauthorizedFunc func(ctx *gin.Context, code int, message string)) (*jwt.GinJWTMiddleware, error)
+func JWTMiddleware(proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, authorizatorFunc func(data any, ctx *gin.Context) bool, unauthorizedFunc func(ctx *gin.Context, code int, message string)) (*jwt.GinJWTMiddleware, error)
 ```
 
 JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization \(optional\)
 
 <a name="SetupRouter"></a>
-## func [SetupRouter](<https://gitlab.com/Isotop7/proviant/blob/main/src/router/router.go#L25>)
+## func SetupRouter
 
 ```go
-func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController) *gin.Engine
 ```
 
 SetupRouter creates the gin engine and associated middleware
 
 <a name="UnauthorizedAPIFunc"></a>
-## func [UnauthorizedAPIFunc](<https://gitlab.com/Isotop7/proviant/blob/main/src/router/middleware.go#L41>)
+## func UnauthorizedAPIFunc
 
 ```go
 func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string)
@@ -400,7 +425,7 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string)
 
 
 <a name="UnauthorizedFrontendFunc"></a>
-## func [UnauthorizedFrontendFunc](<https://gitlab.com/Isotop7/proviant/blob/main/src/router/middleware.go#L45>)
+## func UnauthorizedFrontendFunc
 
 ```go
 func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string)
@@ -409,7 +434,7 @@ func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string)
 
 
 <a name="ZerologMiddleware"></a>
-## func [ZerologMiddleware](<https://gitlab.com/Isotop7/proviant/blob/main/src/router/middleware.go#L22>)
+## func ZerologMiddleware
 
 ```go
 func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc
@@ -420,14 +445,14 @@ ZerologMiddleware implements a gin.HandlerFunc and logs the output from gin
 # templates
 
 ```go
-import "gitlab.com/Isotop7/proviant/templates"
+import "codeberg.org/isotop7/proviant/templates"
 ```
 
 ## Index
 
 - [Variables](<#variables>)
 - [func NewTemplateCache\(\) \(map\[string\]\*template.Template, error\)](<#NewTemplateCache>)
-- [func Render\(ctx \*gin.Context, tc map\[string\]\*template.Template, status int, base string, page string, data map\[string\]any\)](<#Render>)
+- [func Render\(ctx \*gin.Context, tc map\[string\]\*template.Template, status int, base, page string, data map\[string\]any\)](<#Render>)
 - [func RenderError\(ctx \*gin.Context, tc map\[string\]\*template.Template, code int, message string\)](<#RenderError>)
 
 
@@ -440,7 +465,7 @@ var TemplateFiles embed.FS
 ```
 
 <a name="NewTemplateCache"></a>
-## func [NewTemplateCache](<https://gitlab.com/Isotop7/proviant/blob/main/src/templates/template.go#L80>)
+## func NewTemplateCache
 
 ```go
 func NewTemplateCache() (map[string]*template.Template, error)
@@ -449,16 +474,16 @@ func NewTemplateCache() (map[string]*template.Template, error)
 
 
 <a name="Render"></a>
-## func [Render](<https://gitlab.com/Isotop7/proviant/blob/main/src/templates/template.go#L110>)
+## func Render
 
 ```go
-func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base string, page string, data map[string]any)
+func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base, page string, data map[string]any)
 ```
 
 
 
 <a name="RenderError"></a>
-## func [RenderError](<https://gitlab.com/Isotop7/proviant/blob/main/src/templates/template.go#L144>)
+## func RenderError
 
 ```go
 func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, message string)
@@ -469,7 +494,7 @@ func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, m
 # web
 
 ```go
-import "gitlab.com/Isotop7/proviant/web"
+import "codeberg.org/isotop7/proviant/web"
 ```
 
 ## Index
@@ -477,18 +502,18 @@ import "gitlab.com/Isotop7/proviant/web"
 - [type Frontend](<#Frontend>)
   - [func \(frontend \*Frontend\) Auth\(ctx \*gin.Context\)](<#Frontend.Auth>)
   - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
+  - [func \(frontend \*Frontend\) ProductsArchived\(ctx \*gin.Context\)](<#Frontend.ProductsArchived>)
   - [func \(frontend \*Frontend\) ProductsCreate\(ctx \*gin.Context\)](<#Frontend.ProductsCreate>)
   - [func \(frontend \*Frontend\) ProductsEdit\(ctx \*gin.Context\)](<#Frontend.ProductsEdit>)
   - [func \(frontend \*Frontend\) ProductsScan\(ctx \*gin.Context\)](<#Frontend.ProductsScan>)
   - [func \(frontend \*Frontend\) ProductsView\(ctx \*gin.Context\)](<#Frontend.ProductsView>)
   - [func \(frontend \*Frontend\) Root\(ctx \*gin.Context\)](<#Frontend.Root>)
-  - [func \(frontend \*Frontend\) Search\(ctx \*gin.Context\)](<#Frontend.Search>)
   - [func \(frontend \*Frontend\) User\(ctx \*gin.Context\)](<#Frontend.User>)
   - [func \(frontend \*Frontend\) UserSettings\(ctx \*gin.Context\)](<#Frontend.UserSettings>)
 
 
 <a name="Frontend"></a>
-## type [Frontend](<https://gitlab.com/Isotop7/proviant/blob/main/src/web/fontend.go#L19-L21>)
+## type Frontend
 
 
 
@@ -499,7 +524,7 @@ type Frontend struct {
 ```
 
 <a name="Frontend.Auth"></a>
-### func \(\*Frontend\) [Auth](<https://gitlab.com/Isotop7/proviant/blob/main/src/web/fontend.go#L62>)
+### func \(\*Frontend\) Auth
 
 ```go
 func (frontend *Frontend) Auth(ctx *gin.Context)
@@ -508,7 +533,7 @@ func (frontend *Frontend) Auth(ctx *gin.Context)
 
 
 <a name="Frontend.Products"></a>
-### func \(\*Frontend\) [Products](<https://gitlab.com/Isotop7/proviant/blob/main/src/web/fontend.go#L114>)
+### func \(\*Frontend\) Products
 
 ```go
 func (frontend *Frontend) Products(ctx *gin.Context)
@@ -516,8 +541,17 @@ func (frontend *Frontend) Products(ctx *gin.Context)
 
 
 
+<a name="Frontend.ProductsArchived"></a>
+### func \(\*Frontend\) ProductsArchived
+
+```go
+func (frontend *Frontend) ProductsArchived(ctx *gin.Context)
+```
+
+
+
 <a name="Frontend.ProductsCreate"></a>
-### func \(\*Frontend\) [ProductsCreate](<https://gitlab.com/Isotop7/proviant/blob/main/src/web/fontend.go#L152>)
+### func \(\*Frontend\) ProductsCreate
 
 ```go
 func (frontend *Frontend) ProductsCreate(ctx *gin.Context)
@@ -526,7 +560,7 @@ func (frontend *Frontend) ProductsCreate(ctx *gin.Context)
 
 
 <a name="Frontend.ProductsEdit"></a>
-### func \(\*Frontend\) [ProductsEdit](<https://gitlab.com/Isotop7/proviant/blob/main/src/web/fontend.go#L214>)
+### func \(\*Frontend\) ProductsEdit
 
 ```go
 func (frontend *Frontend) ProductsEdit(ctx *gin.Context)
@@ -535,7 +569,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context)
 
 
 <a name="Frontend.ProductsScan"></a>
-### func \(\*Frontend\) [ProductsScan](<https://gitlab.com/Isotop7/proviant/blob/main/src/web/fontend.go#L159>)
+### func \(\*Frontend\) ProductsScan
 
 ```go
 func (frontend *Frontend) ProductsScan(ctx *gin.Context)
@@ -544,7 +578,7 @@ func (frontend *Frontend) ProductsScan(ctx *gin.Context)
 
 
 <a name="Frontend.ProductsView"></a>
-### func \(\*Frontend\) [ProductsView](<https://gitlab.com/Isotop7/proviant/blob/main/src/web/fontend.go#L166>)
+### func \(\*Frontend\) ProductsView
 
 ```go
 func (frontend *Frontend) ProductsView(ctx *gin.Context)
@@ -553,7 +587,7 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context)
 
 
 <a name="Frontend.Root"></a>
-### func \(\*Frontend\) [Root](<https://gitlab.com/Isotop7/proviant/blob/main/src/web/fontend.go#L23>)
+### func \(\*Frontend\) Root
 
 ```go
 func (frontend *Frontend) Root(ctx *gin.Context)
@@ -561,17 +595,8 @@ func (frontend *Frontend) Root(ctx *gin.Context)
 
 
 
-<a name="Frontend.Search"></a>
-### func \(\*Frontend\) [Search](<https://gitlab.com/Isotop7/proviant/blob/main/src/web/fontend.go#L262>)
-
-```go
-func (frontend *Frontend) Search(ctx *gin.Context)
-```
-
-
-
 <a name="Frontend.User"></a>
-### func \(\*Frontend\) [User](<https://gitlab.com/Isotop7/proviant/blob/main/src/web/fontend.go#L69>)
+### func \(\*Frontend\) User
 
 ```go
 func (frontend *Frontend) User(ctx *gin.Context)
@@ -580,7 +605,7 @@ func (frontend *Frontend) User(ctx *gin.Context)
 
 
 <a name="Frontend.UserSettings"></a>
-### func \(\*Frontend\) [UserSettings](<https://gitlab.com/Isotop7/proviant/blob/main/src/web/fontend.go#L76>)
+### func \(\*Frontend\) UserSettings
 
 ```go
 func (frontend *Frontend) UserSettings(ctx *gin.Context)
@@ -591,7 +616,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context)
 # auth
 
 ```go
-import "gitlab.com/Isotop7/proviant/api/auth"
+import "codeberg.org/isotop7/proviant/api/auth"
 ```
 
 auth contains authentication method handlers
@@ -602,7 +627,7 @@ auth contains authentication method handlers
 
 
 <a name="Signup"></a>
-## func [Signup](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/auth/auth.go#L27>)
+## func Signup
 
 ```go
 func Signup(ctx *gin.Context)
@@ -613,7 +638,7 @@ Signup creates a new user object in the database @Summary Creates a new user @De
 # common
 
 ```go
-import "gitlab.com/Isotop7/proviant/api/common"
+import "codeberg.org/isotop7/proviant/api/common"
 ```
 
 common implements non\-specifc handlers
@@ -624,7 +649,7 @@ common implements non\-specifc handlers
 
 
 <a name="GetHealth"></a>
-## func [GetHealth](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/common/health.go#L19>)
+## func GetHealth
 
 ```go
 func GetHealth(ctx *gin.Context)
@@ -635,28 +660,61 @@ GetHealth returns the health status of the API @Summary Gets health @Description
 # v1
 
 ```go
-import "gitlab.com/Isotop7/proviant/api/v1"
+import "codeberg.org/isotop7/proviant/api/v1"
 ```
 
 v1 implements version 1 of the proviant API
 
 ## Index
 
+- [func BulkArchiveProducts\(ctx \*gin.Context\)](<#BulkArchiveProducts>)
+- [func BulkDeleteProducts\(ctx \*gin.Context\)](<#BulkDeleteProducts>)
+- [func BulkRestoreProducts\(ctx \*gin.Context\)](<#BulkRestoreProducts>)
 - [func CreateProduct\(ctx \*gin.Context\)](<#CreateProduct>)
 - [func DeleteProduct\(ctx \*gin.Context\)](<#DeleteProduct>)
+- [func GetArchivedProducts\(ctx \*gin.Context\)](<#GetArchivedProducts>)
 - [func GetExpired\(ctx \*gin.Context\)](<#GetExpired>)
 - [func GetProduct\(ctx \*gin.Context\)](<#GetProduct>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
+- [func RestoreProduct\(ctx \*gin.Context\)](<#RestoreProduct>)
 - [func ScanProduct\(ctx \*gin.Context\)](<#ScanProduct>)
+- [func SearchProducts\(ctx \*gin.Context\)](<#SearchProducts>)
 - [func SetExpireAt\(ctx \*gin.Context\)](<#SetExpireAt>)
 - [func UpdateProduct\(ctx \*gin.Context\)](<#UpdateProduct>)
 - [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
 - [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
 
 
+<a name="BulkArchiveProducts"></a>
+## func BulkArchiveProducts
+
+```go
+func BulkArchiveProducts(ctx *gin.Context)
+```
+
+BulkArchiveProducts archives a list of products of a user @Summary Archives a list of products @Description Archives a list of products of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/bulkArchive \[delete\]
+
+<a name="BulkDeleteProducts"></a>
+## func BulkDeleteProducts
+
+```go
+func BulkDeleteProducts(ctx *gin.Context)
+```
+
+BulkDeleteProducts deletes a list of products of a user @Summary Deletes a list of products @Description Deletes a list of products of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/bulkDelete \[delete\]
+
+<a name="BulkRestoreProducts"></a>
+## func BulkRestoreProducts
+
+```go
+func BulkRestoreProducts(ctx *gin.Context)
+```
+
+BulkRestoreProducts restores a list of products of a user @Summary Restores a list of product @Description Restores a list of product of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/bulkRestore \[post\]
+
 <a name="CreateProduct"></a>
-## func [CreateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L231>)
+## func CreateProduct
 
 ```go
 func CreateProduct(ctx *gin.Context)
@@ -665,16 +723,25 @@ func CreateProduct(ctx *gin.Context)
 CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
 
 <a name="DeleteProduct"></a>
-## func [DeleteProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L383>)
+## func DeleteProduct
 
 ```go
 func DeleteProduct(ctx *gin.Context)
 ```
 
-DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
+DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param archiveOnly query bool false "Archive only" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
+
+<a name="GetArchivedProducts"></a>
+## func GetArchivedProducts
+
+```go
+func GetArchivedProducts(ctx *gin.Context)
+```
+
+GetArchivedProducts returns the archived products of a user @Summary Return a list of archived products @Description Return a list of archived products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/archived \[get\]
 
 <a name="GetExpired"></a>
-## func [GetExpired](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L530>)
+## func GetExpired
 
 ```go
 func GetExpired(ctx *gin.Context)
@@ -683,7 +750,7 @@ func GetExpired(ctx *gin.Context)
 GetExpired returns the list of all expired products of a user @Summary Gets expired products @Description Gets a list of expired products of a user @Tags product @Accept json @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/expired \[get\]
 
 <a name="GetProduct"></a>
-## func [GetProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L95>)
+## func GetProduct
 
 ```go
 func GetProduct(ctx *gin.Context)
@@ -692,7 +759,7 @@ func GetProduct(ctx *gin.Context)
 GetProduct return a single product of a user @Summary Returns a single product @Description Returns a single product of user @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[get\]
 
 <a name="GetProducts"></a>
-## func [GetProducts](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L40>)
+## func GetProducts
 
 ```go
 func GetProducts(ctx *gin.Context)
@@ -701,7 +768,7 @@ func GetProducts(ctx *gin.Context)
 GetProducts returns the products of a user @Summary Return a list of products @Description Return a list of products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[get\]
 
 <a name="GetProductsByBarcode"></a>
-## func [GetProductsByBarcode](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L159>)
+## func GetProductsByBarcode
 
 ```go
 func GetProductsByBarcode(ctx *gin.Context)
@@ -709,8 +776,17 @@ func GetProductsByBarcode(ctx *gin.Context)
 
 GetProductsByBarcode returns a list of products of a user matching a barcode @Summary Returns a list of products @Description Returns a list of products of user matching the given barcode @Tags product @Produce json @Param barcode path int true "Barcode" @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/productsByBarcode \[get\]
 
+<a name="RestoreProduct"></a>
+## func RestoreProduct
+
+```go
+func RestoreProduct(ctx *gin.Context)
+```
+
+RestoreProduct restores an archived product of a user @Summary Restores a product @Description Restores an archived product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/restore \[post\]
+
 <a name="ScanProduct"></a>
-## func [ScanProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L577>)
+## func ScanProduct
 
 ```go
 func ScanProduct(ctx *gin.Context)
@@ -718,8 +794,17 @@ func ScanProduct(ctx *gin.Context)
 
 ScanProduct returns a barcode based on an image @Summary Scan product @Description Returns the barcode of a product in an uploaded image @Tags product @Accept json @Produce json @Success 200 \{object\} database.ProductDTOBarcode @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/scan \[post\]
 
+<a name="SearchProducts"></a>
+## func SearchProducts
+
+```go
+func SearchProducts(ctx *gin.Context)
+```
+
+SearchProducts returns a list of products based on an query @Summary Search products @Description Returns a list of products based on a query @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/search \[GET\]
+
 <a name="SetExpireAt"></a>
-## func [SetExpireAt](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L440>)
+## func SetExpireAt
 
 ```go
 func SetExpireAt(ctx *gin.Context)
@@ -728,7 +813,7 @@ func SetExpireAt(ctx *gin.Context)
 SetExpireAt updates the expire date of a product of a user @Summary Updates the expire date @Description Updates the expire date of a product @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param timestamp body database.Timestamp true "Timestamp" @Success 200 \{object\} database.ProductDTOExpire @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/expire \[post\]
 
 <a name="UpdateProduct"></a>
-## func [UpdateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/product.go#L310>)
+## func UpdateProduct
 
 ```go
 func UpdateProduct(ctx *gin.Context)
@@ -737,7 +822,7 @@ func UpdateProduct(ctx *gin.Context)
 UpdateProduct updates a product of a user @Summary Updates a product @Description Updates a product with new values @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.Product true "Product" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[patch\]
 
 <a name="UpdateUser"></a>
-## func [UpdateUser](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/user.go#L29>)
+## func UpdateUser
 
 ```go
 func UpdateUser(ctx *gin.Context)
@@ -746,7 +831,7 @@ func UpdateUser(ctx *gin.Context)
 UpdateUser updates a user @Summary Updates a user object @Description Updates properties of a user @Tags user @Accept json @Produce json @Param user body authentication.User true "User" @Success 200 \{object\} authentication.User @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user \[patch\]
 
 <a name="UpdateUserPassword"></a>
-## func [UpdateUserPassword](<https://gitlab.com/Isotop7/proviant/blob/main/src/api/v1/user.go#L103>)
+## func UpdateUserPassword
 
 ```go
 func UpdateUserPassword(ctx *gin.Context)
@@ -757,42 +842,87 @@ UpdateUserPassword updates a user password @Summary Updates a user password @Des
 # database
 
 ```go
-import "gitlab.com/Isotop7/proviant/controllers/database"
+import "codeberg.org/isotop7/proviant/controllers/database"
 ```
 
 ## Index
 
+- [Constants](<#constants>)
+- [type BulkOperationError](<#BulkOperationError>)
+  - [func \(b \*BulkOperationError\) Error\(\) string](<#BulkOperationError.Error>)
 - [type DatabaseController](<#DatabaseController>)
+  - [func \(dbc DatabaseController\) BulkArchiveProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkArchiveProducts>)
+  - [func \(dbc DatabaseController\) BulkDeleteProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkDeleteProducts>)
+  - [func \(dbc DatabaseController\) BulkRestoreProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkRestoreProducts>)
   - [func \(dbc DatabaseController\) CreateProduct\(userID uint, product \*database.Product\) error](<#DatabaseController.CreateProduct>)
   - [func \(dbc DatabaseController\) CreateUser\(user \*authentication.User\) error](<#DatabaseController.CreateUser>)
-  - [func \(dbc DatabaseController\) DeleteProduct\(productID int, userID uint\) error](<#DatabaseController.DeleteProduct>)
+  - [func \(dbc DatabaseController\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#DatabaseController.DeleteProduct>)
+  - [func \(dbc DatabaseController\) GetArchivedProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetArchivedProductByID>)
+  - [func \(dbc DatabaseController\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#DatabaseController.GetHouseholdByID>)
+  - [func \(dbc DatabaseController\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#DatabaseController.GetHouseholdMembersMailAddressesByID>)
   - [func \(dbc DatabaseController\) GetNextUserID\(\) uint](<#DatabaseController.GetNextUserID>)
   - [func \(dbc DatabaseController\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetProductByID>)
-  - [func \(dbc DatabaseController\) GetProductsExpired\(userID uint\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpired>)
+  - [func \(dbc DatabaseController\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#DatabaseController.GetProductsExpired>)
   - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
+  - [func \(dbc DatabaseController\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserArchivedProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#DatabaseController.GetUserByID>)
   - [func \(dbc DatabaseController\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#DatabaseController.GetUserByUsername>)
   - [func \(dbc DatabaseController\) GetUserHomeTiles\(userID uint\) \(\[\]webparts.Tile, error\)](<#DatabaseController.GetUserHomeTiles>)
-  - [func \(dbc DatabaseController\) GetUserMailAddressByID\(userID uint\) \(string, error\)](<#DatabaseController.GetUserMailAddressByID>)
+  - [func \(dbc DatabaseController\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#DatabaseController.GetUserHouseholdByID>)
   - [func \(dbc DatabaseController\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulkByBarcode>)
-  - [func \(dbc DatabaseController\) SearchProducts\(searchQuery string, searchParameter SearchParameterEnum, userID uint\) \(\[\]database.Product, error\)](<#DatabaseController.SearchProducts>)
+  - [func \(dbc DatabaseController\) RestoreProduct\(productID int, userID uint\) error](<#DatabaseController.RestoreProduct>)
+  - [func \(dbc DatabaseController\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sort, order string, userID uint\) \(\[\]database.Product, error\)](<#DatabaseController.SearchProducts>)
   - [func \(dbc DatabaseController\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#DatabaseController.SetProductExpireAt>)
   - [func \(dbc DatabaseController\) SetProductNotifiedAt\(productID uint\) error](<#DatabaseController.SetProductNotifiedAt>)
   - [func \(dbc DatabaseController\) UpdateProduct\(productID int, userID uint, product \*database.ProductDTOPatch\) error](<#DatabaseController.UpdateProduct>)
   - [func \(dbc DatabaseController\) UpdateUser\(userID uint, user \*authentication.User\) error](<#DatabaseController.UpdateUser>)
   - [func \(dbc DatabaseController\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#DatabaseController.UpdateUserPassword>)
-  - [func \(dbc DatabaseController\) UserExistsByMailAddress\(user authentication.User\) bool](<#DatabaseController.UserExistsByMailAddress>)
-  - [func \(dbc DatabaseController\) UserExistsByUsername\(user authentication.User\) bool](<#DatabaseController.UserExistsByUsername>)
-  - [func \(dbc DatabaseController\) UserIsProductOwner\(userID uint, productID int\) bool](<#DatabaseController.UserIsProductOwner>)
+  - [func \(dbc DatabaseController\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#DatabaseController.UserExistsByMailAddress>)
+  - [func \(dbc DatabaseController\) UserExistsByUsername\(user \*authentication.User\) bool](<#DatabaseController.UserExistsByUsername>)
+  - [func \(dbc DatabaseController\) UserHasProductAccess\(userID uint, productID int\) bool](<#DatabaseController.UserHasProductAccess>)
 - [type SearchParameterEnum](<#SearchParameterEnum>)
   - [func SearchParameterEnumFromString\(str string\) SearchParameterEnum](<#SearchParameterEnumFromString>)
 - [type SupportedEngines](<#SupportedEngines>)
   - [func SupportedEnginesFromString\(str string\) SupportedEngines](<#SupportedEnginesFromString>)
 
 
+## Constants
+
+<a name="GeneratedPrefix"></a>
+
+```go
+const GeneratedPrefix = "Generated @ %s"
+```
+
+<a name="PreferredTimeFormat"></a>PreferredTimeFormat is the preferred time format for database operations
+
+```go
+const PreferredTimeFormat = "02.01.2006 15:04"
+```
+
+<a name="BulkOperationError"></a>
+## type BulkOperationError
+
+BulkOperationError is an error type for bulk operations
+
+```go
+type BulkOperationError struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="BulkOperationError.Error"></a>
+### func \(\*BulkOperationError\) Error
+
+```go
+func (b *BulkOperationError) Error() string
+```
+
+Error returns a string representation of the error
+
 <a name="DatabaseController"></a>
-## type [DatabaseController](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L17-L19>)
+## type DatabaseController
 
 DatabaseController is the object struct for interacting with the gorm\-backed database
 
@@ -802,8 +932,35 @@ type DatabaseController struct {
 }
 ```
 
+<a name="DatabaseController.BulkArchiveProducts"></a>
+### func \(DatabaseController\) BulkArchiveProducts
+
+```go
+func (dbc DatabaseController) BulkArchiveProducts(productIDs []int, userID uint) []BulkOperationError
+```
+
+BulkDeleteProducts deletes a list of products \(based on product ID\) of a user \(based on user ID\) given as a slice of product IDs If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+
+<a name="DatabaseController.BulkDeleteProducts"></a>
+### func \(DatabaseController\) BulkDeleteProducts
+
+```go
+func (dbc DatabaseController) BulkDeleteProducts(productIDs []int, userID uint) []BulkOperationError
+```
+
+BulkDeleteProducts deletes a list of products \(based on product ID\) of a user \(based on user ID\) given as a slice of product IDs If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+
+<a name="DatabaseController.BulkRestoreProducts"></a>
+### func \(DatabaseController\) BulkRestoreProducts
+
+```go
+func (dbc DatabaseController) BulkRestoreProducts(productIDs []int, userID uint) []BulkOperationError
+```
+
+BulkRestoreProducts restores a list of products \(based on product ID\) of a user \(based on user ID\) given as a slice of product IDs If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+
 <a name="DatabaseController.CreateProduct"></a>
-### func \(DatabaseController\) [CreateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L326>)
+### func \(DatabaseController\) CreateProduct
 
 ```go
 func (dbc DatabaseController) CreateProduct(userID uint, product *database.Product) error
@@ -812,7 +969,7 @@ func (dbc DatabaseController) CreateProduct(userID uint, product *database.Produ
 CreateProduct creates a product in the database and connects it to the user If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.CreateUser"></a>
-### func \(DatabaseController\) [CreateUser](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L91>)
+### func \(DatabaseController\) CreateUser
 
 ```go
 func (dbc DatabaseController) CreateUser(user *authentication.User) error
@@ -821,16 +978,43 @@ func (dbc DatabaseController) CreateUser(user *authentication.User) error
 CreateUser creates a new user based on a given user object Before creation, the user password is hashed with brcypt If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.DeleteProduct"></a>
-### func \(DatabaseController\) [DeleteProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L378>)
+### func \(DatabaseController\) DeleteProduct
 
 ```go
-func (dbc DatabaseController) DeleteProduct(productID int, userID uint) error
+func (dbc DatabaseController) DeleteProduct(productID int, userID uint, archiveOnly bool) error
 ```
 
 DeleteProduct deletes a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.GetArchivedProductByID"></a>
+### func \(DatabaseController\) GetArchivedProductByID
+
+```go
+func (dbc DatabaseController) GetArchivedProductByID(productID int, userID uint) (database.Product, error)
+```
+
+GetArchivedProductByID returns an archived product object \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
+
+<a name="DatabaseController.GetHouseholdByID"></a>
+### func \(DatabaseController\) GetHouseholdByID
+
+```go
+func (dbc DatabaseController) GetHouseholdByID(householdID uint) (database.Household, error)
+```
+
+GetHouseholdByID uses a given household ID and returns the matching household object If the database operations return an error, the error is also returned \(otherwise nil\)
+
+<a name="DatabaseController.GetHouseholdMembersMailAddressesByID"></a>
+### func \(DatabaseController\) GetHouseholdMembersMailAddressesByID
+
+```go
+func (dbc DatabaseController) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
+```
+
+GetHouseholdMembersMailAddressesByID returns the mail addresses of all users of a household
+
 <a name="DatabaseController.GetNextUserID"></a>
-### func \(DatabaseController\) [GetNextUserID](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L80>)
+### func \(DatabaseController\) GetNextUserID
 
 ```go
 func (dbc DatabaseController) GetNextUserID() uint
@@ -839,7 +1023,7 @@ func (dbc DatabaseController) GetNextUserID() uint
 GetNextUserID returns the next available user ID
 
 <a name="DatabaseController.GetProductByID"></a>
-### func \(DatabaseController\) [GetProductByID](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L263>)
+### func \(DatabaseController\) GetProductByID
 
 ```go
 func (dbc DatabaseController) GetProductByID(productID int, userID uint) (database.Product, error)
@@ -848,16 +1032,16 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 GetProductByID returns a product object \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.GetProductsExpired"></a>
-### func \(DatabaseController\) [GetProductsExpired](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L436>)
+### func \(DatabaseController\) GetProductsExpired
 
 ```go
-func (dbc DatabaseController) GetProductsExpired(userID uint) ([]database.Product, error)
+func (dbc DatabaseController) GetProductsExpired(userID uint) ([]*database.Product, error)
 ```
 
 GetProductsExpired returns an array of products of a user \(based on user ID\) that are already expired If the database operations return an error, the error is also returned \(otherwise nil\) If the user has no products assigned, the function returns an empty dataset
 
 <a name="DatabaseController.GetProductsExpiredAndNotificationPending"></a>
-### func \(DatabaseController\) [GetProductsExpiredAndNotificationPending](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L455>)
+### func \(DatabaseController\) GetProductsExpiredAndNotificationPending
 
 ```go
 func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error)
@@ -865,8 +1049,17 @@ func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInte
 
 GetProductsExpiredAndNotificationPending returns an array of products which are expired and have a pending notification
 
+<a name="DatabaseController.GetUserArchivedProductsBulk"></a>
+### func \(DatabaseController\) GetUserArchivedProductsBulk
+
+```go
+func (dbc DatabaseController) GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
+```
+
+GetUserArchivedProductsBulk returns an array of archived products of a user \(based on user ID\) The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
+
 <a name="DatabaseController.GetUserByID"></a>
-### func \(DatabaseController\) [GetUserByID](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L54>)
+### func \(DatabaseController\) GetUserByID
 
 ```go
 func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, error)
@@ -875,7 +1068,7 @@ func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, err
 GetUserByID uses a given user ID and returns the matching user object If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.GetUserByUsername"></a>
-### func \(DatabaseController\) [GetUserByUsername](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L45>)
+### func \(DatabaseController\) GetUserByUsername
 
 ```go
 func (dbc DatabaseController) GetUserByUsername(username string) (authentication.User, error)
@@ -884,7 +1077,7 @@ func (dbc DatabaseController) GetUserByUsername(username string) (authentication
 GetUserByUsername uses a given username and returns the matching user object If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.GetUserHomeTiles"></a>
-### func \(DatabaseController\) [GetUserHomeTiles](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L473>)
+### func \(DatabaseController\) GetUserHomeTiles
 
 ```go
 func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, error)
@@ -892,17 +1085,17 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 
 GetUserHomeTiles creates a list of tiles with user statistics
 
-<a name="DatabaseController.GetUserMailAddressByID"></a>
-### func \(DatabaseController\) [GetUserMailAddressByID](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L201>)
+<a name="DatabaseController.GetUserHouseholdByID"></a>
+### func \(DatabaseController\) GetUserHouseholdByID
 
 ```go
-func (dbc DatabaseController) GetUserMailAddressByID(userID uint) (string, error)
+func (dbc DatabaseController) GetUserHouseholdByID(userID uint) (uint, error)
 ```
 
-GetUserMailAddressByID returns the mail address of a user by his ID
+GetUserHouseholdByID uses a given user ID and returns the connected household id If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.GetUserProductsBulk"></a>
-### func \(DatabaseController\) [GetUserProductsBulk](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L220>)
+### func \(DatabaseController\) GetUserProductsBulk
 
 ```go
 func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
@@ -911,7 +1104,7 @@ func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]dat
 GetUserProductsBulk returns an array of products of a user \(based on user ID\) The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.GetUserProductsBulkByBarcode"></a>
-### func \(DatabaseController\) [GetUserProductsBulkByBarcode](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L245>)
+### func \(DatabaseController\) GetUserProductsBulkByBarcode
 
 ```go
 func (dbc DatabaseController) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
@@ -919,17 +1112,26 @@ func (dbc DatabaseController) GetUserProductsBulkByBarcode(userID uint, barcode 
 
 GetUserProductsBulkByBarcode returns an array of products of a user \(based on user ID\) matching a barcode The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.SearchProducts"></a>
-### func \(DatabaseController\) [SearchProducts](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L289>)
+<a name="DatabaseController.RestoreProduct"></a>
+### func \(DatabaseController\) RestoreProduct
 
 ```go
-func (dbc DatabaseController) SearchProducts(searchQuery string, searchParameter SearchParameterEnum, userID uint) ([]database.Product, error)
+func (dbc DatabaseController) RestoreProduct(productID int, userID uint) error
+```
+
+RestoreProduct restores a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
+
+<a name="DatabaseController.SearchProducts"></a>
+### func \(DatabaseController\) SearchProducts
+
+```go
+func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue, sort, order string, userID uint) ([]database.Product, error)
 ```
 
 SearchProducts returns an array of products of a user matching a search paramater and a query
 
 <a name="DatabaseController.SetProductExpireAt"></a>
-### func \(DatabaseController\) [SetProductExpireAt](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L392>)
+### func \(DatabaseController\) SetProductExpireAt
 
 ```go
 func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error
@@ -938,7 +1140,7 @@ func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, exp
 SetProductExpireAt updates the expiry date of a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.SetProductNotifiedAt"></a>
-### func \(DatabaseController\) [SetProductNotifiedAt](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L415>)
+### func \(DatabaseController\) SetProductNotifiedAt
 
 ```go
 func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error
@@ -947,7 +1149,7 @@ func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error
 SetProductNotifiedAt sets the notified\_at timestamp to the current time
 
 <a name="DatabaseController.UpdateProduct"></a>
-### func \(DatabaseController\) [UpdateProduct](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L340>)
+### func \(DatabaseController\) UpdateProduct
 
 ```go
 func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product *database.ProductDTOPatch) error
@@ -956,7 +1158,7 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 UpdateProduct gets a product \(based on product ID\) of a user \(based on user ID\) and updates its contents with the contents of a supplied reference to the updated product If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.UpdateUser"></a>
-### func \(DatabaseController\) [UpdateUser](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L104>)
+### func \(DatabaseController\) UpdateUser
 
 ```go
 func (dbc DatabaseController) UpdateUser(userID uint, user *authentication.User) error
@@ -965,7 +1167,7 @@ func (dbc DatabaseController) UpdateUser(userID uint, user *authentication.User)
 UpdateUser gets a user \(based on user ID\) and updates its contents with the contents of a supplied reference to the updated user If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.UpdateUserPassword"></a>
-### func \(DatabaseController\) [UpdateUserPassword](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L139>)
+### func \(DatabaseController\) UpdateUserPassword
 
 ```go
 func (dbc DatabaseController) UpdateUserPassword(userID uint, login *authentication.Login) error
@@ -974,34 +1176,34 @@ func (dbc DatabaseController) UpdateUserPassword(userID uint, login *authenticat
 UpdateUserPassword gets a user \(based on user ID\) and updates its password with the contents of a supplied reference to the updated login data If the database operations return an error, the error is also returned \(otherwise nil\)
 
 <a name="DatabaseController.UserExistsByMailAddress"></a>
-### func \(DatabaseController\) [UserExistsByMailAddress](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L71>)
+### func \(DatabaseController\) UserExistsByMailAddress
 
 ```go
-func (dbc DatabaseController) UserExistsByMailAddress(user authentication.User) bool
+func (dbc DatabaseController) UserExistsByMailAddress(user *authentication.User) bool
 ```
 
 UserExistsByMailAddress returns if a given user object exists in the database based on the property 'mailAddress'
 
 <a name="DatabaseController.UserExistsByUsername"></a>
-### func \(DatabaseController\) [UserExistsByUsername](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L62>)
+### func \(DatabaseController\) UserExistsByUsername
 
 ```go
-func (dbc DatabaseController) UserExistsByUsername(user authentication.User) bool
+func (dbc DatabaseController) UserExistsByUsername(user *authentication.User) bool
 ```
 
 UserExistsByUsername returns if a given user object exists in the database based on the property 'username'
 
-<a name="DatabaseController.UserIsProductOwner"></a>
-### func \(DatabaseController\) [UserIsProductOwner](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L182>)
+<a name="DatabaseController.UserHasProductAccess"></a>
+### func \(DatabaseController\) UserHasProductAccess
 
 ```go
-func (dbc DatabaseController) UserIsProductOwner(userID uint, productID int) bool
+func (dbc DatabaseController) UserHasProductAccess(userID uint, productID int) bool
 ```
 
-UserIsProductOwner checks if user \(based on user ID\) is the matching owner of a product \(based on product ID\)
+UserHasProductAccess checks if user \(based on user ID\) is the matching owner of a product \(based on product ID\)
 
 <a name="SearchParameterEnum"></a>
-## type [SearchParameterEnum](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L22>)
+## type SearchParameterEnum
 
 SearchParameterEnum is a int value specifying a valid search parameter
 
@@ -1020,7 +1222,7 @@ const (
 ```
 
 <a name="SearchParameterEnumFromString"></a>
-### func [SearchParameterEnumFromString](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/databasecontroller.go#L32>)
+### func SearchParameterEnumFromString
 
 ```go
 func SearchParameterEnumFromString(str string) SearchParameterEnum
@@ -1029,7 +1231,7 @@ func SearchParameterEnumFromString(str string) SearchParameterEnum
 SearchParameterEnumFromString parses and converts a given string to the matching enum value If the enum value can't be matched, enum value 'InvalidParameter' is used
 
 <a name="SupportedEngines"></a>
-## type [SupportedEngines](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/engine.go#L4>)
+## type SupportedEngines
 
 SupportedEngines is a int value specifying a valid database engine
 
@@ -1048,7 +1250,7 @@ const (
 ```
 
 <a name="SupportedEnginesFromString"></a>
-### func [SupportedEnginesFromString](<https://gitlab.com/Isotop7/proviant/blob/main/src/controllers/database/engine.go#L15>)
+### func SupportedEnginesFromString
 
 ```go
 func SupportedEnginesFromString(str string) SupportedEngines
@@ -1056,10 +1258,32 @@ func SupportedEnginesFromString(str string) SupportedEngines
 
 SupportedEnginesFromString parses and converts a given string to the matching enum value If the enum value can't be matched, enum value 'InvalidEngine' is used
 
+# api
+
+```go
+import "codeberg.org/isotop7/proviant/models/api"
+```
+
+## Index
+
+- [type BulkProductsAPIModel](<#BulkProductsAPIModel>)
+
+
+<a name="BulkProductsAPIModel"></a>
+## type BulkProductsAPIModel
+
+
+
+```go
+type BulkProductsAPIModel struct {
+    ProductIDs []string `json:"productIDs"`
+}
+```
+
 # authentication
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/authentication"
+import "codeberg.org/isotop7/proviant/models/authentication"
 ```
 
 authentication provides models and methods for logins
@@ -1071,11 +1295,11 @@ authentication provides models and methods for logins
 - [type Signup](<#Signup>)
   - [func \(signup \*Signup\) IsValid\(\) error](<#Signup.IsValid>)
 - [type User](<#User>)
-  - [func \(user User\) IsValid\(skipPassword bool\) error](<#User.IsValid>)
+  - [func \(user \*User\) IsValid\(skipPassword bool\) error](<#User.IsValid>)
 
 
 <a name="Login"></a>
-## type [Login](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/authentication/login.go#L6-L9>)
+## type Login
 
 Login is derived from User and primarily used for sign in
 
@@ -1087,7 +1311,7 @@ type Login struct {
 ```
 
 <a name="Login.IsValid"></a>
-### func \(\*Login\) [IsValid](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/authentication/login.go#L12>)
+### func \(\*Login\) IsValid
 
 ```go
 func (login *Login) IsValid() error
@@ -1096,7 +1320,7 @@ func (login *Login) IsValid() error
 IsValid checks if the given login instance is valid
 
 <a name="Signup"></a>
-## type [Signup](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/authentication/signup.go#L10-L14>)
+## type Signup
 
 Signup is derived from User and Login and primarily used for registration
 
@@ -1109,7 +1333,7 @@ type Signup struct {
 ```
 
 <a name="Signup.IsValid"></a>
-### func \(\*Signup\) [IsValid](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/authentication/signup.go#L17>)
+### func \(\*Signup\) IsValid
 
 ```go
 func (signup *Signup) IsValid() error
@@ -1118,7 +1342,7 @@ func (signup *Signup) IsValid() error
 IsValid checks if the given signup instance is valid
 
 <a name="User"></a>
-## type [User](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/authentication/user.go#L14-L21>)
+## type User
 
 User is the struct for the database definition and the JWT claims A single user can own many products
 
@@ -1129,15 +1353,16 @@ type User struct {
     Username    string `json:"username"`
     MailAddress string `json:"mailAddress"`
     Password    string `json:"-"`
-    Products    []database.Product
+    HouseholdID uint   `gorm:"index"`
+    Household   database.Household
 }
 ```
 
 <a name="User.IsValid"></a>
-### func \(User\) [IsValid](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/authentication/user.go#L24>)
+### func \(\*User\) IsValid
 
 ```go
-func (user User) IsValid(skipPassword bool) error
+func (user *User) IsValid(skipPassword bool) error
 ```
 
 IsValid is a simple validator function to check for valid properties
@@ -1145,7 +1370,7 @@ IsValid is a simple validator function to check for valid properties
 # configuration
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/configuration"
+import "codeberg.org/isotop7/proviant/models/configuration"
 ```
 
 configuration defines structs and methods for proviants configuration and specific parts of it
@@ -1162,13 +1387,13 @@ configuration defines structs and methods for proviants configuration and specif
 - [type OpenFoodFactsConfiguration](<#OpenFoodFactsConfiguration>)
 - [type ProviantConfiguration](<#ProviantConfiguration>)
   - [func \(ec \*ProviantConfiguration\) ValidateDatabaseConfiguration\(\) error](<#ProviantConfiguration.ValidateDatabaseConfiguration>)
-  - [func \(ec ProviantConfiguration\) ValidateOpenFoodFactsConfiguration\(\) error](<#ProviantConfiguration.ValidateOpenFoodFactsConfiguration>)
+  - [func \(ec \*ProviantConfiguration\) ValidateOpenFoodFactsConfiguration\(\) error](<#ProviantConfiguration.ValidateOpenFoodFactsConfiguration>)
 - [type SMTPConfiguration](<#SMTPConfiguration>)
 - [type ServerConfiguration](<#ServerConfiguration>)
 
 
 <a name="AuthenticationConfiguration"></a>
-## type [AuthenticationConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L33-L36>)
+## type AuthenticationConfiguration
 
 AuthenticationConfiguration contains all properties regarding the JSON Web Tokens
 
@@ -1180,7 +1405,7 @@ type AuthenticationConfiguration struct {
 ```
 
 <a name="CorsConfiguration"></a>
-## type [CorsConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L39-L42>)
+## type CorsConfiguration
 
 CorsConfiguration contains all properties for the CORS configuration of the proviant server
 
@@ -1192,7 +1417,7 @@ type CorsConfiguration struct {
 ```
 
 <a name="DatabaseConfiguration"></a>
-## type [DatabaseConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L24-L30>)
+## type DatabaseConfiguration
 
 DatabaseConfiguration contains all properties regarding the database connection
 
@@ -1207,7 +1432,7 @@ type DatabaseConfiguration struct {
 ```
 
 <a name="DatabaseMariaDBConfiguration"></a>
-## type [DatabaseMariaDBConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L11-L17>)
+## type DatabaseMariaDBConfiguration
 
 
 
@@ -1222,7 +1447,7 @@ type DatabaseMariaDBConfiguration struct {
 ```
 
 <a name="DatabaseSQLiteConfiguration"></a>
-## type [DatabaseSQLiteConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L19-L21>)
+## type DatabaseSQLiteConfiguration
 
 
 
@@ -1233,7 +1458,7 @@ type DatabaseSQLiteConfiguration struct {
 ```
 
 <a name="LoggingConfiguration"></a>
-## type [LoggingConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L52-L55>)
+## type LoggingConfiguration
 
 LoggingConfiguration contains all properties regarding the log configuration for zerolog
 
@@ -1245,7 +1470,7 @@ type LoggingConfiguration struct {
 ```
 
 <a name="NotificationConfiguration"></a>
-## type [NotificationConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L67-L72>)
+## type NotificationConfiguration
 
 NotificationConfiguration contains all properties regarding the notification handler
 
@@ -1259,7 +1484,7 @@ type NotificationConfiguration struct {
 ```
 
 <a name="OpenFoodFactsConfiguration"></a>
-## type [OpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L75-L78>)
+## type OpenFoodFactsConfiguration
 
 OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
 
@@ -1271,7 +1496,7 @@ type OpenFoodFactsConfiguration struct {
 ```
 
 <a name="ProviantConfiguration"></a>
-## type [ProviantConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L81-L88>)
+## type ProviantConfiguration
 
 ProviantConfiguration is the configuration wrapper struct
 
@@ -1287,7 +1512,7 @@ type ProviantConfiguration struct {
 ```
 
 <a name="ProviantConfiguration.ValidateDatabaseConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateDatabaseConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L102>)
+### func \(\*ProviantConfiguration\) ValidateDatabaseConfiguration
 
 ```go
 func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error
@@ -1296,16 +1521,16 @@ func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error
 ValidateDatabaseConfiguration checks the current database configuration for common errors
 
 <a name="ProviantConfiguration.ValidateOpenFoodFactsConfiguration"></a>
-### func \(ProviantConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L91>)
+### func \(\*ProviantConfiguration\) ValidateOpenFoodFactsConfiguration
 
 ```go
-func (ec ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error
+func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error
 ```
 
 ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
 
 <a name="SMTPConfiguration"></a>
-## type [SMTPConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L58-L64>)
+## type SMTPConfiguration
 
 SMTPConfiguration contains all properties regarding the notification handler target
 
@@ -1320,7 +1545,7 @@ type SMTPConfiguration struct {
 ```
 
 <a name="ServerConfiguration"></a>
-## type [ServerConfiguration](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/configuration/configuration.go#L45-L49>)
+## type ServerConfiguration
 
 ServerConfiguration contains all properties regarding the proviant server
 
@@ -1335,7 +1560,7 @@ type ServerConfiguration struct {
 # database
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/database"
+import "codeberg.org/isotop7/proviant/models/database"
 ```
 
 database contains the database specific definitions and models
@@ -1346,6 +1571,7 @@ database contains the database specific definitions and models
   - [func \(d Date\) Format\(s string\) string](<#Date.Format>)
   - [func \(d Date\) MarshalJSON\(\) \(\[\]byte, error\)](<#Date.MarshalJSON>)
   - [func \(d \*Date\) UnmarshalJSON\(b \[\]byte\) error](<#Date.UnmarshalJSON>)
+- [type Household](<#Household>)
 - [type Product](<#Product>)
 - [type ProductDTOBarcode](<#ProductDTOBarcode>)
 - [type ProductDTOExpire](<#ProductDTOExpire>)
@@ -1354,7 +1580,7 @@ database contains the database specific definitions and models
 
 
 <a name="Date"></a>
-## type [Date](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/database/timestamp.go#L10>)
+## type Date
 
 Date is a simple wrapper for time.Time
 
@@ -1363,7 +1589,7 @@ type Date time.Time
 ```
 
 <a name="Date.Format"></a>
-### func \(Date\) [Format](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/database/timestamp.go#L34>)
+### func \(Date\) Format
 
 ```go
 func (d Date) Format(s string) string
@@ -1372,7 +1598,7 @@ func (d Date) Format(s string) string
 Format returns a formatted string of Date
 
 <a name="Date.MarshalJSON"></a>
-### func \(Date\) [MarshalJSON](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/database/timestamp.go#L29>)
+### func \(Date\) MarshalJSON
 
 ```go
 func (d Date) MarshalJSON() ([]byte, error)
@@ -1381,7 +1607,7 @@ func (d Date) MarshalJSON() ([]byte, error)
 MarshalJSON generates JSON from a Date
 
 <a name="Date.UnmarshalJSON"></a>
-### func \(\*Date\) [UnmarshalJSON](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/database/timestamp.go#L18>)
+### func \(\*Date\) UnmarshalJSON
 
 ```go
 func (d *Date) UnmarshalJSON(b []byte) error
@@ -1389,28 +1615,44 @@ func (d *Date) UnmarshalJSON(b []byte) error
 
 UnmarshalJSON parses JSON into Date
 
+<a name="Household"></a>
+## type Household
+
+
+
+```go
+type Household struct {
+    gorm.Model
+    Name        string `gorm:"not null"`
+    Description string
+    AdminID     uint `gorm:"not null"`
+}
+```
+
 <a name="Product"></a>
-## type [Product](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/database/product.go#L10-L21>)
+## type Product
 
 Product is the database model of a product
 
 ```go
 type Product struct {
     gorm.Model
-    Barcode     string    `json:"barcode"`
-    ProductName string    `json:"productName"`
-    Categories  string    `json:"categories"`
-    Countries   string    `json:"countries"`
-    ImageURL    string    `json:"imageUrl"`
-    ExpireAt    time.Time `json:"expireAt"`
-    ScannedAt   time.Time `json:"scannedAt"`
-    NotifiedAt  time.Time `json:"notifiedAt"`
-    UserID      uint      `json:"userID"`
+    Barcode     string         `json:"barcode"`
+    ProductName string         `json:"productName"`
+    Categories  string         `json:"categories"`
+    Countries   string         `json:"countries"`
+    ImageURL    string         `json:"imageUrl"`
+    ExpireAt    time.Time      `json:"expireAt"`
+    ScannedAt   time.Time      `json:"scannedAt"`
+    NotifiedAt  time.Time      `json:"notifiedAt"`
+    DeletedAt   gorm.DeletedAt `gorm:"index"`
+    HouseholdID uint           `gorm:"index, not null" json:"-"`
+    Household   Household      `json:"-"`
 }
 ```
 
 <a name="ProductDTOBarcode"></a>
-## type [ProductDTOBarcode](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/database/product.go#L31-L33>)
+## type ProductDTOBarcode
 
 ProductDTOBarcode is a simplified DTO only containing a barcode
 
@@ -1421,7 +1663,7 @@ type ProductDTOBarcode struct {
 ```
 
 <a name="ProductDTOExpire"></a>
-## type [ProductDTOExpire](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/database/product.go#L24-L28>)
+## type ProductDTOExpire
 
 ProductDTOExpire is a simplified DTO for product expiration
 
@@ -1434,7 +1676,7 @@ type ProductDTOExpire struct {
 ```
 
 <a name="ProductDTOPatch"></a>
-## type [ProductDTOPatch](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/database/product.go#L36-L43>)
+## type ProductDTOPatch
 
 ProductDTOPatch is a simplified DTO only containing the patchable elements
 
@@ -1450,7 +1692,7 @@ type ProductDTOPatch struct {
 ```
 
 <a name="Timestamp"></a>
-## type [Timestamp](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/database/timestamp.go#L13-L15>)
+## type Timestamp
 
 Timestamp is the model definition for timestamp
 
@@ -1463,7 +1705,7 @@ type Timestamp struct {
 # external
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/external"
+import "codeberg.org/isotop7/proviant/models/external"
 ```
 
 external provides model definitions from external parties
@@ -1487,7 +1729,7 @@ var (
 ```
 
 <a name="OpenFoodFactsAPIDataset"></a>
-## type [OpenFoodFactsAPIDataset](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/external/openfoodfactsapidataset.go#L13-L24>)
+## type OpenFoodFactsAPIDataset
 
 OpenFoodFactsAPIDataset represents the data model of a json respons from the OpenFoodFacts API
 
@@ -1509,7 +1751,7 @@ type OpenFoodFactsAPIDataset struct {
 # webparts
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/webparts"
+import "codeberg.org/isotop7/proviant/models/webparts"
 ```
 
 web contains models for web entities
@@ -1520,7 +1762,7 @@ web contains models for web entities
 
 
 <a name="Tile"></a>
-## type [Tile](<https://gitlab.com/Isotop7/proviant/blob/main/src/models/webparts/tile.go#L5-L10>)
+## type Tile
 
 Tile is a wrapper for a card content on the home page
 
@@ -1536,7 +1778,7 @@ type Tile struct {
 # static
 
 ```go
-import "gitlab.com/Isotop7/proviant/models/configuration/static"
+import "codeberg.org/isotop7/proviant/models/configuration/static"
 ```
 
 static implements "constants" used in proviant

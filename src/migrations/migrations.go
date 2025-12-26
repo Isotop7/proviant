@@ -3,9 +3,9 @@ package migrations
 import (
 	"fmt"
 
+	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/models/database"
 	"github.com/rs/zerolog"
-	"gitlab.com/Isotop7/proviant/models/authentication"
-	"gitlab.com/Isotop7/proviant/models/database"
 	"gorm.io/gorm"
 )
 
@@ -13,7 +13,7 @@ import (
 // This fixes breaking changes of version 0.2.0
 func assignHouseholdsToUsers(db *gorm.DB) error {
 	// Fetch all users who are not assigned to a household
-	var usersWithoutHouseholds []authentication.User
+	var usersWithoutHouseholds []*authentication.User
 	result := db.Where("household_id IS NULL").Find(&usersWithoutHouseholds)
 	if result.Error != nil {
 		return fmt.Errorf("error fetching users without households: %v", result.Error)
@@ -41,7 +41,7 @@ func assignHouseholdsToUsers(db *gorm.DB) error {
 	return nil
 }
 
-func RunBreakingDatabaseMigrations(logger zerolog.Logger, db *gorm.DB) error {
+func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 	// Migrations version 0.2.0
 	logger.Info().Msg("Running database migrations for version 0.2.0")
 	if err := assignHouseholdsToUsers(db); err != nil {

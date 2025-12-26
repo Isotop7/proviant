@@ -55,6 +55,15 @@ var (
 	// ErrParseBody is thrown when a body fails to parse
 	ErrParseBody = errors.New("error parsing body")
 
+	// Message format template for generic error
+	FormatGenericError = "%s: %s"
+
+	// Message format template for invalid ID
+	FormatInvalidRequestId = "Requested ID '%s' is invalid"
+
+	// Message format template for product not found
+	FormatProductWithIDNotFound = "Product with id '%d' was not found"
+
 	/*
 	 * Database related errors
 	 */
@@ -84,6 +93,12 @@ var (
 
 	// ErrDatabaseSQLiteInvalidPath is thrown if no valid SQLite database path was specified
 	ErrDatabaseSQLiteInvalidPath = errors.New("no valid SQLite database path specified")
+
+	// Message format template for product not found
+	FormatProductNotFound = "Product with ID '%d' was not found in database"
+
+	// Message format template for product not found for user
+	FormatProductForUserNotFound = "Product with ID '%d' for user was not found"
 
 	/*
 	 * OpenFoodFacts related errors

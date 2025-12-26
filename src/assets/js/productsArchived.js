@@ -8,10 +8,10 @@ async function bulkDeleteProducts(productIDs) {
   });
 }
 
-async function bulkArchiveProducts(productIDs) {
-  await proviant.bulkArchiveProducts(productIDs).then((response) => {
+async function bulkRestoreProducts(productIDs) {
+  await proviant.bulkRestoreProducts(productIDs).then((response) => {
       if (response.code == 200) {
-        console.log("Products archived")
+        console.log("Products restored")
       } else {
         console.error(response.message)
       }
@@ -35,13 +35,6 @@ async function handleSelect() {
     }
 }
 
-document.querySelectorAll('#edit-product').forEach(button => {
-    button.addEventListener('click', async function () {
-        const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        globalThis.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/web/products/${selectedProducts[0]}/edit`;
-    });
-});
-
 document.querySelectorAll('#delete-product').forEach(button => {
     button.addEventListener('click', async function () {
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
@@ -50,10 +43,10 @@ document.querySelectorAll('#delete-product').forEach(button => {
     });
 });
 
-document.querySelectorAll('#archive-product').forEach(button => {
+document.querySelectorAll('#restore-product').forEach(button => {
     button.addEventListener('click', async function () {
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        await bulkArchiveProducts(selectedProducts);
+        await bulkRestoreProducts(selectedProducts);
         location.reload();
     });
 });
@@ -89,40 +82,4 @@ document.querySelectorAll('.card').forEach(card => {
           handleCardClickEffect(cardId);
       }
     });
-});
-
-// Function to perform search
-function performSearch() {
-    const queryParam = document.getElementById("search-param").value;
-    const queryValue = document.getElementById("search-query").value;
-    const sortParam = document.getElementById("sort-param").value;
-    const sortOrder = document.getElementById("sort-order").value;
-
-    // Build query string and redirect to products page
-    const queryString = new URLSearchParams({
-        queryParam: queryParam || "product_name",
-        queryValue: queryValue || "",
-        sort: sortParam || "created_at",
-        order: sortOrder || "asc",
-    }).toString();
-
-    window.location.href = `/web/products?${queryString}`;
-}
-
-// Event listener for Enter key on search input
-document.getElementById("search-query").addEventListener("keypress", (event) => {
-    if (event.key === "Enter") {
-        performSearch();
-    }
-});
-
-// Event listener for search button
-document.getElementById("search-btn").addEventListener("click", () => {
-    performSearch();
-});
-
-// Event listener for Show All button
-document.getElementById("show-all-btn").addEventListener("click", () => {
-    // Redirect to products page without any query parameters (clears all filters)
-    window.location.href = "/web/products";
 });

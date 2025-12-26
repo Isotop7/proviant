@@ -1,0 +1,33 @@
+version: "2"
+
+linters:
+  #default: fast
+
+  enable:
+    - gocritic
+    - staticcheck
+    - govet
+
+  disable: []
+
+  # All available settings of specific linters.
+  settings:
+    gocritic:
+      enable-all: true
+      disabled-checks: []
+
+formatters:
+  enable: []
+
+output:
+  formats:
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: true
+      colors: true
+
+run:
+  timeout: 3m
+  relative-path-mode: cfg
+  issues-exit-code: 1

@@ -1,4 +1,4 @@
-{{ define "productCard" }}
+{{ define "productArchivedCard" }}
 
 <style>
     .card {
@@ -79,6 +79,14 @@
                 </div>
                 <span class="badge bg-primary rounded-pill">
                     {{ .NotifiedAt | humanDateTime }}
+                </span>
+            </li>
+            <li class="list-group-item d-flex justify-content-evenly align-items-center">
+                <div class="ms-2 me-auto">
+                    <i class="bi bi-trash3 me-3"></i>
+                </div>
+                <span class="badge bg-primary rounded-pill">
+                    {{ .DeletedAt | humanDateTimeFromSQL }}
                 </span>
             </li>
         </ul>

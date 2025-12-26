@@ -4,8 +4,8 @@ package configuration
 import (
 	"html/template"
 
-	"gitlab.com/Isotop7/proviant/controllers/database"
-	"gitlab.com/Isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/errors"
 )
 
 type DatabaseMariaDBConfiguration struct {
@@ -88,7 +88,7 @@ type ProviantConfiguration struct {
 }
 
 // ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
-func (ec ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error {
+func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error {
 	if ec.OpenFoodFacts.URL == "" {
 		return errors.ErrOpenFoodFactsAPIEmptyURL
 	}

@@ -1,7 +1,7 @@
-FROM golang:1.23-alpine AS buildenv
+FROM golang:1.24-alpine AS buildenv
 WORKDIR /app
 
-RUN apk add --no-cache --update go gcc g++ npm
+RUN apk add --no-cache --update g++ gcc go npm
 COPY ./src/go.mod ./src/go.sum ./
 RUN go mod download
 COPY ./ ./
@@ -9,12 +9,17 @@ RUN npm install && \
     npm run css && \
     cp node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/ && \
 	cp node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2 ./src/assets/fonts/ && \
+    cp node_modules/@fontsource/pacifico/files/pacifico-latin-*.woff2 ./src/assets/fonts/ && \
     cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* ./src/assets/js/ && \
     cp node_modules/html5-qrcode/html5-qrcode.min.js ./src/assets/js/ && \
+    cp res/icons/proviant_logo_256.png ./src/assets/icons/ && \
+	cp res/icons/proviant_logo.ico ./src/assets/icons/favicon.ico && \
+	cp res/icons/proviant_logo_256.png ./src/assets/icons/favicon.png && \
+	cp res/icons/proviant_hero.png ./src/assets/icons/hero.png && \
     cd src && \
     CGO_ENABLED=1 GOOS=linux CGO_CFLAGS="-D_LARGEFILE64_SOURCE" go build -v -o ../proviant
 
-FROM alpine:3.20
+FROM alpine:3.22
 WORKDIR /app
 
 COPY --from=buildenv /app/proviant /app/proviant

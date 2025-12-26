@@ -19,7 +19,7 @@ function editProduct() {
         return;
     }
     // Get form values
-    let productID = parseInt(labelProductID.innerText.trim());
+    let productID = Number.parseInt(labelProductID.innerText.trim());
     let product = {
         "ID": productID,
         "productName": inputProductName.value.trim(),
@@ -60,7 +60,7 @@ function editProduct() {
 };
 
 // Validity checker
-window.addEventListener('load', function () {
+globalThis.addEventListener('load', function () {
     // Fetch all the forms we want to apply custom Bootstrap validation styles to
     let forms = document.getElementsByClassName('needs-validation');
     // Loop over them and prevent submission

@@ -4,8 +4,8 @@ package common
 import (
 	"net/http"
 
+	"codeberg.org/isotop7/proviant/api"
 	"github.com/gin-gonic/gin"
-	"gitlab.com/Isotop7/proviant/api"
 )
 
 // GetHealth returns the health status of the API

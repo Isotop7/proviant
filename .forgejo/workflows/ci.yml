@@ -1,0 +1,85 @@
+name: CI
+
+env:
+  GO_VERSION: 1.24
+  GOLANGCI_LINT_VERSION: v2.7.2
+  CODEBERG_REGISTRY: codeberg.org
+  PRIVATE_REGISTRY: registry.hr94.de
+
+on: [push]
+
+jobs:
+  check:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Verify modules
+        run: |
+          cd ./src
+          go mod verify
+      - name: Lint code
+        uses: https://github.com/golangci/golangci-lint-action@v8
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          working-directory: src
+      - name: Test code
+        run: |
+          cd ./src
+          go test -race $(go list ./... | grep -v /vendor/)
+      - name: Compile code
+        run: |
+          cd ./src
+          mkdir -p release
+          go build -o release ./...
+  docker-build-and-push:
+    needs: check
+    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main'
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Codeberg registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.CODEBERG_REGISTRY }}
+          username: ${{ secrets.CODEBERG_REGISTRY_USERNAME }}
+          password: ${{ secrets.CODEBERG_REGISTRY_PASSWORD }}
+      - name: Login to private registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.PRIVATE_REGISTRY }}
+          username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
+          password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:${{ forgejo.ref_name }}
+            ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:latest
+            ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:${{ forgejo.ref_name }}
+            ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:latest
+  sonarcloud-scan:
+    needs: check
+    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Run SonarCloud scan
+        continue-on-error: true
+        uses: https://github.com/SonarSource/sonarqube-scan-action@v6.0.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

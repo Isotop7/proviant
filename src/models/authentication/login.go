@@ -1,6 +1,6 @@
 package authentication
 
-import "gitlab.com/Isotop7/proviant/errors"
+import "codeberg.org/isotop7/proviant/errors"
 
 // Login is derived from User and primarily used for sign in
 type Login struct {
@@ -10,7 +10,7 @@ type Login struct {
 
 // IsValid checks if the given login instance is valid
 func (login *Login) IsValid() error {
-	if len(login.Username) == 0 {
+	if login.Username == "" {
 		return errors.ErrUsernameEmpty
 	}
 

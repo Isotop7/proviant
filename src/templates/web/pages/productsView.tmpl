@@ -39,12 +39,12 @@
                     Countries
                 </div>
                 <div class="col col-auto">
-                    {{- .Product.Countries | splitString -}}
+                    {{- flagReplace .Product.Countries -}}
                 </div>
             </div>
             <div class="row mt-4 my-2" style="color: var(--bs-pink)">
                 <div class="col-4 fw-bold">
-                    <i class="bi bi-trash3 me-3"></i>{{- .Product.ExpireAt | humanDate -}}
+                    <i class="bi bi-calendar-x me-3"></i>{{- .Product.ExpireAt | humanDate -}}
                 </div>
                 <div class="col-4 fw-bold">
                     <i class="bi bi-upc-scan me-3"></i>{{- .Product.ScannedAt | humanDateTime -}}

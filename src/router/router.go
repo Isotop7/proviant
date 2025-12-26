@@ -5,15 +5,15 @@ import (
 	"net/http"
 	"strings"
 
-	"gitlab.com/Isotop7/proviant/api/auth"
-	"gitlab.com/Isotop7/proviant/api/common"
-	v1 "gitlab.com/Isotop7/proviant/api/v1"
-	"gitlab.com/Isotop7/proviant/assets"
-	"gitlab.com/Isotop7/proviant/controllers"
-	"gitlab.com/Isotop7/proviant/errors"
-	"gitlab.com/Isotop7/proviant/models/configuration"
-	"gitlab.com/Isotop7/proviant/templates"
-	"gitlab.com/Isotop7/proviant/web"
+	"codeberg.org/isotop7/proviant/api/auth"
+	"codeberg.org/isotop7/proviant/api/common"
+	v1 "codeberg.org/isotop7/proviant/api/v1"
+	"codeberg.org/isotop7/proviant/assets"
+	"codeberg.org/isotop7/proviant/controllers"
+	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/configuration"
+	"codeberg.org/isotop7/proviant/templates"
+	"codeberg.org/isotop7/proviant/web"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -22,7 +22,7 @@ import (
 )
 
 // SetupRouter creates the gin engine and associated middleware
-func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl controllers.OpenFoodFactsAPIController) *gin.Engine {
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController) *gin.Engine {
 	// Generate new gin instance
 	engine := gin.New()
 
@@ -32,13 +32,13 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	// Setup cors
 	corsConfig := cors.DefaultConfig()
 	// Check if any origin is allowed or set list
-	if configuration.Server.CORS.AllowAllOrigins {
+	if proviantConfiguration.Server.CORS.AllowAllOrigins {
 		corsConfig.AllowAllOrigins = true
 		logger.Info().Msg("Allowed all CORS origins")
 	} else {
 		corsConfig.AllowAllOrigins = false
-		corsConfig.AllowOrigins = configuration.Server.CORS.AllowedOrigins
-		logger.Info().Msgf("Allowed CORS origins: %s", strings.Join(configuration.Server.CORS.AllowedOrigins, "; "))
+		corsConfig.AllowOrigins = proviantConfiguration.Server.CORS.AllowedOrigins
+		logger.Info().Msgf("Allowed CORS origins: %s", strings.Join(proviantConfiguration.Server.CORS.AllowedOrigins, "; "))
 	}
 	corsConfig.AllowCredentials = true
 	engine.Use(cors.New(corsConfig))
@@ -64,12 +64,12 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 
 	// Template cache
 	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("templateCache", configuration.TemplateCache)
+		ctx.Set("templateCache", proviantConfiguration.TemplateCache)
 		ctx.Next()
 	})
 
 	// Setup JWT authentication middleware for API
-	jwtAPIMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorNotUserAware, UnauthorizedAPIFunc)
+	jwtAPIMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedAPIFunc)
 	if jwtAPIAuthSetupErr != nil {
 		logger.Error().Msg(jwtAPIAuthSetupErr.Error())
 		panic(jwtAPIAuthSetupErr.Error())
@@ -82,7 +82,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	}
 
 	// Setup JWT authentication and authorization middleware, aka user-aware
-	jwtAPIUserAwareMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorUserAware, UnauthorizedAPIFunc)
+	jwtAPIUserAwareMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorUserAware, UnauthorizedAPIFunc)
 	if jwtAPIAuthSetupErr != nil {
 		logger.Error().Msg(jwtAPIAuthSetupErr.Error())
 		panic(jwtAPIAuthSetupErr.Error())
@@ -95,7 +95,7 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	}
 
 	// Setup JWT authentication middleware for Frontend
-	jwtFrontendMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorNotUserAware, UnauthorizedFrontendFunc)
+	jwtFrontendMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedFrontendFunc)
 	if jwtFrontendAuthSetupErr != nil {
 		logger.Error().Msg(jwtFrontendAuthSetupErr.Error())
 		panic(jwtFrontendAuthSetupErr.Error())
@@ -108,9 +108,9 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	}
 
 	// Setup JWT authentication and authorization middleware, aka user-aware
-	jwtFrontendUserAwareMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(configuration, dbHandle, AuthorizatorUserAware, UnauthorizedFrontendFunc)
+	jwtFrontendUserAwareMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorUserAware, UnauthorizedFrontendFunc)
 	if jwtFrontendAuthSetupErr != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrUserAwareAuthMiddlewareInit.Error(), jwtFrontendAuthSetupErr.Error())
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrUserAwareAuthMiddlewareInit.Error(), jwtFrontendAuthSetupErr.Error())
 		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
 	}
 	// Initialize JWT authentication and authorization middleware
@@ -140,10 +140,15 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	publicProductAPI := engine.Group("/api/v1/products")
 	publicProductAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
 	publicProductAPI.GET("", v1.GetProducts)
+	publicProductAPI.GET("/archived", v1.GetArchivedProducts)
 	publicProductAPI.GET("/expired", v1.GetExpired)
 	publicProductAPI.POST("", v1.CreateProduct)
 	publicProductAPI.POST("/scan", v1.ScanProduct)
 	publicProductAPI.GET("/byBarcode/:barcode", v1.GetProductsByBarcode)
+	publicProductAPI.GET("/search", v1.SearchProducts)
+	publicProductAPI.DELETE("/bulkDelete", v1.BulkDeleteProducts)
+	publicProductAPI.DELETE("/bulkArchive", v1.BulkArchiveProducts)
+	publicProductAPI.POST("/bulkRestore", v1.BulkRestoreProducts)
 
 	// Protected user routes
 	protectedUserAPI := engine.Group("/api/v1/user")
@@ -157,13 +162,14 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	protectedProductAPI.GET("/:id", v1.GetProduct)
 	protectedProductAPI.PATCH("/:id", v1.UpdateProduct)
 	protectedProductAPI.DELETE("/:id", v1.DeleteProduct)
+	protectedProductAPI.POST("/:id/restore", v1.RestoreProduct)
 	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)
 
 	// Web frontend routes
 	// Serve asset files
 	engine.StaticFS("/assets", http.FS(assets.AssetFiles))
 	// Create frontend handler with template cache
-	webFrontendHandler := web.Frontend{TemplateCache: configuration.TemplateCache}
+	webFrontendHandler := web.Frontend{TemplateCache: proviantConfiguration.TemplateCache}
 	webFrontend := engine.Group("/web")
 	webFrontend.GET("/auth", webFrontendHandler.Auth)
 
@@ -174,8 +180,8 @@ func SetupRouter(logger *zerolog.Logger, configuration *configuration.ProviantCo
 	publicWebFrontend.GET("/user", webFrontendHandler.User)
 	publicWebFrontend.GET("/user/settings", webFrontendHandler.UserSettings)
 	publicWebFrontend.GET("/products", webFrontendHandler.Products)
+	publicWebFrontend.GET("/products/archived", webFrontendHandler.ProductsArchived)
 	publicWebFrontend.GET("/products/create", webFrontendHandler.ProductsCreate)
-	publicWebFrontend.GET("/products/search", webFrontendHandler.Search)
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")

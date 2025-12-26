@@ -6,10 +6,10 @@ import (
 	"html/template"
 	"time"
 
-	dbController "gitlab.com/Isotop7/proviant/controllers/database"
-	"gitlab.com/Isotop7/proviant/models/configuration"
-	dbModel "gitlab.com/Isotop7/proviant/models/database"
-	"gitlab.com/Isotop7/proviant/templates"
+	dbController "codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/models/configuration"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/templates"
 
 	"github.com/rs/zerolog"
 	gomail "gopkg.in/mail.v2"
@@ -24,7 +24,7 @@ type NotificationController struct {
 
 // Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them.
 // The timeout can be configured with the Configuration struct of NotificationController
-func (nc NotificationController) Dispatch() {
+func (nc *NotificationController) Dispatch() {
 	sleepInterval := time.Hour * time.Duration(nc.Configuration.Interval)
 	go func() {
 		for {
@@ -45,19 +45,19 @@ func (nc NotificationController) Dispatch() {
 }
 
 // generateNotifications uses a list of products and generates a notification for it
-func (nc NotificationController) generateNotifications(notificationProducts *[]dbModel.Product) {
+func (nc *NotificationController) generateNotifications(notificationProducts *[]dbModel.Product) {
 	// Loop through products
-	for _, product := range *notificationProducts {
+	for idx := range *notificationProducts {
 		// Get user object of product
-		mailAddresses, getError := nc.DatabaseController.GetHouseholdMembersMailAddressesByID(product.HouseholdID) //TODO: Iterate through users and send mail
+		mailAddresses, getError := nc.DatabaseController.GetHouseholdMembersMailAddressesByID((*notificationProducts)[idx].HouseholdID)
 		if getError != nil {
 			nc.Logger.Error().Msg(getError.Error())
 		}
 
 		for _, mailAddress := range mailAddresses {
 			// Sending notification
-			nc.Logger.Info().Msgf("Sending notification for product with id '%d' and barcode '%s' to '%s'", product.ID, product.Barcode, mailAddress)
-			sendError := nc.sendMail(product, mailAddress)
+			nc.Logger.Info().Msgf("Sending notification for product with id '%d' and barcode '%s' to '%s'", (*notificationProducts)[idx].ID, (*notificationProducts)[idx].Barcode, mailAddress)
+			sendError := nc.sendMail(&(*notificationProducts)[idx], mailAddress)
 
 			// Check for error
 			if sendError != nil {
@@ -68,7 +68,7 @@ func (nc NotificationController) generateNotifications(notificationProducts *[]d
 			}
 
 			// Update notifiedAt timestamp
-			updateErr := nc.DatabaseController.SetProductNotifiedAt(product.ID)
+			updateErr := nc.DatabaseController.SetProductNotifiedAt((*notificationProducts)[idx].ID)
 			if updateErr != nil {
 				nc.Logger.Error().Msg(updateErr.Error())
 			} else {
@@ -79,7 +79,7 @@ func (nc NotificationController) generateNotifications(notificationProducts *[]d
 }
 
 // sendMail sends the notification for a product to a recipient
-func (nc NotificationController) sendMail(product dbModel.Product, recipient string) error {
+func (nc *NotificationController) sendMail(product *dbModel.Product, recipient string) error {
 	// Create new mail object
 	mail := gomail.NewMessage()
 
@@ -90,7 +90,7 @@ func (nc NotificationController) sendMail(product dbModel.Product, recipient str
 	mail.SetHeader("To", recipient)
 
 	// Set header
-	subject := fmt.Sprintf("proviant - Warning - Product '%d' expired", product.ID)
+	subject := fmt.Sprintf("proviant - Warning - Product '%d' expired", &product.ID)
 	mail.SetHeader("Subject", subject)
 
 	// Generate email body from template
