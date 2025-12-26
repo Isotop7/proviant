@@ -202,7 +202,7 @@ func main() {
 
 	// Check API controller config and create instance
 	validateAPIs(proviantConfiguration)
-	offacntrl := controllers.OpenFoodFactsAPIController{
+	offacntrl := &controllers.OpenFoodFactsAPIController{
 		Configuration: proviantConfiguration.OpenFoodFacts,
 		Logger:        logger,
 	}
@@ -218,5 +218,5 @@ func main() {
 	}
 	proviantConfiguration.TemplateCache = templateCache
 
-	startProviantServer(logger, proviantConfiguration, dbHandle, &offacntrl)
+	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl)
 }

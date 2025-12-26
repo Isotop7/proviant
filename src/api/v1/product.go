@@ -18,9 +18,9 @@ import (
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -321,7 +321,7 @@ func CreateProduct(ctx *gin.Context) {
 	}
 
 	// Get OpenFoodFacts API controller from context
-	offacntrl, offaErr := ctx.MustGet("offacntrl").(controllers.OpenFoodFactsAPIController)
+	offacntrl, offaErr := ctx.MustGet("offacntrl").(*controllers.OpenFoodFactsAPIController)
 	if !offaErr {
 		logger.Error().Msg("Failed to get controller from context")
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get controller from context"})
@@ -567,9 +567,9 @@ func BulkDeleteProducts(ctx *gin.Context) {
 		return
 	} else {
 		strProductIDs := make([]string, len(convertedProductIDs))
-	    for i, v := range convertedProductIDs {
-	        strProductIDs[i] = strconv.Itoa(v)
-	    }
+		for i, v := range convertedProductIDs {
+			strProductIDs[i] = strconv.Itoa(v)
+		}
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", strings.Join(strProductIDs, ";"))})
 		return
 	}
@@ -643,9 +643,9 @@ func BulkArchiveProducts(ctx *gin.Context) {
 		return
 	} else {
 		strProductIDs := make([]string, len(convertedProductIDs))
-	    for i, v := range convertedProductIDs {
-	        strProductIDs[i] = strconv.Itoa(v)
-	    }
+		for i, v := range convertedProductIDs {
+			strProductIDs[i] = strconv.Itoa(v)
+		}
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", strings.Join(strProductIDs, ";"))})
 		return
 	}
@@ -775,9 +775,9 @@ func BulkRestoreProducts(ctx *gin.Context) {
 		return
 	} else {
 		strProductIDs := make([]string, len(convertedProductIDs))
-	    for i, v := range convertedProductIDs {
-	        strProductIDs[i] = strconv.Itoa(v)
-	    }
+		for i, v := range convertedProductIDs {
+			strProductIDs[i] = strconv.Itoa(v)
+		}
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were restored", strings.Join(strProductIDs, ";"))})
 		return
 	}
