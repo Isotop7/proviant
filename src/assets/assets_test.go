@@ -1,19 +1,13 @@
 package assets
 
 import (
-	"embed"
 	"testing"
 )
 
 func TestAssetFiles(t *testing.T) {
 	t.Run("AssetFiles is defined", func(t *testing.T) {
 		// Test that AssetFiles is of type embed.FS
-		var _ embed.FS = AssetFiles
-
-		// Basic test that AssetFiles exists
-		// AssetFiles is an embedded filesystem, so it won't be empty if files are embedded
-		// Just verify it's not nil which would indicate embed failed
-		// The actual content is embedded at build time
+		var _ = AssetFiles
 	})
 }
 
@@ -73,7 +67,6 @@ func TestAssetFilesOpen(t *testing.T) {
 			t.Errorf("Failed to open auth.css: %v", err)
 			return
 		}
-		defer file.Close()
 
 		// Check if file can be read
 		stat, err := file.Stat()

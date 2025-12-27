@@ -263,7 +263,7 @@ func TestFormatTemplates(t *testing.T) {
 			t.Error("FormatGenericError is empty")
 		}
 		if FormatGenericError != "%s: %s" {
-			t.Errorf("FormatGenericError = %v, want %s: %s", FormatGenericError)
+			t.Errorf("FormatGenericError = %v, want '%%s: %%s'", FormatGenericError)
 		}
 	})
 
@@ -272,7 +272,7 @@ func TestFormatTemplates(t *testing.T) {
 			t.Error("FormatInvalidRequestId is empty")
 		}
 		if FormatInvalidRequestId != "Requested ID '%s' is invalid" {
-			t.Errorf("FormatInvalidRequestId = %v, want Requested ID '%s' is invalid", FormatInvalidRequestId)
+			t.Errorf("FormatInvalidRequestId = %v, want Requested ID '%%s' is invalid", FormatInvalidRequestId)
 		}
 	})
 
@@ -281,7 +281,7 @@ func TestFormatTemplates(t *testing.T) {
 			t.Error("FormatProductWithIDNotFound is empty")
 		}
 		if FormatProductWithIDNotFound != "Product with id '%d' was not found" {
-			t.Errorf("FormatProductWithIDNotFound = %v, want Product with id '%d' was not found", FormatProductWithIDNotFound)
+			t.Errorf("FormatProductWithIDNotFound = %v, want Product with id '%%d' was not found", FormatProductWithIDNotFound)
 		}
 	})
 
@@ -290,7 +290,7 @@ func TestFormatTemplates(t *testing.T) {
 			t.Error("FormatProductForUserNotFound is empty")
 		}
 		if FormatProductForUserNotFound != "Product with ID '%d' for user was not found" {
-			t.Errorf("FormatProductForUserNotFound = %v, want Product with ID '%d' for user was not found", FormatProductForUserNotFound)
+			t.Errorf("FormatProductForUserNotFound = %v, want Product with ID '%%d' for user was not found", FormatProductForUserNotFound)
 		}
 	})
 
@@ -299,7 +299,7 @@ func TestFormatTemplates(t *testing.T) {
 			t.Error("FormatProductNotFound is empty")
 		}
 		if FormatProductNotFound != "Product with ID '%d' was not found in database" {
-			t.Errorf("FormatProductNotFound = %v, want Product with ID '%d' was not found in database", FormatProductNotFound)
+			t.Errorf("FormatProductNotFound = %v, want Product with ID '%%d' was not found in database", FormatProductNotFound)
 		}
 	})
 }
