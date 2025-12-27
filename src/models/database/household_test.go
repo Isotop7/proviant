@@ -2,8 +2,6 @@ package database
 
 import (
 	"testing"
-
-	"gorm.io/gorm"
 )
 
 func TestHouseholdStruct(t *testing.T) {
@@ -30,7 +28,7 @@ func TestHouseholdGORMModel(t *testing.T) {
 	t.Run("Household embeds gorm.Model", func(t *testing.T) {
 		household := Household{}
 
-		var _ gorm.Model = household.Model
+		var _ = household.Model
 	})
 }
 

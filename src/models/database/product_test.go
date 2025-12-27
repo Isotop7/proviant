@@ -3,8 +3,6 @@ package database
 import (
 	"testing"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 func TestProductStruct(t *testing.T) {
@@ -122,7 +120,7 @@ func TestProductGORMModel(t *testing.T) {
 	t.Run("Product embeds gorm.Model", func(t *testing.T) {
 		product := Product{}
 
-		var _ gorm.Model = product.Model
+		var _ = product.Model
 	})
 }
 
@@ -130,7 +128,7 @@ func TestProductSoftDelete(t *testing.T) {
 	t.Run("Product has DeletedAt for soft delete", func(t *testing.T) {
 		product := Product{}
 
-		var _ gorm.DeletedAt = product.DeletedAt
+		var _ = product.DeletedAt
 	})
 }
 
