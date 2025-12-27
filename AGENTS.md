@@ -85,6 +85,7 @@ import (
 - Use GORM struct tags for database models: `gorm:"index, not null"`
 - Use JSON struct tags for API responses: `json:"fieldName"`
 - Use `json:"-"` to exclude fields from JSON (e.g., sensitive fields)
+- Use EAN-13 format for barcode (alphanumeric, 13 digits)
 - Embed `gorm.Model` for ID, CreatedAt, UpdatedAt, DeletedAt
 - Example:
 ```go
