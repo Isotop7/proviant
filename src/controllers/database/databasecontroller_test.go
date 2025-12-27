@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -253,12 +254,12 @@ func TestDatabaseController_CreateProduct(t *testing.T) {
 	user := authentication.User{ID: 1, Username: "testuser", HouseholdID: 1}
 	db.Create(&user)
 
- 	// Create test product
- 	product := database.Product{
- 		ProductName: "Test Product",
- 		Barcode:     "123456789",
- 		HouseholdID: 1,
- 	}
+	// Create test product
+	product := database.Product{
+		ProductName: "Test Product",
+		Barcode:     "3017620422003",
+		HouseholdID: 1,
+	}
 
 	// Create product
 	err = controller.CreateProduct(1, &product)
@@ -269,7 +270,7 @@ func TestDatabaseController_CreateProduct(t *testing.T) {
 	result := db.First(&createdProduct, product.ID)
 	assert.True(t, result.Error == nil)
 	assert.Equal(t, "Test Product", createdProduct.ProductName)
-	assert.Equal(t, "123456789", createdProduct.Barcode)
+	assert.Equal(t, "3017620422003", createdProduct.Barcode)
 }
 
 // TestDatabaseController_GetProductByID tests getting product by ID
@@ -288,9 +289,9 @@ func TestDatabaseController_GetProductByID(t *testing.T) {
 	// Create controller
 	controller := DatabaseController{DBHandle: db}
 
- 	// Create test user and product
- 	user := authentication.User{ID: 1, Username: "testuser", HouseholdID: 1}
- 	product := database.Product{ProductName: "Test Product", Barcode: "123456789", HouseholdID: 1}
+	// Create test user and product
+	user := authentication.User{ID: 1, Username: "testuser", HouseholdID: 1}
+	product := database.Product{ProductName: "Test Product", Barcode: "123456789", HouseholdID: 1}
 	db.Create(&user)
 	db.Create(&product)
 
@@ -320,16 +321,16 @@ func TestDatabaseController_UpdateProduct(t *testing.T) {
 	// Create controller
 	controller := DatabaseController{DBHandle: db}
 
- 	// Create test user and product
- 	user := authentication.User{ID: 1, Username: "testuser", HouseholdID: 1}
- 	product := database.Product{ProductName: "Old Name", Barcode: "11111", HouseholdID: 1}
+	// Create test user and product
+	user := authentication.User{ID: 1, Username: "testuser", HouseholdID: 1}
+	product := database.Product{ProductName: "Old Name", Barcode: "11111", HouseholdID: 1}
 	db.Create(&user)
 	db.Create(&product)
 
- 	// Update product
- 	updateData := database.ProductDTOPatch{
- 		ProductName: "New Name",
- 	}
+	// Update product
+	updateData := database.ProductDTOPatch{
+		ProductName: "New Name",
+	}
 	err = controller.UpdateProduct(1, 1, &updateData)
 	assert.NoError(t, err)
 
@@ -355,9 +356,9 @@ func TestDatabaseController_DeleteProduct(t *testing.T) {
 	// Create controller
 	controller := DatabaseController{DBHandle: db}
 
- 	// Create test user and product
- 	user := authentication.User{ID: 1, Username: "testuser", HouseholdID: 1}
- 	product := database.Product{ProductName: "Test Product", Barcode: "123456789", HouseholdID: 1}
+	// Create test user and product
+	user := authentication.User{ID: 1, Username: "testuser", HouseholdID: 1}
+	product := database.Product{ProductName: "Test Product", Barcode: "3017620422003", HouseholdID: 1}
 	db.Create(&user)
 	db.Create(&product)
 
@@ -388,9 +389,9 @@ func TestDatabaseController_RestoreProduct(t *testing.T) {
 	// Create controller
 	controller := DatabaseController{DBHandle: db}
 
- 	// Create test user and product
- 	user := authentication.User{ID: 1, Username: "testuser", HouseholdID: 1}
- 	product := database.Product{ProductName: "Test Product", Barcode: "123456789", HouseholdID: 1}
+	// Create test user and product
+	user := authentication.User{ID: 1, Username: "testuser", HouseholdID: 1}
+	product := database.Product{ProductName: "Test Product", Barcode: "3017620422003", HouseholdID: 1}
 	db.Create(&user)
 	db.Create(&product)
 
@@ -421,22 +422,22 @@ func TestDatabaseController_SetExpireAt(t *testing.T) {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
- 	// Create test user and product
- 	user := authentication.User{ID: 1, Username: "testuser", HouseholdID: 1}
- 	product := database.Product{ProductName: "Test Product", Barcode: "123456789", HouseholdID: 1}
- 	db.Create(&user)
- 	db.Create(&product)
+	// Create test user and product
+	user := authentication.User{ID: 1, Username: "testuser", HouseholdID: 1}
+	product := database.Product{ProductName: "Test Product", Barcode: "3017620422003", HouseholdID: 1}
+	db.Create(&user)
+	db.Create(&product)
 
- 	// Set expiration date
- 	expireAt := time.Now().Add(7 * 24 * time.Hour) // 7 days from now
- 	product.ExpireAt = expireAt
- 	err = db.Save(&product).Error
- 	assert.NoError(t, err)
+	// Set expiration date
+	expireAt := time.Now().Add(7 * 24 * time.Hour) // 7 days from now
+	product.ExpireAt = expireAt
+	err = db.Save(&product).Error
+	assert.NoError(t, err)
 
- 	// Verify expiration date was set
- 	var updatedProduct database.Product
- 	db.First(&updatedProduct, 1)
- 	assert.True(t, !updatedProduct.ExpireAt.IsZero())
+	// Verify expiration date was set
+	var updatedProduct database.Product
+	db.First(&updatedProduct, 1)
+	assert.True(t, !updatedProduct.ExpireAt.IsZero())
 }
 
 // TestDatabaseController_SearchProducts tests product search
@@ -478,4 +479,53 @@ func TestDatabaseController_SearchProducts(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, foundProducts, 1)
 	assert.Equal(t, "Banana", foundProducts[0].ProductName)
+}
+
+// TestBulkOperationError tests the BulkOperationError struct
+func TestBulkOperationError(t *testing.T) {
+	t.Run("can create BulkOperationError", func(t *testing.T) {
+		testErr := errors.New("test error")
+		err := BulkOperationError{
+			productID: 123,
+			error:     testErr,
+		}
+
+		if err.productID != 123 {
+			t.Errorf("productID = %v, want 123", err.productID)
+		}
+
+		if err.error != testErr {
+			t.Errorf("error = %v, want %v", err.error, testErr)
+		}
+	})
+
+	t.Run("Error method returns correct string", func(t *testing.T) {
+		testErr := errors.New("test error")
+		err := &BulkOperationError{
+			productID: 456,
+			error:     testErr,
+		}
+
+		expected := "Error bulk deleting product '456', error: test error"
+		actual := err.Error()
+
+		if actual != expected {
+			t.Errorf("Error() = %v, want %v", actual, expected)
+		}
+	})
+
+	t.Run("Error method with different product ID and error", func(t *testing.T) {
+		testErr := errors.New("database connection failed")
+		err := &BulkOperationError{
+			productID: 789,
+			error:     testErr,
+		}
+
+		expected := "Error bulk deleting product '789', error: database connection failed"
+		actual := err.Error()
+
+		if actual != expected {
+			t.Errorf("Error() = %v, want %v", actual, expected)
+		}
+	})
 }
