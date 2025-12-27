@@ -17,9 +17,9 @@ import (
 
 // NotificationController is the object struct to generate and send notifications for expired products
 type NotificationController struct {
-	Logger        *zerolog.Logger
-	Configuration configuration.NotificationConfiguration
-	DatabaseController  dbController.DatabaseControllerInterface
+	Logger             *zerolog.Logger
+	Configuration      configuration.NotificationConfiguration
+	DatabaseController dbController.DatabaseControllerInterface
 }
 
 // Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them.
