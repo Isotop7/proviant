@@ -40,8 +40,13 @@ import (
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products [get]
 func GetProducts(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	// Get logger instance from context
+	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	if !loggerOk {
+		logger.Error().Msg(api.ResponseErrLoggerContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
+		return
+	}
 
 	// Get and parse parameter limit
 	limitParam := ctx.Query("limit")

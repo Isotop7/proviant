@@ -70,6 +70,9 @@ var (
 	// ErrDatabaseInvalidEngine is thrown if an invalid database engine is selected
 	ErrDatabaseInvalidEngine = errors.New("no valid database engine selected")
 
+	// ErrLoggerContextNotFound is thrown if logger handle can't be found in context
+	ErrLoggerContextNotFound = errors.New("failed to get logger from context")
+
 	// ErrDatabaseContextNotFound is thrown if database handle can't be found in context
 	ErrDatabaseContextNotFound = errors.New("failed to get database from context")
 

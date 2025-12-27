@@ -26,7 +26,12 @@ import (
 // @Router       	/auth/signup [post]
 func Signup(ctx *gin.Context) {
 	// Get logger instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	if !loggerOk {
+		logger.Error().Msg(api.ResponseErrLoggerContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
+		return
+	}
 
 	// Get database instance from context
 	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
