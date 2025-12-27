@@ -466,6 +466,12 @@ func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, que
 	}
 
 	// Order dataset
+	if sort == "" {
+		sort = "product_name"
+	}
+	if order == "" {
+		order = "ASC"
+	}
 	preloadedDataset = preloadedDataset.Order(fmt.Sprintf("%s %s", sort, order))
 
 	// Cast found set to returned array or return error
