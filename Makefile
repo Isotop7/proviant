@@ -47,6 +47,14 @@ test:
 	go test -race -vet=off ./... && \
 	go mod verify
 
+## cover: get code coverage report
+.PHONY: cover
+cover:
+	cd ./src && \
+	go test -coverprofile=coverage.out ./... && \
+	go tool cover -html=coverage.out && \
+	go mod verify
+
 ## check: runs quality control checks
 .PHONY: check
 check:
