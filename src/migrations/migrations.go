@@ -14,7 +14,7 @@ import (
 func assignHouseholdsToUsers(db *gorm.DB) error {
 	// Fetch all users who are not assigned to a household
 	var usersWithoutHouseholds []*authentication.User
-	result := db.Where("household_id IS NULL").Find(&usersWithoutHouseholds)
+	result := db.Where("household_id IS NULL or household_id = 0").Find(&usersWithoutHouseholds)
 	if result.Error != nil {
 		return fmt.Errorf("error fetching users without households: %v", result.Error)
 	}
