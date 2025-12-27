@@ -31,6 +31,11 @@ jobs:
         run: |
           cd ./src
           go test -race $(go list ./... | grep -v /vendor/)
+      - name: Test code coverage
+        run: |
+          cd ./src
+          go test -coverprofile=coverage.out ./... &&
+          go mod verify
       - name: Compile code
         run: |
           cd ./src
