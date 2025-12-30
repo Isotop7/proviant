@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/api"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -22,6 +24,8 @@ func setupTestContext(db *gorm.DB) (*gin.Context, *httptest.ResponseRecorder) {
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
 
+
+
 	// Setup mock logger
 	mockLogger := zerolog.Nop()
 	ctx.Set("logger", &mockLogger)
@@ -30,6 +34,118 @@ func setupTestContext(db *gorm.DB) (*gin.Context, *httptest.ResponseRecorder) {
 	ctx.Set("dbHandle", db)
 
 	return ctx, w
+}
+
+// TestSignupWithoutLogger tests the signup without a logger in the context
+func TestSignupWithoutLogger(t *testing.T) {
+	// Create in-memory database
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+
+	// Migrate schema
+	if err := db.AutoMigrate(&authentication.User{}); err != nil {
+		t.Fatalf("Failed to migrate database: %v", err)
+	}
+
+	// Create test context
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+
+	// Setup test database
+	ctx.Set("dbHandle", db)
+
+	// Create test request body
+	signup := authentication.Signup{
+		Username:    "testuser",
+		Password:    "testpassword123",
+		MailAddress: "test@example.com",
+	}
+
+	jsonValue, _ := json.Marshal(signup)
+	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
+	ctx.Request.Header.Set("Content-Type", "application/json")
+
+	// Call the handler directly
+	Signup(ctx)
+
+	// Check the response
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	var response map[string]string
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, api.ResponseErrLoggerContextNotFound.Message, response["message"])
+}
+
+// TestSignupWithoutDatabase tests the signup without a logger in the context
+func TestSignupWithoutDatabase(t *testing.T) {
+	// Create test context
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+
+	// Setup mock logger
+	mockLogger := zerolog.Nop()
+	ctx.Set("logger", &mockLogger)
+
+	// Create test request body
+	signup := authentication.Signup{
+		Username:    "testuser",
+		Password:    "testpassword123",
+		MailAddress: "test@example.com",
+	}
+
+	jsonValue, _ := json.Marshal(signup)
+	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
+	ctx.Request.Header.Set("Content-Type", "application/json")
+
+	// Call the handler directly
+	Signup(ctx)
+
+	// Check the response
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	var response map[string]string
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, api.ResponseErrDatabaseContextNotFound.Message, response["message"])
+}
+
+// TestSignupGenericCreateError tests signup create error
+func TestSignupGenericCreateError(t *testing.T) {
+	// Create in-memory database
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+
+	// Migrate schema
+	if err := db.AutoMigrate(&dbModel.Household{}, &authentication.User{}); err != nil {
+		t.Fatalf("Failed to migrate database: %v", err)
+	}
+
+	// Setup test context
+	ctx, w := setupTestContext(db)
+
+	// Create test request with short password
+	signup := authentication.Signup{
+		Username:    "testuserGenericCreateError",
+		Password:    "ThisIsAVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString",
+		MailAddress: "testuserGenericCreateError@example.com",
+	}
+
+	jsonValue, _ := json.Marshal(signup)
+	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
+	ctx.Request.Header.Set("Content-Type", "application/json")
+
+	// Call the handler directly
+	Signup(ctx)
+
+	// Check the response
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var response map[string]string
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, api.ResponseErrInvalidUserData.Message, response["message"])
 }
 
 // TestSignupSuccess tests the successful signup of a new user

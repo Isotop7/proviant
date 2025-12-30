@@ -26,15 +26,15 @@ import (
 // @Router       	/auth/signup [post]
 func Signup(ctx *gin.Context) {
 	// Get logger instance from context
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	loggerValue, loggerOk := ctx.Get("logger")
 	if !loggerOk {
-		logger.Error().Msg(api.ResponseErrLoggerContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return
 	}
+	logger := loggerValue.(*zerolog.Logger)
 
 	// Get database instance from context
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := ctx.Get("dbHandle")
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -42,7 +42,7 @@ func Signup(ctx *gin.Context) {
 	}
 
 	// Create database controller object
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle.(*gorm.DB)}
 
 	// Parse request body to Login
 	var signup authentication.Signup
