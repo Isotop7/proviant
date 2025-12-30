@@ -51,11 +51,17 @@ func GetProducts(ctx *gin.Context) {
 	// Get and parse parameter limit
 	limitParam := ctx.Query("limit")
 	var limit int
-	var parseError error
-	if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
-		logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
-		return
+	// Check if limit was found in query
+	if limitParam != "" {
+		var parseError error
+		if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
+			logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
+			return
+		}
+	} else {
+		// Set default limit
+		limit = 0
 	}
 
 	// Get database instance from context
@@ -105,11 +111,17 @@ func GetArchivedProducts(ctx *gin.Context) {
 	// Get and parse parameter limit
 	limitParam := ctx.Query("limit")
 	var limit int
-	var parseError error
-	if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
-		logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
-		return
+	// Check if limit was found in query
+	if limitParam != "" {
+		var parseError error
+		if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
+			logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
+			return
+		}
+	} else {
+		// Set default limit
+		limit = 0
 	}
 
 	// Get database instance from context
@@ -326,7 +338,7 @@ func CreateProduct(ctx *gin.Context) {
 	}
 
 	// Get OpenFoodFacts API controller from context
-	offacntrl, offaErr := ctx.MustGet("offacntrl").(*controllers.OpenFoodFactsAPIController)
+	offacntrl, offaErr := ctx.MustGet("offacntrl").(controllers.OpenFoodFactsAPIControllerInterface)
 	if !offaErr {
 		logger.Error().Msg("Failed to get controller from context")
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get controller from context"})
