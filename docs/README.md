@@ -37,6 +37,7 @@ var (
     ResponseErrUserWithUsernameExists    = APIResponse{Message: errors.ErrUserWithUsernameExists.Error()}
     ResponseErrUserWithMailAddressExists = APIResponse{Message: errors.ErrUserWithMailAddressExists.Error()}
     ResponseErrDatabaseContextNotFound   = APIResponse{Message: errors.ErrDatabaseContextNotFound.Error()}
+    ResponseErrLoggerContextNotFound     = APIResponse{Message: errors.ErrLoggerContextNotFound.Error()}
     ResponseErrUserIDFromToken           = APIResponse{Message: errors.ErrUserIDFromToken.Error()}
     ResponseErrUserNoProductsFound       = APIResponse{Message: errors.ErrUserNoProductsFound.Error()}
 )
@@ -87,14 +88,13 @@ var AssetFiles embed.FS
 import "codeberg.org/isotop7/proviant/controllers"
 ```
 
-controllers implements different controllers used for accessing different APIs, objects and datasources
-
 ## Index
 
 - [type NotificationController](<#NotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
+- [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
 
 
 <a name="NotificationController"></a>
@@ -106,7 +106,7 @@ NotificationController is the object struct to generate and send notifications f
 type NotificationController struct {
     Logger             *zerolog.Logger
     Configuration      configuration.NotificationConfiguration
-    DatabaseController *dbController.DatabaseController
+    DatabaseController dbController.DatabaseControllerInterface
 }
 ```
 
@@ -139,6 +139,17 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 ```
 
 GetDataset gets data from OpenFoodFacts by its API. The search parameter is the barcode of the product
+
+<a name="OpenFoodFactsAPIControllerInterface"></a>
+## type OpenFoodFactsAPIControllerInterface
+
+OpenFoodFactsAPIControllerInterface defines the contract for interacting with OpenFoodFacts
+
+```go
+type OpenFoodFactsAPIControllerInterface interface {
+    GetDataset(barcode string) (database.Product, error)
+}
+```
 
 # errors
 
@@ -224,6 +235,9 @@ var (
      */
     // ErrDatabaseInvalidEngine is thrown if an invalid database engine is selected
     ErrDatabaseInvalidEngine = errors.New("no valid database engine selected")
+
+    // ErrLoggerContextNotFound is thrown if logger handle can't be found in context
+    ErrLoggerContextNotFound = errors.New("failed to get logger from context")
 
     // ErrDatabaseContextNotFound is thrown if database handle can't be found in context
     ErrDatabaseContextNotFound = errors.New("failed to get database from context")
@@ -881,6 +895,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#DatabaseController.UserExistsByMailAddress>)
   - [func \(dbc DatabaseController\) UserExistsByUsername\(user \*authentication.User\) bool](<#DatabaseController.UserExistsByUsername>)
   - [func \(dbc DatabaseController\) UserHasProductAccess\(userID uint, productID int\) bool](<#DatabaseController.UserHasProductAccess>)
+- [type DatabaseControllerInterface](<#DatabaseControllerInterface>)
 - [type SearchParameterEnum](<#SearchParameterEnum>)
   - [func SearchParameterEnumFromString\(str string\) SearchParameterEnum](<#SearchParameterEnumFromString>)
 - [type SupportedEngines](<#SupportedEngines>)
@@ -1202,6 +1217,19 @@ func (dbc DatabaseController) UserHasProductAccess(userID uint, productID int) b
 
 UserHasProductAccess checks if user \(based on user ID\) is the matching owner of a product \(based on product ID\)
 
+<a name="DatabaseControllerInterface"></a>
+## type DatabaseControllerInterface
+
+DatabaseControllerInterface defines the interface for database operations needed by other controllers
+
+```go
+type DatabaseControllerInterface interface {
+    GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error)
+    GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
+    SetProductNotifiedAt(productID uint) error
+}
+```
+
 <a name="SearchParameterEnum"></a>
 ## type SearchParameterEnum
 
@@ -1285,8 +1313,6 @@ type BulkProductsAPIModel struct {
 ```go
 import "codeberg.org/isotop7/proviant/models/authentication"
 ```
-
-authentication provides models and methods for logins
 
 ## Index
 
@@ -1562,8 +1588,6 @@ type ServerConfiguration struct {
 ```go
 import "codeberg.org/isotop7/proviant/models/database"
 ```
-
-database contains the database specific definitions and models
 
 ## Index
 
