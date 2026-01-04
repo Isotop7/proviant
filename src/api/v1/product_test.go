@@ -23,12 +23,12 @@ import (
 
 // MockOpenFoodFactsAPIController is a test double for OpenFoodFactsAPIControllerInterface
 type MockOpenFoodFactsAPIController struct {
-    MockGetDataset func(barcode string) (dbModel.Product, error)
+	MockGetDataset func(barcode string) (dbModel.Product, error)
 }
 
 // GetDataset implements OpenFoodFactsAPIControllerInterface and simply returns a generic product
 func (m *MockOpenFoodFactsAPIController) GetDataset(barcode string) (dbModel.Product, error) {
-    return m.MockGetDataset(barcode)
+	return m.MockGetDataset(barcode)
 }
 
 // TestGetProducts tests the GetProducts endpoint
