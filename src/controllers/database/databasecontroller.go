@@ -924,8 +924,8 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	topArchived, topErr := dbc.GetTopArchivedProducts(userID, 3)
 	if topErr == nil && len(topArchived) > 0 {
 		var productNames []string
-		for _, product := range topArchived {
-			productNames = append(productNames, product.ProductName)
+		for i := range topArchived {
+			productNames = append(productNames, topArchived[i].ProductName)
 		}
 
 		homeTiles = append(homeTiles, webparts.Tile{
