@@ -13,7 +13,6 @@ import (
 
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
-	"codeberg.org/isotop7/proviant/models/database"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -325,13 +324,13 @@ func TestCreateProduct(t *testing.T) {
 			static.TokenIdentityKey: float64(testUser.ID),
 		})
 		mockOpenFoodFactsAPIController := &MockOpenFoodFactsAPIController{
-			MockGetDataset: func(barcode string) (database.Product, error) {
+			MockGetDataset: func(barcode string) (dbModel.Product, error) {
 				return dbModel.Product{
-					ProductName: 	"New Product",
-					Barcode:     	barcode,
-					Categories: 	"Test Category",
-					Countries: 		"de",
-					ImageURL: 		"https://example.com/image.jpg",
+					ProductName: "New Product",
+					Barcode:     barcode,
+					Categories:  "Test Category",
+					Countries:   "de",
+					ImageURL:    "https://example.com/image.jpg",
 				}, nil
 			},
 		}
@@ -542,10 +541,9 @@ func TestDeleteProduct(t *testing.T) {
 		}
 		ctx.Params = []gin.Param{{Key: "id", Value: fmt.Sprintf("%d", product.ID)}}
 		ctx.Request.URL = &url.URL{
-			Path: fmt.Sprintf("/api/v1/products/%d", product.ID),
+			Path:     fmt.Sprintf("/api/v1/products/%d", product.ID),
 			RawQuery: "archiveOnly=true",
 		}
-
 
 		// Execute
 		DeleteProduct(ctx)

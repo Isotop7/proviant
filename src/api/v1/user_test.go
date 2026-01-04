@@ -231,7 +231,7 @@ func TestUpdateUserPassword(t *testing.T) {
 
 		// Request body with invalid data
 		loginData := authentication.Login{
-			Username: "", // Empty username
+			Username: "",      // Empty username
 			Password: "short", // Too short password
 		}
 		body, _ := json.Marshal(loginData)
