@@ -106,8 +106,8 @@ func TestRunBreakingDatabaseMigrations_UsersWithHouseholds(t *testing.T) {
 
 	// Create a user with an existing household
 	user := authentication.User{
-		Username:     "user1",
-		Password:     "password1",
+		Username:    "user1",
+		Password:    "password1",
 		HouseholdID: household.ID,
 	}
 	db.Create(&user)

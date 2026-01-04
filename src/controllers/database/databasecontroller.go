@@ -2,6 +2,8 @@ package database
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"codeberg.org/isotop7/proviant/errors"
@@ -439,7 +441,7 @@ func (dbc DatabaseController) GetArchivedProductByID(productID int, userID uint)
 }
 
 // SearchProducts returns an array of products of a user matching a search paramater and a query
-func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue, sort, order string, userID uint) ([]database.Product, error) {
+func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error) {
 	// Get user object from database
 	user, userErr := dbc.GetUserByID(userID)
 	if userErr != nil {
@@ -466,13 +468,13 @@ func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, que
 	}
 
 	// Order dataset
-	if sort == "" {
-		sort = "product_name"
+	if sortValue == "" {
+		sortValue = "product_name"
 	}
-	if order == "" {
-		order = "ASC"
+	if orderValue == "" {
+		orderValue = "ASC"
 	}
-	preloadedDataset = preloadedDataset.Order(fmt.Sprintf("%s %s", sort, order))
+	preloadedDataset = preloadedDataset.Order(fmt.Sprintf("%s %s", sortValue, orderValue))
 
 	// Cast found set to returned array or return error
 	findErr := preloadedDataset.Find(&foundProducts)
@@ -727,6 +729,116 @@ func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInte
 	}
 }
 
+// GetLastNotifiedProduct returns the last notified product for a user
+func (dbc DatabaseController) GetLastNotifiedProduct(householdID uint) (database.Product, error) {
+	var lastNotifiedProduct database.Product
+	getNotifiedError := dbc.DBHandle.
+		Where("household_id = ?", householdID).
+		Where("deleted_at IS NULL").
+		Order("notified_at DESC").
+		Limit(1).
+		Find(&lastNotifiedProduct)
+
+	return lastNotifiedProduct, getNotifiedError.Error
+}
+
+func (dbc DatabaseController) GetLastInsertedProduct(householdID uint) (database.Product, error) {
+	var lastProduct database.Product
+	getError := dbc.DBHandle.
+		Where("household_id = ?", householdID).
+		Where("deleted_at IS NULL").
+		Order("created_at DESC").
+		Limit(1).
+		Find(&lastProduct)
+
+	return lastProduct, getError.Error
+}
+
+// GetExpiredProductsCount returns the count of expired products for a user
+func (dbc DatabaseController) GetExpiredProductsCount(userID uint) (int, error) {
+	userProducts, getBulkErr := dbc.GetUserProductsBulk(userID, 0)
+	if getBulkErr != nil {
+		return 0, getBulkErr
+	}
+
+	count := 0
+	timestamp := time.Now()
+	for i := range userProducts {
+		if userProducts[i].ExpireAt.Before(timestamp) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// GetArchivedProductsGroupedByBarcode returns archived products grouped by barcode with counts
+func (dbc DatabaseController) GetArchivedProductsGroupedByBarcode(userID uint) (map[string]int, error) {
+	archivedProducts, err := dbc.GetUserArchivedProductsBulk(userID, -1)
+	if err != nil {
+		return nil, err
+	}
+
+	grouped := make(map[string]int)
+	for i := range archivedProducts {
+		grouped[archivedProducts[i].Barcode]++
+	}
+	return grouped, nil
+}
+
+// GetTopArchivedProducts returns the top N most frequently archived products
+func (dbc DatabaseController) GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error) {
+	archivedProducts, err := dbc.GetUserArchivedProductsBulk(userID, -1)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(archivedProducts) == 0 {
+		return []database.Product{}, nil
+	}
+
+	// Count occurrences by barcode and store first product occurrence
+	barcodeCounts := make(map[string]int)
+	barcodeToProduct := make(map[string]database.Product)
+
+	for i := range archivedProducts {
+		product := &archivedProducts[i]
+		barcodeCounts[product.Barcode]++
+		// Store the first occurrence of each barcode
+		if _, exists := barcodeToProduct[product.Barcode]; !exists {
+			barcodeToProduct[product.Barcode] = *product
+		}
+	}
+
+	// Create a slice of structs to sort
+	type barcodeCount struct {
+		barcode string
+		count   int
+		product database.Product
+	}
+
+	var counts []barcodeCount
+	for barcode, count := range barcodeCounts {
+		counts = append(counts, barcodeCount{
+			barcode: barcode,
+			count:   count,
+			product: barcodeToProduct[barcode],
+		})
+	}
+
+	// Sort by count (descending)
+	sort.Slice(counts, func(i, j int) bool {
+		return counts[i].count > counts[j].count
+	})
+
+	// Get top N products
+	var result []database.Product
+	for i := 0; i < len(counts) && i < limit; i++ {
+		result = append(result, counts[i].product)
+	}
+
+	return result, nil
+}
+
 // GetUserHomeTiles creates a list of tiles with user statistics
 func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, error) {
 	// Create list of hometiles
@@ -740,60 +852,89 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 
 	// Get count of products
 	productList, productCountErr := dbc.GetUserProductsBulk(userID, -1)
-	if productCountErr != nil {
-		return homeTiles, productCountErr
+	if productCountErr == nil && len(productList) > 0 {
+		homeTiles = append(homeTiles, webparts.Tile{
+			Title:  "Amount of your products",
+			Hero:   fmt.Sprint(len(productList)),
+			Body:   fmt.Sprintf("You currently have %d products assigned", len(productList)),
+			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
+		})
 	}
-	// Check for products
-	productCount := len(productList)
-	// If no products are assigned, there is nothing to show
-	if productCount == 0 {
-		return homeTiles, nil
-	}
-	// Create tile
-	homeTiles = append(homeTiles, webparts.Tile{
-		Title:  "Amount of your products",
-		Hero:   fmt.Sprint(productCount),
-		Body:   fmt.Sprintf("You currently have %d products assigned", productCount),
-		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-	})
 
 	// Get last inserted product
-	var lastProduct database.Product
-	getError := dbc.DBHandle.
-		Where("household_id = ?", user.HouseholdID).
-		Where("deleted_at IS NULL").
-		Order("created_at DESC").
-		Limit(1).
-		Find(&lastProduct)
-	if getError.Error != nil {
-		return homeTiles, getError.Error
+	lastInsertedProduct, getLastInsertedProductErr := dbc.GetLastInsertedProduct(user.HouseholdID)
+	if getLastInsertedProductErr == nil && lastInsertedProduct.ID != 0 {
+		homeTiles = append(homeTiles, webparts.Tile{
+			Title:  "Last inserted product",
+			Hero:   lastInsertedProduct.ProductName,
+			Body:   fmt.Sprintf("'%s' is the most recent product with barcode #%s", lastInsertedProduct.ProductName, lastInsertedProduct.Barcode),
+			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
+		})
 	}
-	// Create tile
-	homeTiles = append(homeTiles, webparts.Tile{
-		Title:  "Last inserted product",
-		Hero:   lastProduct.ProductName,
-		Body:   fmt.Sprintf("'%s' is the most recent product with barcode #%s", lastProduct.ProductName, lastProduct.Barcode),
-		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-	})
 
-	// Last notification
-	var lastNotifiedProduct database.Product
-	getNotifiedError := dbc.DBHandle.
-		Where("household_id = ?", user.HouseholdID).
-		Where("deleted_at IS NULL").
-		Order("notified_at DESC").
-		Limit(1).
-		Find(&lastNotifiedProduct)
-	if getNotifiedError.Error != nil {
-		return homeTiles, getNotifiedError.Error
+	// Last notified product
+	lastNotifiedProduct, getNotifiedErr := dbc.GetLastNotifiedProduct(user.HouseholdID)
+	if getNotifiedErr == nil && lastNotifiedProduct.ID != 0 {
+		homeTiles = append(homeTiles, webparts.Tile{
+			Title:  "Last notification",
+			Hero:   lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat),
+			Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastNotifiedProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat)),
+			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
+		})
 	}
-	// Create tile
-	homeTiles = append(homeTiles, webparts.Tile{
-		Title:  "Last notification",
-		Hero:   lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat),
-		Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat)),
-		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-	})
+
+	// Percentage of unopened expired products
+	activeProducts, activeErr := dbc.GetUserProductsBulk(userID, -1)
+	if activeErr == nil && len(activeProducts) > 0 {
+		expiredCount, expiredErr := dbc.GetExpiredProductsCount(userID)
+		if expiredErr == nil && expiredCount > 0 {
+			percentage := float64(expiredCount) / float64(len(activeProducts)) * 100
+			homeTiles = append(homeTiles, webparts.Tile{
+				Title:  "Unopened Expired Products",
+				Hero:   fmt.Sprintf("%.1f%%", percentage),
+				Body:   fmt.Sprintf("%.1f%% of your %d active products are expired but not archived", percentage, len(activeProducts)),
+				Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
+			})
+		}
+	}
+
+	// Number of total archived products
+	archivedProducts, archivedErr := dbc.GetUserArchivedProductsBulk(userID, -1)
+	if archivedErr == nil {
+		homeTiles = append(homeTiles, webparts.Tile{
+			Title:  "Total Archived Products",
+			Hero:   fmt.Sprint(len(archivedProducts)),
+			Body:   fmt.Sprintf("You have archived %d products", len(archivedProducts)),
+			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
+		})
+	}
+
+	// Number of total archived products grouped by barcode
+	grouped, groupErr := dbc.GetArchivedProductsGroupedByBarcode(userID)
+	if groupErr == nil {
+		homeTiles = append(homeTiles, webparts.Tile{
+			Title:  "Unique Archived Products",
+			Hero:   fmt.Sprint(len(grouped)),
+			Body:   fmt.Sprintf("%d different products have been archived", len(grouped)),
+			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
+		})
+	}
+
+	// Top 3 archived products
+	topArchived, topErr := dbc.GetTopArchivedProducts(userID, 3)
+	if topErr == nil && len(topArchived) > 0 {
+		var productNames []string
+		for i := range topArchived {
+			productNames = append(productNames, topArchived[i].ProductName)
+		}
+
+		homeTiles = append(homeTiles, webparts.Tile{
+			Title:  "Top Archived Products",
+			Hero:   strings.Join(productNames, ", "),
+			Body:   fmt.Sprintf("Your most archived products: %s", strings.Join(productNames, ", ")),
+			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
+		})
+	}
 
 	return homeTiles, nil
 }

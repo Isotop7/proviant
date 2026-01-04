@@ -79,7 +79,7 @@ func TestOpenFoodFactsAPIController_GetDataset(t *testing.T) {
 				}
 			}`
 			w.WriteHeader(http.StatusOK)
-			_,_ = w.Write([]byte(mockResponse))
+			_, _ = w.Write([]byte(mockResponse))
 		}))
 		defer server.Close()
 

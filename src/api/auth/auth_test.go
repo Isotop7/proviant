@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	"github.com/gin-gonic/gin"
@@ -23,8 +23,6 @@ func setupTestContext(db *gorm.DB) (*gin.Context, *httptest.ResponseRecorder) {
 	// Create test context
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-
-
 
 	// Setup mock logger
 	mockLogger := zerolog.Nop()
