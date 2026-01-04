@@ -763,8 +763,8 @@ func (dbc DatabaseController) GetExpiredProductsCount(userID uint) (int, error) 
 
 	count := 0
 	timestamp := time.Now()
-	for _, product := range userProducts {
-		if product.ExpireAt.Before(timestamp) {
+	for i := range userProducts {
+		if userProducts[i].ExpireAt.Before(timestamp) {
 			count++
 		}
 	}
@@ -779,8 +779,8 @@ func (dbc DatabaseController) GetArchivedProductsGroupedByBarcode(userID uint) (
 	}
 
 	grouped := make(map[string]int)
-	for _, product := range archivedProducts {
-		grouped[product.Barcode]++
+	for i := range archivedProducts {
+		grouped[archivedProducts[i].Barcode]++
 	}
 	return grouped, nil
 }
@@ -796,15 +796,16 @@ func (dbc DatabaseController) GetTopArchivedProducts(userID uint, limit int) ([]
 		return []database.Product{}, nil
 	}
 
-	// Count occurrences by barcode
+	// Count occurrences by barcode and store first product occurrence
 	barcodeCounts := make(map[string]int)
 	barcodeToProduct := make(map[string]database.Product)
 
-	for _, product := range archivedProducts {
+	for i := range archivedProducts {
+		product := &archivedProducts[i]
 		barcodeCounts[product.Barcode]++
 		// Store the first occurrence of each barcode
 		if _, exists := barcodeToProduct[product.Barcode]; !exists {
-			barcodeToProduct[product.Barcode] = product
+			barcodeToProduct[product.Barcode] = *product
 		}
 	}
 
