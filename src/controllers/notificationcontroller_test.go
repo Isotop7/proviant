@@ -57,7 +57,7 @@ func TestNotificationControllerInitialization(t *testing.T) {
 	// Setup notification controller with dependency injection
 	nc := &NotificationController{
 		Logger:             &logger,
-		Configuration:      configuration.NotificationConfiguration{},
+		Configuration:      &configuration.NotificationConfiguration{},
 		DatabaseController: mockDB,
 	}
 
@@ -78,7 +78,7 @@ func TestNotificationControllerWithMockDB(t *testing.T) {
 	// Setup notification controller with dependency injection
 	nc := &NotificationController{
 		Logger:             &logger,
-		Configuration:      configuration.NotificationConfiguration{},
+		Configuration:      &configuration.NotificationConfiguration{},
 		DatabaseController: mockDB,
 	}
 

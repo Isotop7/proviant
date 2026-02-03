@@ -16,7 +16,7 @@ import (
 // NotificationController is the object struct to generate and send notifications for expired products
 type NotificationController struct {
 	Logger             *zerolog.Logger
-	Configuration      configuration.NotificationConfiguration
+	Configuration      *configuration.NotificationConfiguration
 	DatabaseController dbController.DatabaseControllerInterface
 	Providers          []NotificationProvider
 }
@@ -24,13 +24,13 @@ type NotificationController struct {
 // NewNotificationController creates a new NotificationController with configured providers
 func NewNotificationController(
 	logger *zerolog.Logger,
-	config configuration.NotificationConfiguration,
-	dbController dbController.DatabaseControllerInterface,
+	config *configuration.NotificationConfiguration,
+	dbc dbController.DatabaseControllerInterface,
 ) *NotificationController {
 	nc := &NotificationController{
 		Logger:             logger,
 		Configuration:      config,
-		DatabaseController: dbController,
+		DatabaseController: dbc,
 	}
 
 	// Initialize providers

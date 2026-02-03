@@ -30,7 +30,7 @@ func (n *NtfyNotificationProvider) IsConfigured() bool {
 	return n.Configuration.URL != "" || n.Configuration.Topic != ""
 }
 
-func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo interface{}) error {
+func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo any) error {
 	recipient, ok := recipientInfo.(models.NotificationRecipientInfo)
 	if !ok {
 		return fmt.Errorf("invalid recipient type for ntfy provider")
@@ -101,7 +101,11 @@ func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, re
 	if httpErr != nil {
 		return httpErr
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			n.Logger.Error().Msgf("Error closing response body: %v", closeErr)
+		}
+	}()
 
 	// Check response status
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {

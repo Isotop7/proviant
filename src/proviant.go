@@ -77,7 +77,7 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 		// Generate notification controller using the new constructor
 		notificationController := controllers.NewNotificationController(
 			logger,
-			proviantConfiguration.Notification,
+			&proviantConfiguration.Notification,
 			&dbController.DatabaseController{DBHandle: dbHandle},
 		)
 		// Dispatch notification handler goroutine
