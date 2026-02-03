@@ -3,6 +3,7 @@ package database
 import (
 	"time"
 
+	"codeberg.org/isotop7/proviant/models"
 	"codeberg.org/isotop7/proviant/models/database"
 )
 
@@ -10,6 +11,7 @@ import (
 type DatabaseControllerInterface interface {
 	GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error)
 	GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
+	GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
 	SetProductNotifiedAt(productID uint) error
 }
 

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	dbController "codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/models"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
@@ -30,6 +31,18 @@ func (m *MockDatabaseController) SetProductNotifiedAt(productID uint) error {
 	return nil
 }
 
+func (m *MockDatabaseController) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error) {
+	// Return mock notification preferences for testing
+	return []models.NotificationRecipientInfo{
+		{
+			EmailAddress: "test@example.com",
+			NtfyURL:      "https://ntfy.sh",
+			NtfyTopic:    "test_topic",
+			NtfyToken:    "test_token",
+		},
+	}, nil
+}
+
 // Ensure MockDatabaseController implements the interface
 var _ dbController.DatabaseControllerInterface = (*MockDatabaseController)(nil)
 
@@ -44,7 +57,7 @@ func TestNotificationControllerInitialization(t *testing.T) {
 	// Setup notification controller with dependency injection
 	nc := &NotificationController{
 		Logger:             &logger,
-		Configuration:      configuration.NotificationConfiguration{},
+		Configuration:      &configuration.NotificationConfiguration{},
 		DatabaseController: mockDB,
 	}
 
@@ -65,7 +78,7 @@ func TestNotificationControllerWithMockDB(t *testing.T) {
 	// Setup notification controller with dependency injection
 	nc := &NotificationController{
 		Logger:             &logger,
-		Configuration:      configuration.NotificationConfiguration{},
+		Configuration:      &configuration.NotificationConfiguration{},
 		DatabaseController: mockDB,
 	}
 
@@ -113,14 +126,14 @@ func TestProductExpirationDetection(t *testing.T) {
 func TestNotificationConfiguration(t *testing.T) {
 	// Test basic configuration
 	config := configuration.NotificationConfiguration{
-		Interval:    24,
-		FromAddress: "noreply@example.com",
+		Interval: 24,
 		SMTP: configuration.SMTPConfiguration{
-			Host:     "smtp.example.com",
-			Port:     587,
-			User:     "username",
-			Password: "password",
-			SSL:      true,
+			Host:        "smtp.example.com",
+			Port:        587,
+			User:        "username",
+			Password:    "password",
+			FromAddress: "noreply@example.com",
+			SSL:         true,
 		},
 	}
 
@@ -129,8 +142,8 @@ func TestNotificationConfiguration(t *testing.T) {
 		t.Errorf("Expected interval to be 24, got %d", config.Interval)
 	}
 
-	if config.FromAddress != "noreply@example.com" {
-		t.Errorf("Expected from address to be 'noreply@example.com', got %s", config.FromAddress)
+	if config.SMTP.FromAddress != "noreply@example.com" {
+		t.Errorf("Expected from address to be 'noreply@example.com', got %s", config.SMTP.FromAddress)
 	}
 
 	if config.SMTP.Host != "smtp.example.com" {

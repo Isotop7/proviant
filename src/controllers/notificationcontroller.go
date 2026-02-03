@@ -1,40 +1,90 @@
 package controllers
 
 import (
-	"bytes"
-	"fmt"
-	"html/template"
 	"time"
 
 	dbController "codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/models"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/templates"
+
+	"net/http"
 
 	"github.com/rs/zerolog"
-	gomail "gopkg.in/mail.v2"
 )
 
 // NotificationController is the object struct to generate and send notifications for expired products
 type NotificationController struct {
 	Logger             *zerolog.Logger
-	Configuration      configuration.NotificationConfiguration
+	Configuration      *configuration.NotificationConfiguration
 	DatabaseController dbController.DatabaseControllerInterface
+	Providers          []NotificationProvider
+}
+
+// NewNotificationController creates a new NotificationController with configured providers
+func NewNotificationController(
+	logger *zerolog.Logger,
+	config *configuration.NotificationConfiguration,
+	dbc dbController.DatabaseControllerInterface,
+) *NotificationController {
+	nc := &NotificationController{
+		Logger:             logger,
+		Configuration:      config,
+		DatabaseController: dbc,
+	}
+
+	// Initialize providers
+	nc.initializeProviders()
+
+	return nc
+}
+
+func (nc *NotificationController) initializeProviders() {
+	// Add email provider if configured
+	emailProvider := &EmailNotificationProvider{
+		Configuration: nc.Configuration.SMTP,
+		Logger:        nc.Logger,
+	}
+
+	if emailProvider.IsConfigured() {
+		nc.Providers = append(nc.Providers, emailProvider)
+	}
+
+	// Add ntfy provider if configured
+	ntfyProvider := &NtfyNotificationProvider{
+		Configuration: nc.Configuration.Ntfy,
+		Logger:        nc.Logger,
+		HTTPClient:    &http.Client{Timeout: time.Duration(nc.Configuration.Ntfy.Timeout) * time.Second},
+	}
+
+	if ntfyProvider.IsConfigured() {
+		nc.Providers = append(nc.Providers, ntfyProvider)
+	}
+
+	nc.Logger.Info().Msgf("Initialized %d notification providers", len(nc.Providers))
 }
 
 // Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them.
 // The timeout can be configured with the Configuration struct of NotificationController
 func (nc *NotificationController) Dispatch() {
+	if !nc.Configuration.Enabled {
+		nc.Logger.Info().Msg("NotificationController is disabled")
+		return
+	}
+
 	sleepInterval := time.Hour * time.Duration(nc.Configuration.Interval)
 	go func() {
+		nc.Logger.Debug().Msg("New NotificationController run dispatched")
 		for {
 			// Get affected products
 			notificationProducts, getError := nc.DatabaseController.GetProductsExpiredAndNotificationPending(sleepInterval)
 			if getError != nil {
 				nc.Logger.Error().Msg(getError.Error())
+				continue
 			}
 
 			// Generate notifications and send them
+			nc.Logger.Info().Msgf("Sending notifications for %d products", len(notificationProducts))
 			nc.generateNotifications(&notificationProducts)
 
 			// Sleep
@@ -48,27 +98,52 @@ func (nc *NotificationController) Dispatch() {
 func (nc *NotificationController) generateNotifications(notificationProducts *[]dbModel.Product) {
 	// Loop through products
 	for idx := range *notificationProducts {
-		// Get user object of product
-		mailAddresses, getError := nc.DatabaseController.GetHouseholdMembersMailAddressesByID((*notificationProducts)[idx].HouseholdID)
+		product := &(*notificationProducts)[idx]
+
+		// Get notification preferences for household members
+		preferences, getError := nc.DatabaseController.GetHouseholdMembersNotificationPreferences(product.HouseholdID)
 		if getError != nil {
 			nc.Logger.Error().Msg(getError.Error())
+			continue
 		}
 
-		for _, mailAddress := range mailAddresses {
-			// Sending notification
-			nc.Logger.Info().Msgf("Sending notification for product with id '%d' and barcode '%s' to '%s'", (*notificationProducts)[idx].ID, (*notificationProducts)[idx].Barcode, mailAddress)
-			sendError := nc.sendMail(&(*notificationProducts)[idx], mailAddress)
+		// Send notifications for each recipient
+		for _, pref := range preferences {
+			nc.sendNotificationsForRecipient(product, pref)
+		}
+	}
+}
 
-			// Check for error
-			if sendError != nil {
-				nc.Logger.Error().Msg(sendError.Error())
-				break
-			} else {
-				nc.Logger.Info().Msg("Notification send successfully")
+func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel.Product, recipientInfo models.NotificationRecipientInfo) {
+	success := false
+
+	// Try each provider in order
+	for _, provider := range nc.Providers {
+		providerType := provider.GetProviderType()
+		nc.Logger.Info().Msgf("Attempting to send %s notification for product '%s' (ID: %d)",
+			providerType, product.ProductName, product.ID)
+
+		var sendError error
+		switch providerType {
+		case "email":
+			if recipientInfo.EmailAddress != "" {
+				sendError = provider.SendNotification(product, recipientInfo.EmailAddress)
 			}
+		case "ntfy":
+			sendError = provider.SendNotification(product, recipientInfo)
+		}
 
-			// Update notifiedAt timestamp
-			updateErr := nc.DatabaseController.SetProductNotifiedAt((*notificationProducts)[idx].ID)
+		if sendError != nil {
+			nc.Logger.Error().Msgf("Failed to send %s notification: %s", providerType, sendError.Error())
+			continue
+		}
+
+		nc.Logger.Info().Msgf("Successfully sent %s notification", providerType)
+		success = true
+
+		// Only update NotifiedAt on first successful notification
+		if success {
+			updateErr := nc.DatabaseController.SetProductNotifiedAt(product.ID)
 			if updateErr != nil {
 				nc.Logger.Error().Msg(updateErr.Error())
 			} else {
@@ -76,64 +151,9 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 			}
 		}
 	}
-}
 
-// sendMail sends the notification for a product to a recipient
-func (nc *NotificationController) sendMail(product *dbModel.Product, recipient string) error {
-	// Create new mail object
-	mail := gomail.NewMessage()
-
-	// Set sender
-	mail.SetHeader("From", nc.Configuration.FromAddress)
-
-	// Set recipient
-	mail.SetHeader("To", recipient)
-
-	// Set header
-	subject := fmt.Sprintf("proviant - Warning - Product '%d' expired", &product.ID)
-	mail.SetHeader("Subject", subject)
-
-	// Generate email body from template
-	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/expired.html")
-	if templErr != nil {
-		return templErr
+	if !success {
+		nc.Logger.Warn().Msgf("Failed to send any notifications for product '%s' (ID: %d)",
+			product.ProductName, product.ID)
 	}
-	var bodyBuf bytes.Buffer
-	templExecErr := templ.Execute(&bodyBuf, struct {
-		ProductName string
-		ID          uint
-		Barcode     string
-		ExpireAt    time.Time
-	}{
-		ProductName: product.ProductName,
-		ID:          product.ID,
-		Barcode:     product.Barcode,
-		ExpireAt:    product.ExpireAt,
-	})
-	// Check for templating errors
-	if templExecErr != nil {
-		return templExecErr
-	}
-
-	// Set body of mail to generated template output
-	mail.SetBody("text/html", bodyBuf.String())
-
-	// Settings for SMTP server
-	mailDialer := gomail.Dialer{
-		Host: nc.Configuration.SMTP.Host,
-		Port: nc.Configuration.SMTP.Port,
-	}
-
-	if nc.Configuration.SMTP.User != "" && nc.Configuration.SMTP.Password != "" {
-		mailDialer.Username = nc.Configuration.SMTP.User
-		mailDialer.Password = nc.Configuration.SMTP.Password
-	}
-
-	// Set ssl mode
-	mailDialer.SSL = nc.Configuration.SMTP.SSL
-
-	// Send mail and return error
-
-	err := mailDialer.DialAndSend(mail)
-	return err
 }

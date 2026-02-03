@@ -21,7 +21,7 @@ services:
   proviant:
     build: ./
     restart: always
-    ports: 
+    ports:
       - "80:5050"
     depends_on:
       - database
@@ -34,7 +34,7 @@ services:
       - PROVIANT_DATABASE_USER=proviant
       - PROVIANT_DATABASE_PASSWORD=supersecretpassword
       - PROVIANT_NOTIFICATION_SMTP_HOST=smtp
-      - PROVIANT_NOTIFICATION_FROMADDRESS=proviant@yourdomain.com
+      - PROVIANT_NOTIFICATION_SMTP_FROMADDRESS=proviant@yourdomain.com
     volumes:
       - proviantlogs:/app/logs
     links:
@@ -45,4 +45,3 @@ volumes:
   proviantdb: {}
   proviantlogs: {}
   smtpdb: {}
-  

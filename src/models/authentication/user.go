@@ -9,16 +9,26 @@ import (
 	"gorm.io/gorm"
 )
 
+// NotificationPreferences contains user-specific notification settings
+type NotificationPreferences struct {
+	EmailEnabled bool   `json:"emailEnabled" gorm:"default:true"`
+	NtfyEnabled  bool   `json:"ntfyEnabled" gorm:"default:false"`
+	NtfyURL      string `json:"ntfyUrl,omitempty"`
+	NtfyTopic    string `json:"ntfyTopic,omitempty"`
+	NtfyToken    string `json:"ntfyToken,omitempty"`
+}
+
 // User is the struct for the database definition and the JWT claims
 // A single user can own many products
 type User struct {
 	gorm.Model
-	ID          uint   `gorm:"primaryKey,unique"`
-	Username    string `json:"username"`
-	MailAddress string `json:"mailAddress"`
-	Password    string `json:"-"`
-	HouseholdID uint   `gorm:"index"`
-	Household   database.Household
+	ID                      uint   `gorm:"primaryKey,unique"`
+	Username                string `json:"username"`
+	MailAddress             string `json:"mailAddress"`
+	Password                string `json:"-"`
+	HouseholdID             uint   `gorm:"index"`
+	Household               database.Household
+	NotificationPreferences NotificationPreferences `gorm:"embedded"`
 }
 
 // IsValid is a simple validator function to check for valid properties

@@ -72,14 +72,17 @@ PROVIANT_LOGGING_ENABLED=true                                                 # 
 PROVIANT_LOGGING_FILE="proviant.log"                                            # Path to log file
 
 # Notification configuration
-PROVIANT_NOTIFICATION_ENABLED=true                                            # Enable notifications
-PROVIANT_NOTIFICATION_INTERVAL=12                                             # Interval in hours when notifications should be send
-PROVIANT_NOTIFICATION_FROMADDRESS="sender@local.net"                          # Sender address for notifications
-PROVIANT_NOTIFICATION_SMTP_HOST="127.0.0.1"                                   # Host or IP address of SMTP server
-PROVIANT_NOTIFICATION_SMTP_PORT=25                                            # Port of SMTP server
-PROVIANT_NOTIFICATION_SMTP_SSL=false                                          # Enables/disables SSL
-PROVIANT_NOTIFICATION_SMTP_USER="user"                                        # Username used for sending notifications via SMTP server
-PROVIANT_NOTIFICATION_SMTP_PASSWORD="password"                                # Password used for sending notifications via SMTP server
+PROVIANT_NOTIFICATION_ENABLED=true                          # Enable notifications
+PROVIANT_NOTIFICATION_INTERVAL=12                           # Interval in hours when notifications should be send
+PROVIANT_NOTIFICATION_SMTP_FROMADDRESS="sender@local.net"   # Sender address for notifications
+PROVIANT_NOTIFICATION_SMTP_HOST="127.0.0.1"                 # Host or IP address of SMTP server
+PROVIANT_NOTIFICATION_SMTP_PORT=25                          # Port of SMTP server
+PROVIANT_NOTIFICATION_SMTP_SSL=false                        # Enables/disables SSL
+PROVIANT_NOTIFICATION_SMTP_USER="user"                      # Username used for sending notifications via SMTP server
+PROVIANT_NOTIFICATION_SMTP_PASSWORD="password"              # Password used for sending notifications via SMTP server
+PROVIANT_NOTIFICATION_NTFY_URL="https://ntfy.sh"            # Default Ntfy URL
+PROVIANT_NOTIFICATION_NTFY_TOPIC="default_topic"            # Default Ntfy topic
+PROVIANT_NOTIFICATION_NTFY_TIMEOUT=60                       # Ntfy message timeout
 
 # OpenFoodFacts configuration
 PROVIANT_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"   # Address of API backend of OpenFoodFacts

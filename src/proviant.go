@@ -74,12 +74,12 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 	if !proviantConfiguration.Notification.Enabled {
 		logger.Info().Msg("Notifications are disabled")
 	} else {
-		// Generate notification controller
-		notificationController := controllers.NotificationController{
-			Logger:             logger,
-			Configuration:      proviantConfiguration.Notification,
-			DatabaseController: &dbController.DatabaseController{DBHandle: dbHandle},
-		}
+		// Generate notification controller using the new constructor
+		notificationController := controllers.NewNotificationController(
+			logger,
+			&proviantConfiguration.Notification,
+			&dbController.DatabaseController{DBHandle: dbHandle},
+		)
 		// Dispatch notification handler goroutine
 		notificationController.Dispatch()
 	}
@@ -205,6 +205,14 @@ func main() {
 	offacntrl := &controllers.OpenFoodFactsAPIController{
 		Configuration: proviantConfiguration.OpenFoodFacts,
 		Logger:        logger,
+	}
+
+	// Validate notification configuration
+	if proviantConfiguration.Notification.Enabled {
+		if err := proviantConfiguration.ValidateNotificationConfiguration(); err != nil {
+			logger.Error().Msg(err.Error())
+			panic(err)
+		}
 	}
 
 	// Setup NotificationController if notifications are enabled

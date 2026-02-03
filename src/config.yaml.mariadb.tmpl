@@ -26,13 +26,17 @@ logging:
 notification:
   enabled: true
   interval: 12
-  fromAddress: sender@local.net
   smtp:
     host: 127.0.0.1
     port: 25
     ssl: false
     user: user
+    fromAddress: sender@local.net
     password: password
+  ntfy:
+    url: https://ntfy.sh
+    topic: default_topic
+    timeout: 60
 
 openfoodfacts:
   url: https://world.openfoodfacts.org/api/v2/product

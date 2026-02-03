@@ -111,4 +111,22 @@ var (
 
 	// ErrOpenFoodFactsAPIInvalidTimeout is thrown if an invalid API timeout was supplied
 	ErrOpenFoodFactsAPIInvalidTimeout = errors.New("invalid timeout for OpenFoodFacts API specified")
+
+	/*
+	 * Notification related errors
+	 */
+	// ErrNotificationInvalidInterval is thrown if an invalid notification interval was specified
+	ErrNotificationInvalidInterval = errors.New("notification interval must be greater than 0")
+
+	// ErrNotificationInvalidSMTPPort is thrown if an invalid SMTP port was specified
+	ErrNotificationInvalidSMTPPort = errors.New("SMTP port must be greater than 0")
+
+	// ErrNotificationEmptyFromAddress is thrown if an empty from address was specified
+	ErrNotificationEmptyFromAddress = errors.New("notification from address cannot be empty")
+
+	// ErrNotificationInvalidNtfyURL is thrown if an invalid ntfy.sh URL was specified
+	ErrNotificationInvalidNtfyURL = errors.New("invalid ntfy.sh URL")
+
+	// ErrNotificationEmptyNtfyTopic is thrown if an empty ntfy.sh topic was specified
+	ErrNotificationEmptyNtfyTopic = errors.New("ntfy.sh topic cannot be empty when URL is provided")
 )

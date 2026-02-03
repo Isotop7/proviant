@@ -745,6 +745,74 @@
                 }
             }
         },
+        "/api/v1/user/notification-preferences": {
+            "get": {
+                "description": "Retrieves notification preferences for the current user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Gets a user's notification preferences",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/authentication.NotificationPreferences"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Updates notification preferences for the current user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Updates a user's notification preferences",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/user/password": {
             "post": {
                 "description": "Updates password of a user",
@@ -862,6 +930,26 @@
                 }
             }
         },
+        "authentication.NotificationPreferences": {
+            "type": "object",
+            "properties": {
+                "emailEnabled": {
+                    "type": "boolean"
+                },
+                "ntfyEnabled": {
+                    "type": "boolean"
+                },
+                "ntfyToken": {
+                    "type": "string"
+                },
+                "ntfyTopic": {
+                    "type": "string"
+                },
+                "ntfyUrl": {
+                    "type": "string"
+                }
+            }
+        },
         "authentication.Signup": {
             "type": "object",
             "required": [
@@ -901,6 +989,9 @@
                 },
                 "mailAddress": {
                     "type": "string"
+                },
+                "notificationPreferences": {
+                    "$ref": "#/definitions/authentication.NotificationPreferences"
                 },
                 "updatedAt": {
                     "type": "string"
