@@ -90,11 +90,60 @@ import "codeberg.org/isotop7/proviant/controllers"
 
 ## Index
 
+- [type EmailNotificationProvider](<#EmailNotificationProvider>)
+  - [func \(e \*EmailNotificationProvider\) GetProviderType\(\) string](<#EmailNotificationProvider.GetProviderType>)
+  - [func \(e \*EmailNotificationProvider\) IsConfigured\(\) bool](<#EmailNotificationProvider.IsConfigured>)
+  - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
 - [type NotificationController](<#NotificationController>)
+  - [func NewNotificationController\(logger \*zerolog.Logger, config configuration.NotificationConfiguration, dbController dbController.DatabaseControllerInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
+- [type NotificationProvider](<#NotificationProvider>)
+- [type NtfyNotificationProvider](<#NtfyNotificationProvider>)
+  - [func \(n \*NtfyNotificationProvider\) GetProviderType\(\) string](<#NtfyNotificationProvider.GetProviderType>)
+  - [func \(n \*NtfyNotificationProvider\) IsConfigured\(\) bool](<#NtfyNotificationProvider.IsConfigured>)
+  - [func \(n \*NtfyNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#NtfyNotificationProvider.SendNotification>)
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
 - [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
+
+
+<a name="EmailNotificationProvider"></a>
+## type EmailNotificationProvider
+
+
+
+```go
+type EmailNotificationProvider struct {
+    Configuration configuration.SMTPConfiguration
+    Logger        *zerolog.Logger
+}
+```
+
+<a name="EmailNotificationProvider.GetProviderType"></a>
+### func \(\*EmailNotificationProvider\) GetProviderType
+
+```go
+func (e *EmailNotificationProvider) GetProviderType() string
+```
+
+
+
+<a name="EmailNotificationProvider.IsConfigured"></a>
+### func \(\*EmailNotificationProvider\) IsConfigured
+
+```go
+func (e *EmailNotificationProvider) IsConfigured() bool
+```
+
+
+
+<a name="EmailNotificationProvider.SendNotification"></a>
+### func \(\*EmailNotificationProvider\) SendNotification
+
+```go
+func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo interface{}) error
+```
+
 
 
 <a name="NotificationController"></a>
@@ -107,8 +156,18 @@ type NotificationController struct {
     Logger             *zerolog.Logger
     Configuration      configuration.NotificationConfiguration
     DatabaseController dbController.DatabaseControllerInterface
+    Providers          []NotificationProvider
 }
 ```
+
+<a name="NewNotificationController"></a>
+### func NewNotificationController
+
+```go
+func NewNotificationController(logger *zerolog.Logger, config configuration.NotificationConfiguration, dbController dbController.DatabaseControllerInterface) *NotificationController
+```
+
+NewNotificationController creates a new NotificationController with configured providers
 
 <a name="NotificationController.Dispatch"></a>
 ### func \(\*NotificationController\) Dispatch
@@ -118,6 +177,59 @@ func (nc *NotificationController) Dispatch()
 ```
 
 Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them. The timeout can be configured with the Configuration struct of NotificationController
+
+<a name="NotificationProvider"></a>
+## type NotificationProvider
+
+NotificationProvider interface defines methods for sending notifications
+
+```go
+type NotificationProvider interface {
+    SendNotification(product *dbModel.Product, recipientInfo interface{}) error
+    GetProviderType() string
+    IsConfigured() bool
+}
+```
+
+<a name="NtfyNotificationProvider"></a>
+## type NtfyNotificationProvider
+
+
+
+```go
+type NtfyNotificationProvider struct {
+    Configuration configuration.NtfyConfiguration
+    Logger        *zerolog.Logger
+    HTTPClient    *http.Client
+}
+```
+
+<a name="NtfyNotificationProvider.GetProviderType"></a>
+### func \(\*NtfyNotificationProvider\) GetProviderType
+
+```go
+func (n *NtfyNotificationProvider) GetProviderType() string
+```
+
+
+
+<a name="NtfyNotificationProvider.IsConfigured"></a>
+### func \(\*NtfyNotificationProvider\) IsConfigured
+
+```go
+func (n *NtfyNotificationProvider) IsConfigured() bool
+```
+
+
+
+<a name="NtfyNotificationProvider.SendNotification"></a>
+### func \(\*NtfyNotificationProvider\) SendNotification
+
+```go
+func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo interface{}) error
+```
+
+
 
 <a name="OpenFoodFactsAPIController"></a>
 ## type OpenFoodFactsAPIController
@@ -277,6 +389,24 @@ var (
 
     // ErrOpenFoodFactsAPIInvalidTimeout is thrown if an invalid API timeout was supplied
     ErrOpenFoodFactsAPIInvalidTimeout = errors.New("invalid timeout for OpenFoodFacts API specified")
+
+    /*
+     * Notification related errors
+     */
+    // ErrNotificationInvalidInterval is thrown if an invalid notification interval was specified
+    ErrNotificationInvalidInterval = errors.New("notification interval must be greater than 0")
+
+    // ErrNotificationInvalidSMTPPort is thrown if an invalid SMTP port was specified
+    ErrNotificationInvalidSMTPPort = errors.New("SMTP port must be greater than 0")
+
+    // ErrNotificationEmptyFromAddress is thrown if an empty from address was specified
+    ErrNotificationEmptyFromAddress = errors.New("notification from address cannot be empty")
+
+    // ErrNotificationInvalidNtfyURL is thrown if an invalid ntfy.sh URL was specified
+    ErrNotificationInvalidNtfyURL = errors.New("invalid ntfy.sh URL")
+
+    // ErrNotificationEmptyNtfyTopic is thrown if an empty ntfy.sh topic was specified
+    ErrNotificationEmptyNtfyTopic = errors.New("ntfy.sh topic cannot be empty when URL is provided")
 )
 ```
 
@@ -362,8 +492,18 @@ import "codeberg.org/isotop7/proviant/migrations"
 
 ## Index
 
+- [func AddNotificationPreferencesMigration\(db \*gorm.DB\) error](<#AddNotificationPreferencesMigration>)
 - [func RunBreakingDatabaseMigrations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RunBreakingDatabaseMigrations>)
 
+
+<a name="AddNotificationPreferencesMigration"></a>
+## func AddNotificationPreferencesMigration
+
+```go
+func AddNotificationPreferencesMigration(db *gorm.DB) error
+```
+
+AddNotificationPreferencesMigration adds notification preference columns to users table
 
 <a name="RunBreakingDatabaseMigrations"></a>
 ## func RunBreakingDatabaseMigrations
@@ -373,6 +513,31 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error
 ```
 
 
+
+# models
+
+```go
+import "codeberg.org/isotop7/proviant/models"
+```
+
+## Index
+
+- [type NotificationRecipientInfo](<#NotificationRecipientInfo>)
+
+
+<a name="NotificationRecipientInfo"></a>
+## type NotificationRecipientInfo
+
+NotificationRecipientInfo contains recipient information for different notification providers
+
+```go
+type NotificationRecipientInfo struct {
+    EmailAddress string
+    NtfyURL      string
+    NtfyTopic    string
+    NtfyToken    string
+}
+```
 
 # router
 
@@ -691,12 +856,14 @@ v1 implements version 1 of the proviant API
 - [func GetProduct\(ctx \*gin.Context\)](<#GetProduct>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
+- [func GetUserNotificationPreferences\(ctx \*gin.Context\)](<#GetUserNotificationPreferences>)
 - [func RestoreProduct\(ctx \*gin.Context\)](<#RestoreProduct>)
 - [func ScanProduct\(ctx \*gin.Context\)](<#ScanProduct>)
 - [func SearchProducts\(ctx \*gin.Context\)](<#SearchProducts>)
 - [func SetExpireAt\(ctx \*gin.Context\)](<#SetExpireAt>)
 - [func UpdateProduct\(ctx \*gin.Context\)](<#UpdateProduct>)
 - [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
+- [func UpdateUserNotificationPreferences\(ctx \*gin.Context\)](<#UpdateUserNotificationPreferences>)
 - [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
 
 
@@ -790,6 +957,15 @@ func GetProductsByBarcode(ctx *gin.Context)
 
 GetProductsByBarcode returns a list of products of a user matching a barcode @Summary Returns a list of products @Description Returns a list of products of user matching the given barcode @Tags product @Produce json @Param barcode path int true "Barcode" @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/productsByBarcode \[get\]
 
+<a name="GetUserNotificationPreferences"></a>
+## func GetUserNotificationPreferences
+
+```go
+func GetUserNotificationPreferences(ctx *gin.Context)
+```
+
+GetUserNotificationPreferences gets a user's notification preferences @Summary Gets a user's notification preferences @Description Retrieves notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} authentication.NotificationPreferences @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[get\]
+
 <a name="RestoreProduct"></a>
 ## func RestoreProduct
 
@@ -844,6 +1020,15 @@ func UpdateUser(ctx *gin.Context)
 
 UpdateUser updates a user @Summary Updates a user object @Description Updates properties of a user @Tags user @Accept json @Produce json @Param user body authentication.User true "User" @Success 200 \{object\} authentication.User @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user \[patch\]
 
+<a name="UpdateUserNotificationPreferences"></a>
+## func UpdateUserNotificationPreferences
+
+```go
+func UpdateUserNotificationPreferences(ctx *gin.Context)
+```
+
+UpdateUserNotificationPreferences updates a user's notification preferences @Summary Updates a user's notification preferences @Description Updates notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[post\]
+
 <a name="UpdateUserPassword"></a>
 ## func UpdateUserPassword
 
@@ -872,12 +1057,18 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) CreateUser\(user \*authentication.User\) error](<#DatabaseController.CreateUser>)
   - [func \(dbc DatabaseController\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#DatabaseController.DeleteProduct>)
   - [func \(dbc DatabaseController\) GetArchivedProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetArchivedProductByID>)
+  - [func \(dbc DatabaseController\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#DatabaseController.GetArchivedProductsGroupedByBarcode>)
+  - [func \(dbc DatabaseController\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#DatabaseController.GetExpiredProductsCount>)
   - [func \(dbc DatabaseController\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#DatabaseController.GetHouseholdByID>)
   - [func \(dbc DatabaseController\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#DatabaseController.GetHouseholdMembersMailAddressesByID>)
+  - [func \(dbc DatabaseController\) GetHouseholdMembersNotificationPreferences\(householdID uint\) \(\[\]models.NotificationRecipientInfo, error\)](<#DatabaseController.GetHouseholdMembersNotificationPreferences>)
+  - [func \(dbc DatabaseController\) GetLastInsertedProduct\(householdID uint\) \(database.Product, error\)](<#DatabaseController.GetLastInsertedProduct>)
+  - [func \(dbc DatabaseController\) GetLastNotifiedProduct\(householdID uint\) \(database.Product, error\)](<#DatabaseController.GetLastNotifiedProduct>)
   - [func \(dbc DatabaseController\) GetNextUserID\(\) uint](<#DatabaseController.GetNextUserID>)
   - [func \(dbc DatabaseController\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetProductByID>)
   - [func \(dbc DatabaseController\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#DatabaseController.GetProductsExpired>)
   - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
+  - [func \(dbc DatabaseController\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetTopArchivedProducts>)
   - [func \(dbc DatabaseController\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserArchivedProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#DatabaseController.GetUserByID>)
   - [func \(dbc DatabaseController\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#DatabaseController.GetUserByUsername>)
@@ -886,7 +1077,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulkByBarcode>)
   - [func \(dbc DatabaseController\) RestoreProduct\(productID int, userID uint\) error](<#DatabaseController.RestoreProduct>)
-  - [func \(dbc DatabaseController\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sort, order string, userID uint\) \(\[\]database.Product, error\)](<#DatabaseController.SearchProducts>)
+  - [func \(dbc DatabaseController\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#DatabaseController.SearchProducts>)
   - [func \(dbc DatabaseController\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#DatabaseController.SetProductExpireAt>)
   - [func \(dbc DatabaseController\) SetProductNotifiedAt\(productID uint\) error](<#DatabaseController.SetProductNotifiedAt>)
   - [func \(dbc DatabaseController\) UpdateProduct\(productID int, userID uint, product \*database.ProductDTOPatch\) error](<#DatabaseController.UpdateProduct>)
@@ -1010,6 +1201,24 @@ func (dbc DatabaseController) GetArchivedProductByID(productID int, userID uint)
 
 GetArchivedProductByID returns an archived product object \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.GetArchivedProductsGroupedByBarcode"></a>
+### func \(DatabaseController\) GetArchivedProductsGroupedByBarcode
+
+```go
+func (dbc DatabaseController) GetArchivedProductsGroupedByBarcode(userID uint) (map[string]int, error)
+```
+
+GetArchivedProductsGroupedByBarcode returns archived products grouped by barcode with counts
+
+<a name="DatabaseController.GetExpiredProductsCount"></a>
+### func \(DatabaseController\) GetExpiredProductsCount
+
+```go
+func (dbc DatabaseController) GetExpiredProductsCount(userID uint) (int, error)
+```
+
+GetExpiredProductsCount returns the count of expired products for a user
+
 <a name="DatabaseController.GetHouseholdByID"></a>
 ### func \(DatabaseController\) GetHouseholdByID
 
@@ -1027,6 +1236,33 @@ func (dbc DatabaseController) GetHouseholdMembersMailAddressesByID(householdID u
 ```
 
 GetHouseholdMembersMailAddressesByID returns the mail addresses of all users of a household
+
+<a name="DatabaseController.GetHouseholdMembersNotificationPreferences"></a>
+### func \(DatabaseController\) GetHouseholdMembersNotificationPreferences
+
+```go
+func (dbc DatabaseController) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
+```
+
+GetHouseholdMembersNotificationPreferences returns the notification preferences of all users of a household
+
+<a name="DatabaseController.GetLastInsertedProduct"></a>
+### func \(DatabaseController\) GetLastInsertedProduct
+
+```go
+func (dbc DatabaseController) GetLastInsertedProduct(householdID uint) (database.Product, error)
+```
+
+
+
+<a name="DatabaseController.GetLastNotifiedProduct"></a>
+### func \(DatabaseController\) GetLastNotifiedProduct
+
+```go
+func (dbc DatabaseController) GetLastNotifiedProduct(householdID uint) (database.Product, error)
+```
+
+GetLastNotifiedProduct returns the last notified product for a user
 
 <a name="DatabaseController.GetNextUserID"></a>
 ### func \(DatabaseController\) GetNextUserID
@@ -1063,6 +1299,15 @@ func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInte
 ```
 
 GetProductsExpiredAndNotificationPending returns an array of products which are expired and have a pending notification
+
+<a name="DatabaseController.GetTopArchivedProducts"></a>
+### func \(DatabaseController\) GetTopArchivedProducts
+
+```go
+func (dbc DatabaseController) GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error)
+```
+
+GetTopArchivedProducts returns the top N most frequently archived products
 
 <a name="DatabaseController.GetUserArchivedProductsBulk"></a>
 ### func \(DatabaseController\) GetUserArchivedProductsBulk
@@ -1140,7 +1385,7 @@ RestoreProduct restores a product \(based on product ID\) of a user \(based on u
 ### func \(DatabaseController\) SearchProducts
 
 ```go
-func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue, sort, order string, userID uint) ([]database.Product, error)
+func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
 ```
 
 SearchProducts returns an array of products of a user matching a search paramater and a query
@@ -1226,6 +1471,7 @@ DatabaseControllerInterface defines the interface for database operations needed
 type DatabaseControllerInterface interface {
     GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error)
     GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
+    GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
     SetProductNotifiedAt(productID uint) error
 }
 ```
@@ -1318,6 +1564,7 @@ import "codeberg.org/isotop7/proviant/models/authentication"
 
 - [type Login](<#Login>)
   - [func \(login \*Login\) IsValid\(\) error](<#Login.IsValid>)
+- [type NotificationPreferences](<#NotificationPreferences>)
 - [type Signup](<#Signup>)
   - [func \(signup \*Signup\) IsValid\(\) error](<#Signup.IsValid>)
 - [type User](<#User>)
@@ -1344,6 +1591,21 @@ func (login *Login) IsValid() error
 ```
 
 IsValid checks if the given login instance is valid
+
+<a name="NotificationPreferences"></a>
+## type NotificationPreferences
+
+NotificationPreferences contains user\-specific notification settings
+
+```go
+type NotificationPreferences struct {
+    EmailEnabled bool   `json:"emailEnabled" gorm:"default:true"`
+    NtfyEnabled  bool   `json:"ntfyEnabled" gorm:"default:false"`
+    NtfyURL      string `json:"ntfyUrl,omitempty"`
+    NtfyTopic    string `json:"ntfyTopic,omitempty"`
+    NtfyToken    string `json:"ntfyToken,omitempty"`
+}
+```
 
 <a name="Signup"></a>
 ## type Signup
@@ -1375,12 +1637,13 @@ User is the struct for the database definition and the JWT claims A single user 
 ```go
 type User struct {
     gorm.Model
-    ID          uint   `gorm:"primaryKey,unique"`
-    Username    string `json:"username"`
-    MailAddress string `json:"mailAddress"`
-    Password    string `json:"-"`
-    HouseholdID uint   `gorm:"index"`
-    Household   database.Household
+    ID                      uint   `gorm:"primaryKey,unique"`
+    Username                string `json:"username"`
+    MailAddress             string `json:"mailAddress"`
+    Password                string `json:"-"`
+    HouseholdID             uint   `gorm:"index"`
+    Household               database.Household
+    NotificationPreferences NotificationPreferences `gorm:"embedded"`
 }
 ```
 
@@ -1410,9 +1673,11 @@ configuration defines structs and methods for proviants configuration and specif
 - [type DatabaseSQLiteConfiguration](<#DatabaseSQLiteConfiguration>)
 - [type LoggingConfiguration](<#LoggingConfiguration>)
 - [type NotificationConfiguration](<#NotificationConfiguration>)
+- [type NtfyConfiguration](<#NtfyConfiguration>)
 - [type OpenFoodFactsConfiguration](<#OpenFoodFactsConfiguration>)
 - [type ProviantConfiguration](<#ProviantConfiguration>)
   - [func \(ec \*ProviantConfiguration\) ValidateDatabaseConfiguration\(\) error](<#ProviantConfiguration.ValidateDatabaseConfiguration>)
+  - [func \(ec \*ProviantConfiguration\) ValidateNotificationConfiguration\(\) error](<#ProviantConfiguration.ValidateNotificationConfiguration>)
   - [func \(ec \*ProviantConfiguration\) ValidateOpenFoodFactsConfiguration\(\) error](<#ProviantConfiguration.ValidateOpenFoodFactsConfiguration>)
 - [type SMTPConfiguration](<#SMTPConfiguration>)
 - [type ServerConfiguration](<#ServerConfiguration>)
@@ -1502,10 +1767,23 @@ NotificationConfiguration contains all properties regarding the notification han
 
 ```go
 type NotificationConfiguration struct {
-    Enabled     bool
-    Interval    int
-    FromAddress string
-    SMTP        SMTPConfiguration
+    Enabled  bool
+    Interval int
+    SMTP     SMTPConfiguration
+    Ntfy     NtfyConfiguration
+}
+```
+
+<a name="NtfyConfiguration"></a>
+## type NtfyConfiguration
+
+NtfyConfiguration contains all properties regarding the ntfy.sh notification provider
+
+```go
+type NtfyConfiguration struct {
+    URL     string
+    Topic   string
+    Timeout int
 }
 ```
 
@@ -1546,6 +1824,15 @@ func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error
 
 ValidateDatabaseConfiguration checks the current database configuration for common errors
 
+<a name="ProviantConfiguration.ValidateNotificationConfiguration"></a>
+### func \(\*ProviantConfiguration\) ValidateNotificationConfiguration
+
+```go
+func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error
+```
+
+ValidateNotificationConfiguration validates the notification configuration
+
 <a name="ProviantConfiguration.ValidateOpenFoodFactsConfiguration"></a>
 ### func \(\*ProviantConfiguration\) ValidateOpenFoodFactsConfiguration
 
@@ -1562,11 +1849,12 @@ SMTPConfiguration contains all properties regarding the notification handler tar
 
 ```go
 type SMTPConfiguration struct {
-    Host     string
-    Port     int
-    SSL      bool
-    User     string
-    Password string
+    Host        string
+    Port        int
+    SSL         bool
+    User        string
+    FromAddress string
+    Password    string
 }
 ```
 

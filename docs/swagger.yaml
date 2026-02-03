@@ -15,6 +15,19 @@ definitions:
     - password
     - username
     type: object
+  authentication.NotificationPreferences:
+    properties:
+      emailEnabled:
+        type: boolean
+      ntfyEnabled:
+        type: boolean
+      ntfyToken:
+        type: string
+      ntfyTopic:
+        type: string
+      ntfyUrl:
+        type: string
+    type: object
   authentication.Signup:
     properties:
       mailAddress:
@@ -42,6 +55,8 @@ definitions:
         type: integer
       mailAddress:
         type: string
+      notificationPreferences:
+        $ref: '#/definitions/authentication.NotificationPreferences'
       updatedAt:
         type: string
       username:
@@ -614,6 +629,51 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Updates a user object
+      tags:
+      - user
+  /api/v1/user/notification-preferences:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves notification preferences for the current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authentication.NotificationPreferences'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Gets a user's notification preferences
+      tags:
+      - user
+    post:
+      consumes:
+      - application/json
+      description: Updates notification preferences for the current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Updates a user's notification preferences
       tags:
       - user
   /api/v1/user/password:

@@ -155,6 +155,8 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedUserAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
 	protectedUserAPI.PATCH("", v1.UpdateUser)
 	protectedUserAPI.POST("/password", v1.UpdateUserPassword)
+	protectedUserAPI.GET("/notification-preferences", v1.GetUserNotificationPreferences)
+	protectedUserAPI.POST("/notification-preferences", v1.UpdateUserNotificationPreferences)
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")

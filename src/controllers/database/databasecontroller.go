@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/models/webparts"
@@ -286,6 +287,37 @@ func (dbc DatabaseController) GetHouseholdMembersMailAddressesByID(householdID u
 		mailAddresses = append(mailAddresses, users[idx].MailAddress)
 	}
 	return mailAddresses, nil
+}
+
+// GetHouseholdMembersNotificationPreferences returns the notification preferences of all users of a household
+func (dbc DatabaseController) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error) {
+	var preferences []models.NotificationRecipientInfo
+
+	// Check for household
+	_, householdErr := dbc.GetHouseholdByID(householdID)
+	if householdErr != nil {
+		return preferences, householdErr
+	}
+
+	// Find users with matching household ID
+	var users []*authentication.User
+	findErr := dbc.DBHandle.Where("household_id = ?", householdID).Find(&users)
+	if findErr.Error != nil {
+		return preferences, findErr.Error
+	}
+
+	// Loop through household members and collect notification preferences
+	for idx := range users {
+		user := users[idx]
+		preferences = append(preferences, models.NotificationRecipientInfo{
+			EmailAddress: user.MailAddress,
+			NtfyURL:      user.NotificationPreferences.NtfyURL,
+			NtfyTopic:    user.NotificationPreferences.NtfyTopic,
+			NtfyToken:    user.NotificationPreferences.NtfyToken,
+		})
+	}
+
+	return preferences, nil
 }
 
 // GetUserProductsBulk returns an array of products of a user (based on user ID)

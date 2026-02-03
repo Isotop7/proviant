@@ -10,7 +10,7 @@ services:
   proviant:
     build: ./
     restart: always
-    ports: 
+    ports:
       - "80:5050"
     environment:
       - GIN_MODE=debug
@@ -19,7 +19,7 @@ services:
       - PROVIANT_ENGINE=sqlite
       - PROVIANT_SQLITE_FILEPATH=data/proviant.db
       - PROVIANT_NOTIFICATION_SMTP_HOST=smtp
-      - PROVIANT_NOTIFICATION_FROMADDRESS=proviant@yourdomain.com
+      - PROVIANT_NOTIFICATION_SMTP_FROMADDRESS=proviant@yourdomain.com
     volumes:
       - proviantlogs:/app/logs
       - proviantdb:/app/data
@@ -30,4 +30,3 @@ volumes:
   proviantdb: {}
   proviantlogs: {}
   smtpdb: {}
-  

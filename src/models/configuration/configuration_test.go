@@ -171,12 +171,12 @@ func TestSMTPConfigurationStruct(t *testing.T) {
 func TestNotificationConfigurationStruct(t *testing.T) {
 	t.Run("can create NotificationConfiguration", func(t *testing.T) {
 		config := NotificationConfiguration{
-			Enabled:     true,
-			Interval:    24,
-			FromAddress: "notifications@example.com",
+			Enabled:  true,
+			Interval: 24,
 			SMTP: SMTPConfiguration{
-				Host: "smtp.example.com",
-				Port: 587,
+				Host:        "smtp.example.com",
+				Port:        587,
+				FromAddress: "notifications@example.com",
 			},
 		}
 
@@ -186,8 +186,8 @@ func TestNotificationConfigurationStruct(t *testing.T) {
 		if config.Interval != 24 {
 			t.Errorf("Interval = %v, want 24", config.Interval)
 		}
-		if config.FromAddress != "notifications@example.com" {
-			t.Errorf("FromAddress = %v, want notifications@example.com", config.FromAddress)
+		if config.SMTP.FromAddress != "notifications@example.com" {
+			t.Errorf("FromAddress = %v, want notifications@example.com", config.SMTP.FromAddress)
 		}
 		if config.SMTP.Host != "smtp.example.com" {
 			t.Errorf("SMTP.Host = %v, want smtp.example.com", config.SMTP.Host)

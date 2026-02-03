@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"fmt"
+	"strings"
 
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
@@ -41,10 +42,36 @@ func assignHouseholdsToUsers(db *gorm.DB) error {
 	return nil
 }
 
+// AddNotificationPreferencesMigration adds notification preference columns to users table
+func AddNotificationPreferencesMigration(db *gorm.DB) error {
+	// Try to add the columns - if they already exist, this will fail but that's okay
+	err := db.Exec(`
+		ALTER TABLE users
+		ADD COLUMN email_enabled BOOLEAN DEFAULT TRUE,
+		ADD COLUMN ntfy_enabled BOOLEAN DEFAULT FALSE,
+		ADD COLUMN ntfy_url TEXT,
+		ADD COLUMN ntfy_topic TEXT,
+		ADD COLUMN ntfy_token TEXT
+	`).Error
+
+	// If the error is about duplicate columns, we can ignore it
+	if err != nil && (strings.Contains(err.Error(), "duplicate column") || strings.Contains(err.Error(), "already exists")) {
+		return nil
+	}
+
+	return err
+}
+
 func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 	// Migrations version 0.2.0
 	logger.Info().Msg("Running database migrations for version 0.2.0")
 	if err := assignHouseholdsToUsers(db); err != nil {
+		return err
+	}
+
+	// Migrations for notification preferences
+	logger.Info().Msg("Running database migrations for notification preferences")
+	if err := AddNotificationPreferencesMigration(db); err != nil {
 		return err
 	}
 

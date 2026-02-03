@@ -74,7 +74,7 @@ PROVIANT_LOGGING_FILE="proviant.log"                                            
 # Notification configuration
 PROVIANT_NOTIFICATION_ENABLED=true                                            # Enable notifications
 PROVIANT_NOTIFICATION_INTERVAL=12                                             # Interval in hours when notifications should be send
-PROVIANT_NOTIFICATION_FROMADDRESS="sender@local.net"                          # Sender address for notifications
+PROVIANT_NOTIFICATION_SMTP_FROMADDRESS="sender@local.net"                          # Sender address for notifications
 PROVIANT_NOTIFICATION_SMTP_HOST="127.0.0.1"                                   # Host or IP address of SMTP server
 PROVIANT_NOTIFICATION_SMTP_PORT=25                                            # Port of SMTP server
 PROVIANT_NOTIFICATION_SMTP_SSL=false                                          # Enables/disables SSL

@@ -1,0 +1,10 @@
+proviant - Product Expiration Notification
+
+Product: {{.ProductName}}
+Barcode: {{.Barcode}}
+ID: {{.ID}}
+Expiration Date: {{.ExpireAt.Format "2006-01-02"}}
+
+Please take the necessary actions to ensure the safety and quality of your products.
+
+Thank you for using proviant!
