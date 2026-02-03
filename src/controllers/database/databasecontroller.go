@@ -184,6 +184,7 @@ func (dbc DatabaseController) UpdateUser(userID uint, user *authentication.User)
 	// Update values
 	dbUser.Username = user.Username
 	dbUser.MailAddress = user.MailAddress
+	dbUser.NotificationPreferences = user.NotificationPreferences
 
 	// Save updated product
 	saveResult := dbc.DBHandle.Save(&dbUser)
