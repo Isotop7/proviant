@@ -95,13 +95,13 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(e \*EmailNotificationProvider\) IsConfigured\(\) bool](<#EmailNotificationProvider.IsConfigured>)
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
 - [type NotificationController](<#NotificationController>)
-  - [func NewNotificationController\(logger \*zerolog.Logger, config configuration.NotificationConfiguration, dbController dbController.DatabaseControllerInterface\) \*NotificationController](<#NewNotificationController>)
+  - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, dbc dbController.DatabaseControllerInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
 - [type NotificationProvider](<#NotificationProvider>)
 - [type NtfyNotificationProvider](<#NtfyNotificationProvider>)
   - [func \(n \*NtfyNotificationProvider\) GetProviderType\(\) string](<#NtfyNotificationProvider.GetProviderType>)
   - [func \(n \*NtfyNotificationProvider\) IsConfigured\(\) bool](<#NtfyNotificationProvider.IsConfigured>)
-  - [func \(n \*NtfyNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#NtfyNotificationProvider.SendNotification>)
+  - [func \(n \*NtfyNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#NtfyNotificationProvider.SendNotification>)
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
 - [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
@@ -154,7 +154,7 @@ NotificationController is the object struct to generate and send notifications f
 ```go
 type NotificationController struct {
     Logger             *zerolog.Logger
-    Configuration      configuration.NotificationConfiguration
+    Configuration      *configuration.NotificationConfiguration
     DatabaseController dbController.DatabaseControllerInterface
     Providers          []NotificationProvider
 }
@@ -164,7 +164,7 @@ type NotificationController struct {
 ### func NewNotificationController
 
 ```go
-func NewNotificationController(logger *zerolog.Logger, config configuration.NotificationConfiguration, dbController dbController.DatabaseControllerInterface) *NotificationController
+func NewNotificationController(logger *zerolog.Logger, config *configuration.NotificationConfiguration, dbc dbController.DatabaseControllerInterface) *NotificationController
 ```
 
 NewNotificationController creates a new NotificationController with configured providers
@@ -226,7 +226,7 @@ func (n *NtfyNotificationProvider) IsConfigured() bool
 ### func \(\*NtfyNotificationProvider\) SendNotification
 
 ```go
-func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo interface{}) error
+func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo any) error
 ```
 
 
