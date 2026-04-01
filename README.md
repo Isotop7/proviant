@@ -16,14 +16,20 @@
 
 ## Features
 
-- 📝 Track and log your products.
-- 📊 Add information from OpenFoodFacts API.
-- ⏰ Get reminders if products are due to expire.
+- 📝 Track and log products with expiration dates.
+- 📷 Scan product barcodes via camera to auto-fill data from [OpenFoodFacts](https://world.openfoodfacts.org/).
+- 🗄️ Archive and restore products; bulk delete, archive, and restore.
+- 🔍 Search and filter products by multiple parameters.
+- ⏰ Receive expiration reminders via email (SMTP) or push notifications ([Ntfy](https://ntfy.sh/)).
+- 🔔 Per-user notification preferences.
+- 👥 Multi-user support with household scoping.
+- 🌙 Dark theme.
 
 ## Technologies and Tools
 
 - **Web:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html), [Bootstrap](https://getbootstrap.com/)
 - **Database:** MariaDB or SQLite
+- **Notifications:** SMTP, [Ntfy](https://ntfy.sh/)
 
 ## Installation and Usage
 
@@ -102,7 +108,6 @@ User-facing important changes are documented in the [CHANGELOG.md](./CHANGELOG.m
 ## What's missing?
 
 - Administrative Functions: Create and Update users
-- Everything that's still an issue 😅
 
 ## Documentation
 
@@ -143,5 +148,3 @@ This project is licensed under the [MIT License](LICENSE).
 - LinkedIn: [Hendrik Röder](https://www.linkedin.com/in/hendrik-r%C3%B6der-9b8483198/)
 
 ---
-
-⭐️ If you find this project helpful, give it a star and share it with others! ⭐️
