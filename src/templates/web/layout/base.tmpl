@@ -6,6 +6,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ if .Title }}proviant - {{ .Title}}{{ else }}proviant{{ end }}</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#4e9ab8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Proviant">
+  <link rel="apple-touch-icon" href="/assets/icons/proviant_logo_192.png">
+
   <link rel="stylesheet" href="/assets/css/main.css">
   <script src="/assets/js/proviant.js"></script>
 </head>
@@ -27,6 +37,14 @@
       var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
       tooltipEls.forEach(function (el) { new bootstrap.Tooltip(el); });
     });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').catch(function (err) {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
   </script>
 </body>
 

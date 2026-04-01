@@ -167,6 +167,25 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedProductAPI.POST("/:id/restore", v1.RestoreProduct)
 	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)
 
+	// PWA — serve manifest and service worker at root scope (no auth required)
+	engine.GET("/manifest.json", func(ctx *gin.Context) {
+		content, readErr := assets.AssetFiles.ReadFile("manifest.json")
+		if readErr != nil {
+			ctx.Status(http.StatusNotFound)
+			return
+		}
+		ctx.Data(http.StatusOK, "application/manifest+json", content)
+	})
+	engine.GET("/sw.js", func(ctx *gin.Context) {
+		content, readErr := assets.AssetFiles.ReadFile("js/sw.js")
+		if readErr != nil {
+			ctx.Status(http.StatusNotFound)
+			return
+		}
+		ctx.Header("Service-Worker-Allowed", "/")
+		ctx.Data(http.StatusOK, "application/javascript", content)
+	})
+
 	// Web frontend routes
 	// Serve asset files
 	engine.StaticFS("/assets", http.FS(assets.AssetFiles))
