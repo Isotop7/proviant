@@ -80,17 +80,20 @@ $bootstrap-icons-font-dir: "../fonts";
 @import "bootstrap-icons/font/bootstrap-icons.scss";
 
 //
-// Dark mode — boosted status colors for readability on dark backgrounds
+// Dark mode — improved status colors and card surfaces
 //
 [data-bs-theme="dark"] {
-    --bs-success:     #4ade80;
-    --bs-success-rgb: 74, 222, 128;
-    --bs-warning:     #fbbf24;
-    --bs-warning-rgb: 251, 191, 36;
-    --bs-danger:      #f87171;
+    --bs-primary:     #4e9ab8;
+    --bs-primary-rgb: 78, 154, 184;
+    --bs-success:     #34d399;   // emerald — reads as "fresh"
+    --bs-success-rgb: 52, 211, 153;
+    --bs-warning:     #fb923c;   // orange — clearer urgency than amber/yellow
+    --bs-warning-rgb: 251, 146, 60;
+    --bs-danger:      #f87171;   // red — expired
     --bs-danger-rgb:  248, 113, 113;
-    --bs-info:        #67e8f9;
+    --bs-info:        #67e8f9;   // cyan
     --bs-info-rgb:    103, 232, 249;
+    --bs-card-bg:     rgba(255, 255, 255, 0.04); // subtle lift from dark background
 }
 
 //
