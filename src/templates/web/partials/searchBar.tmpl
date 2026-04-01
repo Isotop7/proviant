@@ -1,45 +1,42 @@
 {{ define "searchBar" }}
-<style>
-    .card {
-        min-height: 150px;
-    }
 
-    .card-body {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-</style>
-
-<div class="row mb-4">
-    <div class="search-bar input-group mb-2 mb-md-0 w-100 w-md-auto">
-        <span class="input-group-text" id="addon-wrapping">
-            <i class="bi bi-key"></i>
+<div role="search" class="row mb-4">
+    <div class="search-bar input-group mb-2 mb-md-0 w-100">
+        <label for="search-query" class="visually-hidden">Search products</label>
+        <span class="input-group-text" id="addon-wrapping" aria-hidden="true">
+            <i class="bi bi-search"></i>
         </span>
-        <select id="search-param" class="form-select">
+        <select id="search-param" class="form-select" aria-label="Search by field">
             <option value="product_name" {{ if eq .QueryParam "product_name" }}selected{{ end }}>Product Name</option>
             <option value="barcode" {{ if eq .QueryParam "barcode" }}selected{{ end }}>Barcode</option>
         </select>
-        <input type="text" id="search-query" class="form-control" placeholder="Search..." value="{{ .QueryValue }}" />
-        <button class="btn btn-outline-secondary dropdown-toggle mb-md-0 w-md-auto" type="button" data-bs-toggle="collapse" data-bs-target="#advanced-filters">
-            <i class="bi bi-funnel"></i>
+        <input type="search" id="search-query" class="form-control" placeholder="Search..."
+            value="{{ .QueryValue }}" aria-describedby="addon-wrapping" />
+        <button class="btn btn-outline-secondary" type="button"
+            data-bs-toggle="collapse" data-bs-target="#advanced-filters"
+            aria-expanded="false" aria-controls="advanced-filters"
+            title="Advanced filters">
+            <i class="bi bi-funnel" aria-hidden="true"></i>
+            <span class="visually-hidden">Advanced filters</span>
         </button>
-        <button id="search-btn" class="btn btn-primary">
-            <i class="bi bi-search me-2"></i>
+        <button id="search-btn" class="btn btn-primary" title="Search">
+            <i class="bi bi-search me-1" aria-hidden="true"></i>
+            <span class="d-none d-sm-inline">Search</span>
         </button>
-        <button id="show-all-btn" class="btn btn-outline-secondary rounded-end" type="button">
-            <i class="bi bi-arrow-counterclockwise me-2"></i>
+        <button id="show-all-btn" class="btn btn-outline-secondary rounded-end" type="button" title="Show all">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+            <span class="visually-hidden">Show all products</span>
         </button>
         <div id="advanced-filters" class="collapse w-100">
             <div class="input-group my-2">
-                <span class="input-group-text">Order by</span>
+                <label for="sort-param" class="input-group-text">Order by</label>
                 <select id="sort-param" class="form-select">
                     <option value="created_at" {{ if eq .Sort "created_at" }}selected{{ end }}>Created At</option>
                     <option value="expire_at" {{ if eq .Sort "expire_at" }}selected{{ end }}>Expire At</option>
                     <option value="scanned_at" {{ if eq .Sort "scanned_at" }}selected{{ end }}>Scanned At</option>
                     <option value="notified_at" {{ if eq .Sort "notified_at" }}selected{{ end }}>Notified At</option>
                 </select>
-                <select id="sort-order" class="form-select">
+                <select id="sort-order" class="form-select" aria-label="Sort order">
                     <option value="asc" {{ if eq .Order "asc" }}selected{{ end }}>↑ Ascending</option>
                     <option value="desc" {{ if eq .Order "desc" }}selected{{ end }}>↓ Descending</option>
                 </select>
@@ -49,5 +46,5 @@
 </div>
 
 <!-- Empty product-list div for JavaScript injection -->
-<div id="product-list" class="row row-cols-1 row-cols-lg-2 g-5 my-auto" style="display: none;"></div>
+<div id="product-list" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 my-auto" style="display: none;"></div>
 {{ end }}

@@ -11,7 +11,7 @@
                 {{ .Title }}
             </div>
             <div class="card-body">
-                <p class="card-title display-5 my-2 text-primary fw-bold">
+                <p class="card-title display-5 my-2 fw-bold {{ if .Variant }}text-{{ .Variant }}{{ else }}text-primary{{ end }}">
                     {{ .Hero }}
                 </p>
                 <p class="card-text fs-5 fw-light">

@@ -923,10 +923,11 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 		if expiredErr == nil && expiredCount > 0 {
 			percentage := float64(expiredCount) / float64(len(activeProducts)) * 100
 			homeTiles = append(homeTiles, webparts.Tile{
-				Title:  "Unopened Expired Products",
-				Hero:   fmt.Sprintf("%.1f%%", percentage),
-				Body:   fmt.Sprintf("%.1f%% of your %d active products are expired but not archived", percentage, len(activeProducts)),
-				Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
+				Title:   "Unopened Expired Products",
+				Hero:    fmt.Sprintf("%.1f%%", percentage),
+				Body:    fmt.Sprintf("%.1f%% of your %d active products are expired but not archived", percentage, len(activeProducts)),
+				Footer:  fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
+				Variant: "danger",
 			})
 		}
 	}

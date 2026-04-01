@@ -15,24 +15,23 @@ $font-family-base: 'DM Sans Variable', sans-serif;
 $card-cap-bg:  rgba(var(--bs-body-color-rgb), .15);
 $card-bg:  rgba(var(--bs-body-color-rgb), .01);
 $list-group-border-width: 2px;
-$line-height-base: 2;
+$line-height-base: 1.6;
 
-// Colors
-// Minimal Slate Theme
-$primary: #577590; // Slate Blue
-$secondary: #a3a5b3; // Cool Gray
-$info: #a8dadc; // Soft Teal
-$light: #f1faee; // Light Cream
-$dark: #1d3557; // Dark Slate Blue
-$gray: #d1d9e6; // Light Gray
-$success: #66a182; // Muted Green
-$warning: #e8c547; // Soft Yellow
-$danger: #ef476f; // Bright Red
+// Colors — Slate + status traffic-light
+$primary:    #577590; // Slate Blue
+$secondary:  #a3a5b3; // Cool Gray
+$info:       #a8dadc; // Soft Teal (light mode)
+$light:      #f1faee; // Light Cream
+$dark:       #1d3557; // Dark Slate Blue
+$gray:       #d1d9e6; // Light Gray
+$success:    #66a182; // Muted Green (light mode)
+$warning:    #e8c547; // Soft Yellow (light mode)
+$danger:     #ef476f; // Bright Red (light mode)
 $link-color: #457b9d; // Slate Blue
 
 // Additional colors
-$body-bg: #f5f7fa; // Light Gray Background
-$body-color: #2a2a2a; // Dark Text
+$body-bg:     #f5f7fa; // Light Gray Background
+$body-color:  #2a2a2a; // Dark Text
 $border-color: #e1e5ec; // Light Border Gray
 $shadow-color: rgba(30, 45, 60, 0.15); // Soft Shadow
 
@@ -81,6 +80,20 @@ $bootstrap-icons-font-dir: "../fonts";
 @import "bootstrap-icons/font/bootstrap-icons.scss";
 
 //
+// Dark mode — boosted status colors for readability on dark backgrounds
+//
+[data-bs-theme="dark"] {
+    --bs-success:     #4ade80;
+    --bs-success-rgb: 74, 222, 128;
+    --bs-warning:     #fbbf24;
+    --bs-warning-rgb: 251, 191, 36;
+    --bs-danger:      #f87171;
+    --bs-danger-rgb:  248, 113, 113;
+    --bs-info:        #67e8f9;
+    --bs-info-rgb:    103, 232, 249;
+}
+
+//
 // Custom styles
 //
 .navbar {
@@ -95,6 +108,10 @@ $bootstrap-icons-font-dir: "../fonts";
 
 .navbar-nav .nav-link:hover i {
     color: var(--bs-info);
+}
+
+.navbar-nav .nav-link.active i {
+    color: var(--bs-primary);
 }
 
 .logo-font {
@@ -116,26 +133,38 @@ div.form-floating > input#inputMailAddress {
     margin-bottom: 10px;
 }
 
-td a,th a {
+td a, th a {
     color: inherit;
     text-decoration: none;
 }
 
 .form-check-input:checked {
     background-color: var(--bs-primary);
-    border-color: var(--bs-primary)
+    border-color: var(--bs-primary);
 }
 
+// Product card — image container
 .product-card-img-container {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
+    min-height: 80px;
+    background-color: rgba(var(--bs-body-color-rgb), .03);
+    border-radius: var(--bs-card-border-radius);
 }
 
 .product-card-img {
-    max-height: 160px;
-    object-fit: cover;
+    max-height: 120px;
+    object-fit: contain;
+    padding: 8px;
+}
+
+// Ensure card body fills height and spaces content vertically
+.card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .product-btn-toolbar {
@@ -147,13 +176,36 @@ td a,th a {
     width: 48px;
 }
 
+// Card press micro-interaction
 .card {
-    transition: transform 0.06s ease;
+    transition: transform 0.06s ease, box-shadow 0.15s ease;
+    min-height: 150px;
 }
+
 .card.card-clicked {
     transform: scale(0.98);
 }
 
 .hero-icon {
     font-size: 6rem;
+}
+
+// Search bar — vertically center the input group
+.search-bar {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+//
+// Reduced motion — respect system preference
+//
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
