@@ -185,6 +185,11 @@ function shiftExpiry(days, months) {
     if (days !== 0) base.setDate(base.getDate() + days);
     if (months !== 0) base.setMonth(base.getMonth() + months);
     el.value = formatInputDate(base);
+    // Flash the field so the user sees the value changed
+    el.classList.remove('date-updated');
+    void el.offsetWidth; // force reflow to restart the animation if clicked repeatedly
+    el.classList.add('date-updated');
+    el.addEventListener('animationend', () => el.classList.remove('date-updated'), { once: true });
 }
 
 // Async functions

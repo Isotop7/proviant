@@ -201,6 +201,19 @@ td a, th a {
 }
 
 //
+// Expiry field update flash
+//
+@keyframes expire-flash {
+    0%   { box-shadow: 0 0 0 3px var(--bs-info); }
+    70%  { box-shadow: 0 0 0 3px rgba(var(--bs-info-rgb), 0.3); }
+    100% { box-shadow: 0 0 0 0   rgba(var(--bs-info-rgb), 0); }
+}
+
+#expireAt.date-updated {
+    animation: expire-flash 0.5s ease-out forwards;
+}
+
+//
 // Reduced motion — respect system preference
 //
 @media (prefers-reduced-motion: reduce) {
