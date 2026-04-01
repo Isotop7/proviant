@@ -166,6 +166,26 @@ function setProductOptionsState(productState, products) {
             break;
     }
 }
+function parseInputDate(value) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
+function formatInputDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function shiftExpiry(days, months) {
+    // Always read the element fresh — avoids stale reference after DOM updates
+    const el = document.getElementById('expireAt');
+    const base = el.value ? parseInputDate(el.value) : new Date();
+    if (days !== 0) base.setDate(base.getDate() + days);
+    if (months !== 0) base.setMonth(base.getMonth() + months);
+    el.value = formatInputDate(base);
+}
 
 // Async functions
 async function queryProductInfoRequest(barcode) {
@@ -409,3 +429,6 @@ document.getElementById('btnScan').onclick = function (event) {
     event.preventDefault();
     handleScanButton();
 };
+document.getElementById('btnExpireAdd3').onclick = function () { shiftExpiry(3, 0); };
+document.getElementById('btnExpireAdd7').onclick = function () { shiftExpiry(7, 0); };
+document.getElementById('btnExpireAdd1m').onclick = function () { shiftExpiry(0, 1); };
