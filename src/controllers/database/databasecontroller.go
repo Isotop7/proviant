@@ -750,6 +750,7 @@ func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInte
 	var notificationProducts []database.Product
 	// Get expired products with pending notification
 	getError := dbc.DBHandle.
+		Where("expire_at > ?", time.Time{}).
 		Where("expire_at < ?", time.Now()).
 		Where("notified_at < ?", time.Now().Add(-(sleepInterval))).
 		Find(&notificationProducts)
