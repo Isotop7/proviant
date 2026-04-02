@@ -90,14 +90,16 @@ import "codeberg.org/isotop7/proviant/controllers"
 
 ## Index
 
-- [func SendInvitationEmail\(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, smtpConfig configuration.SMTPConfiguration, logger \*zerolog.Logger\) error](<#SendInvitationEmail>)
 - [type EmailNotificationProvider](<#EmailNotificationProvider>)
   - [func \(e \*EmailNotificationProvider\) GetProviderType\(\) string](<#EmailNotificationProvider.GetProviderType>)
   - [func \(e \*EmailNotificationProvider\) IsConfigured\(\) bool](<#EmailNotificationProvider.IsConfigured>)
+  - [func \(e \*EmailNotificationProvider\) SendInvitationEmail\(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#EmailNotificationProvider.SendInvitationEmail>)
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
 - [type NotificationController](<#NotificationController>)
   - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, dbc dbController.DatabaseControllerInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
+  - [func \(nc \*NotificationController\) DispatchInvitations\(baseURL string\)](<#NotificationController.DispatchInvitations>)
+  - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#NotificationController.SendInvitationEmail>)
 - [type NotificationProvider](<#NotificationProvider>)
 - [type NtfyNotificationProvider](<#NtfyNotificationProvider>)
   - [func \(n \*NtfyNotificationProvider\) GetProviderType\(\) string](<#NtfyNotificationProvider.GetProviderType>)
@@ -107,15 +109,6 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
 - [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
 
-
-<a name="SendInvitationEmail"></a>
-## func SendInvitationEmail
-
-```go
-func SendInvitationEmail(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, smtpConfig configuration.SMTPConfiguration, logger *zerolog.Logger) error
-```
-
-SendInvitationEmail sends an invitation email to the recipient
 
 <a name="EmailNotificationProvider"></a>
 ## type EmailNotificationProvider
@@ -146,6 +139,15 @@ func (e *EmailNotificationProvider) IsConfigured() bool
 ```
 
 
+
+<a name="EmailNotificationProvider.SendInvitationEmail"></a>
+### func \(\*EmailNotificationProvider\) SendInvitationEmail
+
+```go
+func (e *EmailNotificationProvider) SendInvitationEmail(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error
+```
+
+SendInvitationEmail sends an invitation email to the recipient
 
 <a name="EmailNotificationProvider.SendNotification"></a>
 ### func \(\*EmailNotificationProvider\) SendNotification
@@ -187,6 +189,24 @@ func (nc *NotificationController) Dispatch()
 ```
 
 Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them. The timeout can be configured with the Configuration struct of NotificationController
+
+<a name="NotificationController.DispatchInvitations"></a>
+### func \(\*NotificationController\) DispatchInvitations
+
+```go
+func (nc *NotificationController) DispatchInvitations(baseURL string)
+```
+
+DispatchInvitations starts a background goroutine that periodically retries sending pending invitation emails. It runs once immediately on startup, then every Interval hours \(reusing the same config as product notifications\).
+
+<a name="NotificationController.SendInvitationEmail"></a>
+### func \(\*NotificationController\) SendInvitationEmail
+
+```go
+func (nc *NotificationController) SendInvitationEmail(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error
+```
+
+SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database.
 
 <a name="NotificationProvider"></a>
 ## type NotificationProvider
@@ -610,7 +630,7 @@ router contains the gin router definitions and maps requests to handlers
 - [func AuthorizatorNotUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorNotUserAware>)
 - [func AuthorizatorUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorUserAware>)
 - [func JWTMiddleware\(proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
-- [func SetupRouter\(logger \*zerolog.Logger, proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl \*controllers.OpenFoodFactsAPIController\) \*gin.Engine](<#SetupRouter>)
+- [func SetupRouter\(logger \*zerolog.Logger, proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl \*controllers.OpenFoodFactsAPIController, notificationController \*controllers.NotificationController\) \*gin.Engine](<#SetupRouter>)
 - [func UnauthorizedAPIFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedAPIFunc>)
 - [func UnauthorizedFrontendFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedFrontendFunc>)
 - [func ZerologMiddleware\(logger \*zerolog.Logger\) gin.HandlerFunc](<#ZerologMiddleware>)
@@ -647,7 +667,7 @@ JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authoriza
 ## func SetupRouter
 
 ```go
-func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController) *gin.Engine
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) *gin.Engine
 ```
 
 SetupRouter creates the gin engine and associated middleware
@@ -1276,6 +1296,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetNextUserID\(\) uint](<#DatabaseController.GetNextUserID>)
   - [func \(dbc DatabaseController\) GetPendingApplicationsForAdmin\(adminUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#DatabaseController.GetPendingApplicationsForAdmin>)
   - [func \(dbc DatabaseController\) GetPendingApplicationsForApplicant\(applicantUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#DatabaseController.GetPendingApplicationsForApplicant>)
+  - [func \(dbc DatabaseController\) GetPendingInvitationsNotSent\(retryInterval time.Duration\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetPendingInvitationsNotSent>)
   - [func \(dbc DatabaseController\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetProductByID>)
   - [func \(dbc DatabaseController\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#DatabaseController.GetProductsExpired>)
   - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
@@ -1288,6 +1309,8 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulkByBarcode>)
   - [func \(dbc DatabaseController\) LeaveHousehold\(userID uint\) error](<#DatabaseController.LeaveHousehold>)
+  - [func \(dbc DatabaseController\) MarkInvitationSendFailed\(invitationID uint\) error](<#DatabaseController.MarkInvitationSendFailed>)
+  - [func \(dbc DatabaseController\) MarkInvitationSent\(invitationID uint\) error](<#DatabaseController.MarkInvitationSent>)
   - [func \(dbc DatabaseController\) RejectApplication\(applicationID, adminUserID uint\) error](<#DatabaseController.RejectApplication>)
   - [func \(dbc DatabaseController\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#DatabaseController.RemoveMemberFromHousehold>)
   - [func \(dbc DatabaseController\) RestoreProduct\(productID int, userID uint\) error](<#DatabaseController.RestoreProduct>)
@@ -1605,6 +1628,15 @@ func (dbc DatabaseController) GetPendingApplicationsForApplicant(applicantUserID
 
 GetPendingApplicationsForApplicant returns all pending applications submitted by the given user.
 
+<a name="DatabaseController.GetPendingInvitationsNotSent"></a>
+### func \(DatabaseController\) GetPendingInvitationsNotSent
+
+```go
+func (dbc DatabaseController) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
+```
+
+GetPendingInvitationsNotSent returns all pending invitations that have not been successfully sent yet, or that failed and are due for a retry based on the given retry interval.
+
 <a name="DatabaseController.GetProductByID"></a>
 ### func \(DatabaseController\) GetProductByID
 
@@ -1712,6 +1744,24 @@ func (dbc DatabaseController) LeaveHousehold(userID uint) error
 ```
 
 LeaveHousehold creates a new personal household for the user, moves all products if they were the sole member, then updates the user's HouseholdID to the new household.
+
+<a name="DatabaseController.MarkInvitationSendFailed"></a>
+### func \(DatabaseController\) MarkInvitationSendFailed
+
+```go
+func (dbc DatabaseController) MarkInvitationSendFailed(invitationID uint) error
+```
+
+MarkInvitationSendFailed increments the send attempt counter without marking as sent
+
+<a name="DatabaseController.MarkInvitationSent"></a>
+### func \(DatabaseController\) MarkInvitationSent
+
+```go
+func (dbc DatabaseController) MarkInvitationSent(invitationID uint) error
+```
+
+MarkInvitationSent marks an invitation as successfully sent
 
 <a name="DatabaseController.RejectApplication"></a>
 ### func \(DatabaseController\) RejectApplication
@@ -1846,6 +1896,11 @@ type DatabaseControllerInterface interface {
     GetInvitationByToken(token string) (database.HouseholdInvitation, error)
     AcceptInvitation(token, email string, userID uint) error
     CancelInvitation(invitationID, userID uint) error
+    GetUserByID(userID uint) (authentication.User, error)
+    GetHouseholdByID(householdID uint) (database.Household, error)
+    GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
+    MarkInvitationSent(invitationID uint) error
+    MarkInvitationSendFailed(invitationID uint) error
 }
 ```
 
@@ -2242,6 +2297,7 @@ type ServerConfiguration struct {
     Port           int
     Authentication AuthenticationConfiguration
     CORS           CorsConfiguration
+    BaseURL        string
 }
 ```
 
@@ -2363,12 +2419,14 @@ HouseholdInvitation represents an invitation sent by a household member to invit
 ```go
 type HouseholdInvitation struct {
     gorm.Model
-    HouseholdID uint      `gorm:"index,not null" json:"householdId"`
-    InviterID   uint      `gorm:"index,not null" json:"inviterId"`
-    Email       string    `gorm:"not null" json:"email"`
-    Token       string    `gorm:"uniqueIndex,not null" json:"-"`
-    Status      string    `gorm:"not null;default:'pending'" json:"status"`
-    ExpiresAt   time.Time `gorm:"not null" json:"expiresAt"`
+    HouseholdID  uint       `gorm:"index,not null" json:"householdId"`
+    InviterID    uint       `gorm:"index,not null" json:"inviterId"`
+    Email        string     `gorm:"not null" json:"email"`
+    Token        string     `gorm:"uniqueIndex,not null" json:"-"`
+    Status       string     `gorm:"not null;default:'pending'" json:"status"`
+    ExpiresAt    time.Time  `gorm:"not null" json:"expiresAt"`
+    SentAt       *time.Time `json:"sentAt,omitempty"`
+    SendAttempts int        `gorm:"default:0" json:"sendAttempts"`
 }
 ```
 

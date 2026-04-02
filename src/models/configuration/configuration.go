@@ -47,6 +47,7 @@ type ServerConfiguration struct {
 	Port           int
 	Authentication AuthenticationConfiguration
 	CORS           CorsConfiguration
+	BaseURL        string
 }
 
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog

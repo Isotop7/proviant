@@ -88,3 +88,60 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 	// Send mail and return error
 	return mailDialer.DialAndSend(mail)
 }
+
+// SendInvitationEmail sends an invitation email to the recipient
+func (e *EmailNotificationProvider) SendInvitationEmail(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
+	// Construct magic link
+	magicLink := fmt.Sprintf("%s/web/invite/accept?token=%s", baseURL, invitation.Token)
+
+	// Generate email body from template
+	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/invitation.html")
+	if templErr != nil {
+		return templErr
+	}
+	var bodyBuf bytes.Buffer
+	templExecErr := templ.Execute(&bodyBuf, struct {
+		InviterName   string
+		HouseholdName string
+		MagicLink     string
+		ExpiresAt     string
+	}{
+		InviterName:   inviterName,
+		HouseholdName: householdName,
+		MagicLink:     magicLink,
+		ExpiresAt:     invitation.ExpiresAt.Format("2006-01-02 15:04"),
+	})
+	if templExecErr != nil {
+		return templExecErr
+	}
+
+	// Create new mail object
+	mail := gomail.NewMessage()
+
+	// Set sender
+	mail.SetHeader("From", e.Configuration.FromAddress)
+
+	// Set recipient
+	mail.SetHeader("To", invitation.Email)
+
+	// Set subject
+	mail.SetHeader("Subject", fmt.Sprintf("You're invited to join '%s' on Proviant", householdName))
+
+	// Set body of mail to generated template output
+	mail.SetBody("text/html", bodyBuf.String())
+
+	// Settings for SMTP server
+	mailDialer := gomail.Dialer{
+		Host: e.Configuration.Host,
+		Port: e.Configuration.Port,
+		SSL:  e.Configuration.SSL,
+	}
+
+	if e.Configuration.User != "" && e.Configuration.Password != "" {
+		mailDialer.Username = e.Configuration.User
+		mailDialer.Password = e.Configuration.Password
+	}
+
+	// Send mail and return error
+	return mailDialer.DialAndSend(mail)
+}

@@ -6,6 +6,7 @@ import (
 
 	dbController "codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models"
+	authentication "codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
@@ -165,4 +166,21 @@ func (m *MockDatabaseController) AcceptInvitation(token, email string, userID ui
 }
 func (m *MockDatabaseController) CancelInvitation(invitationID, userID uint) error {
 	return nil
+}
+
+func (m *MockDatabaseController) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]dbModel.HouseholdInvitation, error) {
+	return nil, nil
+}
+func (m *MockDatabaseController) MarkInvitationSent(invitationID uint) error {
+	return nil
+}
+func (m *MockDatabaseController) MarkInvitationSendFailed(invitationID uint) error {
+	return nil
+}
+
+func (m *MockDatabaseController) GetUserByID(userID uint) (authentication.User, error) {
+	return authentication.User{}, nil
+}
+func (m *MockDatabaseController) GetHouseholdByID(householdID uint) (dbModel.Household, error) {
+	return dbModel.Household{}, nil
 }

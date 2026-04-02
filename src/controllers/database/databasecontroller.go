@@ -1432,3 +1432,39 @@ func (dbc DatabaseController) CancelInvitation(invitationID, userID uint) error 
 
 	return dbc.DBHandle.Model(&invitation).Update("status", database.InvitationStatusCancelled).Error
 }
+
+// GetPendingInvitationsNotSent returns all pending invitations that have not been successfully sent yet,
+// or that failed and are due for a retry based on the given retry interval.
+func (dbc DatabaseController) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error) {
+	var invitations []database.HouseholdInvitation
+	// Get invitations that are:
+	// 1. Status is pending
+	// 2. Not yet expired
+	// 3. Either never sent (SentAt IS NULL) or last attempt was before the retry interval
+	query := dbc.DBHandle.Where(
+		"status = ? AND expires_at > ? AND (sent_at IS NULL OR sent_at < ?)",
+		database.InvitationStatusPending,
+		time.Now(),
+		time.Now().Add(-retryInterval),
+	)
+	err := query.Order("created_at ASC").Find(&invitations).Error
+	return invitations, err
+}
+
+// MarkInvitationSent marks an invitation as successfully sent
+func (dbc DatabaseController) MarkInvitationSent(invitationID uint) error {
+	now := time.Now()
+	return dbc.DBHandle.Model(&database.HouseholdInvitation{}).
+		Where("id = ?", invitationID).
+		Updates(map[string]interface{}{
+			"sent_at":       now,
+			"send_attempts": gorm.Expr("send_attempts + 1"),
+		}).Error
+}
+
+// MarkInvitationSendFailed increments the send attempt counter without marking as sent
+func (dbc DatabaseController) MarkInvitationSendFailed(invitationID uint) error {
+	return dbc.DBHandle.Model(&database.HouseholdInvitation{}).
+		Where("id = ?", invitationID).
+		Update("send_attempts", gorm.Expr("send_attempts + 1")).Error
+}

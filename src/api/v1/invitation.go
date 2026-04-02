@@ -1,10 +1,12 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
@@ -93,9 +95,26 @@ func CreateInvitation(ctx *gin.Context) {
 		}
 	}
 
-	// TODO: Send invitation email using controllers.SendInvitationEmail()
-	// Requires SMTP configuration and base URL from application config
-	logger.Info().Msgf("Invitation created for %s to household %d (token: %s). Email sending not yet implemented.", req.Email, user.HouseholdID, invitation.Token)
+	// Send invitation email via NotificationController
+	baseURL, _ := ctx.MustGet("baseURL").(string)
+	notificationController, _ := ctx.MustGet("notificationController").(*controllers.NotificationController)
+	if notificationController != nil {
+		inviterName := user.Username
+		household, householdErr := dbController.GetHouseholdByID(user.HouseholdID)
+		householdName := fmt.Sprintf("Household #%d", user.HouseholdID)
+		if householdErr == nil {
+			householdName = household.Name
+		}
+
+		if err := notificationController.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
+			logger.Error().Msgf("Failed to send invitation email to %s: %s", req.Email, err)
+			// Don't fail the request, invitation is still created; retry handled by dispatcher
+		} else {
+			logger.Info().Msgf("Invitation email sent to %s", req.Email)
+		}
+	} else {
+		logger.Warn().Msg("InvitationController not available, email will be sent by retry dispatcher")
+	}
 
 	ctx.JSON(http.StatusCreated, api.APIResponse{Message: "Invitation created successfully"})
 }

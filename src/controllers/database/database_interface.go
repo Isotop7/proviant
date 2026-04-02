@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/models"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
 )
 
@@ -18,6 +19,11 @@ type DatabaseControllerInterface interface {
 	GetInvitationByToken(token string) (database.HouseholdInvitation, error)
 	AcceptInvitation(token, email string, userID uint) error
 	CancelInvitation(invitationID, userID uint) error
+	GetUserByID(userID uint) (authentication.User, error)
+	GetHouseholdByID(householdID uint) (database.Household, error)
+	GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
+	MarkInvitationSent(invitationID uint) error
+	MarkInvitationSendFailed(invitationID uint) error
 }
 
 // Ensure that DatabaseController implements the interface

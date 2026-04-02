@@ -22,7 +22,7 @@ import (
 )
 
 // SetupRouter creates the gin engine and associated middleware
-func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController) *gin.Engine {
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) *gin.Engine {
 	// Generate new gin instance
 	engine := gin.New()
 
@@ -65,6 +65,24 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Template cache
 	engine.Use(func(ctx *gin.Context) {
 		ctx.Set("templateCache", proviantConfiguration.TemplateCache)
+		ctx.Next()
+	})
+
+	// Notification controller for invitation emails
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("notificationController", notificationController)
+		ctx.Next()
+	})
+
+	// SMTP configuration for invitation emails
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("smtpConfig", proviantConfiguration.Notification.SMTP)
+		ctx.Next()
+	})
+
+	// Base URL for constructing magic links
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("baseURL", proviantConfiguration.Server.BaseURL)
 		ctx.Next()
 	})
 

@@ -1744,6 +1744,12 @@ const docTemplate = `{
                 "inviterId": {
                     "type": "integer"
                 },
+                "sendAttempts": {
+                    "type": "integer"
+                },
+                "sentAt": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 },
