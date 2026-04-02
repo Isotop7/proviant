@@ -217,3 +217,13 @@ document.addEventListener("click", function(event) {
 - Uses JWT tokens for API authentication
 - CORS is configurable (allow all or specific origins)
 - Run `make check` before committing - golangci-lint must pass
+- **Database migrations**: When creating a new database model or modifying an existing one, always add it to the `AutoMigrate` call in `src/proviant.go` (around line 188). Forgetting this will cause "no such table" errors at runtime. Example:
+  ```go
+  migrationError := dbHandle.AutoMigrate(
+      &dbModel.Household{},
+      &authentication.User{},
+      &dbModel.Product{},
+      &dbModel.HouseholdApplication{},
+      &dbModel.YourNewModel{},  // ← always add new models here
+  )
+  ```

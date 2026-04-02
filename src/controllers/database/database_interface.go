@@ -13,6 +13,11 @@ type DatabaseControllerInterface interface {
 	GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
 	GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
 	SetProductNotifiedAt(productID uint) error
+	CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
+	GetInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
+	GetInvitationByToken(token string) (database.HouseholdInvitation, error)
+	AcceptInvitation(token, email string, userID uint) error
+	CancelInvitation(invitationID, userID uint) error
 }
 
 // Ensure that DatabaseController implements the interface

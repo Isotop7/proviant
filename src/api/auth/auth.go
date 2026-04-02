@@ -90,6 +90,18 @@ func Signup(ctx *gin.Context) {
 		return
 	} else {
 		logger.Info().Msgf("New User '%s' with ID '%d' created", user.Username, user.ID)
+
+		// Auto-accept invitation if token was provided during signup
+		if signup.InviteToken != "" {
+			acceptErr := dbController.AcceptInvitation(signup.InviteToken, user.MailAddress, user.ID)
+			if acceptErr != nil {
+				logger.Warn().Msgf("Failed to auto-accept invitation after signup: %s", acceptErr.Error())
+				// Don't fail the signup, just log the warning
+			} else {
+				logger.Info().Msgf("Successfully auto-accepted invitation for user '%s'", user.Username)
+			}
+		}
+
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
 		return
 	}

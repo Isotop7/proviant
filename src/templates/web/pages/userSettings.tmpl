@@ -206,6 +206,56 @@
     </div>
     {{ end }}
 
+    {{/* Invitation management */}}
+    <div class="row g-5 p-3 align-items-center justify-content-between">
+        <div class="col">
+            <h5 class="mb-0"><i class="bi bi-envelope-paper me-2"></i>Invite by Email</h5>
+            <p class="text-body-secondary small mb-0 mt-1">Send an invitation to join this household. The recipient will receive an email with a magic link to accept.</p>
+        </div>
+    </div>
+    <div class="row gx-5 px-3 mb-3">
+        <div class="col">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-at"></i></span>
+                <input type="email" class="form-control" id="inputInviteEmail" placeholder="user@example.com" aria-label="Email address to invite">
+                <button type="button" class="btn btn-outline-primary" id="btnSendInvitation">Send Invite</button>
+            </div>
+            <div id="sendInviteAlert" class="alert mt-3 d-none" role="alert"></div>
+        </div>
+    </div>
+
+    {{/* Pending invitations */}}
+    {{ if .Invitations }}
+    <div class="row g-5 p-3 align-items-center justify-content-between">
+        <div class="col">
+            <h5 class="mb-0"><i class="bi bi-send me-2"></i>Pending Invitations</h5>
+            <p class="text-body-secondary small mb-0 mt-1">Invitations you have sent that are awaiting acceptance.</p>
+        </div>
+    </div>
+    <div class="row gx-5 px-3 mb-3">
+        <div class="col">
+            <ul class="list-group" id="invitationList">
+                {{ range .Invitations }}
+                <li class="list-group-item d-flex justify-content-between align-items-center" id="invitation-{{ .ID }}">
+                    <span>
+                        <i class="bi bi-envelope me-2"></i>{{ .Email }}
+                        <span class="badge bg-secondary ms-2">{{ .Status }}</span>
+                        <small class="text-muted ms-2">Expires: {{ .ExpiresAt.Format "2006-01-02" }}</small>
+                    </span>
+                    {{ if eq .Status "pending" }}
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-cancel-invitation"
+                            data-id="{{ .ID }}" aria-label="Cancel invitation">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    {{ end }}
+                </li>
+                {{ end }}
+            </ul>
+            <div id="invitationsAlert" class="alert mt-3 d-none" role="alert"></div>
+        </div>
+    </div>
+    {{ end }}
+
     <hr>
     <div class="row g-5 p-3 align-items-center justify-content-between">
         <div class="col">

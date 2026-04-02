@@ -1,9 +1,11 @@
 package web
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
+	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
@@ -124,6 +126,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	isAdmin := household.AdminID == userID
 
 	members, _ := dbController.GetHouseholdMembers(user.HouseholdID)
+	invitations, _ := dbController.GetInvitationsForHousehold(user.HouseholdID)
 
 	pendingApplications, _ := dbController.GetPendingApplicationsForAdmin(userID)
 
@@ -137,6 +140,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"Members":             members,
 		"PendingApplications": pendingApplications,
 		"MyApplications":      myApplications,
+		"Invitations":         invitations,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
 }
@@ -348,4 +352,105 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 		"Product": product,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
+}
+
+// AcceptInvite renders the invitation acceptance page
+func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	token := ctx.Query("token")
+
+	if token == "" {
+		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "base", "acceptInvite.tmpl", map[string]any{
+			"Title": "Accept Invitation",
+			"Error": "No invitation token provided.",
+		})
+		return
+	}
+
+	// Get database handle
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", "acceptInvite.tmpl", map[string]any{
+			"Title": "Accept Invitation",
+			"Error": "Internal server error.",
+		})
+		return
+	}
+
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+
+	// Look up the invitation
+	invitation, invErr := dbController.GetInvitationByToken(token)
+	if invErr != nil {
+		if invErr == errors.ErrInvitationNotFound {
+			templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "base", "acceptInvite.tmpl", map[string]any{
+				"Title": "Accept Invitation",
+				"Error": "This invitation does not exist or has been deleted.",
+			})
+			return
+		}
+		logger.Error().Msg(invErr.Error())
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", "acceptInvite.tmpl", map[string]any{
+			"Title": "Accept Invitation",
+			"Error": "An error occurred while processing this invitation.",
+		})
+		return
+	}
+
+	// Check if invitation is still valid
+	if invitation.Status != dbModel.InvitationStatusPending {
+		msg := "This invitation has already been used."
+		if invitation.Status == dbModel.InvitationStatusCancelled {
+			msg = "This invitation has been cancelled by the sender."
+		} else if invitation.Status == dbModel.InvitationStatusExpired {
+			msg = "This invitation has expired."
+		}
+		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", "acceptInvite.tmpl", map[string]any{
+			"Title": "Accept Invitation",
+			"Error": msg,
+		})
+		return
+	}
+
+	if time.Now().After(invitation.ExpiresAt) {
+		// Mark as expired
+		_ = dbController.DBHandle.Model(&dbModel.HouseholdInvitation{}).Where("id = ?", invitation.ID).Update("status", dbModel.InvitationStatusExpired)
+		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", "acceptInvite.tmpl", map[string]any{
+			"Title": "Accept Invitation",
+			"Error": "This invitation has expired.",
+		})
+		return
+	}
+
+	// Get household name for display
+	household, householdErr := dbController.GetHouseholdByID(invitation.HouseholdID)
+	householdName := fmt.Sprintf("Household #%d", invitation.HouseholdID)
+	if householdErr == nil {
+		householdName = household.Name
+	}
+
+	// Check if user is already authenticated
+	claims := jwt.ExtractClaims(ctx)
+	if claims != nil {
+		userID, ok := claims[static.TokenIdentityKey].(float64)
+		if ok && uint(userID) > 0 {
+			// User is logged in — show confirmation
+			templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "acceptInvite.tmpl", map[string]any{
+				"Title":         "Accept Invitation",
+				"ConfirmAccept": true,
+				"Token":         token,
+				"HouseholdName": householdName,
+			})
+			return
+		}
+	}
+
+	// User is not logged in — redirect to auth with token
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "acceptInvite.tmpl", map[string]any{
+		"Title":         "Accept Invitation",
+		"NeedsAuth":     true,
+		"Token":         token,
+		"HouseholdName": householdName,
+	})
 }

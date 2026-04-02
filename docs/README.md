@@ -90,6 +90,7 @@ import "codeberg.org/isotop7/proviant/controllers"
 
 ## Index
 
+- [func SendInvitationEmail\(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, smtpConfig configuration.SMTPConfiguration, logger \*zerolog.Logger\) error](<#SendInvitationEmail>)
 - [type EmailNotificationProvider](<#EmailNotificationProvider>)
   - [func \(e \*EmailNotificationProvider\) GetProviderType\(\) string](<#EmailNotificationProvider.GetProviderType>)
   - [func \(e \*EmailNotificationProvider\) IsConfigured\(\) bool](<#EmailNotificationProvider.IsConfigured>)
@@ -106,6 +107,15 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
 - [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
 
+
+<a name="SendInvitationEmail"></a>
+## func SendInvitationEmail
+
+```go
+func SendInvitationEmail(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, smtpConfig configuration.SMTPConfiguration, logger *zerolog.Logger) error
+```
+
+SendInvitationEmail sends an invitation email to the recipient
 
 <a name="EmailNotificationProvider"></a>
 ## type EmailNotificationProvider
@@ -407,6 +417,54 @@ var (
 
     // ErrNotificationEmptyNtfyTopic is thrown if an empty ntfy.sh topic was specified
     ErrNotificationEmptyNtfyTopic = errors.New("ntfy.sh topic cannot be empty when URL is provided")
+
+    /*
+     * Household related errors
+     */
+    // ErrHouseholdNotFound is thrown when a requested household does not exist
+    ErrHouseholdNotFound = errors.New("household not found")
+
+    // ErrNotHouseholdAdmin is thrown when a user attempts an admin action on a household they do not administrate
+    ErrNotHouseholdAdmin = errors.New("user is not the admin of this household")
+
+    // ErrApplicationAlreadyPending is thrown when a user already has a pending application for a household
+    ErrApplicationAlreadyPending = errors.New("a pending application for this household already exists")
+
+    // ErrApplicationNotFound is thrown when a requested household application does not exist
+    ErrApplicationNotFound = errors.New("household application not found")
+
+    // ErrNotApplicationApplicant is thrown when a user tries to cancel an application they did not create
+    ErrNotApplicationApplicant = errors.New("user is not the applicant of this application")
+
+    // ErrCannotRemoveAdmin is thrown when an admin tries to remove themselves via the member removal endpoint
+    ErrCannotRemoveAdmin = errors.New("cannot remove the household admin")
+
+    // ErrMemberNotInHousehold is thrown when the target user is not a member of the caller's household
+    ErrMemberNotInHousehold = errors.New("user is not a member of this household")
+
+    /*
+     * Invitation related errors
+     */
+    // ErrInvitationNotFound is thrown when a requested invitation does not exist
+    ErrInvitationNotFound = errors.New("invitation not found")
+
+    // ErrInvitationExpired is thrown when an invitation has passed its expiry time
+    ErrInvitationExpired = errors.New("invitation has expired")
+
+    // ErrInvitationAlreadyUsed is thrown when an invitation has already been accepted
+    ErrInvitationAlreadyUsed = errors.New("invitation has already been accepted")
+
+    // ErrInvitationCancelled is thrown when an invitation has been cancelled by the sender
+    ErrInvitationCancelled = errors.New("invitation has been cancelled")
+
+    // ErrInvitationEmailMismatch is thrown when the recipient email does not match the invitation
+    ErrInvitationEmailMismatch = errors.New("email does not match invitation")
+
+    // ErrDuplicateInvitation is thrown when a pending invitation already exists for the same email and household
+    ErrDuplicateInvitation = errors.New("a pending invitation already exists for this email")
+
+    // ErrInvitationNotAuthorized is thrown when a user tries to manage an invitation they did not create
+    ErrInvitationNotAuthorized = errors.New("not authorized to manage this invitation")
 )
 ```
 
@@ -679,6 +737,7 @@ import "codeberg.org/isotop7/proviant/web"
 ## Index
 
 - [type Frontend](<#Frontend>)
+  - [func \(frontend \*Frontend\) AcceptInvite\(ctx \*gin.Context\)](<#Frontend.AcceptInvite>)
   - [func \(frontend \*Frontend\) Auth\(ctx \*gin.Context\)](<#Frontend.Auth>)
   - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
   - [func \(frontend \*Frontend\) ProductsArchived\(ctx \*gin.Context\)](<#Frontend.ProductsArchived>)
@@ -701,6 +760,15 @@ type Frontend struct {
     TemplateCache map[string]*template.Template
 }
 ```
+
+<a name="Frontend.AcceptInvite"></a>
+### func \(\*Frontend\) AcceptInvite
+
+```go
+func (frontend *Frontend) AcceptInvite(ctx *gin.Context)
+```
+
+AcceptInvite renders the invitation acceptance page
 
 <a name="Frontend.Auth"></a>
 ### func \(\*Frontend\) Auth
@@ -802,8 +870,18 @@ auth contains authentication method handlers
 
 ## Index
 
+- [func AcceptInvitation\(ctx \*gin.Context\)](<#AcceptInvitation>)
 - [func Signup\(ctx \*gin.Context\)](<#Signup>)
 
+
+<a name="AcceptInvitation"></a>
+## func AcceptInvitation
+
+```go
+func AcceptInvitation(ctx *gin.Context)
+```
+
+AcceptInvitation accepts a household invitation for the authenticated user. @Summary Accept invitation @Description Accepts a household invitation using a token @Tags Invitation @Accept json @Produce json @Param request body acceptInvitationRequest true "Accept invitation request" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/invite/accept \[post\]
 
 <a name="Signup"></a>
 ## func Signup
@@ -846,26 +924,56 @@ v1 implements version 1 of the proviant API
 
 ## Index
 
+- [func ApplyForHousehold\(ctx \*gin.Context\)](<#ApplyForHousehold>)
+- [func ApproveHouseholdApplication\(ctx \*gin.Context\)](<#ApproveHouseholdApplication>)
 - [func BulkArchiveProducts\(ctx \*gin.Context\)](<#BulkArchiveProducts>)
 - [func BulkDeleteProducts\(ctx \*gin.Context\)](<#BulkDeleteProducts>)
 - [func BulkRestoreProducts\(ctx \*gin.Context\)](<#BulkRestoreProducts>)
+- [func CancelHouseholdApplication\(ctx \*gin.Context\)](<#CancelHouseholdApplication>)
+- [func CancelInvitation\(ctx \*gin.Context\)](<#CancelInvitation>)
+- [func CreateHousehold\(ctx \*gin.Context\)](<#CreateHousehold>)
+- [func CreateInvitation\(ctx \*gin.Context\)](<#CreateInvitation>)
 - [func CreateProduct\(ctx \*gin.Context\)](<#CreateProduct>)
 - [func DeleteProduct\(ctx \*gin.Context\)](<#DeleteProduct>)
 - [func GetArchivedProducts\(ctx \*gin.Context\)](<#GetArchivedProducts>)
 - [func GetExpired\(ctx \*gin.Context\)](<#GetExpired>)
+- [func GetHouseholdApplications\(ctx \*gin.Context\)](<#GetHouseholdApplications>)
+- [func GetInvitations\(ctx \*gin.Context\)](<#GetInvitations>)
 - [func GetProduct\(ctx \*gin.Context\)](<#GetProduct>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context\)](<#GetUserNotificationPreferences>)
+- [func LeaveHousehold\(ctx \*gin.Context\)](<#LeaveHousehold>)
+- [func RejectHouseholdApplication\(ctx \*gin.Context\)](<#RejectHouseholdApplication>)
+- [func RemoveHouseholdMember\(ctx \*gin.Context\)](<#RemoveHouseholdMember>)
 - [func RestoreProduct\(ctx \*gin.Context\)](<#RestoreProduct>)
 - [func ScanProduct\(ctx \*gin.Context\)](<#ScanProduct>)
 - [func SearchProducts\(ctx \*gin.Context\)](<#SearchProducts>)
 - [func SetExpireAt\(ctx \*gin.Context\)](<#SetExpireAt>)
+- [func UpdateHouseholdName\(ctx \*gin.Context\)](<#UpdateHouseholdName>)
 - [func UpdateProduct\(ctx \*gin.Context\)](<#UpdateProduct>)
 - [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
 - [func UpdateUserNotificationPreferences\(ctx \*gin.Context\)](<#UpdateUserNotificationPreferences>)
 - [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
 
+
+<a name="ApplyForHousehold"></a>
+## func ApplyForHousehold
+
+```go
+func ApplyForHousehold(ctx *gin.Context)
+```
+
+ApplyForHousehold submits a join application for an existing household. @Summary Apply to join a household @Description Creates a pending application for the calling user to join the specified household. @Tags household @Produce json @Param id path int true "Household ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/\{id\}/apply \[post\]
+
+<a name="ApproveHouseholdApplication"></a>
+## func ApproveHouseholdApplication
+
+```go
+func ApproveHouseholdApplication(ctx *gin.Context)
+```
+
+ApproveHouseholdApplication approves a pending join application. @Summary Approve a household application @Description Moves the applicant into the household. Caller must be the household admin. @Tags household @Produce json @Param id path int true "Application ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications/\{id\}/approve \[post\]
 
 <a name="BulkArchiveProducts"></a>
 ## func BulkArchiveProducts
@@ -893,6 +1001,42 @@ func BulkRestoreProducts(ctx *gin.Context)
 ```
 
 BulkRestoreProducts restores a list of products of a user @Summary Restores a list of product @Description Restores a list of product of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/bulkRestore \[post\]
+
+<a name="CancelHouseholdApplication"></a>
+## func CancelHouseholdApplication
+
+```go
+func CancelHouseholdApplication(ctx *gin.Context)
+```
+
+CancelHouseholdApplication cancels a pending application submitted by the caller. @Summary Cancel own household application @Tags household @Produce json @Param id path int true "Application ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications/\{id\} \[delete\]
+
+<a name="CancelInvitation"></a>
+## func CancelInvitation
+
+```go
+func CancelInvitation(ctx *gin.Context)
+```
+
+CancelInvitation cancels a pending invitation. @Summary Cancel invitation @Description Cancels a pending invitation by ID @Tags Invitation @Produce json @Param id path int true "Invitation ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations/\{id\} \[delete\]
+
+<a name="CreateHousehold"></a>
+## func CreateHousehold
+
+```go
+func CreateHousehold(ctx *gin.Context)
+```
+
+CreateHousehold creates a new named household and switches the calling user to it. @Summary Create and switch to a new household @Description Creates a new household with the given name and assigns the user to it. @Tags household @Accept json @Produce json @Param household body createHouseholdRequest true "Household" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/household/create \[post\]
+
+<a name="CreateInvitation"></a>
+## func CreateInvitation
+
+```go
+func CreateInvitation(ctx *gin.Context)
+```
+
+CreateInvitation creates a new household invitation and sends an email to the recipient. @Summary Create invitation @Description Creates a new household invitation and sends an email to the recipient @Tags Invitation @Accept json @Produce json @Param request body createInvitationRequest true "Invitation request" @Success 201 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations \[post\]
 
 <a name="CreateProduct"></a>
 ## func CreateProduct
@@ -930,6 +1074,24 @@ func GetExpired(ctx *gin.Context)
 
 GetExpired returns the list of all expired products of a user @Summary Gets expired products @Description Gets a list of expired products of a user @Tags product @Accept json @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/expired \[get\]
 
+<a name="GetHouseholdApplications"></a>
+## func GetHouseholdApplications
+
+```go
+func GetHouseholdApplications(ctx *gin.Context)
+```
+
+GetHouseholdApplications returns all pending applications for the household the caller administrates. @Summary List pending household applications @Description Returns pending join applications for the household the calling user is admin of. @Tags household @Produce json @Success 200 \{array\} database.HouseholdApplication @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications \[get\]
+
+<a name="GetInvitations"></a>
+## func GetInvitations
+
+```go
+func GetInvitations(ctx *gin.Context)
+```
+
+GetInvitations returns all invitations for the calling user's household. @Summary Get household invitations @Description Returns all invitations for the calling user's household @Tags Invitation @Produce json @Success 200 \{array\} database.HouseholdInvitation @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations \[get\]
+
 <a name="GetProduct"></a>
 ## func GetProduct
 
@@ -966,6 +1128,33 @@ func GetUserNotificationPreferences(ctx *gin.Context)
 
 GetUserNotificationPreferences gets a user's notification preferences @Summary Gets a user's notification preferences @Description Retrieves notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} authentication.NotificationPreferences @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[get\]
 
+<a name="LeaveHousehold"></a>
+## func LeaveHousehold
+
+```go
+func LeaveHousehold(ctx *gin.Context)
+```
+
+LeaveHousehold removes the calling user from their current household and assigns them a new personal one. @Summary Leave current household @Description Creates a new personal household for the user. Products are moved if they were the sole member. @Tags household @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/household/leave \[post\]
+
+<a name="RejectHouseholdApplication"></a>
+## func RejectHouseholdApplication
+
+```go
+func RejectHouseholdApplication(ctx *gin.Context)
+```
+
+RejectHouseholdApplication rejects a pending join application. @Summary Reject a household application @Description Marks the application as rejected. Caller must be the household admin. @Tags household @Produce json @Param id path int true "Application ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications/\{id\}/reject \[post\]
+
+<a name="RemoveHouseholdMember"></a>
+## func RemoveHouseholdMember
+
+```go
+func RemoveHouseholdMember(ctx *gin.Context)
+```
+
+RemoveHouseholdMember removes a member from the caller's household. Caller must be the admin. @Summary Remove a household member @Tags household @Produce json @Param userId path int true "User ID to remove" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/members/\{userId\} \[delete\]
+
 <a name="RestoreProduct"></a>
 ## func RestoreProduct
 
@@ -1001,6 +1190,15 @@ func SetExpireAt(ctx *gin.Context)
 ```
 
 SetExpireAt updates the expire date of a product of a user @Summary Updates the expire date @Description Updates the expire date of a product @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param timestamp body database.Timestamp true "Timestamp" @Success 200 \{object\} database.ProductDTOExpire @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/expire \[post\]
+
+<a name="UpdateHouseholdName"></a>
+## func UpdateHouseholdName
+
+```go
+func UpdateHouseholdName(ctx *gin.Context)
+```
+
+UpdateHouseholdName renames the caller's household. Caller must be the household admin. @Summary Rename household @Tags household @Accept json @Produce json @Param household body updateHouseholdNameRequest true "Name" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/name \[patch\]
 
 <a name="UpdateProduct"></a>
 ## func UpdateProduct
@@ -1050,9 +1248,16 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 - [type BulkOperationError](<#BulkOperationError>)
   - [func \(b \*BulkOperationError\) Error\(\) string](<#BulkOperationError.Error>)
 - [type DatabaseController](<#DatabaseController>)
+  - [func \(dbc DatabaseController\) AcceptInvitation\(token, email string, userID uint\) error](<#DatabaseController.AcceptInvitation>)
+  - [func \(dbc DatabaseController\) ApplyForHousehold\(applicantID, householdID uint\) error](<#DatabaseController.ApplyForHousehold>)
+  - [func \(dbc DatabaseController\) ApproveApplication\(applicationID, adminUserID uint\) error](<#DatabaseController.ApproveApplication>)
   - [func \(dbc DatabaseController\) BulkArchiveProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkArchiveProducts>)
   - [func \(dbc DatabaseController\) BulkDeleteProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkDeleteProducts>)
   - [func \(dbc DatabaseController\) BulkRestoreProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkRestoreProducts>)
+  - [func \(dbc DatabaseController\) CancelApplication\(applicationID, applicantUserID uint\) error](<#DatabaseController.CancelApplication>)
+  - [func \(dbc DatabaseController\) CancelInvitation\(invitationID, userID uint\) error](<#DatabaseController.CancelInvitation>)
+  - [func \(dbc DatabaseController\) CreateAndSwitchHousehold\(userID uint, name string\) error](<#DatabaseController.CreateAndSwitchHousehold>)
+  - [func \(dbc DatabaseController\) CreateInvitation\(householdID, inviterID uint, email string\) \(database.HouseholdInvitation, error\)](<#DatabaseController.CreateInvitation>)
   - [func \(dbc DatabaseController\) CreateProduct\(userID uint, product \*database.Product\) error](<#DatabaseController.CreateProduct>)
   - [func \(dbc DatabaseController\) CreateUser\(user \*authentication.User\) error](<#DatabaseController.CreateUser>)
   - [func \(dbc DatabaseController\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#DatabaseController.DeleteProduct>)
@@ -1060,11 +1265,17 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#DatabaseController.GetArchivedProductsGroupedByBarcode>)
   - [func \(dbc DatabaseController\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#DatabaseController.GetExpiredProductsCount>)
   - [func \(dbc DatabaseController\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#DatabaseController.GetHouseholdByID>)
+  - [func \(dbc DatabaseController\) GetHouseholdMemberCount\(householdID uint\) \(int64, error\)](<#DatabaseController.GetHouseholdMemberCount>)
+  - [func \(dbc DatabaseController\) GetHouseholdMembers\(householdID uint\) \(\[\]authentication.User, error\)](<#DatabaseController.GetHouseholdMembers>)
   - [func \(dbc DatabaseController\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#DatabaseController.GetHouseholdMembersMailAddressesByID>)
   - [func \(dbc DatabaseController\) GetHouseholdMembersNotificationPreferences\(householdID uint\) \(\[\]models.NotificationRecipientInfo, error\)](<#DatabaseController.GetHouseholdMembersNotificationPreferences>)
+  - [func \(dbc DatabaseController\) GetInvitationByToken\(token string\) \(database.HouseholdInvitation, error\)](<#DatabaseController.GetInvitationByToken>)
+  - [func \(dbc DatabaseController\) GetInvitationsForHousehold\(householdID uint\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetInvitationsForHousehold>)
   - [func \(dbc DatabaseController\) GetLastInsertedProduct\(householdID uint\) \(database.Product, error\)](<#DatabaseController.GetLastInsertedProduct>)
   - [func \(dbc DatabaseController\) GetLastNotifiedProduct\(householdID uint\) \(database.Product, error\)](<#DatabaseController.GetLastNotifiedProduct>)
   - [func \(dbc DatabaseController\) GetNextUserID\(\) uint](<#DatabaseController.GetNextUserID>)
+  - [func \(dbc DatabaseController\) GetPendingApplicationsForAdmin\(adminUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#DatabaseController.GetPendingApplicationsForAdmin>)
+  - [func \(dbc DatabaseController\) GetPendingApplicationsForApplicant\(applicantUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#DatabaseController.GetPendingApplicationsForApplicant>)
   - [func \(dbc DatabaseController\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetProductByID>)
   - [func \(dbc DatabaseController\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#DatabaseController.GetProductsExpired>)
   - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
@@ -1076,10 +1287,14 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#DatabaseController.GetUserHouseholdByID>)
   - [func \(dbc DatabaseController\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulkByBarcode>)
+  - [func \(dbc DatabaseController\) LeaveHousehold\(userID uint\) error](<#DatabaseController.LeaveHousehold>)
+  - [func \(dbc DatabaseController\) RejectApplication\(applicationID, adminUserID uint\) error](<#DatabaseController.RejectApplication>)
+  - [func \(dbc DatabaseController\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#DatabaseController.RemoveMemberFromHousehold>)
   - [func \(dbc DatabaseController\) RestoreProduct\(productID int, userID uint\) error](<#DatabaseController.RestoreProduct>)
   - [func \(dbc DatabaseController\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#DatabaseController.SearchProducts>)
   - [func \(dbc DatabaseController\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#DatabaseController.SetProductExpireAt>)
   - [func \(dbc DatabaseController\) SetProductNotifiedAt\(productID uint\) error](<#DatabaseController.SetProductNotifiedAt>)
+  - [func \(dbc DatabaseController\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#DatabaseController.UpdateHouseholdName>)
   - [func \(dbc DatabaseController\) UpdateProduct\(productID int, userID uint, product \*database.ProductDTOPatch\) error](<#DatabaseController.UpdateProduct>)
   - [func \(dbc DatabaseController\) UpdateUser\(userID uint, user \*authentication.User\) error](<#DatabaseController.UpdateUser>)
   - [func \(dbc DatabaseController\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#DatabaseController.UpdateUserPassword>)
@@ -1138,6 +1353,33 @@ type DatabaseController struct {
 }
 ```
 
+<a name="DatabaseController.AcceptInvitation"></a>
+### func \(DatabaseController\) AcceptInvitation
+
+```go
+func (dbc DatabaseController) AcceptInvitation(token, email string, userID uint) error
+```
+
+AcceptInvitation processes an invitation acceptance, updating the user's household and marking the invitation as accepted
+
+<a name="DatabaseController.ApplyForHousehold"></a>
+### func \(DatabaseController\) ApplyForHousehold
+
+```go
+func (dbc DatabaseController) ApplyForHousehold(applicantID, householdID uint) error
+```
+
+ApplyForHousehold creates a pending HouseholdApplication for the given user and target household. Returns ErrHouseholdNotFound if the target household does not exist, or ErrApplicationAlreadyPending if a pending application already exists.
+
+<a name="DatabaseController.ApproveApplication"></a>
+### func \(DatabaseController\) ApproveApplication
+
+```go
+func (dbc DatabaseController) ApproveApplication(applicationID, adminUserID uint) error
+```
+
+ApproveApplication approves a household application: moves the applicant into the household. Only the household admin may call this.
+
 <a name="DatabaseController.BulkArchiveProducts"></a>
 ### func \(DatabaseController\) BulkArchiveProducts
 
@@ -1164,6 +1406,42 @@ func (dbc DatabaseController) BulkRestoreProducts(productIDs []int, userID uint)
 ```
 
 BulkRestoreProducts restores a list of products \(based on product ID\) of a user \(based on user ID\) given as a slice of product IDs If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
+
+<a name="DatabaseController.CancelApplication"></a>
+### func \(DatabaseController\) CancelApplication
+
+```go
+func (dbc DatabaseController) CancelApplication(applicationID, applicantUserID uint) error
+```
+
+CancelApplication cancels a pending application. The caller must be the applicant.
+
+<a name="DatabaseController.CancelInvitation"></a>
+### func \(DatabaseController\) CancelInvitation
+
+```go
+func (dbc DatabaseController) CancelInvitation(invitationID, userID uint) error
+```
+
+CancelInvitation cancels a pending invitation after verifying the caller is a member of the invitation's household
+
+<a name="DatabaseController.CreateAndSwitchHousehold"></a>
+### func \(DatabaseController\) CreateAndSwitchHousehold
+
+```go
+func (dbc DatabaseController) CreateAndSwitchHousehold(userID uint, name string) error
+```
+
+CreateAndSwitchHousehold creates a new named household and switches the user to it. Products are moved from the old household when the user was its sole member.
+
+<a name="DatabaseController.CreateInvitation"></a>
+### func \(DatabaseController\) CreateInvitation
+
+```go
+func (dbc DatabaseController) CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
+```
+
+CreateInvitation creates a new household invitation after verifying the inviter is a member and no pending invitation exists for the same email.
 
 <a name="DatabaseController.CreateProduct"></a>
 ### func \(DatabaseController\) CreateProduct
@@ -1228,6 +1506,24 @@ func (dbc DatabaseController) GetHouseholdByID(householdID uint) (database.House
 
 GetHouseholdByID uses a given household ID and returns the matching household object If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.GetHouseholdMemberCount"></a>
+### func \(DatabaseController\) GetHouseholdMemberCount
+
+```go
+func (dbc DatabaseController) GetHouseholdMemberCount(householdID uint) (int64, error)
+```
+
+GetHouseholdMemberCount returns how many users currently belong to a household
+
+<a name="DatabaseController.GetHouseholdMembers"></a>
+### func \(DatabaseController\) GetHouseholdMembers
+
+```go
+func (dbc DatabaseController) GetHouseholdMembers(householdID uint) ([]authentication.User, error)
+```
+
+GetHouseholdMembers returns all users that belong to the given household.
+
 <a name="DatabaseController.GetHouseholdMembersMailAddressesByID"></a>
 ### func \(DatabaseController\) GetHouseholdMembersMailAddressesByID
 
@@ -1245,6 +1541,24 @@ func (dbc DatabaseController) GetHouseholdMembersNotificationPreferences(househo
 ```
 
 GetHouseholdMembersNotificationPreferences returns the notification preferences of all users of a household
+
+<a name="DatabaseController.GetInvitationByToken"></a>
+### func \(DatabaseController\) GetInvitationByToken
+
+```go
+func (dbc DatabaseController) GetInvitationByToken(token string) (database.HouseholdInvitation, error)
+```
+
+GetInvitationByToken looks up an invitation by its token
+
+<a name="DatabaseController.GetInvitationsForHousehold"></a>
+### func \(DatabaseController\) GetInvitationsForHousehold
+
+```go
+func (dbc DatabaseController) GetInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
+```
+
+GetInvitationsForHousehold returns all non\-deleted invitations for the household, ordered by CreatedAt DESC
 
 <a name="DatabaseController.GetLastInsertedProduct"></a>
 ### func \(DatabaseController\) GetLastInsertedProduct
@@ -1272,6 +1586,24 @@ func (dbc DatabaseController) GetNextUserID() uint
 ```
 
 GetNextUserID returns the next available user ID
+
+<a name="DatabaseController.GetPendingApplicationsForAdmin"></a>
+### func \(DatabaseController\) GetPendingApplicationsForAdmin
+
+```go
+func (dbc DatabaseController) GetPendingApplicationsForAdmin(adminUserID uint) ([]database.HouseholdApplication, error)
+```
+
+GetPendingApplicationsForAdmin returns all pending applications for the household the given user administrates. Returns ErrNotHouseholdAdmin if the user is not the admin of their household.
+
+<a name="DatabaseController.GetPendingApplicationsForApplicant"></a>
+### func \(DatabaseController\) GetPendingApplicationsForApplicant
+
+```go
+func (dbc DatabaseController) GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error)
+```
+
+GetPendingApplicationsForApplicant returns all pending applications submitted by the given user.
 
 <a name="DatabaseController.GetProductByID"></a>
 ### func \(DatabaseController\) GetProductByID
@@ -1372,6 +1704,33 @@ func (dbc DatabaseController) GetUserProductsBulkByBarcode(userID uint, barcode 
 
 GetUserProductsBulkByBarcode returns an array of products of a user \(based on user ID\) matching a barcode The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.LeaveHousehold"></a>
+### func \(DatabaseController\) LeaveHousehold
+
+```go
+func (dbc DatabaseController) LeaveHousehold(userID uint) error
+```
+
+LeaveHousehold creates a new personal household for the user, moves all products if they were the sole member, then updates the user's HouseholdID to the new household.
+
+<a name="DatabaseController.RejectApplication"></a>
+### func \(DatabaseController\) RejectApplication
+
+```go
+func (dbc DatabaseController) RejectApplication(applicationID, adminUserID uint) error
+```
+
+RejectApplication rejects a household application. Only the household admin may call this.
+
+<a name="DatabaseController.RemoveMemberFromHousehold"></a>
+### func \(DatabaseController\) RemoveMemberFromHousehold
+
+```go
+func (dbc DatabaseController) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
+```
+
+RemoveMemberFromHousehold removes a member from the admin's household and assigns them a new personal household.
+
 <a name="DatabaseController.RestoreProduct"></a>
 ### func \(DatabaseController\) RestoreProduct
 
@@ -1407,6 +1766,15 @@ func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error
 ```
 
 SetProductNotifiedAt sets the notified\_at timestamp to the current time
+
+<a name="DatabaseController.UpdateHouseholdName"></a>
+### func \(DatabaseController\) UpdateHouseholdName
+
+```go
+func (dbc DatabaseController) UpdateHouseholdName(householdID, adminUserID uint, name string) error
+```
+
+UpdateHouseholdName renames a household. The caller must be the household admin.
 
 <a name="DatabaseController.UpdateProduct"></a>
 ### func \(DatabaseController\) UpdateProduct
@@ -1473,6 +1841,11 @@ type DatabaseControllerInterface interface {
     GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
     GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
     SetProductNotifiedAt(productID uint) error
+    CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
+    GetInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
+    GetInvitationByToken(token string) (database.HouseholdInvitation, error)
+    AcceptInvitation(token, email string, userID uint) error
+    CancelInvitation(invitationID, userID uint) error
 }
 ```
 
@@ -1617,6 +1990,7 @@ type Signup struct {
     Username    string `form:"username" json:"username" binding:"required"`
     Password    string `form:"password" json:"password" binding:"required"`
     MailAddress string `form:"mailAddress" json:"mailAddress" binding:"required"`
+    InviteToken string `form:"inviteToken" json:"inviteToken"`
 }
 ```
 
@@ -1879,17 +2253,43 @@ import "codeberg.org/isotop7/proviant/models/database"
 
 ## Index
 
+- [Constants](<#constants>)
 - [type Date](<#Date>)
   - [func \(d Date\) Format\(s string\) string](<#Date.Format>)
   - [func \(d Date\) MarshalJSON\(\) \(\[\]byte, error\)](<#Date.MarshalJSON>)
   - [func \(d \*Date\) UnmarshalJSON\(b \[\]byte\) error](<#Date.UnmarshalJSON>)
 - [type Household](<#Household>)
+- [type HouseholdApplication](<#HouseholdApplication>)
+- [type HouseholdInvitation](<#HouseholdInvitation>)
 - [type Product](<#Product>)
 - [type ProductDTOBarcode](<#ProductDTOBarcode>)
 - [type ProductDTOExpire](<#ProductDTOExpire>)
 - [type ProductDTOPatch](<#ProductDTOPatch>)
 - [type Timestamp](<#Timestamp>)
 
+
+## Constants
+
+<a name="ApplicationStatusPending"></a>
+
+```go
+const (
+    ApplicationStatusPending  = "pending"
+    ApplicationStatusApproved = "approved"
+    ApplicationStatusRejected = "rejected"
+)
+```
+
+<a name="InvitationStatusPending"></a>
+
+```go
+const (
+    InvitationStatusPending   = "pending"
+    InvitationStatusAccepted  = "accepted"
+    InvitationStatusExpired   = "expired"
+    InvitationStatusCancelled = "cancelled"
+)
+```
 
 <a name="Date"></a>
 ## type Date
@@ -1938,6 +2338,37 @@ type Household struct {
     Name        string `gorm:"not null"`
     Description string
     AdminID     uint `gorm:"not null"`
+}
+```
+
+<a name="HouseholdApplication"></a>
+## type HouseholdApplication
+
+HouseholdApplication represents a user's request to join a household
+
+```go
+type HouseholdApplication struct {
+    gorm.Model
+    ApplicantID uint   `gorm:"index,not null" json:"applicantId"`
+    HouseholdID uint   `gorm:"index,not null" json:"householdId"`
+    Status      string `gorm:"not null;default:'pending'" json:"status"`
+}
+```
+
+<a name="HouseholdInvitation"></a>
+## type HouseholdInvitation
+
+HouseholdInvitation represents an invitation sent by a household member to invite someone by email
+
+```go
+type HouseholdInvitation struct {
+    gorm.Model
+    HouseholdID uint      `gorm:"index,not null" json:"householdId"`
+    InviterID   uint      `gorm:"index,not null" json:"inviterId"`
+    Email       string    `gorm:"not null" json:"email"`
+    Token       string    `gorm:"uniqueIndex,not null" json:"-"`
+    Status      string    `gorm:"not null;default:'pending'" json:"status"`
+    ExpiresAt   time.Time `gorm:"not null" json:"expiresAt"`
 }
 ```
 
@@ -2080,10 +2511,11 @@ Tile is a wrapper for a card content on the home page
 
 ```go
 type Tile struct {
-    Title  string
-    Hero   string
-    Body   string
-    Footer string
+    Title   string
+    Hero    string
+    Body    string
+    Footer  string
+    Variant string // Bootstrap color variant: "danger", "warning", "success", "" (default/primary)
 }
 ```
 

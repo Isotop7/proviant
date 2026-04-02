@@ -6,6 +6,7 @@ require (
 	github.com/appleboy/gin-jwt/v2 v2.10.3
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
+	github.com/google/uuid v1.6.0
 	github.com/makiuchi-d/gozxing v0.1.1
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/viper v1.21.0

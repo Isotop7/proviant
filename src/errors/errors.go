@@ -153,4 +153,28 @@ var (
 
 	// ErrMemberNotInHousehold is thrown when the target user is not a member of the caller's household
 	ErrMemberNotInHousehold = errors.New("user is not a member of this household")
+
+	/*
+	 * Invitation related errors
+	 */
+	// ErrInvitationNotFound is thrown when a requested invitation does not exist
+	ErrInvitationNotFound = errors.New("invitation not found")
+
+	// ErrInvitationExpired is thrown when an invitation has passed its expiry time
+	ErrInvitationExpired = errors.New("invitation has expired")
+
+	// ErrInvitationAlreadyUsed is thrown when an invitation has already been accepted
+	ErrInvitationAlreadyUsed = errors.New("invitation has already been accepted")
+
+	// ErrInvitationCancelled is thrown when an invitation has been cancelled by the sender
+	ErrInvitationCancelled = errors.New("invitation has been cancelled")
+
+	// ErrInvitationEmailMismatch is thrown when the recipient email does not match the invitation
+	ErrInvitationEmailMismatch = errors.New("email does not match invitation")
+
+	// ErrDuplicateInvitation is thrown when a pending invitation already exists for the same email and household
+	ErrDuplicateInvitation = errors.New("a pending invitation already exists for this email")
+
+	// ErrInvitationNotAuthorized is thrown when a user tries to manage an invitation they did not create
+	ErrInvitationNotAuthorized = errors.New("not authorized to manage this invitation")
 )

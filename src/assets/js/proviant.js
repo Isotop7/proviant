@@ -359,3 +359,46 @@ proviant.colorExpiry = function (date) {
     return "bg-primary";
   }
 };
+
+/* Invitation API methods */
+proviant.createInvitation = async function (email) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.getInvitations = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, invitations: body };
+};
+
+proviant.cancelInvitation = async function (invitationID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations/${invitationID}`;
+  const apiCall = await fetch(url, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.acceptInvitation = async function (token) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/auth/invite/accept`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};

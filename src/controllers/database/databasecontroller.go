@@ -12,6 +12,7 @@ import (
 	"codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/models/webparts"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -1303,4 +1304,131 @@ func (dbc DatabaseController) RemoveMemberFromHousehold(memberUserID, adminUserI
 	}
 
 	return tx.Commit().Error
+}
+
+// CreateInvitation creates a new household invitation after verifying the inviter is a member
+// and no pending invitation exists for the same email.
+func (dbc DatabaseController) CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error) {
+	// Verify inviter is a member of the household
+	var user authentication.User
+	if err := dbc.DBHandle.Where("id = ? AND household_id = ?", inviterID, householdID).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return database.HouseholdInvitation{}, errors.ErrInvitationNotAuthorized
+		}
+		return database.HouseholdInvitation{}, err
+	}
+
+	// Check no pending invitation exists for same householdID + email
+	var existingInvitation database.HouseholdInvitation
+	err := dbc.DBHandle.Where("household_id = ? AND email = ? AND status = ?", householdID, email, database.InvitationStatusPending).First(&existingInvitation).Error
+	if err == nil {
+		return database.HouseholdInvitation{}, errors.ErrDuplicateInvitation
+	}
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return database.HouseholdInvitation{}, err
+	}
+
+	// Generate token and set expiry
+	token := uuid.New().String()
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+
+	invitation := database.HouseholdInvitation{
+		HouseholdID: householdID,
+		InviterID:   inviterID,
+		Email:       email,
+		Token:       token,
+		Status:      database.InvitationStatusPending,
+		ExpiresAt:   expiresAt,
+	}
+
+	if err := dbc.DBHandle.Create(&invitation).Error; err != nil {
+		return database.HouseholdInvitation{}, err
+	}
+
+	return invitation, nil
+}
+
+// GetInvitationsForHousehold returns all non-deleted invitations for the household, ordered by CreatedAt DESC
+func (dbc DatabaseController) GetInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error) {
+	var invitations []database.HouseholdInvitation
+	err := dbc.DBHandle.Where("household_id = ?", householdID).Order("created_at DESC").Find(&invitations).Error
+	return invitations, err
+}
+
+// GetInvitationByToken looks up an invitation by its token
+func (dbc DatabaseController) GetInvitationByToken(token string) (database.HouseholdInvitation, error) {
+	var invitation database.HouseholdInvitation
+	if err := dbc.DBHandle.Where("token = ?", token).First(&invitation).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return database.HouseholdInvitation{}, errors.ErrInvitationNotFound
+		}
+		return database.HouseholdInvitation{}, err
+	}
+	return invitation, nil
+}
+
+// AcceptInvitation processes an invitation acceptance, updating the user's household and marking the invitation as accepted
+func (dbc DatabaseController) AcceptInvitation(token, email string, userID uint) error {
+	var invitation database.HouseholdInvitation
+	if err := dbc.DBHandle.Where("token = ?", token).First(&invitation).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrInvitationNotFound
+		}
+		return err
+	}
+
+	// Check status
+	switch invitation.Status {
+	case database.InvitationStatusAccepted:
+		return errors.ErrInvitationAlreadyUsed
+	case database.InvitationStatusCancelled:
+		return errors.ErrInvitationCancelled
+	}
+
+	// Check expiry
+	if time.Now().After(invitation.ExpiresAt) {
+		dbc.DBHandle.Model(&invitation).Update("status", database.InvitationStatusExpired)
+		return errors.ErrInvitationExpired
+	}
+
+	// Check email match
+	if invitation.Email != email {
+		return errors.ErrInvitationEmailMismatch
+	}
+
+	// Use transaction to update user's household and mark invitation as accepted
+	tx := dbc.DBHandle.Begin()
+	if err := tx.Model(&authentication.User{}).Where("id = ?", userID).Update("household_id", invitation.HouseholdID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Model(&invitation).Update("status", database.InvitationStatusAccepted).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// CancelInvitation cancels a pending invitation after verifying the caller is a member of the invitation's household
+func (dbc DatabaseController) CancelInvitation(invitationID, userID uint) error {
+	var invitation database.HouseholdInvitation
+	if err := dbc.DBHandle.First(&invitation, invitationID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrInvitationNotFound
+		}
+		return err
+	}
+
+	// Verify caller is a member of the invitation's household
+	var user authentication.User
+	if err := dbc.DBHandle.Where("id = ? AND household_id = ?", userID, invitation.HouseholdID).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrInvitationNotAuthorized
+		}
+		return err
+	}
+
+	return dbc.DBHandle.Model(&invitation).Update("status", database.InvitationStatusCancelled).Error
 }

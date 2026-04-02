@@ -190,6 +190,7 @@ func main() {
 		&authentication.User{},
 		&dbModel.Product{},
 		&dbModel.HouseholdApplication{},
+		&dbModel.HouseholdInvitation{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
