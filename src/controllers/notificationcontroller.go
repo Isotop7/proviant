@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"time"
 
 	dbController "codeberg.org/isotop7/proviant/controllers/database"
@@ -155,5 +156,104 @@ func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel
 	if !success {
 		nc.Logger.Warn().Msgf("Failed to send any notifications for product '%s' (ID: %d)",
 			product.ProductName, product.ID)
+	}
+}
+
+// DispatchInvitations starts a background goroutine that periodically retries sending pending invitation emails.
+// It runs once immediately on startup, then every Interval hours (reusing the same config as product notifications).
+func (nc *NotificationController) DispatchInvitations(baseURL string) {
+	emailProvider := &EmailNotificationProvider{
+		Configuration: nc.Configuration.SMTP,
+		Logger:        nc.Logger,
+	}
+
+	if !emailProvider.IsConfigured() {
+		nc.Logger.Info().Msg("Invitation dispatch: email provider not configured, skipping")
+		return
+	}
+
+	sleepInterval := time.Hour * time.Duration(nc.Configuration.Interval)
+	go func() {
+		nc.Logger.Info().Msg("Invitation dispatch: running initial dispatch on startup")
+		nc.processPendingInvitations(emailProvider, baseURL)
+
+		for {
+			nc.Logger.Info().Msgf("Invitation dispatch: sleeping for %v before next retry cycle", sleepInterval)
+			time.Sleep(sleepInterval)
+			nc.processPendingInvitations(emailProvider, baseURL)
+		}
+	}()
+}
+
+// SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database.
+func (nc *NotificationController) SendInvitationEmail(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
+	emailProvider := &EmailNotificationProvider{
+		Configuration: nc.Configuration.SMTP,
+		Logger:        nc.Logger,
+	}
+
+	if !emailProvider.IsConfigured() {
+		return fmt.Errorf("email provider not configured")
+	}
+
+	if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
+		nc.Logger.Error().Msgf("Failed to send invitation email to %s: %s", invitation.Email, err)
+		if markErr := nc.DatabaseController.MarkInvitationSendFailed(invitation.ID); markErr != nil {
+			nc.Logger.Error().Msgf("Failed to mark invitation %d as send-failed: %s", invitation.ID, markErr)
+		}
+		return err
+	}
+
+	if err := nc.DatabaseController.MarkInvitationSent(invitation.ID); err != nil {
+		nc.Logger.Error().Msgf("Failed to mark invitation %d as sent: %s", invitation.ID, err)
+		return err
+	}
+
+	nc.Logger.Info().Msgf("Invitation email sent successfully to %s", invitation.Email)
+	return nil
+}
+
+// processPendingInvitations fetches all pending invitations that need to be sent or retried.
+func (nc *NotificationController) processPendingInvitations(emailProvider *EmailNotificationProvider, baseURL string) {
+	sleepInterval := time.Hour * time.Duration(nc.Configuration.Interval)
+
+	invitations, err := nc.DatabaseController.GetPendingInvitationsNotSent(sleepInterval)
+	if err != nil {
+		nc.Logger.Error().Msgf("Failed to fetch pending invitations: %s", err)
+		return
+	}
+
+	if len(invitations) == 0 {
+		nc.Logger.Debug().Msg("Invitation dispatch: no pending invitations to send")
+		return
+	}
+
+	nc.Logger.Info().Msgf("Invitation dispatch: processing %d pending invitation(s)", len(invitations))
+
+	for _, invitation := range invitations {
+		user, userErr := nc.DatabaseController.GetUserByID(invitation.InviterID)
+		inviterName := "A household member"
+		if userErr == nil {
+			inviterName = user.Username
+		}
+
+		household, householdErr := nc.DatabaseController.GetHouseholdByID(invitation.HouseholdID)
+		householdName := fmt.Sprintf("Household #%d", invitation.HouseholdID)
+		if householdErr == nil {
+			householdName = household.Name
+		}
+
+		if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
+			nc.Logger.Error().Msgf("Failed to send invitation %d to %s: %s", invitation.ID, invitation.Email, err)
+			if markErr := nc.DatabaseController.MarkInvitationSendFailed(invitation.ID); markErr != nil {
+				nc.Logger.Error().Msgf("Failed to mark invitation %d as send-failed: %s", invitation.ID, markErr)
+			}
+		} else {
+			if markErr := nc.DatabaseController.MarkInvitationSent(invitation.ID); markErr != nil {
+				nc.Logger.Error().Msgf("Failed to mark invitation %d as sent: %s", invitation.ID, markErr)
+			} else {
+				nc.Logger.Info().Msgf("Invitation email sent successfully to %s", invitation.Email)
+			}
+		}
 	}
 }

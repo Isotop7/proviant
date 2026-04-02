@@ -6,6 +6,7 @@ import (
 
 	dbController "codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models"
+	authentication "codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
@@ -149,4 +150,37 @@ func TestNotificationConfiguration(t *testing.T) {
 	if config.SMTP.Host != "smtp.example.com" {
 		t.Errorf("Expected SMTP host to be 'smtp.example.com', got %s", config.SMTP.Host)
 	}
+}
+
+func (m *MockDatabaseController) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error) {
+	return dbModel.HouseholdInvitation{}, nil
+}
+func (m *MockDatabaseController) GetInvitationsForHousehold(householdID, inviterID uint) ([]dbModel.HouseholdInvitation, error) {
+	return nil, nil
+}
+func (m *MockDatabaseController) GetInvitationByToken(token string) (dbModel.HouseholdInvitation, error) {
+	return dbModel.HouseholdInvitation{}, nil
+}
+func (m *MockDatabaseController) AcceptInvitation(token, email string, userID uint) error {
+	return nil
+}
+func (m *MockDatabaseController) CancelInvitation(invitationID, userID uint) error {
+	return nil
+}
+
+func (m *MockDatabaseController) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]dbModel.HouseholdInvitation, error) {
+	return nil, nil
+}
+func (m *MockDatabaseController) MarkInvitationSent(invitationID uint) error {
+	return nil
+}
+func (m *MockDatabaseController) MarkInvitationSendFailed(invitationID uint) error {
+	return nil
+}
+
+func (m *MockDatabaseController) GetUserByID(userID uint) (authentication.User, error) {
+	return authentication.User{}, nil
+}
+func (m *MockDatabaseController) GetHouseholdByID(householdID uint) (dbModel.Household, error) {
+	return dbModel.Household{}, nil
 }

@@ -1,9 +1,11 @@
 package web
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
+	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
@@ -59,6 +61,7 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 
 	// Setup page data
 	pageData := map[string]any{
+		"InviteToken":  ctx.Query("invite_token"),
 		"Title":        "Home",
 		"Tiles":        homeTiles,
 		"HasHousehold": hasHousehold,
@@ -71,14 +74,16 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 
 func (frontend *Frontend) Auth(ctx *gin.Context) {
 	pageData := map[string]any{
-		"Title": "Authentication",
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Authentication",
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "auth.tmpl", pageData)
 }
 
 func (frontend *Frontend) User(ctx *gin.Context) {
 	pageData := map[string]any{
-		"Title": "User",
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "User",
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "user.tmpl", pageData)
 }
@@ -130,6 +135,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	myApplications, _ := dbController.GetPendingApplicationsForApplicant(userID)
 
 	pageData := map[string]any{
+		"InviteToken":         ctx.Query("invite_token"),
 		"Title":               "User Settings",
 		"User":                user,
 		"Household":           household,
@@ -137,6 +143,12 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"Members":             members,
 		"PendingApplications": pendingApplications,
 		"MyApplications":      myApplications,
+	}
+
+	// Only admins can see and manage invitations
+	if isAdmin {
+		invitations, _ := dbController.GetInvitationsForHousehold(user.HouseholdID, userID)
+		pageData["Invitations"] = invitations
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
 }
@@ -192,12 +204,13 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	}
 
 	pageData := map[string]any{
-		"Title":      "Products",
-		"Products":   products,
-		"QueryParam": queryParam,
-		"QueryValue": queryValue,
-		"Sort":       sort,
-		"Order":      order,
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Products",
+		"Products":    products,
+		"QueryParam":  queryParam,
+		"QueryValue":  queryValue,
+		"Sort":        sort,
+		"Order":       order,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }
@@ -234,22 +247,25 @@ func (frontend *Frontend) ProductsArchived(ctx *gin.Context) {
 	}
 
 	pageData := map[string]any{
-		"Title":    "ArchivedProducts",
-		"Products": archivedProducts,
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "ArchivedProducts",
+		"Products":    archivedProducts,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsArchived.tmpl", pageData)
 }
 
 func (frontend *Frontend) ProductsCreate(ctx *gin.Context) {
 	pageData := map[string]any{
-		"Title": "Create product",
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Create product",
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsCreate.tmpl", pageData)
 }
 
 func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
 	pageData := map[string]any{
-		"Title": "Scan Product",
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Scan Product",
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsScan.tmpl", pageData)
 }
@@ -296,8 +312,9 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	}
 
 	pageData := map[string]any{
-		"Title":   "Products",
-		"Product": product,
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Products",
+		"Product":     product,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsView.tmpl", pageData)
 }
@@ -344,8 +361,112 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	}
 
 	pageData := map[string]any{
-		"Title":   "Products",
-		"Product": product,
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Products",
+		"Product":     product,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
+}
+
+// AcceptInvite renders the invitation acceptance page
+func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	token := ctx.Query("token")
+
+	if token == "" {
+		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "base", "acceptInvite.tmpl", map[string]any{
+			"Title": "Accept Invitation",
+			"Error": "No invitation token provided.",
+		})
+		return
+	}
+
+	// Get database handle
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", "acceptInvite.tmpl", map[string]any{
+			"Title": "Accept Invitation",
+			"Error": "Internal server error.",
+		})
+		return
+	}
+
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+
+	// Look up the invitation
+	invitation, invErr := dbController.GetInvitationByToken(token)
+	if invErr != nil {
+		if invErr == errors.ErrInvitationNotFound {
+			templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "base", "acceptInvite.tmpl", map[string]any{
+				"Title": "Accept Invitation",
+				"Error": "This invitation does not exist or has been deleted.",
+			})
+			return
+		}
+		logger.Error().Msg(invErr.Error())
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", "acceptInvite.tmpl", map[string]any{
+			"Title": "Accept Invitation",
+			"Error": "An error occurred while processing this invitation.",
+		})
+		return
+	}
+
+	// Check if invitation is still valid
+	if invitation.Status != dbModel.InvitationStatusPending {
+		msg := "This invitation has already been used."
+		if invitation.Status == dbModel.InvitationStatusCancelled {
+			msg = "This invitation has been cancelled by the sender."
+		} else if invitation.Status == dbModel.InvitationStatusExpired {
+			msg = "This invitation has expired."
+		}
+		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", "acceptInvite.tmpl", map[string]any{
+			"Title": "Accept Invitation",
+			"Error": msg,
+		})
+		return
+	}
+
+	if time.Now().After(invitation.ExpiresAt) {
+		// Mark as expired
+		_ = dbController.DBHandle.Model(&dbModel.HouseholdInvitation{}).Where("id = ?", invitation.ID).Update("status", dbModel.InvitationStatusExpired)
+		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", "acceptInvite.tmpl", map[string]any{
+			"Title": "Accept Invitation",
+			"Error": "This invitation has expired.",
+		})
+		return
+	}
+
+	// Get household name for display
+	household, householdErr := dbController.GetHouseholdByID(invitation.HouseholdID)
+	householdName := fmt.Sprintf("Household #%d", invitation.HouseholdID)
+	if householdErr == nil {
+		householdName = household.Name
+	}
+
+	// Check if user is already authenticated
+	claims := jwt.ExtractClaims(ctx)
+	if claims != nil {
+		userID, ok := claims[static.TokenIdentityKey].(float64)
+		if ok && uint(userID) > 0 {
+			// User is logged in — show confirmation
+			templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "acceptInvite.tmpl", map[string]any{
+				"Title":           "Accept Invitation",
+				"ConfirmAccept":   true,
+				"Token":           token,
+				"HouseholdName":   householdName,
+				"InvitationEmail": invitation.Email,
+			})
+			return
+		}
+	}
+
+	// User is not logged in — redirect to auth with token
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "acceptInvite.tmpl", map[string]any{
+		"Title":           "Accept Invitation",
+		"NeedsAuth":       true,
+		"Token":           token,
+		"HouseholdName":   householdName,
+		"InvitationEmail": invitation.Email,
+	})
 }

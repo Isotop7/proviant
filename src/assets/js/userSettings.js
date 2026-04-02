@@ -540,3 +540,60 @@ document.addEventListener("change", function (event) {
     toggleNtfySettings();
   }
 });
+/* Invitation management helpers */
+function showInviteAlert(elementId, message, isSuccess) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.textContent = message;
+  el.className = `alert mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
+}
+
+/* Send invitation */
+function handleSendInvitation() {
+  const emailInput = document.getElementById("inputInviteEmail");
+  const email = emailInput ? emailInput.value.trim() : "";
+  if (!email) {
+    if (emailInput) emailInput.classList.add("is-invalid");
+    return;
+  }
+  if (emailInput) emailInput.classList.remove("is-invalid");
+  proviant.createInvitation(email).then((response) => {
+    if (response.code === 201) {
+      ShowSuccessModal("Invitation sent. Reloading page.", function (e) {
+        e.preventDefault();
+        location.reload();
+      });
+    } else if (response.code === 409) {
+      showInviteAlert("sendInviteAlert", response.message, false);
+    } else if (response.code === 400) {
+      showInviteAlert("sendInviteAlert", response.message, false);
+    } else {
+      showInviteAlert("sendInviteAlert", `Error: ${response.message}`, false);
+    }
+  });
+}
+
+/* Cancel invitation — event delegation */
+document.addEventListener("click", function (event) {
+  const cancelInviteBtn = event.target.closest(".btn-cancel-invitation");
+  if (cancelInviteBtn) {
+    const invitationID = cancelInviteBtn.dataset.id;
+    if (!confirm("Cancel this invitation?")) return;
+    proviant.cancelInvitation(invitationID).then((response) => {
+      if (response.code === 200) {
+        const row = document.getElementById(`invitation-${invitationID}`);
+        if (row) row.remove();
+      } else {
+        showInviteAlert("invitationsAlert", `Error: ${response.message}`, false);
+      }
+    });
+    return;
+  }
+
+  // Send invitation button
+  if (event.target.closest("#btnSendInvitation")) {
+    event.preventDefault();
+    handleSendInvitation();
+    return;
+  }
+});

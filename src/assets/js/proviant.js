@@ -166,14 +166,14 @@ proviant.loginUser = async function (username, password) {
   return response;
 };
 
-proviant.signupUser = async function (username, mailAddress, password) {
+proviant.signupUser = async function (username, mailAddress, password, inviteToken) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/auth/signup`;
   const apiCall = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ username, mailAddress, password }),
+    body: JSON.stringify({ username, mailAddress, password, inviteToken }),
   });
   const body = await apiCall.json();
   const response = {
@@ -358,4 +358,47 @@ proviant.colorExpiry = function (date) {
   } else {
     return "bg-primary";
   }
+};
+
+/* Invitation API methods */
+proviant.createInvitation = async function (email) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.getInvitations = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, invitations: body };
+};
+
+proviant.cancelInvitation = async function (invitationID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations/${invitationID}`;
+  const apiCall = await fetch(url, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.acceptInvitation = async function (token) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/auth/invite/accept`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
 };

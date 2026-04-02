@@ -56,6 +56,7 @@ The app can be configured with environment variables:
 ```bash
 # Server configuration
 PROVIANT_SERVER_PORT=5050                                                     # Listening port of server
+PROVIANT_SERVER_BASEURL="https://proviant.local.de"                           # URL of Proviant with protocol
 PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD="secret key"                     # Secret used for JSON Web Tokens
 PROVIANT_SERVER_AUTHENTICATION_TOKENLIFETIME=8                                # Lifetime of JSON Web Tokens
 PROVIANT_SERVER_CORS_ALLOWALLORIGINS=true                                     # Allow all requests to API

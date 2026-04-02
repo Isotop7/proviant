@@ -22,7 +22,7 @@ import (
 )
 
 // SetupRouter creates the gin engine and associated middleware
-func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController) *gin.Engine {
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) *gin.Engine {
 	// Generate new gin instance
 	engine := gin.New()
 
@@ -65,6 +65,24 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Template cache
 	engine.Use(func(ctx *gin.Context) {
 		ctx.Set("templateCache", proviantConfiguration.TemplateCache)
+		ctx.Next()
+	})
+
+	// Notification controller for invitation emails
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("notificationController", notificationController)
+		ctx.Next()
+	})
+
+	// SMTP configuration for invitation emails
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("smtpConfig", proviantConfiguration.Notification.SMTP)
+		ctx.Next()
+	})
+
+	// Base URL for constructing magic links
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("baseURL", proviantConfiguration.Server.BaseURL)
 		ctx.Next()
 	})
 
@@ -134,6 +152,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Signup routes
 	engine.POST("/auth/signup", auth.Signup)
+	engine.POST("/auth/invite/accept", auth.AcceptInvitation)
 	engine.GET("/auth/refresh_token", jwtAPIMiddleware.RefreshHandler)
 
 	// Public product routes
@@ -170,6 +189,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAPI.DELETE("/applications/:id", v1.CancelHouseholdApplication)
 	householdAPI.PATCH("/name", v1.UpdateHouseholdName)
 	householdAPI.DELETE("/members/:userId", v1.RemoveHouseholdMember)
+
+	// Household invitation routes
+	householdAPI.POST("/invitations", v1.CreateInvitation)
+	householdAPI.GET("/invitations", v1.GetInvitations)
+	householdAPI.DELETE("/invitations/:id", v1.CancelInvitation)
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")
@@ -216,6 +240,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products", webFrontendHandler.Products)
 	publicWebFrontend.GET("/products/archived", webFrontendHandler.ProductsArchived)
 	publicWebFrontend.GET("/products/create", webFrontendHandler.ProductsCreate)
+
+	// Public invite acceptance page (no auth required)
+	engine.GET("/web/invite/accept", webFrontendHandler.AcceptInvite)
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")

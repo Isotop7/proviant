@@ -5,6 +5,13 @@ definitions:
       message:
         type: string
     type: object
+  auth.acceptInvitationRequest:
+    properties:
+      token:
+        type: string
+    required:
+    - token
+    type: object
   authentication.Login:
     properties:
       password:
@@ -30,6 +37,8 @@ definitions:
     type: object
   authentication.Signup:
     properties:
+      inviteToken:
+        type: string
       mailAddress:
         type: string
       password:
@@ -75,6 +84,48 @@ definitions:
       id:
         type: integer
       name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  database.HouseholdApplication:
+    properties:
+      applicantId:
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      householdId:
+        type: integer
+      id:
+        type: integer
+      status:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  database.HouseholdInvitation:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      email:
+        type: string
+      expiresAt:
+        type: string
+      householdId:
+        type: integer
+      id:
+        type: integer
+      inviterId:
+        type: integer
+      sendAttempts:
+        type: integer
+      sentAt:
+        type: string
+      status:
         type: string
       updatedAt:
         type: string
@@ -135,6 +186,23 @@ definitions:
         description: Valid is true if Time is not NULL
         type: boolean
     type: object
+  v1.createHouseholdRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  v1.createInvitationRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  v1.updateHouseholdNameRequest:
+    properties:
+      name:
+        type: string
+    type: object
 externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
@@ -167,6 +235,346 @@ paths:
       summary: Gets health
       tags:
       - common
+  /api/v1/household/{id}/apply:
+    post:
+      description: Creates a pending application for the calling user to join the
+        specified household.
+      parameters:
+      - description: Household ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Apply to join a household
+      tags:
+      - household
+  /api/v1/household/applications:
+    get:
+      description: Returns pending join applications for the household the calling
+        user is admin of.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/database.HouseholdApplication'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: List pending household applications
+      tags:
+      - household
+  /api/v1/household/applications/{id}:
+    delete:
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Cancel own household application
+      tags:
+      - household
+  /api/v1/household/applications/{id}/approve:
+    post:
+      description: Moves the applicant into the household. Caller must be the household
+        admin.
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Approve a household application
+      tags:
+      - household
+  /api/v1/household/applications/{id}/reject:
+    post:
+      description: Marks the application as rejected. Caller must be the household
+        admin.
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Reject a household application
+      tags:
+      - household
+  /api/v1/household/invitations:
+    get:
+      description: Returns all invitations for the calling user's household
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/database.HouseholdInvitation'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get household invitations
+      tags:
+      - Invitation
+    post:
+      consumes:
+      - application/json
+      description: Creates a new household invitation and sends an email to the recipient
+      parameters:
+      - description: Invitation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.createInvitationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Create invitation
+      tags:
+      - Invitation
+  /api/v1/household/invitations/{id}:
+    delete:
+      description: Cancels a pending invitation by ID
+      parameters:
+      - description: Invitation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Cancel invitation
+      tags:
+      - Invitation
+  /api/v1/household/members/{userId}:
+    delete:
+      parameters:
+      - description: User ID to remove
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Remove a household member
+      tags:
+      - household
+  /api/v1/household/name:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Name
+        in: body
+        name: household
+        required: true
+        schema:
+          $ref: '#/definitions/v1.updateHouseholdNameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Rename household
+      tags:
+      - household
   /api/v1/product/{id}:
     delete:
       consumes:
@@ -631,6 +1039,59 @@ paths:
       summary: Updates a user object
       tags:
       - user
+  /api/v1/user/household/create:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new household with the given name and assigns the user
+        to it.
+      parameters:
+      - description: Household
+        in: body
+        name: household
+        required: true
+        schema:
+          $ref: '#/definitions/v1.createHouseholdRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Create and switch to a new household
+      tags:
+      - household
+  /api/v1/user/household/leave:
+    post:
+      description: Creates a new personal household for the user. Products are moved
+        if they were the sole member.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Leave current household
+      tags:
+      - household
   /api/v1/user/notification-preferences:
     get:
       consumes:
@@ -706,6 +1167,44 @@ paths:
       summary: Updates a user password
       tags:
       - user
+  /auth/invite/accept:
+    post:
+      consumes:
+      - application/json
+      description: Accepts a household invitation using a token
+      parameters:
+      - description: Accept invitation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.acceptInvitationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Accept invitation
+      tags:
+      - Invitation
   /auth/signup:
     post:
       consumes:

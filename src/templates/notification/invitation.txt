@@ -1,0 +1,16 @@
+You're invited to join a household
+
+Hi there,
+
+{{.InviterName}} has invited you to join the household "{{.HouseholdName}}" on Proviant.
+
+Proviant helps you manage your household's pantry, track expiration dates, and share shopping lists with family members.
+
+Accept the invitation by clicking the link below:
+{{.MagicLink}}
+
+Note: This invitation link will expire on {{.ExpiresAt}}. Please accept it before then.
+
+If you didn't expect this invitation, you can safely ignore this email.
+
+Thank you for using Proviant!
