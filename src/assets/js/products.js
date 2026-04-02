@@ -68,6 +68,20 @@ document.addEventListener("click", function (event) {
         }
         return;
     }
+
+    // Search button
+    if (target.closest("#search-btn")) {
+        event.preventDefault();
+        performSearch();
+        return;
+    }
+
+    // Show All button
+    if (target.closest("#show-all-btn")) {
+        event.preventDefault();
+        window.location.href = "/web/products";
+        return;
+    }
 });
 
 /* Event delegation for checkbox changes */
