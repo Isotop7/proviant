@@ -157,6 +157,19 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedUserAPI.POST("/password", v1.UpdateUserPassword)
 	protectedUserAPI.GET("/notification-preferences", v1.GetUserNotificationPreferences)
 	protectedUserAPI.POST("/notification-preferences", v1.UpdateUserNotificationPreferences)
+	protectedUserAPI.POST("/household/leave", v1.LeaveHousehold)
+	protectedUserAPI.POST("/household/create", v1.CreateHousehold)
+
+	// Household application routes
+	householdAPI := engine.Group("/api/v1/household")
+	householdAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	householdAPI.POST("/:id/apply", v1.ApplyForHousehold)
+	householdAPI.GET("/applications", v1.GetHouseholdApplications)
+	householdAPI.POST("/applications/:id/approve", v1.ApproveHouseholdApplication)
+	householdAPI.POST("/applications/:id/reject", v1.RejectHouseholdApplication)
+	householdAPI.DELETE("/applications/:id", v1.CancelHouseholdApplication)
+	householdAPI.PATCH("/name", v1.UpdateHouseholdName)
+	householdAPI.DELETE("/members/:userId", v1.RemoveHouseholdMember)
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")

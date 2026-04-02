@@ -244,6 +244,70 @@ proviant.updateNotificationSettings = async function (preferences) {
   return response;
 };
 
+proviant.updateHouseholdName = async function (name) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/name`;
+  const apiCall = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.cancelApplication = async function (applicationID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/applications/${applicationID}`;
+  const apiCall = await fetch(url, { method: "DELETE" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.removeMember = async function (userID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/members/${userID}`;
+  const apiCall = await fetch(url, { method: "DELETE" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.leaveHousehold = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/household/leave`;
+  const apiCall = await fetch(url, { method: "POST" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.createHousehold = async function (name) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/household/create`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.applyForHousehold = async function (householdID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/${householdID}/apply`;
+  const apiCall = await fetch(url, { method: "POST" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.approveApplication = async function (applicationID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/applications/${applicationID}/approve`;
+  const apiCall = await fetch(url, { method: "POST" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.rejectApplication = async function (applicationID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/applications/${applicationID}/reject`;
+  const apiCall = await fetch(url, { method: "POST" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
 proviant.logoutUser = function () {
   document.cookie = "jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
 };

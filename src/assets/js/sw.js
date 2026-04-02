@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v1';
+const CACHE_NAME = 'proviant-v2';
 
 // Static shell to pre-cache on install
 const PRECACHE_URLS = [
@@ -89,7 +89,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for static assets — they are versioned via cache name
+  // Network-first for JavaScript files to avoid stale cached scripts
+  if (url.pathname.endsWith('.js')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Cache-first for other static assets — they are versioned via cache name
   if (url.pathname.startsWith('/assets/') || url.pathname === '/manifest.json') {
     event.respondWith(
       caches.match(request).then(

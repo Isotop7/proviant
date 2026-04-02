@@ -121,10 +121,22 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		return
 	}
 
+	isAdmin := household.AdminID == userID
+
+	members, _ := dbController.GetHouseholdMembers(user.HouseholdID)
+
+	pendingApplications, _ := dbController.GetPendingApplicationsForAdmin(userID)
+
+	myApplications, _ := dbController.GetPendingApplicationsForApplicant(userID)
+
 	pageData := map[string]any{
-		"Title":     "User Settings",
-		"User":      user,
-		"Household": household,
+		"Title":               "User Settings",
+		"User":                user,
+		"Household":           household,
+		"IsAdmin":             isAdmin,
+		"Members":             members,
+		"PendingApplications": pendingApplications,
+		"MyApplications":      myApplications,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
 }

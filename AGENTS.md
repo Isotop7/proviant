@@ -160,6 +160,33 @@ logger.Info().Msg("Logging initialized")
 - JavaScript files served from `src/assets/js/`
 - Use Bootstrap for styling, Bootstrap Icons for icons
 
+#### Service Worker Caching Warning
+- The project uses a service worker (`src/assets/js/sw.js`) with cache-first strategy for static assets
+- JavaScript files now use **network-first** strategy (as of `proviant-v2` cache) to avoid stale scripts
+- When modifying JS files, always bump `CACHE_NAME` in `sw.js` to force cache invalidation
+- Users may experience stale JS behavior until they do a hard refresh (Ctrl+Shift+R) or the service worker updates
+
+#### Frontend JavaScript Event Handling
+- **Always use event delegation** for button/input handlers: `document.addEventListener("click", ...)` with `event.target.closest()`
+- **Never capture DOM references at script load time** (e.g., `const btn = document.getElementById("btnX"); btn.onclick = ...`) — these become stale after navigation or DOM updates
+- Query DOM elements inside the handler function when needed, not at module scope
+- This pattern ensures handlers work reliably regardless of browser caching or SPA-like navigation
+- Example:
+```javascript
+// WRONG: stale reference captured once
+const btnSave = document.getElementById("btnSave");
+btnSave.onclick = function() { ... };
+
+// CORRECT: event delegation, always works
+document.addEventListener("click", function(event) {
+  if (event.target.closest("#btnSave")) {
+    event.preventDefault();
+    // query elements here, not at top of file
+    handleSave();
+  }
+});
+```
+
 ### Documentation
 - Use godoc comments for exported functions
 - Include Swagger annotations for API endpoints

@@ -28,58 +28,60 @@ function handleCardClickEffect(cardId) {
 
 async function handleSelect() {
     const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-    if (selectedProducts.length == 1) {
-      document.getElementById('edit-product').disabled = false;
-    } else {
-      document.getElementById('edit-product').disabled = true;
+    const editBtn = document.getElementById('edit-product');
+    if (editBtn) {
+        editBtn.disabled = selectedProducts.length !== 1;
     }
 }
 
-document.querySelectorAll('#delete-product').forEach(button => {
-    button.addEventListener('click', async function () {
+/* Event delegation for clicks */
+document.addEventListener("click", function (event) {
+    const target = event.target;
+
+    // Delete product button
+    if (target.closest("#delete-product")) {
+        event.preventDefault();
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        await bulkDeleteProducts(selectedProducts);
-        location.reload();
-    });
-});
+        bulkDeleteProducts(selectedProducts).then(() => location.reload());
+        return;
+    }
 
-document.querySelectorAll('#restore-product').forEach(button => {
-    button.addEventListener('click', async function () {
+    // Restore product button
+    if (target.closest("#restore-product")) {
+        event.preventDefault();
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        await bulkRestoreProducts(selectedProducts);
-        location.reload();
-    });
+        bulkRestoreProducts(selectedProducts).then(() => location.reload());
+        return;
+    }
+
+    // Card click
+    const card = target.closest('.card');
+    if (card) {
+        const cardId = card.id;
+        const productId = cardId.split('-')[1];
+        const checkbox = document.getElementById(`checkbox-${productId}`);
+        if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+            card.classList.toggle('border-info');
+            handleSelect();
+            handleCardClickEffect(cardId);
+        }
+        return;
+    }
 });
 
-document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-    checkbox.addEventListener('change', async function () {
-      const cardId = `card-${this.id.split('-')[1]}`;
-      const card = document.getElementById(cardId);
-      const checkbox = document.getElementById(`checkbox-${this.id.split('-')[1]}`);
-      if (card) {
-        document.getElementById(cardId).classList.toggle('border-info')
-        checkbox.checked = !checkbox.checked;
-      }
-    });
-    checkbox.addEventListener('click', async function () {
-      const cardId = `card-${this.id.split('-')[1]}`;
-      const card = document.getElementById(cardId);
-      if (card) {
-        document.getElementById(cardId).classList.toggle('border-info')
-      }
-    });
-});
-
-document.querySelectorAll('.card').forEach(card => {
-    card.addEventListener('click', async function () {
-      const cardId = this.id;
-      const productId = cardId.split('-')[1];
-      const checkbox = document.getElementById(`checkbox-${productId}`);
-      if (checkbox) {
-          checkbox.checked = !checkbox.checked;
-          document.getElementById(cardId).classList.toggle('border-info')
-          handleSelect();
-          handleCardClickEffect(cardId);
-      }
-    });
+/* Event delegation for checkbox changes */
+document.addEventListener("change", function (event) {
+    const target = event.target;
+    if (target.matches('input[type="checkbox"]')) {
+        const cardId = `card-${target.id.split('-')[1]}`;
+        const card = document.getElementById(cardId);
+        const checkbox = document.getElementById(`checkbox-${target.id.split('-')[1]}`);
+        if (card) {
+            card.classList.toggle('border-info');
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+        }
+    }
 });

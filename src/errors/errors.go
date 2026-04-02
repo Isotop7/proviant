@@ -129,4 +129,28 @@ var (
 
 	// ErrNotificationEmptyNtfyTopic is thrown if an empty ntfy.sh topic was specified
 	ErrNotificationEmptyNtfyTopic = errors.New("ntfy.sh topic cannot be empty when URL is provided")
+
+	/*
+	 * Household related errors
+	 */
+	// ErrHouseholdNotFound is thrown when a requested household does not exist
+	ErrHouseholdNotFound = errors.New("household not found")
+
+	// ErrNotHouseholdAdmin is thrown when a user attempts an admin action on a household they do not administrate
+	ErrNotHouseholdAdmin = errors.New("user is not the admin of this household")
+
+	// ErrApplicationAlreadyPending is thrown when a user already has a pending application for a household
+	ErrApplicationAlreadyPending = errors.New("a pending application for this household already exists")
+
+	// ErrApplicationNotFound is thrown when a requested household application does not exist
+	ErrApplicationNotFound = errors.New("household application not found")
+
+	// ErrNotApplicationApplicant is thrown when a user tries to cancel an application they did not create
+	ErrNotApplicationApplicant = errors.New("user is not the applicant of this application")
+
+	// ErrCannotRemoveAdmin is thrown when an admin tries to remove themselves via the member removal endpoint
+	ErrCannotRemoveAdmin = errors.New("cannot remove the household admin")
+
+	// ErrMemberNotInHousehold is thrown when the target user is not a member of the caller's household
+	ErrMemberNotInHousehold = errors.New("user is not a member of this household")
 )

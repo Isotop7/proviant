@@ -750,6 +750,7 @@ func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInte
 	var notificationProducts []database.Product
 	// Get expired products with pending notification
 	getError := dbc.DBHandle.
+		Where("expire_at > ?", time.Time{}).
 		Where("expire_at < ?", time.Now()).
 		Where("notified_at < ?", time.Now().Add(-(sleepInterval))).
 		Find(&notificationProducts)
@@ -971,4 +972,335 @@ func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, er
 	}
 
 	return homeTiles, nil
+}
+
+// GetHouseholdMemberCount returns how many users currently belong to a household
+func (dbc DatabaseController) GetHouseholdMemberCount(householdID uint) (int64, error) {
+	var count int64
+	result := dbc.DBHandle.Model(&authentication.User{}).Where("household_id = ?", householdID).Count(&count)
+	return count, result.Error
+}
+
+// LeaveHousehold creates a new personal household for the user, moves all products if they were the
+// sole member, then updates the user's HouseholdID to the new household.
+func (dbc DatabaseController) LeaveHousehold(userID uint) error {
+	tx := dbc.DBHandle.Begin()
+
+	var user authentication.User
+	if err := tx.First(&user, userID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	oldHouseholdID := user.HouseholdID
+
+	// Create new personal household
+	newHousehold := database.Household{
+		Name: fmt.Sprintf("%s's Household", user.Username),
+	}
+	if err := tx.Create(&newHousehold).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Model(&newHousehold).Update("admin_id", userID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Move products only when the user is the sole member
+	var memberCount int64
+	tx.Model(&authentication.User{}).Where("household_id = ?", oldHouseholdID).Count(&memberCount)
+	if memberCount == 1 {
+		if err := tx.Model(&database.Product{}).Where("household_id = ?", oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// Update user to new household
+	if err := tx.Model(&user).Update("household_id", newHousehold.ID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// CreateAndSwitchHousehold creates a new named household and switches the user to it.
+// Products are moved from the old household when the user was its sole member.
+func (dbc DatabaseController) CreateAndSwitchHousehold(userID uint, name string) error {
+	tx := dbc.DBHandle.Begin()
+
+	var user authentication.User
+	if err := tx.First(&user, userID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	oldHouseholdID := user.HouseholdID
+
+	newHousehold := database.Household{Name: name}
+	if err := tx.Create(&newHousehold).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Model(&newHousehold).Update("admin_id", userID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var memberCount int64
+	tx.Model(&authentication.User{}).Where("household_id = ?", oldHouseholdID).Count(&memberCount)
+	if memberCount == 1 {
+		if err := tx.Model(&database.Product{}).Where("household_id = ?", oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Model(&user).Update("household_id", newHousehold.ID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// ApplyForHousehold creates a pending HouseholdApplication for the given user and target household.
+// Returns ErrHouseholdNotFound if the target household does not exist,
+// or ErrApplicationAlreadyPending if a pending application already exists.
+func (dbc DatabaseController) ApplyForHousehold(applicantID, householdID uint) error {
+	// Verify target household exists
+	var household database.Household
+	if err := dbc.DBHandle.First(&household, householdID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrHouseholdNotFound
+		}
+		return err
+	}
+
+	// Check for an existing pending application
+	var existing database.HouseholdApplication
+	result := dbc.DBHandle.Where("applicant_id = ? AND household_id = ? AND status = ?", applicantID, householdID, database.ApplicationStatusPending).First(&existing)
+	if result.Error == nil {
+		return errors.ErrApplicationAlreadyPending
+	}
+	if result.Error != gorm.ErrRecordNotFound {
+		return result.Error
+	}
+
+	application := database.HouseholdApplication{
+		ApplicantID: applicantID,
+		HouseholdID: householdID,
+		Status:      database.ApplicationStatusPending,
+	}
+	return dbc.DBHandle.Create(&application).Error
+}
+
+// GetPendingApplicationsForAdmin returns all pending applications for the household the given user administrates.
+// Returns ErrNotHouseholdAdmin if the user is not the admin of their household.
+func (dbc DatabaseController) GetPendingApplicationsForAdmin(adminUserID uint) ([]database.HouseholdApplication, error) {
+	var user authentication.User
+	if err := dbc.DBHandle.First(&user, adminUserID).Error; err != nil {
+		return nil, err
+	}
+
+	var household database.Household
+	if err := dbc.DBHandle.First(&household, user.HouseholdID).Error; err != nil {
+		return nil, err
+	}
+	if household.AdminID != adminUserID {
+		return nil, errors.ErrNotHouseholdAdmin
+	}
+
+	var applications []database.HouseholdApplication
+	err := dbc.DBHandle.Where("household_id = ? AND status = ?", household.ID, database.ApplicationStatusPending).Find(&applications).Error
+	return applications, err
+}
+
+// ApproveApplication approves a household application: moves the applicant into the household.
+// Only the household admin may call this.
+func (dbc DatabaseController) ApproveApplication(applicationID, adminUserID uint) error {
+	tx := dbc.DBHandle.Begin()
+
+	var application database.HouseholdApplication
+	if err := tx.First(&application, applicationID).Error; err != nil {
+		tx.Rollback()
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrApplicationNotFound
+		}
+		return err
+	}
+
+	// Verify caller is admin of target household
+	var household database.Household
+	if err := tx.First(&household, application.HouseholdID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if household.AdminID != adminUserID {
+		tx.Rollback()
+		return errors.ErrNotHouseholdAdmin
+	}
+
+	// Move applicant to household
+	if err := tx.Model(&authentication.User{}).Where("id = ?", application.ApplicantID).Update("household_id", application.HouseholdID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Mark application approved
+	if err := tx.Model(&application).Update("status", database.ApplicationStatusApproved).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// RejectApplication rejects a household application.
+// Only the household admin may call this.
+func (dbc DatabaseController) RejectApplication(applicationID, adminUserID uint) error {
+	tx := dbc.DBHandle.Begin()
+
+	var application database.HouseholdApplication
+	if err := tx.First(&application, applicationID).Error; err != nil {
+		tx.Rollback()
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrApplicationNotFound
+		}
+		return err
+	}
+
+	var household database.Household
+	if err := tx.First(&household, application.HouseholdID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if household.AdminID != adminUserID {
+		tx.Rollback()
+		return errors.ErrNotHouseholdAdmin
+	}
+
+	if err := tx.Model(&application).Update("status", database.ApplicationStatusRejected).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// GetHouseholdMembers returns all users that belong to the given household.
+func (dbc DatabaseController) GetHouseholdMembers(householdID uint) ([]authentication.User, error) {
+	var users []authentication.User
+	err := dbc.DBHandle.Where("household_id = ?", householdID).Find(&users).Error
+	return users, err
+}
+
+// UpdateHouseholdName renames a household. The caller must be the household admin.
+func (dbc DatabaseController) UpdateHouseholdName(householdID, adminUserID uint, name string) error {
+	var household database.Household
+	if err := dbc.DBHandle.First(&household, householdID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrHouseholdNotFound
+		}
+		return err
+	}
+	if household.AdminID != adminUserID {
+		return errors.ErrNotHouseholdAdmin
+	}
+	return dbc.DBHandle.Model(&household).Update("name", name).Error
+}
+
+// GetPendingApplicationsForApplicant returns all pending applications submitted by the given user.
+func (dbc DatabaseController) GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error) {
+	var applications []database.HouseholdApplication
+	err := dbc.DBHandle.
+		Where("applicant_id = ? AND status = ?", applicantUserID, database.ApplicationStatusPending).
+		Find(&applications).Error
+	return applications, err
+}
+
+// CancelApplication cancels a pending application. The caller must be the applicant.
+func (dbc DatabaseController) CancelApplication(applicationID, applicantUserID uint) error {
+	var application database.HouseholdApplication
+	if err := dbc.DBHandle.First(&application, applicationID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrApplicationNotFound
+		}
+		return err
+	}
+	if application.ApplicantID != applicantUserID {
+		return errors.ErrNotApplicationApplicant
+	}
+	if application.Status != database.ApplicationStatusPending {
+		return errors.ErrApplicationNotFound
+	}
+	return dbc.DBHandle.Delete(&application).Error
+}
+
+// RemoveMemberFromHousehold removes a member from the admin's household and assigns them a new personal household.
+func (dbc DatabaseController) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error {
+	tx := dbc.DBHandle.Begin()
+
+	var adminUser authentication.User
+	if err := tx.First(&adminUser, adminUserID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var household database.Household
+	if err := tx.First(&household, adminUser.HouseholdID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if household.AdminID != adminUserID {
+		tx.Rollback()
+		return errors.ErrNotHouseholdAdmin
+	}
+
+	var memberUser authentication.User
+	if err := tx.First(&memberUser, memberUserID).Error; err != nil {
+		tx.Rollback()
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrMemberNotInHousehold
+		}
+		return err
+	}
+	if memberUser.HouseholdID != household.ID {
+		tx.Rollback()
+		return errors.ErrMemberNotInHousehold
+	}
+	if memberUserID == adminUserID {
+		tx.Rollback()
+		return errors.ErrCannotRemoveAdmin
+	}
+
+	newHousehold := database.Household{
+		Name: fmt.Sprintf("%s's Household", memberUser.Username),
+	}
+	if err := tx.Create(&newHousehold).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Model(&newHousehold).Update("admin_id", memberUserID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var memberCount int64
+	tx.Model(&authentication.User{}).Where("household_id = ?", household.ID).Count(&memberCount)
+	if memberCount == 1 {
+		if err := tx.Model(&database.Product{}).Where("household_id = ?", household.ID).Update("household_id", newHousehold.ID).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Model(&memberUser).Update("household_id", newHousehold.ID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }
