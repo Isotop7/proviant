@@ -56,74 +56,55 @@
         </div>
     </div>
 
-    {{/* Action cards */}}
-    <div class="row gx-5 px-3 mb-3">
+    {{/* Leave household */}}
+    <div class="row g-5 p-3 align-items-center justify-content-between">
         <div class="col">
-            <div class="accordion" id="householdAccordion">
+            <h5 class="mb-0"><i class="bi bi-box-arrow-left me-2"></i>Leave Household</h5>
+            <p class="text-body-secondary small mb-0 mt-1">You will be assigned a new personal household. If you are the sole member, your products will be moved with you.</p>
+        </div>
+        <div class="col col-auto">
+            <button type="button" class="btn btn-outline-danger" id="btnLeaveHousehold">Leave</button>
+        </div>
+    </div>
+    <div class="row gx-5 px-3 mb-1">
+        <div class="col">
+            <div id="leaveHouseholdAlert" class="alert alert-danger d-none" role="alert"></div>
+        </div>
+    </div>
 
-                {{/* Leave household */}}
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLeave" aria-expanded="false" aria-controls="collapseLeave">
-                            <i class="bi bi-box-arrow-left me-2 text-danger"></i>Leave Household
-                        </button>
-                    </h2>
-                    <div id="collapseLeave" class="accordion-collapse collapse" data-bs-parent="#householdAccordion">
-                        <div class="accordion-body">
-                            <p class="text-body-secondary small">You will be assigned a new personal household. If you are the sole member, your products will be moved with you.</p>
-                            <button type="button" class="btn btn-danger" id="btnLeaveHousehold">
-                                <i class="bi bi-box-arrow-left me-1"></i>Leave Household
-                            </button>
-                            <div id="leaveHouseholdAlert" class="alert alert-danger mt-3 d-none" role="alert"></div>
-                        </div>
-                    </div>
-                </div>
-
-                {{/* Create new household */}}
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCreate" aria-expanded="false" aria-controls="collapseCreate">
-                            <i class="bi bi-house-add me-2 text-success"></i>Create New Household
-                        </button>
-                    </h2>
-                    <div id="collapseCreate" class="accordion-collapse collapse" data-bs-parent="#householdAccordion">
-                        <div class="accordion-body">
-                            <p class="text-body-secondary small">Create a new household and switch to it. If you are currently the sole member, your products will be moved.</p>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-house"></i></span>
-                                <input type="text" class="form-control" id="inputNewHouseholdName" placeholder="Household name" aria-label="New household name">
-                                <button type="button" class="btn btn-success" id="btnCreateHousehold">
-                                    <i class="bi bi-check-lg me-1"></i>Create &amp; Switch
-                                </button>
-                            </div>
-                            <div id="createHouseholdAlert" class="alert alert-danger mt-3 d-none" role="alert"></div>
-                        </div>
-                    </div>
-                </div>
-
-                {{/* Apply to join a household */}}
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseApply" aria-expanded="false" aria-controls="collapseApply">
-                            <i class="bi bi-person-plus me-2 text-info"></i>Apply to Join a Household
-                        </button>
-                    </h2>
-                    <div id="collapseApply" class="accordion-collapse collapse" data-bs-parent="#householdAccordion">
-                        <div class="accordion-body">
-                            <p class="text-body-secondary small">Enter the ID of the household you want to join. The admin will need to approve your request.</p>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-hash"></i></span>
-                                <input type="number" class="form-control" id="inputApplyHouseholdID" placeholder="Household ID" aria-label="Household ID to join" min="1">
-                                <button type="button" class="btn btn-info" id="btnApplyHousehold">
-                                    <i class="bi bi-send me-1"></i>Apply
-                                </button>
-                            </div>
-                            <div id="applyHouseholdAlert" class="alert mt-3 d-none" role="alert"></div>
-                        </div>
-                    </div>
-                </div>
-
+    {{/* Create new household */}}
+    <div class="row g-5 p-3 align-items-center justify-content-between">
+        <div class="col">
+            <h5 class="mb-0"><i class="bi bi-house-add me-2"></i>Create New Household</h5>
+            <p class="text-body-secondary small mb-0 mt-1">Create a new household and switch to it. If you are currently the sole member, your products will be moved.</p>
+        </div>
+    </div>
+    <div class="row gx-5 px-3 mb-1">
+        <div class="col">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-house"></i></span>
+                <input type="text" class="form-control" id="inputNewHouseholdName" placeholder="Household name" aria-label="New household name">
+                <button type="button" class="btn btn-outline-primary" id="btnCreateHousehold">Create &amp; Switch</button>
             </div>
+            <div id="createHouseholdAlert" class="alert alert-danger mt-3 d-none" role="alert"></div>
+        </div>
+    </div>
+
+    {{/* Apply to join a household */}}
+    <div class="row g-5 p-3 align-items-center justify-content-between">
+        <div class="col">
+            <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>Apply to Join a Household</h5>
+            <p class="text-body-secondary small mb-0 mt-1">Enter the ID of the household you want to join. The admin will need to approve your request.</p>
+        </div>
+    </div>
+    <div class="row gx-5 px-3 mb-1">
+        <div class="col">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-hash"></i></span>
+                <input type="number" class="form-control" id="inputApplyHouseholdID" placeholder="Household ID" aria-label="Household ID to join" min="1">
+                <button type="button" class="btn btn-outline-primary" id="btnApplyHousehold">Apply</button>
+            </div>
+            <div id="applyHouseholdAlert" class="alert mt-3 d-none" role="alert"></div>
         </div>
     </div>
 
