@@ -12,8 +12,17 @@
             <div class="toast-body">
             </div>
         </div>
-    
+
+        {{ if .InviteToken }}
+        <div class="alert alert-info mb-3" role="alert">
+            <i class="bi bi-info-circle me-2"></i>You were invited to join a household. Please sign up using the <strong>exact email address</strong> you were invited with to automatically join.
+        </div>
+        {{ end }}
+
         <form id="authData" novalidate>
+            {{ if .InviteToken }}
+            <input type="hidden" id="inputInviteToken" name="inviteToken" value="{{ .InviteToken }}">
+            {{ end }}
             <div class="mx-auto my-5 text-center">
                 <img src="/assets/icons/hero.png" class="img-fluid" alt="proviant">
             </div>

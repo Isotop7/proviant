@@ -166,14 +166,14 @@ proviant.loginUser = async function (username, password) {
   return response;
 };
 
-proviant.signupUser = async function (username, mailAddress, password) {
+proviant.signupUser = async function (username, mailAddress, password, inviteToken) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/auth/signup`;
   const apiCall = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ username, mailAddress, password }),
+    body: JSON.stringify({ username, mailAddress, password, inviteToken }),
   });
   const body = await apiCall.json();
   const response = {

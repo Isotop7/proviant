@@ -121,6 +121,8 @@ function Signup() {
     const username = usernameInput.value;
     const password = passwordInput.value;
     const mailAddress = inputMailAddress.value;
+    const inviteTokenInput = authForm.elements.inviteToken;
+    const inviteToken = inviteTokenInput ? inviteTokenInput.value : "";
 
     if (username == "") {
         if (!usernameInput.classList.contains("is-invalid")) {
@@ -145,7 +147,7 @@ function Signup() {
         return;
     }
 
-    proviant.signupUser(username, mailAddress, password).then((response) => {
+    proviant.signupUser(username, mailAddress, password, inviteToken).then((response) => {
         switch (response.code) {
             case 200:
                 showSignupSuccess(username);

@@ -105,11 +105,13 @@ func (e *EmailNotificationProvider) SendInvitationEmail(invitation dbModel.House
 		HouseholdName string
 		MagicLink     string
 		ExpiresAt     string
+		Email         string
 	}{
 		InviterName:   inviterName,
 		HouseholdName: householdName,
 		MagicLink:     magicLink,
 		ExpiresAt:     invitation.ExpiresAt.Format("2006-01-02 15:04"),
+		Email:         invitation.Email,
 	})
 	if templExecErr != nil {
 		return templExecErr

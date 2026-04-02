@@ -61,6 +61,7 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 
 	// Setup page data
 	pageData := map[string]any{
+		"InviteToken":  ctx.Query("invite_token"),
 		"Title":        "Home",
 		"Tiles":        homeTiles,
 		"HasHousehold": hasHousehold,
@@ -73,14 +74,16 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 
 func (frontend *Frontend) Auth(ctx *gin.Context) {
 	pageData := map[string]any{
-		"Title": "Authentication",
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Authentication",
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "auth.tmpl", pageData)
 }
 
 func (frontend *Frontend) User(ctx *gin.Context) {
 	pageData := map[string]any{
-		"Title": "User",
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "User",
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "user.tmpl", pageData)
 }
@@ -133,6 +136,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	myApplications, _ := dbController.GetPendingApplicationsForApplicant(userID)
 
 	pageData := map[string]any{
+		"InviteToken":         ctx.Query("invite_token"),
 		"Title":               "User Settings",
 		"User":                user,
 		"Household":           household,
@@ -196,12 +200,13 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	}
 
 	pageData := map[string]any{
-		"Title":      "Products",
-		"Products":   products,
-		"QueryParam": queryParam,
-		"QueryValue": queryValue,
-		"Sort":       sort,
-		"Order":      order,
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Products",
+		"Products":    products,
+		"QueryParam":  queryParam,
+		"QueryValue":  queryValue,
+		"Sort":        sort,
+		"Order":       order,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }
@@ -238,22 +243,25 @@ func (frontend *Frontend) ProductsArchived(ctx *gin.Context) {
 	}
 
 	pageData := map[string]any{
-		"Title":    "ArchivedProducts",
-		"Products": archivedProducts,
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "ArchivedProducts",
+		"Products":    archivedProducts,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsArchived.tmpl", pageData)
 }
 
 func (frontend *Frontend) ProductsCreate(ctx *gin.Context) {
 	pageData := map[string]any{
-		"Title": "Create product",
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Create product",
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsCreate.tmpl", pageData)
 }
 
 func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
 	pageData := map[string]any{
-		"Title": "Scan Product",
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Scan Product",
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsScan.tmpl", pageData)
 }
@@ -300,8 +308,9 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	}
 
 	pageData := map[string]any{
-		"Title":   "Products",
-		"Product": product,
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Products",
+		"Product":     product,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsView.tmpl", pageData)
 }
@@ -348,8 +357,9 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	}
 
 	pageData := map[string]any{
-		"Title":   "Products",
-		"Product": product,
+		"InviteToken": ctx.Query("invite_token"),
+		"Title":       "Products",
+		"Product":     product,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
 }
@@ -437,10 +447,11 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		if ok && uint(userID) > 0 {
 			// User is logged in — show confirmation
 			templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "acceptInvite.tmpl", map[string]any{
-				"Title":         "Accept Invitation",
-				"ConfirmAccept": true,
-				"Token":         token,
-				"HouseholdName": householdName,
+				"Title":           "Accept Invitation",
+				"ConfirmAccept":   true,
+				"Token":           token,
+				"HouseholdName":   householdName,
+				"InvitationEmail": invitation.Email,
 			})
 			return
 		}
@@ -448,9 +459,10 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 
 	// User is not logged in — redirect to auth with token
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "acceptInvite.tmpl", map[string]any{
-		"Title":         "Accept Invitation",
-		"NeedsAuth":     true,
-		"Token":         token,
-		"HouseholdName": householdName,
+		"Title":           "Accept Invitation",
+		"NeedsAuth":       true,
+		"Token":           token,
+		"HouseholdName":   householdName,
+		"InvitationEmail": invitation.Email,
 	})
 }
