@@ -333,3 +333,116 @@ if (btnUpdateNotificationSettings) {
     UpdateNotificationSettings();
   };
 }
+
+/* Household management helpers */
+function showHouseholdAlert(elementId, message, isSuccess) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.textContent = message;
+  el.className = `alert mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
+}
+
+function hideHouseholdAlert(elementId) {
+  const el = document.getElementById(elementId);
+  if (el) el.classList.add("d-none");
+}
+
+/* Leave household */
+const btnLeaveHousehold = document.getElementById("btnLeaveHousehold");
+if (btnLeaveHousehold) {
+  btnLeaveHousehold.onclick = function (event) {
+    event.preventDefault();
+    if (!confirm("Leave your current household? You will be assigned a new personal household.")) return;
+    proviant.leaveHousehold().then((response) => {
+      if (response.code === 200) {
+        ShowSuccessModal("You have left the household. Reloading page.", function (e) {
+          e.preventDefault();
+          location.reload();
+        });
+      } else {
+        showHouseholdAlert("leaveHouseholdAlert", `Error: ${response.message}`, false);
+      }
+    });
+  };
+}
+
+/* Create new household */
+const btnCreateHousehold = document.getElementById("btnCreateHousehold");
+if (btnCreateHousehold) {
+  btnCreateHousehold.onclick = function (event) {
+    event.preventDefault();
+    const nameInput = document.getElementById("inputNewHouseholdName");
+    const name = nameInput ? nameInput.value.trim() : "";
+    if (!name) {
+      if (nameInput) nameInput.classList.add("is-invalid");
+      return;
+    }
+    if (nameInput) nameInput.classList.remove("is-invalid");
+    proviant.createHousehold(name).then((response) => {
+      if (response.code === 200) {
+        ShowSuccessModal("Household created. Reloading page.", function (e) {
+          e.preventDefault();
+          location.reload();
+        });
+      } else {
+        showHouseholdAlert("createHouseholdAlert", `Error: ${response.message}`, false);
+      }
+    });
+  };
+}
+
+/* Apply to join household */
+const btnApplyHousehold = document.getElementById("btnApplyHousehold");
+if (btnApplyHousehold) {
+  btnApplyHousehold.onclick = function (event) {
+    event.preventDefault();
+    const idInput = document.getElementById("inputApplyHouseholdID");
+    const householdID = idInput ? parseInt(idInput.value, 10) : NaN;
+    if (!householdID || householdID < 1) {
+      if (idInput) idInput.classList.add("is-invalid");
+      return;
+    }
+    if (idInput) idInput.classList.remove("is-invalid");
+    proviant.applyForHousehold(householdID).then((response) => {
+      const alertEl = document.getElementById("applyHouseholdAlert");
+      if (response.code === 200) {
+        showHouseholdAlert("applyHouseholdAlert", "Application submitted. Waiting for admin approval.", true);
+      } else if (response.code === 409) {
+        showHouseholdAlert("applyHouseholdAlert", "You already have a pending application for this household.", false);
+      } else if (response.code === 404) {
+        showHouseholdAlert("applyHouseholdAlert", "Household not found.", false);
+      } else {
+        showHouseholdAlert("applyHouseholdAlert", `Error: ${response.message}`, false);
+      }
+    });
+  };
+}
+
+/* Approve / reject applications */
+document.querySelectorAll(".btn-approve-application").forEach(function (btn) {
+  btn.onclick = function () {
+    const applicationID = btn.dataset.id;
+    proviant.approveApplication(applicationID).then((response) => {
+      if (response.code === 200) {
+        const row = document.getElementById(`application-${applicationID}`);
+        if (row) row.remove();
+      } else {
+        showHouseholdAlert("applicationsAlert", `Error: ${response.message}`, false);
+      }
+    });
+  };
+});
+
+document.querySelectorAll(".btn-reject-application").forEach(function (btn) {
+  btn.onclick = function () {
+    const applicationID = btn.dataset.id;
+    proviant.rejectApplication(applicationID).then((response) => {
+      if (response.code === 200) {
+        const row = document.getElementById(`application-${applicationID}`);
+        if (row) row.remove();
+      } else {
+        showHouseholdAlert("applicationsAlert", `Error: ${response.message}`, false);
+      }
+    });
+  };
+});
