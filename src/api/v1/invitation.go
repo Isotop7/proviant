@@ -168,7 +168,7 @@ func GetInvitations(ctx *gin.Context) {
 		return
 	}
 
-	invitations, err := dbController.GetInvitationsForHousehold(user.HouseholdID)
+	invitations, err := dbController.GetInvitationsForHousehold(user.HouseholdID, userID)
 	if err != nil {
 		logger.Error().Msgf("Error fetching invitations: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))

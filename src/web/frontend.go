@@ -129,7 +129,6 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	isAdmin := household.AdminID == userID
 
 	members, _ := dbController.GetHouseholdMembers(user.HouseholdID)
-	invitations, _ := dbController.GetInvitationsForHousehold(user.HouseholdID)
 
 	pendingApplications, _ := dbController.GetPendingApplicationsForAdmin(userID)
 
@@ -144,7 +143,12 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"Members":             members,
 		"PendingApplications": pendingApplications,
 		"MyApplications":      myApplications,
-		"Invitations":         invitations,
+	}
+
+	// Only admins can see and manage invitations
+	if isAdmin {
+		invitations, _ := dbController.GetInvitationsForHousehold(user.HouseholdID, userID)
+		pageData["Invitations"] = invitations
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
 }

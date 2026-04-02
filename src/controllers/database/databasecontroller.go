@@ -1349,9 +1349,9 @@ func (dbc DatabaseController) CreateInvitation(householdID, inviterID uint, emai
 }
 
 // GetInvitationsForHousehold returns all non-deleted invitations for the household, ordered by CreatedAt DESC
-func (dbc DatabaseController) GetInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error) {
+func (dbc DatabaseController) GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error) {
 	var invitations []database.HouseholdInvitation
-	err := dbc.DBHandle.Where("household_id = ?", householdID).Order("created_at DESC").Find(&invitations).Error
+	err := dbc.DBHandle.Where("household_id = ? AND inviter_id = ?", householdID, inviterID).Order("created_at DESC").Find(&invitations).Error
 	return invitations, err
 }
 

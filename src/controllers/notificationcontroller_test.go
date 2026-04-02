@@ -155,7 +155,7 @@ func TestNotificationConfiguration(t *testing.T) {
 func (m *MockDatabaseController) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error) {
 	return dbModel.HouseholdInvitation{}, nil
 }
-func (m *MockDatabaseController) GetInvitationsForHousehold(householdID uint) ([]dbModel.HouseholdInvitation, error) {
+func (m *MockDatabaseController) GetInvitationsForHousehold(householdID, inviterID uint) ([]dbModel.HouseholdInvitation, error) {
 	return nil, nil
 }
 func (m *MockDatabaseController) GetInvitationByToken(token string) (dbModel.HouseholdInvitation, error) {

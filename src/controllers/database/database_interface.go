@@ -15,7 +15,7 @@ type DatabaseControllerInterface interface {
 	GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
 	SetProductNotifiedAt(productID uint) error
 	CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
-	GetInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
+	GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
 	GetInvitationByToken(token string) (database.HouseholdInvitation, error)
 	AcceptInvitation(token, email string, userID uint) error
 	CancelInvitation(invitationID, userID uint) error
