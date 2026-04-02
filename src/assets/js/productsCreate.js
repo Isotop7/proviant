@@ -1,4 +1,4 @@
-/* Helper to dynamically query DOM elements */
+/* Helper to dynamically query DOM elements — always fresh, never stale */
 function getElements() {
     return {
         foundBarcodeWrapper: document.getElementById('foundBarcode'),
@@ -7,12 +7,6 @@ function getElements() {
         inputExpireAt: document.getElementById('expireAt'),
     };
 }
-
-// Get elements
-
-
-
-
 const html5QrCode = new Html5Qrcode('barcode-reader',
     { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13] }
 );
@@ -26,15 +20,19 @@ const ProductState = Object.freeze({
 // UI functions
 function showError(error) {
     const els = getElements();
-    if (els.inputBarcode) { els.inputBarcode.value = '';
-    els.inputBarcode.style.backgroundColor = 'var(--bs-warning)';
-    els.inputBarcode.style.color = 'var(--bs-warning-text)';
+    if (els.inputBarcode) {
+        els.inputBarcode.value = '';
+        els.inputBarcode.style.backgroundColor = 'var(--bs-warning)';
+        els.inputBarcode.style.color = 'var(--bs-warning-text)';
+    }
     console.error(error);
 }
 function showBarcode(barcode) {
     const els = getElements();
-    if (els.inputBarcode) { els.inputBarcode.value = barcode;
-    els.inputBarcode.classList.add('border-success'); }
+    if (els.inputBarcode) {
+        els.inputBarcode.value = barcode;
+        els.inputBarcode.classList.add('border-success');
+    }
 }
 function showAlert(isSuccess, message) {
     const alertElement = document.getElementById('productAlert');
@@ -214,8 +212,8 @@ async function queryProductInfoRequest(barcode) {
         }
     }).catch(() => {
         const els = getElements();
-        const barcode = els.inputBarcode ? els.inputBarcode.value : 'unknown';
-        showError(`Could not find product with barcode ${barcode}!`);
+        const bc = els.inputBarcode ? els.inputBarcode.value : 'unknown';
+        showError(`Could not find product with barcode ${bc}!`);
     });
     return response.json();
 }
@@ -392,7 +390,9 @@ function handleChangedBarcode() {
     checkBarcode(barcode);
     dismissAlert();
 };
+
 // Add event listeners — all use event delegation to avoid stale references
+
 /* Event delegation for form submission */
 document.addEventListener('submit', function (event) {
     const target = event.target;
