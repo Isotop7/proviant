@@ -167,6 +167,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAPI.GET("/applications", v1.GetHouseholdApplications)
 	householdAPI.POST("/applications/:id/approve", v1.ApproveHouseholdApplication)
 	householdAPI.POST("/applications/:id/reject", v1.RejectHouseholdApplication)
+	householdAPI.DELETE("/applications/:id", v1.CancelHouseholdApplication)
+	householdAPI.PATCH("/name", v1.UpdateHouseholdName)
+	householdAPI.DELETE("/members/:userId", v1.RemoveHouseholdMember)
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")

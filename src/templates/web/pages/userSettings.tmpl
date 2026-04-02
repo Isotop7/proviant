@@ -56,6 +56,51 @@
         </div>
     </div>
 
+    {{/* Rename household — admin only */}}
+    {{ if .IsAdmin }}
+    <div class="row gx-5 px-3 mb-3">
+        <div class="col">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-pencil"></i></span>
+                <input type="text" class="form-control" id="inputHouseholdName"
+                       placeholder="New household name" aria-label="Household name"
+                       value="{{ .Household.Name }}">
+                <button type="button" class="btn btn-outline-primary" id="btnUpdateHouseholdName">Rename</button>
+            </div>
+            <div id="updateNameAlert" class="alert mt-3 d-none" role="alert"></div>
+        </div>
+    </div>
+    {{ end }}
+
+    {{/* Members list */}}
+    {{ if .Members }}
+    <div class="row g-5 p-3 align-items-center justify-content-between">
+        <div class="col"><h5 class="mb-0"><i class="bi bi-people me-2"></i>Members</h5></div>
+    </div>
+    <div class="row gx-5 px-3 mb-3">
+        <div class="col">
+            <ul class="list-group" id="memberList">
+                {{ range .Members }}
+                <li class="list-group-item d-flex justify-content-between align-items-center" id="member-{{ .ID }}">
+                    <span>
+                        <i class="bi bi-person me-2"></i>{{ .Username }}
+                        {{ if eq .ID $.User.ID }}<span class="badge bg-secondary ms-1">You</span>{{ end }}
+                        {{ if eq .ID $.Household.AdminID }}<span class="badge bg-primary ms-1"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
+                    </span>
+                    {{ if and $.IsAdmin (ne .ID $.Household.AdminID) }}
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-member"
+                            data-id="{{ .ID }}" aria-label="Remove member">
+                        <i class="bi bi-person-dash"></i>
+                    </button>
+                    {{ end }}
+                </li>
+                {{ end }}
+            </ul>
+            <div id="membersAlert" class="alert mt-3 d-none" role="alert"></div>
+        </div>
+    </div>
+    {{ end }}
+
     {{/* Leave household */}}
     <div class="row g-5 p-3 align-items-center justify-content-between">
         <div class="col">
@@ -133,6 +178,32 @@
         </div>
     </div>
     {{ end }}
+    {{ end }}
+
+    {{/* Outgoing pending applications */}}
+    {{ if .MyApplications }}
+    <div class="row g-5 p-3 align-items-center justify-content-between">
+        <div class="col">
+            <h5 class="mb-0"><i class="bi bi-send me-2"></i>Your Pending Applications</h5>
+            <p class="text-body-secondary small mb-0 mt-1">Awaiting admin approval.</p>
+        </div>
+    </div>
+    <div class="row gx-5 px-3 mb-3">
+        <div class="col">
+            <ul class="list-group" id="myApplicationList">
+                {{ range .MyApplications }}
+                <li class="list-group-item d-flex justify-content-between align-items-center" id="my-application-{{ .ID }}">
+                    <span><i class="bi bi-house me-2"></i>Household #{{ .HouseholdID }}</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-cancel-application"
+                            data-id="{{ .ID }}" aria-label="Cancel application">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                </li>
+                {{ end }}
+            </ul>
+            <div id="myApplicationsAlert" class="alert mt-3 d-none" role="alert"></div>
+        </div>
+    </div>
     {{ end }}
 
     <hr>

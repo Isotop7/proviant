@@ -1,83 +1,99 @@
-// Get elemens
-let editProductForm = document.getElementById('editProductForm');
-let inputProductName = document.getElementById('inputProductName');
-let inputImageURL = document.getElementById('inputImageURL');
-let inputCategories = document.getElementById('inputCategories');
-let inputCountries = document.getElementById('inputCountries');
-let inputExpireAt = document.getElementById('inputExpireAt');
-let labelProductID = document.getElementById('labelProductID');
-let imgProduct = document.getElementById('imgProduct');
-let alertEditProduct = document.getElementById('alertEditProduct');
+/* Helper to dynamically query form elements */
+function getFormElements() {
+    return {
+        form: document.getElementById('editProductForm'),
+        inputProductName: document.getElementById('inputProductName'),
+        inputImageURL: document.getElementById('inputImageURL'),
+        inputCategories: document.getElementById('inputCategories'),
+        inputCountries: document.getElementById('inputCountries'),
+        inputExpireAt: document.getElementById('inputExpireAt'),
+        labelProductID: document.getElementById('labelProductID'),
+        imgProduct: document.getElementById('imgProduct'),
+        alertEditProduct: document.getElementById('alertEditProduct'),
+    };
+}
 
 function checkFormValidity() {
-    return false;
+    // TODO: Implement actual validation logic
+    return true;
 }
 
 function editProduct() {
-    // Return if form is invalid
-    if (!(checkFormValidity)) {
+    const els = getFormElements();
+    if (!els.form || !els.labelProductID || !els.inputProductName || 
+        !els.inputCategories || !els.inputCountries || !els.inputImageURL || !els.inputExpireAt) {
         return;
     }
+
+    // Return if form is invalid
+    if (!checkFormValidity()) {
+        return;
+    }
+
     // Get form values
-    let productID = Number.parseInt(labelProductID.innerText.trim());
-    let product = {
+    const productID = Number.parseInt(els.labelProductID.innerText.trim());
+    const expireDate = els.inputExpireAt.valueAsDate;
+    
+    const product = {
         "ID": productID,
-        "productName": inputProductName.value.trim(),
-        "categories": inputCategories.value.trim(),
-        "countries": inputCountries.value.trim(),
-        "imageUrl": inputImageURL.value.trim(),
-        "expireAt": inputExpireAt.valueAsDate.toISOString()
+        "productName": els.inputProductName.value.trim(),
+        "categories": els.inputCategories.value.trim(),
+        "countries": els.inputCountries.value.trim(),
+        "imageUrl": els.inputImageURL.value.trim(),
+        "expireAt": expireDate ? expireDate.toISOString() : null
     };
+
     // Edit product
     proviant.editProduct(product).then((response) => {
-        // Get and show alert
-        let alert = document.getElementById('alertEditProduct');
+        const alert = document.getElementById('alertEditProduct');
+        if (!alert) return;
+        
         alert.style.display = '';
         // Switch on response code
         switch (response.code) {
             case 200:
-                alert.classList.remove(...alert.classList);
-                alert.classList.add("alert", "alert-success");
+                alert.className = "alert alert-success";
                 alert.innerText = `Product with id '${productID}' was updated successfully`;
                 break;
             case 400:
-                alert.classList.remove(...alert.classList);
-                alert.classList.add("alert", "alert-warning");
+                alert.className = "alert alert-warning";
                 alert.innerText = 'Request contained invalid data';
                 break;
             case 500:
-                alert.classList.remove(...alert.classList);
-                alert.classList.add("alert", "alert-danger");
+                alert.className = "alert alert-danger";
                 alert.innerText = `Backend server error: ${response.message}`;
                 break;
             default:
-                alert.classList.remove(...alert.classList);
-                alert.classList.add("alert", "alert-danger");
+                alert.className = "alert alert-danger";
                 alert.innerText = `Undefined error: ${response.message}`;
                 break;
         }
     });
-};
+}
 
-// Validity checker
-globalThis.addEventListener('load', function () {
-    // Fetch all the forms we want to apply custom Bootstrap validation styles to
-    let forms = document.getElementsByClassName('needs-validation');
-    // Loop over them and prevent submission
-    Array.prototype.filter.call(forms, function (form) {
-        form.addEventListener('submit', function (event) {
-            if (form.checkValidity() === false) {
-                event.preventDefault();
-                event.stopPropagation();
-            } else {
-                editProduct();
-                event.preventDefault();
-            }
-            form.classList.add('was-validated');
-        }, false);
-    });
-}, false);
+/* Event delegation for form submission */
+document.addEventListener("submit", function (event) {
+    const target = event.target;
+    // Handle editProductForm or any form with needs-validation class
+    if (target.id === "editProductForm" || target.classList.contains("needs-validation")) {
+        if (target.checkValidity() === false) {
+            event.preventDefault();
+            event.stopPropagation();
+        } else {
+            event.preventDefault();
+            editProduct();
+        }
+        target.classList.add('was-validated');
+    }
+});
 
-inputImageURL.onkeyup = function () {
-    imgProduct.src = inputImageURL.value;
-};
+/* Event delegation for keyup on image URL input */
+document.addEventListener("keyup", function (event) {
+    const target = event.target;
+    if (target.id === "inputImageURL") {
+        const imgProduct = document.getElementById("imgProduct");
+        if (imgProduct) {
+            imgProduct.src = target.value;
+        }
+    }
+});

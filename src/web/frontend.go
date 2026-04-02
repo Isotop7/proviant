@@ -123,19 +123,20 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 
 	isAdmin := household.AdminID == userID
 
-	// Fetch pending applications if the user is the household admin
-	pendingApplications, appErr := dbController.GetPendingApplicationsForAdmin(userID)
-	if appErr != nil {
-		// Non-fatal: admin check failing just means no applications are shown
-		pendingApplications = nil
-	}
+	members, _ := dbController.GetHouseholdMembers(user.HouseholdID)
+
+	pendingApplications, _ := dbController.GetPendingApplicationsForAdmin(userID)
+
+	myApplications, _ := dbController.GetPendingApplicationsForApplicant(userID)
 
 	pageData := map[string]any{
 		"Title":               "User Settings",
 		"User":                user,
 		"Household":           household,
 		"IsAdmin":             isAdmin,
+		"Members":             members,
 		"PendingApplications": pendingApplications,
+		"MyApplications":      myApplications,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
 }

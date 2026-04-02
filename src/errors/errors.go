@@ -144,4 +144,13 @@ var (
 
 	// ErrApplicationNotFound is thrown when a requested household application does not exist
 	ErrApplicationNotFound = errors.New("household application not found")
+
+	// ErrNotApplicationApplicant is thrown when a user tries to cancel an application they did not create
+	ErrNotApplicationApplicant = errors.New("user is not the applicant of this application")
+
+	// ErrCannotRemoveAdmin is thrown when an admin tries to remove themselves via the member removal endpoint
+	ErrCannotRemoveAdmin = errors.New("cannot remove the household admin")
+
+	// ErrMemberNotInHousehold is thrown when the target user is not a member of the caller's household
+	ErrMemberNotInHousehold = errors.New("user is not a member of this household")
 )

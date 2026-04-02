@@ -301,6 +301,178 @@ func RejectHouseholdApplication(ctx *gin.Context) {
 	}
 }
 
+// UpdateHouseholdName renames the caller's household. Caller must be the household admin.
+// @Summary      Rename household
+// @Tags         household
+// @Accept       json
+// @Produce      json
+// @Param        household  body      updateHouseholdNameRequest  true  "Name"
+// @Success      200  {object}  api.APIResponse
+// @Failure      400  {object}  api.APIResponse
+// @Failure      403  {object}  api.APIResponse
+// @Failure      404  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/household/name [patch]
+func UpdateHouseholdName(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	var req updateHouseholdNameRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		return
+	}
+	if req.Name == "" {
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "household name cannot be empty"})
+		return
+	}
+
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	user, userErr := dbController.GetUserByID(userID)
+	if userErr != nil {
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
+		return
+	}
+
+	updateErr := dbController.UpdateHouseholdName(user.HouseholdID, userID, req.Name)
+	switch updateErr {
+	case nil:
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Household name updated"})
+	case errors.ErrHouseholdNotFound:
+		ctx.JSON(http.StatusNotFound, api.Error(updateErr))
+	case errors.ErrNotHouseholdAdmin:
+		ctx.JSON(http.StatusForbidden, api.Error(updateErr))
+	default:
+		logger.Error().Msgf("Error updating household name: %s", updateErr)
+		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
+	}
+}
+
+// CancelHouseholdApplication cancels a pending application submitted by the caller.
+// @Summary      Cancel own household application
+// @Tags         household
+// @Produce      json
+// @Param        id   path      int  true  "Application ID"
+// @Success      200  {object}  api.APIResponse
+// @Failure      400  {object}  api.APIResponse
+// @Failure      403  {object}  api.APIResponse
+// @Failure      404  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/household/applications/{id} [delete]
+func CancelHouseholdApplication(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	idParam := ctx.Param("id")
+	applicationID, convErr := strconv.ParseUint(idParam, 10, 64)
+	if convErr != nil {
+		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid application id"})
+		return
+	}
+
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	cancelErr := dbController.CancelApplication(uint(applicationID), userID)
+	switch cancelErr {
+	case nil:
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application cancelled"})
+	case errors.ErrApplicationNotFound:
+		ctx.JSON(http.StatusNotFound, api.Error(cancelErr))
+	case errors.ErrNotApplicationApplicant:
+		ctx.JSON(http.StatusForbidden, api.Error(cancelErr))
+	default:
+		logger.Error().Msgf("Error cancelling application: %s", cancelErr)
+		ctx.JSON(http.StatusInternalServerError, api.Error(cancelErr))
+	}
+}
+
+// RemoveHouseholdMember removes a member from the caller's household. Caller must be the admin.
+// @Summary      Remove a household member
+// @Tags         household
+// @Produce      json
+// @Param        userId  path      int  true  "User ID to remove"
+// @Success      200  {object}  api.APIResponse
+// @Failure      400  {object}  api.APIResponse
+// @Failure      403  {object}  api.APIResponse
+// @Failure      404  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/household/members/{userId} [delete]
+func RemoveHouseholdMember(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	idParam := ctx.Param("userId")
+	memberID, convErr := strconv.ParseUint(idParam, 10, 64)
+	if convErr != nil {
+		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid user id"})
+		return
+	}
+
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	removeErr := dbController.RemoveMemberFromHousehold(uint(memberID), userID)
+	switch removeErr {
+	case nil:
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Member removed from household"})
+	case errors.ErrNotHouseholdAdmin:
+		ctx.JSON(http.StatusForbidden, api.Error(removeErr))
+	case errors.ErrMemberNotInHousehold:
+		ctx.JSON(http.StatusNotFound, api.Error(removeErr))
+	case errors.ErrCannotRemoveAdmin:
+		ctx.JSON(http.StatusBadRequest, api.Error(removeErr))
+	default:
+		logger.Error().Msgf("Error removing member: %s", removeErr)
+		ctx.JSON(http.StatusInternalServerError, api.Error(removeErr))
+	}
+}
+
 type createHouseholdRequest struct {
+	Name string `json:"name"`
+}
+
+type updateHouseholdNameRequest struct {
 	Name string `json:"name"`
 }

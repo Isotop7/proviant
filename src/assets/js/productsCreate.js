@@ -1,8 +1,18 @@
+/* Helper to dynamically query DOM elements */
+function getElements() {
+    return {
+        foundBarcodeWrapper: document.getElementById('foundBarcode'),
+        productDataWrapper: document.getElementById('productData'),
+        inputBarcode: document.getElementById('barcode'),
+        inputExpireAt: document.getElementById('expireAt'),
+    };
+}
+
 // Get elements
-let foundBarcodeWrapper = document.getElementById('foundBarcode');
-let productDataWrapper = document.getElementById('productData');
-let inputBarcode = document.getElementById('barcode');
-let inputExpireAt = document.getElementById('expireAt');
+
+
+
+
 const html5QrCode = new Html5Qrcode('barcode-reader',
     { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13] }
 );
@@ -15,14 +25,16 @@ const ProductState = Object.freeze({
 
 // UI functions
 function showError(error) {
-    inputBarcode.value = '';
-    inputBarcode.style.backgroundColor = 'var(--bs-warning)';
-    inputBarcode.style.color = 'var(--bs-warning-text)';
+    const els = getElements();
+    if (els.inputBarcode) { els.inputBarcode.value = '';
+    els.inputBarcode.style.backgroundColor = 'var(--bs-warning)';
+    els.inputBarcode.style.color = 'var(--bs-warning-text)';
     console.error(error);
 }
 function showBarcode(barcode) {
-    inputBarcode.value = barcode;
-    inputBarcode.classList.add('border-success');
+    const els = getElements();
+    if (els.inputBarcode) { els.inputBarcode.value = barcode;
+    els.inputBarcode.classList.add('border-success'); }
 }
 function showAlert(isSuccess, message) {
     const alertElement = document.getElementById('productAlert');
@@ -201,7 +213,9 @@ async function queryProductInfoRequest(barcode) {
             'Content-Type': 'application/json'
         }
     }).catch(() => {
-        showError(`Could not find product with barcode ${inputBarcode.value}!`);
+        const els = getElements();
+        const barcode = els.inputBarcode ? els.inputBarcode.value : 'unknown';
+        showError(`Could not find product with barcode ${barcode}!`);
     });
     return response.json();
 }
@@ -290,7 +304,9 @@ function handleScanButton() {
     }
 };
 function handleBtnAddProduct() {
-    if (!(inputBarcode.checkValidity() && inputExpireAt.checkValidity())) {
+    const els = getElements();
+    if (!els.inputBarcode || !els.inputExpireAt) return;
+    if (!(els.inputBarcode.checkValidity() && els.inputExpireAt.checkValidity())) {
         return;
     }
 
@@ -360,9 +376,11 @@ function handleBtnShowProducts() {
 
 // Input handlers
 function handleChangedBarcode() {
-    if (!(inputBarcode.checkValidity())) {
-        if (inputBarcode.classList.contains('border-success')) {
-            inputBarcode.classList.remove('border-success')
+    const els = getElements();
+    if (!els.inputBarcode) return;
+    if (!(els.inputBarcode.checkValidity())) {
+        if (els.inputBarcode.classList.contains('border-success')) {
+            els.inputBarcode.classList.remove('border-success')
         }
         return;
     }
@@ -374,66 +392,105 @@ function handleChangedBarcode() {
     checkBarcode(barcode);
     dismissAlert();
 };
+// Add event listeners — all use event delegation to avoid stale references
+/* Event delegation for form submission */
+document.addEventListener('submit', function (event) {
+    const target = event.target;
+    if (target.classList.contains('needs-validation')) {
+        if (target.checkValidity() === false) {
+            event.preventDefault();
+            event.stopPropagation();
+        } else {
+            event.preventDefault();
+            createProduct();
+        }
+        target.classList.add('was-validated');
+    }
+});
 
-// Add event listeners
-globalThis.addEventListener('load', function () {
-    // Fetch all the forms we want to apply custom Bootstrap validation styles to
-    let forms = document.getElementsByClassName('needs-validation');
-    // Loop over them and prevent submission
-    Array.prototype.filter.call(forms, function (form) {
-        form.addEventListener('submit', function (event) {
-            if (form.checkValidity() === false) {
-                event.preventDefault();
-                event.stopPropagation();
-            } else {
-                createProduct();
-                event.preventDefault();
-            }
-            form.classList.add('was-validated');
-        }, false);
-    });
-}, false);
-document.addEventListener("DOMContentLoaded", () => {
-    const alertElement = document.getElementById('productAlert');
-    alertElement.addEventListener('close.bs.alert', function (event) {
+/* Event delegation for all clicks */
+document.addEventListener('click', function (event) {
+    const target = event.target;
+
+    if (target.closest('#btnAddProduct')) {
         event.preventDefault();
-        alertElement.classList.remove('show');
-    });
+        handleBtnAddProduct();
+        return;
+    }
+
+    if (target.closest('#btnShowProduct')) {
+        event.preventDefault();
+        handleBtnShowProduct();
+        return;
+    }
+
+    if (target.closest('#btnDeleteProduct')) {
+        event.preventDefault();
+        handleBtnDeleteProduct();
+        return;
+    }
+
+    if (target.closest('#btnArchiveProduct')) {
+        event.preventDefault();
+        handleBtnArchiveProduct();
+        return;
+    }
+
+    if (target.closest('#btnShowProducts')) {
+        event.preventDefault();
+        handleBtnShowProducts();
+        return;
+    }
+
+    if (target.closest('#btnScan')) {
+        event.preventDefault();
+        handleScanButton();
+        return;
+    }
+
+    if (target.closest('#btnExpireAdd3')) {
+        event.preventDefault();
+        shiftExpiry(3, 0);
+        return;
+    }
+
+    if (target.closest('#btnExpireAdd7')) {
+        event.preventDefault();
+        shiftExpiry(7, 0);
+        return;
+    }
+
+    if (target.closest('#btnExpireAdd1m')) {
+        event.preventDefault();
+        shiftExpiry(0, 1);
+        return;
+    }
 });
-document.getElementById('barcode').addEventListener('input', function (event) {
-    event.preventDefault();
-    handleChangedBarcode();
-})
-document.getElementById('btnAddProduct').onclick = function (event) {
-    event.preventDefault();
-    handleBtnAddProduct();
-}
-document.getElementById('btnShowProduct').onclick = function (event) {
-    event.preventDefault();
-    handleBtnShowProduct();
-}
-document.getElementById('deleteModal').addEventListener('show.bs.modal', (event) => {
-    setDeleteModalBody();
+
+/* Event delegation for barcode input */
+document.addEventListener('input', function (event) {
+    const target = event.target;
+    if (target.id === 'barcode' || target.name === 'barcode') {
+        handleChangedBarcode();
+    }
 });
-document.getElementById('archiveModal').addEventListener('show.bs.modal', (event) => {
-    setArchiveModalBody();
+
+/* Event delegation for modal show */
+document.addEventListener('show.bs.modal', function (event) {
+    const modal = event.target;
+    if (modal && modal.id === 'deleteModal') {
+        setDeleteModalBody();
+    }
+    if (modal && modal.id === 'archiveModal') {
+        setArchiveModalBody();
+    }
 });
-document.getElementById('btnDeleteProduct').onclick = function (event) {
-    event.preventDefault();
-    handleBtnDeleteProduct();
-}
-document.getElementById('btnArchiveProduct').onclick = function (event) {
-    event.preventDefault();
-    handleBtnArchiveProduct();
-}
-document.getElementById('btnShowProducts').onclick = function (event) {
-    event.preventDefault();
-    handleBtnShowProducts();
-}
-document.getElementById('btnScan').onclick = function (event) {
-    event.preventDefault();
-    handleScanButton();
-};
-document.getElementById('btnExpireAdd3').onclick = function () { shiftExpiry(3, 0); };
-document.getElementById('btnExpireAdd7').onclick = function () { shiftExpiry(7, 0); };
-document.getElementById('btnExpireAdd1m').onclick = function () { shiftExpiry(0, 1); };
+
+/* Event delegation for alert close */
+document.addEventListener('close.bs.alert', function (event) {
+    const target = event.target;
+    if (target && target.id === 'productAlert') {
+        event.preventDefault();
+        target.classList.remove('show');
+    }
+});

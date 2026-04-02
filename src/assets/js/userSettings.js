@@ -1,37 +1,53 @@
 function showUpdateError(message) {
-  updateAlert.innerText = message;
-  updateAlert.style.display = "";
+  const updateAlert = document.getElementById("updateAlert");
+  if (updateAlert) {
+    updateAlert.innerText = message;
+    updateAlert.style.display = "";
+  }
 }
 
 function hideUpdateError() {
-  updateAlert.innerText = "";
-  updateAlert.style.display = "none";
+  const updateAlert = document.getElementById("updateAlert");
+  if (updateAlert) {
+    updateAlert.innerText = "";
+    updateAlert.style.display = "none";
+  }
 }
 
 function showPasswordError(message) {
-  passwordAlert.innerText = message;
-  passwordAlert.style.display = "";
+  const passwordAlert = document.getElementById("passwordAlert");
+  if (passwordAlert) {
+    passwordAlert.innerText = message;
+    passwordAlert.style.display = "";
+  }
 }
 
 function hidePasswordError() {
-  passwordAlert.innerText = "";
-  passwordAlert.style.display = "none";
+  const passwordAlert = document.getElementById("passwordAlert");
+  if (passwordAlert) {
+    passwordAlert.innerText = "";
+    passwordAlert.style.display = "none";
+  }
 }
 
 function ShowSuccessModal(message, btnFunction) {
-  modalBody.innerText = message;
-  document.getElementById("btnModal").onclick = btnFunction;
-  let successModal = new bootstrap.Modal(document.getElementById("modal"));
+  const modalBody = document.getElementById("modalBody");
+  const btnModal = document.getElementById("btnModal");
+  if (modalBody) modalBody.innerText = message;
+  if (btnModal) btnModal.onclick = btnFunction;
+  const successModal = new bootstrap.Modal(document.getElementById("modal"));
   successModal.show();
 }
 
 /* Update user settings */
 function UpdateSettings() {
   let formIsValid = true;
-  let inputUsername = document.getElementById("inputUsername");
-  let inputMailAddress = document.getElementById("inputMailAddress");
-  let username = inputUsername.value;
-  let mailAddress = inputMailAddress.value;
+  const inputUsername = document.getElementById("inputUsername");
+  const inputMailAddress = document.getElementById("inputMailAddress");
+  if (!inputUsername || !inputMailAddress) return;
+
+  const username = inputUsername.value;
+  const mailAddress = inputMailAddress.value;
 
   if (username == "") {
     if (!inputUsername.classList.contains("is-invalid")) {
@@ -77,14 +93,14 @@ function UpdateSettings() {
 /* Update password */
 function UpdatePassword() {
   let formIsValid = true;
-  let inputPassword = document.getElementById("inputPassword");
-  let inputPasswordVerification = document.getElementById(
-    "inputPasswordVerification",
-  );
-  let password = inputPassword.value;
-  let passwordVerification = inputPasswordVerification.value;
-  let inputUsername = document.getElementById("inputUsername");
-  let username = inputUsername.value;
+  const inputPassword = document.getElementById("inputPassword");
+  const inputPasswordVerification = document.getElementById("inputPasswordVerification");
+  const inputUsername = document.getElementById("inputUsername");
+  if (!inputPassword || !inputPasswordVerification || !inputUsername) return;
+
+  const password = inputPassword.value;
+  const passwordVerification = inputPasswordVerification.value;
+  const username = inputUsername.value;
 
   if (username == "") {
     if (!inputUsername.classList.contains("is-invalid")) {
@@ -144,94 +160,17 @@ function UpdatePassword() {
   });
 }
 
-/* Inputs */
-let inputMailAddress = document.getElementById("inputMailAddress");
-let inputUsername = document.getElementById("inputUsername");
-let inputPassword = document.getElementById("inputPassword");
-let inputPasswordVerification = document.getElementById(
-  "inputPasswordVerification",
-);
-/* Notification inputs */
-let toggleEmailNotifications = document.getElementById(
-  "toggleEmailNotifications",
-);
-let toggleNtfyNotifications = document.getElementById(
-  "toggleNtfyNotifications",
-);
-let inputNtfyUrl = document.getElementById("inputNtfyUrl");
-let inputNtfyTopic = document.getElementById("inputNtfyTopic");
-let inputNtfyToken = document.getElementById("inputNtfyToken");
-/* Alert boxes */
-let updateAlert = document.getElementById("updateAlert");
-let passwordAlert = document.getElementById("passwordAlert");
-let notificationAlert = document.getElementById("notificationAlert");
-/* Buttons */
-let btnUpdatePersonalDetails = document.getElementById(
-  "btnUpdatePersonalDetails",
-);
-let btnUpdatePassword = document.getElementById("btnUpdatePassword");
-let btnUpdateNotificationSettings = document.getElementById(
-  "btnUpdateNotificationSettings",
-);
-let btnModal = document.getElementById("btnModal");
-/* Modal */
-let modalBody = document.getElementById("modalBody");
-
-/* Input change handlers */
-inputMailAddress.oninput = function () {
-  if (
-    inputMailAddress.value.length > 0 &&
-    inputMailAddress.classList.contains("is-invalid")
-  ) {
-    inputMailAddress.classList.toggle("is-invalid");
-  }
-  if (updateAlert.style.display == "") {
-    hideUpdateError();
-  }
-};
-inputUsername.oninput = function () {
-  if (
-    inputUsername.value.length > 0 &&
-    inputUsername.classList.contains("is-invalid")
-  ) {
-    inputUsername.classList.toggle("is-invalid");
-  }
-  if (updateAlert.style.display == "") {
-    hideUpdateError();
-  }
-};
-inputPassword.oninput = function () {
-  if (
-    inputPassword.value.length > 0 &&
-    inputPassword.classList.contains("is-invalid")
-  ) {
-    inputPassword.classList.toggle("is-invalid");
-  }
-  if (updateAlert.style.display == "") {
-    hidePasswordError();
-  }
-};
-inputPasswordVerification.oninput = function () {
-  if (
-    inputPasswordVerification.value.length > 0 &&
-    inputPasswordVerification.classList.contains("is-invalid")
-  ) {
-    inputPasswordVerification.classList.toggle("is-invalid");
-  }
-  if (updateAlert.style.display == "") {
-    hidePasswordError();
-  }
-};
-
 /* Notification settings functions */
 function toggleNtfySettings() {
+  const toggleNtfyNotifications = document.getElementById("toggleNtfyNotifications");
   const ntfySettings = document.getElementById("ntfySettings");
-  if (ntfySettings) {
+  if (ntfySettings && toggleNtfyNotifications) {
     ntfySettings.style.display = toggleNtfyNotifications.checked ? "" : "none";
   }
 }
 
 function showNotificationError(message) {
+  const notificationAlert = document.getElementById("notificationAlert");
   if (notificationAlert) {
     notificationAlert.innerText = message;
     notificationAlert.style.display = "";
@@ -239,6 +178,7 @@ function showNotificationError(message) {
 }
 
 function hideNotificationError() {
+  const notificationAlert = document.getElementById("notificationAlert");
   if (notificationAlert) {
     notificationAlert.innerText = "";
     notificationAlert.style.display = "none";
@@ -246,6 +186,13 @@ function hideNotificationError() {
 }
 
 function UpdateNotificationSettings() {
+  const toggleEmailNotifications = document.getElementById("toggleEmailNotifications");
+  const toggleNtfyNotifications = document.getElementById("toggleNtfyNotifications");
+  const inputNtfyUrl = document.getElementById("inputNtfyUrl");
+  const inputNtfyTopic = document.getElementById("inputNtfyTopic");
+  const inputNtfyToken = document.getElementById("inputNtfyToken");
+  if (!toggleEmailNotifications || !toggleNtfyNotifications || !inputNtfyUrl || !inputNtfyTopic || !inputNtfyToken) return;
+
   // Validate inputs
   if (toggleNtfyNotifications.checked) {
     if (!inputNtfyUrl.value) {
@@ -304,36 +251,6 @@ function UpdateNotificationSettings() {
     });
 }
 
-/* Button handlers */
-btnUpdatePersonalDetails.onclick = function (event) {
-  event.preventDefault();
-  UpdateSettings();
-};
-btnUpdatePersonalDetails.onsubmit = function (event) {
-  event.preventDefault();
-  UpdateSettings();
-};
-btnUpdatePassword.onclick = function (event) {
-  event.preventDefault();
-  UpdatePassword();
-};
-btnUpdatePassword.onsubmit = function (event) {
-  event.preventDefault();
-  UpdatePassword();
-};
-
-/* Notification settings event handlers */
-if (toggleNtfyNotifications) {
-  toggleNtfyNotifications.onchange = toggleNtfySettings;
-}
-
-if (btnUpdateNotificationSettings) {
-  btnUpdateNotificationSettings.onclick = function (event) {
-    event.preventDefault();
-    UpdateNotificationSettings();
-  };
-}
-
 /* Household management helpers */
 function showHouseholdAlert(elementId, message, isSuccess) {
   const el = document.getElementById(elementId);
@@ -348,101 +265,278 @@ function hideHouseholdAlert(elementId) {
 }
 
 /* Leave household */
-const btnLeaveHousehold = document.getElementById("btnLeaveHousehold");
-if (btnLeaveHousehold) {
-  btnLeaveHousehold.onclick = function (event) {
-    event.preventDefault();
-    if (!confirm("Leave your current household? You will be assigned a new personal household.")) return;
-    proviant.leaveHousehold().then((response) => {
-      if (response.code === 200) {
-        ShowSuccessModal("You have left the household. Reloading page.", function (e) {
-          e.preventDefault();
-          location.reload();
-        });
-      } else {
-        showHouseholdAlert("leaveHouseholdAlert", `Error: ${response.message}`, false);
-      }
-    });
-  };
+function handleLeaveHousehold() {
+  if (!confirm("Leave your current household? You will be assigned a new personal household.")) return;
+  proviant.leaveHousehold().then((response) => {
+    if (response.code === 200) {
+      ShowSuccessModal("You have left the household. Reloading page.", function (e) {
+        e.preventDefault();
+        location.reload();
+      });
+    } else {
+      showHouseholdAlert("leaveHouseholdAlert", `Error: ${response.message}`, false);
+    }
+  });
 }
 
 /* Create new household */
-const btnCreateHousehold = document.getElementById("btnCreateHousehold");
-if (btnCreateHousehold) {
-  btnCreateHousehold.onclick = function (event) {
-    event.preventDefault();
-    const nameInput = document.getElementById("inputNewHouseholdName");
-    const name = nameInput ? nameInput.value.trim() : "";
-    if (!name) {
-      if (nameInput) nameInput.classList.add("is-invalid");
-      return;
+function handleCreateHousehold() {
+  const nameInput = document.getElementById("inputNewHouseholdName");
+  const name = nameInput ? nameInput.value.trim() : "";
+  if (!name) {
+    if (nameInput) nameInput.classList.add("is-invalid");
+    return;
+  }
+  if (nameInput) nameInput.classList.remove("is-invalid");
+  proviant.createHousehold(name).then((response) => {
+    if (response.code === 200) {
+      ShowSuccessModal("Household created. Reloading page.", function (e) {
+        e.preventDefault();
+        location.reload();
+      });
+    } else {
+      showHouseholdAlert("createHouseholdAlert", `Error: ${response.message}`, false);
     }
-    if (nameInput) nameInput.classList.remove("is-invalid");
-    proviant.createHousehold(name).then((response) => {
-      if (response.code === 200) {
-        ShowSuccessModal("Household created. Reloading page.", function (e) {
-          e.preventDefault();
-          location.reload();
-        });
-      } else {
-        showHouseholdAlert("createHouseholdAlert", `Error: ${response.message}`, false);
-      }
-    });
-  };
+  });
 }
 
 /* Apply to join household */
-const btnApplyHousehold = document.getElementById("btnApplyHousehold");
-if (btnApplyHousehold) {
-  btnApplyHousehold.onclick = function (event) {
-    event.preventDefault();
-    const idInput = document.getElementById("inputApplyHouseholdID");
-    const householdID = idInput ? parseInt(idInput.value, 10) : NaN;
-    if (!householdID || householdID < 1) {
-      if (idInput) idInput.classList.add("is-invalid");
-      return;
+function handleApplyHousehold() {
+  const idInput = document.getElementById("inputApplyHouseholdID");
+  const householdID = idInput ? parseInt(idInput.value, 10) : NaN;
+  if (!householdID || householdID < 1) {
+    if (idInput) idInput.classList.add("is-invalid");
+    return;
+  }
+  if (idInput) idInput.classList.remove("is-invalid");
+  proviant.applyForHousehold(householdID).then((response) => {
+    if (response.code === 200) {
+      location.reload();
+    } else if (response.code === 409) {
+      showHouseholdAlert("applyHouseholdAlert", "You already have a pending application for this household.", false);
+    } else if (response.code === 404) {
+      showHouseholdAlert("applyHouseholdAlert", "Household not found.", false);
+    } else {
+      showHouseholdAlert("applyHouseholdAlert", `Error: ${response.message}`, false);
     }
-    if (idInput) idInput.classList.remove("is-invalid");
-    proviant.applyForHousehold(householdID).then((response) => {
-      const alertEl = document.getElementById("applyHouseholdAlert");
-      if (response.code === 200) {
-        showHouseholdAlert("applyHouseholdAlert", "Application submitted. Waiting for admin approval.", true);
-      } else if (response.code === 409) {
-        showHouseholdAlert("applyHouseholdAlert", "You already have a pending application for this household.", false);
-      } else if (response.code === 404) {
-        showHouseholdAlert("applyHouseholdAlert", "Household not found.", false);
-      } else {
-        showHouseholdAlert("applyHouseholdAlert", `Error: ${response.message}`, false);
-      }
-    });
-  };
+  });
 }
 
-/* Approve / reject applications */
-document.querySelectorAll(".btn-approve-application").forEach(function (btn) {
-  btn.onclick = function () {
-    const applicationID = btn.dataset.id;
-    proviant.approveApplication(applicationID).then((response) => {
-      if (response.code === 200) {
-        const row = document.getElementById(`application-${applicationID}`);
-        if (row) row.remove();
-      } else {
-        showHouseholdAlert("applicationsAlert", `Error: ${response.message}`, false);
-      }
-    });
-  };
+/* Approve application */
+function handleApproveApplication(btn) {
+  const applicationID = btn.dataset.id;
+  proviant.approveApplication(applicationID).then((response) => {
+    if (response.code === 200) {
+      const row = document.getElementById(`application-${applicationID}`);
+      if (row) row.remove();
+    } else {
+      showHouseholdAlert("applicationsAlert", `Error: ${response.message}`, false);
+    }
+  });
+}
+
+/* Reject application */
+function handleRejectApplication(btn) {
+  const applicationID = btn.dataset.id;
+  proviant.rejectApplication(applicationID).then((response) => {
+    if (response.code === 200) {
+      const row = document.getElementById(`application-${applicationID}`);
+      if (row) row.remove();
+    } else {
+      showHouseholdAlert("applicationsAlert", `Error: ${response.message}`, false);
+    }
+  });
+}
+
+/* Rename household */
+function handleUpdateHouseholdName() {
+  const nameInput = document.getElementById("inputHouseholdName");
+  const name = nameInput ? nameInput.value.trim() : "";
+  if (!name) {
+    if (nameInput) nameInput.classList.add("is-invalid");
+    return;
+  }
+  if (nameInput) nameInput.classList.remove("is-invalid");
+  proviant.updateHouseholdName(name).then((response) => {
+    if (response.code === 200) {
+      location.reload();
+    } else {
+      showHouseholdAlert("updateNameAlert", `Error: ${response.message}`, false);
+    }
+  });
+}
+
+/* Cancel own pending application */
+function handleCancelApplication(btn) {
+  const applicationID = btn.dataset.id;
+  if (!confirm("Cancel this application?")) return;
+  proviant.cancelApplication(applicationID).then((response) => {
+    if (response.code === 200) {
+      const row = document.getElementById(`my-application-${applicationID}`);
+      if (row) row.remove();
+    } else {
+      showHouseholdAlert("myApplicationsAlert", `Error: ${response.message}`, false);
+    }
+  });
+}
+
+/* Remove household member */
+function handleRemoveMember(btn) {
+  const memberID = btn.dataset.id;
+  if (!confirm("Remove this member from the household?")) return;
+  proviant.removeMember(memberID).then((response) => {
+    if (response.code === 200) {
+      const row = document.getElementById(`member-${memberID}`);
+      if (row) row.remove();
+    } else {
+      showHouseholdAlert("membersAlert", `Error: ${response.message}`, false);
+    }
+  });
+}
+
+/* Event delegation for all clicks */
+document.addEventListener("click", function (event) {
+  const target = event.target;
+
+  // Update personal details
+  if (target.closest("#btnUpdatePersonalDetails")) {
+    event.preventDefault();
+    UpdateSettings();
+    return;
+  }
+
+  // Update password
+  if (target.closest("#btnUpdatePassword")) {
+    event.preventDefault();
+    UpdatePassword();
+    return;
+  }
+
+  // Update notification settings
+  if (target.closest("#btnUpdateNotificationSettings")) {
+    event.preventDefault();
+    UpdateNotificationSettings();
+    return;
+  }
+
+  // Leave household
+  if (target.closest("#btnLeaveHousehold")) {
+    event.preventDefault();
+    handleLeaveHousehold();
+    return;
+  }
+
+  // Create household
+  if (target.closest("#btnCreateHousehold")) {
+    event.preventDefault();
+    handleCreateHousehold();
+    return;
+  }
+
+  // Apply to join household
+  if (target.closest("#btnApplyHousehold")) {
+    event.preventDefault();
+    handleApplyHousehold();
+    return;
+  }
+
+  // Update household name
+  if (target.closest("#btnUpdateHouseholdName")) {
+    event.preventDefault();
+    handleUpdateHouseholdName();
+    return;
+  }
+
+  // Approve application
+  const approveBtn = target.closest(".btn-approve-application");
+  if (approveBtn) {
+    event.preventDefault();
+    handleApproveApplication(approveBtn);
+    return;
+  }
+
+  // Reject application
+  const rejectBtn = target.closest(".btn-reject-application");
+  if (rejectBtn) {
+    event.preventDefault();
+    handleRejectApplication(rejectBtn);
+    return;
+  }
+
+  // Cancel application
+  const cancelBtn = target.closest(".btn-cancel-application");
+  if (cancelBtn) {
+    event.preventDefault();
+    handleCancelApplication(cancelBtn);
+    return;
+  }
+
+  // Remove member
+  const removeBtn = target.closest(".btn-remove-member");
+  if (removeBtn) {
+    event.preventDefault();
+    handleRemoveMember(removeBtn);
+    return;
+  }
 });
 
-document.querySelectorAll(".btn-reject-application").forEach(function (btn) {
-  btn.onclick = function () {
-    const applicationID = btn.dataset.id;
-    proviant.rejectApplication(applicationID).then((response) => {
-      if (response.code === 200) {
-        const row = document.getElementById(`application-${applicationID}`);
-        if (row) row.remove();
-      } else {
-        showHouseholdAlert("applicationsAlert", `Error: ${response.message}`, false);
-      }
-    });
-  };
+/* Event delegation for input changes */
+document.addEventListener("input", function (event) {
+  const target = event.target;
+
+  // Username input
+  if (target.id === "inputUsername") {
+    if (target.value.length > 0 && target.classList.contains("is-invalid")) {
+      target.classList.toggle("is-invalid");
+    }
+    const updateAlert = document.getElementById("updateAlert");
+    if (updateAlert && updateAlert.style.display == "") {
+      hideUpdateError();
+    }
+    return;
+  }
+
+  // Mail address input
+  if (target.id === "inputMailAddress") {
+    if (target.value.length > 0 && target.classList.contains("is-invalid")) {
+      target.classList.toggle("is-invalid");
+    }
+    const updateAlert = document.getElementById("updateAlert");
+    if (updateAlert && updateAlert.style.display == "") {
+      hideUpdateError();
+    }
+    return;
+  }
+
+  // Password input
+  if (target.id === "inputPassword") {
+    if (target.value.length > 0 && target.classList.contains("is-invalid")) {
+      target.classList.toggle("is-invalid");
+    }
+    const passwordAlert = document.getElementById("passwordAlert");
+    if (passwordAlert && passwordAlert.style.display == "") {
+      hidePasswordError();
+    }
+    return;
+  }
+
+  // Password verification input
+  if (target.id === "inputPasswordVerification") {
+    if (target.value.length > 0 && target.classList.contains("is-invalid")) {
+      target.classList.toggle("is-invalid");
+    }
+    const passwordAlert = document.getElementById("passwordAlert");
+    if (passwordAlert && passwordAlert.style.display == "") {
+      hidePasswordError();
+    }
+    return;
+  }
+});
+
+/* Event delegation for checkbox changes */
+document.addEventListener("change", function (event) {
+  const target = event.target;
+  if (target.id === "toggleNtfyNotifications") {
+    toggleNtfySettings();
+  }
 });

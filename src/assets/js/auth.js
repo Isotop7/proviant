@@ -1,52 +1,87 @@
 function showLoginError(message) {
-    loginAlert.innerText = message;
-    loginAlert.style.display = "";
+    const loginAlert = document.getElementById("loginAlert");
+    if (loginAlert) {
+        loginAlert.innerText = message;
+        loginAlert.style.display = "";
+    }
 }
 
 function hideLoginError() {
-    loginAlert.innerText = "";
-    loginAlert.style.display = "none";
+    const loginAlert = document.getElementById("loginAlert");
+    if (loginAlert) {
+        loginAlert.innerText = "";
+        loginAlert.style.display = "none";
+    }
 }
 
 function showSignupError(message) {
-    signupAlert.innerText = message;
-    signupAlert.style.display = "";
+    const signupAlert = document.getElementById("signupAlert");
+    if (signupAlert) {
+        signupAlert.innerText = message;
+        signupAlert.style.display = "";
+    }
 }
 
 function hideSignupError() {
-    signupAlert.innerText = "";
-    signupAlert.style.display = "none";
+    const signupAlert = document.getElementById("signupAlert");
+    if (signupAlert) {
+        signupAlert.innerText = "";
+        signupAlert.style.display = "none";
+    }
 }
 
 function showSignupSuccess(username) {
-    let toastBootstrap = bootstrap.Toast.getOrCreateInstance(infoToast)
-    infoToast.getElementsByClassName("toast-body")[0].innerHTML = `Hello <span class="fw-bold">${username}</span>!<br><br>Your signup succeeded and you should be able to log in and use proviant`
-    toastBootstrap.show()
+    const infoToast = document.getElementById("infoToast");
+    if (infoToast) {
+        let toastBootstrap = bootstrap.Toast.getOrCreateInstance(infoToast);
+        const toastBody = infoToast.getElementsByClassName("toast-body")[0];
+        if (toastBody) {
+            toastBody.innerHTML = `Hello <span class="fw-bold">${username}</span>!<br><br>Your signup succeeded and you should be able to log in and use proviant`;
+        }
+        toastBootstrap.show();
+    }
 }
 
 function clearLoginInputs() {
-    usernameInput.value = "";
-    passwordInput.value = "";
+    const authForm = document.forms["authData"];
+    if (authForm) {
+        const usernameInput = authForm.elements.inputUsername;
+        const passwordInput = authForm.elements.inputPassword;
+        if (usernameInput) usernameInput.value = "";
+        if (passwordInput) passwordInput.value = "";
+    }
 }
 
 function clearSignupInputs() {
-    inputMailAddress.value = "";
+    const authForm = document.forms["authData"];
+    if (authForm) {
+        const inputMailAddress = authForm.elements.inputMailAddress;
+        if (inputMailAddress) inputMailAddress.value = "";
+    }
 }
 
 function Login() {
+    const authForm = document.forms["authData"];
+    if (!authForm) return;
+
     let formIsValid = true;
-    let username = authForm.elements.inputUsername.value;
-    let password = authForm.elements.inputPassword.value;
+    const usernameInput = authForm.elements.inputUsername;
+    const passwordInput = authForm.elements.inputPassword;
+
+    if (!usernameInput || !passwordInput) return;
+
+    const username = usernameInput.value;
+    const password = passwordInput.value;
 
     if (username == "") {
-        if (!authForm.elements.inputUsername.classList.contains("is-invalid")) {
-            authForm.elements.inputUsername.classList.toggle("is-invalid");
+        if (!usernameInput.classList.contains("is-invalid")) {
+            usernameInput.classList.toggle("is-invalid");
         }
         formIsValid = false;
     }
     if (password == "") {
-        if (!authForm.elements.inputPassword.classList.contains("is-invalid")) {
-            authForm.elements.inputPassword.classList.toggle("is-invalid");
+        if (!passwordInput.classList.contains("is-invalid")) {
+            passwordInput.classList.toggle("is-invalid");
         }
         formIsValid = false;
     }
@@ -65,7 +100,7 @@ function Login() {
                 clearLoginInputs();
                 break;
             default:
-                showLoginError(`Undefined authentication error: ${response.message}`)
+                showLoginError(`Undefined authentication error: ${response.message}`);
                 clearLoginInputs();
                 break;
         }
@@ -73,26 +108,35 @@ function Login() {
 }
 
 function Signup() {
+    const authForm = document.forms["authData"];
+    if (!authForm) return;
+
     let formIsValid = true;
-    let username = authForm.elements.inputUsername.value;
-    let password = authForm.elements.inputPassword.value;
-    let mailAddress = authForm.elements.inputMailAddress.value;
+    const usernameInput = authForm.elements.inputUsername;
+    const passwordInput = authForm.elements.inputPassword;
+    const inputMailAddress = authForm.elements.inputMailAddress;
+
+    if (!usernameInput || !passwordInput || !inputMailAddress) return;
+
+    const username = usernameInput.value;
+    const password = passwordInput.value;
+    const mailAddress = inputMailAddress.value;
 
     if (username == "") {
-        if (!authForm.elements.inputUsername.classList.contains("is-invalid")) {
-            authForm.elements.inputUsername.classList.toggle("is-invalid");
+        if (!usernameInput.classList.contains("is-invalid")) {
+            usernameInput.classList.toggle("is-invalid");
         }
         formIsValid = false;
     }
     if (password == "") {
-        if (!authForm.elements.inputPassword.classList.contains("is-invalid")) {
-            authForm.elements.inputPassword.classList.toggle("is-invalid");
+        if (!passwordInput.classList.contains("is-invalid")) {
+            passwordInput.classList.toggle("is-invalid");
         }
         formIsValid = false;
     }
     if (mailAddress == "") {
-        if (!authForm.elements.inputMailAddress.classList.contains("is-invalid")) {
-            authForm.elements.inputMailAddress.classList.toggle("is-invalid");
+        if (!inputMailAddress.classList.contains("is-invalid")) {
+            inputMailAddress.classList.toggle("is-invalid");
         }
         formIsValid = false;
     }
@@ -121,58 +165,82 @@ function Signup() {
     });
 }
 
-let btnAuth = document.getElementById("btnAuth")
-let authForm = document.forms["authData"]
-let usernameInput = authForm.elements.inputUsername;
-let passwordInput = authForm.elements.inputPassword;
-let loginAlert = document.getElementById("loginAlert");
-let signupAlert = document.getElementById("signupAlert");
-let btnSignup = document.getElementById("btnSignup");
-let infoToast = document.getElementById("infoToast");
+/* Event delegation for all clicks */
+document.addEventListener("click", function (event) {
+    const target = event.target;
 
-usernameInput.oninput = function () {
-    if (usernameInput.value.length > 0 && usernameInput.classList.contains("is-invalid")) {
-        usernameInput.classList.toggle("is-invalid");
+    // Login button
+    if (target.closest("#btnAuth")) {
+        event.preventDefault();
+        Login();
+        return;
     }
-    if (loginAlert.style.display == "") {
-        hideLoginError();
+
+    // Signup button
+    if (target.closest("#btnSignup")) {
+        event.preventDefault();
+        Signup();
+        return;
     }
-    if (signupAlert.style.display == "") {
-        hideSignupError();
+});
+
+/* Event delegation for form submissions */
+document.addEventListener("submit", function (event) {
+    const target = event.target;
+
+    // Auth form submission
+    if (target.id === "authData" || target.name === "authData") {
+        event.preventDefault();
+        Login();
+        return;
     }
-}
-passwordInput.oninput = function () {
-    if (passwordInput.value.length > 0 && passwordInput.classList.contains("is-invalid")) {
-        passwordInput.classList.toggle("is-invalid");
+});
+
+/* Event delegation for input changes */
+document.addEventListener("input", function (event) {
+    const target = event.target;
+
+    // Username input
+    if (target.name === "inputUsername" || target.id === "inputUsername") {
+        if (target.value.length > 0 && target.classList.contains("is-invalid")) {
+            target.classList.toggle("is-invalid");
+        }
+        const loginAlert = document.getElementById("loginAlert");
+        if (loginAlert && loginAlert.style.display == "") {
+            hideLoginError();
+        }
+        const signupAlert = document.getElementById("signupAlert");
+        if (signupAlert && signupAlert.style.display == "") {
+            hideSignupError();
+        }
+        return;
     }
-    if (loginAlert.style.display == "") {
-        hideLoginError();
+
+    // Password input
+    if (target.name === "inputPassword" || target.id === "inputPassword") {
+        if (target.value.length > 0 && target.classList.contains("is-invalid")) {
+            target.classList.toggle("is-invalid");
+        }
+        const loginAlert = document.getElementById("loginAlert");
+        if (loginAlert && loginAlert.style.display == "") {
+            hideLoginError();
+        }
+        const signupAlert = document.getElementById("signupAlert");
+        if (signupAlert && signupAlert.style.display == "") {
+            hideSignupError();
+        }
+        return;
     }
-    if (signupAlert.style.display == "") {
-        hideSignupError();
+
+    // Mail address input
+    if (target.name === "inputMailAddress" || target.id === "inputMailAddress") {
+        if (target.value.length > 0 && target.classList.contains("is-invalid")) {
+            target.classList.toggle("is-invalid");
+        }
+        const signupAlert = document.getElementById("signupAlert");
+        if (signupAlert && signupAlert.style.display == "") {
+            hideSignupError();
+        }
+        return;
     }
-}
-inputMailAddress.oninput = function () {
-    if (inputMailAddress.value.length > 0 && inputMailAddress.classList.contains("is-invalid")) {
-        inputMailAddress.classList.toggle("is-invalid");
-    }
-    if (signupAlert.style.display == "") {
-        hideSignupError();
-    }
-}
-btnAuth.onclick = function (event) {
-    event.preventDefault();
-    Login();
-}
-authForm.onsubmit = function (event) {
-    event.preventDefault();
-    Login();
-}
-btnSignup.onclick = function (event) {
-    event.preventDefault();
-    Signup();
-}
-btnSignup.onsubmit = function (event) {
-    event.preventDefault();
-    Signup();
-}
+});
