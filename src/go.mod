@@ -1,6 +1,6 @@
 module codeberg.org/isotop7/proviant
 
-go 1.25.0
+go 1.25.8
 
 require (
 	github.com/appleboy/gin-jwt/v2 v2.10.3
