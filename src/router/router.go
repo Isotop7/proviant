@@ -165,6 +165,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.POST("", v1.CreateProduct)
 	publicProductAPI.POST("/scan", v1.ScanProduct)
 	publicProductAPI.GET("/byBarcode/:barcode", v1.GetProductsByBarcode)
+	publicProductAPI.GET("/openfoodfacts/:barcode", v1.GetOpenFoodFactsData)
 	publicProductAPI.GET("/search", v1.SearchProducts)
 	publicProductAPI.DELETE("/bulkDelete", v1.BulkDeleteProducts)
 	publicProductAPI.DELETE("/bulkArchive", v1.BulkArchiveProducts)

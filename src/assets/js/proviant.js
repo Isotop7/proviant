@@ -23,6 +23,22 @@ proviant.createProduct = async function (barcode, expireAt) {
   return response;
 };
 
+proviant.getOpenFoodFactsData = async function (barcode) {
+  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/openfoodfacts/${barcode}`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  const body = await apiCall.json();
+  let response = {
+    code: apiCall.status,
+    message: body,
+  };
+  return response;
+};
+
 proviant.getProductsByBarcode = async function (barcode) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/byBarcode/${barcode}`;
   const apiCall = await fetch(url, {

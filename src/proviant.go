@@ -189,6 +189,7 @@ func main() {
 		&dbModel.HouseholdApplication{},
 		&dbModel.HouseholdInvitation{},
 		&dbModel.OnboardingState{},
+		&dbModel.OpenFoodFactsCache{},
 	)
 	if migrationError != nil {
 		panic(migrationError)

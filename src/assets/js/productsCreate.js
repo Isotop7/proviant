@@ -62,10 +62,10 @@ function clearProductInfo() {
     document.getElementById('productInfoGenericName').innerText = '';
 }
 function showProductData(product) {
-    document.getElementById('productInfoImage').src = product.image_url;
-    document.getElementById('productInfoName').innerText = product.product_name;
-    if (product.generic_name != 'undefined' && product.generic_name != null) {
-        document.getElementById('productInfoGenericName').innerText = product.generic_name;
+    document.getElementById('productInfoImage').src = product.imageUrl;
+    document.getElementById('productInfoName').innerText = product.productName;
+    if (product.categories != 'undefined' && product.categories != null) {
+        document.getElementById('productInfoGenericName').innerText = product.categories;
     }
     document.getElementById('productData').style.display = '';
 }
@@ -204,25 +204,22 @@ function shiftExpiry(days, months) {
 
 // Async functions
 async function queryProductInfoRequest(barcode) {
-    let openFoodFactsAPIRURL = `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=product_name,countries,generic_name,image_url`;
-    const response = await fetch(openFoodFactsAPIRURL, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    }).catch(() => {
+    return proviant.getOpenFoodFactsData(barcode).catch(() => {
         const els = getElements();
         const bc = els.inputBarcode ? els.inputBarcode.value : 'unknown';
         showError(`Could not find product with barcode ${bc}!`);
     });
-    return response.json();
 }
 // Function handlers
 function queryProductInfo(barcode) {
     clearProductInfo();
     queryProductInfoRequest(barcode).then((response) => {
-        let product = response.product;
-        showProductData(product);
+        if (response && response.code === 200) {
+            showProductData(response.message);
+        } else {
+            showError(`Could not find product with barcode ${barcode}`);
+            clearProductInfo();
+        }
     }).catch((error) => {
         showError('Error: ' + error);
         clearProductInfo();

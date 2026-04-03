@@ -1104,3 +1104,77 @@ func SearchProducts(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, products)
 }
+
+// GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode,
+// using the database cache when cacheEnabled is true in the OpenFoodFacts configuration.
+//
+// @Summary      Return OpenFoodFacts product data
+// @Description  Proxies OpenFoodFacts API with optional database caching
+// @Tags         product
+// @Produce      json
+// @Param        barcode  path  string  true  "Barcode"
+// @Success      200  {object}  dbModel.OpenFoodFactsCache
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Failure      502  {object}  api.APIResponse
+// @Router       /api/v1/products/openfoodfacts/{barcode} [get]
+func GetOpenFoodFactsData(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	barcode := ctx.Param("barcode")
+	if barcode == "" {
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
+		return
+	}
+
+	dbHandle, dbOk := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbOk {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	offacntrl, offaOk := ctx.MustGet("offacntrl").(*controllers.OpenFoodFactsAPIController)
+	if !offaOk {
+		logger.Error().Msg("Failed to get OpenFoodFacts controller from context")
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get controller from context"})
+		return
+	}
+
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+
+	if offacntrl.Configuration.CacheEnabled {
+		cached, cacheErr := dbController.GetOpenFoodFactsCacheByBarcode(barcode)
+		if cacheErr == nil {
+			logger.Info().Msgf("Cache hit for barcode '%s'", barcode)
+			ctx.JSON(http.StatusOK, cached)
+			return
+		}
+		if cacheErr != gorm.ErrRecordNotFound {
+			logger.Warn().Msgf("Cache lookup error for barcode '%s': %s", barcode, cacheErr)
+		}
+	}
+
+	product, apiErr := offacntrl.GetDataset(barcode)
+	if apiErr != nil {
+		logger.Error().Msgf("OpenFoodFacts API error for barcode '%s': %s", barcode, apiErr)
+		ctx.JSON(http.StatusBadGateway, api.APIResponse{Message: "Error fetching product data from OpenFoodFacts"})
+		return
+	}
+
+	entry := dbModel.OpenFoodFactsCache{
+		Barcode:     product.Barcode,
+		ProductName: product.ProductName,
+		Categories:  product.Categories,
+		Countries:   product.Countries,
+		ImageURL:    product.ImageURL,
+	}
+
+	if offacntrl.Configuration.CacheEnabled {
+		if storeErr := dbController.CreateOpenFoodFactsCache(&entry); storeErr != nil {
+			logger.Warn().Msgf("Failed to store cache entry for barcode '%s': %s", barcode, storeErr)
+		}
+	}
+
+	ctx.JSON(http.StatusOK, entry)
+}
