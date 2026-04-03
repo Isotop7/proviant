@@ -2,6 +2,7 @@
 
 {{ if .HasHousehold }}
 
+<div aria-live="polite" aria-atomic="true" class="visually-hidden" id="dashboard-status"></div>
 <div class="row row-cols-1 row-cols-md-3 g-4 px-3 pt-3 pb-2" id="dashboard">
     <!-- stat tiles injected here by homeStats.js -->
 </div>
@@ -29,12 +30,13 @@
         </div>
     </div>
 </div>
-<script src="/assets/js/chart.umd.min.js"></script>
-<script src="/assets/js/homeStats.js"></script>
+<script src="/assets/js/chart.umd.min.js" defer></script>
+<script src="/assets/js/homeStats.js" defer></script>
 
 {{ else }}
 
-<div class="container row text-center">
+<div class="container">
+<div class="row text-center">
     <p class="fs-1">
         <i class="bi bi-emoji-dizzy-fill my-5 text-primary"></i>
     </p>
@@ -50,6 +52,7 @@
             Connect to household
         </a>
     </div>
+</div>
 </div>
 
 {{ end }}

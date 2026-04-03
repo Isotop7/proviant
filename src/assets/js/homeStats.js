@@ -117,6 +117,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     dashboard.appendChild(renderListTile('Expiring within next 7 Days', s.expiringSoon));
+
+    const status = document.getElementById('dashboard-status');
+    if (status) status.textContent = 'Dashboard loaded';
   }
 
   // Chart 1 — Waste donut (expired vs fresh)
