@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v12';
+const CACHE_NAME = 'proviant-v14';
 
 // Static shell to pre-cache on install
 const PRECACHE_URLS = [
@@ -10,6 +10,7 @@ const PRECACHE_URLS = [
   '/assets/js/bootstrap.bundle.min.js',
   '/assets/js/chart.umd.min.js',
   '/assets/js/main.js',
+  '/assets/js/notifications.js',
   '/assets/icons/proviant_logo_192.png',
   '/assets/icons/proviant_logo_512.png',
   '/assets/icons/hero.png',

@@ -1393,6 +1393,16 @@ func (dbc DatabaseController) GetInvitationsForHousehold(householdID, inviterID 
 	return invitations, err
 }
 
+// GetPendingInvitationsForHousehold returns all pending invitations for a household, regardless of who sent them.
+func (dbc DatabaseController) GetPendingInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error) {
+	var invitations []database.HouseholdInvitation
+	err := dbc.DBHandle.
+		Where("household_id = ? AND status = ?", householdID, database.InvitationStatusPending).
+		Order("created_at DESC").
+		Find(&invitations).Error
+	return invitations, err
+}
+
 // GetInvitationByToken looks up an invitation by its token
 func (dbc DatabaseController) GetInvitationByToken(token string) (database.HouseholdInvitation, error) {
 	var invitation database.HouseholdInvitation

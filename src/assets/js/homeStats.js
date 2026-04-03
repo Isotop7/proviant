@@ -64,7 +64,7 @@ function renderListTile(title, items) {
   col.innerHTML = `
     <div class="card h-100">
       <div class="card-header fw-bold">${title}</div>
-      <div class="card-body p-0" style="overflow-y: auto; max-height: 200px;">
+      <div class="card-body p-0 tile-scroll-body">
         <ul class="list-group list-group-flush">${listHtml}</ul>
       </div>
     </div>`;

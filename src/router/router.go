@@ -190,6 +190,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	onboardingAPI.POST("/apply-household", onboarding.ApplyForHousehold)
 	onboardingAPI.POST("/complete", onboarding.CompleteOnboarding)
 
+	// Notification routes
+	notificationAPI := engine.Group("/api/v1/notifications")
+	notificationAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	notificationAPI.GET("", v1.GetNotifications)
+
 	// Household application routes
 	householdAPI := engine.Group("/api/v1/household")
 	householdAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
