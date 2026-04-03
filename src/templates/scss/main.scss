@@ -12,28 +12,30 @@ $offcanvas-box-shadow: 0 1rem 3rem rgba(0, 0, 0, .175);
 
 // Customize some defaults
 $font-family-base: 'DM Sans Variable', sans-serif;
-$card-cap-bg:  rgba(var(--bs-body-color-rgb), .15);
-$card-bg:  rgba(var(--bs-body-color-rgb), .01);
+$card-cap-bg:  #EBF5EB;
+$card-bg:      #FFFFFF;
 $list-group-border-width: 2px;
 $line-height-base: 1.6;
 
-// Colors — Slate + status traffic-light
-$primary:    #577590; // Slate Blue
-$secondary:  #a3a5b3; // Cool Gray
-$info:       #a8dadc; // Soft Teal (light mode)
-$light:      #f1faee; // Light Cream
-$dark:       #1d3557; // Dark Slate Blue
-$gray:       #d1d9e6; // Light Gray
-$success:    #66a182; // Muted Green (light mode)
-$warning:    #e8c547; // Soft Yellow (light mode)
-$danger:     #ef476f; // Bright Red (light mode)
-$link-color: #457b9d; // Slate Blue
+// Colors — Fresh Garden (matched to hero.png icon)
+// Icon palette: basket green #3D7A5C · leaf green #7BC67E · apple green #A8D5A2
+//               carrot orange #E8914E · logo steel blue #5B7FA6
+$primary:    #3D7A5C; // basket outline green
+$secondary:  #5B7FA6; // logo text steel blue
+$info:       #7BC67E; // leaf / vegetable green
+$light:      #EBF5EB; // pale leaf green
+$dark:       #1A3028; // dark forest
+$gray:       #9DB5A8; // sage gray
+$success:    #2D9B4F; // produce green
+$warning:    #E8914E; // carrot orange
+$danger:     #DC2626; // red
+$link-color: #5B7FA6; // steel blue
 
-// Additional colors
-$body-bg:     #f5f7fa; // Light Gray Background
-$body-color:  #2a2a2a; // Dark Text
-$border-color: #e1e5ec; // Light Border Gray
-$shadow-color: rgba(30, 45, 60, 0.15); // Soft Shadow
+// Body
+$body-bg:     #F5FAF5; // warm white with green tint
+$body-color:  #1A3028; // dark forest text
+$border-color: #C8DDD0; // muted green border
+$shadow-color: rgba(26, 48, 40, 0.10);
 
 // Required
 @import "bootstrap/scss/variables";
@@ -80,20 +82,10 @@ $bootstrap-icons-font-dir: "../fonts";
 @import "bootstrap-icons/font/bootstrap-icons.scss";
 
 //
-// Dark mode — improved status colors and card surfaces
+// Light mode surface polish — ensure card and navbar surfaces use the pale green palette
 //
-[data-bs-theme="dark"] {
-    --bs-primary:     #4e9ab8;
-    --bs-primary-rgb: 78, 154, 184;
-    --bs-success:     #34d399;   // emerald — reads as "fresh"
-    --bs-success-rgb: 52, 211, 153;
-    --bs-warning:     #fb923c;   // orange — clearer urgency than amber/yellow
-    --bs-warning-rgb: 251, 146, 60;
-    --bs-danger:      #f87171;   // red — expired
-    --bs-danger-rgb:  248, 113, 113;
-    --bs-info:        #67e8f9;   // cyan
-    --bs-info-rgb:    103, 232, 249;
-    --bs-card-bg:     rgba(255, 255, 255, 0.04); // subtle lift from dark background
+[data-bs-theme="light"] {
+    --bs-tertiary-bg: #EBF5EB;  // pale leaf green — used by bg-body-tertiary (auth pages, offcanvas)
 }
 
 //
