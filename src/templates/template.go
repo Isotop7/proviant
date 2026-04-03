@@ -46,16 +46,16 @@ func hasPassed(t time.Time) bool {
 
 func expiryBadgeClass(t time.Time) string {
 	if t.IsZero() {
-		return "bg-secondary text-white"
+		return "bg-secondary"
 	}
 	now := time.Now()
 	if t.Before(now) {
-		return "bg-danger text-white"
+		return "bg-danger"
 	}
 	if t.Before(now.Add(7 * 24 * time.Hour)) {
-		return "bg-warning text-dark"
+		return "bg-warning"
 	}
-	return "bg-success text-dark"
+	return "bg-success"
 }
 
 func badgifyCategories(categories string, limit int) template.HTML {
