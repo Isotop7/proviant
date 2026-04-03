@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS buildenv
+FROM docker.io/golang:1.25-alpine AS buildenv
 WORKDIR /app
 
 RUN apk add --no-cache --update g++ gcc go npm
@@ -19,7 +19,7 @@ RUN npm install && \
     cd src && \
     CGO_ENABLED=1 GOOS=linux CGO_CFLAGS="-D_LARGEFILE64_SOURCE" go build -v -o ../proviant
 
-FROM alpine:3.22
+FROM docker.io/alpine:3.23
 WORKDIR /app
 
 COPY --from=buildenv /app/proviant /app/proviant

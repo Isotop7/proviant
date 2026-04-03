@@ -9,14 +9,14 @@ Proviant is a food expiration tracking web app built with Go (Gin, GORM) on the 
 ## Commands
 
 ```bash
-make init          # Install npm deps, build CSS/JS, copy assets
-make run           # Start development server
-make tidy          # go fmt + go mod tidy
-make test          # Run all Go tests
-make check         # Run golangci-lint (requires podman or docker)
-make css           # Compile SCSS → CSS
-make js            # Copy JS files to assets
-make doc           # Generate package docs + Swagger API docs
+task init          # Install npm deps, build CSS/JS, copy assets
+task run           # Start development server
+task tidy          # go fmt + go mod tidy
+task test          # Run all Go tests
+task check         # Run golangci-lint (requires podman or docker)
+task css           # Compile SCSS → CSS
+task js            # Copy JS files to assets
+task doc           # Generate package docs + Swagger API docs
 ```
 
 **Single test:**
@@ -24,8 +24,8 @@ make doc           # Generate package docs + Swagger API docs
 cd src && go test -race -vet=off ./path/to/package -run TestFunctionName
 ```
 
-**Must pass before committing:** `make tidy` (formatting) and `make check` (linting).
-**After API changes:** run `make doc` to regenerate Swagger docs.
+**Must pass before committing:** `task tidy` (formatting) and `task check` (linting).
+**After API changes:** run `task doc` to regenerate Swagger docs.
 
 ## Architecture
 

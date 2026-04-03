@@ -1031,6 +1031,7 @@ v1 implements version 1 of the proviant API
 - [func GetExpired\(ctx \*gin.Context\)](<#GetExpired>)
 - [func GetHouseholdApplications\(ctx \*gin.Context\)](<#GetHouseholdApplications>)
 - [func GetInvitations\(ctx \*gin.Context\)](<#GetInvitations>)
+- [func GetNotifications\(ctx \*gin.Context\)](<#GetNotifications>)
 - [func GetOpenFoodFactsData\(ctx \*gin.Context\)](<#GetOpenFoodFactsData>)
 - [func GetProduct\(ctx \*gin.Context\)](<#GetProduct>)
 - [func GetProductStats\(ctx \*gin.Context\)](<#GetProductStats>)
@@ -1185,6 +1186,15 @@ func GetInvitations(ctx *gin.Context)
 ```
 
 GetInvitations returns all invitations for the calling user's household. @Summary Get household invitations @Description Returns all invitations for the calling user's household @Tags Invitation @Produce json @Success 200 \{array\} database.HouseholdInvitation @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations \[get\]
+
+<a name="GetNotifications"></a>
+## func GetNotifications
+
+```go
+func GetNotifications(ctx *gin.Context)
+```
+
+GetNotifications returns actionable notification items for the current user: pending invitations from their household, incoming join requests \(admin only\), and outgoing join requests the user submitted. @Summary Get notifications @Description Returns pending invitations and household join requests for the current user @Tags Notifications @Produce json @Success 200 \{object\} apiModel.NotificationsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/notifications \[get\]
 
 <a name="GetOpenFoodFactsData"></a>
 ## func GetOpenFoodFactsData
@@ -1396,6 +1406,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetOpenFoodFactsCacheByBarcode\(barcode string\) \(database.OpenFoodFactsCache, error\)](<#DatabaseController.GetOpenFoodFactsCacheByBarcode>)
   - [func \(dbc DatabaseController\) GetPendingApplicationsForAdmin\(adminUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#DatabaseController.GetPendingApplicationsForAdmin>)
   - [func \(dbc DatabaseController\) GetPendingApplicationsForApplicant\(applicantUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#DatabaseController.GetPendingApplicationsForApplicant>)
+  - [func \(dbc DatabaseController\) GetPendingInvitationsForHousehold\(householdID uint\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetPendingInvitationsForHousehold>)
   - [func \(dbc DatabaseController\) GetPendingInvitationsNotSent\(retryInterval time.Duration\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetPendingInvitationsNotSent>)
   - [func \(dbc DatabaseController\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetProductByID>)
   - [func \(dbc DatabaseController\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#DatabaseController.GetProductCategoryBreakdown>)
@@ -1786,6 +1797,15 @@ func (dbc DatabaseController) GetPendingApplicationsForApplicant(applicantUserID
 
 GetPendingApplicationsForApplicant returns all pending applications submitted by the given user.
 
+<a name="DatabaseController.GetPendingInvitationsForHousehold"></a>
+### func \(DatabaseController\) GetPendingInvitationsForHousehold
+
+```go
+func (dbc DatabaseController) GetPendingInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
+```
+
+GetPendingInvitationsForHousehold returns all pending invitations for a household, regardless of who sent them.
+
 <a name="DatabaseController.GetPendingInvitationsNotSent"></a>
 ### func \(DatabaseController\) GetPendingInvitationsNotSent
 
@@ -2169,6 +2189,8 @@ import "codeberg.org/isotop7/proviant/models/api"
 
 - [type BulkProductsAPIModel](<#BulkProductsAPIModel>)
 - [type HouseholdListItem](<#HouseholdListItem>)
+- [type NotificationItem](<#NotificationItem>)
+- [type NotificationsResponse](<#NotificationsResponse>)
 - [type OnboardingStateResponse](<#OnboardingStateResponse>)
 - [type ProductStatsResponse](<#ProductStatsResponse>)
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
@@ -2197,6 +2219,32 @@ type HouseholdListItem struct {
     Name        string `json:"name"`
     Description string `json:"description"`
     MemberCount int    `json:"memberCount"`
+}
+```
+
+<a name="NotificationItem"></a>
+## type NotificationItem
+
+NotificationItem represents a single actionable notification entry.
+
+```go
+type NotificationItem struct {
+    ID        uint   `json:"id"`
+    Type      string `json:"type"`
+    Title     string `json:"title"`
+    CreatedAt string `json:"createdAt"`
+}
+```
+
+<a name="NotificationsResponse"></a>
+## type NotificationsResponse
+
+NotificationsResponse wraps the notification items and a total count.
+
+```go
+type NotificationsResponse struct {
+    Total int                `json:"total"`
+    Items []NotificationItem `json:"items"`
 }
 ```
 
