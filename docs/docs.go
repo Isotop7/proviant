@@ -1838,6 +1838,12 @@ const docTemplate = `{
                         "type": "integer"
                     }
                 },
+                "expiringSoon": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.StatsExpiringProduct"
+                    }
+                },
                 "expiryTrend": {
                     "type": "array",
                     "items": {
@@ -1846,12 +1852,6 @@ const docTemplate = `{
                 },
                 "lastInsertedProduct": {
                     "type": "string"
-                },
-                "topProducts": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/api.StatsTopProduct"
-                    }
                 },
                 "totalActive": {
                     "type": "integer"
@@ -1870,6 +1870,18 @@ const docTemplate = `{
                 }
             }
         },
+        "api.StatsExpiringProduct": {
+            "type": "object",
+            "properties": {
+                "expireAt": {
+                    "description": "format: \"2006-01-02\"",
+                    "type": "string"
+                },
+                "productName": {
+                    "type": "string"
+                }
+            }
+        },
         "api.StatsMonthlyCount": {
             "type": "object",
             "properties": {
@@ -1878,20 +1890,6 @@ const docTemplate = `{
                 },
                 "month": {
                     "description": "format: \"2006-01\"",
-                    "type": "string"
-                }
-            }
-        },
-        "api.StatsTopProduct": {
-            "type": "object",
-            "properties": {
-                "barcode": {
-                    "type": "string"
-                },
-                "count": {
-                    "type": "integer"
-                },
-                "productName": {
                     "type": "string"
                 }
             }

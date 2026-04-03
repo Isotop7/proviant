@@ -31,16 +31,16 @@ definitions:
         additionalProperties:
           type: integer
         type: object
+      expiringSoon:
+        items:
+          $ref: '#/definitions/api.StatsExpiringProduct'
+        type: array
       expiryTrend:
         items:
           $ref: '#/definitions/api.StatsMonthlyCount'
         type: array
       lastInsertedProduct:
         type: string
-      topProducts:
-        items:
-          $ref: '#/definitions/api.StatsTopProduct'
-        type: array
       totalActive:
         type: integer
       totalArchived:
@@ -52,21 +52,20 @@ definitions:
       wastePercent:
         type: number
     type: object
+  api.StatsExpiringProduct:
+    properties:
+      expireAt:
+        description: 'format: "2006-01-02"'
+        type: string
+      productName:
+        type: string
+    type: object
   api.StatsMonthlyCount:
     properties:
       count:
         type: integer
       month:
         description: 'format: "2006-01"'
-        type: string
-    type: object
-  api.StatsTopProduct:
-    properties:
-      barcode:
-        type: string
-      count:
-        type: integer
-      productName:
         type: string
     type: object
   auth.acceptInvitationRequest:

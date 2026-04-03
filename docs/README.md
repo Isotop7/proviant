@@ -1380,6 +1380,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetArchivedProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetArchivedProductByID>)
   - [func \(dbc DatabaseController\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#DatabaseController.GetArchivedProductsGroupedByBarcode>)
   - [func \(dbc DatabaseController\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#DatabaseController.GetExpiredProductsCount>)
+  - [func \(dbc DatabaseController\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#DatabaseController.GetExpiringSoonProducts>)
   - [func \(dbc DatabaseController\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#DatabaseController.GetExpiryTrend>)
   - [func \(dbc DatabaseController\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#DatabaseController.GetHouseholdByID>)
   - [func \(dbc DatabaseController\) GetHouseholdMemberCount\(householdID uint\) \(int64, error\)](<#DatabaseController.GetHouseholdMemberCount>)
@@ -1401,7 +1402,6 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#DatabaseController.GetProductsExpired>)
   - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
   - [func \(dbc DatabaseController\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]database.HouseholdWithMemberCount, error\)](<#DatabaseController.GetPublicHouseholds>)
-  - [func \(dbc DatabaseController\) GetTopArchivedProductStats\(userID uint, limit int\) \(\[\]apiModel.StatsTopProduct, error\)](<#DatabaseController.GetTopArchivedProductStats>)
   - [func \(dbc DatabaseController\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetTopArchivedProducts>)
   - [func \(dbc DatabaseController\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserArchivedProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#DatabaseController.GetUserByID>)
@@ -1642,6 +1642,15 @@ func (dbc DatabaseController) GetExpiredProductsCount(userID uint) (int, error)
 
 GetExpiredProductsCount returns the count of expired products for a user
 
+<a name="DatabaseController.GetExpiringSoonProducts"></a>
+### func \(DatabaseController\) GetExpiringSoonProducts
+
+```go
+func (dbc DatabaseController) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
+```
+
+GetExpiringSoonProducts returns active products whose expiry date falls within the next \`days\` calendar days, including today. Results are sorted ascending by expiry date.
+
 <a name="DatabaseController.GetExpiryTrend"></a>
 ### func \(DatabaseController\) GetExpiryTrend
 
@@ -1830,15 +1839,6 @@ func (dbc DatabaseController) GetPublicHouseholds(excludeHouseholdID uint) ([]da
 ```
 
 GetPublicHouseholds returns all households except the one the user already belongs to.
-
-<a name="DatabaseController.GetTopArchivedProductStats"></a>
-### func \(DatabaseController\) GetTopArchivedProductStats
-
-```go
-func (dbc DatabaseController) GetTopArchivedProductStats(userID uint, limit int) ([]apiModel.StatsTopProduct, error)
-```
-
-GetTopArchivedProductStats returns the top N most\-archived products with their archive counts
 
 <a name="DatabaseController.GetTopArchivedProducts"></a>
 ### func \(DatabaseController\) GetTopArchivedProducts
@@ -2171,8 +2171,8 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type HouseholdListItem](<#HouseholdListItem>)
 - [type OnboardingStateResponse](<#OnboardingStateResponse>)
 - [type ProductStatsResponse](<#ProductStatsResponse>)
+- [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
-- [type StatsTopProduct](<#StatsTopProduct>)
 
 
 <a name="BulkProductsAPIModel"></a>
@@ -2220,15 +2220,27 @@ ProductStatsResponse is the response body for GET /api/v1/products/stats
 
 ```go
 type ProductStatsResponse struct {
-    WasteCount          int                 `json:"wasteCount"`
-    WastePercent        float64             `json:"wastePercent"`
-    TotalActive         int                 `json:"totalActive"`
-    TotalArchived       int                 `json:"totalArchived"`
-    UniqueArchived      int                 `json:"uniqueArchived"`
-    LastInsertedProduct string              `json:"lastInsertedProduct"`
-    TopProducts         []StatsTopProduct   `json:"topProducts"`
-    Categories          map[string]int      `json:"categories"`
-    ExpiryTrend         []StatsMonthlyCount `json:"expiryTrend"`
+    WasteCount          int                    `json:"wasteCount"`
+    WastePercent        float64                `json:"wastePercent"`
+    TotalActive         int                    `json:"totalActive"`
+    TotalArchived       int                    `json:"totalArchived"`
+    UniqueArchived      int                    `json:"uniqueArchived"`
+    LastInsertedProduct string                 `json:"lastInsertedProduct"`
+    ExpiringSoon        []StatsExpiringProduct `json:"expiringSoon"`
+    Categories          map[string]int         `json:"categories"`
+    ExpiryTrend         []StatsMonthlyCount    `json:"expiryTrend"`
+}
+```
+
+<a name="StatsExpiringProduct"></a>
+## type StatsExpiringProduct
+
+StatsExpiringProduct represents a product expiring within a short window
+
+```go
+type StatsExpiringProduct struct {
+    ProductName string `json:"productName"`
+    ExpireAt    string `json:"expireAt"` // format: "2006-01-02"
 }
 ```
 
@@ -2241,19 +2253,6 @@ StatsMonthlyCount represents the number of products for a given month
 type StatsMonthlyCount struct {
     Month string `json:"month"` // format: "2006-01"
     Count int    `json:"count"`
-}
-```
-
-<a name="StatsTopProduct"></a>
-## type StatsTopProduct
-
-StatsTopProduct represents a product with its archived count
-
-```go
-type StatsTopProduct struct {
-    ProductName string `json:"productName"`
-    Barcode     string `json:"barcode"`
-    Count       int    `json:"count"`
 }
 ```
 
@@ -2868,34 +2867,6 @@ type OpenFoodFactsAPIDataset struct {
         GenericName string `json:"generic_name"`
         ImageURL    string `json:"image_url"`
     }   `json:"product"`
-}
-```
-
-# webparts
-
-```go
-import "codeberg.org/isotop7/proviant/models/webparts"
-```
-
-web contains models for web entities
-
-## Index
-
-- [type Tile](<#Tile>)
-
-
-<a name="Tile"></a>
-## type Tile
-
-Tile is a wrapper for a card content on the home page
-
-```go
-type Tile struct {
-    Title   string
-    Hero    string
-    Body    string
-    Footer  string
-    Variant string // Bootstrap color variant: "danger", "warning", "success", "" (default/primary)
 }
 ```
 
