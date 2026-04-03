@@ -1481,7 +1481,6 @@ func (dbc DatabaseController) MarkInvitationSendFailed(invitationID uint) error 
 		Update("send_attempts", gorm.Expr("send_attempts + 1")).Error
 }
 
-
 // GetOnboardingState retrieves the onboarding state for a user
 func (dbc DatabaseController) GetOnboardingState(userID uint) (database.OnboardingState, error) {
 	var onboardingState database.OnboardingState
@@ -1509,7 +1508,6 @@ func (dbc DatabaseController) MarkOnboardingComplete(userID uint) error {
 		Where("user_id = ?", userID).
 		Update("onboarding_completed", true).Error
 }
-
 
 // GetPublicHouseholds returns all households except the one the user already belongs to.
 func (dbc DatabaseController) GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error) {

@@ -414,11 +414,14 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 
 	// Check if invitation is still valid
 	if invitation.Status != dbModel.InvitationStatusPending {
-		msg := "This invitation has already been used."
-		if invitation.Status == dbModel.InvitationStatusCancelled {
+		var msg string
+		switch invitation.Status {
+		case dbModel.InvitationStatusCancelled:
 			msg = "This invitation has been cancelled by the sender."
-		} else if invitation.Status == dbModel.InvitationStatusExpired {
+		case dbModel.InvitationStatusExpired:
 			msg = "This invitation has expired."
+		default:
+			msg = "This invitation has already been used."
 		}
 		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", "acceptInvite.tmpl", map[string]any{
 			"Title": "Accept Invitation",

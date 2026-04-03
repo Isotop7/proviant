@@ -90,7 +90,7 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 }
 
 // SendInvitationEmail sends an invitation email to the recipient
-func (e *EmailNotificationProvider) SendInvitationEmail(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
+func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
 	// Construct magic link
 	magicLink := fmt.Sprintf("%s/web/invite/accept?token=%s", baseURL, invitation.Token)
 

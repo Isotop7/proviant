@@ -110,12 +110,12 @@ func GetAvailableHouseholds(ctx *gin.Context) {
 	}
 
 	items := make([]modelsAPI.HouseholdListItem, len(households))
-	for i, h := range households {
+	for i := range households {
 		items[i] = modelsAPI.HouseholdListItem{
-			ID:          h.ID,
-			Name:        h.Name,
-			Description: h.Description,
-			MemberCount: h.MemberCount,
+			ID:          households[i].ID,
+			Name:        households[i].Name,
+			Description: households[i].Description,
+			MemberCount: households[i].MemberCount,
 		}
 	}
 	ctx.JSON(http.StatusOK, items)

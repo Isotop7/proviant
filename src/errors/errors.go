@@ -177,5 +177,4 @@ var (
 
 	// ErrInvitationNotAuthorized is thrown when a user tries to manage an invitation they did not create
 	ErrInvitationNotAuthorized = errors.New("not authorized to manage this invitation")
-
 )
