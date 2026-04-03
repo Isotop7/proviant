@@ -156,8 +156,20 @@ func (dbc DatabaseController) CreateUser(user *authentication.User) error {
 		return err
 	}
 
+	// Create onboarding state for the new user
+	onboardingState := database.OnboardingState{
+		UserID: user.ID,
+	}
+	if err := tx.Create(&onboardingState).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	// Commit the transaction
-	tx.Commit()
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -1467,4 +1479,47 @@ func (dbc DatabaseController) MarkInvitationSendFailed(invitationID uint) error 
 	return dbc.DBHandle.Model(&database.HouseholdInvitation{}).
 		Where("id = ?", invitationID).
 		Update("send_attempts", gorm.Expr("send_attempts + 1")).Error
+}
+
+
+// GetOnboardingState retrieves the onboarding state for a user
+func (dbc DatabaseController) GetOnboardingState(userID uint) (database.OnboardingState, error) {
+	var onboardingState database.OnboardingState
+	err := dbc.DBHandle.Where("user_id = ?", userID).First(&onboardingState).Error
+	return onboardingState, err
+}
+
+// MarkNotificationsSetup marks notifications as configured for a user's onboarding state
+func (dbc DatabaseController) MarkNotificationsSetup(userID uint) error {
+	return dbc.DBHandle.Model(&database.OnboardingState{}).
+		Where("user_id = ?", userID).
+		Update("notifications_setup", true).Error
+}
+
+// MarkHouseholdStepDone marks the household onboarding step as done (e.g. application submitted or skipped)
+func (dbc DatabaseController) MarkHouseholdStepDone(userID uint) error {
+	return dbc.DBHandle.Model(&database.OnboardingState{}).
+		Where("user_id = ?", userID).
+		Update("household_step_done", true).Error
+}
+
+// MarkOnboardingComplete marks onboarding as fully complete for a user
+func (dbc DatabaseController) MarkOnboardingComplete(userID uint) error {
+	return dbc.DBHandle.Model(&database.OnboardingState{}).
+		Where("user_id = ?", userID).
+		Update("onboarding_completed", true).Error
+}
+
+
+// GetPublicHouseholds returns all households except the one the user already belongs to.
+func (dbc DatabaseController) GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error) {
+	var results []database.HouseholdWithMemberCount
+	err := dbc.DBHandle.Table("households").
+		Select("households.*, COUNT(users.id) as member_count").
+		Joins("LEFT JOIN users ON households.id = users.household_id AND users.deleted_at IS NULL").
+		Where("households.deleted_at IS NULL AND households.id != ?", excludeHouseholdID).
+		Group("households.id").
+		Order("households.name").
+		Find(&results).Error
+	return results, err
 }

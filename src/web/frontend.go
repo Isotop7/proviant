@@ -470,3 +470,36 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		"InvitationEmail": invitation.Email,
 	})
 }
+
+// Onboarding renders the post-signup onboarding wizard
+func (frontend *Frontend) Onboarding(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
+		return
+	}
+
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		return
+	}
+
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	user, userErr := dbController.GetUserByID(userID)
+	if userErr != nil {
+		logger.Error().Msg(api.ResponseErrInvalidUserData.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
+		return
+	}
+
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "onboarding.tmpl", map[string]any{
+		"Title":    "Onboarding",
+		"Username": user.Username,
+	})
+}

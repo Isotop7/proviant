@@ -402,3 +402,36 @@ proviant.acceptInvitation = async function (token) {
   const body = await apiCall.json();
   return { code: apiCall.status, message: body.message };
 };
+
+/* Onboarding API methods */
+proviant.getOnboardingState = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/state`;
+  const apiCall = await fetch(url, { method: "GET" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, body };
+};
+
+proviant.getOnboardingHouseholds = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/households`;
+  const apiCall = await fetch(url, { method: "GET" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, body };
+};
+
+proviant.applyOnboardingHousehold = async function (householdId) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/apply-household`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ householdId }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.completeOnboarding = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/complete`;
+  const apiCall = await fetch(url, { method: "POST" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};

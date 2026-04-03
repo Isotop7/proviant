@@ -201,6 +201,60 @@ td a, th a {
 }
 
 //
+// Onboarding wizard
+//
+.onboarding-wizard {
+    max-width: 640px;
+    width: 100%;
+}
+
+.step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0.5;
+    transition: opacity 0.3s;
+
+    &.active  { opacity: 1; }
+
+    &.completed .step-circle {
+        background-color: $success;
+        color: white;
+    }
+}
+
+.step-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: $secondary;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.step-connector {
+    width: 60px;
+    height: 2px;
+    background-color: var(--bs-border-color);
+    align-self: center;
+    margin: 0 8px;
+}
+
+.onboarding-step {
+    animation: onboarding-fade-in 0.3s ease-in;
+}
+
+@keyframes onboarding-fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+//
 // Expiry field update flash
 //
 @keyframes expire-flash {

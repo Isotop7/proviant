@@ -7,6 +7,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api/auth"
 	"codeberg.org/isotop7/proviant/api/common"
+	"codeberg.org/isotop7/proviant/api/onboarding"
 	v1 "codeberg.org/isotop7/proviant/api/v1"
 	"codeberg.org/isotop7/proviant/assets"
 	"codeberg.org/isotop7/proviant/controllers"
@@ -179,6 +180,14 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedUserAPI.POST("/household/leave", v1.LeaveHousehold)
 	protectedUserAPI.POST("/household/create", v1.CreateHousehold)
 
+	// Onboarding routes (require authentication)
+	onboardingAPI := engine.Group("/api/v1/onboarding")
+	onboardingAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	onboardingAPI.GET("/state", onboarding.GetOnboardingState)
+	onboardingAPI.GET("/households", onboarding.GetAvailableHouseholds)
+	onboardingAPI.POST("/apply-household", onboarding.ApplyForHousehold)
+	onboardingAPI.POST("/complete", onboarding.CompleteOnboarding)
+
 	// Household application routes
 	householdAPI := engine.Group("/api/v1/household")
 	householdAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
@@ -240,6 +249,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products", webFrontendHandler.Products)
 	publicWebFrontend.GET("/products/archived", webFrontendHandler.ProductsArchived)
 	publicWebFrontend.GET("/products/create", webFrontendHandler.ProductsCreate)
+	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
 
 	// Public invite acceptance page (no auth required)
 	engine.GET("/web/invite/accept", webFrontendHandler.AcceptInvite)
