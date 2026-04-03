@@ -2,9 +2,7 @@
 <nav class="navbar navbar-expand-lg navbar fixed-top bg-body-secondary fs-4">
 	<div class="container">
 		<div class="me-3">
-			<a class="navbar-brand" href="/web">
-				<img class="img-fluid nav-proviant-logo" src="/assets/icons/proviant_logo_256.png" alt="Proviant home">
-			</a>
+			<img class="img-fluid nav-proviant-logo" src="/assets/icons/proviant_logo_256.png" alt="Proviant home">
 		</div>
 		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navigation"
 			aria-controls="navigation" aria-expanded="false" aria-label="Toggle navigation">
@@ -13,19 +11,24 @@
 		<div class="collapse navbar-collapse" id="navigation">
 			<ul class="navbar-nav me-auto">
 				<li class="nav-item">
+					<a class="nav-link {{ if eq .Title "Home" }}active{{ end }}" href="/web"
+						{{ if eq .Title "Home" }}aria-current="page"{{ end }}>
+						<span class="d-inline d-lg-none">Portal</span>
+						<i class="mx-3 d-none d-lg-inline bi bi-speedometer2" aria-hidden="true"></i>
+					</a>
+				</li>
+				<li class="nav-item">
 					<a class="nav-link {{ if eq .Title "Products" }}active{{ end }}" href="/web/products"
 						{{ if eq .Title "Products" }}aria-current="page"{{ end }}>
 						<span class="d-inline d-lg-none">All Products</span>
-						<i class="mx-3 d-none d-lg-inline bi bi-box-seam-fill" aria-hidden="true"
-							data-bs-toggle="tooltip" data-bs-placement="bottom" title="All Products"></i>
+						<i class="mx-3 d-none d-lg-inline bi bi-box-seam-fill" aria-hidden="true"></i>
 					</a>
 				</li>
 				<li class="nav-item">
 					<a class="nav-link {{ if eq .Title "Create product" }}active{{ end }}" href="/web/products/create"
 						{{ if eq .Title "Create product" }}aria-current="page"{{ end }}>
 						<span class="d-inline d-lg-none">Create Product</span>
-						<i class="mx-3 d-none d-lg-inline bi bi-upc-scan" aria-hidden="true"
-							data-bs-toggle="tooltip" data-bs-placement="bottom" title="Create Product"></i>
+						<i class="mx-3 d-none d-lg-inline bi bi-upc-scan" aria-hidden="true"></i>
 					</a>
 				</li>
 			</ul>
@@ -34,23 +37,20 @@
 					<a class="nav-link {{ if eq .Title "Archive" }}active{{ end }}" href="/web/products/archived"
 						{{ if eq .Title "Archive" }}aria-current="page"{{ end }}>
 						<span class="d-inline d-lg-none">Archive</span>
-						<i class="mx-3 d-none d-lg-inline bi bi-archive" aria-hidden="true"
-							data-bs-toggle="tooltip" data-bs-placement="bottom" title="Archive"></i>
+						<i class="mx-3 d-none d-lg-inline bi bi-archive" aria-hidden="true"></i>
 					</a>
 				</li>
 				<li class="nav-item">
 					<a class="nav-link {{ if eq .Title "Settings" }}active{{ end }}" href="/web/user/settings"
 						{{ if eq .Title "Settings" }}aria-current="page"{{ end }}>
 						<span class="d-inline d-lg-none">Settings</span>
-						<i class="mx-3 d-none d-lg-inline bi bi-gear-wide-connected" aria-hidden="true"
-							data-bs-toggle="tooltip" data-bs-placement="bottom" title="Settings"></i>
+						<i class="mx-3 d-none d-lg-inline bi bi-gear-wide-connected" aria-hidden="true"></i>
 					</a>
 				</li>
 				<li class="nav-item">
 					<a class="nav-link" onclick="proviant.logoutUser()" href="/web" role="button">
 						<span class="d-inline d-lg-none">Logout</span>
-						<i class="text-danger mx-3 d-none d-lg-inline bi bi-escape" aria-hidden="true"
-							data-bs-toggle="tooltip" data-bs-placement="bottom" title="Logout"></i>
+						<i class="text-danger mx-3 d-none d-lg-inline bi bi-escape" aria-hidden="true"></i>
 					</a>
 				</li>
 			</ul>

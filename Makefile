@@ -140,3 +140,4 @@ js:
 	cp ./node_modules/html5-qrcode/html5-qrcode.min.js ./src/assets/js/
 	cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js ./src/assets/js/
 	cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js.map ./src/assets/js/
+	cp ./node_modules/chart.js/dist/chart.umd.min.js ./src/assets/js/

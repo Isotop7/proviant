@@ -1370,6 +1370,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/stats": {
+            "get": {
+                "description": "Returns waste rate, top archived products, category breakdown and expiry trend",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Return product statistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductStatsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/productsByBarcode": {
             "get": {
                 "description": "Returns a list of products of user matching the given barcode",
@@ -1794,6 +1826,73 @@ const docTemplate = `{
                 },
                 "onboardingCompleted": {
                     "type": "boolean"
+                }
+            }
+        },
+        "api.ProductStatsResponse": {
+            "type": "object",
+            "properties": {
+                "categories": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "expiryTrend": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.StatsMonthlyCount"
+                    }
+                },
+                "lastInsertedProduct": {
+                    "type": "string"
+                },
+                "topProducts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.StatsTopProduct"
+                    }
+                },
+                "totalActive": {
+                    "type": "integer"
+                },
+                "totalArchived": {
+                    "type": "integer"
+                },
+                "uniqueArchived": {
+                    "type": "integer"
+                },
+                "wasteCount": {
+                    "type": "integer"
+                },
+                "wastePercent": {
+                    "type": "number"
+                }
+            }
+        },
+        "api.StatsMonthlyCount": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "month": {
+                    "description": "format: \"2006-01\"",
+                    "type": "string"
+                }
+            }
+        },
+        "api.StatsTopProduct": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "productName": {
+                    "type": "string"
                 }
             }
         },

@@ -1178,3 +1178,114 @@ func GetOpenFoodFactsData(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, entry)
 }
+
+// GetProductStats returns aggregated product statistics for the authenticated user
+// @Summary      Return product statistics
+// @Description  Returns waste rate, top archived products, category breakdown and expiry trend
+// @Tags         product
+// @Produce      json
+// @Success      200  {object}  apiModel.ProductStatsResponse
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/products/stats [get]
+func GetProductStats(ctx *gin.Context) {
+	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	if !loggerOk {
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
+		return
+	}
+
+	dbHandle, dbOk := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbOk {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+
+	totalActive, err := dbController.GetActiveProductsCount(userID)
+	if err != nil {
+		logger.Error().Msgf("GetActiveProductsCount: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing active product count"})
+		return
+	}
+
+	wasteCount, err := dbController.GetExpiredProductsCount(userID)
+	if err != nil {
+		logger.Error().Msgf("GetExpiredProductsCount: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing waste count"})
+		return
+	}
+
+	var wastePercent float64
+	if totalActive > 0 {
+		wastePercent = float64(wasteCount) / float64(totalActive) * 100
+	}
+
+	expiringSoon, err := dbController.GetExpiringSoonProducts(userID, 7)
+	if err != nil {
+		logger.Error().Msgf("GetExpiringSoonProducts: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon products"})
+		return
+	}
+
+	categories, err := dbController.GetProductCategoryBreakdown(userID)
+	if err != nil {
+		logger.Error().Msgf("GetProductCategoryBreakdown: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing category breakdown"})
+		return
+	}
+
+	expiryTrend, err := dbController.GetExpiryTrend(userID)
+	if err != nil {
+		logger.Error().Msgf("GetExpiryTrend: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiry trend"})
+		return
+	}
+
+	archivedProducts, err := dbController.GetUserArchivedProductsBulk(userID, -1)
+	if err != nil {
+		logger.Error().Msgf("GetUserArchivedProductsBulk: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing archived count"})
+		return
+	}
+	totalArchived := len(archivedProducts)
+
+	uniqueArchivedMap, err := dbController.GetArchivedProductsGroupedByBarcode(userID)
+	if err != nil {
+		logger.Error().Msgf("GetArchivedProductsGroupedByBarcode: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing unique archived count"})
+		return
+	}
+	uniqueArchived := len(uniqueArchivedMap)
+
+	var lastInsertedProduct string
+	householdID, householdErr := dbController.GetUserHouseholdByID(userID)
+	if householdErr == nil && householdID > 0 {
+		lastProduct, lastErr := dbController.GetLastInsertedProduct(householdID)
+		if lastErr == nil && lastProduct.ID != 0 {
+			lastInsertedProduct = lastProduct.ProductName
+		}
+	}
+
+	ctx.JSON(http.StatusOK, apiModel.ProductStatsResponse{
+		WasteCount:          wasteCount,
+		WastePercent:        wastePercent,
+		TotalActive:         totalActive,
+		TotalArchived:       totalArchived,
+		UniqueArchived:      uniqueArchived,
+		LastInsertedProduct: lastInsertedProduct,
+		ExpiringSoon:        expiringSoon,
+		Categories:          categories,
+		ExpiryTrend:         expiryTrend,
+	})
+}

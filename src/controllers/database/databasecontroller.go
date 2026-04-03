@@ -8,9 +8,9 @@ import (
 
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/models/webparts"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -886,105 +886,131 @@ func (dbc DatabaseController) GetTopArchivedProducts(userID uint, limit int) ([]
 	return result, nil
 }
 
-// GetUserHomeTiles creates a list of tiles with user statistics
-func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, error) {
-	// Create list of hometiles
-	homeTiles := []webparts.Tile{}
+// GetActiveProductsCount returns the count of active (non-archived) products for a user
+func (dbc DatabaseController) GetActiveProductsCount(userID uint) (int, error) {
+	products, err := dbc.GetUserProductsBulk(userID, 0)
+	if err != nil {
+		return 0, err
+	}
+	return len(products), nil
+}
 
-	// Try to get user object from database
-	user, userErr := dbc.GetUserByID(userID)
-	if userErr != nil {
-		return homeTiles, userErr
+// GetProductCategoryBreakdown returns a map of category name → product count for active products.
+// Language prefixes (e.g. "en:") are stripped. The top 8 categories are kept; the rest are
+// grouped under "Other". Products with no category are counted under "Uncategorized".
+func (dbc DatabaseController) GetProductCategoryBreakdown(userID uint) (map[string]int, error) {
+	products, err := dbc.GetUserProductsBulk(userID, 0)
+	if err != nil {
+		return nil, err
 	}
 
-	// Get count of products
-	productList, productCountErr := dbc.GetUserProductsBulk(userID, -1)
-	if productCountErr == nil && len(productList) > 0 {
-		homeTiles = append(homeTiles, webparts.Tile{
-			Title:  "Amount of your products",
-			Hero:   fmt.Sprint(len(productList)),
-			Body:   fmt.Sprintf("You currently have %d products assigned", len(productList)),
-			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-		})
+	counts := make(map[string]int)
+	for i := range products {
+		raw := strings.TrimSpace(products[i].Categories)
+		if raw == "" {
+			counts["Uncategorized"]++
+			continue
+		}
+		// Use only the first category listed
+		first := strings.SplitN(raw, ",", 2)[0]
+		first = strings.TrimSpace(first)
+		// Strip language prefix (e.g. "en:")
+		if idx := strings.Index(first, ":"); idx != -1 {
+			first = strings.TrimSpace(first[idx+1:])
+		}
+		if first == "" {
+			first = "Uncategorized"
+		}
+		counts[first]++
 	}
 
-	// Get last inserted product
-	lastInsertedProduct, getLastInsertedProductErr := dbc.GetLastInsertedProduct(user.HouseholdID)
-	if getLastInsertedProductErr == nil && lastInsertedProduct.ID != 0 {
-		homeTiles = append(homeTiles, webparts.Tile{
-			Title:  "Last inserted product",
-			Hero:   lastInsertedProduct.ProductName,
-			Body:   fmt.Sprintf("'%s' is the most recent product with barcode #%s", lastInsertedProduct.ProductName, lastInsertedProduct.Barcode),
-			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-		})
+	// Keep top 8, lump the rest into "Other"
+	const maxCategories = 8
+	if len(counts) <= maxCategories {
+		return counts, nil
 	}
 
-	// Last notified product
-	lastNotifiedProduct, getNotifiedErr := dbc.GetLastNotifiedProduct(user.HouseholdID)
-	if getNotifiedErr == nil && lastNotifiedProduct.ID != 0 {
-		homeTiles = append(homeTiles, webparts.Tile{
-			Title:  "Last notification",
-			Hero:   lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat),
-			Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastNotifiedProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat)),
-			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-		})
+	type catCount struct {
+		name  string
+		count int
+	}
+	cats := make([]catCount, 0, len(counts))
+	for n, c := range counts {
+		cats = append(cats, catCount{n, c})
+	}
+	sort.Slice(cats, func(i, j int) bool {
+		return cats[i].count > cats[j].count
+	})
+
+	result := make(map[string]int, maxCategories+1)
+	other := 0
+	for i, c := range cats {
+		if i < maxCategories {
+			result[c.name] = c.count
+		} else {
+			other += c.count
+		}
+	}
+	if other > 0 {
+		result["Other"] = other
+	}
+	return result, nil
+}
+
+// GetExpiryTrend returns the count of active products expiring in each of the next 12 calendar
+// months, starting from the current month.
+func (dbc DatabaseController) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error) {
+	products, err := dbc.GetUserProductsBulk(userID, 0)
+	if err != nil {
+		return nil, err
 	}
 
-	// Percentage of unopened expired products
-	activeProducts, activeErr := dbc.GetUserProductsBulk(userID, -1)
-	if activeErr == nil && len(activeProducts) > 0 {
-		expiredCount, expiredErr := dbc.GetExpiredProductsCount(userID)
-		if expiredErr == nil && expiredCount > 0 {
-			percentage := float64(expiredCount) / float64(len(activeProducts)) * 100
-			homeTiles = append(homeTiles, webparts.Tile{
-				Title:   "Unopened Expired Products",
-				Hero:    fmt.Sprintf("%.1f%%", percentage),
-				Body:    fmt.Sprintf("%.1f%% of your %d active products are expired but not archived", percentage, len(activeProducts)),
-				Footer:  fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-				Variant: "danger",
+	now := time.Now()
+	monthCounts := make(map[string]int, 12)
+	for i := 0; i < 12; i++ {
+		monthCounts[now.AddDate(0, i, 0).Format("2006-01")] = 0
+	}
+	for i := range products {
+		month := products[i].ExpireAt.Format("2006-01")
+		if _, ok := monthCounts[month]; ok {
+			monthCounts[month]++
+		}
+	}
+
+	result := make([]apiModel.StatsMonthlyCount, 0, 12)
+	for i := 0; i < 12; i++ {
+		month := now.AddDate(0, i, 0).Format("2006-01")
+		result = append(result, apiModel.StatsMonthlyCount{Month: month, Count: monthCounts[month]})
+	}
+	return result, nil
+}
+
+// GetExpiringSoonProducts returns active products whose expiry date falls within the next `days`
+// calendar days, including today. Results are sorted ascending by expiry date.
+func (dbc DatabaseController) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error) {
+	products, err := dbc.GetUserProductsBulk(userID, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
+
+	var result []apiModel.StatsExpiringProduct
+	for i := range products {
+		e := products[i].ExpireAt
+		if !e.Before(startOfToday) && !e.After(endOfWindow) {
+			result = append(result, apiModel.StatsExpiringProduct{
+				ProductName: products[i].ProductName,
+				ExpireAt:    e.Format("2006-01-02"),
 			})
 		}
 	}
-
-	// Number of total archived products
-	archivedProducts, archivedErr := dbc.GetUserArchivedProductsBulk(userID, -1)
-	if archivedErr == nil {
-		homeTiles = append(homeTiles, webparts.Tile{
-			Title:  "Total Archived Products",
-			Hero:   fmt.Sprint(len(archivedProducts)),
-			Body:   fmt.Sprintf("You have archived %d products", len(archivedProducts)),
-			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-		})
-	}
-
-	// Number of total archived products grouped by barcode
-	grouped, groupErr := dbc.GetArchivedProductsGroupedByBarcode(userID)
-	if groupErr == nil {
-		homeTiles = append(homeTiles, webparts.Tile{
-			Title:  "Unique Archived Products",
-			Hero:   fmt.Sprint(len(grouped)),
-			Body:   fmt.Sprintf("%d different products have been archived", len(grouped)),
-			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-		})
-	}
-
-	// Top 3 archived products
-	topArchived, topErr := dbc.GetTopArchivedProducts(userID, 3)
-	if topErr == nil && len(topArchived) > 0 {
-		var productNames []string
-		for i := range topArchived {
-			productNames = append(productNames, topArchived[i].ProductName)
-		}
-
-		homeTiles = append(homeTiles, webparts.Tile{
-			Title:  "Top Archived Products",
-			Hero:   strings.Join(productNames, ", "),
-			Body:   fmt.Sprintf("Your most archived products: %s", strings.Join(productNames, ", ")),
-			Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-		})
-	}
-
-	return homeTiles, nil
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ExpireAt < result[j].ExpireAt
+	})
+	return result, nil
 }
 
 // GetHouseholdMemberCount returns how many users currently belong to a household

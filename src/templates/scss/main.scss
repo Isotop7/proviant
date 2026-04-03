@@ -118,6 +118,17 @@ $bootstrap-icons-font-dir: "../fonts";
     padding-top: 100px;
 }
 
+.toolbar-sticky {
+    position: sticky;
+    // navbar visual height: 8px padding + 48px logo + 8px padding + 6px border-bottom = 70px
+    // docking flush to navbar bottom eliminates the gap content bleeds through
+    top: 70px;
+    z-index: 1020; // below fixed navbar (1030), above page content
+    background-color: var(--bs-body-bg);
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
 div.form-floating > input#inputUsername {
     margin-bottom: -1px;
     border-bottom-right-radius: 0;
