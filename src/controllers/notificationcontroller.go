@@ -186,7 +186,7 @@ func (nc *NotificationController) DispatchInvitations(baseURL string) {
 }
 
 // SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database.
-func (nc *NotificationController) SendInvitationEmail(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
+func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
 	emailProvider := &EmailNotificationProvider{
 		Configuration: nc.Configuration.SMTP,
 		Logger:        nc.Logger,
@@ -213,6 +213,34 @@ func (nc *NotificationController) SendInvitationEmail(invitation dbModel.Househo
 	return nil
 }
 
+// SendVerificationEmail sends an email verification link using the invitation email system.
+func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.HouseholdInvitation, username, baseURL string) error {
+	emailProvider := &EmailNotificationProvider{
+		Configuration: nc.Configuration.SMTP,
+		Logger:        nc.Logger,
+	}
+
+	if !emailProvider.IsConfigured() {
+		return fmt.Errorf("email provider not configured")
+	}
+
+	if err := emailProvider.SendInvitationEmail(invitation, username, "your household", baseURL); err != nil {
+		nc.Logger.Error().Msgf("Failed to send verification email to %s: %s", invitation.Email, err)
+		if markErr := nc.DatabaseController.MarkInvitationSendFailed(invitation.ID); markErr != nil {
+			nc.Logger.Error().Msgf("Failed to mark verification invitation %d as send-failed: %s", invitation.ID, markErr)
+		}
+		return err
+	}
+
+	if err := nc.DatabaseController.MarkInvitationSent(invitation.ID); err != nil {
+		nc.Logger.Error().Msgf("Failed to mark verification invitation %d as sent: %s", invitation.ID, err)
+		return err
+	}
+
+	nc.Logger.Info().Msgf("Verification email sent successfully to %s", invitation.Email)
+	return nil
+}
+
 // processPendingInvitations fetches all pending invitations that need to be sent or retried.
 func (nc *NotificationController) processPendingInvitations(emailProvider *EmailNotificationProvider, baseURL string) {
 	sleepInterval := time.Hour * time.Duration(nc.Configuration.Interval)
@@ -230,7 +258,8 @@ func (nc *NotificationController) processPendingInvitations(emailProvider *Email
 
 	nc.Logger.Info().Msgf("Invitation dispatch: processing %d pending invitation(s)", len(invitations))
 
-	for _, invitation := range invitations {
+	for i := range invitations {
+		invitation := &invitations[i]
 		user, userErr := nc.DatabaseController.GetUserByID(invitation.InviterID)
 		inviterName := "A household member"
 		if userErr == nil {

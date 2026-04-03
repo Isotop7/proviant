@@ -24,6 +24,11 @@ type DatabaseControllerInterface interface {
 	GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
 	MarkInvitationSent(invitationID uint) error
 	MarkInvitationSendFailed(invitationID uint) error
+	GetOnboardingState(userID uint) (database.OnboardingState, error)
+	MarkNotificationsSetup(userID uint) error
+	MarkHouseholdStepDone(userID uint) error
+	MarkOnboardingComplete(userID uint) error
+	GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
 }
 
 // Ensure that DatabaseController implements the interface

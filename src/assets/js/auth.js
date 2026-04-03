@@ -31,15 +31,18 @@ function hideSignupError() {
 }
 
 function showSignupSuccess(username) {
+    // Show success message on the auth page — user must log in before accessing onboarding
     const infoToast = document.getElementById("infoToast");
     if (infoToast) {
         let toastBootstrap = bootstrap.Toast.getOrCreateInstance(infoToast);
         const toastBody = infoToast.getElementsByClassName("toast-body")[0];
         if (toastBody) {
-            toastBody.innerHTML = `Hello <span class="fw-bold">${username}</span>!<br><br>Your signup succeeded and you should be able to log in and use proviant`;
+            toastBody.innerHTML = `Hello <span class="fw-bold">${username}</span>!<br><br>Your account was created. Please log in to continue.`;
         }
         toastBootstrap.show();
     }
+    // Clear signup fields so the user sees the login form
+    clearSignupInputs();
 }
 
 function clearLoginInputs() {
@@ -93,7 +96,15 @@ function Login() {
     proviant.loginUser(username, password).then((response) => {
         switch (response.code) {
             case 200:
-                globalThis.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/web`;
+                proviant.getOnboardingState().then((stateResponse) => {
+                    if (stateResponse.code === 200 && stateResponse.body && !stateResponse.body.onboardingCompleted) {
+                        globalThis.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/web/onboarding`;
+                    } else {
+                        globalThis.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/web`;
+                    }
+                }).catch(() => {
+                    globalThis.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/web`;
+                });
                 break;
             case 401:
                 showLoginError("Authentication failed!");

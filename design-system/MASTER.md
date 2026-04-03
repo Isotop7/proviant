@@ -1,307 +1,222 @@
-# Proviant — Design System MASTER
+# Design System — Proviant
 
-> Source of truth for all UI decisions. Page-specific overrides live in `pages/`.
-
----
-
-## 1. Product Identity
-
-**Type:** Inventory & Stock Management + Smart Home Dashboard hybrid  
-**Audience:** Home users managing household food inventory — practical, low friction, glanceable  
-**Tone:** Clean, organized, reliable, slightly fresh (food/health context)  
-**Mode:** Dark-first (current `data-bs-theme="dark"` stays)
+> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
+> If that file exists, its rules **override** this Master file.
+> If not, strictly follow the rules below.
 
 ---
 
-## 2. Style
-
-**Primary style:** Flat Design + Minimalism  
-**Secondary:** Subtle micro-interactions (tactile feedback, status transitions)  
-**Anti-patterns to avoid:**
-- Cyberpunk / neon effects — wrong domain
-- Complex onboarding flows
-- Slow animations (>400ms)
-- Layout-shifting transforms on press
-- Emoji used as structural icons (use Bootstrap Icons only)
+**Project:** Proviant — Food Expiration Tracking / Pantry Management
+**Updated:** 2026-04-03
+**Theme:** Light mode — `data-bs-theme="light"` on all pages
+**Palette:** Fresh Garden — matched to `src/assets/icons/hero.png`
 
 ---
 
-## 3. Color Tokens
+## 1. Color Tokens
 
-### 3.1 Dark Mode (active — `data-bs-theme="dark"`)
+Extracted directly from the Proviant icon: basket green outline, leaf greens, carrot orange, apple green, and logo steel blue.
 
-The most important color rule for Proviant: **status colors must be instantly readable at a glance**. Expiry state is the primary information signal.
+### Surfaces
+
+| Role | Hex | SCSS var |
+|------|-----|----------|
+| Page background | `#F5FAF5` | `$body-bg` |
+| Card | `#FFFFFF` | `$card-bg` |
+| Elevated / info blocks | `#EBF5EB` | `$card-cap-bg`, `$light`, `--bs-tertiary-bg` |
+
+### Text
+
+| Role | Hex |
+|------|-----|
+| Primary | `#1A3028` — dark forest |
+| Strong / emphasis | `#2D4F3C` |
+| Muted | `#6A9580` — sage |
+
+### Brand & Status
+
+| Role | Hex | SCSS var | Source |
+|------|-----|----------|--------|
+| Primary / brand | `#3D7A5C` | `$primary` | basket outline green |
+| Secondary / links | `#5B7FA6` | `$secondary`, `$link-color` | logo steel blue |
+| Info | `#7BC67E` | `$info` | leaf / vegetable green |
+| Success | `#2D9B4F` | `$success` | produce green |
+| Warning | `#E8914E` | `$warning` | carrot orange |
+| Danger | `#DC2626` | `$danger` | red |
+
+### Borders & Shadows
+
+| Role | Value |
+|------|-------|
+| Border | `#C8DDD0` — muted green |
+| Shadow | `rgba(26, 48, 40, 0.10)` |
+
+### Status Badge Rules — Expiry (core logic)
+
+| State | Condition | Badge classes |
+|-------|-----------|---------------|
+| Expired | date passed | `bg-danger text-white` |
+| Expiring soon | ≤ 7 days | `bg-warning text-dark` |
+| Fresh | > 7 days | `bg-success text-dark` |
+| No date | — | `bg-secondary` |
+
+---
+
+## 2. Typography
 
 ```scss
-// ── Status colors (CRITICAL — keep high contrast on dark bg) ──
-$success:   #4ADE80;   // Fresh / OK          — green-400 (WCAG AA on dark)
-$warning:   #FBBF24;   // Expiring soon        — amber-400
-$danger:    #F87171;   // Expired / overdue    — red-400
-$info:      #67E8F9;   // Informational        — cyan-300
-
-// ── Brand ──
-$primary:   #577590;   // Slate Blue (keep — works well in dark)
-$secondary: #94A3B8;   // Cool Gray — slightly lighter than current for contrast
-
-// ── Surfaces ──
-$body-bg:         #0F172A;   // Slate-900 — rich dark, not pure black (avoids OLED smear)
-$surface:         #1E293B;   // Slate-800 — cards, nav, modals
-$surface-raised:  #334155;   // Slate-700 — elevated elements, dropdowns
-$border-color:    rgba(255, 255, 255, 0.08);  // hairline, subtle
-
-// ── Text ──
-$body-color:        #E2E8F0;  // Slate-200 — primary text (contrast 12:1 on bg)
-$text-muted:        #94A3B8;  // Slate-400 — secondary/metadata text
-$text-emphasis:     #F8FAFC;  // Slate-50  — headings, strong labels
+$font-family-base:  'DM Sans Variable', system-ui, sans-serif;  // self-hosted woff2
+$font-family-logo:  'Pacifico', cursive;    // brand mark only (.logo-font)
+$font-size-base:    1rem;                   // 16px — never go below on body text
+$line-height-base:  1.6;
 ```
-
-### 3.2 Semantic Token Map (Bootstrap overrides)
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--bs-primary` | `#577590` | Brand actions, links |
-| `--bs-success` | `#4ADE80` | Fresh products, OK states |
-| `--bs-warning` | `#FBBF24` | Expiring soon (≤7 days) |
-| `--bs-danger`  | `#F87171` | Expired, destructive actions |
-| `--bs-info`    | `#67E8F9` | Scanned date, neutral info |
-
-### 3.3 Status Badge Rules (Expiry — core UI logic)
-
-```
-Expired (date passed)        → bg-danger   (#F87171)
-Expiring soon (≤7 days)      → bg-warning  (#FBBF24) + dark text
-Fresh (>7 days)              → bg-success  (#4ADE80) + dark text
-No date set                  → bg-secondary (#94A3B8)
-```
-
----
-
-## 4. Typography
-
-**Existing stack is solid — keep DM Sans Variable.**
-
-```scss
-$font-family-base:    'DM Sans Variable', system-ui, sans-serif;
-$font-family-heading: 'DM Sans Variable', sans-serif;  // same — consistent
-$font-family-logo:    'Pacifico', cursive;              // keep for brand mark only
-
-// Scale (Bootstrap defaults are fine; enforce minimums)
-$font-size-base:  1rem;        // 16px — never go below on body text
-$line-height-base: 1.6;        // change from current 2.0 → 1.6 (2.0 is too loose)
-$h1-font-size:    2rem;        // 32px
-$h2-font-size:    1.5rem;      // 24px
-$h3-font-size:    1.25rem;     // 20px
-$h4-font-size:    1.125rem;    // 18px
-$font-weight-normal:  400;
-$font-weight-medium:  500;
-$font-weight-bold:    700;
-```
-
-**Key fix:** `$line-height-base: 2` is too aggressive — it makes content feel very spaced out and wastes vertical space on product lists. Change to `1.6`.
-
-### Font Weight Hierarchy
 
 | Element | Weight | Size |
 |---------|--------|------|
 | Page headings | 700 | 24–32px |
-| Card titles (product name) | 600 | 18px |
+| Card titles | 600 | 18px |
 | Body / labels | 400 | 16px |
 | Metadata (barcode, dates) | 400 | 14px |
 | Badge text | 500 | 12–13px |
-| Logo (Pacifico) | 400 | any |
 
 ---
 
-## 5. Spacing Scale
+## 3. Spacing Scale (8pt grid)
 
-Use Bootstrap's 4pt/8px grid. Custom spacing must be multiples of 4.
+Multiples of 4px only. Bootstrap's default spacing utilities are sufficient.
 
-```
-4px   — tight internal (icon gap, badge padding)
-8px   — default gap between inline elements
-16px  — card internal padding, form field gap
-24px  — section spacing, card gap in grid
-32px  — major section breaks
-48px  — page-level vertical rhythm
-```
-
-**Current issue:** `#content-wrapper { padding-top: 100px }` — this is fine for fixed navbar clearance, but verify on mobile (navbar collapses, so this may be too much).
+| Size | Value | Usage |
+|------|-------|-------|
+| xs | 4px | icon gaps, badge padding |
+| sm | 8px | inline element gaps |
+| md | 16px | card padding, form field gaps |
+| lg | 24px | section spacing, card gaps |
+| xl | 32px | major breaks |
+| 2xl | 48px | page-level rhythm |
 
 ---
 
-## 6. Layout & Responsive
+## 4. Layout & Responsive
 
-| Breakpoint | Width | Layout |
-|-----------|-------|--------|
-| xs (mobile) | <576px | Single column, full-width cards |
-| sm | 576px | Single column |
-| md | 768px | 2-column product grid |
-| lg | 992px | 3-column product grid |
-| xl | 1200px | 3-column, wider container |
+| Breakpoint | Product grid |
+|-----------|-------------|
+| xs / sm (<768px) | 1 column |
+| md (768px) | 2 columns |
+| lg+ (992px+) | 3 columns |
 
-**Rules:**
-- `viewport-meta` — already correct (`width=device-width, initial-scale=1`) — do NOT add `user-scalable=no`
-- Container max-width: Bootstrap default `container` — keep as-is
-- Product cards: `row-cols-1 row-cols-md-2 row-cols-lg-3` — change from current `row-cols-md-3` to include 2-col at md
-- No horizontal scroll — verify on 375px
+- `viewport-meta` — `width=device-width, initial-scale=1` — never add `user-scalable=no`
+- No horizontal scroll at 375px — verify after any layout change
 
 ---
 
-## 7. Component Patterns
+## 5. Component Patterns
 
-### 7.1 Product Card
+### Product Card
 
-**Current issues to fix:**
-- Inline `<style>` in `productCard.tmpl` — move to SCSS
-- `col-md-1 / col-md-2 / col-md-9` split for checkbox/image/content works well — keep layout
-- Image `max-height: 160px` — fine, but add a fallback placeholder style for missing images
-- ID badge (`#{{.Model.ID}}`) — low priority info, consider `text-muted` styling instead of primary
-
-**Recommended card structure (semantic hierarchy):**
+Semantic hierarchy:
 ```
 Card
-├── [checkbox]  (top-left, accessible label required)
-├── [image]     (fixed 80×80, object-fit: contain, bg: surface)
-├── [content]
-│   ├── Product name (h4, weight 600)
-│   ├── Barcode (font-mono, text-muted, 13px)
-│   └── Category badges
-└── [list-group footer]
-    ├── Expiry date     → status badge (danger/warning/success)
-    ├── Scanned date    → info badge
-    └── Notification    → muted badge
+├── [checkbox]   aria-label="Select {ProductName}" (required)
+├── [image]      max-height 120px, object-fit: contain
+├── [content]    product name (h4, 600) · barcode (mono, muted, 13px) · category badges
+└── [list-group]
+    ├── Expiry     → status badge (danger / warning / success)
+    ├── Scanned    → info badge
+    └── Notified   → secondary badge
 ```
 
-**Checkbox accessibility fix (required):**
-```html
-<!-- Current (bad): aria-label="..." with empty string -->
-<input class="form-check-input" type="checkbox" id="checkbox-{{ .Model.ID }}"
-       aria-label="Select {{ .ProductName }}">
-```
+### Navbar
 
-### 7.2 Status Badges
+- `border-bottom: 6px solid var(--bs-primary)` — basket green accent bar
+- `bg-body-secondary` background
+- Logo: Pacifico font, `var(--bs-info)` color (leaf green)
+- Desktop icon-only links must include `data-bs-toggle="tooltip" title="..."` (already implemented)
+- Active link: `.active` class + `aria-current="page"` (set via template)
 
-```html
-<!-- Expiry badge — dynamic class from template -->
-<span class="badge rounded-pill {{ expiryBadgeClass .ExpireAt }}">
-  {{ .ExpireAt | humanDate }}
-</span>
-```
+### Empty States
 
-Template helper should return:
-- `bg-danger text-white` — expired
-- `bg-warning text-dark` — ≤7 days
-- `bg-success text-dark` — fresh
-
-### 7.3 Navigation
-
-**Current issues:**
-- Icon-only nav on desktop (≥lg) — violates `nav-label-icon` rule
-- Nav items show either text (mobile) or icon (desktop) — should show both, or add `title` tooltip on icon
-
-**Fix:** Add `data-bs-toggle="tooltip"` + `title` attribute to icon-only nav links on desktop.
-
-```html
-<i class="mx-3 d-none d-lg-inline bi bi-box-seam-fill"
-   data-bs-toggle="tooltip" title="All Products"></i>
-```
-
-**Active state:** Current nav has no active state indicator. Add `aria-current="page"` and Bootstrap's `.active` class to the current page link via template.
-
-### 7.4 Forms (Create/Edit Product)
-
-- Labels must be visible — not placeholder-only
-- Required fields: add `*` with `.text-danger` and `aria-required="true"`
-- Error messages: place below the field (`invalid-feedback` class)
-- Submit button: disable + show spinner during async submit
-- Input height: min 44px (Bootstrap's default form controls meet this)
-
-### 7.5 Empty States
-
-Use consistent structure:
 ```html
 <div class="text-center py-5">
   <i class="bi bi-[icon] hero-icon text-muted"></i>
   <p class="fs-4 mt-3">[Short message]</p>
-  <p class="text-muted">[Helpful explanation]</p>
+  <p class="text-muted">[Explanation]</p>
   <a class="btn btn-primary mt-3" href="...">[Primary action]</a>
 </div>
 ```
 
-### 7.6 Home Dashboard Tiles
+### Forms
 
-Current: `card text-body-secondary` with `display-5` hero number.  
-Recommendation: Keep structure, add status coloring to hero numbers (e.g., expired count in danger color).
+- Visible `<label for="...">` per input — no placeholder-only labels
+- Required fields: `*` with `text-danger` + `aria-required="true"`
+- Errors: `invalid-feedback` class below the field
+- Submit: disable + spinner while async in progress
 
----
+### Email Templates (inline styles only)
 
-## 8. Animation & Motion
-
-```scss
-// Durations
---transition-fast:    150ms;  // hover, badge state
---transition-base:    250ms;  // card interactions, modals
---transition-slow:    350ms;  // page-level transitions
-
-// Easing
---ease-out: cubic-bezier(0.0, 0.0, 0.2, 1);  // enter
---ease-in:  cubic-bezier(0.4, 0.0, 1, 1);     // exit
-```
-
-**Card press (already implemented — keep):**
-```scss
-.card {
-  transition: transform 0.06s ease;  // current is good
-}
-.card.card-clicked {
-  transform: scale(0.98);            // subtle — correct
-}
-```
-
-**Nav icon hover (already implemented — keep):**
-```scss
-.navbar-nav .nav-link i {
-  transition: color 0.2s ease;       // fine
-}
-```
-
-**Add: reduced motion support**
-```scss
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-```
+| Element | Value |
+|---------|-------|
+| Body bg | `#F5FAF5` |
+| Card container | `#FFFFFF` + `box-shadow: 0 4px 16px rgba(26,48,40,0.10)` |
+| Info block | `#EBF5EB` + `border: 1px solid #C8DDD0` |
+| Brand icon badge | `#3D7A5C` bg, `#FFFFFF` text |
+| Danger icon badge | `#DC2626` bg, `#FFFFFF` text |
+| Body text | `#1A3028` |
+| Muted text | `#6A9580` |
+| Strong text | `#2D4F3C` |
+| CTA button | `#3D7A5C` bg, `#FFFFFF` text, `border-radius: 8px` |
+| Footer divider | `#C8DDD0` |
 
 ---
 
-## 9. Accessibility Checklist
+## 6. Animation & Motion
 
-- [ ] Checkbox `aria-label` must include product name (not empty string)
-- [ ] Icon-only nav links need `title` tooltip or visible label
-- [ ] Active nav item needs `aria-current="page"`
-- [ ] Status info (expiry) must not rely on color alone — date text is already shown (good)
-- [ ] Form labels: use `<label for="...">` — not placeholder-only
-- [ ] Focus rings: Bootstrap 5 default focus-visible rings — do NOT remove
-- [ ] Image `alt` text on product images: use product name
-- [ ] Logo image: `alt="Proviant"` — already correct
-- [ ] Contrast: all badge text must meet 4.5:1 on badge bg color
-  - `bg-warning text-dark`: amber #FBBF24 + dark #1E293B = ✓ passes
-  - `bg-danger text-white`: red #F87171 + white — verify at ~4.5:1
-  - `bg-success text-dark`: green #4ADE80 + dark = ✓ passes
+| Token | Value | Usage |
+|-------|-------|-------|
+| Fast | 150ms | hover, badge state |
+| Base | 250ms | card interactions, modals |
+| Slow | 350ms | page transitions |
+
+- Card press: `transform: scale(0.98)` via `.card-clicked` (already in SCSS)
+- Reduced motion: `@media (prefers-reduced-motion: reduce)` already in SCSS — keep
 
 ---
 
-## 10. Pre-Delivery Checklist
+## 7. Accessibility Checklist
 
-- [ ] No inline `<style>` blocks in templates — all styles in SCSS
-- [ ] `line-height-base` changed from `2` to `1.6`
-- [ ] Status badge colors follow expiry traffic-light rules
 - [ ] Checkbox `aria-label` includes product name
-- [ ] Nav active state set via template
-- [ ] `prefers-reduced-motion` media query added to SCSS
-- [ ] Mobile layout: product grid is 1-col on xs/sm, 2-col on md, 3-col on lg+
-- [ ] Content padding-top on mobile verified (navbar collapse height)
-- [ ] No horizontal scroll at 375px viewport width
+- [ ] Nav icon links have tooltip `title` attribute
+- [ ] Active nav item has `aria-current="page"`
+- [ ] Status info (expiry) shows date text — not color alone
+- [ ] Form labels use `<label for="...">` — not placeholder-only
+- [ ] Focus rings: Bootstrap 5 default `focus-visible` — do NOT remove
+- [ ] Product image `alt` uses product name
+- [ ] Logo `alt="Proviant home"` (already correct)
+- [ ] Warning badge: `text-dark` on `#E8914E` — verify ≥ 4.5:1 contrast
+
+---
+
+## 8. Anti-Patterns
+
+- ❌ `data-bs-theme="dark"` — app is light-mode only
+- ❌ Raw hex in templates — use Bootstrap utility classes or `var(--bs-*)`
+- ❌ `text-white` on white-background cards
+- ❌ Emojis as icons — Bootstrap Icons (`bi-*`) only
+- ❌ Inline `<style>` blocks in templates — all styles in `main.scss`
+- ❌ `$line-height-base > 1.6` — too loose, wastes vertical space on product lists
+
+---
+
+## 9. Pre-Delivery Checklist
+
+- [ ] `data-bs-theme="light"` on HTML element
+- [ ] Surfaces: page `#F5FAF5`, card `#FFFFFF`, elevated `#EBF5EB`
+- [ ] Status badges follow expiry traffic-light rules (§1)
+- [ ] Bootstrap utilities used (not raw hex)
+- [ ] All icons from Bootstrap Icons
+- [ ] `cursor-pointer` on all clickable elements
+- [ ] Hover/active transitions 150–300ms
+- [ ] Text contrast ≥ 4.5:1 on white card surfaces
+- [ ] Responsive: 375px single-col verified
+- [ ] `make css` run after any `.scss` change
+- [ ] SW cache version bumped after JS/CSS changes
+- [ ] New DB models added to `AutoMigrate` in `src/proviant.go`

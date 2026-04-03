@@ -18,6 +18,16 @@ async function bulkRestoreProducts(productIDs) {
   });
 }
 
+async function bulkArchiveProducts(productIDs) {
+  await proviant.bulkArchiveProducts(productIDs).then((response) => {
+      if (response.code == 200) {
+        console.log("Products archived")
+      } else {
+        console.error(response.message)
+      }
+  });
+}
+
 function handleCardClickEffect(cardId) {
     const card = document.getElementById(cardId);
     if (card) {
@@ -51,6 +61,14 @@ document.addEventListener("click", function (event) {
         event.preventDefault();
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
         bulkRestoreProducts(selectedProducts).then(() => location.reload());
+        return;
+    }
+
+    // Archive product button
+    if (target.closest("#archive-product")) {
+        event.preventDefault();
+        const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
+        bulkArchiveProducts(selectedProducts).then(() => location.reload());
         return;
     }
 

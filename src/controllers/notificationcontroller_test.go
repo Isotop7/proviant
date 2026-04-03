@@ -184,3 +184,18 @@ func (m *MockDatabaseController) GetUserByID(userID uint) (authentication.User, 
 func (m *MockDatabaseController) GetHouseholdByID(householdID uint) (dbModel.Household, error) {
 	return dbModel.Household{}, nil
 }
+func (m *MockDatabaseController) GetOnboardingState(userID uint) (dbModel.OnboardingState, error) {
+	return dbModel.OnboardingState{}, nil
+}
+func (m *MockDatabaseController) MarkNotificationsSetup(userID uint) error {
+	return nil
+}
+func (m *MockDatabaseController) MarkHouseholdStepDone(userID uint) error {
+	return nil
+}
+func (m *MockDatabaseController) MarkOnboardingComplete(userID uint) error {
+	return nil
+}
+func (m *MockDatabaseController) GetPublicHouseholds(excludeHouseholdID uint) ([]dbModel.HouseholdWithMemberCount, error) {
+	return nil, nil
+}

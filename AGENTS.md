@@ -156,7 +156,7 @@ logger.Info().Msg("Logging initialized")
 ### Frontend/Assets
 - SCSS files in `src/templates/scss/`
 - Compiled CSS goes to `src/assets/css/`
-- Run `make css` to build SCSS to CSS
+- **Always run `make css` after any change to `.scss` files** — the compiled CSS is what gets served; editing SCSS without recompiling has no visible effect
 - JavaScript files served from `src/assets/js/`
 - Use Bootstrap for styling, Bootstrap Icons for icons
 

@@ -414,11 +414,14 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 
 	// Check if invitation is still valid
 	if invitation.Status != dbModel.InvitationStatusPending {
-		msg := "This invitation has already been used."
-		if invitation.Status == dbModel.InvitationStatusCancelled {
+		var msg string
+		switch invitation.Status {
+		case dbModel.InvitationStatusCancelled:
 			msg = "This invitation has been cancelled by the sender."
-		} else if invitation.Status == dbModel.InvitationStatusExpired {
+		case dbModel.InvitationStatusExpired:
 			msg = "This invitation has expired."
+		default:
+			msg = "This invitation has already been used."
 		}
 		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", "acceptInvite.tmpl", map[string]any{
 			"Title": "Accept Invitation",
@@ -468,5 +471,38 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		"Token":           token,
 		"HouseholdName":   householdName,
 		"InvitationEmail": invitation.Email,
+	})
+}
+
+// Onboarding renders the post-signup onboarding wizard
+func (frontend *Frontend) Onboarding(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
+		return
+	}
+
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		return
+	}
+
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	user, userErr := dbController.GetUserByID(userID)
+	if userErr != nil {
+		logger.Error().Msg(api.ResponseErrInvalidUserData.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
+		return
+	}
+
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "onboarding.tmpl", map[string]any{
+		"Title":    "Onboarding",
+		"Username": user.Username,
 	})
 }

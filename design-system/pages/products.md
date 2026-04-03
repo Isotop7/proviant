@@ -1,37 +1,44 @@
 # Page Override: Products List (`/web/products`)
 
-> Overrides apply on top of `MASTER.md`. Only differences are listed here.
+> Overrides apply on top of `design-system/MASTER.md`. Only differences from Master are listed.
+
+---
 
 ## Priority Focus
 
-This is the **core screen** — users spend most time here. Information density and status readability are the top concerns.
+Core screen — users spend most time here. Information density and expiry readability are the top concerns.
+
+---
 
 ## Layout Override
 
-- Grid: `row-cols-1 row-cols-sm-1 row-cols-md-2 row-cols-lg-3` (MASTER default is lg-3 only — add md-2)
-- Card gap: `g-4` (currently `g-5` — reduce slightly for density)
+- Grid: `row-cols-1 row-cols-sm-1 row-cols-md-2 row-cols-lg-3` (Master default lg-3 only — add md-2)
+- Card gap: `g-4` (not `g-5` — slightly tighter for density)
 
-## Status Badge — Expiry Logic
+---
 
-This page's most critical visual element. Expiry state must be **immediately scannable**.
+## Status Badge — Expiry Countdown
 
-```
-date passed          → bg-danger   text-white   "Expired"
-1–7 days remaining   → bg-warning  text-dark    "X days left"
-8–30 days            → bg-success  text-dark    date string
->30 days             → bg-primary  text-white   date string
-```
+For ≤ 7 days remaining, prefer a human-readable countdown ("3 days left") over a raw date string.
 
-Consider adding a human-readable countdown for ≤7 days ("3 days left") instead of just a date.
+| State | Condition | Classes |
+|-------|-----------|---------|
+| Expired | date passed | `bg-danger text-white` |
+| Expiring soon | 1–7 days | `bg-warning text-dark` |
+| Fresh | 8–30 days | `bg-success text-dark` |
+| Well stocked | > 30 days | `bg-primary text-white` |
+
+---
 
 ## Toolbar / Bulk Actions
 
-The `productOptionBar` should follow the "overflow-menu" pattern:
-- Primary: Delete, Archive buttons (visible)
-- If screen <768px: collapse secondary filters into a dropdown
+- Primary actions (Delete, Archive): always visible
+- Secondary filters < 768px: collapse into dropdown (overflow-menu pattern)
+
+---
 
 ## Search Bar
 
-- Input must have visible label (can be visually hidden with `.visually-hidden`)
+- Input must have a visible label (`.visually-hidden` is acceptable)
 - Placeholder alone is not sufficient
 - Add `role="search"` to the containing element

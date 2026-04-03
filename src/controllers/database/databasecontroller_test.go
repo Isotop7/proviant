@@ -22,7 +22,7 @@ func TestDatabaseController_CreateUser(t *testing.T) {
 	}
 
 	// Migrate schema
-	if err := db.AutoMigrate(&authentication.User{}, &database.Household{}); err != nil {
+	if err := db.AutoMigrate(&authentication.User{}, &database.Household{}, &database.OnboardingState{}); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 

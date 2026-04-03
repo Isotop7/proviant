@@ -10,3 +10,9 @@ type Household struct {
 	Description string
 	AdminID     uint `gorm:"not null"`
 }
+
+// HouseholdWithMemberCount pairs a household with its current member count
+type HouseholdWithMemberCount struct {
+	Household
+	MemberCount int
+}

@@ -106,7 +106,7 @@ func CreateInvitation(ctx *gin.Context) {
 			householdName = household.Name
 		}
 
-		if err := notificationController.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
+		if err := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, baseURL); err != nil {
 			logger.Error().Msgf("Failed to send invitation email to %s: %s", req.Email, err)
 			// Don't fail the request, invitation is still created; retry handled by dispatcher
 		} else {
