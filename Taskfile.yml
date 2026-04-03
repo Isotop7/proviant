@@ -1,0 +1,134 @@
+version: '3'
+
+vars:
+  CONTAINER_RUNTIME:
+    sh: command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo ""
+  GOLANGCI_VERSION: "2.11.4"
+
+tasks:
+  default:
+    desc: List available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  init:
+    desc: Install npm deps, build CSS/JS, copy assets
+    cmds:
+      - npm install
+      - task: css
+      - task: js
+      - task: icons
+      - mkdir -p ./src/assets/js
+      - cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* ./src/assets/js/
+      - cmd: cd src && go get -u
+
+  tidy:
+    desc: Format code and tidy modfile
+    dir: src
+    cmds:
+      - go fmt ./...
+      - go mod tidy -v
+
+  test:
+    desc: Run code tests
+    dir: src
+    cmds:
+      - go test -race -vet=off ./...
+      - go mod verify
+
+  cover:
+    desc: Get code coverage report
+    dir: src
+    cmds:
+      - go test -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out
+      - go mod verify
+
+  check:
+    desc: Run quality control checks (requires podman or docker)
+    preconditions:
+      - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
+        msg: "No container runtime found. Please install podman or docker."
+    dir: src
+    cmds:
+      - '{{.CONTAINER_RUNTIME}} run -t --rm -v ./:/app:Z -v ../.golangci.yml:/tmp/.golangci.yml:Z -w /app golangci/golangci-lint:v{{.GOLANGCI_VERSION}} golangci-lint run -v -c /tmp/.golangci.yml'
+
+  packagedoc:
+    desc: Generate package documentation as markdown
+    dir: src
+    cmds:
+      - go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest --output ../docs/README.md ./...
+
+  apidoc:
+    desc: Generate API documentation (Swagger)
+    dir: src
+    cmds:
+      - go run github.com/swaggo/swag/cmd/swag@latest init -g api/api.go --parseDependency -o ../docs/
+
+  doc:
+    desc: Generate all documentation
+    deps: [packagedoc, apidoc]
+
+  containerimage:
+    desc: Build container image (requires podman or docker)
+    preconditions:
+      - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
+        msg: "No container runtime found. Please install podman or docker."
+    cmds:
+      - '{{.CONTAINER_RUNTIME}} build --no-cache --tag=proviant ./'
+
+  run:
+    desc: Start development server
+    dir: src
+    cmds:
+      - go run proviant.go
+
+  runcontainer:
+    desc: Build and run container (requires podman or docker)
+    deps: [containerimage]
+    preconditions:
+      - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
+        msg: "No container runtime found. Please install podman or docker."
+    cmds:
+      - '{{.CONTAINER_RUNTIME}} run -t --rm -p 5114:5114 -v ./src/config.yaml.sqlite.tmpl:/app/config.yaml:Z proviant:latest'
+
+  runcontainerdebug:
+    desc: Build and run container with shell entrypoint (requires podman or docker)
+    deps: [containerimage]
+    preconditions:
+      - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
+        msg: "No container runtime found. Please install podman or docker."
+    cmds:
+      - '{{.CONTAINER_RUNTIME}} run -it --rm -v ./src/config.yaml.sqlite.tmpl:/app/config.yaml:Z --entrypoint /bin/sh proviant:latest'
+
+  fonts:
+    desc: Copy font files to assets
+    cmds:
+      - cp ./node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/
+      - cp ./node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2 ./src/assets/fonts/
+      - cp ./node_modules/@fontsource/pacifico/files/pacifico-latin-*.woff2 ./src/assets/fonts/
+
+  icons:
+    desc: Copy icon files to assets
+    cmds:
+      - cp ./res/icons/proviant_logo_256.png ./src/assets/icons/
+      - cp ./res/icons/proviant_logo_512.png ./src/assets/icons/
+      - cp ./res/icons/proviant_logo.ico ./src/assets/icons/favicon.ico
+      - cp ./res/icons/proviant_logo_256.png ./src/assets/icons/favicon.png
+      - cp ./res/icons/proviant_hero.png ./src/assets/icons/hero.png
+      - magick ./res/icons/proviant_logo_256.png -resize 192x192 ./src/assets/icons/proviant_logo_192.png
+
+  css:
+    desc: Compile SCSS to CSS
+    deps: [fonts]
+    cmds:
+      - npm run css
+
+  js:
+    desc: Copy JS vendor files to assets
+    cmds:
+      - cp ./node_modules/html5-qrcode/html5-qrcode.min.js ./src/assets/js/
+      - cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js ./src/assets/js/
+      - cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js.map ./src/assets/js/
+      - cp ./node_modules/chart.js/dist/chart.umd.min.js ./src/assets/js/

@@ -40,7 +40,7 @@
 #### Executable
 
 1. Clone the repository: `git clone https://codeberg.org/isotop7/proviant.git`
-2. Setup node_modules and assets: `make init`
+2. Setup node_modules and assets: `task init`
 3. Navigate to the project directory: `cd proviant/src`
 4. Build the application: `go build -o proviant`
 5. Copy the desired config file `config.yaml.[mariadb|sqlite].tmpl`, rename it to `config.yaml` and adjust it

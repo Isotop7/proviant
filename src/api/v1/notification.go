@@ -60,7 +60,8 @@ func GetNotifications(ctx *gin.Context) {
 		if invErr != nil {
 			logger.Error().Msgf("Error fetching pending invitations: %s", invErr)
 		} else {
-			for _, inv := range invitations {
+			for i := range invitations {
+				inv := &invitations[i]
 				items = append(items, apiModel.NotificationItem{
 					ID:        inv.ID,
 					Type:      "invitation",

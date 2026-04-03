@@ -7,25 +7,25 @@ This document provides guidelines for agentic coding assistants working on the P
 ### Build and Setup
 ```bash
 # Initialize project (install dependencies, build CSS/JS, copy assets)
-make init
+task init
 
 # Run development server
-make run
+task run
 
 # Build container image
-make containerimage
+task containerimage
 
 # Run container
-make runcontainer
+task runcontainer
 ```
 
 ### Quality Control
 ```bash
 # Format Go code and tidy dependencies
-make tidy
+task tidy
 
 # Run all Go tests
-make test
+task test
 
 # Run a single test file
 cd src && go test -race -vet=off ./path/to/package
@@ -34,7 +34,7 @@ cd src && go test -race -vet=off ./path/to/package
 cd src && go test -race -vet=off ./path/to/package -run TestFunctionName
 
 # Run linter (requires podman or docker)
-make check
+task check
 
 # Run linter with specific file
 cd src && golangci-lint run path/to/file.go
@@ -43,10 +43,10 @@ cd src && golangci-lint run path/to/file.go
 ### Frontend
 ```bash
 # Build CSS
-make css
+task css
 
 # Build JS
-make js
+task js
 
 # Run frontend tests
 npm test
@@ -69,7 +69,7 @@ import (
 ```
 
 ### Formatting
-- Use `go fmt` (run `make tidy` before committing)
+- Use `go fmt` (run `task tidy` before committing)
 - Use tabs for indentation (Go standard)
 - Maximum line length: ~120 characters (not enforced but recommended)
 
@@ -156,7 +156,7 @@ logger.Info().Msg("Logging initialized")
 ### Frontend/Assets
 - SCSS files in `src/templates/scss/`
 - Compiled CSS goes to `src/assets/css/`
-- **Always run `make css` after any change to `.scss` files** — the compiled CSS is what gets served; editing SCSS without recompiling has no visible effect
+- **Always run `task css` after any change to `.scss` files** — the compiled CSS is what gets served; editing SCSS without recompiling has no visible effect
 - JavaScript files served from `src/assets/js/`
 - Use Bootstrap for styling, Bootstrap Icons for icons
 
@@ -190,7 +190,7 @@ document.addEventListener("click", function(event) {
 ### Documentation
 - Use godoc comments for exported functions
 - Include Swagger annotations for API endpoints
-- Run `make doc` to generate package documentation and API docs before commits to regenerate docs
+- Run `task doc` to generate package documentation and API docs before commits to regenerate docs
 - Swagger annotations format: `@Summary`, `@Description`, `@Tags`, `@Router`
 
 ### Performance Considerations
@@ -226,7 +226,7 @@ The home page (`/web/`) is a fully client-side rendered dashboard. The Go handle
 1. Prepends metric tiles (via `renderTile` / `renderListTile`) into `#dashboard` before the `.chart-col` sentinel elements
 2. Renders three Chart.js charts into the canvas elements already present in `home.tmpl`
 
-**Chart.js:** bundled as `src/assets/js/chart.umd.min.js` (copied from `node_modules` via `make js`). Loaded via a `<script>` tag in `home.tmpl` before `homeStats.js`.
+**Chart.js:** bundled as `src/assets/js/chart.umd.min.js` (copied from `node_modules` via `task js`). Loaded via a `<script>` tag in `home.tmpl` before `homeStats.js`.
 
 **Removed:** `GetUserHomeTiles` DB method and the `webparts` import from `databasecontroller.go` are gone — tile data now comes entirely from the stats API.
 
@@ -236,7 +236,7 @@ The home page (`/web/`) is a fully client-side rendered dashboard. The Go handle
 - Supports both SQLite and MariaDB backends
 - Uses JWT tokens for API authentication
 - CORS is configurable (allow all or specific origins)
-- Run `make check` before committing - golangci-lint must pass
+- Run `task check` before committing - golangci-lint must pass
 - **Database migrations**: When creating a new database model or modifying an existing one, always add it to the `AutoMigrate` call in `src/proviant.go` (around line 188). Forgetting this will cause "no such table" errors at runtime. Example:
   ```go
   migrationError := dbHandle.AutoMigrate(

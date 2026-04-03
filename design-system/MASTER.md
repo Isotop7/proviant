@@ -230,6 +230,6 @@ Card
 - [ ] Hover/active transitions 150–300ms
 - [ ] Text contrast ≥ 4.5:1 on white card surfaces
 - [ ] Responsive: 375px single-col verified
-- [ ] `make css` run after any `.scss` change
+- [ ] `task css` run after any `.scss` change
 - [ ] SW cache version bumped after JS/CSS changes
 - [ ] New DB models added to `AutoMigrate` in `src/proviant.go`

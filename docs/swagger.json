@@ -551,6 +551,38 @@
                 }
             }
         },
+        "/api/v1/notifications": {
+            "get": {
+                "description": "Returns pending invitations and household join requests for the current user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Get notifications",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.NotificationsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/onboarding/apply-household": {
             "post": {
                 "description": "Submits an application to join a household during onboarding",
@@ -1806,6 +1838,37 @@
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "api.NotificationItem": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.NotificationsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.NotificationItem"
+                    }
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },

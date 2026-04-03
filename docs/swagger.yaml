@@ -16,6 +16,26 @@ definitions:
       name:
         type: string
     type: object
+  api.NotificationItem:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
+      type:
+        type: string
+    type: object
+  api.NotificationsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/api.NotificationItem'
+        type: array
+      total:
+        type: integer
+    type: object
   api.OnboardingStateResponse:
     properties:
       householdStepDone:
@@ -659,6 +679,28 @@ paths:
       summary: Rename household
       tags:
       - household
+  /api/v1/notifications:
+    get:
+      description: Returns pending invitations and household join requests for the
+        current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.NotificationsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get notifications
+      tags:
+      - Notifications
   /api/v1/onboarding/apply-household:
     post:
       consumes:
