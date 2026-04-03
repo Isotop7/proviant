@@ -271,6 +271,65 @@ td a, th a {
 }
 
 //
+// Notification bell
+//
+#notification-badge {
+    font-size: 0.55rem;
+    min-width: 1.1rem;
+    padding: 0.2em 0.35em;
+    bottom: 12px;
+    right: 16px;
+}
+
+#notification-dropdown {
+    min-width: 290px;
+}
+
+#notification-items {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.notification-entry:hover {
+    background-color: var(--bs-tertiary-bg);
+}
+
+.notification-entry-date {
+    font-size: 0.7rem;
+}
+
+//
+// Scrollable stat tile body
+//
+.tile-scroll-body {
+    overflow-y: auto;
+    max-height: 200px;
+}
+
+//
+// Error page
+//
+.error-icon {
+    font-size: 8rem;
+}
+
+//
+// Onboarding hero image
+//
+.onboarding-hero {
+    max-height: 80px;
+}
+
+//
+// Accept invite icon wrapper
+//
+.invite-icon-wrapper {
+    width: 64px;
+    height: 64px;
+    background-color: var(--bs-primary);
+}
+
+//
 // Tabular numbers — stable width for stat tiles
 //
 .card-body .display-5 {
