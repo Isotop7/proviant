@@ -12,13 +12,12 @@
 
 ---
 
-## Layout: 3 zones
+## Layout: 2 zones
 
 ```
 ┌─────────────────────────────────────┐
 │  Zone 1 — Always visible            │
 │  • Page heading                     │
-│  • Alert (hidden until JS shows it) │
 │  • [SCAN BARCODE] hero button       │
 │  • Camera view (hidden until scan)  │
 │  • "Or enter manually" + input      │
@@ -34,13 +33,9 @@
 │  • View / All instances (secondary) │
 │  • Archive / Delete (destructive)   │
 └─────────────────────────────────────┘
-        (always present, off-screen)
-┌─────────────────────────────────────┐
-│  Zone 3 — Modals (unchanged)        │
-│  • deleteModal                      │
-│  • archiveModal                     │
-└─────────────────────────────────────┘
 ```
+
+> **Note:** Archive and Delete confirmations use the shared `#proviantConfirmModal` in `base.tmpl` via `proviant.showConfirm()`. No page-specific modals are needed on this page.
 
 ---
 
@@ -50,43 +45,6 @@
 {{ define "content" }}
 <div class="row justify-content-center p-3">
   <div class="col-12 col-md-8 col-lg-6">
-
-    <!-- Modals (always present, off-screen) -->
-    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h1 class="modal-title fs-5" id="deleteModalLabel">Delete product?</h1>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div id="deleteModalBody" class="modal-body"></div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button id="btnDeleteProduct" type="submit" class="btn btn-danger">
-              <i class="bi bi-trash me-2"></i>Delete product
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal fade" id="archiveModal" tabindex="-1" aria-labelledby="archiveModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h1 class="modal-title fs-5" id="archiveModalLabel">Archive product?</h1>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div id="archiveModalBody" class="modal-body"></div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button id="btnArchiveProduct" type="submit" class="btn btn-warning">
-              <i class="bi bi-archive me-2"></i>Archive product
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- ═══════════════════════════════════════════ -->
     <!-- ZONE 1 — Always visible                     -->
@@ -207,13 +165,12 @@
       </div>
 
       <!-- Destructive actions — outline only, visually separated -->
+      <!-- Clicking these triggers proviant.showConfirm() in productsCreate.js — no data-bs-toggle needed -->
       <div class="d-flex gap-2">
-        <button id="btnArchiveProductModal" type="button" class="btn btn-outline-warning flex-fill"
-                data-bs-toggle="modal" data-bs-target="#archiveModal" disabled>
+        <button id="btnArchiveProductModal" type="button" class="btn btn-outline-warning flex-fill" disabled>
           <i class="bi bi-archive me-1"></i>Archive
         </button>
-        <button id="btnDeleteProductModal" type="button" class="btn btn-outline-danger flex-fill"
-                data-bs-toggle="modal" data-bs-target="#deleteModal" disabled>
+        <button id="btnDeleteProductModal" type="button" class="btn btn-outline-danger flex-fill" disabled>
           <i class="bi bi-trash me-1"></i>Delete
         </button>
       </div>
@@ -229,10 +186,10 @@
 
 ---
 
-## What changed vs current template
+## What changed vs original template
 
-| Area | Current | New |
-|------|---------|-----|
+| Area | Before | After |
+|------|--------|-------|
 | Scan button | `col-3`, small | `d-grid btn-lg py-3`, full-width hero |
 | Barcode input label | None (placeholder only) | Visible label "Or enter barcode manually" |
 | Product info card | Always visible (empty state) | `d-none` on load, revealed by JS |
@@ -242,10 +199,11 @@
 | Primary CTA | One of 5 buttons in a toolbar | `d-grid btn-lg` — only dominant button |
 | Secondary/destructive | Mixed in same toolbar | Separated into 2 `d-flex gap-2` rows |
 | Page max-width | Full container | `col-md-8 col-lg-6` — comfortable reading width |
-| Modal IDs | `id="deleteModal"` on `h1` | Fixed: `id` on dialog, `aria-labelledby` references it |
+| Archive/Delete modals | Page-specific `#archiveModal` / `#deleteModal` | Removed — use shared `proviant.showConfirm()` |
+| Archive/Delete buttons | `data-bs-toggle="modal"` triggers | Plain buttons; JS calls `proviant.showConfirm()` |
 
-## JS element IDs — all preserved
+## JS element IDs
 
-`barcode`, `barcode-reader`, `barcode-reader-wrapper`, `btnScan`, `btnAddProduct`, `btnShowProduct`, `btnDeleteProduct`, `btnDeleteProductModal`, `btnArchiveProduct`, `btnArchiveProductModal`, `btnShowProducts`, `btnExpireAdd3`, `btnExpireAdd7`, `btnExpireAdd1m`, `productData`, `foundBarcode`, `productInfoImage`, `productInfoName`, `productInfoGenericName`, `expireAt`, `productAlert`, `alertMessage`, `deleteModal`, `deleteModalBody`, `archiveModal`, `archiveModalBody`, `instanceDropdown`
+`barcode`, `barcode-reader`, `barcode-reader-wrapper`, `btnScan`, `btnAddProduct`, `btnShowProduct`, `btnArchiveProductModal`, `btnDeleteProductModal`, `btnShowProducts`, `btnExpireAdd3`, `btnExpireAdd7`, `btnExpireAdd1m`, `productData`, `foundBarcode`, `productInfoImage`, `productInfoName`, `productInfoGenericName`, `expireAt`, `instanceDropdown`
 
 ## No other files need changes
