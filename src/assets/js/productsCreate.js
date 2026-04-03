@@ -43,7 +43,6 @@ function showAlert(isSuccess, message) {
 }
 function clearProductInfo() {
     document.getElementById('productInfoImage').src = '';
-    document.getElementById('productInfoImage').style.height = '160px';
     document.getElementById('productInfoName').innerText = '';
     document.getElementById('productInfoGenericName').innerText = '';
 }
@@ -53,7 +52,7 @@ function showProductData(product) {
     if (product.categories != 'undefined' && product.categories != null) {
         document.getElementById('productInfoGenericName').innerText = product.categories;
     }
-    document.getElementById('productData').style.display = '';
+    document.getElementById('productData').classList.remove('d-none');
 }
 
 // UI toggle functions
@@ -78,11 +77,11 @@ function togglePlaceholders(state) {
     const placeholders = document.querySelectorAll('.placeholder');
     if (state) {
         placeholders.forEach(element => {
-            element.style.display = '';
+            element.classList.remove('d-none');
         });
     } else {
         placeholders.forEach(element => {
-            element.style.display = 'none';
+            element.classList.add('d-none');
         });
     }
 }
@@ -102,7 +101,7 @@ function clearScanUI() {
     toggleBtnScan(true);
     toggleBtnAddProduct(true);
     togglePlaceholders(false);
-    document.getElementById('barcode-reader-wrapper').classList.remove('py-4');
+    document.getElementById('barcode-reader-wrapper').style.display = 'none';
     if (html5QrCode.getState() == Html5QrcodeScannerState.SCANNING) {
         html5QrCode.stop();
         html5QrCode.clear();
@@ -214,6 +213,7 @@ function queryProductInfo(barcode) {
 function storeBarcode(barcode) {
     document.getElementById('barcode').dataset.barcode = barcode;
     document.getElementById('barcode').value = barcode;
+    document.getElementById('productData').classList.remove('d-none');
 }
 function getSelectedProductName() {
     const instanceDropdown = document.getElementById('instanceDropdown');
@@ -254,7 +254,7 @@ function handleScanButton() {
     if (btnScan.dataset.action == 'scan') {
         toggleGrowers(true);
         toggleBtnScan(false);
-        document.getElementById('barcode-reader-wrapper').classList.add('py-4');
+        document.getElementById('barcode-reader-wrapper').style.display = '';
         html5QrCode.start(
             { facingMode: 'environment' },
             {
