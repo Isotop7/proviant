@@ -93,13 +93,14 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [type EmailNotificationProvider](<#EmailNotificationProvider>)
   - [func \(e \*EmailNotificationProvider\) GetProviderType\(\) string](<#EmailNotificationProvider.GetProviderType>)
   - [func \(e \*EmailNotificationProvider\) IsConfigured\(\) bool](<#EmailNotificationProvider.IsConfigured>)
-  - [func \(e \*EmailNotificationProvider\) SendInvitationEmail\(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#EmailNotificationProvider.SendInvitationEmail>)
+  - [func \(e \*EmailNotificationProvider\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#EmailNotificationProvider.SendInvitationEmail>)
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
 - [type NotificationController](<#NotificationController>)
   - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, dbc dbController.DatabaseControllerInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
   - [func \(nc \*NotificationController\) DispatchInvitations\(baseURL string\)](<#NotificationController.DispatchInvitations>)
-  - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#NotificationController.SendInvitationEmail>)
+  - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#NotificationController.SendInvitationEmail>)
+  - [func \(nc \*NotificationController\) SendVerificationEmail\(invitation \*dbModel.HouseholdInvitation, username, baseURL string\) error](<#NotificationController.SendVerificationEmail>)
 - [type NotificationProvider](<#NotificationProvider>)
 - [type NtfyNotificationProvider](<#NtfyNotificationProvider>)
   - [func \(n \*NtfyNotificationProvider\) GetProviderType\(\) string](<#NtfyNotificationProvider.GetProviderType>)
@@ -144,7 +145,7 @@ func (e *EmailNotificationProvider) IsConfigured() bool
 ### func \(\*EmailNotificationProvider\) SendInvitationEmail
 
 ```go
-func (e *EmailNotificationProvider) SendInvitationEmail(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error
+func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error
 ```
 
 SendInvitationEmail sends an invitation email to the recipient
@@ -203,10 +204,19 @@ DispatchInvitations starts a background goroutine that periodically retries send
 ### func \(\*NotificationController\) SendInvitationEmail
 
 ```go
-func (nc *NotificationController) SendInvitationEmail(invitation dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error
+func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error
 ```
 
 SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database.
+
+<a name="NotificationController.SendVerificationEmail"></a>
+### func \(\*NotificationController\) SendVerificationEmail
+
+```go
+func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.HouseholdInvitation, username, baseURL string) error
+```
+
+SendVerificationEmail sends an email verification link using the invitation email system.
 
 <a name="NotificationProvider"></a>
 ## type NotificationProvider
@@ -759,6 +769,7 @@ import "codeberg.org/isotop7/proviant/web"
 - [type Frontend](<#Frontend>)
   - [func \(frontend \*Frontend\) AcceptInvite\(ctx \*gin.Context\)](<#Frontend.AcceptInvite>)
   - [func \(frontend \*Frontend\) Auth\(ctx \*gin.Context\)](<#Frontend.Auth>)
+  - [func \(frontend \*Frontend\) Onboarding\(ctx \*gin.Context\)](<#Frontend.Onboarding>)
   - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
   - [func \(frontend \*Frontend\) ProductsArchived\(ctx \*gin.Context\)](<#Frontend.ProductsArchived>)
   - [func \(frontend \*Frontend\) ProductsCreate\(ctx \*gin.Context\)](<#Frontend.ProductsCreate>)
@@ -798,6 +809,15 @@ func (frontend *Frontend) Auth(ctx *gin.Context)
 ```
 
 
+
+<a name="Frontend.Onboarding"></a>
+### func \(\*Frontend\) Onboarding
+
+```go
+func (frontend *Frontend) Onboarding(ctx *gin.Context)
+```
+
+Onboarding renders the post\-signup onboarding wizard
 
 <a name="Frontend.Products"></a>
 ### func \(\*Frontend\) Products
@@ -934,6 +954,58 @@ func GetHealth(ctx *gin.Context)
 
 GetHealth returns the health status of the API @Summary Gets health @Description Gets health status of the API @Tags common @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Router /api/health \[get\]
 
+# onboarding
+
+```go
+import "codeberg.org/isotop7/proviant/api/onboarding"
+```
+
+onboarding contains handlers for the post\-signup onboarding flow
+
+## Index
+
+- [func ApplyForHousehold\(ctx \*gin.Context\)](<#ApplyForHousehold>)
+- [func CompleteOnboarding\(ctx \*gin.Context\)](<#CompleteOnboarding>)
+- [func GetAvailableHouseholds\(ctx \*gin.Context\)](<#GetAvailableHouseholds>)
+- [func GetOnboardingState\(ctx \*gin.Context\)](<#GetOnboardingState>)
+
+
+<a name="ApplyForHousehold"></a>
+## func ApplyForHousehold
+
+```go
+func ApplyForHousehold(ctx *gin.Context)
+```
+
+ApplyForHousehold submits an application to join a household during onboarding @Summary Apply for household @Description Submits an application to join a household during onboarding @Tags onboarding @Accept json @Produce json @Param householdId body object true "Household ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/onboarding/apply\-household \[post\]
+
+<a name="CompleteOnboarding"></a>
+## func CompleteOnboarding
+
+```go
+func CompleteOnboarding(ctx *gin.Context)
+```
+
+CompleteOnboarding marks the onboarding as complete @Summary Complete onboarding @Description Marks the onboarding process as complete @Tags onboarding @Produce json @Success 200 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/onboarding/complete \[post\]
+
+<a name="GetAvailableHouseholds"></a>
+## func GetAvailableHouseholds
+
+```go
+func GetAvailableHouseholds(ctx *gin.Context)
+```
+
+GetAvailableHouseholds returns a list of households the user can apply to @Summary Get available households @Description Returns a list of households that the user can apply to join @Tags onboarding @Produce json @Success 200 \{array\} modelsAPI.HouseholdListItem @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/onboarding/households \[get\]
+
+<a name="GetOnboardingState"></a>
+## func GetOnboardingState
+
+```go
+func GetOnboardingState(ctx *gin.Context)
+```
+
+GetOnboardingState returns the current onboarding progress for the authenticated user @Summary Get onboarding state @Description Returns the current onboarding progress for the user @Tags onboarding @Produce json @Success 200 \{object\} modelsAPI.OnboardingStateResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/onboarding/state \[get\]
+
 # v1
 
 ```go
@@ -959,6 +1031,7 @@ v1 implements version 1 of the proviant API
 - [func GetExpired\(ctx \*gin.Context\)](<#GetExpired>)
 - [func GetHouseholdApplications\(ctx \*gin.Context\)](<#GetHouseholdApplications>)
 - [func GetInvitations\(ctx \*gin.Context\)](<#GetInvitations>)
+- [func GetOpenFoodFactsData\(ctx \*gin.Context\)](<#GetOpenFoodFactsData>)
 - [func GetProduct\(ctx \*gin.Context\)](<#GetProduct>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
@@ -1111,6 +1184,17 @@ func GetInvitations(ctx *gin.Context)
 ```
 
 GetInvitations returns all invitations for the calling user's household. @Summary Get household invitations @Description Returns all invitations for the calling user's household @Tags Invitation @Produce json @Success 200 \{array\} database.HouseholdInvitation @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations \[get\]
+
+<a name="GetOpenFoodFactsData"></a>
+## func GetOpenFoodFactsData
+
+```go
+func GetOpenFoodFactsData(ctx *gin.Context)
+```
+
+GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode, using the database cache when cacheEnabled is true in the OpenFoodFacts configuration.
+
+@Summary Return OpenFoodFacts product data @Description Proxies OpenFoodFacts API with optional database caching @Tags product @Produce json @Param barcode path string true "Barcode" @Success 200 \{object\} dbModel.OpenFoodFactsCache @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Failure 502 \{object\} api.APIResponse @Router /api/v1/products/openfoodfacts/\{barcode\} \[get\]
 
 <a name="GetProduct"></a>
 ## func GetProduct
@@ -1278,6 +1362,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) CancelInvitation\(invitationID, userID uint\) error](<#DatabaseController.CancelInvitation>)
   - [func \(dbc DatabaseController\) CreateAndSwitchHousehold\(userID uint, name string\) error](<#DatabaseController.CreateAndSwitchHousehold>)
   - [func \(dbc DatabaseController\) CreateInvitation\(householdID, inviterID uint, email string\) \(database.HouseholdInvitation, error\)](<#DatabaseController.CreateInvitation>)
+  - [func \(dbc DatabaseController\) CreateOpenFoodFactsCache\(entry \*database.OpenFoodFactsCache\) error](<#DatabaseController.CreateOpenFoodFactsCache>)
   - [func \(dbc DatabaseController\) CreateProduct\(userID uint, product \*database.Product\) error](<#DatabaseController.CreateProduct>)
   - [func \(dbc DatabaseController\) CreateUser\(user \*authentication.User\) error](<#DatabaseController.CreateUser>)
   - [func \(dbc DatabaseController\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#DatabaseController.DeleteProduct>)
@@ -1290,16 +1375,19 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#DatabaseController.GetHouseholdMembersMailAddressesByID>)
   - [func \(dbc DatabaseController\) GetHouseholdMembersNotificationPreferences\(householdID uint\) \(\[\]models.NotificationRecipientInfo, error\)](<#DatabaseController.GetHouseholdMembersNotificationPreferences>)
   - [func \(dbc DatabaseController\) GetInvitationByToken\(token string\) \(database.HouseholdInvitation, error\)](<#DatabaseController.GetInvitationByToken>)
-  - [func \(dbc DatabaseController\) GetInvitationsForHousehold\(householdID uint\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetInvitationsForHousehold>)
+  - [func \(dbc DatabaseController\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetInvitationsForHousehold>)
   - [func \(dbc DatabaseController\) GetLastInsertedProduct\(householdID uint\) \(database.Product, error\)](<#DatabaseController.GetLastInsertedProduct>)
   - [func \(dbc DatabaseController\) GetLastNotifiedProduct\(householdID uint\) \(database.Product, error\)](<#DatabaseController.GetLastNotifiedProduct>)
   - [func \(dbc DatabaseController\) GetNextUserID\(\) uint](<#DatabaseController.GetNextUserID>)
+  - [func \(dbc DatabaseController\) GetOnboardingState\(userID uint\) \(database.OnboardingState, error\)](<#DatabaseController.GetOnboardingState>)
+  - [func \(dbc DatabaseController\) GetOpenFoodFactsCacheByBarcode\(barcode string\) \(database.OpenFoodFactsCache, error\)](<#DatabaseController.GetOpenFoodFactsCacheByBarcode>)
   - [func \(dbc DatabaseController\) GetPendingApplicationsForAdmin\(adminUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#DatabaseController.GetPendingApplicationsForAdmin>)
   - [func \(dbc DatabaseController\) GetPendingApplicationsForApplicant\(applicantUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#DatabaseController.GetPendingApplicationsForApplicant>)
   - [func \(dbc DatabaseController\) GetPendingInvitationsNotSent\(retryInterval time.Duration\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetPendingInvitationsNotSent>)
   - [func \(dbc DatabaseController\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetProductByID>)
   - [func \(dbc DatabaseController\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#DatabaseController.GetProductsExpired>)
   - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
+  - [func \(dbc DatabaseController\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]database.HouseholdWithMemberCount, error\)](<#DatabaseController.GetPublicHouseholds>)
   - [func \(dbc DatabaseController\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetTopArchivedProducts>)
   - [func \(dbc DatabaseController\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserArchivedProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#DatabaseController.GetUserByID>)
@@ -1309,8 +1397,11 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulkByBarcode>)
   - [func \(dbc DatabaseController\) LeaveHousehold\(userID uint\) error](<#DatabaseController.LeaveHousehold>)
+  - [func \(dbc DatabaseController\) MarkHouseholdStepDone\(userID uint\) error](<#DatabaseController.MarkHouseholdStepDone>)
   - [func \(dbc DatabaseController\) MarkInvitationSendFailed\(invitationID uint\) error](<#DatabaseController.MarkInvitationSendFailed>)
   - [func \(dbc DatabaseController\) MarkInvitationSent\(invitationID uint\) error](<#DatabaseController.MarkInvitationSent>)
+  - [func \(dbc DatabaseController\) MarkNotificationsSetup\(userID uint\) error](<#DatabaseController.MarkNotificationsSetup>)
+  - [func \(dbc DatabaseController\) MarkOnboardingComplete\(userID uint\) error](<#DatabaseController.MarkOnboardingComplete>)
   - [func \(dbc DatabaseController\) RejectApplication\(applicationID, adminUserID uint\) error](<#DatabaseController.RejectApplication>)
   - [func \(dbc DatabaseController\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#DatabaseController.RemoveMemberFromHousehold>)
   - [func \(dbc DatabaseController\) RestoreProduct\(productID int, userID uint\) error](<#DatabaseController.RestoreProduct>)
@@ -1466,6 +1557,15 @@ func (dbc DatabaseController) CreateInvitation(householdID, inviterID uint, emai
 
 CreateInvitation creates a new household invitation after verifying the inviter is a member and no pending invitation exists for the same email.
 
+<a name="DatabaseController.CreateOpenFoodFactsCache"></a>
+### func \(DatabaseController\) CreateOpenFoodFactsCache
+
+```go
+func (dbc DatabaseController) CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error
+```
+
+CreateOpenFoodFactsCache persists a new OpenFoodFacts cache entry.
+
 <a name="DatabaseController.CreateProduct"></a>
 ### func \(DatabaseController\) CreateProduct
 
@@ -1578,7 +1678,7 @@ GetInvitationByToken looks up an invitation by its token
 ### func \(DatabaseController\) GetInvitationsForHousehold
 
 ```go
-func (dbc DatabaseController) GetInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
+func (dbc DatabaseController) GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
 ```
 
 GetInvitationsForHousehold returns all non\-deleted invitations for the household, ordered by CreatedAt DESC
@@ -1609,6 +1709,24 @@ func (dbc DatabaseController) GetNextUserID() uint
 ```
 
 GetNextUserID returns the next available user ID
+
+<a name="DatabaseController.GetOnboardingState"></a>
+### func \(DatabaseController\) GetOnboardingState
+
+```go
+func (dbc DatabaseController) GetOnboardingState(userID uint) (database.OnboardingState, error)
+```
+
+GetOnboardingState retrieves the onboarding state for a user
+
+<a name="DatabaseController.GetOpenFoodFactsCacheByBarcode"></a>
+### func \(DatabaseController\) GetOpenFoodFactsCacheByBarcode
+
+```go
+func (dbc DatabaseController) GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error)
+```
+
+GetOpenFoodFactsCacheByBarcode retrieves a cached OpenFoodFacts entry by barcode. Returns gorm.ErrRecordNotFound if no entry exists.
 
 <a name="DatabaseController.GetPendingApplicationsForAdmin"></a>
 ### func \(DatabaseController\) GetPendingApplicationsForAdmin
@@ -1663,6 +1781,15 @@ func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInte
 ```
 
 GetProductsExpiredAndNotificationPending returns an array of products which are expired and have a pending notification
+
+<a name="DatabaseController.GetPublicHouseholds"></a>
+### func \(DatabaseController\) GetPublicHouseholds
+
+```go
+func (dbc DatabaseController) GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
+```
+
+GetPublicHouseholds returns all households except the one the user already belongs to.
 
 <a name="DatabaseController.GetTopArchivedProducts"></a>
 ### func \(DatabaseController\) GetTopArchivedProducts
@@ -1745,6 +1872,15 @@ func (dbc DatabaseController) LeaveHousehold(userID uint) error
 
 LeaveHousehold creates a new personal household for the user, moves all products if they were the sole member, then updates the user's HouseholdID to the new household.
 
+<a name="DatabaseController.MarkHouseholdStepDone"></a>
+### func \(DatabaseController\) MarkHouseholdStepDone
+
+```go
+func (dbc DatabaseController) MarkHouseholdStepDone(userID uint) error
+```
+
+MarkHouseholdStepDone marks the household onboarding step as done \(e.g. application submitted or skipped\)
+
 <a name="DatabaseController.MarkInvitationSendFailed"></a>
 ### func \(DatabaseController\) MarkInvitationSendFailed
 
@@ -1762,6 +1898,24 @@ func (dbc DatabaseController) MarkInvitationSent(invitationID uint) error
 ```
 
 MarkInvitationSent marks an invitation as successfully sent
+
+<a name="DatabaseController.MarkNotificationsSetup"></a>
+### func \(DatabaseController\) MarkNotificationsSetup
+
+```go
+func (dbc DatabaseController) MarkNotificationsSetup(userID uint) error
+```
+
+MarkNotificationsSetup marks notifications as configured for a user's onboarding state
+
+<a name="DatabaseController.MarkOnboardingComplete"></a>
+### func \(DatabaseController\) MarkOnboardingComplete
+
+```go
+func (dbc DatabaseController) MarkOnboardingComplete(userID uint) error
+```
+
+MarkOnboardingComplete marks onboarding as fully complete for a user
 
 <a name="DatabaseController.RejectApplication"></a>
 ### func \(DatabaseController\) RejectApplication
@@ -1892,7 +2046,7 @@ type DatabaseControllerInterface interface {
     GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
     SetProductNotifiedAt(productID uint) error
     CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
-    GetInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
+    GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
     GetInvitationByToken(token string) (database.HouseholdInvitation, error)
     AcceptInvitation(token, email string, userID uint) error
     CancelInvitation(invitationID, userID uint) error
@@ -1901,6 +2055,11 @@ type DatabaseControllerInterface interface {
     GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
     MarkInvitationSent(invitationID uint) error
     MarkInvitationSendFailed(invitationID uint) error
+    GetOnboardingState(userID uint) (database.OnboardingState, error)
+    MarkNotificationsSetup(userID uint) error
+    MarkHouseholdStepDone(userID uint) error
+    MarkOnboardingComplete(userID uint) error
+    GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
 }
 ```
 
@@ -1969,16 +2128,45 @@ import "codeberg.org/isotop7/proviant/models/api"
 ## Index
 
 - [type BulkProductsAPIModel](<#BulkProductsAPIModel>)
+- [type HouseholdListItem](<#HouseholdListItem>)
+- [type OnboardingStateResponse](<#OnboardingStateResponse>)
 
 
 <a name="BulkProductsAPIModel"></a>
 ## type BulkProductsAPIModel
 
-
+BulkProductsAPIModel represents a bulk product operation request
 
 ```go
 type BulkProductsAPIModel struct {
     ProductIDs []string `json:"productIDs"`
+}
+```
+
+<a name="HouseholdListItem"></a>
+## type HouseholdListItem
+
+HouseholdListItem represents a household in the discovery list
+
+```go
+type HouseholdListItem struct {
+    ID          uint   `json:"id"`
+    Name        string `json:"name"`
+    Description string `json:"description"`
+    MemberCount int    `json:"memberCount"`
+}
+```
+
+<a name="OnboardingStateResponse"></a>
+## type OnboardingStateResponse
+
+OnboardingStateResponse represents the current onboarding progress
+
+```go
+type OnboardingStateResponse struct {
+    NotificationsSetup  bool `json:"notificationsSetup"`
+    HouseholdStepDone   bool `json:"householdStepDone"`
+    OnboardingCompleted bool `json:"onboardingCompleted"`
 }
 ```
 
@@ -2223,8 +2411,9 @@ OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts A
 
 ```go
 type OpenFoodFactsConfiguration struct {
-    URL     string
-    Timeout int
+    URL          string
+    Timeout      int
+    CacheEnabled bool
 }
 ```
 
@@ -2317,6 +2506,9 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type Household](<#Household>)
 - [type HouseholdApplication](<#HouseholdApplication>)
 - [type HouseholdInvitation](<#HouseholdInvitation>)
+- [type HouseholdWithMemberCount](<#HouseholdWithMemberCount>)
+- [type OnboardingState](<#OnboardingState>)
+- [type OpenFoodFactsCache](<#OpenFoodFactsCache>)
 - [type Product](<#Product>)
 - [type ProductDTOBarcode](<#ProductDTOBarcode>)
 - [type ProductDTOExpire](<#ProductDTOExpire>)
@@ -2427,6 +2619,49 @@ type HouseholdInvitation struct {
     ExpiresAt    time.Time  `gorm:"not null" json:"expiresAt"`
     SentAt       *time.Time `json:"sentAt,omitempty"`
     SendAttempts int        `gorm:"default:0" json:"sendAttempts"`
+}
+```
+
+<a name="HouseholdWithMemberCount"></a>
+## type HouseholdWithMemberCount
+
+HouseholdWithMemberCount pairs a household with its current member count
+
+```go
+type HouseholdWithMemberCount struct {
+    Household
+    MemberCount int
+}
+```
+
+<a name="OnboardingState"></a>
+## type OnboardingState
+
+OnboardingState tracks which onboarding steps a user has completed
+
+```go
+type OnboardingState struct {
+    gorm.Model
+    UserID              uint `gorm:"uniqueIndex,not null"`
+    NotificationsSetup  bool `gorm:"default:false"`
+    HouseholdStepDone   bool `gorm:"default:false"`
+    OnboardingCompleted bool `gorm:"default:false"`
+}
+```
+
+<a name="OpenFoodFactsCache"></a>
+## type OpenFoodFactsCache
+
+OpenFoodFactsCache stores cached responses from the OpenFoodFacts API keyed by barcode
+
+```go
+type OpenFoodFactsCache struct {
+    gorm.Model
+    Barcode     string `gorm:"uniqueIndex;not null" json:"barcode"`
+    ProductName string `json:"productName"`
+    Categories  string `json:"categories"`
+    Countries   string `json:"countries"`
+    ImageURL    string `json:"imageUrl"`
 }
 ```
 

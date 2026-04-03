@@ -83,8 +83,9 @@ type NotificationConfiguration struct {
 
 // OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
 type OpenFoodFactsConfiguration struct {
-	URL     string
-	Timeout int
+	URL          string
+	Timeout      int
+	CacheEnabled bool
 }
 
 // ProviantConfiguration is the configuration wrapper struct

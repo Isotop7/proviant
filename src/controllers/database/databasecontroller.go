@@ -1521,3 +1521,16 @@ func (dbc DatabaseController) GetPublicHouseholds(excludeHouseholdID uint) ([]da
 		Find(&results).Error
 	return results, err
 }
+
+// GetOpenFoodFactsCacheByBarcode retrieves a cached OpenFoodFacts entry by barcode.
+// Returns gorm.ErrRecordNotFound if no entry exists.
+func (dbc DatabaseController) GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error) {
+	var entry database.OpenFoodFactsCache
+	result := dbc.DBHandle.Where("barcode = ?", barcode).First(&entry)
+	return entry, result.Error
+}
+
+// CreateOpenFoodFactsCache persists a new OpenFoodFacts cache entry.
+func (dbc DatabaseController) CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error {
+	return dbc.DBHandle.Create(entry).Error
+}

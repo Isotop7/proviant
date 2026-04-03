@@ -227,3 +227,4 @@ document.addEventListener("click", function(event) {
       &dbModel.YourNewModel{},  // ← always add new models here
   )
   ```
+- **OpenFoodFacts caching**: Barcode lookups go through the backend proxy endpoint `GET /api/v1/products/openfoodfacts/:barcode` (JWT-protected). When `openfoodfacts.cacheEnabled: true`, responses are stored in the `open_food_facts_caches` table (`src/models/database/openfoodfacts_cache.go`) and served from there on subsequent requests. The frontend (`src/assets/js/productsCreate.js`) calls `proviant.getOpenFoodFactsData()` from `proviant.js` — **do not** reintroduce direct browser calls to `world.openfoodfacts.org`. Cache operations are in `src/controllers/database/databasecontroller.go` (`GetOpenFoodFactsCacheByBarcode`, `CreateOpenFoodFactsCache`).

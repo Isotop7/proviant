@@ -17,7 +17,7 @@
 ## Features
 
 - 📝 Track and log products with expiration dates.
-- 📷 Scan product barcodes via camera to auto-fill data from [OpenFoodFacts](https://world.openfoodfacts.org/).
+- 📷 Scan product barcodes via camera to auto-fill data from [OpenFoodFacts](https://world.openfoodfacts.org/), with optional local caching for offline use.
 - 🗄️ Archive and restore products; bulk delete, archive, and restore.
 - 🔍 Search and filter products by multiple parameters.
 - ⏰ Receive expiration reminders via email (SMTP) or push notifications ([Ntfy](https://ntfy.sh/)).
@@ -94,6 +94,7 @@ PROVIANT_NOTIFICATION_NTFY_TIMEOUT=60                       # Ntfy message timeo
 # OpenFoodFacts configuration
 PROVIANT_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"   # Address of API backend of OpenFoodFacts
 PROVIANT_OPENFOODFACTS_TIMEOUT=5                                              # Timeout of API requests to OpenFoodFacts API
+PROVIANT_OPENFOODFACTS_CACHEENABLED=true                                      # Cache OpenFoodFacts responses in the database for offline use
 ```
 
 Additionally `Gin` supports a debug mode, which also can be set with a environment variable:

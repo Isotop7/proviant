@@ -557,6 +557,157 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/onboarding/apply-household": {
+            "post": {
+                "description": "Submits an application to join a household during onboarding",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "onboarding"
+                ],
+                "summary": "Apply for household",
+                "parameters": [
+                    {
+                        "description": "Household ID",
+                        "name": "householdId",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/onboarding/complete": {
+            "post": {
+                "description": "Marks the onboarding process as complete",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "onboarding"
+                ],
+                "summary": "Complete onboarding",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/onboarding/households": {
+            "get": {
+                "description": "Returns a list of households that the user can apply to join",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "onboarding"
+                ],
+                "summary": "Get available households",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.HouseholdListItem"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/onboarding/state": {
+            "get": {
+                "description": "Returns the current onboarding progress for the user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "onboarding"
+                ],
+                "summary": "Get onboarding state",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.OnboardingStateResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/product/bulkArchive": {
             "delete": {
                 "description": "Archives a list of products of a user",
@@ -1093,6 +1244,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/openfoodfacts/{barcode}": {
+            "get": {
+                "description": "Proxies OpenFoodFacts API with optional database caching",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Return OpenFoodFacts product data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Barcode",
+                        "name": "barcode",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.OpenFoodFactsCache"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/scan": {
             "post": {
                 "description": "Returns the barcode of a product in an uploaded image",
@@ -1568,6 +1766,37 @@ const docTemplate = `{
                 }
             }
         },
+        "api.HouseholdListItem": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "memberCount": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.OnboardingStateResponse": {
+            "type": "object",
+            "properties": {
+                "householdStepDone": {
+                    "type": "boolean"
+                },
+                "notificationsSetup": {
+                    "type": "boolean"
+                },
+                "onboardingCompleted": {
+                    "type": "boolean"
+                }
+            }
+        },
         "auth.acceptInvitationRequest": {
             "type": "object",
             "required": [
@@ -1751,6 +1980,38 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "database.OpenFoodFactsCache": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "countries": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "productName": {
                     "type": "string"
                 },
                 "updatedAt": {

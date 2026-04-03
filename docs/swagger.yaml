@@ -5,6 +5,26 @@ definitions:
       message:
         type: string
     type: object
+  api.HouseholdListItem:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      memberCount:
+        type: integer
+      name:
+        type: string
+    type: object
+  api.OnboardingStateResponse:
+    properties:
+      householdStepDone:
+        type: boolean
+      notificationsSetup:
+        type: boolean
+      onboardingCompleted:
+        type: boolean
+    type: object
   auth.acceptInvitationRequest:
     properties:
       token:
@@ -126,6 +146,27 @@ definitions:
       sentAt:
         type: string
       status:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  database.OpenFoodFactsCache:
+    properties:
+      barcode:
+        type: string
+      categories:
+        type: string
+      countries:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      imageUrl:
+        type: string
+      productName:
         type: string
       updatedAt:
         type: string
@@ -575,6 +616,105 @@ paths:
       summary: Rename household
       tags:
       - household
+  /api/v1/onboarding/apply-household:
+    post:
+      consumes:
+      - application/json
+      description: Submits an application to join a household during onboarding
+      parameters:
+      - description: Household ID
+        in: body
+        name: householdId
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Apply for household
+      tags:
+      - onboarding
+  /api/v1/onboarding/complete:
+    post:
+      description: Marks the onboarding process as complete
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Complete onboarding
+      tags:
+      - onboarding
+  /api/v1/onboarding/households:
+    get:
+      description: Returns a list of households that the user can apply to join
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.HouseholdListItem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get available households
+      tags:
+      - onboarding
+  /api/v1/onboarding/state:
+    get:
+      description: Returns the current onboarding progress for the user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.OnboardingStateResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get onboarding state
+      tags:
+      - onboarding
   /api/v1/product/{id}:
     delete:
       consumes:
@@ -926,6 +1066,37 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Gets expired products
+      tags:
+      - product
+  /api/v1/products/openfoodfacts/{barcode}:
+    get:
+      description: Proxies OpenFoodFacts API with optional database caching
+      parameters:
+      - description: Barcode
+        in: path
+        name: barcode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/database.OpenFoodFactsCache'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Return OpenFoodFacts product data
       tags:
       - product
   /api/v1/products/scan:
