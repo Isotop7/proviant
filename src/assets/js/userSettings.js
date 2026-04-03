@@ -1,42 +1,39 @@
 function showUpdateError(message) {
   const updateAlert = document.getElementById("updateAlert");
   if (updateAlert) {
-    updateAlert.innerText = message;
-    updateAlert.style.display = "";
+    document.getElementById("updateAlertMessage").textContent = message;
+    updateAlert.classList.remove("d-none");
+    updateAlert.classList.add("show");
   }
 }
 
 function hideUpdateError() {
   const updateAlert = document.getElementById("updateAlert");
   if (updateAlert) {
-    updateAlert.innerText = "";
-    updateAlert.style.display = "none";
+    updateAlert.classList.remove("show");
+    updateAlert.classList.add("d-none");
   }
 }
 
 function showPasswordError(message) {
   const passwordAlert = document.getElementById("passwordAlert");
   if (passwordAlert) {
-    passwordAlert.innerText = message;
-    passwordAlert.style.display = "";
+    document.getElementById("passwordAlertMessage").textContent = message;
+    passwordAlert.classList.remove("d-none");
+    passwordAlert.classList.add("show");
   }
 }
 
 function hidePasswordError() {
   const passwordAlert = document.getElementById("passwordAlert");
   if (passwordAlert) {
-    passwordAlert.innerText = "";
-    passwordAlert.style.display = "none";
+    passwordAlert.classList.remove("show");
+    passwordAlert.classList.add("d-none");
   }
 }
 
 function ShowSuccessModal(message, btnFunction) {
-  const modalBody = document.getElementById("modalBody");
-  const btnModal = document.getElementById("btnModal");
-  if (modalBody) modalBody.innerText = message;
-  if (btnModal) btnModal.onclick = btnFunction;
-  const successModal = new bootstrap.Modal(document.getElementById("modal"));
-  successModal.show();
+  proviant.showFeedback('success', 'Done', message, btnFunction);
 }
 
 /* Update user settings */
@@ -172,16 +169,17 @@ function toggleNtfySettings() {
 function showNotificationError(message) {
   const notificationAlert = document.getElementById("notificationAlert");
   if (notificationAlert) {
-    notificationAlert.innerText = message;
-    notificationAlert.style.display = "";
+    document.getElementById("notificationAlertMessage").textContent = message;
+    notificationAlert.classList.remove("d-none");
+    notificationAlert.classList.add("show");
   }
 }
 
 function hideNotificationError() {
   const notificationAlert = document.getElementById("notificationAlert");
   if (notificationAlert) {
-    notificationAlert.innerText = "";
-    notificationAlert.style.display = "none";
+    notificationAlert.classList.remove("show");
+    notificationAlert.classList.add("d-none");
   }
 }
 
@@ -255,13 +253,18 @@ function UpdateNotificationSettings() {
 function showHouseholdAlert(elementId, message, isSuccess) {
   const el = document.getElementById(elementId);
   if (!el) return;
-  el.textContent = message;
-  el.className = `alert mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
+  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
+  const span = el.querySelector("span") || el;
+  span.textContent = message;
+  el.classList.remove("d-none");
+  el.classList.add("show");
 }
 
 function hideHouseholdAlert(elementId) {
   const el = document.getElementById(elementId);
-  if (el) el.classList.add("d-none");
+  if (!el) return;
+  el.classList.remove("show");
+  el.classList.add("d-none");
 }
 
 /* Leave household */
@@ -369,28 +372,30 @@ function handleUpdateHouseholdName() {
 /* Cancel own pending application */
 function handleCancelApplication(btn) {
   const applicationID = btn.dataset.id;
-  if (!confirm("Cancel this application?")) return;
-  proviant.cancelApplication(applicationID).then((response) => {
-    if (response.code === 200) {
-      const row = document.getElementById(`my-application-${applicationID}`);
-      if (row) row.remove();
-    } else {
-      showHouseholdAlert("myApplicationsAlert", `Error: ${response.message}`, false);
-    }
+  proviant.showConfirm('Cancel Application', 'Cancel this pending application to join the household?', function () {
+    proviant.cancelApplication(applicationID).then((response) => {
+      if (response.code === 200) {
+        const row = document.getElementById(`my-application-${applicationID}`);
+        if (row) row.remove();
+      } else {
+        proviant.showFeedback('error', 'Error', response.message || 'Could not cancel application.');
+      }
+    });
   });
 }
 
 /* Remove household member */
 function handleRemoveMember(btn) {
   const memberID = btn.dataset.id;
-  if (!confirm("Remove this member from the household?")) return;
-  proviant.removeMember(memberID).then((response) => {
-    if (response.code === 200) {
-      const row = document.getElementById(`member-${memberID}`);
-      if (row) row.remove();
-    } else {
-      showHouseholdAlert("membersAlert", `Error: ${response.message}`, false);
-    }
+  proviant.showConfirm('Remove Member', 'Remove this member from the household? They will be assigned a new personal household.', function () {
+    proviant.removeMember(memberID).then((response) => {
+      if (response.code === 200) {
+        const row = document.getElementById(`member-${memberID}`);
+        if (row) row.remove();
+      } else {
+        proviant.showFeedback('error', 'Error', response.message || 'Could not remove member.');
+      }
+    });
   });
 }
 
@@ -490,7 +495,7 @@ document.addEventListener("input", function (event) {
       target.classList.toggle("is-invalid");
     }
     const updateAlert = document.getElementById("updateAlert");
-    if (updateAlert && updateAlert.style.display == "") {
+    if (updateAlert && updateAlert.classList.contains("show")) {
       hideUpdateError();
     }
     return;
@@ -502,7 +507,7 @@ document.addEventListener("input", function (event) {
       target.classList.toggle("is-invalid");
     }
     const updateAlert = document.getElementById("updateAlert");
-    if (updateAlert && updateAlert.style.display == "") {
+    if (updateAlert && updateAlert.classList.contains("show")) {
       hideUpdateError();
     }
     return;
@@ -514,7 +519,7 @@ document.addEventListener("input", function (event) {
       target.classList.toggle("is-invalid");
     }
     const passwordAlert = document.getElementById("passwordAlert");
-    if (passwordAlert && passwordAlert.style.display == "") {
+    if (passwordAlert && passwordAlert.classList.contains("show")) {
       hidePasswordError();
     }
     return;
@@ -526,7 +531,7 @@ document.addEventListener("input", function (event) {
       target.classList.toggle("is-invalid");
     }
     const passwordAlert = document.getElementById("passwordAlert");
-    if (passwordAlert && passwordAlert.style.display == "") {
+    if (passwordAlert && passwordAlert.classList.contains("show")) {
       hidePasswordError();
     }
     return;
@@ -544,8 +549,11 @@ document.addEventListener("change", function (event) {
 function showInviteAlert(elementId, message, isSuccess) {
   const el = document.getElementById(elementId);
   if (!el) return;
-  el.textContent = message;
-  el.className = `alert mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
+  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
+  const span = el.querySelector("span") || el;
+  span.textContent = message;
+  el.classList.remove("d-none");
+  el.classList.add("show");
 }
 
 /* Send invitation */
@@ -578,14 +586,15 @@ document.addEventListener("click", function (event) {
   const cancelInviteBtn = event.target.closest(".btn-cancel-invitation");
   if (cancelInviteBtn) {
     const invitationID = cancelInviteBtn.dataset.id;
-    if (!confirm("Cancel this invitation?")) return;
-    proviant.cancelInvitation(invitationID).then((response) => {
-      if (response.code === 200) {
-        const row = document.getElementById(`invitation-${invitationID}`);
-        if (row) row.remove();
-      } else {
-        showInviteAlert("invitationsAlert", `Error: ${response.message}`, false);
-      }
+    proviant.showConfirm('Cancel Invitation', 'Cancel this invitation? The recipient will no longer be able to use it.', function () {
+      proviant.cancelInvitation(invitationID).then((response) => {
+        if (response.code === 200) {
+          const row = document.getElementById(`invitation-${invitationID}`);
+          if (row) row.remove();
+        } else {
+          proviant.showFeedback('error', 'Error', response.message || 'Could not cancel invitation.');
+        }
+      });
     });
     return;
   }

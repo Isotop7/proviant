@@ -34,7 +34,8 @@
                         aria-describedby="basic-addon2" value="{{ .User.MailAddress }}" id="inputMailAddress">
                 </div>
             </form>
-            <div id="updateAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
+            <div id="updateAlert" class="alert alert-danger fade mt-3 d-none" role="alert">
+                <span id="updateAlertMessage"></span>
             </div>
         </div>
     </div>
@@ -67,7 +68,7 @@
                        value="{{ .Household.Name }}">
                 <button type="button" class="btn btn-outline-primary" id="btnUpdateHouseholdName">Rename</button>
             </div>
-            <div id="updateNameAlert" class="alert mt-3 d-none" role="alert"></div>
+            <div id="updateNameAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
         </div>
     </div>
     {{ end }}
@@ -96,7 +97,7 @@
                 </li>
                 {{ end }}
             </ul>
-            <div id="membersAlert" class="alert mt-3 d-none" role="alert"></div>
+            <div id="membersAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
         </div>
     </div>
     {{ end }}
@@ -113,7 +114,7 @@
     </div>
     <div class="row gx-5 px-3 mb-1">
         <div class="col">
-            <div id="leaveHouseholdAlert" class="alert alert-danger d-none" role="alert"></div>
+            <div id="leaveHouseholdAlert" class="alert alert-danger fade d-none" role="alert"><span></span></div>
         </div>
     </div>
 
@@ -131,7 +132,7 @@
                 <input type="text" class="form-control" id="inputNewHouseholdName" placeholder="Household name" aria-label="New household name">
                 <button type="button" class="btn btn-outline-primary" id="btnCreateHousehold">Create &amp; Switch</button>
             </div>
-            <div id="createHouseholdAlert" class="alert alert-danger mt-3 d-none" role="alert"></div>
+            <div id="createHouseholdAlert" class="alert alert-danger fade mt-3 d-none" role="alert"><span></span></div>
         </div>
     </div>
 
@@ -149,7 +150,7 @@
                 <input type="number" class="form-control" id="inputApplyHouseholdID" placeholder="Household ID" aria-label="Household ID to join" min="1">
                 <button type="button" class="btn btn-outline-primary" id="btnApplyHousehold">Apply</button>
             </div>
-            <div id="applyHouseholdAlert" class="alert mt-3 d-none" role="alert"></div>
+            <div id="applyHouseholdAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
         </div>
     </div>
 
@@ -174,7 +175,7 @@
                 </li>
                 {{ end }}
             </ul>
-            <div id="applicationsAlert" class="alert alert-danger mt-3 d-none" role="alert"></div>
+            <div id="applicationsAlert" class="alert alert-danger fade mt-3 d-none" role="alert"><span></span></div>
         </div>
     </div>
     {{ end }}
@@ -201,7 +202,7 @@
                 </li>
                 {{ end }}
             </ul>
-            <div id="myApplicationsAlert" class="alert mt-3 d-none" role="alert"></div>
+            <div id="myApplicationsAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
         </div>
     </div>
     {{ end }}
@@ -220,7 +221,7 @@
                 <input type="email" class="form-control" id="inputInviteEmail" placeholder="user@example.com" aria-label="Email address to invite">
                 <button type="button" class="btn btn-outline-primary" id="btnSendInvitation">Send Invite</button>
             </div>
-            <div id="sendInviteAlert" class="alert mt-3 d-none" role="alert"></div>
+            <div id="sendInviteAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
         </div>
     </div>
 
@@ -281,7 +282,7 @@
             </div>
             {{ end }}
 
-            <div id="invitationsAlert" class="alert mt-3 d-none" role="alert"></div>
+            <div id="invitationsAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
         </div>
     </div>
     {{ end }}
@@ -326,7 +327,8 @@
                     </div>
                 </div>
             </form>
-            <div id="notificationAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
+            <div id="notificationAlert" class="alert alert-danger fade mt-3 d-none" role="alert">
+                <span id="notificationAlertMessage"></span>
             </div>
         </div>
     </div>
@@ -349,27 +351,12 @@
                     <button class="btn btn-outline-primary" type="button" id="btnUpdatePassword">Update Password</button>
                 </div>
             </form>
-            <div id="passwordAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
+            <div id="passwordAlert" class="alert alert-danger fade mt-3 d-none" role="alert">
+                <span id="passwordAlertMessage"></span>
             </div>
         </div>
     </div>
 </div>
-
-<div id="modal" class="modal" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">proviant</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body" id="modalBody">
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary" id="btnModal">Reload</button>
-        </div>
-      </div>
-    </div>
-  </div>
 
 <script src="/assets/js/userSettings.js"></script>
 {{ end }}

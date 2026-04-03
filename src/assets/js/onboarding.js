@@ -61,13 +61,6 @@
         }
     }
 
-    function showAlert(elementId, message, isSuccess) {
-        const el = document.getElementById(elementId);
-        if (!el) return;
-        el.className = "alert " + (isSuccess ? "alert-success" : "alert-danger");
-        el.textContent = message;
-        el.classList.remove("d-none");
-    }
 
     // --- Step 1: Notifications ---
 
@@ -145,10 +138,10 @@
             if (response.code === 200) {
                 showComplete();
             } else {
-                showAlert("householdAlert", "Failed to apply: " + (response.message || "Unknown error"), false);
+                proviant.showFeedback('error', 'Could Not Join', response.message || 'Unknown error');
             }
         } catch (err) {
-            showAlert("householdAlert", "Network error: " + err.message, false);
+            proviant.showFeedback('error', 'Network Error', err.message);
         }
     }
 

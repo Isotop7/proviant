@@ -45,27 +45,18 @@ function editProduct() {
 
     // Edit product
     proviant.editProduct(product).then((response) => {
-        const alert = document.getElementById('alertEditProduct');
-        if (!alert) return;
-        
-        alert.style.display = '';
-        // Switch on response code
         switch (response.code) {
             case 200:
-                alert.className = "alert alert-success";
-                alert.innerText = `Product with id '${productID}' was updated successfully`;
+                proviant.showFeedback('success', 'Product Updated', `Product #${productID} was updated successfully.`);
                 break;
             case 400:
-                alert.className = "alert alert-warning";
-                alert.innerText = 'Request contained invalid data';
+                proviant.showFeedback('error', 'Invalid Data', 'Request contained invalid data.');
                 break;
             case 500:
-                alert.className = "alert alert-danger";
-                alert.innerText = `Backend server error: ${response.message}`;
+                proviant.showFeedback('error', 'Server Error', `Backend server error: ${response.message}`);
                 break;
             default:
-                alert.className = "alert alert-danger";
-                alert.innerText = `Undefined error: ${response.message}`;
+                proviant.showFeedback('error', 'Error', `Undefined error: ${response.message}`);
                 break;
         }
     });

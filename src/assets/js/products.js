@@ -52,7 +52,16 @@ document.addEventListener("click", function (event) {
     if (target.closest("#delete-product")) {
         event.preventDefault();
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        bulkDeleteProducts(selectedProducts).then(() => location.reload());
+        const count = selectedProducts.length;
+        proviant.showConfirm(
+            'Delete Products',
+            `Delete ${count} selected product${count !== 1 ? 's' : ''}? This cannot be undone.`,
+            function () {
+                bulkDeleteProducts(selectedProducts).then(() => location.reload());
+            },
+            'Delete',
+            'danger'
+        );
         return;
     }
 
@@ -68,7 +77,16 @@ document.addEventListener("click", function (event) {
     if (target.closest("#archive-product")) {
         event.preventDefault();
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        bulkArchiveProducts(selectedProducts).then(() => location.reload());
+        const count = selectedProducts.length;
+        proviant.showConfirm(
+            'Archive Products',
+            `Archive ${count} selected product${count !== 1 ? 's' : ''}?`,
+            function () {
+                bulkArchiveProducts(selectedProducts).then(() => location.reload());
+            },
+            'Archive',
+            'warning'
+        );
         return;
     }
 

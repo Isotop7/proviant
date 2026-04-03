@@ -1,32 +1,34 @@
 function showLoginError(message) {
     const loginAlert = document.getElementById("loginAlert");
     if (loginAlert) {
-        loginAlert.innerText = message;
-        loginAlert.style.display = "";
+        document.getElementById("loginAlertMessage").textContent = message;
+        loginAlert.classList.remove("d-none");
+        loginAlert.classList.add("show");
     }
 }
 
 function hideLoginError() {
     const loginAlert = document.getElementById("loginAlert");
     if (loginAlert) {
-        loginAlert.innerText = "";
-        loginAlert.style.display = "none";
+        loginAlert.classList.remove("show");
+        loginAlert.classList.add("d-none");
     }
 }
 
 function showSignupError(message) {
     const signupAlert = document.getElementById("signupAlert");
     if (signupAlert) {
-        signupAlert.innerText = message;
-        signupAlert.style.display = "";
+        document.getElementById("signupAlertMessage").textContent = message;
+        signupAlert.classList.remove("d-none");
+        signupAlert.classList.add("show");
     }
 }
 
 function hideSignupError() {
     const signupAlert = document.getElementById("signupAlert");
     if (signupAlert) {
-        signupAlert.innerText = "";
-        signupAlert.style.display = "none";
+        signupAlert.classList.remove("show");
+        signupAlert.classList.add("d-none");
     }
 }
 
@@ -35,9 +37,9 @@ function showSignupSuccess(username) {
     const infoToast = document.getElementById("infoToast");
     if (infoToast) {
         let toastBootstrap = bootstrap.Toast.getOrCreateInstance(infoToast);
-        const toastBody = infoToast.getElementsByClassName("toast-body")[0];
+        const toastBody = document.getElementById("infoToastBody");
         if (toastBody) {
-            toastBody.innerHTML = `Hello <span class="fw-bold">${username}</span>!<br><br>Your account was created. Please log in to continue.`;
+            toastBody.textContent = `Hello ${username}! Your account was created. Please log in to continue.`;
         }
         toastBootstrap.show();
     }
@@ -219,11 +221,11 @@ document.addEventListener("input", function (event) {
             target.classList.toggle("is-invalid");
         }
         const loginAlert = document.getElementById("loginAlert");
-        if (loginAlert && loginAlert.style.display == "") {
+        if (loginAlert && loginAlert.classList.contains("show")) {
             hideLoginError();
         }
         const signupAlert = document.getElementById("signupAlert");
-        if (signupAlert && signupAlert.style.display == "") {
+        if (signupAlert && signupAlert.classList.contains("show")) {
             hideSignupError();
         }
         return;
@@ -235,11 +237,11 @@ document.addEventListener("input", function (event) {
             target.classList.toggle("is-invalid");
         }
         const loginAlert = document.getElementById("loginAlert");
-        if (loginAlert && loginAlert.style.display == "") {
+        if (loginAlert && loginAlert.classList.contains("show")) {
             hideLoginError();
         }
         const signupAlert = document.getElementById("signupAlert");
-        if (signupAlert && signupAlert.style.display == "") {
+        if (signupAlert && signupAlert.classList.contains("show")) {
             hideSignupError();
         }
         return;
@@ -251,7 +253,7 @@ document.addEventListener("input", function (event) {
             target.classList.toggle("is-invalid");
         }
         const signupAlert = document.getElementById("signupAlert");
-        if (signupAlert && signupAlert.style.display == "") {
+        if (signupAlert && signupAlert.classList.contains("show")) {
             hideSignupError();
         }
         return;

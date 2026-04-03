@@ -8,20 +8,13 @@ document.addEventListener("submit", function (event) {
     if (!token) return;
 
     proviant.acceptInvitation(token).then((response) => {
-      const alertEl = document.getElementById("acceptAlert");
       if (response.code === 200) {
-        if (alertEl) {
-          alertEl.textContent = "Invitation accepted! Redirecting...";
-          alertEl.className = "alert alert-success mt-3";
-        }
-        setTimeout(() => {
+        proviant.showFeedback('success', 'Invitation Accepted', 'Welcome! You will be redirected to the dashboard.', function () {
           globalThis.location.href = "/web";
-        }, 1500);
+        });
+        setTimeout(() => { globalThis.location.href = "/web"; }, 4000);
       } else {
-        if (alertEl) {
-          alertEl.textContent = `Error: ${response.message}`;
-          alertEl.className = "alert alert-danger mt-3";
-        }
+        proviant.showFeedback('error', 'Could Not Accept', response.message || 'Unknown error');
       }
     });
   }

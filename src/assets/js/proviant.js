@@ -5,6 +5,55 @@ proviant.debug = function () {
   console.log("Proviant loaded");
 };
 
+/* Unified feedback modal — use for all page-level async success/error results */
+proviant.showFeedback = function (type, title, message, onClose) {
+  const modal = document.getElementById("proviantFeedbackModal");
+  if (!modal) return;
+
+  const iconEl = document.getElementById("proviantFeedbackIcon");
+  const titleEl = document.getElementById("proviantFeedbackTitle");
+  const msgEl = document.getElementById("proviantFeedbackMessage");
+  const btnEl = document.getElementById("proviantFeedbackBtn");
+
+  const configs = {
+    success: { icon: "bi-check-circle-fill", color: "text-success" },
+    error:   { icon: "bi-x-circle-fill",     color: "text-danger"  },
+    warning: { icon: "bi-exclamation-circle-fill", color: "text-warning" },
+    info:    { icon: "bi-info-circle-fill",   color: "text-secondary" },
+  };
+  const cfg = configs[type] || configs.info;
+
+  if (iconEl) iconEl.className = "bi " + cfg.icon + " " + cfg.color + " fs-1 mb-3 d-block";
+  if (titleEl) titleEl.textContent = title || "";
+  if (msgEl) msgEl.textContent = message || "";
+  if (btnEl) btnEl.onclick = onClose || null;
+
+  bootstrap.Modal.getOrCreateInstance(modal).show();
+};
+
+/* Confirmation modal — destructive actions requiring user decision */
+proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confirmType) {
+  const modal = document.getElementById("proviantConfirmModal");
+  if (!modal) return;
+
+  const titleEl = document.getElementById("proviantConfirmTitle");
+  const msgEl = document.getElementById("proviantConfirmMessage");
+  const btnEl = document.getElementById("proviantConfirmBtn");
+
+  if (titleEl) titleEl.textContent = title || "Are you sure?";
+  if (msgEl) msgEl.textContent = message || "";
+  if (btnEl) {
+    btnEl.textContent = confirmLabel || "Confirm";
+    btnEl.className = "btn px-4 btn-" + (confirmType || "danger");
+    btnEl.onclick = function () {
+      bootstrap.Modal.getInstance(modal).hide();
+      onConfirm();
+    };
+  }
+
+  bootstrap.Modal.getOrCreateInstance(modal).show();
+};
+
 proviant.createProduct = async function (barcode, expireAt) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
   let data = JSON.stringify({ barcode, expireAt });

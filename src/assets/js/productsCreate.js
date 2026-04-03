@@ -35,25 +35,11 @@ function showBarcode(barcode) {
     }
 }
 function showAlert(isSuccess, message) {
-    const alertElement = document.getElementById('productAlert');
-    const alertMessage = document.getElementById('alertMessage');
-
     if (isSuccess) {
-        alertElement.classList.remove('alert-danger');
-        alertElement.classList.add('alert-success');
-        alertMessage.textContent = message || "Product created successfully!";
+        proviant.showFeedback('success', 'Product Created', message || 'Product created successfully!');
     } else {
-        alertElement.classList.remove('alert-success');
-        alertElement.classList.add('alert-danger');
-        alertMessage.textContent = message || "Failed to create product. Please try again.";
+        proviant.showFeedback('error', 'Error', message || 'Failed to create product. Please try again.');
     }
-
-    alertElement.classList.add('show');
-    setTimeout(() => dismissAlert(), 3000);
-}
-function dismissAlert() {
-    const alertElement = document.getElementById('productAlert');
-    alertElement.classList.remove('show');
 }
 function clearProductInfo() {
     document.getElementById('productInfoImage').src = '';
@@ -229,17 +215,10 @@ function storeBarcode(barcode) {
     document.getElementById('barcode').dataset.barcode = barcode;
     document.getElementById('barcode').value = barcode;
 }
-function setDeleteModalBody () {
+function getSelectedProductName() {
     const instanceDropdown = document.getElementById('instanceDropdown');
-    const productData = instanceDropdown[instanceDropdown.selectedIndex].innerText;
-    const deleteButtonModalBody = document.getElementById('deleteModalBody');
-    deleteButtonModalBody.innerHTML = `Do you want to delete the following product:</br></br>${productData.replaceAll(';','</br>')}`;
-}
-function setArchiveModalBody () {
-    const instanceDropdown = document.getElementById('instanceDropdown');
-    const productData = instanceDropdown[instanceDropdown.selectedIndex].innerText;
-    const archiveButtonModalBody = document.getElementById('archiveModalBody');
-    archiveButtonModalBody.innerHTML = `Do you want to archive the following product:</br></br>${productData.replaceAll(';','</br>')}`;
+    if (!instanceDropdown || instanceDropdown.selectedIndex < 0) return '';
+    return instanceDropdown[instanceDropdown.selectedIndex].innerText.split(';')[0].trim();
 }
 function checkBarcode(barcode) {
   proviant.getProductsByBarcode(barcode).then((response) => {
@@ -305,7 +284,6 @@ function handleBtnAddProduct() {
         return;
     }
 
-    dismissAlert();
 
     try {
         const barcode = document.getElementById('barcode').value;
@@ -340,29 +318,45 @@ function handleBtnShowProduct() {
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
     globalThis.location = `/web/products/${productId}/view`;
 }
-function handleBtnDeleteProduct() {
+function handleBtnDeleteProductModal() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
-
-    proviant.deleteProduct(productId, false).then((response) => {
-        if (response.code == 200) {
-          globalThis.location.reload();
-        } else {
-          showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
-        }
-    });
+    const productName = getSelectedProductName();
+    proviant.showConfirm(
+        'Delete Product',
+        `Delete "${productName}"? This cannot be undone.`,
+        function () {
+            proviant.deleteProduct(productId, false).then((response) => {
+                if (response.code == 200) {
+                    globalThis.location.reload();
+                } else {
+                    proviant.showFeedback('error', 'Delete Failed', `Error deleting product: ${response.message}`);
+                }
+            });
+        },
+        'Delete',
+        'danger'
+    );
 }
-function handleBtnArchiveProduct() {
+function handleBtnArchiveProductModal() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
-
-    proviant.deleteProduct(productId, true).then((response) => {
-      if (response.code == 200) {
-        globalThis.location.reload();
-      } else {
-        showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
-      }
-    });
+    const productName = getSelectedProductName();
+    proviant.showConfirm(
+        'Archive Product',
+        `Archive "${productName}"?`,
+        function () {
+            proviant.deleteProduct(productId, true).then((response) => {
+                if (response.code == 200) {
+                    globalThis.location.reload();
+                } else {
+                    proviant.showFeedback('error', 'Archive Failed', `Error archiving product: ${response.message}`);
+                }
+            });
+        },
+        'Archive',
+        'warning'
+    );
 }
 function handleBtnShowProducts() {
     const barcode = document.getElementById('barcode').value;
@@ -421,15 +415,15 @@ document.addEventListener('click', function (event) {
         return;
     }
 
-    if (target.closest('#btnDeleteProduct')) {
+    if (target.closest('#btnDeleteProductModal')) {
         event.preventDefault();
-        handleBtnDeleteProduct();
+        handleBtnDeleteProductModal();
         return;
     }
 
-    if (target.closest('#btnArchiveProduct')) {
+    if (target.closest('#btnArchiveProductModal')) {
         event.preventDefault();
-        handleBtnArchiveProduct();
+        handleBtnArchiveProductModal();
         return;
     }
 
@@ -472,22 +466,4 @@ document.addEventListener('input', function (event) {
     }
 });
 
-/* Event delegation for modal show */
-document.addEventListener('show.bs.modal', function (event) {
-    const modal = event.target;
-    if (modal && modal.id === 'deleteModal') {
-        setDeleteModalBody();
-    }
-    if (modal && modal.id === 'archiveModal') {
-        setArchiveModalBody();
-    }
-});
 
-/* Event delegation for alert close */
-document.addEventListener('close.bs.alert', function (event) {
-    const target = event.target;
-    if (target && target.id === 'productAlert') {
-        event.preventDefault();
-        target.classList.remove('show');
-    }
-});

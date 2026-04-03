@@ -151,6 +151,19 @@ Card
 - Errors: `invalid-feedback` class below the field
 - Submit: disable + spinner while async in progress
 
+### Popups (Modals, Toasts, Inline Alerts)
+
+> Full spec: `design-system/pages/popups.md` — implementation guide: `design-system/pages/popups-implementation-guide.md`
+
+| Component | Key rules |
+|-----------|-----------|
+| **Feedback Modal** | Single `#proviantFeedbackModal` in `base.tmpl`; `proviant.showFeedback(type, title, msg, onClose?)` everywhere; icon + color per semantic type |
+| **Confirmation Modal** | `modal fade` + `modal-dialog-centered`; close + Cancel + semantic-color action |
+| **Toast** | Auth page only; `position-fixed top-0 start-50 translate-middle-x`; `text-bg-{semantic}`; `data-bs-delay="4000"` |
+| **Inline Alert** | Field/section errors only; `d-none fade`; semantic color set by JS; never for page-level async results |
+
+---
+
 ### Email Templates (inline styles only)
 
 | Element | Value |
