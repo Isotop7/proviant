@@ -3,7 +3,7 @@ version: '3'
 vars:
   CONTAINER_RUNTIME:
     sh: command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo ""
-  GOLANGCI_VERSION: "2.11.4"
+  GOLANGCI_VERSION: "v2.11.4"
 
 tasks:
   default:
@@ -52,7 +52,7 @@ tasks:
         msg: "No container runtime found. Please install podman or docker."
     dir: src
     cmds:
-      - '{{.CONTAINER_RUNTIME}} run -t --rm -v ./:/app:Z -v ../.golangci.yml:/tmp/.golangci.yml:Z -w /app golangci/golangci-lint:v{{.GOLANGCI_VERSION}} golangci-lint run -v -c /tmp/.golangci.yml'
+      - '{{.CONTAINER_RUNTIME}} run -t --rm -v ./:/app:Z -v ../.golangci.yml:/tmp/.golangci.yml:Z -w /app golangci/golangci-lint:{{.GOLANGCI_VERSION}} golangci-lint run -v -c /tmp/.golangci.yml'
 
   packagedoc:
     desc: Generate package documentation as markdown
