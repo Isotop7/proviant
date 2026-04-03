@@ -2,9 +2,7 @@
 <nav class="navbar navbar-expand-lg navbar fixed-top bg-body-secondary fs-4">
 	<div class="container">
 		<div class="me-3">
-			<a class="navbar-brand" href="/web">
-				<img class="img-fluid nav-proviant-logo" src="/assets/icons/proviant_logo_256.png" alt="Proviant home">
-			</a>
+			<img class="img-fluid nav-proviant-logo" src="/assets/icons/proviant_logo_256.png" alt="Proviant home">
 		</div>
 		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navigation"
 			aria-controls="navigation" aria-expanded="false" aria-label="Toggle navigation">
@@ -12,6 +10,14 @@
 		</button>
 		<div class="collapse navbar-collapse" id="navigation">
 			<ul class="navbar-nav me-auto">
+				<li class="nav-item">
+					<a class="nav-link {{ if eq .Title "Home" }}active{{ end }}" href="/web"
+						{{ if eq .Title "Home" }}aria-current="page"{{ end }}>
+						<span class="d-inline d-lg-none">Portal</span>
+						<i class="mx-3 d-none d-lg-inline bi bi-speedometer2" aria-hidden="true"
+							data-bs-toggle="tooltip" data-bs-placement="bottom" title="Portal"></i>
+					</a>
+				</li>
 				<li class="nav-item">
 					<a class="nav-link {{ if eq .Title "Products" }}active{{ end }}" href="/web/products"
 						{{ if eq .Title "Products" }}aria-current="page"{{ end }}>

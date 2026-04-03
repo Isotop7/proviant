@@ -24,10 +24,12 @@
 - 🔔 Per-user notification preferences.
 - 👥 Multi-user support with household scoping.
 - 🌙 Dark theme.
+- 📊 Dashboard portal with live metric tiles (active products, waste rate, archived counts, last added product, products expiring within 7 days) and charts (waste rate donut, category breakdown pie, 12-month expiry trend line).
 
 ## Technologies and Tools
 
 - **Web:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html), [Bootstrap](https://getbootstrap.com/)
+- **Charts:** [Chart.js](https://www.chartjs.org/)
 - **Database:** MariaDB or SQLite
 - **Notifications:** SMTP, [Ntfy](https://ntfy.sh/)
 

@@ -38,6 +38,16 @@ async function handleSelect() {
 document.addEventListener("click", function (event) {
     const target = event.target;
 
+    // Edit product button
+    if (target.closest("#edit-product")) {
+        event.preventDefault();
+        const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
+        if (selectedProducts.length === 1) {
+            window.location.href = `/web/products/${selectedProducts[0]}/edit`;
+        }
+        return;
+    }
+
     // Delete product button
     if (target.closest("#delete-product")) {
         event.preventDefault();

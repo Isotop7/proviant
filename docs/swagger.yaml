@@ -25,6 +25,50 @@ definitions:
       onboardingCompleted:
         type: boolean
     type: object
+  api.ProductStatsResponse:
+    properties:
+      categories:
+        additionalProperties:
+          type: integer
+        type: object
+      expiryTrend:
+        items:
+          $ref: '#/definitions/api.StatsMonthlyCount'
+        type: array
+      lastInsertedProduct:
+        type: string
+      topProducts:
+        items:
+          $ref: '#/definitions/api.StatsTopProduct'
+        type: array
+      totalActive:
+        type: integer
+      totalArchived:
+        type: integer
+      uniqueArchived:
+        type: integer
+      wasteCount:
+        type: integer
+      wastePercent:
+        type: number
+    type: object
+  api.StatsMonthlyCount:
+    properties:
+      count:
+        type: integer
+      month:
+        description: 'format: "2006-01"'
+        type: string
+    type: object
+  api.StatsTopProduct:
+    properties:
+      barcode:
+        type: string
+      count:
+        type: integer
+      productName:
+        type: string
+    type: object
   auth.acceptInvitationRequest:
     properties:
       token:
@@ -1149,6 +1193,28 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Search products
+      tags:
+      - product
+  /api/v1/products/stats:
+    get:
+      description: Returns waste rate, top archived products, category breakdown and
+        expiry trend
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ProductStatsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Return product statistics
       tags:
       - product
   /api/v1/productsByBarcode:

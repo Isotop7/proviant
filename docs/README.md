@@ -1033,6 +1033,7 @@ v1 implements version 1 of the proviant API
 - [func GetInvitations\(ctx \*gin.Context\)](<#GetInvitations>)
 - [func GetOpenFoodFactsData\(ctx \*gin.Context\)](<#GetOpenFoodFactsData>)
 - [func GetProduct\(ctx \*gin.Context\)](<#GetProduct>)
+- [func GetProductStats\(ctx \*gin.Context\)](<#GetProductStats>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context\)](<#GetUserNotificationPreferences>)
@@ -1205,6 +1206,15 @@ func GetProduct(ctx *gin.Context)
 
 GetProduct return a single product of a user @Summary Returns a single product @Description Returns a single product of user @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[get\]
 
+<a name="GetProductStats"></a>
+## func GetProductStats
+
+```go
+func GetProductStats(ctx *gin.Context)
+```
+
+GetProductStats returns aggregated product statistics for the authenticated user @Summary Return product statistics @Description Returns waste rate, top archived products, category breakdown and expiry trend @Tags product @Produce json @Success 200 \{object\} apiModel.ProductStatsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/stats \[get\]
+
 <a name="GetProducts"></a>
 ## func GetProducts
 
@@ -1366,9 +1376,11 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) CreateProduct\(userID uint, product \*database.Product\) error](<#DatabaseController.CreateProduct>)
   - [func \(dbc DatabaseController\) CreateUser\(user \*authentication.User\) error](<#DatabaseController.CreateUser>)
   - [func \(dbc DatabaseController\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#DatabaseController.DeleteProduct>)
+  - [func \(dbc DatabaseController\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#DatabaseController.GetActiveProductsCount>)
   - [func \(dbc DatabaseController\) GetArchivedProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetArchivedProductByID>)
   - [func \(dbc DatabaseController\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#DatabaseController.GetArchivedProductsGroupedByBarcode>)
   - [func \(dbc DatabaseController\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#DatabaseController.GetExpiredProductsCount>)
+  - [func \(dbc DatabaseController\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#DatabaseController.GetExpiryTrend>)
   - [func \(dbc DatabaseController\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#DatabaseController.GetHouseholdByID>)
   - [func \(dbc DatabaseController\) GetHouseholdMemberCount\(householdID uint\) \(int64, error\)](<#DatabaseController.GetHouseholdMemberCount>)
   - [func \(dbc DatabaseController\) GetHouseholdMembers\(householdID uint\) \(\[\]authentication.User, error\)](<#DatabaseController.GetHouseholdMembers>)
@@ -1385,14 +1397,15 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetPendingApplicationsForApplicant\(applicantUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#DatabaseController.GetPendingApplicationsForApplicant>)
   - [func \(dbc DatabaseController\) GetPendingInvitationsNotSent\(retryInterval time.Duration\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetPendingInvitationsNotSent>)
   - [func \(dbc DatabaseController\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetProductByID>)
+  - [func \(dbc DatabaseController\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#DatabaseController.GetProductCategoryBreakdown>)
   - [func \(dbc DatabaseController\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#DatabaseController.GetProductsExpired>)
   - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
   - [func \(dbc DatabaseController\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]database.HouseholdWithMemberCount, error\)](<#DatabaseController.GetPublicHouseholds>)
+  - [func \(dbc DatabaseController\) GetTopArchivedProductStats\(userID uint, limit int\) \(\[\]apiModel.StatsTopProduct, error\)](<#DatabaseController.GetTopArchivedProductStats>)
   - [func \(dbc DatabaseController\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetTopArchivedProducts>)
   - [func \(dbc DatabaseController\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserArchivedProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#DatabaseController.GetUserByID>)
   - [func \(dbc DatabaseController\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#DatabaseController.GetUserByUsername>)
-  - [func \(dbc DatabaseController\) GetUserHomeTiles\(userID uint\) \(\[\]webparts.Tile, error\)](<#DatabaseController.GetUserHomeTiles>)
   - [func \(dbc DatabaseController\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#DatabaseController.GetUserHouseholdByID>)
   - [func \(dbc DatabaseController\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulkByBarcode>)
@@ -1593,6 +1606,15 @@ func (dbc DatabaseController) DeleteProduct(productID int, userID uint, archiveO
 
 DeleteProduct deletes a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.GetActiveProductsCount"></a>
+### func \(DatabaseController\) GetActiveProductsCount
+
+```go
+func (dbc DatabaseController) GetActiveProductsCount(userID uint) (int, error)
+```
+
+GetActiveProductsCount returns the count of active \(non\-archived\) products for a user
+
 <a name="DatabaseController.GetArchivedProductByID"></a>
 ### func \(DatabaseController\) GetArchivedProductByID
 
@@ -1619,6 +1641,15 @@ func (dbc DatabaseController) GetExpiredProductsCount(userID uint) (int, error)
 ```
 
 GetExpiredProductsCount returns the count of expired products for a user
+
+<a name="DatabaseController.GetExpiryTrend"></a>
+### func \(DatabaseController\) GetExpiryTrend
+
+```go
+func (dbc DatabaseController) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
+```
+
+GetExpiryTrend returns the count of active products expiring in each of the next 12 calendar months, starting from the current month.
 
 <a name="DatabaseController.GetHouseholdByID"></a>
 ### func \(DatabaseController\) GetHouseholdByID
@@ -1764,6 +1795,15 @@ func (dbc DatabaseController) GetProductByID(productID int, userID uint) (databa
 
 GetProductByID returns a product object \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.GetProductCategoryBreakdown"></a>
+### func \(DatabaseController\) GetProductCategoryBreakdown
+
+```go
+func (dbc DatabaseController) GetProductCategoryBreakdown(userID uint) (map[string]int, error)
+```
+
+GetProductCategoryBreakdown returns a map of category name → product count for active products. Language prefixes \(e.g. "en:"\) are stripped. The top 8 categories are kept; the rest are grouped under "Other". Products with no category are counted under "Uncategorized".
+
 <a name="DatabaseController.GetProductsExpired"></a>
 ### func \(DatabaseController\) GetProductsExpired
 
@@ -1790,6 +1830,15 @@ func (dbc DatabaseController) GetPublicHouseholds(excludeHouseholdID uint) ([]da
 ```
 
 GetPublicHouseholds returns all households except the one the user already belongs to.
+
+<a name="DatabaseController.GetTopArchivedProductStats"></a>
+### func \(DatabaseController\) GetTopArchivedProductStats
+
+```go
+func (dbc DatabaseController) GetTopArchivedProductStats(userID uint, limit int) ([]apiModel.StatsTopProduct, error)
+```
+
+GetTopArchivedProductStats returns the top N most\-archived products with their archive counts
 
 <a name="DatabaseController.GetTopArchivedProducts"></a>
 ### func \(DatabaseController\) GetTopArchivedProducts
@@ -1826,15 +1875,6 @@ func (dbc DatabaseController) GetUserByUsername(username string) (authentication
 ```
 
 GetUserByUsername uses a given username and returns the matching user object If the database operations return an error, the error is also returned \(otherwise nil\)
-
-<a name="DatabaseController.GetUserHomeTiles"></a>
-### func \(DatabaseController\) GetUserHomeTiles
-
-```go
-func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, error)
-```
-
-GetUserHomeTiles creates a list of tiles with user statistics
 
 <a name="DatabaseController.GetUserHouseholdByID"></a>
 ### func \(DatabaseController\) GetUserHouseholdByID
@@ -2130,6 +2170,9 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type BulkProductsAPIModel](<#BulkProductsAPIModel>)
 - [type HouseholdListItem](<#HouseholdListItem>)
 - [type OnboardingStateResponse](<#OnboardingStateResponse>)
+- [type ProductStatsResponse](<#ProductStatsResponse>)
+- [type StatsMonthlyCount](<#StatsMonthlyCount>)
+- [type StatsTopProduct](<#StatsTopProduct>)
 
 
 <a name="BulkProductsAPIModel"></a>
@@ -2167,6 +2210,50 @@ type OnboardingStateResponse struct {
     NotificationsSetup  bool `json:"notificationsSetup"`
     HouseholdStepDone   bool `json:"householdStepDone"`
     OnboardingCompleted bool `json:"onboardingCompleted"`
+}
+```
+
+<a name="ProductStatsResponse"></a>
+## type ProductStatsResponse
+
+ProductStatsResponse is the response body for GET /api/v1/products/stats
+
+```go
+type ProductStatsResponse struct {
+    WasteCount          int                 `json:"wasteCount"`
+    WastePercent        float64             `json:"wastePercent"`
+    TotalActive         int                 `json:"totalActive"`
+    TotalArchived       int                 `json:"totalArchived"`
+    UniqueArchived      int                 `json:"uniqueArchived"`
+    LastInsertedProduct string              `json:"lastInsertedProduct"`
+    TopProducts         []StatsTopProduct   `json:"topProducts"`
+    Categories          map[string]int      `json:"categories"`
+    ExpiryTrend         []StatsMonthlyCount `json:"expiryTrend"`
+}
+```
+
+<a name="StatsMonthlyCount"></a>
+## type StatsMonthlyCount
+
+StatsMonthlyCount represents the number of products for a given month
+
+```go
+type StatsMonthlyCount struct {
+    Month string `json:"month"` // format: "2006-01"
+    Count int    `json:"count"`
+}
+```
+
+<a name="StatsTopProduct"></a>
+## type StatsTopProduct
+
+StatsTopProduct represents a product with its archived count
+
+```go
+type StatsTopProduct struct {
+    ProductName string `json:"productName"`
+    Barcode     string `json:"barcode"`
+    Count       int    `json:"count"`
 }
 ```
 

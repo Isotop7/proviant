@@ -2,36 +2,28 @@
 
 {{ if .HasHousehold }}
 
-{{ if .Tiles }}
-<div class="row row-cols-1 row-cols-md-3 g-5 p-3">
-    {{ range .Tiles }}
-    <div class="col">
-        <div class="card h-100 text-body-secondary mb-3">
-            <div class="card-header fw-bold">
-                {{ .Title }}
-            </div>
-            <div class="card-body">
-                <p class="card-title display-5 my-2 fw-bold {{ if .Variant }}text-{{ .Variant }}{{ else }}text-primary{{ end }}">
-                    {{ .Hero }}
-                </p>
-                <p class="card-text fs-5 fw-light">
-                    {{ .Body }}
-                </p>
-            </div>
-            <!--<div class="card-footer">
-                <small>
-                    {{ .Footer }}
-                </small>
-            </div>-->
+<div class="row row-cols-1 row-cols-md-3 g-4 p-3" id="dashboard">
+    <div class="col chart-col">
+        <div class="card h-100">
+            <div class="card-header fw-bold">Waste Rate</div>
+            <div class="card-body"><canvas id="chartWaste"></canvas></div>
         </div>
     </div>
-    {{ end }}
+    <div class="col chart-col">
+        <div class="card h-100">
+            <div class="card-header fw-bold">Category Breakdown</div>
+            <div class="card-body"><canvas id="chartCategories"></canvas></div>
+        </div>
+    </div>
+    <div class="col chart-col">
+        <div class="card h-100">
+            <div class="card-header fw-bold">Expiry Trend (next 12 months)</div>
+            <div class="card-body"><canvas id="chartExpiryTrend"></canvas></div>
+        </div>
+    </div>
 </div>
-{{ else }}
-
-{{ template "noproducts" . }}
-
-{{ end }}
+<script src="/assets/js/chart.umd.min.js"></script>
+<script src="/assets/js/homeStats.js"></script>
 
 {{ else }}
 

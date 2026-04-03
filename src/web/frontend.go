@@ -46,11 +46,6 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 
 	// Create database controller object
 	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get user tiles
-	homeTiles, homeTileErr := dbController.GetUserHomeTiles(userID)
-	if homeTileErr != nil {
-		logger.Error().Msg(homeTileErr.Error())
-	}
 	// Get user household
 	var hasHousehold bool
 	userHouseholdID, userErr := dbController.GetUserHouseholdByID(userID)
@@ -63,7 +58,6 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 	pageData := map[string]any{
 		"InviteToken":  ctx.Query("invite_token"),
 		"Title":        "Home",
-		"Tiles":        homeTiles,
 		"HasHousehold": hasHousehold,
 		"Household":    userHouseholdID,
 	}

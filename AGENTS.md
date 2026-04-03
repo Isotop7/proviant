@@ -210,6 +210,26 @@ document.addEventListener("click", function(event) {
 - `src/web/` - Frontend page handlers
 - `docs/` - Generated documentation
 
+## Dashboard / Portal
+
+The home page (`/web/`) is a fully client-side rendered dashboard. The Go handler (`web/frontend.go → Root`) only provides `HasHousehold` and `Household` — no server-side tile data.
+
+**API endpoint:** `GET /api/v1/products/stats` (JWT-protected) — returns `apiModel.ProductStatsResponse` defined in `src/models/api/stats.go`. Fields:
+- `wasteCount`, `wastePercent`, `totalActive` — active/expired counts
+- `totalArchived`, `uniqueArchived` — archived product counts
+- `lastInsertedProduct` — name of the most recently added product
+- `expiringSoon` — `[]StatsExpiringProduct` (name + date) for products expiring within the next 7 days (today inclusive), sorted ascending
+- `categories` — `map[string]int` category breakdown of active products
+- `expiryTrend` — `[]StatsMonthlyCount` for the next 12 calendar months
+
+**Frontend:** `src/assets/js/homeStats.js` fetches the stats endpoint on `DOMContentLoaded` and:
+1. Prepends metric tiles (via `renderTile` / `renderListTile`) into `#dashboard` before the `.chart-col` sentinel elements
+2. Renders three Chart.js charts into the canvas elements already present in `home.tmpl`
+
+**Chart.js:** bundled as `src/assets/js/chart.umd.min.js` (copied from `node_modules` via `make js`). Loaded via a `<script>` tag in `home.tmpl` before `homeStats.js`.
+
+**Removed:** `GetUserHomeTiles` DB method and the `webparts` import from `databasecontroller.go` are gone — tile data now comes entirely from the stats API.
+
 ## Important Notes
 - Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask
 - Project uses embedded filesystems (embed) for templates and assets

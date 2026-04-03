@@ -500,3 +500,13 @@ proviant.completeOnboarding = async function () {
   const body = await apiCall.json();
   return { code: apiCall.status, message: body.message };
 };
+
+proviant.getProductStats = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/stats`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
