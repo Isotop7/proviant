@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       dashboard.appendChild(renderTile(title, hero, body, variant, heroClass));
     });
 
-    dashboard.appendChild(renderListTile('Expiring within next 7 Days', s.expiringSoon));
+    dashboard.appendChild(renderListTile('Expiring within next 7 Days', s.expiringSoon ?? []));
 
     const status = document.getElementById('dashboard-status');
     if (status) status.textContent = 'Dashboard loaded';

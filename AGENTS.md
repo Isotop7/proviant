@@ -160,11 +160,11 @@ logger.Info().Msg("Logging initialized")
 - JavaScript files served from `src/assets/js/`
 - Use Bootstrap for styling, Bootstrap Icons for icons
 
-#### Service Worker Caching Warning
-- The project uses a service worker (`src/assets/js/sw.js`) with cache-first strategy for static assets
-- JavaScript files now use **network-first** strategy (as of `proviant-v2` cache) to avoid stale scripts
-- When modifying JS files, always bump `CACHE_NAME` in `sw.js` to force cache invalidation
-- Users may experience stale JS behavior until they do a hard refresh (Ctrl+Shift+R) or the service worker updates
+#### Service Worker Caching
+- The project uses a service worker (`src/assets/js/sw.js`)
+- **CSS and other non-JS assets** under `/assets/` use **cache-first** — bump `CACHE_NAME` in `sw.js` after every `task css` run (or any change to fonts, icons, or other static assets)
+- **JS files** use **network-first** — they are always fetched fresh; bumping `CACHE_NAME` is NOT needed for JS changes
+- After bumping `CACHE_NAME`, run `task css` (or `task js`) so the new version is deployed alongside the asset change
 
 #### Frontend JavaScript Event Handling
 - **Always use event delegation** for button/input handlers: `document.addEventListener("click", ...)` with `event.target.closest()`

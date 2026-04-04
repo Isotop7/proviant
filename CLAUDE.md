@@ -26,6 +26,7 @@ cd src && go test -race -vet=off ./path/to/package -run TestFunctionName
 
 **Must pass before committing:** `task tidy` (formatting) and `task check` (linting).
 **After API changes:** run `task doc` to regenerate Swagger docs.
+**After CSS changes:** bump `CACHE_NAME` in `src/assets/js/sw.js` — CSS uses cache-first in the service worker. JS files use network-first and do NOT require a version bump.
 
 ## Architecture
 
