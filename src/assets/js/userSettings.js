@@ -204,13 +204,6 @@ function showHouseholdAlert(elementId, message, isSuccess) {
   el.classList.add("show");
 }
 
-function hideHouseholdAlert(elementId) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-  el.classList.remove("show");
-  el.classList.add("d-none");
-}
-
 /* Leave household */
 function handleLeaveHousehold() {
   proviant.showConfirm(

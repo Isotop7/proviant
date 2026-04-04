@@ -150,7 +150,7 @@
     async function completeOnboarding() {
         try {
             await proviant.completeOnboarding();
-        } catch (err) {
+        } catch (_e) {
             // Don't block navigation on error
         }
         window.location.href = "/web";
@@ -183,7 +183,7 @@
             } else {
                 showStep(1);
             }
-        } catch (err) {
+        } catch (_e) {
             showStep(1);
         }
     }
