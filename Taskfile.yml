@@ -132,3 +132,22 @@ tasks:
       - cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js ./src/assets/js/
       - cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js.map ./src/assets/js/
       - cp ./node_modules/chart.js/dist/chart.umd.min.js ./src/assets/js/
+
+  lint-css:
+    desc: Lint SCSS files
+    cmds:
+      - npm run lint-css
+
+  lint-js:
+    desc: Lint JavaScript files
+    cmds:
+      - npm run lint-js
+
+  lint-html:
+    desc: Lint HTML templates
+    cmds:
+      - npm run lint-html
+
+  lint:
+    desc: Run all frontend linters (CSS, JS, HTML)
+    deps: [lint-css, lint-js, lint-html]

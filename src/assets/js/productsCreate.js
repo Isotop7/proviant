@@ -379,7 +379,6 @@ function handleChangedBarcode() {
     storeBarcode(barcode);
     clearScanUI();
     checkBarcode(barcode);
-    dismissAlert();
 };
 
 // Add event listeners — all use event delegation to avoid stale references
@@ -393,7 +392,7 @@ document.addEventListener('submit', function (event) {
             event.stopPropagation();
         } else {
             event.preventDefault();
-            createProduct();
+            handleBtnAddProduct();
         }
         target.classList.add('was-validated');
     }
