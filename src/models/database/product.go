@@ -20,6 +20,7 @@ type Product struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
 	HouseholdID uint           `gorm:"index, not null" json:"-"`
 	Household   Household      `json:"-"`
+	Amount      int            `json:"amount"`
 }
 
 // ProductDTOExpire is a simplified DTO for product expiration
@@ -42,4 +43,5 @@ type ProductDTOPatch struct {
 	Countries   string    `json:"countries"`
 	ImageURL    string    `json:"imageUrl"`
 	ExpireAt    time.Time `json:"expireAt"`
+	Amount      int       `json:"amount"`
 }

@@ -58,6 +58,14 @@
           <select class="form-select mb-3 d-none" id="instanceDropdown" aria-label="Select existing instance"></select>
 
           <form id="formExpireAt" class="needs-validation" novalidate>
+            <label class="form-label">Amount</label>
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <button type="button" class="btn btn-outline-secondary" id="btnAmountDec" aria-label="Decrease amount">−</button>
+                <span id="amountDisplay" class="fs-5 px-2">1</span>
+                <button type="button" class="btn btn-outline-secondary" id="btnAmountInc" aria-label="Increase amount">+</button>
+            </div>
+            <input type="hidden" id="amount" value="1">
+
             <label for="expireAt" class="form-label">
               Expiry date <span class="text-danger" aria-hidden="true">*</span>
             </label>
@@ -66,7 +74,7 @@
             <div class="invalid-feedback">Please select an expiry date</div>
           </form>
 
-          <div class="btn-group w-100" role="group" aria-label="Quick expiry shortcuts">
+          <div class="btn-group w-100 mb-1" role="group" aria-label="Quick expiry shortcuts">
             <button type="button" class="btn btn-outline-secondary btn-sm" id="btnExpireAdd3">
               <i class="bi bi-calendar-plus me-1"></i>+3 days
             </button>

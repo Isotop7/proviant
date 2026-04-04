@@ -62,6 +62,14 @@ func AddNotificationPreferencesMigration(db *gorm.DB) error {
 	return err
 }
 
+// SetDefaultProductAmounts sets amount=1 for all existing products that have amount=0 or NULL.
+// When the amount column is first added via AutoMigrate, existing rows receive NULL (not 0),
+// so both cases must be handled.
+func SetDefaultProductAmounts(logger *zerolog.Logger, db *gorm.DB) error {
+	logger.Info().Msg("Running database migrations for backfilling product amounts")
+	return db.Exec("UPDATE products SET amount = 1 WHERE amount IS NULL OR amount = 0").Error
+}
+
 func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 	// Migrations version 0.2.0
 	logger.Info().Msg("Running database migrations for version 0.2.0")

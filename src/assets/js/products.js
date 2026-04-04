@@ -100,6 +100,48 @@ document.addEventListener("click", function (event) {
         return;
     }
 
+    // Amount increment button
+    if (target.closest(".btn-amount-inc")) {
+        event.preventDefault();
+        event.stopPropagation();
+        const btn = target.closest(".btn-amount-inc");
+        const productID = btn.dataset.productId;
+        proviant.updateProductAmount(productID, 1).then((response) => {
+            if (response.code === 200) {
+                const amountEl = document.getElementById(`amount-${productID}`);
+                if (amountEl) amountEl.textContent = parseInt(amountEl.textContent, 10) + 1;
+            } else {
+                console.error(response.message);
+            }
+        });
+        return;
+    }
+
+    // Amount decrement button
+    if (target.closest(".btn-amount-dec")) {
+        event.preventDefault();
+        event.stopPropagation();
+        const btn = target.closest(".btn-amount-dec");
+        const productID = btn.dataset.productId;
+        proviant.updateProductAmount(productID, -1).then((response) => {
+            if (response.code === 200) {
+                if (response.deleted) {
+                    const card = document.getElementById(`card-${productID}`);
+                    if (card) card.closest(".col").remove();
+                } else {
+                    const amountEl = document.getElementById(`amount-${productID}`);
+                    if (amountEl) {
+                        const newVal = Math.max(0, parseInt(amountEl.textContent, 10) - 1);
+                        amountEl.textContent = newVal;
+                    }
+                }
+            } else {
+                console.error(response.message);
+            }
+        });
+        return;
+    }
+
     // Card click
     const card = target.closest('.card');
     if (card) {
@@ -161,14 +203,13 @@ function performSearch() {
     const queryValue = document.getElementById("search-query");
     const sortParam = document.getElementById("sort-param");
     const sortOrder = document.getElementById("sort-order");
-
     // Build query string and redirect to products page
-    const queryString = new URLSearchParams({
+    const params = {
         queryParam: queryParam ? queryParam.value || "product_name" : "product_name",
         queryValue: queryValue ? queryValue.value || "" : "",
         sort: sortParam ? sortParam.value || "created_at" : "created_at",
         order: sortOrder ? sortOrder.value || "asc" : "asc",
-    }).toString();
+    };
 
-    window.location.href = `/web/products?${queryString}`;
+    window.location.href = `/web/products?${new URLSearchParams(params).toString()}`;
 }
