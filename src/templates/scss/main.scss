@@ -67,6 +67,7 @@ $shadow-color: rgba(26, 48, 40, 0.10);
 @import "bootstrap/scss/close";
 @import "bootstrap/scss/toasts";
 @import "bootstrap/scss/modal"; // Requires transitions
+@import "bootstrap/scss/tooltip";
 @import "bootstrap/scss/popover";
 @import "bootstrap/scss/spinners";
 @import "bootstrap/scss/offcanvas"; // Requires transitions
@@ -301,6 +302,10 @@ td a, th a {
 //
 // Scrollable stat tile body
 //
+.tile-threshold-info {
+    cursor: default;
+}
+
 .tile-scroll-body {
     overflow-y: auto;
     max-height: 200px;

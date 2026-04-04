@@ -43,13 +43,13 @@ function renderTile(title, hero, body, variant, heroClass) {
   return col;
 }
 
-function renderListTile(title, items) {
+function renderListTile(title, items, days) {
   const col = document.createElement('div');
   col.className = 'col';
 
   let listHtml;
   if (items.length === 0) {
-    listHtml = '<li class="list-group-item text-body-secondary small py-2">No products expiring in the next 7 days</li>';
+    listHtml = `<li class="list-group-item text-body-secondary small py-2">No products expiring in the next ${days} day${days !== 1 ? 's' : ''}</li>`;
   } else {
     listHtml = items.map((item) => {
       const date = new Date(item.expireAt + 'T00:00:00');
@@ -63,11 +63,15 @@ function renderListTile(title, items) {
 
   col.innerHTML = `
     <div class="card h-100">
-      <div class="card-header fw-bold">${title}</div>
+      <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+        <span>${title}</span>
+        <i class="bi bi-info-circle text-body-secondary fw-normal tile-threshold-info"></i>
+      </div>
       <div class="card-body p-0 tile-scroll-body">
         <ul class="list-group list-group-flush">${listHtml}</ul>
       </div>
     </div>`;
+
   return col;
 }
 
@@ -116,7 +120,22 @@ document.addEventListener('DOMContentLoaded', async function () {
       dashboard.appendChild(renderTile(title, hero, body, variant, heroClass));
     });
 
-    dashboard.appendChild(renderListTile('Expiring within next 7 Days', s.expiringSoon ?? []));
+    const days = s.expiringSoonDays ?? 7;
+    const listTile = renderListTile(`Expiring within next ${days} Day${days !== 1 ? 's' : ''}`, s.expiringSoon ?? [], days);
+    dashboard.appendChild(listTile);
+
+    // Initialise Bootstrap tooltip on the info icon — must happen after the
+    // element is in the DOM; we pass the text via JS so no native title tooltip shows.
+    const infoIcon = listTile.querySelector('.tile-threshold-info');
+    if (infoIcon) {
+      const tooltip = new bootstrap.Tooltip(infoIcon, {
+        title: `Shows products expiring within your notification threshold (${days} day${days !== 1 ? 's' : ''}). Change this in User Settings.`,
+        placement: 'left',
+        trigger: 'manual',
+      });
+      infoIcon.addEventListener('mouseenter', () => tooltip.show());
+      document.addEventListener('click', () => tooltip.hide(), { once: false, capture: true });
+    }
 
     const status = document.getElementById('dashboard-status');
     if (status) status.textContent = 'Dashboard loaded';

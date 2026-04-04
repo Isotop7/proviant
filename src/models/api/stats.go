@@ -21,6 +21,7 @@ type ProductStatsResponse struct {
 	UniqueArchived      int                    `json:"uniqueArchived"`
 	LastInsertedProduct string                 `json:"lastInsertedProduct"`
 	ExpiringSoon        []StatsExpiringProduct `json:"expiringSoon"`
+	ExpiringSoonDays    int                    `json:"expiringSoonDays"`
 	Categories          map[string]int         `json:"categories"`
 	ExpiryTrend         []StatsMonthlyCount    `json:"expiryTrend"`
 }
