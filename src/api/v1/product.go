@@ -1231,7 +1231,12 @@ func GetProductStats(ctx *gin.Context) {
 		wastePercent = float64(wasteCount) / float64(totalActive) * 100
 	}
 
-	expiringSoon, err := dbController.GetExpiringSoonProducts(userID, 7)
+	expiringSoonDays := 7
+	if user, userErr := dbController.GetUserByID(userID); userErr == nil && user.NotificationPreferences.NotificationThresholdDays > 0 {
+		expiringSoonDays = user.NotificationPreferences.NotificationThresholdDays
+	}
+
+	expiringSoon, err := dbController.GetExpiringSoonProducts(userID, expiringSoonDays)
 	if err != nil {
 		logger.Error().Msgf("GetExpiringSoonProducts: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon products"})
@@ -1285,6 +1290,7 @@ func GetProductStats(ctx *gin.Context) {
 		UniqueArchived:      uniqueArchived,
 		LastInsertedProduct: lastInsertedProduct,
 		ExpiringSoon:        expiringSoon,
+		ExpiringSoonDays:    expiringSoonDays,
 		Categories:          categories,
 		ExpiryTrend:         expiryTrend,
 	})

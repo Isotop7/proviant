@@ -11,11 +11,12 @@ import (
 
 // NotificationPreferences contains user-specific notification settings
 type NotificationPreferences struct {
-	EmailEnabled bool   `json:"emailEnabled" gorm:"default:true"`
-	NtfyEnabled  bool   `json:"ntfyEnabled" gorm:"default:false"`
-	NtfyURL      string `json:"ntfyUrl,omitempty"`
-	NtfyTopic    string `json:"ntfyTopic,omitempty"`
-	NtfyToken    string `json:"ntfyToken,omitempty"`
+	EmailEnabled              bool   `json:"emailEnabled" gorm:"default:true"`
+	NtfyEnabled               bool   `json:"ntfyEnabled" gorm:"default:false"`
+	NtfyURL                   string `json:"ntfyUrl,omitempty"`
+	NtfyTopic                 string `json:"ntfyTopic,omitempty"`
+	NtfyToken                 string `json:"ntfyToken,omitempty"`
+	NotificationThresholdDays int    `json:"notificationThresholdDays" gorm:"default:0"`
 }
 
 // User is the struct for the database definition and the JWT claims

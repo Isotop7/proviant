@@ -313,6 +313,19 @@
                     </div>
                 </div>
 
+                <div class="mb-3 mt-3">
+                    <h5>Expiry Threshold</h5>
+                    <p class="text-body-secondary small mb-2">Notify this many days <strong>before</strong> a product expires. Set to 0 to only notify on or after the expiry date.</p>
+                    <div class="input-group" style="max-width: 260px;">
+                        <span class="input-group-text"><i class="bi bi-alarm"></i></span>
+                        <input type="number" class="form-control" id="inputNotificationThreshold"
+                               min="0" step="1"
+                               value="{{ .User.NotificationPreferences.NotificationThresholdDays }}"
+                               aria-label="Notification threshold in days">
+                        <span class="input-group-text">days</span>
+                    </div>
+                </div>
+
                 <div id="ntfySettings" {{if not .User.NotificationPreferences.NtfyEnabled}}style="display: none;"{{end}}>
                     <h5 class="mt-3">ntfy.sh Configuration</h5>
                     <div class="input-group mb-3">

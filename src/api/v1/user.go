@@ -246,6 +246,12 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
+	// Validate threshold
+	if preferences.NotificationThresholdDays < 0 {
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNotificationInvalidThreshold))
+		return
+	}
+
 	// Validate ntfy configuration if enabled
 	if preferences.NtfyEnabled {
 		if preferences.NtfyTopic == "" {

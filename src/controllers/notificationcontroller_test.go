@@ -17,9 +17,13 @@ import (
 // MockDatabaseController is a mock implementation for testing
 type MockDatabaseController struct{}
 
-func (m *MockDatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]dbModel.Product, error) {
+func (m *MockDatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]dbModel.Product, error) {
 	// Return empty for testing
 	return []dbModel.Product{}, nil
+}
+
+func (m *MockDatabaseController) GetMaxNotificationThresholdDays() int {
+	return 0
 }
 
 func (m *MockDatabaseController) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error) {

@@ -118,6 +118,9 @@ var (
 	// ErrNotificationInvalidInterval is thrown if an invalid notification interval was specified
 	ErrNotificationInvalidInterval = errors.New("notification interval must be greater than 0")
 
+	// ErrNotificationInvalidThreshold is thrown if a negative notification threshold is specified
+	ErrNotificationInvalidThreshold = errors.New("notification threshold must be 0 or greater")
+
 	// ErrNotificationInvalidSMTPPort is thrown if an invalid SMTP port was specified
 	ErrNotificationInvalidSMTPPort = errors.New("SMTP port must be greater than 0")
 
