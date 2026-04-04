@@ -18,14 +18,14 @@ import (
 // UpdateUser updates a user
 // @Summary			Updates a user object
 // @Description		Updates properties of a user
-// @Tags         	user
-// @Accept			json
-// @Produce      	json
-// @Param			user	body	authentication.User	true	"User"
-// @Success      	200  {object}  authentication.User
-// @Failure      	400  {object}  api.APIResponse
-// @Failure      	500  {object}  api.APIResponse
-// @Router       	/api/v1/user [patch]
+// @Tags          	user
+// @Accept        	json
+// @Produce       	json
+// @Param         	user    body    authentication.User  true  "User"
+// @Success       	200  {object}  authentication.User
+// @Failure       	400  {object}  api.APIResponse
+// @Failure       	500  {object}  api.APIResponse
+// @Router        	/api/v1/user [patch]
 func UpdateUser(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
@@ -92,14 +92,14 @@ func UpdateUser(ctx *gin.Context) {
 // UpdateUserPassword updates a user password
 // @Summary			Updates a user password
 // @Description		Updates password of a user
-// @Tags         	user
-// @Accept			json
-// @Produce      	json
-// @Param			login	body	authentication.Login	true	"Login"
-// @Success      	200  {object}  api.APIResponse
-// @Failure      	400  {object}  api.APIResponse
-// @Failure      	500  {object}  api.APIResponse
-// @Router       	/api/v1/user/password [post]
+// @Tags          	user
+// @Accept        	json
+// @Produce       	json
+// @Param         	login   body    authentication.Login  true  "Login"
+// @Success       	200  {object}  api.APIResponse
+// @Failure       	400  {object}  api.APIResponse
+// @Failure       	500  {object}  api.APIResponse
+// @Router        	/api/v1/user/password [post]
 func UpdateUserPassword(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
@@ -159,4 +159,133 @@ func UpdateUserPassword(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
 		return
 	}
+}
+
+// GetUserNotificationPreferences gets a user's notification preferences
+// @Summary			Gets a user's notification preferences
+// @Description		Retrieves notification preferences for the current user
+// @Tags          	user
+// @Accept        	json
+// @Produce       	json
+// @Success       	200  {object}  authentication.NotificationPreferences
+// @Failure       	400  {object}  api.APIResponse
+// @Failure       	500  {object}  api.APIResponse
+// @Router        	/api/v1/user/notification-preferences [get]
+func GetUserNotificationPreferences(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	// Create database controller
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+
+	// Get user from database
+	user, getErr := dbController.GetUserByID(userID)
+	if getErr != nil {
+		logger.Error().Msgf("Error getting user: %s", getErr)
+		ctx.JSON(http.StatusInternalServerError, api.Error(getErr))
+		return
+	}
+
+	// Return notification preferences
+	ctx.JSON(http.StatusOK, user.NotificationPreferences)
+}
+
+// UpdateUserNotificationPreferences updates a user's notification preferences
+// @Summary			Updates a user's notification preferences
+// @Description		Updates notification preferences for the current user
+// @Tags          	user
+// @Accept        	json
+// @Produce       	json
+// @Success       	200  {object}  api.APIResponse
+// @Failure       	400  {object}  api.APIResponse
+// @Failure       	500  {object}  api.APIResponse
+// @Router        	/api/v1/user/notification-preferences [post]
+func UpdateUserNotificationPreferences(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	// Get and parse body to notification preferences
+	var preferences authentication.NotificationPreferences
+	if bindErr := ctx.ShouldBindJSON(&preferences); bindErr != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+		return
+	}
+
+	// Validate threshold
+	if preferences.NotificationThresholdDays < 0 {
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNotificationInvalidThreshold))
+		return
+	}
+
+	// Validate ntfy configuration if enabled
+	if preferences.NtfyEnabled {
+		if preferences.NtfyTopic == "" {
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "ntfy topic is required when ntfy is enabled"})
+			return
+		}
+		if preferences.NtfyURL == "" {
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "ntfy URL is required when ntfy is enabled"})
+			return
+		}
+	}
+
+	// Create database controller
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+
+	// Get user from database
+	user, getErr := dbController.GetUserByID(userID)
+	if getErr != nil {
+		logger.Error().Msgf("Error getting user: %s", getErr)
+		ctx.JSON(http.StatusInternalServerError, api.Error(getErr))
+		return
+	}
+
+	// Update notification preferences
+	user.NotificationPreferences = preferences
+
+	// Update user in database
+	updateErr := dbController.UpdateUser(user.ID, &user)
+	if updateErr != nil {
+		logger.Error().Msgf("Error updating notification preferences: %s", updateErr)
+		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
+		return
+	}
+
+	// Return success
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Notification preferences updated successfully"})
 }

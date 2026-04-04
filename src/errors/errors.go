@@ -70,6 +70,9 @@ var (
 	// ErrDatabaseInvalidEngine is thrown if an invalid database engine is selected
 	ErrDatabaseInvalidEngine = errors.New("no valid database engine selected")
 
+	// ErrLoggerContextNotFound is thrown if logger handle can't be found in context
+	ErrLoggerContextNotFound = errors.New("failed to get logger from context")
+
 	// ErrDatabaseContextNotFound is thrown if database handle can't be found in context
 	ErrDatabaseContextNotFound = errors.New("failed to get database from context")
 
@@ -108,4 +111,73 @@ var (
 
 	// ErrOpenFoodFactsAPIInvalidTimeout is thrown if an invalid API timeout was supplied
 	ErrOpenFoodFactsAPIInvalidTimeout = errors.New("invalid timeout for OpenFoodFacts API specified")
+
+	/*
+	 * Notification related errors
+	 */
+	// ErrNotificationInvalidInterval is thrown if an invalid notification interval was specified
+	ErrNotificationInvalidInterval = errors.New("notification interval must be greater than 0")
+
+	// ErrNotificationInvalidThreshold is thrown if a negative notification threshold is specified
+	ErrNotificationInvalidThreshold = errors.New("notification threshold must be 0 or greater")
+
+	// ErrNotificationInvalidSMTPPort is thrown if an invalid SMTP port was specified
+	ErrNotificationInvalidSMTPPort = errors.New("SMTP port must be greater than 0")
+
+	// ErrNotificationEmptyFromAddress is thrown if an empty from address was specified
+	ErrNotificationEmptyFromAddress = errors.New("notification from address cannot be empty")
+
+	// ErrNotificationInvalidNtfyURL is thrown if an invalid ntfy.sh URL was specified
+	ErrNotificationInvalidNtfyURL = errors.New("invalid ntfy.sh URL")
+
+	// ErrNotificationEmptyNtfyTopic is thrown if an empty ntfy.sh topic was specified
+	ErrNotificationEmptyNtfyTopic = errors.New("ntfy.sh topic cannot be empty when URL is provided")
+
+	/*
+	 * Household related errors
+	 */
+	// ErrHouseholdNotFound is thrown when a requested household does not exist
+	ErrHouseholdNotFound = errors.New("household not found")
+
+	// ErrNotHouseholdAdmin is thrown when a user attempts an admin action on a household they do not administrate
+	ErrNotHouseholdAdmin = errors.New("user is not the admin of this household")
+
+	// ErrApplicationAlreadyPending is thrown when a user already has a pending application for a household
+	ErrApplicationAlreadyPending = errors.New("a pending application for this household already exists")
+
+	// ErrApplicationNotFound is thrown when a requested household application does not exist
+	ErrApplicationNotFound = errors.New("household application not found")
+
+	// ErrNotApplicationApplicant is thrown when a user tries to cancel an application they did not create
+	ErrNotApplicationApplicant = errors.New("user is not the applicant of this application")
+
+	// ErrCannotRemoveAdmin is thrown when an admin tries to remove themselves via the member removal endpoint
+	ErrCannotRemoveAdmin = errors.New("cannot remove the household admin")
+
+	// ErrMemberNotInHousehold is thrown when the target user is not a member of the caller's household
+	ErrMemberNotInHousehold = errors.New("user is not a member of this household")
+
+	/*
+	 * Invitation related errors
+	 */
+	// ErrInvitationNotFound is thrown when a requested invitation does not exist
+	ErrInvitationNotFound = errors.New("invitation not found")
+
+	// ErrInvitationExpired is thrown when an invitation has passed its expiry time
+	ErrInvitationExpired = errors.New("invitation has expired")
+
+	// ErrInvitationAlreadyUsed is thrown when an invitation has already been accepted
+	ErrInvitationAlreadyUsed = errors.New("invitation has already been accepted")
+
+	// ErrInvitationCancelled is thrown when an invitation has been cancelled by the sender
+	ErrInvitationCancelled = errors.New("invitation has been cancelled")
+
+	// ErrInvitationEmailMismatch is thrown when the recipient email does not match the invitation
+	ErrInvitationEmailMismatch = errors.New("email does not match invitation")
+
+	// ErrDuplicateInvitation is thrown when a pending invitation already exists for the same email and household
+	ErrDuplicateInvitation = errors.New("a pending invitation already exists for this email")
+
+	// ErrInvitationNotAuthorized is thrown when a user tries to manage an invitation they did not create
+	ErrInvitationNotAuthorized = errors.New("not authorized to manage this invitation")
 )

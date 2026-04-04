@@ -1,165 +1,120 @@
 {{ define "content" }}
-<div class="row justify-content-between p-3">
+<div class="row justify-content-center p-3">
+  <div class="col-12 col-md-8 col-lg-6">
 
-	<div id="productAlert" class="alert alert-dismissible fade" role="alert">
-		<span id="alertMessage"></span>
-		<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-	</div>
+    <div class="text-center mb-4">
+      <h2 class="mb-1">Add product</h2>
+      <p class="text-muted small mb-0">Scan or enter a barcode</p>
+    </div>
 
-	<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h1 class="modal-title fs-5" id="deleteModal">Delete product?</h1>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-				<div id="deleteModalBody" class="modal-body">
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-					<button id="btnDeleteProduct" type="submit" class="btn btn-danger">
-						<i class="bi bi-calendar-x me-2"></i>
-						Delete product
-					</button>
-				</div>
-			</div>
-		</div>
-	</div>
+    <div class="d-grid mb-3">
+      <button class="btn btn-primary btn-lg py-3" type="button" id="btnScan" data-action="scan">
+        <i class="bi bi-upc-scan fs-3 me-2"></i>
+        <span>Scan barcode</span>
+      </button>
+    </div>
 
-	<div class="modal fade" id="archiveModal" tabindex="-1" aria-labelledby="archiveModalLabel" aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h1 class="modal-title fs-5" id="archiveModal">Archive product?</h1>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-				<div id="archiveModalBody" class="modal-body">
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-					<button id="btnArchiveProduct" type="submit" class="btn btn-warning">
-						<i class="bi bi-archive me-2"></i>
-						Archive product
-					</button>
-				</div>
-			</div>
-		</div>
-	</div>
+    <div class="mb-3" id="barcode-reader-wrapper" style="display:none;">
+      <div id="barcode-reader"></div>
+    </div>
 
-	<div class="text-center mb-4">
-		<h2>Create product</h2>
-		<p class="text-muted">Scan or enter a barcode to add a product</p>
-	</div>
+    <form id="formBarcodeInput" class="needs-validation mb-4" novalidate>
+      <label for="barcode" class="form-label text-muted small">Or enter barcode manually</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-upc"></i></span>
+        <input type="number" class="form-control" id="barcode"
+               placeholder="13-digit EAN barcode"
+               aria-label="Barcode" data-barcode=""
+               min="1000000000000" max="9999999999999">
+        <div class="invalid-feedback">Must be a 13-digit number</div>
+        <div class="valid-feedback">Looks valid — fetching product info…</div>
+      </div>
+    </form>
 
-	<div class="card p-3 mb-4">
-		<div class="row g-2">
-			<div class="col-9">
-				<form id="formBarcodeInput" class="needs-validation" novalidate>
-					<div class="input-group">
-						<div class="input-group-text" id="btnGroupAddon">#</div>
-						<input type="number" class="form-control" id="barcode" placeholder="Barcode" data-barcode=""
-							aria-describedby="btnGroupAddon" min="1000000000000" max="9999999999999">
-						<div class="invalid-feedback">
-							Barcode has to be a digit-only 13 character string
-						</div>
-						<div class="valid-feedback">
-							Barcode seems to be valid. Use the 'Get Info' button to query data of product
-						</div>
-					</div>
-				</form>
-			</div>
-			<div class="col-3">
-				<button class="btn btn-primary w-100" type="button" id="btnScan" data-action="scan">
-					<i class="bi bi-upc-scan px-2"></i>
-					Scan
-				</button>
-			</div>
-		</div>
-		<div class="row m-auto w-100" id="barcode-reader-wrapper">
-			<div id="barcode-reader"></div>
-		</div>
-	</div>
+    <div id="productData" class="d-none">
+      <div class="card mb-3">
+        <div class="card-body">
 
-	<div class="card px-0">
-		<div class="card-header bg-primary text-white">
-			Scanned Product
-		</div>
-		<ul class="list-group list-group-flush" id="productData">
-			<li class="list-group-item text-center">
-				<span class="text-body-secondary">
-					<img id="productInfoImage">
-					<div class="fs-2 placeholder">
-						<i class="bi bi-image-fill"></i>
-					</div>
-					<div class="spinner-grow spinner-grow-sm text-secondary" role="status" style="display: none;">
-						<span class="visually-hidden">Loading...</span>
-					</div>
-				</span>
-			</li>
-			<li class="list-group-item d-flex justify-content-between lh-sm">
-				<div>
-					<h6 class="my-2">Product name</h6>
-					<small id="productInfoName" class="text-body-secondary">
-					</small>
-					<div class="spinner-grow spinner-grow-sm text-secondary" role="status" style="display: none;">
-						<span class="visually-hidden">Loading...</span>
-					</div>
-				</div>
-			</li>
-			<li class="list-group-item d-flex justify-content-between lh-sm">
-				<div>
-					<h6 class="my-2">Generic name</h6>
-					<small id="productInfoGenericName" class="text-body-secondary"></small>
-					<div class="spinner-grow spinner-grow-sm text-secondary m-2" role="status" style="display: none;">
-						<span class="visually-hidden">Loading...</span>
-					</div>
-				</div>
-			</li>
-			<li class="list-group-item">
-				<form id="formExpireAt" class="needs-validation" novalidate>
-					<label for="expireAt" class="form-label">Expires at</label>
-					<input type="date" class="form-control" id="expireAt" placeholder="Expires at" value="{{ today }}"
-						required>
-					<div class="invalid-feedback">
-						Please select the expiry date
-					</div>
-				</form>
-			</li>
-			<li class="list-group-item ">
-				<div class="text-center">
-					<select class="form-select mb-3 d-none" id="instanceDropdown"></select>
-					<div class="btn-toolbar product-btn-toolbar" role="toolbar" aria-label="">
-						<div class="btn-group me-4">
-							<button id="btnAddProduct" type="submit" class="btn btn-primary">
-								<i class="bi bi-plus-circle-dotted me-2"></i>
-								Create new
-							</button>
-							<button id="btnShowProduct" type="submit" class="btn btn-primary" disabled>
-								<i class="bi bi-eye me-2"></i>
-								Show product
-							</button>
-							<button id="btnArchiveProductModal" type="button" class="btn btn-warning"
-								data-bs-toggle="modal" data-bs-target="#archiveModal" disabled>
-								<i class="bi bi-archive me-2"></i>
-								Archive product
-							</button>
-							<button id="btnDeleteProductModal" type="button" class="btn btn-danger"
-								data-bs-toggle="modal" data-bs-target="#deleteModal" disabled>
-								<i class="bi bi-calendar-x me-2"></i>
-								Delete product
-							</button>
-						</div>
-						<div class="btn-group">
-							<button id="btnShowProducts" type="submit" class="btn btn-primary" disabled>
-								<i class="bi bi-collection me-2"></i>
-								Show all
-							</button>
-						</div>
-					</div>
-				</div>
-			</li>
-		</ul>
-	</div>
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="flex-shrink-0">
+              <img id="productInfoImage" src="" alt=""
+                   class="rounded" style="width:64px;height:64px;object-fit:contain;background:#EBF5EB;">
+              <div class="fs-2 placeholder text-muted d-none">
+                <i class="bi bi-image"></i>
+              </div>
+              <div class="spinner-grow spinner-grow-sm text-secondary" role="status" style="display:none;">
+                <span class="visually-hidden">Loading…</span>
+              </div>
+            </div>
+            <div class="flex-grow-1">
+              <div id="productInfoName" class="fw-semibold"></div>
+              <div id="productInfoGenericName" class="text-muted small"></div>
+              <div class="spinner-grow spinner-grow-sm text-secondary" role="status" style="display:none;">
+                <span class="visually-hidden">Loading…</span>
+              </div>
+            </div>
+          </div>
+
+          <select class="form-select mb-3 d-none" id="instanceDropdown" aria-label="Select existing instance"></select>
+
+          <form id="formExpireAt" class="needs-validation" novalidate>
+            <label class="form-label">Amount</label>
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <button type="button" class="btn btn-outline-secondary" id="btnAmountDec" aria-label="Decrease amount">−</button>
+                <span id="amountDisplay" class="fs-5 px-2">1</span>
+                <button type="button" class="btn btn-outline-secondary" id="btnAmountInc" aria-label="Increase amount">+</button>
+            </div>
+            <input type="hidden" id="amount" value="1">
+
+            <label for="expireAt" class="form-label">
+              Expiry date <span class="text-danger" aria-hidden="true">*</span>
+            </label>
+            <input type="date" class="form-control mb-2" id="expireAt"
+                   value="{{ today }}" required aria-required="true">
+            <div class="invalid-feedback">Please select an expiry date</div>
+          </form>
+
+          <div class="btn-group w-100 mb-1" role="group" aria-label="Quick expiry shortcuts">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnExpireAdd3">
+              <i class="bi bi-calendar-plus me-1"></i>+3 days
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnExpireAdd7">
+              <i class="bi bi-calendar-plus me-1"></i>+7 days
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnExpireAdd1m">
+              <i class="bi bi-calendar-plus me-1"></i>+1 month
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="d-grid mb-2">
+        <button id="btnAddProduct" type="submit" class="btn btn-primary btn-lg">
+          <i class="bi bi-plus-circle me-2"></i>Save product
+        </button>
+      </div>
+
+      <div class="d-flex gap-2 mb-2" id="foundBarcode">
+        <button id="btnShowProduct" type="button" class="btn btn-sm btn-outline-secondary flex-fill" disabled>
+          <i class="bi bi-eye me-1"></i>View
+        </button>
+        <button id="btnShowProducts" type="button" class="btn btn-sm btn-outline-secondary flex-fill" disabled>
+          <i class="bi bi-collection me-1"></i>All instances
+        </button>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button id="btnArchiveProductModal" type="button" class="btn btn-sm btn-outline-warning flex-fill" disabled>
+          <i class="bi bi-archive me-1"></i>Archive
+        </button>
+        <button id="btnDeleteProductModal" type="button" class="btn btn-sm btn-outline-danger flex-fill" disabled>
+          <i class="bi bi-trash me-1"></i>Delete
+        </button>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <script src="/assets/js/html5-qrcode.min.js"></script>

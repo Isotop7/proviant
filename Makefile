@@ -47,6 +47,14 @@ test:
 	go test -race -vet=off ./... && \
 	go mod verify
 
+## cover: get code coverage report
+.PHONY: cover
+cover:
+	cd ./src && \
+	go test -coverprofile=coverage.out ./... && \
+	go tool cover -html=coverage.out && \
+	go mod verify
+
 ## check: runs quality control checks
 .PHONY: check
 check:
@@ -116,9 +124,11 @@ fonts:
 .PHONY: icons
 icons:
 	cp ./res/icons/proviant_logo_256.png ./src/assets/icons/
+	cp ./res/icons/proviant_logo_512.png ./src/assets/icons/
 	cp ./res/icons/proviant_logo.ico ./src/assets/icons/favicon.ico
 	cp ./res/icons/proviant_logo_256.png ./src/assets/icons/favicon.png
 	cp ./res/icons/proviant_hero.png ./src/assets/icons/hero.png
+	magick ./res/icons/proviant_logo_256.png -resize 192x192 ./src/assets/icons/proviant_logo_192.png
 
 .PHONY: css
 css:
@@ -130,3 +140,4 @@ js:
 	cp ./node_modules/html5-qrcode/html5-qrcode.min.js ./src/assets/js/
 	cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js ./src/assets/js/
 	cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js.map ./src/assets/js/
+	cp ./node_modules/chart.js/dist/chart.umd.min.js ./src/assets/js/

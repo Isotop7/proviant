@@ -1,0 +1,40 @@
+{
+  "name": "Proviant",
+  "short_name": "Proviant",
+  "description": "Food expiration tracker for your household",
+  "start_url": "/web",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F5FAF5",
+  "theme_color": "#3D7A5C",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "/assets/icons/proviant_logo_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/proviant_logo_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Product",
+      "short_name": "Add",
+      "url": "/web/products/create",
+      "icons": [{ "src": "/assets/icons/proviant_logo_192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Products",
+      "short_name": "Products",
+      "url": "/web/products",
+      "icons": [{ "src": "/assets/icons/proviant_logo_192.png", "sizes": "192x192" }]
+    }
+  ]
+}

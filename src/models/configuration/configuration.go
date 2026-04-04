@@ -3,6 +3,7 @@ package configuration
 
 import (
 	"html/template"
+	"strings"
 
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
@@ -46,6 +47,7 @@ type ServerConfiguration struct {
 	Port           int
 	Authentication AuthenticationConfiguration
 	CORS           CorsConfiguration
+	BaseURL        string
 }
 
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog
@@ -56,25 +58,34 @@ type LoggingConfiguration struct {
 
 // SMTPConfiguration contains all properties regarding the notification handler target
 type SMTPConfiguration struct {
-	Host     string
-	Port     int
-	SSL      bool
-	User     string
-	Password string
+	Host        string
+	Port        int
+	SSL         bool
+	User        string
+	FromAddress string
+	Password    string
+}
+
+// NtfyConfiguration contains all properties regarding the ntfy.sh notification provider
+type NtfyConfiguration struct {
+	URL     string
+	Topic   string
+	Timeout int
 }
 
 // NotificationConfiguration contains all properties regarding the notification handler
 type NotificationConfiguration struct {
-	Enabled     bool
-	Interval    int
-	FromAddress string
-	SMTP        SMTPConfiguration
+	Enabled  bool
+	Interval int
+	SMTP     SMTPConfiguration
+	Ntfy     NtfyConfiguration
 }
 
 // OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
 type OpenFoodFactsConfiguration struct {
-	URL     string
-	Timeout int
+	URL          string
+	Timeout      int
+	CacheEnabled bool
 }
 
 // ProviantConfiguration is the configuration wrapper struct
@@ -95,6 +106,41 @@ func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error {
 	if ec.OpenFoodFacts.Timeout <= 0 {
 		return errors.ErrOpenFoodFactsAPIInvalidTimeout
 	}
+	return nil
+}
+
+// ValidateNotificationConfiguration validates the notification configuration
+func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error {
+	if !ec.Notification.Enabled {
+		return nil // Notifications disabled, no validation needed
+	}
+
+	if ec.Notification.Interval <= 0 {
+		return errors.ErrNotificationInvalidInterval
+	}
+
+	// Validate SMTP configuration if SMTP host is provided
+	if ec.Notification.SMTP.Host != "" {
+		if ec.Notification.SMTP.Port <= 0 {
+			return errors.ErrNotificationInvalidSMTPPort
+		}
+		if ec.Notification.SMTP.FromAddress == "" {
+			return errors.ErrNotificationEmptyFromAddress
+		}
+	}
+
+	// Validate ntfy configuration if ntfy URL is provided
+	if ec.Notification.Ntfy.URL != "" {
+		if ec.Notification.Ntfy.Topic == "" {
+			return errors.ErrNotificationEmptyNtfyTopic
+		}
+		// Basic URL validation
+		if !strings.HasPrefix(ec.Notification.Ntfy.URL, "http://") &&
+			!strings.HasPrefix(ec.Notification.Ntfy.URL, "https://") {
+			return errors.ErrNotificationInvalidNtfyURL
+		}
+	}
+
 	return nil
 }
 

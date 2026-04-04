@@ -2,13 +2,17 @@ package database
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/models/webparts"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -152,8 +156,20 @@ func (dbc DatabaseController) CreateUser(user *authentication.User) error {
 		return err
 	}
 
+	// Create onboarding state for the new user
+	onboardingState := database.OnboardingState{
+		UserID: user.ID,
+	}
+	if err := tx.Create(&onboardingState).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	// Commit the transaction
-	tx.Commit()
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -181,6 +197,7 @@ func (dbc DatabaseController) UpdateUser(userID uint, user *authentication.User)
 	// Update values
 	dbUser.Username = user.Username
 	dbUser.MailAddress = user.MailAddress
+	dbUser.NotificationPreferences = user.NotificationPreferences
 
 	// Save updated product
 	saveResult := dbc.DBHandle.Save(&dbUser)
@@ -284,6 +301,38 @@ func (dbc DatabaseController) GetHouseholdMembersMailAddressesByID(householdID u
 		mailAddresses = append(mailAddresses, users[idx].MailAddress)
 	}
 	return mailAddresses, nil
+}
+
+// GetHouseholdMembersNotificationPreferences returns the notification preferences of all users of a household
+func (dbc DatabaseController) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error) {
+	var preferences []models.NotificationRecipientInfo
+
+	// Check for household
+	_, householdErr := dbc.GetHouseholdByID(householdID)
+	if householdErr != nil {
+		return preferences, householdErr
+	}
+
+	// Find users with matching household ID
+	var users []*authentication.User
+	findErr := dbc.DBHandle.Where("household_id = ?", householdID).Find(&users)
+	if findErr.Error != nil {
+		return preferences, findErr.Error
+	}
+
+	// Loop through household members and collect notification preferences
+	for idx := range users {
+		user := users[idx]
+		preferences = append(preferences, models.NotificationRecipientInfo{
+			EmailAddress:              user.MailAddress,
+			NtfyURL:                   user.NotificationPreferences.NtfyURL,
+			NtfyTopic:                 user.NotificationPreferences.NtfyTopic,
+			NtfyToken:                 user.NotificationPreferences.NtfyToken,
+			NotificationThresholdDays: user.NotificationPreferences.NotificationThresholdDays,
+		})
+	}
+
+	return preferences, nil
 }
 
 // GetUserProductsBulk returns an array of products of a user (based on user ID)
@@ -439,7 +488,7 @@ func (dbc DatabaseController) GetArchivedProductByID(productID int, userID uint)
 }
 
 // SearchProducts returns an array of products of a user matching a search paramater and a query
-func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue, sort, order string, userID uint) ([]database.Product, error) {
+func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error) {
 	// Get user object from database
 	user, userErr := dbc.GetUserByID(userID)
 	if userErr != nil {
@@ -466,7 +515,13 @@ func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, que
 	}
 
 	// Order dataset
-	preloadedDataset = preloadedDataset.Order(fmt.Sprintf("%s %s", sort, order))
+	if sortValue == "" {
+		sortValue = "product_name"
+	}
+	if orderValue == "" {
+		orderValue = "ASC"
+	}
+	preloadedDataset = preloadedDataset.Order(fmt.Sprintf("%s %s", sortValue, orderValue))
 
 	// Cast found set to returned array or return error
 	findErr := preloadedDataset.Find(&foundProducts)
@@ -527,6 +582,7 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	dbProduct.Countries = product.Countries
 	dbProduct.ImageURL = product.ImageURL
 	dbProduct.ExpireAt = product.ExpireAt
+	dbProduct.Amount = product.Amount
 
 	// Save updated product
 	saveResult := dbc.DBHandle.Save(&dbProduct)
@@ -536,6 +592,54 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	} else {
 		return nil
 	}
+}
+
+// UpdateProductAmount applies a delta to a product's amount field.
+// If the resulting amount is <= 0, the product is hard-deleted.
+// Returns deleted=true when the product was removed, deleted=false when it was updated.
+func (dbc DatabaseController) UpdateProductAmount(productID int, userID uint, delta int) (bool, error) {
+	// Check if id is valid
+	if productID <= 0 {
+		return false, gorm.ErrNotImplemented
+	}
+
+	// Try to get product
+	var dbProduct database.Product
+	getError := dbc.DBHandle.First(&dbProduct, productID)
+	if getError.Error != nil {
+		return false, getError.Error
+	}
+
+	// Try to get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return false, userErr
+	}
+
+	// Check if supplied user is allowed to update the product
+	if dbProduct.HouseholdID != user.HouseholdID {
+		return false, errors.ErrMismatcherUserID
+	}
+
+	// Apply delta, floor at 0
+	newAmount := dbProduct.Amount + delta
+	if newAmount < 0 {
+		newAmount = 0
+	}
+	dbProduct.Amount = newAmount
+
+	// Hard-delete products when amount reaches 0
+	if dbProduct.Amount <= 0 {
+		deleteResult := dbc.DBHandle.Unscoped().Delete(&database.Product{}, dbProduct.ID)
+		return true, deleteResult.Error
+	}
+
+	// Save updated product
+	saveResult := dbc.DBHandle.Save(&dbProduct)
+	if saveResult.Error != nil {
+		return false, saveResult.Error
+	}
+	return false, nil
 }
 
 // DeleteProduct deletes a product (based on product ID) of a user (based on user ID)
@@ -703,91 +807,823 @@ func (dbc DatabaseController) GetProductsExpired(userID uint) ([]*database.Produ
 	return expiredProducts, nil
 }
 
-// GetProductsExpiredAndNotificationPending returns an array of products which are expired and have a pending notification
-func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error) {
-	// Get products with pending notification
+// GetProductsExpiredAndNotificationPending returns products that are expired or expiring within maxLookAheadDays
+// and have a pending notification (i.e., not notified within the last sleepInterval).
+func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error) {
 	var notificationProducts []database.Product
-	// Get expired products with pending notification
 	getError := dbc.DBHandle.
-		Where("expire_at < ?", time.Now()).
+		Where("expire_at > ?", time.Time{}).
+		Where("expire_at <= ?", time.Now().AddDate(0, 0, maxLookAheadDays)).
 		Where("notified_at < ?", time.Now().Add(-(sleepInterval))).
 		Find(&notificationProducts)
 
-	// Check for error or return product list
 	if getError.Error != nil {
 		return []database.Product{}, getError.Error
-	} else {
-		return notificationProducts, nil
 	}
+	return notificationProducts, nil
 }
 
-// GetUserHomeTiles creates a list of tiles with user statistics
-func (dbc DatabaseController) GetUserHomeTiles(userID uint) ([]webparts.Tile, error) {
-	// Create list of hometiles
-	homeTiles := []webparts.Tile{}
+// GetMaxNotificationThresholdDays returns the highest NotificationThresholdDays value set across all users.
+// Returns 0 if no user has a threshold configured.
+func (dbc DatabaseController) GetMaxNotificationThresholdDays() int {
+	var maxThreshold int
+	dbc.DBHandle.Model(&authentication.User{}).
+		Select("COALESCE(MAX(notification_threshold_days), 0)").
+		Scan(&maxThreshold)
+	return maxThreshold
+}
 
-	// Try to get user object from database
-	user, userErr := dbc.GetUserByID(userID)
-	if userErr != nil {
-		return homeTiles, userErr
-	}
-
-	// Get count of products
-	productList, productCountErr := dbc.GetUserProductsBulk(userID, -1)
-	if productCountErr != nil {
-		return homeTiles, productCountErr
-	}
-	// Check for products
-	productCount := len(productList)
-	// If no products are assigned, there is nothing to show
-	if productCount == 0 {
-		return homeTiles, nil
-	}
-	// Create tile
-	homeTiles = append(homeTiles, webparts.Tile{
-		Title:  "Amount of your products",
-		Hero:   fmt.Sprint(productCount),
-		Body:   fmt.Sprintf("You currently have %d products assigned", productCount),
-		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-	})
-
-	// Get last inserted product
-	var lastProduct database.Product
-	getError := dbc.DBHandle.
-		Where("household_id = ?", user.HouseholdID).
-		Where("deleted_at IS NULL").
-		Order("created_at DESC").
-		Limit(1).
-		Find(&lastProduct)
-	if getError.Error != nil {
-		return homeTiles, getError.Error
-	}
-	// Create tile
-	homeTiles = append(homeTiles, webparts.Tile{
-		Title:  "Last inserted product",
-		Hero:   lastProduct.ProductName,
-		Body:   fmt.Sprintf("'%s' is the most recent product with barcode #%s", lastProduct.ProductName, lastProduct.Barcode),
-		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
-	})
-
-	// Last notification
+// GetLastNotifiedProduct returns the last notified product for a user
+func (dbc DatabaseController) GetLastNotifiedProduct(householdID uint) (database.Product, error) {
 	var lastNotifiedProduct database.Product
 	getNotifiedError := dbc.DBHandle.
-		Where("household_id = ?", user.HouseholdID).
+		Where("household_id = ?", householdID).
 		Where("deleted_at IS NULL").
 		Order("notified_at DESC").
 		Limit(1).
 		Find(&lastNotifiedProduct)
-	if getNotifiedError.Error != nil {
-		return homeTiles, getNotifiedError.Error
+
+	return lastNotifiedProduct, getNotifiedError.Error
+}
+
+func (dbc DatabaseController) GetLastInsertedProduct(householdID uint) (database.Product, error) {
+	var lastProduct database.Product
+	getError := dbc.DBHandle.
+		Where("household_id = ?", householdID).
+		Where("deleted_at IS NULL").
+		Order("created_at DESC").
+		Limit(1).
+		Find(&lastProduct)
+
+	return lastProduct, getError.Error
+}
+
+// GetExpiredProductsCount returns the count of expired products for a user
+func (dbc DatabaseController) GetExpiredProductsCount(userID uint) (int, error) {
+	userProducts, getBulkErr := dbc.GetUserProductsBulk(userID, 0)
+	if getBulkErr != nil {
+		return 0, getBulkErr
 	}
-	// Create tile
-	homeTiles = append(homeTiles, webparts.Tile{
-		Title:  "Last notification",
-		Hero:   lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat),
-		Body:   fmt.Sprintf("You received the last notfication for product with barcode #%s at %s", lastProduct.Barcode, lastNotifiedProduct.NotifiedAt.Format(PreferredTimeFormat)),
-		Footer: fmt.Sprintf(GeneratedPrefix, time.Now().Format(PreferredTimeFormat)),
+
+	count := 0
+	timestamp := time.Now()
+	for i := range userProducts {
+		if userProducts[i].ExpireAt.Before(timestamp) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// GetArchivedProductsGroupedByBarcode returns archived products grouped by barcode with counts
+func (dbc DatabaseController) GetArchivedProductsGroupedByBarcode(userID uint) (map[string]int, error) {
+	archivedProducts, err := dbc.GetUserArchivedProductsBulk(userID, -1)
+	if err != nil {
+		return nil, err
+	}
+
+	grouped := make(map[string]int)
+	for i := range archivedProducts {
+		grouped[archivedProducts[i].Barcode]++
+	}
+	return grouped, nil
+}
+
+// GetTopArchivedProducts returns the top N most frequently archived products
+func (dbc DatabaseController) GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error) {
+	archivedProducts, err := dbc.GetUserArchivedProductsBulk(userID, -1)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(archivedProducts) == 0 {
+		return []database.Product{}, nil
+	}
+
+	// Count occurrences by barcode and store first product occurrence
+	barcodeCounts := make(map[string]int)
+	barcodeToProduct := make(map[string]database.Product)
+
+	for i := range archivedProducts {
+		product := &archivedProducts[i]
+		barcodeCounts[product.Barcode]++
+		// Store the first occurrence of each barcode
+		if _, exists := barcodeToProduct[product.Barcode]; !exists {
+			barcodeToProduct[product.Barcode] = *product
+		}
+	}
+
+	// Create a slice of structs to sort
+	type barcodeCount struct {
+		barcode string
+		count   int
+		product database.Product
+	}
+
+	var counts []barcodeCount
+	for barcode, count := range barcodeCounts {
+		counts = append(counts, barcodeCount{
+			barcode: barcode,
+			count:   count,
+			product: barcodeToProduct[barcode],
+		})
+	}
+
+	// Sort by count (descending)
+	sort.Slice(counts, func(i, j int) bool {
+		return counts[i].count > counts[j].count
 	})
 
-	return homeTiles, nil
+	// Get top N products
+	var result []database.Product
+	for i := 0; i < len(counts) && i < limit; i++ {
+		result = append(result, counts[i].product)
+	}
+
+	return result, nil
+}
+
+// GetActiveProductsCount returns the count of active (non-archived) products for a user
+func (dbc DatabaseController) GetActiveProductsCount(userID uint) (int, error) {
+	products, err := dbc.GetUserProductsBulk(userID, 0)
+	if err != nil {
+		return 0, err
+	}
+	return len(products), nil
+}
+
+// GetProductCategoryBreakdown returns a map of category name → product count for active products.
+// Language prefixes (e.g. "en:") are stripped. The top 8 categories are kept; the rest are
+// grouped under "Other". Products with no category are counted under "Uncategorized".
+func (dbc DatabaseController) GetProductCategoryBreakdown(userID uint) (map[string]int, error) {
+	products, err := dbc.GetUserProductsBulk(userID, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	counts := make(map[string]int)
+	for i := range products {
+		raw := strings.TrimSpace(products[i].Categories)
+		if raw == "" {
+			counts["Uncategorized"]++
+			continue
+		}
+		// Use only the first category listed
+		first := strings.SplitN(raw, ",", 2)[0]
+		first = strings.TrimSpace(first)
+		// Strip language prefix (e.g. "en:")
+		if idx := strings.Index(first, ":"); idx != -1 {
+			first = strings.TrimSpace(first[idx+1:])
+		}
+		if first == "" {
+			first = "Uncategorized"
+		}
+		counts[first]++
+	}
+
+	// Keep top 8, lump the rest into "Other"
+	const maxCategories = 8
+	if len(counts) <= maxCategories {
+		return counts, nil
+	}
+
+	type catCount struct {
+		name  string
+		count int
+	}
+	cats := make([]catCount, 0, len(counts))
+	for n, c := range counts {
+		cats = append(cats, catCount{n, c})
+	}
+	sort.Slice(cats, func(i, j int) bool {
+		return cats[i].count > cats[j].count
+	})
+
+	result := make(map[string]int, maxCategories+1)
+	other := 0
+	for i, c := range cats {
+		if i < maxCategories {
+			result[c.name] = c.count
+		} else {
+			other += c.count
+		}
+	}
+	if other > 0 {
+		result["Other"] = other
+	}
+	return result, nil
+}
+
+// GetExpiryTrend returns the count of active products expiring in each of the next 12 calendar
+// months, starting from the current month.
+func (dbc DatabaseController) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error) {
+	products, err := dbc.GetUserProductsBulk(userID, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	monthCounts := make(map[string]int, 12)
+	for i := 0; i < 12; i++ {
+		monthCounts[now.AddDate(0, i, 0).Format("2006-01")] = 0
+	}
+	for i := range products {
+		month := products[i].ExpireAt.Format("2006-01")
+		if _, ok := monthCounts[month]; ok {
+			monthCounts[month]++
+		}
+	}
+
+	result := make([]apiModel.StatsMonthlyCount, 0, 12)
+	for i := 0; i < 12; i++ {
+		month := now.AddDate(0, i, 0).Format("2006-01")
+		result = append(result, apiModel.StatsMonthlyCount{Month: month, Count: monthCounts[month]})
+	}
+	return result, nil
+}
+
+// GetExpiringSoonProducts returns active products whose expiry date falls within the next `days`
+// calendar days, including today. Results are sorted ascending by expiry date.
+func (dbc DatabaseController) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error) {
+	products, err := dbc.GetUserProductsBulk(userID, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
+
+	var result []apiModel.StatsExpiringProduct
+	for i := range products {
+		e := products[i].ExpireAt
+		if !e.Before(startOfToday) && !e.After(endOfWindow) {
+			result = append(result, apiModel.StatsExpiringProduct{
+				ProductName: products[i].ProductName,
+				ExpireAt:    e.Format("2006-01-02"),
+			})
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ExpireAt < result[j].ExpireAt
+	})
+	return result, nil
+}
+
+// GetHouseholdMemberCount returns how many users currently belong to a household
+func (dbc DatabaseController) GetHouseholdMemberCount(householdID uint) (int64, error) {
+	var count int64
+	result := dbc.DBHandle.Model(&authentication.User{}).Where("household_id = ?", householdID).Count(&count)
+	return count, result.Error
+}
+
+// LeaveHousehold creates a new personal household for the user, moves all products if they were the
+// sole member, then updates the user's HouseholdID to the new household.
+func (dbc DatabaseController) LeaveHousehold(userID uint) error {
+	tx := dbc.DBHandle.Begin()
+
+	var user authentication.User
+	if err := tx.First(&user, userID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	oldHouseholdID := user.HouseholdID
+
+	// Create new personal household
+	newHousehold := database.Household{
+		Name: fmt.Sprintf("%s's Household", user.Username),
+	}
+	if err := tx.Create(&newHousehold).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Model(&newHousehold).Update("admin_id", userID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Move products only when the user is the sole member
+	var memberCount int64
+	tx.Model(&authentication.User{}).Where("household_id = ?", oldHouseholdID).Count(&memberCount)
+	if memberCount == 1 {
+		if err := tx.Model(&database.Product{}).Where("household_id = ?", oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// Update user to new household
+	if err := tx.Model(&user).Update("household_id", newHousehold.ID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// CreateAndSwitchHousehold creates a new named household and switches the user to it.
+// Products are moved from the old household when the user was its sole member.
+func (dbc DatabaseController) CreateAndSwitchHousehold(userID uint, name string) error {
+	tx := dbc.DBHandle.Begin()
+
+	var user authentication.User
+	if err := tx.First(&user, userID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	oldHouseholdID := user.HouseholdID
+
+	newHousehold := database.Household{Name: name}
+	if err := tx.Create(&newHousehold).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Model(&newHousehold).Update("admin_id", userID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var memberCount int64
+	tx.Model(&authentication.User{}).Where("household_id = ?", oldHouseholdID).Count(&memberCount)
+	if memberCount == 1 {
+		if err := tx.Model(&database.Product{}).Where("household_id = ?", oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Model(&user).Update("household_id", newHousehold.ID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// ApplyForHousehold creates a pending HouseholdApplication for the given user and target household.
+// Returns ErrHouseholdNotFound if the target household does not exist,
+// or ErrApplicationAlreadyPending if a pending application already exists.
+func (dbc DatabaseController) ApplyForHousehold(applicantID, householdID uint) error {
+	// Verify target household exists
+	var household database.Household
+	if err := dbc.DBHandle.First(&household, householdID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrHouseholdNotFound
+		}
+		return err
+	}
+
+	// Check for an existing pending application
+	var existing database.HouseholdApplication
+	result := dbc.DBHandle.Where("applicant_id = ? AND household_id = ? AND status = ?", applicantID, householdID, database.ApplicationStatusPending).First(&existing)
+	if result.Error == nil {
+		return errors.ErrApplicationAlreadyPending
+	}
+	if result.Error != gorm.ErrRecordNotFound {
+		return result.Error
+	}
+
+	application := database.HouseholdApplication{
+		ApplicantID: applicantID,
+		HouseholdID: householdID,
+		Status:      database.ApplicationStatusPending,
+	}
+	return dbc.DBHandle.Create(&application).Error
+}
+
+// GetPendingApplicationsForAdmin returns all pending applications for the household the given user administrates.
+// Returns ErrNotHouseholdAdmin if the user is not the admin of their household.
+func (dbc DatabaseController) GetPendingApplicationsForAdmin(adminUserID uint) ([]database.HouseholdApplication, error) {
+	var user authentication.User
+	if err := dbc.DBHandle.First(&user, adminUserID).Error; err != nil {
+		return nil, err
+	}
+
+	var household database.Household
+	if err := dbc.DBHandle.First(&household, user.HouseholdID).Error; err != nil {
+		return nil, err
+	}
+	if household.AdminID != adminUserID {
+		return nil, errors.ErrNotHouseholdAdmin
+	}
+
+	var applications []database.HouseholdApplication
+	err := dbc.DBHandle.Where("household_id = ? AND status = ?", household.ID, database.ApplicationStatusPending).Find(&applications).Error
+	return applications, err
+}
+
+// ApproveApplication approves a household application: moves the applicant into the household.
+// Only the household admin may call this.
+func (dbc DatabaseController) ApproveApplication(applicationID, adminUserID uint) error {
+	tx := dbc.DBHandle.Begin()
+
+	var application database.HouseholdApplication
+	if err := tx.First(&application, applicationID).Error; err != nil {
+		tx.Rollback()
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrApplicationNotFound
+		}
+		return err
+	}
+
+	// Verify caller is admin of target household
+	var household database.Household
+	if err := tx.First(&household, application.HouseholdID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if household.AdminID != adminUserID {
+		tx.Rollback()
+		return errors.ErrNotHouseholdAdmin
+	}
+
+	// Move applicant to household
+	if err := tx.Model(&authentication.User{}).Where("id = ?", application.ApplicantID).Update("household_id", application.HouseholdID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Mark application approved
+	if err := tx.Model(&application).Update("status", database.ApplicationStatusApproved).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// RejectApplication rejects a household application.
+// Only the household admin may call this.
+func (dbc DatabaseController) RejectApplication(applicationID, adminUserID uint) error {
+	tx := dbc.DBHandle.Begin()
+
+	var application database.HouseholdApplication
+	if err := tx.First(&application, applicationID).Error; err != nil {
+		tx.Rollback()
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrApplicationNotFound
+		}
+		return err
+	}
+
+	var household database.Household
+	if err := tx.First(&household, application.HouseholdID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if household.AdminID != adminUserID {
+		tx.Rollback()
+		return errors.ErrNotHouseholdAdmin
+	}
+
+	if err := tx.Model(&application).Update("status", database.ApplicationStatusRejected).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// GetHouseholdMembers returns all users that belong to the given household.
+func (dbc DatabaseController) GetHouseholdMembers(householdID uint) ([]authentication.User, error) {
+	var users []authentication.User
+	err := dbc.DBHandle.Where("household_id = ?", householdID).Find(&users).Error
+	return users, err
+}
+
+// UpdateHouseholdName renames a household. The caller must be the household admin.
+func (dbc DatabaseController) UpdateHouseholdName(householdID, adminUserID uint, name string) error {
+	var household database.Household
+	if err := dbc.DBHandle.First(&household, householdID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrHouseholdNotFound
+		}
+		return err
+	}
+	if household.AdminID != adminUserID {
+		return errors.ErrNotHouseholdAdmin
+	}
+	return dbc.DBHandle.Model(&household).Update("name", name).Error
+}
+
+// GetPendingApplicationsForApplicant returns all pending applications submitted by the given user.
+func (dbc DatabaseController) GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error) {
+	var applications []database.HouseholdApplication
+	err := dbc.DBHandle.
+		Where("applicant_id = ? AND status = ?", applicantUserID, database.ApplicationStatusPending).
+		Find(&applications).Error
+	return applications, err
+}
+
+// CancelApplication cancels a pending application. The caller must be the applicant.
+func (dbc DatabaseController) CancelApplication(applicationID, applicantUserID uint) error {
+	var application database.HouseholdApplication
+	if err := dbc.DBHandle.First(&application, applicationID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrApplicationNotFound
+		}
+		return err
+	}
+	if application.ApplicantID != applicantUserID {
+		return errors.ErrNotApplicationApplicant
+	}
+	if application.Status != database.ApplicationStatusPending {
+		return errors.ErrApplicationNotFound
+	}
+	return dbc.DBHandle.Delete(&application).Error
+}
+
+// RemoveMemberFromHousehold removes a member from the admin's household and assigns them a new personal household.
+func (dbc DatabaseController) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error {
+	tx := dbc.DBHandle.Begin()
+
+	var adminUser authentication.User
+	if err := tx.First(&adminUser, adminUserID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var household database.Household
+	if err := tx.First(&household, adminUser.HouseholdID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if household.AdminID != adminUserID {
+		tx.Rollback()
+		return errors.ErrNotHouseholdAdmin
+	}
+
+	var memberUser authentication.User
+	if err := tx.First(&memberUser, memberUserID).Error; err != nil {
+		tx.Rollback()
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrMemberNotInHousehold
+		}
+		return err
+	}
+	if memberUser.HouseholdID != household.ID {
+		tx.Rollback()
+		return errors.ErrMemberNotInHousehold
+	}
+	if memberUserID == adminUserID {
+		tx.Rollback()
+		return errors.ErrCannotRemoveAdmin
+	}
+
+	newHousehold := database.Household{
+		Name: fmt.Sprintf("%s's Household", memberUser.Username),
+	}
+	if err := tx.Create(&newHousehold).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Model(&newHousehold).Update("admin_id", memberUserID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var memberCount int64
+	tx.Model(&authentication.User{}).Where("household_id = ?", household.ID).Count(&memberCount)
+	if memberCount == 1 {
+		if err := tx.Model(&database.Product{}).Where("household_id = ?", household.ID).Update("household_id", newHousehold.ID).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Model(&memberUser).Update("household_id", newHousehold.ID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// CreateInvitation creates a new household invitation after verifying the inviter is a member
+// and no pending invitation exists for the same email.
+func (dbc DatabaseController) CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error) {
+	// Verify inviter is a member of the household
+	var user authentication.User
+	if err := dbc.DBHandle.Where("id = ? AND household_id = ?", inviterID, householdID).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return database.HouseholdInvitation{}, errors.ErrInvitationNotAuthorized
+		}
+		return database.HouseholdInvitation{}, err
+	}
+
+	// Check no pending invitation exists for same householdID + email
+	var existingInvitation database.HouseholdInvitation
+	err := dbc.DBHandle.Where("household_id = ? AND email = ? AND status = ?", householdID, email, database.InvitationStatusPending).First(&existingInvitation).Error
+	if err == nil {
+		return database.HouseholdInvitation{}, errors.ErrDuplicateInvitation
+	}
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return database.HouseholdInvitation{}, err
+	}
+
+	// Generate token and set expiry
+	token := uuid.New().String()
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+
+	invitation := database.HouseholdInvitation{
+		HouseholdID: householdID,
+		InviterID:   inviterID,
+		Email:       email,
+		Token:       token,
+		Status:      database.InvitationStatusPending,
+		ExpiresAt:   expiresAt,
+	}
+
+	if err := dbc.DBHandle.Create(&invitation).Error; err != nil {
+		return database.HouseholdInvitation{}, err
+	}
+
+	return invitation, nil
+}
+
+// GetInvitationsForHousehold returns all non-deleted invitations for the household, ordered by CreatedAt DESC
+func (dbc DatabaseController) GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error) {
+	var invitations []database.HouseholdInvitation
+	err := dbc.DBHandle.Where("household_id = ? AND inviter_id = ?", householdID, inviterID).Order("created_at DESC").Find(&invitations).Error
+	return invitations, err
+}
+
+// GetPendingInvitationsForHousehold returns all pending invitations for a household, regardless of who sent them.
+func (dbc DatabaseController) GetPendingInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error) {
+	var invitations []database.HouseholdInvitation
+	err := dbc.DBHandle.
+		Where("household_id = ? AND status = ?", householdID, database.InvitationStatusPending).
+		Order("created_at DESC").
+		Find(&invitations).Error
+	return invitations, err
+}
+
+// GetInvitationByToken looks up an invitation by its token
+func (dbc DatabaseController) GetInvitationByToken(token string) (database.HouseholdInvitation, error) {
+	var invitation database.HouseholdInvitation
+	if err := dbc.DBHandle.Where("token = ?", token).First(&invitation).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return database.HouseholdInvitation{}, errors.ErrInvitationNotFound
+		}
+		return database.HouseholdInvitation{}, err
+	}
+	return invitation, nil
+}
+
+// AcceptInvitation processes an invitation acceptance, updating the user's household and marking the invitation as accepted
+func (dbc DatabaseController) AcceptInvitation(token, email string, userID uint) error {
+	var invitation database.HouseholdInvitation
+	if err := dbc.DBHandle.Where("token = ?", token).First(&invitation).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrInvitationNotFound
+		}
+		return err
+	}
+
+	// Check status
+	switch invitation.Status {
+	case database.InvitationStatusAccepted:
+		return errors.ErrInvitationAlreadyUsed
+	case database.InvitationStatusCancelled:
+		return errors.ErrInvitationCancelled
+	}
+
+	// Check expiry
+	if time.Now().After(invitation.ExpiresAt) {
+		dbc.DBHandle.Model(&invitation).Update("status", database.InvitationStatusExpired)
+		return errors.ErrInvitationExpired
+	}
+
+	// Check email match
+	if invitation.Email != email {
+		return errors.ErrInvitationEmailMismatch
+	}
+
+	// Use transaction to update user's household and mark invitation as accepted
+	tx := dbc.DBHandle.Begin()
+	if err := tx.Model(&authentication.User{}).Where("id = ?", userID).Update("household_id", invitation.HouseholdID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Model(&invitation).Update("status", database.InvitationStatusAccepted).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// CancelInvitation cancels a pending invitation after verifying the caller is a member of the invitation's household
+func (dbc DatabaseController) CancelInvitation(invitationID, userID uint) error {
+	var invitation database.HouseholdInvitation
+	if err := dbc.DBHandle.First(&invitation, invitationID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrInvitationNotFound
+		}
+		return err
+	}
+
+	// Verify caller is a member of the invitation's household
+	var user authentication.User
+	if err := dbc.DBHandle.Where("id = ? AND household_id = ?", userID, invitation.HouseholdID).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrInvitationNotAuthorized
+		}
+		return err
+	}
+
+	return dbc.DBHandle.Model(&invitation).Update("status", database.InvitationStatusCancelled).Error
+}
+
+// GetPendingInvitationsNotSent returns all pending invitations that have not been successfully sent yet,
+// or that failed and are due for a retry based on the given retry interval.
+func (dbc DatabaseController) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error) {
+	var invitations []database.HouseholdInvitation
+	// Get invitations that are:
+	// 1. Status is pending
+	// 2. Not yet expired
+	// 3. Either never sent (SentAt IS NULL) or last attempt was before the retry interval
+	query := dbc.DBHandle.Where(
+		"status = ? AND expires_at > ? AND (sent_at IS NULL OR sent_at < ?)",
+		database.InvitationStatusPending,
+		time.Now(),
+		time.Now().Add(-retryInterval),
+	)
+	err := query.Order("created_at ASC").Find(&invitations).Error
+	return invitations, err
+}
+
+// MarkInvitationSent marks an invitation as successfully sent
+func (dbc DatabaseController) MarkInvitationSent(invitationID uint) error {
+	now := time.Now()
+	return dbc.DBHandle.Model(&database.HouseholdInvitation{}).
+		Where("id = ?", invitationID).
+		Updates(map[string]interface{}{
+			"sent_at":       now,
+			"send_attempts": gorm.Expr("send_attempts + 1"),
+		}).Error
+}
+
+// MarkInvitationSendFailed increments the send attempt counter without marking as sent
+func (dbc DatabaseController) MarkInvitationSendFailed(invitationID uint) error {
+	return dbc.DBHandle.Model(&database.HouseholdInvitation{}).
+		Where("id = ?", invitationID).
+		Update("send_attempts", gorm.Expr("send_attempts + 1")).Error
+}
+
+// GetOnboardingState retrieves the onboarding state for a user
+func (dbc DatabaseController) GetOnboardingState(userID uint) (database.OnboardingState, error) {
+	var onboardingState database.OnboardingState
+	err := dbc.DBHandle.Where("user_id = ?", userID).First(&onboardingState).Error
+	return onboardingState, err
+}
+
+// MarkNotificationsSetup marks notifications as configured for a user's onboarding state
+func (dbc DatabaseController) MarkNotificationsSetup(userID uint) error {
+	return dbc.DBHandle.Model(&database.OnboardingState{}).
+		Where("user_id = ?", userID).
+		Update("notifications_setup", true).Error
+}
+
+// MarkHouseholdStepDone marks the household onboarding step as done (e.g. application submitted or skipped)
+func (dbc DatabaseController) MarkHouseholdStepDone(userID uint) error {
+	return dbc.DBHandle.Model(&database.OnboardingState{}).
+		Where("user_id = ?", userID).
+		Update("household_step_done", true).Error
+}
+
+// MarkOnboardingComplete marks onboarding as fully complete for a user
+func (dbc DatabaseController) MarkOnboardingComplete(userID uint) error {
+	return dbc.DBHandle.Model(&database.OnboardingState{}).
+		Where("user_id = ?", userID).
+		Update("onboarding_completed", true).Error
+}
+
+// GetPublicHouseholds returns all households except the one the user already belongs to.
+func (dbc DatabaseController) GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error) {
+	var results []database.HouseholdWithMemberCount
+	err := dbc.DBHandle.Table("households").
+		Select("households.*, COUNT(users.id) as member_count").
+		Joins("LEFT JOIN users ON households.id = users.household_id AND users.deleted_at IS NULL").
+		Where("households.deleted_at IS NULL AND households.id != ?", excludeHouseholdID).
+		Group("households.id").
+		Order("households.name").
+		Find(&results).Error
+	return results, err
+}
+
+// GetOpenFoodFactsCacheByBarcode retrieves a cached OpenFoodFacts entry by barcode.
+// Returns gorm.ErrRecordNotFound if no entry exists.
+func (dbc DatabaseController) GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error) {
+	var entry database.OpenFoodFactsCache
+	result := dbc.DBHandle.Where("barcode = ?", barcode).First(&entry)
+	return entry, result.Error
+}
+
+// CreateOpenFoodFactsCache persists a new OpenFoodFacts cache entry.
+func (dbc DatabaseController) CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error {
+	return dbc.DBHandle.Create(entry).Error
 }

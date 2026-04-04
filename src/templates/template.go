@@ -44,6 +44,20 @@ func hasPassed(t time.Time) bool {
 	return t.Before(time.Now())
 }
 
+func expiryBadgeClass(t time.Time) string {
+	if t.IsZero() {
+		return "bg-secondary"
+	}
+	now := time.Now()
+	if t.Before(now) {
+		return "bg-danger"
+	}
+	if t.Before(now.Add(7 * 24 * time.Hour)) {
+		return "bg-warning"
+	}
+	return "bg-success"
+}
+
 func badgifyCategories(categories string, limit int) template.HTML {
 	var output strings.Builder
 	elements := strings.Split(categories, ",")
@@ -145,6 +159,7 @@ var customTemplateFunctions = template.FuncMap{
 	"inputDate":            inputDate,
 	"today":                today,
 	"hasPassed":            hasPassed,
+	"expiryBadgeClass":     expiryBadgeClass,
 	"badgifyCategories":    badgifyCategories,
 	"splitString":          splitString,
 	"flagReplace":          flagReplace,

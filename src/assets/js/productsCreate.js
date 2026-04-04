@@ -1,8 +1,12 @@
-// Get elements
-let foundBarcodeWrapper = document.getElementById('foundBarcode');
-let productDataWrapper = document.getElementById('productData');
-let inputBarcode = document.getElementById('barcode');
-let inputExpireAt = document.getElementById('expireAt');
+/* Helper to dynamically query DOM elements — always fresh, never stale */
+function getElements() {
+    return {
+        foundBarcodeWrapper: document.getElementById('foundBarcode'),
+        productDataWrapper: document.getElementById('productData'),
+        inputBarcode: document.getElementById('barcode'),
+        inputExpireAt: document.getElementById('expireAt'),
+    };
+}
 const html5QrCode = new Html5Qrcode('barcode-reader',
     { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13] }
 );
@@ -15,49 +19,40 @@ const ProductState = Object.freeze({
 
 // UI functions
 function showError(error) {
-    inputBarcode.value = '';
-    inputBarcode.style.backgroundColor = 'var(--bs-warning)';
-    inputBarcode.style.color = 'var(--bs-warning-text)';
+    const els = getElements();
+    if (els.inputBarcode) {
+        els.inputBarcode.value = '';
+        els.inputBarcode.style.backgroundColor = 'var(--bs-warning)';
+        els.inputBarcode.style.color = 'var(--bs-warning-text)';
+    }
     console.error(error);
 }
 function showBarcode(barcode) {
-    inputBarcode.value = barcode;
-    inputBarcode.classList.add('border-success');
+    const els = getElements();
+    if (els.inputBarcode) {
+        els.inputBarcode.value = barcode;
+        els.inputBarcode.classList.add('border-success');
+    }
 }
 function showAlert(isSuccess, message) {
-    const alertElement = document.getElementById('productAlert');
-    const alertMessage = document.getElementById('alertMessage');
-
     if (isSuccess) {
-        alertElement.classList.remove('alert-danger');
-        alertElement.classList.add('alert-success');
-        alertMessage.textContent = message || "Product created successfully!";
+        proviant.showFeedback('success', 'Product Created', message || 'Product created successfully!');
     } else {
-        alertElement.classList.remove('alert-success');
-        alertElement.classList.add('alert-danger');
-        alertMessage.textContent = message || "Failed to create product. Please try again.";
+        proviant.showFeedback('error', 'Error', message || 'Failed to create product. Please try again.');
     }
-
-    alertElement.classList.add('show');
-    setTimeout(() => dismissAlert(), 3000);
-}
-function dismissAlert() {
-    const alertElement = document.getElementById('productAlert');
-    alertElement.classList.remove('show');
 }
 function clearProductInfo() {
     document.getElementById('productInfoImage').src = '';
-    document.getElementById('productInfoImage').style.height = '160px';
     document.getElementById('productInfoName').innerText = '';
     document.getElementById('productInfoGenericName').innerText = '';
 }
 function showProductData(product) {
-    document.getElementById('productInfoImage').src = product.image_url;
-    document.getElementById('productInfoName').innerText = product.product_name;
-    if (product.generic_name != 'undefined' && product.generic_name != null) {
-        document.getElementById('productInfoGenericName').innerText = product.generic_name;
+    document.getElementById('productInfoImage').src = product.imageUrl;
+    document.getElementById('productInfoName').innerText = product.productName;
+    if (product.categories != 'undefined' && product.categories != null) {
+        document.getElementById('productInfoGenericName').innerText = product.categories;
     }
-    document.getElementById('productData').style.display = '';
+    document.getElementById('productData').classList.remove('d-none');
 }
 
 // UI toggle functions
@@ -82,11 +77,11 @@ function togglePlaceholders(state) {
     const placeholders = document.querySelectorAll('.placeholder');
     if (state) {
         placeholders.forEach(element => {
-            element.style.display = '';
+            element.classList.remove('d-none');
         });
     } else {
         placeholders.forEach(element => {
-            element.style.display = 'none';
+            element.classList.add('d-none');
         });
     }
 }
@@ -106,7 +101,7 @@ function clearScanUI() {
     toggleBtnScan(true);
     toggleBtnAddProduct(true);
     togglePlaceholders(false);
-    document.getElementById('barcode-reader-wrapper').classList.remove('py-4');
+    document.getElementById('barcode-reader-wrapper').style.display = 'none';
     if (html5QrCode.getState() == Html5QrcodeScannerState.SCANNING) {
         html5QrCode.stop();
         html5QrCode.clear();
@@ -166,26 +161,50 @@ function setProductOptionsState(productState, products) {
             break;
     }
 }
+function parseInputDate(value) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
+function formatInputDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function shiftExpiry(days, months) {
+    // Always read the element fresh — avoids stale reference after DOM updates
+    const el = document.getElementById('expireAt');
+    const base = el.value ? parseInputDate(el.value) : new Date();
+    if (days !== 0) base.setDate(base.getDate() + days);
+    if (months !== 0) base.setMonth(base.getMonth() + months);
+    el.value = formatInputDate(base);
+    // Flash the field so the user sees the value changed
+    el.classList.remove('date-updated');
+    void el.offsetWidth; // force reflow to restart the animation if clicked repeatedly
+    el.classList.add('date-updated');
+    el.addEventListener('animationend', () => el.classList.remove('date-updated'), { once: true });
+}
 
 // Async functions
 async function queryProductInfoRequest(barcode) {
-    let openFoodFactsAPIRURL = `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=product_name,countries,generic_name,image_url`;
-    const response = await fetch(openFoodFactsAPIRURL, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    }).catch(() => {
-        showError(`Could not find product with barcode ${inputBarcode.value}!`);
+    return proviant.getOpenFoodFactsData(barcode).catch(() => {
+        const els = getElements();
+        const bc = els.inputBarcode ? els.inputBarcode.value : 'unknown';
+        showError(`Could not find product with barcode ${bc}!`);
     });
-    return response.json();
 }
 // Function handlers
 function queryProductInfo(barcode) {
     clearProductInfo();
     queryProductInfoRequest(barcode).then((response) => {
-        let product = response.product;
-        showProductData(product);
+        if (response && response.code === 200) {
+            showProductData(response.message);
+        } else {
+            showError(`Could not find product with barcode ${barcode}`);
+            clearProductInfo();
+        }
     }).catch((error) => {
         showError('Error: ' + error);
         clearProductInfo();
@@ -194,18 +213,12 @@ function queryProductInfo(barcode) {
 function storeBarcode(barcode) {
     document.getElementById('barcode').dataset.barcode = barcode;
     document.getElementById('barcode').value = barcode;
+    document.getElementById('productData').classList.remove('d-none');
 }
-function setDeleteModalBody () {
+function getSelectedProductName() {
     const instanceDropdown = document.getElementById('instanceDropdown');
-    const productData = instanceDropdown[instanceDropdown.selectedIndex].innerText;
-    const deleteButtonModalBody = document.getElementById('deleteModalBody');
-    deleteButtonModalBody.innerHTML = `Do you want to delete the following product:</br></br>${productData.replaceAll(';','</br>')}`;
-}
-function setArchiveModalBody () {
-    const instanceDropdown = document.getElementById('instanceDropdown');
-    const productData = instanceDropdown[instanceDropdown.selectedIndex].innerText;
-    const archiveButtonModalBody = document.getElementById('archiveModalBody');
-    archiveButtonModalBody.innerHTML = `Do you want to archive the following product:</br></br>${productData.replaceAll(';','</br>')}`;
+    if (!instanceDropdown || instanceDropdown.selectedIndex < 0) return '';
+    return instanceDropdown[instanceDropdown.selectedIndex].innerText.split(';')[0].trim();
 }
 function checkBarcode(barcode) {
   proviant.getProductsByBarcode(barcode).then((response) => {
@@ -241,7 +254,7 @@ function handleScanButton() {
     if (btnScan.dataset.action == 'scan') {
         toggleGrowers(true);
         toggleBtnScan(false);
-        document.getElementById('barcode-reader-wrapper').classList.add('py-4');
+        document.getElementById('barcode-reader-wrapper').style.display = '';
         html5QrCode.start(
             { facingMode: 'environment' },
             {
@@ -265,11 +278,12 @@ function handleScanButton() {
     }
 };
 function handleBtnAddProduct() {
-    if (!(inputBarcode.checkValidity() && inputExpireAt.checkValidity())) {
+    const els = getElements();
+    if (!els.inputBarcode || !els.inputExpireAt) return;
+    if (!(els.inputBarcode.checkValidity() && els.inputExpireAt.checkValidity())) {
         return;
     }
 
-    dismissAlert();
 
     try {
         const barcode = document.getElementById('barcode').value;
@@ -277,7 +291,9 @@ function handleBtnAddProduct() {
             throw new Error('Barcode cannot be empty');
         }
         const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
-        proviant.createProduct(barcode, expireAt).then((response) => {
+        const amountEl = document.getElementById('amount');
+        const amount = amountEl ? parseInt(amountEl.value, 10) || 1 : 1;
+        proviant.createProduct(barcode, expireAt, amount).then((response) => {
             switch (response.code) {
                 case 201:
                     showAlert(true, `Product with barcode '${barcode}' was created successfully`);
@@ -304,29 +320,45 @@ function handleBtnShowProduct() {
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
     globalThis.location = `/web/products/${productId}/view`;
 }
-function handleBtnDeleteProduct() {
+function handleBtnDeleteProductModal() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
-
-    proviant.deleteProduct(productId, false).then((response) => {
-        if (response.code == 200) {
-          globalThis.location.reload();
-        } else {
-          showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
-        }
-    });
+    const productName = getSelectedProductName();
+    proviant.showConfirm(
+        'Delete Product',
+        `Delete "${productName}"? This cannot be undone.`,
+        function () {
+            proviant.deleteProduct(productId, false).then((response) => {
+                if (response.code == 200) {
+                    globalThis.location.reload();
+                } else {
+                    proviant.showFeedback('error', 'Delete Failed', `Error deleting product: ${response.message}`);
+                }
+            });
+        },
+        'Delete',
+        'danger'
+    );
 }
-function handleBtnArchiveProduct() {
+function handleBtnArchiveProductModal() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
-
-    proviant.deleteProduct(productId, true).then((response) => {
-      if (response.code == 200) {
-        globalThis.location.reload();
-      } else {
-        showAlert(false, `Error deleting product with ID ${productId}: ${response.message}`);
-      }
-    });
+    const productName = getSelectedProductName();
+    proviant.showConfirm(
+        'Archive Product',
+        `Archive "${productName}"?`,
+        function () {
+            proviant.deleteProduct(productId, true).then((response) => {
+                if (response.code == 200) {
+                    globalThis.location.reload();
+                } else {
+                    proviant.showFeedback('error', 'Archive Failed', `Error archiving product: ${response.message}`);
+                }
+            });
+        },
+        'Archive',
+        'warning'
+    );
 }
 function handleBtnShowProducts() {
     const barcode = document.getElementById('barcode').value;
@@ -335,9 +367,11 @@ function handleBtnShowProducts() {
 
 // Input handlers
 function handleChangedBarcode() {
-    if (!(inputBarcode.checkValidity())) {
-        if (inputBarcode.classList.contains('border-success')) {
-            inputBarcode.classList.remove('border-success')
+    const els = getElements();
+    if (!els.inputBarcode) return;
+    if (!(els.inputBarcode.checkValidity())) {
+        if (els.inputBarcode.classList.contains('border-success')) {
+            els.inputBarcode.classList.remove('border-success')
         }
         return;
     }
@@ -347,65 +381,114 @@ function handleChangedBarcode() {
     storeBarcode(barcode);
     clearScanUI();
     checkBarcode(barcode);
-    dismissAlert();
 };
 
-// Add event listeners
-globalThis.addEventListener('load', function () {
-    // Fetch all the forms we want to apply custom Bootstrap validation styles to
-    let forms = document.getElementsByClassName('needs-validation');
-    // Loop over them and prevent submission
-    Array.prototype.filter.call(forms, function (form) {
-        form.addEventListener('submit', function (event) {
-            if (form.checkValidity() === false) {
-                event.preventDefault();
-                event.stopPropagation();
-            } else {
-                createProduct();
-                event.preventDefault();
-            }
-            form.classList.add('was-validated');
-        }, false);
-    });
-}, false);
-document.addEventListener("DOMContentLoaded", () => {
-    const alertElement = document.getElementById('productAlert');
-    alertElement.addEventListener('close.bs.alert', function (event) {
+// Add event listeners — all use event delegation to avoid stale references
+
+/* Event delegation for form submission */
+document.addEventListener('submit', function (event) {
+    const target = event.target;
+    if (target.classList.contains('needs-validation')) {
+        if (target.checkValidity() === false) {
+            event.preventDefault();
+            event.stopPropagation();
+        } else {
+            event.preventDefault();
+            handleBtnAddProduct();
+        }
+        target.classList.add('was-validated');
+    }
+});
+
+/* Event delegation for all clicks */
+document.addEventListener('click', function (event) {
+    const target = event.target;
+
+    if (target.closest('#btnAddProduct')) {
         event.preventDefault();
-        alertElement.classList.remove('show');
-    });
+        handleBtnAddProduct();
+        return;
+    }
+
+    if (target.closest('#btnShowProduct')) {
+        event.preventDefault();
+        handleBtnShowProduct();
+        return;
+    }
+
+    if (target.closest('#btnDeleteProductModal')) {
+        event.preventDefault();
+        handleBtnDeleteProductModal();
+        return;
+    }
+
+    if (target.closest('#btnArchiveProductModal')) {
+        event.preventDefault();
+        handleBtnArchiveProductModal();
+        return;
+    }
+
+    if (target.closest('#btnShowProducts')) {
+        event.preventDefault();
+        handleBtnShowProducts();
+        return;
+    }
+
+    if (target.closest('#btnScan')) {
+        event.preventDefault();
+        handleScanButton();
+        return;
+    }
+
+    if (target.closest('#btnAmountDec')) {
+        event.preventDefault();
+        const hiddenInput = document.getElementById('amount');
+        const display = document.getElementById('amountDisplay');
+        if (hiddenInput && display) {
+            const newVal = Math.max(1, parseInt(hiddenInput.value, 10) - 1);
+            hiddenInput.value = newVal;
+            display.textContent = newVal;
+        }
+        return;
+    }
+
+    if (target.closest('#btnAmountInc')) {
+        event.preventDefault();
+        const hiddenInput = document.getElementById('amount');
+        const display = document.getElementById('amountDisplay');
+        if (hiddenInput && display) {
+            const newVal = parseInt(hiddenInput.value, 10) + 1;
+            hiddenInput.value = newVal;
+            display.textContent = newVal;
+        }
+        return;
+    }
+
+    if (target.closest('#btnExpireAdd3')) {
+        event.preventDefault();
+        shiftExpiry(3, 0);
+        return;
+    }
+
+    if (target.closest('#btnExpireAdd7')) {
+        event.preventDefault();
+        shiftExpiry(7, 0);
+        return;
+    }
+
+    if (target.closest('#btnExpireAdd1m')) {
+        event.preventDefault();
+        shiftExpiry(0, 1);
+        return;
+    }
 });
-document.getElementById('barcode').addEventListener('input', function (event) {
-    event.preventDefault();
-    handleChangedBarcode();
-})
-document.getElementById('btnAddProduct').onclick = function (event) {
-    event.preventDefault();
-    handleBtnAddProduct();
-}
-document.getElementById('btnShowProduct').onclick = function (event) {
-    event.preventDefault();
-    handleBtnShowProduct();
-}
-document.getElementById('deleteModal').addEventListener('show.bs.modal', (event) => {
-    setDeleteModalBody();
+
+/* Event delegation for barcode input */
+document.addEventListener('input', function (event) {
+    const target = event.target;
+    if (target.id === 'barcode' || target.name === 'barcode') {
+        handleChangedBarcode();
+    }
 });
-document.getElementById('archiveModal').addEventListener('show.bs.modal', (event) => {
-    setArchiveModalBody();
-});
-document.getElementById('btnDeleteProduct').onclick = function (event) {
-    event.preventDefault();
-    handleBtnDeleteProduct();
-}
-document.getElementById('btnArchiveProduct').onclick = function (event) {
-    event.preventDefault();
-    handleBtnArchiveProduct();
-}
-document.getElementById('btnShowProducts').onclick = function (event) {
-    event.preventDefault();
-    handleBtnShowProducts();
-}
-document.getElementById('btnScan').onclick = function (event) {
-    event.preventDefault();
-    handleScanButton();
-};
+
+

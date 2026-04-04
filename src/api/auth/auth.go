@@ -26,10 +26,15 @@ import (
 // @Router       	/auth/signup [post]
 func Signup(ctx *gin.Context) {
 	// Get logger instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	loggerValue, loggerOk := ctx.Get("logger")
+	if !loggerOk {
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
+		return
+	}
+	logger := loggerValue.(*zerolog.Logger)
 
 	// Get database instance from context
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := ctx.Get("dbHandle")
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -37,7 +42,7 @@ func Signup(ctx *gin.Context) {
 	}
 
 	// Create database controller object
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	dbController := database.DatabaseController{DBHandle: dbHandle.(*gorm.DB)}
 
 	// Parse request body to Login
 	var signup authentication.Signup
@@ -83,9 +88,20 @@ func Signup(ctx *gin.Context) {
 		logger.Error().Msgf("User '%s' with ID '%d' could not be created. Error: %s", user.Username, user.ID, createError.Error())
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
 		return
-	} else {
-		logger.Info().Msgf("New User '%s' with ID '%d' created", user.Username, user.ID)
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
-		return
 	}
+
+	logger.Info().Msgf("New User '%s' with ID '%d' created", user.Username, user.ID)
+
+	// Auto-accept invitation if token was provided during signup
+	if signup.InviteToken != "" {
+		acceptErr := dbController.AcceptInvitation(signup.InviteToken, user.MailAddress, user.ID)
+		if acceptErr != nil {
+			logger.Warn().Msgf("Failed to auto-accept invitation after signup: %s", acceptErr.Error())
+			// Don't fail the signup, just log the warning
+		} else {
+			logger.Info().Msgf("Successfully auto-accepted invitation for user '%s'", user.Username)
+		}
+	}
+
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
 }

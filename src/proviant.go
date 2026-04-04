@@ -69,20 +69,17 @@ func setupDatabase(logger *zerolog.Logger, databaseConfiguration *configuration.
 }
 
 // setupNotificationController initializes the notification controller and starts the notification handler goroutine.
-func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB) {
-	// Check if notifications are enabled
-	if !proviantConfiguration.Notification.Enabled {
-		logger.Info().Msg("Notifications are disabled")
-	} else {
-		// Generate notification controller
-		notificationController := controllers.NotificationController{
-			Logger:             logger,
-			Configuration:      proviantConfiguration.Notification,
-			DatabaseController: &dbController.DatabaseController{DBHandle: dbHandle},
-		}
-		// Dispatch notification handler goroutine
-		notificationController.Dispatch()
-	}
+func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB) *controllers.NotificationController {
+	notificationController := controllers.NewNotificationController(
+		logger,
+		&proviantConfiguration.Notification,
+		&dbController.DatabaseController{DBHandle: dbHandle},
+	)
+	// Dispatch notification handler goroutine
+	notificationController.Dispatch()
+	// Dispatch invitation email retry goroutine (uses same Interval config)
+	notificationController.DispatchInvitations(proviantConfiguration.Server.BaseURL)
+	return notificationController
 }
 
 // setupConfig initializes the configuration and returns a ProviantConfiguration instance.
@@ -143,9 +140,9 @@ func validateAPIs(config *configuration.ProviantConfiguration) {
 }
 
 // startProviantServer starts the Proviant server.
-func startProviantServer(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController) {
+func startProviantServer(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) {
 	// Call function to setup router and pass references
-	proviantEngine := router.SetupRouter(logger, proviantConfiguration, dbHandle, offacntrl)
+	proviantEngine := router.SetupRouter(logger, proviantConfiguration, dbHandle, offacntrl, notificationController)
 
 	// Get server port or instead set default value
 	serverPort := proviantConfiguration.Server.Port
@@ -189,6 +186,10 @@ func main() {
 		&dbModel.Household{},
 		&authentication.User{},
 		&dbModel.Product{},
+		&dbModel.HouseholdApplication{},
+		&dbModel.HouseholdInvitation{},
+		&dbModel.OnboardingState{},
+		&dbModel.OpenFoodFactsCache{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
@@ -200,11 +201,24 @@ func main() {
 		panic(breakingMigrationsError)
 	}
 
+	// Backfill default amount for existing products
+	if amountMigrationError := migrations.SetDefaultProductAmounts(logger, dbHandle); amountMigrationError != nil {
+		panic(amountMigrationError)
+	}
+
 	// Check API controller config and create instance
 	validateAPIs(proviantConfiguration)
 	offacntrl := &controllers.OpenFoodFactsAPIController{
 		Configuration: proviantConfiguration.OpenFoodFacts,
 		Logger:        logger,
+	}
+
+	// Validate notification configuration
+	if proviantConfiguration.Notification.Enabled {
+		if err := proviantConfiguration.ValidateNotificationConfiguration(); err != nil {
+			logger.Error().Msg(err.Error())
+			panic(err)
+		}
 	}
 
 	// Setup NotificationController if notifications are enabled
@@ -218,5 +232,7 @@ func main() {
 	}
 	proviantConfiguration.TemplateCache = templateCache
 
-	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl)
+	notificationController := setupNotificationController(logger, proviantConfiguration, dbHandle)
+
+	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl, notificationController)
 }

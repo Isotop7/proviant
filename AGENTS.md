@@ -7,25 +7,25 @@ This document provides guidelines for agentic coding assistants working on the P
 ### Build and Setup
 ```bash
 # Initialize project (install dependencies, build CSS/JS, copy assets)
-make init
+task init
 
 # Run development server
-make run
+task run
 
 # Build container image
-make containerimage
+task containerimage
 
 # Run container
-make runcontainer
+task runcontainer
 ```
 
 ### Quality Control
 ```bash
 # Format Go code and tidy dependencies
-make tidy
+task tidy
 
 # Run all Go tests
-make test
+task test
 
 # Run a single test file
 cd src && go test -race -vet=off ./path/to/package
@@ -34,7 +34,7 @@ cd src && go test -race -vet=off ./path/to/package
 cd src && go test -race -vet=off ./path/to/package -run TestFunctionName
 
 # Run linter (requires podman or docker)
-make check
+task check
 
 # Run linter with specific file
 cd src && golangci-lint run path/to/file.go
@@ -43,10 +43,10 @@ cd src && golangci-lint run path/to/file.go
 ### Frontend
 ```bash
 # Build CSS
-make css
+task css
 
 # Build JS
-make js
+task js
 
 # Run frontend tests
 npm test
@@ -69,7 +69,7 @@ import (
 ```
 
 ### Formatting
-- Use `go fmt` (run `make tidy` before committing)
+- Use `go fmt` (run `task tidy` before committing)
 - Use tabs for indentation (Go standard)
 - Maximum line length: ~120 characters (not enforced but recommended)
 
@@ -85,6 +85,7 @@ import (
 - Use GORM struct tags for database models: `gorm:"index, not null"`
 - Use JSON struct tags for API responses: `json:"fieldName"`
 - Use `json:"-"` to exclude fields from JSON (e.g., sensitive fields)
+- Use EAN-13 format for barcode (alphanumeric, 13 digits)
 - Embed `gorm.Model` for ID, CreatedAt, UpdatedAt, DeletedAt
 - Example:
 ```go
@@ -155,14 +156,41 @@ logger.Info().Msg("Logging initialized")
 ### Frontend/Assets
 - SCSS files in `src/templates/scss/`
 - Compiled CSS goes to `src/assets/css/`
-- Run `make css` to build SCSS to CSS
+- **Always run `task css` after any change to `.scss` files** — the compiled CSS is what gets served; editing SCSS without recompiling has no visible effect
 - JavaScript files served from `src/assets/js/`
 - Use Bootstrap for styling, Bootstrap Icons for icons
+
+#### Service Worker Caching
+- The project uses a service worker (`src/assets/js/sw.js`)
+- **CSS and other non-JS assets** under `/assets/` use **cache-first** — bump `CACHE_NAME` in `sw.js` after every `task css` run (or any change to fonts, icons, or other static assets)
+- **JS files** use **network-first** — they are always fetched fresh; bumping `CACHE_NAME` is NOT needed for JS changes
+- After bumping `CACHE_NAME`, run `task css` (or `task js`) so the new version is deployed alongside the asset change
+
+#### Frontend JavaScript Event Handling
+- **Always use event delegation** for button/input handlers: `document.addEventListener("click", ...)` with `event.target.closest()`
+- **Never capture DOM references at script load time** (e.g., `const btn = document.getElementById("btnX"); btn.onclick = ...`) — these become stale after navigation or DOM updates
+- Query DOM elements inside the handler function when needed, not at module scope
+- This pattern ensures handlers work reliably regardless of browser caching or SPA-like navigation
+- Example:
+```javascript
+// WRONG: stale reference captured once
+const btnSave = document.getElementById("btnSave");
+btnSave.onclick = function() { ... };
+
+// CORRECT: event delegation, always works
+document.addEventListener("click", function(event) {
+  if (event.target.closest("#btnSave")) {
+    event.preventDefault();
+    // query elements here, not at top of file
+    handleSave();
+  }
+});
+```
 
 ### Documentation
 - Use godoc comments for exported functions
 - Include Swagger annotations for API endpoints
-- Run `make doc` to generate package documentation and API docs before commits to regenerate docs
+- Run `task doc` to generate package documentation and API docs before commits to regenerate docs
 - Swagger annotations format: `@Summary`, `@Description`, `@Tags`, `@Router`
 
 ### Performance Considerations
@@ -182,9 +210,41 @@ logger.Info().Msg("Logging initialized")
 - `src/web/` - Frontend page handlers
 - `docs/` - Generated documentation
 
+## Dashboard / Portal
+
+The home page (`/web/`) is a fully client-side rendered dashboard. The Go handler (`web/frontend.go → Root`) only provides `HasHousehold` and `Household` — no server-side tile data.
+
+**API endpoint:** `GET /api/v1/products/stats` (JWT-protected) — returns `apiModel.ProductStatsResponse` defined in `src/models/api/stats.go`. Fields:
+- `wasteCount`, `wastePercent`, `totalActive` — active/expired counts
+- `totalArchived`, `uniqueArchived` — archived product counts
+- `lastInsertedProduct` — name of the most recently added product
+- `expiringSoon` — `[]StatsExpiringProduct` (name + date) for products expiring within the next 7 days (today inclusive), sorted ascending
+- `categories` — `map[string]int` category breakdown of active products
+- `expiryTrend` — `[]StatsMonthlyCount` for the next 12 calendar months
+
+**Frontend:** `src/assets/js/homeStats.js` fetches the stats endpoint on `DOMContentLoaded` and:
+1. Prepends metric tiles (via `renderTile` / `renderListTile`) into `#dashboard` before the `.chart-col` sentinel elements
+2. Renders three Chart.js charts into the canvas elements already present in `home.tmpl`
+
+**Chart.js:** bundled as `src/assets/js/chart.umd.min.js` (copied from `node_modules` via `task js`). Loaded via a `<script>` tag in `home.tmpl` before `homeStats.js`.
+
+**Removed:** `GetUserHomeTiles` DB method and the `webparts` import from `databasecontroller.go` are gone — tile data now comes entirely from the stats API.
+
 ## Important Notes
+- Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask
 - Project uses embedded filesystems (embed) for templates and assets
 - Supports both SQLite and MariaDB backends
 - Uses JWT tokens for API authentication
 - CORS is configurable (allow all or specific origins)
-- Run `make check` before committing - golangci-lint must pass
+- Run `task check` before committing - golangci-lint must pass
+- **Database migrations**: When creating a new database model or modifying an existing one, always add it to the `AutoMigrate` call in `src/proviant.go` (around line 188). Forgetting this will cause "no such table" errors at runtime. Example:
+  ```go
+  migrationError := dbHandle.AutoMigrate(
+      &dbModel.Household{},
+      &authentication.User{},
+      &dbModel.Product{},
+      &dbModel.HouseholdApplication{},
+      &dbModel.YourNewModel{},  // ← always add new models here
+  )
+  ```
+- **OpenFoodFacts caching**: Barcode lookups go through the backend proxy endpoint `GET /api/v1/products/openfoodfacts/:barcode` (JWT-protected). When `openfoodfacts.cacheEnabled: true`, responses are stored in the `open_food_facts_caches` table (`src/models/database/openfoodfacts_cache.go`) and served from there on subsequent requests. The frontend (`src/assets/js/productsCreate.js`) calls `proviant.getOpenFoodFactsData()` from `proviant.js` — **do not** reintroduce direct browser calls to `world.openfoodfacts.org`. Cache operations are in `src/controllers/database/databasecontroller.go` (`GetOpenFoodFactsCacheByBarcode`, `CreateOpenFoodFactsCache`).

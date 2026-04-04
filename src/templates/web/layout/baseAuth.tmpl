@@ -1,11 +1,21 @@
 {{define "baseAuth"}}
 <!doctype html>
-<html lang="de" data-bs-theme="dark" class="h-100">
+<html lang="de" data-bs-theme="light" class="h-100">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ if .Title }}proviant - {{ .Title}}{{ else }}proviant{{ end }}</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3D7A5C">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Proviant">
+    <link rel="apple-touch-icon" href="/assets/icons/proviant_logo_192.png">
+
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="stylesheet" href="/assets/css/auth.css">
     <script src="/assets/js/proviant.js"></script>

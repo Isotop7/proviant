@@ -1,8 +1,8 @@
 name: CI
 
 env:
-  GO_VERSION: 1.24
-  GOLANGCI_LINT_VERSION: v2.7.2
+  GO_VERSION: 1.25.8
+  GOLANGCI_LINT_VERSION: v2.11.4
   CODEBERG_REGISTRY: codeberg.org
   PRIVATE_REGISTRY: registry.hr94.de
 
@@ -31,11 +31,34 @@ jobs:
         run: |
           cd ./src
           go test -race $(go list ./... | grep -v /vendor/)
+      - name: Test code coverage
+        run: |
+          cd ./src
+          go test -coverprofile=coverage.out ./... &&
+          go mod verify
       - name: Compile code
         run: |
           cd ./src
           mkdir -p release
           go build -o release ./...
+  frontend-check:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install
+      - name: Lint CSS
+        run: npm run lint-css
+      - name: Lint JS
+        run: npm run lint-js
+      - name: Lint HTML
+        run: npm run lint-html
+
   docker-build-and-push:
     needs: check
     if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main'

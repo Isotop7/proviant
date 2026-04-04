@@ -1,20 +1,57 @@
 version: "2"
 
 linters:
-  #default: fast
-
   enable:
-    - gocritic
-    - staticcheck
+    # Core defaults (catch real bugs with near-zero false positives)
+    - errcheck
     - govet
+    - ineffassign
+    - staticcheck
+    - unused
 
-  disable: []
+    # Extra value (performance, security, resource leaks)
+    - gocritic
+    - bodyclose
+    - gosec
 
-  # All available settings of specific linters.
   settings:
     gocritic:
-      enable-all: true
-      disabled-checks: []
+      # Focused subset that catches bugs/perf issues without style noise
+      enabled-checks:
+        - rangeValCopy
+        - hugeParam
+        - emptyDecl
+        - sloppyReassign
+        - typeAssertChain
+        - unlabelStmt
+        - commentedOutCode
+
+  exclusions:
+    rules:
+      # G107: URL comes from trusted config, not user input
+      - path: openfoodfactsapicontroller\.go
+        linters: [gosec]
+        text: "G107:"
+      # G302: Log file intentionally group-readable (0664) for server deployments
+      - path: proviant\.go
+        linters: [gosec]
+        text: "G302:"
+      # G203: Template helpers intentionally produce HTML from controlled internal data
+      - path: template\.go
+        linters: [gosec]
+        text: "G203:"
+      # G117: Auth test contains test credentials
+      - path: auth_test\.go
+        linters: [gosec]
+        text: "G117:"
+      # G117: User test contains test credentials
+      - path: user_test\.go
+        linters: [gosec]
+        text: "G117:"
+      # G101: Template contains matching between country codes and emojis
+      - path: template\.go
+        linters: [gosec]
+        text: "G101:"
 
 formatters:
   enable: []

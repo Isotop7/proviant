@@ -15,6 +15,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// OpenFoodFactsAPIControllerInterface defines the contract for interacting with OpenFoodFacts
+type OpenFoodFactsAPIControllerInterface interface {
+	GetDataset(barcode string) (database.Product, error)
+}
+
 // OpenFoodFactsAPIController is the object struct for interacting with the API of OpenFoodFacts
 // It uses the given configuration for accessing the API
 type OpenFoodFactsAPIController struct {

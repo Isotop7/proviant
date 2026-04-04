@@ -1,0 +1,101 @@
+{{ define "content" }}
+
+<div class="container vh-100 d-flex justify-content-center align-items-center">
+    <main class="onboarding-wizard">
+        <!-- Header -->
+        <div class="text-center mb-4">
+            <img src="/assets/icons/hero.png" class="img-fluid mb-3 onboarding-hero" alt="proviant">
+            <h2 class="fw-bold">Welcome to Proviant, {{.Username}}!</h2>
+            <p class="text-muted">Let's get you set up in just a few steps.</p>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="d-flex justify-content-center mb-4">
+            <div class="step-indicator" id="stepIndicator1">
+                <div class="step-circle">1</div>
+                <small>Notifications</small>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-indicator" id="stepIndicator2">
+                <div class="step-circle">2</div>
+                <small>Household</small>
+            </div>
+        </div>
+
+        <!-- Step 1: Notifications -->
+        <div class="onboarding-step" id="step1">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-bell me-2"></i>Stay Notified</h5>
+                    <p class="card-text text-muted">Get notified when products in your household are about to expire. You can configure this later in settings.</p>
+                    <button id="btnConfigureNotifications" class="btn btn-primary">
+                        <i class="bi bi-gear me-1"></i>Configure Notifications
+                    </button>
+                    <button id="btnSkipNotifications" class="btn btn-link btn-sm ms-2">Skip for now</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Household Selection -->
+        <div class="onboarding-step d-none" id="step2">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-people me-2"></i>Join a Household</h5>
+                    <p class="card-text text-muted">Households let you share your pantry with family and roommates. You already have a personal household, but you can join another one.</p>
+                    <div id="householdList" class="list-group mb-3 d-none"></div>
+                    <div id="householdListLoading" class="text-center text-muted d-none">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <span class="ms-2">Loading households...</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button id="btnLoadHouseholds" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-search me-1"></i>Browse Households
+                        </button>
+                        <button id="btnSkipHousehold" class="btn btn-link btn-sm">Skip for now</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completion Step -->
+        <div class="onboarding-step d-none" id="stepComplete">
+            <div class="card shadow-sm border-success">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle-fill text-success fs-1"></i>
+                    <h5 class="card-title mt-3">You're All Set!</h5>
+                    <p class="card-text text-muted">Start adding products to your pantry and tracking expiration dates.</p>
+                    <button id="btnFinishOnboarding" class="btn btn-success">
+                        <i class="bi bi-arrow-right me-1"></i>Go to Proviant
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Start Guide -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-lightbulb me-2"></i>Quick Start Guide</h6>
+                <ul class="mb-0 small text-muted">
+                    <li><strong>Add products</strong> — Scan barcodes or search the Open Food Facts database</li>
+                    <li><strong>Track expiration</strong> — Set expiry dates to avoid food waste</li>
+                    <li><strong>Share with household</strong> — Invite family members to manage the pantry together</li>
+                    <li><strong>Get notified</strong> — Receive alerts before products expire</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="d-flex justify-content-between mt-4">
+            <button id="btnSkipOnboarding" class="btn btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i>Skip Onboarding
+            </button>
+            <button id="btnNextStep" class="btn btn-primary d-none">
+                Next <i class="bi bi-arrow-right ms-1"></i>
+            </button>
+        </div>
+    </main>
+</div>
+
+<script src="/assets/js/onboarding.js"></script>
+
+{{ end }}

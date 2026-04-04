@@ -11,6 +11,7 @@ type Signup struct {
 	Username    string `form:"username" json:"username" binding:"required"`
 	Password    string `form:"password" json:"password" binding:"required"`
 	MailAddress string `form:"mailAddress" json:"mailAddress" binding:"required"`
+	InviteToken string `form:"inviteToken" json:"inviteToken"`
 }
 
 // IsValid checks if the given signup instance is valid

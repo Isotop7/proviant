@@ -7,6 +7,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api/auth"
 	"codeberg.org/isotop7/proviant/api/common"
+	"codeberg.org/isotop7/proviant/api/onboarding"
 	v1 "codeberg.org/isotop7/proviant/api/v1"
 	"codeberg.org/isotop7/proviant/assets"
 	"codeberg.org/isotop7/proviant/controllers"
@@ -22,7 +23,7 @@ import (
 )
 
 // SetupRouter creates the gin engine and associated middleware
-func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController) *gin.Engine {
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) *gin.Engine {
 	// Generate new gin instance
 	engine := gin.New()
 
@@ -65,6 +66,24 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Template cache
 	engine.Use(func(ctx *gin.Context) {
 		ctx.Set("templateCache", proviantConfiguration.TemplateCache)
+		ctx.Next()
+	})
+
+	// Notification controller for invitation emails
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("notificationController", notificationController)
+		ctx.Next()
+	})
+
+	// SMTP configuration for invitation emails
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("smtpConfig", proviantConfiguration.Notification.SMTP)
+		ctx.Next()
+	})
+
+	// Base URL for constructing magic links
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("baseURL", proviantConfiguration.Server.BaseURL)
 		ctx.Next()
 	})
 
@@ -134,6 +153,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Signup routes
 	engine.POST("/auth/signup", auth.Signup)
+	engine.POST("/auth/invite/accept", auth.AcceptInvitation)
 	engine.GET("/auth/refresh_token", jwtAPIMiddleware.RefreshHandler)
 
 	// Public product routes
@@ -145,25 +165,80 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.POST("", v1.CreateProduct)
 	publicProductAPI.POST("/scan", v1.ScanProduct)
 	publicProductAPI.GET("/byBarcode/:barcode", v1.GetProductsByBarcode)
+	publicProductAPI.GET("/openfoodfacts/:barcode", v1.GetOpenFoodFactsData)
 	publicProductAPI.GET("/search", v1.SearchProducts)
 	publicProductAPI.DELETE("/bulkDelete", v1.BulkDeleteProducts)
 	publicProductAPI.DELETE("/bulkArchive", v1.BulkArchiveProducts)
 	publicProductAPI.POST("/bulkRestore", v1.BulkRestoreProducts)
+	publicProductAPI.GET("/stats", v1.GetProductStats)
 
 	// Protected user routes
 	protectedUserAPI := engine.Group("/api/v1/user")
 	protectedUserAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
 	protectedUserAPI.PATCH("", v1.UpdateUser)
 	protectedUserAPI.POST("/password", v1.UpdateUserPassword)
+	protectedUserAPI.GET("/notification-preferences", v1.GetUserNotificationPreferences)
+	protectedUserAPI.POST("/notification-preferences", v1.UpdateUserNotificationPreferences)
+	protectedUserAPI.POST("/household/leave", v1.LeaveHousehold)
+	protectedUserAPI.POST("/household/create", v1.CreateHousehold)
+
+	// Onboarding routes (require authentication)
+	onboardingAPI := engine.Group("/api/v1/onboarding")
+	onboardingAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	onboardingAPI.GET("/state", onboarding.GetOnboardingState)
+	onboardingAPI.GET("/households", onboarding.GetAvailableHouseholds)
+	onboardingAPI.POST("/apply-household", onboarding.ApplyForHousehold)
+	onboardingAPI.POST("/complete", onboarding.CompleteOnboarding)
+
+	// Notification routes
+	notificationAPI := engine.Group("/api/v1/notifications")
+	notificationAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	notificationAPI.GET("", v1.GetNotifications)
+
+	// Household application routes
+	householdAPI := engine.Group("/api/v1/household")
+	householdAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	householdAPI.POST("/:id/apply", v1.ApplyForHousehold)
+	householdAPI.GET("/applications", v1.GetHouseholdApplications)
+	householdAPI.POST("/applications/:id/approve", v1.ApproveHouseholdApplication)
+	householdAPI.POST("/applications/:id/reject", v1.RejectHouseholdApplication)
+	householdAPI.DELETE("/applications/:id", v1.CancelHouseholdApplication)
+	householdAPI.PATCH("/name", v1.UpdateHouseholdName)
+	householdAPI.DELETE("/members/:userId", v1.RemoveHouseholdMember)
+
+	// Household invitation routes
+	householdAPI.POST("/invitations", v1.CreateInvitation)
+	householdAPI.GET("/invitations", v1.GetInvitations)
+	householdAPI.DELETE("/invitations/:id", v1.CancelInvitation)
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")
 	protectedProductAPI.Use(jwtAPIUserAwareMiddleware.MiddlewareFunc())
 	protectedProductAPI.GET("/:id", v1.GetProduct)
 	protectedProductAPI.PATCH("/:id", v1.UpdateProduct)
+	protectedProductAPI.PATCH("/:id/amount", v1.UpdateProductAmount)
 	protectedProductAPI.DELETE("/:id", v1.DeleteProduct)
 	protectedProductAPI.POST("/:id/restore", v1.RestoreProduct)
 	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)
+
+	// PWA — serve manifest and service worker at root scope (no auth required)
+	engine.GET("/manifest.json", func(ctx *gin.Context) {
+		content, readErr := assets.AssetFiles.ReadFile("manifest.json")
+		if readErr != nil {
+			ctx.Status(http.StatusNotFound)
+			return
+		}
+		ctx.Data(http.StatusOK, "application/manifest+json", content)
+	})
+	engine.GET("/sw.js", func(ctx *gin.Context) {
+		content, readErr := assets.AssetFiles.ReadFile("js/sw.js")
+		if readErr != nil {
+			ctx.Status(http.StatusNotFound)
+			return
+		}
+		ctx.Header("Service-Worker-Allowed", "/")
+		ctx.Data(http.StatusOK, "application/javascript", content)
+	})
 
 	// Web frontend routes
 	// Serve asset files
@@ -182,6 +257,10 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products", webFrontendHandler.Products)
 	publicWebFrontend.GET("/products/archived", webFrontendHandler.ProductsArchived)
 	publicWebFrontend.GET("/products/create", webFrontendHandler.ProductsCreate)
+	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
+
+	// Public invite acceptance page (no auth required)
+	engine.GET("/web/invite/accept", webFrontendHandler.AcceptInvite)
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")

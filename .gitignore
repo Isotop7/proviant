@@ -30,3 +30,6 @@ src/test/*.httpie
 .vscode/
 proviant.log
 src/data
+
+# Claude Code CLI
+.claude/

@@ -2,7 +2,7 @@
 <div class="my-3 text-bg-tertiary w-100">
     <div class="row g-0">
         <div class="col-md-2 m-auto p-3">
-            <img src="{{- .Product.ImageURL -}}" class="img-fluid" alt="Image URL">
+            <img src="{{- .Product.ImageURL -}}" class="img-fluid" alt="{{- .Product.ProductName -}}">
         </div>
         <div class="ms-auto col-md-10 pb-4 border-bottom border-primary border-2">
             <div>
@@ -42,15 +42,17 @@
                     {{- flagReplace .Product.Countries -}}
                 </div>
             </div>
-            <div class="row mt-4 my-2" style="color: var(--bs-pink)">
-                <div class="col-4 fw-bold">
-                    <i class="bi bi-calendar-x me-3"></i>{{- .Product.ExpireAt | humanDate -}}
+            <div class="row mt-4 my-2">
+                <div class="col-12 col-md-4 mb-2">
+                    <span class="badge {{ expiryBadgeClass .Product.ExpireAt }} fs-6 px-3 py-2">
+                        <i class="bi bi-calendar-x me-2" aria-hidden="true"></i>{{- .Product.ExpireAt | humanDate -}}
+                    </span>
                 </div>
-                <div class="col-4 fw-bold">
-                    <i class="bi bi-upc-scan me-3"></i>{{- .Product.ScannedAt | humanDateTime -}}
+                <div class="col-12 col-md-4 mb-2 text-muted">
+                    <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>{{- .Product.ScannedAt | humanDateTime -}}
                 </div>
-                <div class="col-4 fw-bold">
-                    <i class="bi bi-bell me-3"></i>{{- .Product.NotifiedAt | humanDateTime -}}
+                <div class="col-12 col-md-4 mb-2 text-muted">
+                    <i class="bi bi-bell me-2" aria-hidden="true"></i>{{- .Product.NotifiedAt | humanDateTime -}}
                 </div>
             </div>
         </div>

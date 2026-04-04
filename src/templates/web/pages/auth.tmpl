@@ -2,18 +2,27 @@
 
 <div class="container vh-100 d-flex justify-content-center">
     <main class="form-signin">
-        <div id="infoToast" class="toast m-4 position-absolute top-0 end-0 bg-success text-dark" role="alert"
-            aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
-            <div class="toast-header">
-                <img src="/assets/icons/proviant_logo_256.png" id="icon" class="rounded me-2" alt="proviant">
-                <strong class="me-auto">proviant</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body">
+        <div class="toast-container position-fixed top-0 start-50 translate-middle-x pt-3" style="z-index: 1090;">
+            <div id="infoToast" class="toast align-items-center text-bg-success border-0"
+                 role="alert" aria-live="polite" aria-atomic="true" data-bs-delay="4000">
+                <div class="d-flex">
+                    <div class="toast-body" id="infoToastBody"></div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                            data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
             </div>
         </div>
-    
+
+        {{ if .InviteToken }}
+        <div class="alert alert-info mb-3" role="alert">
+            <i class="bi bi-info-circle me-2"></i>You were invited to join a household. Please sign up using the <strong>exact email address</strong> you were invited with to automatically join.
+        </div>
+        {{ end }}
+
         <form id="authData" novalidate>
+            {{ if .InviteToken }}
+            <input type="hidden" id="inputInviteToken" name="inviteToken" value="{{ .InviteToken }}">
+            {{ end }}
             <div class="mx-auto my-5 text-center">
                 <img src="/assets/icons/hero.png" class="img-fluid" alt="proviant">
             </div>
@@ -27,7 +36,8 @@
                 <label for="inputPassword">Password</label>
             </div>
             <button id="btnAuth" form="authData" class="btn btn-info w-100" type="submit">Sign in</button>
-            <div id="loginAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
+            <div id="loginAlert" class="alert alert-danger fade mt-3 d-none" role="alert">
+                <span id="loginAlertMessage"></span>
             </div>
             <hr class="my-4 border-3 border-dark">
             <div class="form-floating">
@@ -36,7 +46,8 @@
                 <label for="inputMailAddress">Mail Address</label>
             </div>
             <button id="btnSignup" form="authData" class="btn btn-info w-100" type="submit">Sign up</button>
-            <div id="signupAlert" class="alert alert-danger mt-3" role="alert" style="display: none;">
+            <div id="signupAlert" class="alert alert-danger fade mt-3 d-none" role="alert">
+                <span id="signupAlertMessage"></span>
             </div>
         </form>
     </main>

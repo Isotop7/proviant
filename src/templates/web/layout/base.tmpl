@@ -1,11 +1,21 @@
 {{define "base"}}
 <!doctype html>
-<html lang="de" data-bs-theme="dark" class="h-100">
+<html lang="de" data-bs-theme="light" class="h-100">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ if .Title }}proviant - {{ .Title}}{{ else }}proviant{{ end }}</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#3D7A5C">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Proviant">
+  <link rel="apple-touch-icon" href="/assets/icons/proviant_logo_192.png">
+
   <link rel="stylesheet" href="/assets/css/main.css">
   <script src="/assets/js/proviant.js"></script>
 </head>
@@ -20,8 +30,65 @@
     </div>
   </main>
   {{template "footer" .}}
+  <!-- Shared confirm modal — destructive actions requiring user decision -->
+  <div id="proviantConfirmModal" class="modal fade" tabindex="-1"
+       aria-labelledby="proviantConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center px-4 pb-2">
+          <i id="proviantConfirmIcon" class="bi bi-question-circle-fill text-warning fs-1 mb-3 d-block" aria-hidden="true"></i>
+          <h5 id="proviantConfirmTitle" class="mb-2"></h5>
+          <p id="proviantConfirmMessage" class="text-body-secondary mb-0 small"></p>
+        </div>
+        <div class="modal-footer border-0 justify-content-center gap-2 pt-2 pb-4">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger px-4" id="proviantConfirmBtn">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared feedback modal — all pages, all async results -->
+  <div id="proviantFeedbackModal" class="modal fade" tabindex="-1"
+       aria-labelledby="proviantFeedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center px-4 pb-2">
+          <i id="proviantFeedbackIcon" class="bi fs-1 mb-3 d-block" aria-hidden="true"></i>
+          <h5 id="proviantFeedbackTitle" class="mb-2"></h5>
+          <p id="proviantFeedbackMessage" class="text-body-secondary mb-0 small"></p>
+        </div>
+        <div class="modal-footer border-0 justify-content-center pt-2 pb-4">
+          <button type="button" class="btn btn-primary px-4"
+                  id="proviantFeedbackBtn" data-bs-dismiss="modal">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/assets/js/bootstrap.bundle.min.js"></script>
   <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/notifications.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+      tooltipEls.forEach(function (el) { new bootstrap.Tooltip(el); });
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').catch(function (err) {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
+  </script>
 </body>
 
 </html>
