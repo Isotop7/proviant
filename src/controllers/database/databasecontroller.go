@@ -324,10 +324,11 @@ func (dbc DatabaseController) GetHouseholdMembersNotificationPreferences(househo
 	for idx := range users {
 		user := users[idx]
 		preferences = append(preferences, models.NotificationRecipientInfo{
-			EmailAddress: user.MailAddress,
-			NtfyURL:      user.NotificationPreferences.NtfyURL,
-			NtfyTopic:    user.NotificationPreferences.NtfyTopic,
-			NtfyToken:    user.NotificationPreferences.NtfyToken,
+			EmailAddress:              user.MailAddress,
+			NtfyURL:                   user.NotificationPreferences.NtfyURL,
+			NtfyTopic:                 user.NotificationPreferences.NtfyTopic,
+			NtfyToken:                 user.NotificationPreferences.NtfyToken,
+			NotificationThresholdDays: user.NotificationPreferences.NotificationThresholdDays,
 		})
 	}
 
@@ -757,23 +758,30 @@ func (dbc DatabaseController) GetProductsExpired(userID uint) ([]*database.Produ
 	return expiredProducts, nil
 }
 
-// GetProductsExpiredAndNotificationPending returns an array of products which are expired and have a pending notification
-func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error) {
-	// Get products with pending notification
+// GetProductsExpiredAndNotificationPending returns products that are expired or expiring within maxLookAheadDays
+// and have a pending notification (i.e., not notified within the last sleepInterval).
+func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error) {
 	var notificationProducts []database.Product
-	// Get expired products with pending notification
 	getError := dbc.DBHandle.
 		Where("expire_at > ?", time.Time{}).
-		Where("expire_at < ?", time.Now()).
+		Where("expire_at <= ?", time.Now().AddDate(0, 0, maxLookAheadDays)).
 		Where("notified_at < ?", time.Now().Add(-(sleepInterval))).
 		Find(&notificationProducts)
 
-	// Check for error or return product list
 	if getError.Error != nil {
 		return []database.Product{}, getError.Error
-	} else {
-		return notificationProducts, nil
 	}
+	return notificationProducts, nil
+}
+
+// GetMaxNotificationThresholdDays returns the highest NotificationThresholdDays value set across all users.
+// Returns 0 if no user has a threshold configured.
+func (dbc DatabaseController) GetMaxNotificationThresholdDays() int {
+	var maxThreshold int
+	dbc.DBHandle.Model(&authentication.User{}).
+		Select("COALESCE(MAX(notification_threshold_days), 0)").
+		Scan(&maxThreshold)
+	return maxThreshold
 }
 
 // GetLastNotifiedProduct returns the last notified product for a user

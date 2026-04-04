@@ -77,8 +77,9 @@ func (nc *NotificationController) Dispatch() {
 	go func() {
 		nc.Logger.Debug().Msg("New NotificationController run dispatched")
 		for {
-			// Get affected products
-			notificationProducts, getError := nc.DatabaseController.GetProductsExpiredAndNotificationPending(sleepInterval)
+			// Get affected products (widen query window to cover the highest per-user threshold)
+			maxThreshold := nc.DatabaseController.GetMaxNotificationThresholdDays()
+			notificationProducts, getError := nc.DatabaseController.GetProductsExpiredAndNotificationPending(sleepInterval, maxThreshold)
 			if getError != nil {
 				nc.Logger.Error().Msg(getError.Error())
 				continue
@@ -116,6 +117,15 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 }
 
 func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel.Product, recipientInfo models.NotificationRecipientInfo) {
+	// Skip if the product's expiry date is still beyond this user's threshold window.
+	// A threshold of 0 means notify on/after expiry (current behaviour).
+	cutoff := time.Now().AddDate(0, 0, recipientInfo.NotificationThresholdDays)
+	if product.ExpireAt.After(cutoff) {
+		nc.Logger.Debug().Msgf("Product '%s' (ID: %d) not yet within threshold for recipient, skipping",
+			product.ProductName, product.ID)
+		return
+	}
+
 	success := false
 
 	// Try each provider in order

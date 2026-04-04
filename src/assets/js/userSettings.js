@@ -189,6 +189,7 @@ function UpdateNotificationSettings() {
   const inputNtfyUrl = document.getElementById("inputNtfyUrl");
   const inputNtfyTopic = document.getElementById("inputNtfyTopic");
   const inputNtfyToken = document.getElementById("inputNtfyToken");
+  const inputNotificationThreshold = document.getElementById("inputNotificationThreshold");
   if (!toggleEmailNotifications || !toggleNtfyNotifications || !inputNtfyUrl || !inputNtfyTopic || !inputNtfyToken) return;
 
   // Validate inputs
@@ -208,6 +209,12 @@ function UpdateNotificationSettings() {
     }
   }
 
+  const thresholdDays = inputNotificationThreshold ? parseInt(inputNotificationThreshold.value, 10) : 0;
+  if (isNaN(thresholdDays) || thresholdDays < 0) {
+    showNotificationError("Notification threshold must be 0 or greater.");
+    return;
+  }
+
   // Prepare data for API call
   const notificationData = {
     emailEnabled: toggleEmailNotifications.checked,
@@ -215,6 +222,7 @@ function UpdateNotificationSettings() {
     ntfyUrl: inputNtfyUrl.value || "",
     ntfyTopic: inputNtfyTopic.value || "",
     ntfyToken: inputNtfyToken.value || "",
+    notificationThresholdDays: thresholdDays,
   };
 
   // Call backend API

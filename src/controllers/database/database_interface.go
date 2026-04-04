@@ -10,7 +10,8 @@ import (
 
 // DatabaseControllerInterface defines the interface for database operations needed by other controllers
 type DatabaseControllerInterface interface {
-	GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error)
+	GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error)
+	GetMaxNotificationThresholdDays() int
 	GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
 	GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
 	SetProductNotifiedAt(productID uint) error
