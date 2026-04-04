@@ -1,34 +1,13 @@
-function showUpdateError(message) {
-  const updateAlert = document.getElementById("updateAlert");
-  if (updateAlert) {
-    document.getElementById("updateAlertMessage").textContent = message;
-    updateAlert.classList.remove("d-none");
-    updateAlert.classList.add("show");
-  }
-}
-
-function hideUpdateError() {
-  const updateAlert = document.getElementById("updateAlert");
-  if (updateAlert) {
-    updateAlert.classList.remove("show");
-    updateAlert.classList.add("d-none");
-  }
-}
-
-function showPasswordError(message) {
-  const passwordAlert = document.getElementById("passwordAlert");
-  if (passwordAlert) {
-    document.getElementById("passwordAlertMessage").textContent = message;
-    passwordAlert.classList.remove("d-none");
-    passwordAlert.classList.add("show");
-  }
-}
-
-function hidePasswordError() {
-  const passwordAlert = document.getElementById("passwordAlert");
-  if (passwordAlert) {
-    passwordAlert.classList.remove("show");
-    passwordAlert.classList.add("d-none");
+/* ── Button loading helper ────────────────────────────────────────── */
+function setButtonLoading(btn, loading) {
+  if (!btn) return;
+  if (loading) {
+    btn.disabled = true;
+    btn.dataset.originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Saving…';
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
   }
 }
 
@@ -36,37 +15,30 @@ function ShowSuccessModal(message, btnFunction) {
   proviant.showFeedback('success', 'Done', message, btnFunction);
 }
 
-/* Update user settings */
+/* ── Update personal details ─────────────────────────────────────── */
 function UpdateSettings() {
   let formIsValid = true;
   const inputUsername = document.getElementById("inputUsername");
   const inputMailAddress = document.getElementById("inputMailAddress");
   if (!inputUsername || !inputMailAddress) return;
 
-  const username = inputUsername.value;
-  const mailAddress = inputMailAddress.value;
-
-  if (username == "") {
-    if (!inputUsername.classList.contains("is-invalid")) {
-      inputUsername.classList.toggle("is-invalid");
-    }
+  if (!inputUsername.value) {
+    inputUsername.classList.add("is-invalid");
     formIsValid = false;
   }
-  if (mailAddress == "") {
-    if (!inputMailAddress.classList.contains("is-invalid")) {
-      inputMailAddress.classList.toggle("is-invalid");
-    }
+  if (!inputMailAddress.value) {
+    inputMailAddress.classList.add("is-invalid");
     formIsValid = false;
   }
+  if (!formIsValid) return;
 
-  if (!formIsValid) {
-    return;
-  }
+  const btn = document.getElementById("btnUpdatePersonalDetails");
+  setButtonLoading(btn, true);
 
-  proviant.updateUser(username, mailAddress).then((response) => {
+  proviant.updateUser(inputUsername.value, inputMailAddress.value).then((response) => {
+    setButtonLoading(btn, false);
     switch (response.code) {
       case 200:
-        console.error(response.message);
         ShowSuccessModal(
           "User update complete. Please reload page to show changed values.",
           function (event) {
@@ -76,18 +48,16 @@ function UpdateSettings() {
         );
         break;
       case 401:
-        console.error(response.message);
-        showUpdateError(`Update failed: ${response.message}`);
+        proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
         break;
       default:
-        console.error(response.message);
-        showUpdateError(`Undefined update error: ${response.message}`);
+        proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
         break;
     }
   });
 }
 
-/* Update password */
+/* ── Update password ─────────────────────────────────────────────── */
 function UpdatePassword() {
   let formIsValid = true;
   const inputPassword = document.getElementById("inputPassword");
@@ -99,43 +69,32 @@ function UpdatePassword() {
   const passwordVerification = inputPasswordVerification.value;
   const username = inputUsername.value;
 
-  if (username == "") {
-    if (!inputUsername.classList.contains("is-invalid")) {
-      inputUsername.classList.toggle("is-invalid");
-    }
+  if (!username) {
+    inputUsername.classList.add("is-invalid");
     formIsValid = false;
   }
-  if (password == "") {
-    if (!inputPassword.classList.contains("is-invalid")) {
-      inputPassword.classList.toggle("is-invalid");
-    }
+  if (!password) {
+    inputPassword.classList.add("is-invalid");
     formIsValid = false;
   }
-  if (passwordVerification == "") {
-    if (!inputPasswordVerification.classList.contains("is-invalid")) {
-      inputPasswordVerification.classList.toggle("is-invalid");
-    }
+  if (!passwordVerification) {
+    inputPasswordVerification.classList.add("is-invalid");
     formIsValid = false;
   }
+  if (password && passwordVerification && password !== passwordVerification) {
+    inputPassword.classList.add("is-invalid");
+    inputPasswordVerification.classList.add("is-invalid");
+    formIsValid = false;
+  }
+  if (!formIsValid) return;
 
-  if (password != passwordVerification) {
-    if (!inputPassword.classList.contains("is-invalid")) {
-      inputPassword.classList.toggle("is-invalid");
-    }
-    if (!inputPasswordVerification.classList.contains("is-invalid")) {
-      inputPasswordVerification.classList.toggle("is-invalid");
-    }
-    formIsValid = false;
-  }
-
-  if (!formIsValid) {
-    return;
-  }
+  const btn = document.getElementById("btnUpdatePassword");
+  setButtonLoading(btn, true);
 
   proviant.updateUserPassword(username, password).then((response) => {
+    setButtonLoading(btn, false);
     switch (response.code) {
       case 200:
-        console.error(response.message);
         ShowSuccessModal(
           "Password update complete. Please log out to use changed password.",
           function (event) {
@@ -146,40 +105,21 @@ function UpdatePassword() {
         );
         break;
       case 401:
-        console.error(response.message);
-        showPasswordError(`Update failed: ${response.message}`);
+        proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
         break;
       default:
-        console.error(response.message);
-        showPasswordError(`Undefined update error: ${response.message}`);
+        proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
         break;
     }
   });
 }
 
-/* Notification settings functions */
+/* ── Notification settings ───────────────────────────────────────── */
 function toggleNtfySettings() {
   const toggleNtfyNotifications = document.getElementById("toggleNtfyNotifications");
   const ntfySettings = document.getElementById("ntfySettings");
   if (ntfySettings && toggleNtfyNotifications) {
     ntfySettings.style.display = toggleNtfyNotifications.checked ? "" : "none";
-  }
-}
-
-function showNotificationError(message) {
-  const notificationAlert = document.getElementById("notificationAlert");
-  if (notificationAlert) {
-    document.getElementById("notificationAlertMessage").textContent = message;
-    notificationAlert.classList.remove("d-none");
-    notificationAlert.classList.add("show");
-  }
-}
-
-function hideNotificationError() {
-  const notificationAlert = document.getElementById("notificationAlert");
-  if (notificationAlert) {
-    notificationAlert.classList.remove("show");
-    notificationAlert.classList.add("d-none");
   }
 }
 
@@ -192,30 +132,27 @@ function UpdateNotificationSettings() {
   const inputNotificationThreshold = document.getElementById("inputNotificationThreshold");
   if (!toggleEmailNotifications || !toggleNtfyNotifications || !inputNtfyUrl || !inputNtfyTopic || !inputNtfyToken) return;
 
-  // Validate inputs
+  // Field-level validation
   if (toggleNtfyNotifications.checked) {
     if (!inputNtfyUrl.value) {
-      showNotificationError(
-        "ntfy.sh URL is required when ntfy notifications are enabled",
-      );
+      inputNtfyUrl.classList.add("is-invalid");
       return;
     }
-
     if (!inputNtfyTopic.value) {
-      showNotificationError(
-        "ntfy.sh topic is required when ntfy notifications are enabled",
-      );
+      inputNtfyTopic.classList.add("is-invalid");
       return;
     }
   }
 
   const thresholdDays = inputNotificationThreshold ? parseInt(inputNotificationThreshold.value, 10) : 0;
   if (isNaN(thresholdDays) || thresholdDays < 0) {
-    showNotificationError("Notification threshold must be 0 or greater.");
+    if (inputNotificationThreshold) inputNotificationThreshold.classList.add("is-invalid");
     return;
   }
 
-  // Prepare data for API call
+  const btn = document.getElementById("btnUpdateNotificationSettings");
+  setButtonLoading(btn, true);
+
   const notificationData = {
     emailEnabled: toggleEmailNotifications.checked,
     ntfyEnabled: toggleNtfyNotifications.checked,
@@ -225,10 +162,10 @@ function UpdateNotificationSettings() {
     notificationThresholdDays: thresholdDays,
   };
 
-  // Call backend API
   proviant
     .updateNotificationSettings(notificationData)
     .then((response) => {
+      setButtonLoading(btn, false);
       switch (response.code) {
         case 200:
           ShowSuccessModal(
@@ -240,24 +177,23 @@ function UpdateNotificationSettings() {
           );
           break;
         case 400:
-          showNotificationError(`Update failed: ${response.message}`);
+          proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
           break;
         case 401:
-          showNotificationError(`Unauthorized: ${response.message}`);
+          proviant.showFeedback('error', 'Unauthorized', response.message);
           break;
         default:
-          showNotificationError(
-            `Error updating notification settings: ${response.message}`,
-          );
+          proviant.showFeedback('error', 'Error', `Error updating notification settings: ${response.message}`);
           break;
       }
     })
     .catch((error) => {
-      showNotificationError(`Network error: ${error.message}`);
+      setButtonLoading(btn, false);
+      proviant.showFeedback('error', 'Error', `Network error: ${error.message}`);
     });
 }
 
-/* Household management helpers */
+/* ── Household management helpers ────────────────────────────────── */
 function showHouseholdAlert(elementId, message, isSuccess) {
   const el = document.getElementById(elementId);
   if (!el) return;
@@ -277,17 +213,24 @@ function hideHouseholdAlert(elementId) {
 
 /* Leave household */
 function handleLeaveHousehold() {
-  if (!confirm("Leave your current household? You will be assigned a new personal household.")) return;
-  proviant.leaveHousehold().then((response) => {
-    if (response.code === 200) {
-      ShowSuccessModal("You have left the household. Reloading page.", function (e) {
-        e.preventDefault();
-        location.reload();
+  proviant.showConfirm(
+    'Leave Household',
+    'Leave your current household? You will be assigned a new personal household.',
+    function () {
+      proviant.leaveHousehold().then((response) => {
+        if (response.code === 200) {
+          ShowSuccessModal("You have left the household. Reloading page.", function (e) {
+            e.preventDefault();
+            location.reload();
+          });
+        } else {
+          showHouseholdAlert("leaveHouseholdAlert", `Error: ${response.message}`, false);
+        }
       });
-    } else {
-      showHouseholdAlert("leaveHouseholdAlert", `Error: ${response.message}`, false);
-    }
-  });
+    },
+    'Leave',
+    'danger'
+  );
 }
 
 /* Create new household */
@@ -407,153 +350,7 @@ function handleRemoveMember(btn) {
   });
 }
 
-/* Event delegation for all clicks */
-document.addEventListener("click", function (event) {
-  const target = event.target;
-
-  // Update personal details
-  if (target.closest("#btnUpdatePersonalDetails")) {
-    event.preventDefault();
-    UpdateSettings();
-    return;
-  }
-
-  // Update password
-  if (target.closest("#btnUpdatePassword")) {
-    event.preventDefault();
-    UpdatePassword();
-    return;
-  }
-
-  // Update notification settings
-  if (target.closest("#btnUpdateNotificationSettings")) {
-    event.preventDefault();
-    UpdateNotificationSettings();
-    return;
-  }
-
-  // Leave household
-  if (target.closest("#btnLeaveHousehold")) {
-    event.preventDefault();
-    handleLeaveHousehold();
-    return;
-  }
-
-  // Create household
-  if (target.closest("#btnCreateHousehold")) {
-    event.preventDefault();
-    handleCreateHousehold();
-    return;
-  }
-
-  // Apply to join household
-  if (target.closest("#btnApplyHousehold")) {
-    event.preventDefault();
-    handleApplyHousehold();
-    return;
-  }
-
-  // Update household name
-  if (target.closest("#btnUpdateHouseholdName")) {
-    event.preventDefault();
-    handleUpdateHouseholdName();
-    return;
-  }
-
-  // Approve application
-  const approveBtn = target.closest(".btn-approve-application");
-  if (approveBtn) {
-    event.preventDefault();
-    handleApproveApplication(approveBtn);
-    return;
-  }
-
-  // Reject application
-  const rejectBtn = target.closest(".btn-reject-application");
-  if (rejectBtn) {
-    event.preventDefault();
-    handleRejectApplication(rejectBtn);
-    return;
-  }
-
-  // Cancel application
-  const cancelBtn = target.closest(".btn-cancel-application");
-  if (cancelBtn) {
-    event.preventDefault();
-    handleCancelApplication(cancelBtn);
-    return;
-  }
-
-  // Remove member
-  const removeBtn = target.closest(".btn-remove-member");
-  if (removeBtn) {
-    event.preventDefault();
-    handleRemoveMember(removeBtn);
-    return;
-  }
-});
-
-/* Event delegation for input changes */
-document.addEventListener("input", function (event) {
-  const target = event.target;
-
-  // Username input
-  if (target.id === "inputUsername") {
-    if (target.value.length > 0 && target.classList.contains("is-invalid")) {
-      target.classList.toggle("is-invalid");
-    }
-    const updateAlert = document.getElementById("updateAlert");
-    if (updateAlert && updateAlert.classList.contains("show")) {
-      hideUpdateError();
-    }
-    return;
-  }
-
-  // Mail address input
-  if (target.id === "inputMailAddress") {
-    if (target.value.length > 0 && target.classList.contains("is-invalid")) {
-      target.classList.toggle("is-invalid");
-    }
-    const updateAlert = document.getElementById("updateAlert");
-    if (updateAlert && updateAlert.classList.contains("show")) {
-      hideUpdateError();
-    }
-    return;
-  }
-
-  // Password input
-  if (target.id === "inputPassword") {
-    if (target.value.length > 0 && target.classList.contains("is-invalid")) {
-      target.classList.toggle("is-invalid");
-    }
-    const passwordAlert = document.getElementById("passwordAlert");
-    if (passwordAlert && passwordAlert.classList.contains("show")) {
-      hidePasswordError();
-    }
-    return;
-  }
-
-  // Password verification input
-  if (target.id === "inputPasswordVerification") {
-    if (target.value.length > 0 && target.classList.contains("is-invalid")) {
-      target.classList.toggle("is-invalid");
-    }
-    const passwordAlert = document.getElementById("passwordAlert");
-    if (passwordAlert && passwordAlert.classList.contains("show")) {
-      hidePasswordError();
-    }
-    return;
-  }
-});
-
-/* Event delegation for checkbox changes */
-document.addEventListener("change", function (event) {
-  const target = event.target;
-  if (target.id === "toggleNtfyNotifications") {
-    toggleNtfySettings();
-  }
-});
-/* Invitation management helpers */
+/* ── Invitation helpers ───────────────────────────────────────────── */
 function showInviteAlert(elementId, message, isSuccess) {
   const el = document.getElementById(elementId);
   if (!el) return;
@@ -589,10 +386,89 @@ function handleSendInvitation() {
   });
 }
 
-/* Cancel invitation — event delegation */
+/* ── Event delegation — clicks ───────────────────────────────────── */
 document.addEventListener("click", function (event) {
-  const cancelInviteBtn = event.target.closest(".btn-cancel-invitation");
+  const target = event.target;
+
+  if (target.closest("#btnUpdatePersonalDetails")) {
+    event.preventDefault();
+    UpdateSettings();
+    return;
+  }
+
+  if (target.closest("#btnUpdatePassword")) {
+    event.preventDefault();
+    UpdatePassword();
+    return;
+  }
+
+  if (target.closest("#btnUpdateNotificationSettings")) {
+    event.preventDefault();
+    UpdateNotificationSettings();
+    return;
+  }
+
+  if (target.closest("#btnLeaveHousehold")) {
+    event.preventDefault();
+    handleLeaveHousehold();
+    return;
+  }
+
+  if (target.closest("#btnCreateHousehold")) {
+    event.preventDefault();
+    handleCreateHousehold();
+    return;
+  }
+
+  if (target.closest("#btnApplyHousehold")) {
+    event.preventDefault();
+    handleApplyHousehold();
+    return;
+  }
+
+  if (target.closest("#btnUpdateHouseholdName")) {
+    event.preventDefault();
+    handleUpdateHouseholdName();
+    return;
+  }
+
+  if (target.closest("#btnSendInvitation")) {
+    event.preventDefault();
+    handleSendInvitation();
+    return;
+  }
+
+  const approveBtn = target.closest(".btn-approve-application");
+  if (approveBtn) {
+    event.preventDefault();
+    handleApproveApplication(approveBtn);
+    return;
+  }
+
+  const rejectBtn = target.closest(".btn-reject-application");
+  if (rejectBtn) {
+    event.preventDefault();
+    handleRejectApplication(rejectBtn);
+    return;
+  }
+
+  const cancelBtn = target.closest(".btn-cancel-application");
+  if (cancelBtn) {
+    event.preventDefault();
+    handleCancelApplication(cancelBtn);
+    return;
+  }
+
+  const removeBtn = target.closest(".btn-remove-member");
+  if (removeBtn) {
+    event.preventDefault();
+    handleRemoveMember(removeBtn);
+    return;
+  }
+
+  const cancelInviteBtn = target.closest(".btn-cancel-invitation");
   if (cancelInviteBtn) {
+    event.preventDefault();
     const invitationID = cancelInviteBtn.dataset.id;
     proviant.showConfirm('Cancel Invitation', 'Cancel this invitation? The recipient will no longer be able to use it.', function () {
       proviant.cancelInvitation(invitationID).then((response) => {
@@ -606,11 +482,35 @@ document.addEventListener("click", function (event) {
     });
     return;
   }
+});
 
-  // Send invitation button
-  if (event.target.closest("#btnSendInvitation")) {
-    event.preventDefault();
-    handleSendInvitation();
-    return;
+/* ── Event delegation — inputs ───────────────────────────────────── */
+document.addEventListener("input", function (event) {
+  const target = event.target;
+  const clearInvalid = (el) => {
+    if (el && el.classList.contains("is-invalid")) el.classList.remove("is-invalid");
+  };
+
+  switch (target.id) {
+    case "inputUsername":
+    case "inputMailAddress":
+      clearInvalid(target);
+      break;
+    case "inputPassword":
+    case "inputPasswordVerification":
+      clearInvalid(target);
+      break;
+    case "inputNtfyUrl":
+    case "inputNtfyTopic":
+    case "inputNotificationThreshold":
+      clearInvalid(target);
+      break;
+  }
+});
+
+/* ── Event delegation — checkbox changes ─────────────────────────── */
+document.addEventListener("change", function (event) {
+  if (event.target.id === "toggleNtfyNotifications") {
+    toggleNtfySettings();
   }
 });

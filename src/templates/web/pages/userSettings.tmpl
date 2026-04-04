@@ -1,374 +1,377 @@
 {{ define "content" }}
-<div class="row justify-content-between p-3">
-    <div class="text-center mb-4">
-        <h2>
-            User settings
-        </h2>
-        <p class="text-muted">
-            <span class="badge bg-primary">ID: #{{ .User.ID }}</span>
-        </p>
+<div class="container my-4">
+
+    {{/* ── Page header ─────────────────────────────────────────── */}}
+    <div class="mb-4">
+        <h1 class="h2 fw-bold mb-1">User Settings</h1>
+        <span class="badge bg-primary">ID: #{{ .User.ID }}</span>
     </div>
-</div>
-<div class="container my-3">
-    <div class="row g-5 p-3 align-items-center justify-content-between">
-        <div class="col">
-            <h4>
-                Personal details
-            </h4>
-        </div>
-        <div class="col col-auto">
-            <button type="button" class="btn btn-outline-primary" id="btnUpdatePersonalDetails">
+
+    {{/* ── Personal Details ────────────────────────────────────── */}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+            <h2 class="h5 mb-0 fw-semibold">Personal Details</h2>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnUpdatePersonalDetails">
                 Update
             </button>
         </div>
-    </div>
-    <div class="row gx-5 p-3 my-3">
-        <div class="col">
+        <div class="card-body px-4 py-4">
             <form id="userSettings" novalidate>
-                <div class="input-group">
-                    <span class="input-group-text" id="basic-addon1">Username</span>
-                    <input type="text" class="form-control" placeholder="Username" aria-label="Username"
-                        aria-describedby="basic-addon1" value="{{ .User.Username }}" id="inputUsername">
-                    <span class="input-group-text" id="basic-addon2">Mail Address</span>
-                    <input type="text" class="form-control" placeholder="Mail Address" aria-label="Mail Address"
-                        aria-describedby="basic-addon2" value="{{ .User.MailAddress }}" id="inputMailAddress">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="inputUsername" class="form-label fw-medium">
+                            Username <span class="text-danger" aria-hidden="true">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="inputUsername"
+                               value="{{ .User.Username }}" aria-required="true" autocomplete="username">
+                        <div class="invalid-feedback">Please enter a username.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputMailAddress" class="form-label fw-medium">
+                            Email Address <span class="text-danger" aria-hidden="true">*</span>
+                        </label>
+                        <input type="email" class="form-control" id="inputMailAddress"
+                               value="{{ .User.MailAddress }}" aria-required="true" autocomplete="email">
+                        <div class="invalid-feedback">Please enter an email address.</div>
+                    </div>
                 </div>
             </form>
-            <div id="updateAlert" class="alert alert-danger fade mt-3 d-none" role="alert">
-                <span id="updateAlertMessage"></span>
-            </div>
-        </div>
-    </div>
-    <hr>
-    <div class="row g-5 p-3 align-items-center justify-content-between">
-        <div class="col">
-            <h4>Household</h4>
         </div>
     </div>
 
-    {{/* Current household info */}}
-    <div class="row gx-5 px-3 mb-3">
-        <div class="col">
-            <div class="d-flex align-items-center gap-2 mb-3">
-                <span class="badge bg-secondary">ID: {{ .Household.ID }}</span>
-                <strong>{{ .Household.Name }}</strong>
-                {{ if .IsAdmin }}<span class="badge bg-primary"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
-            </div>
-        </div>
-    </div>
-
-    {{/* Rename household — admin only */}}
-    {{ if .IsAdmin }}
-    <div class="row gx-5 px-3 mb-3">
-        <div class="col">
-            <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-pencil"></i></span>
-                <input type="text" class="form-control" id="inputHouseholdName"
-                       placeholder="New household name" aria-label="Household name"
-                       value="{{ .Household.Name }}">
-                <button type="button" class="btn btn-outline-primary" id="btnUpdateHouseholdName">Rename</button>
-            </div>
-            <div id="updateNameAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
-        </div>
-    </div>
-    {{ end }}
-
-    {{/* Members list */}}
-    {{ if .Members }}
-    <div class="row g-5 p-3 align-items-center justify-content-between">
-        <div class="col"><h5 class="mb-0"><i class="bi bi-people me-2"></i>Members</h5></div>
-    </div>
-    <div class="row gx-5 px-3 mb-3">
-        <div class="col">
-            <ul class="list-group" id="memberList">
-                {{ range .Members }}
-                <li class="list-group-item d-flex justify-content-between align-items-center" id="member-{{ .ID }}">
-                    <span>
-                        <i class="bi bi-person me-2"></i>{{ .Username }}
-                        {{ if eq .ID $.User.ID }}<span class="badge bg-secondary ms-1">You</span>{{ end }}
-                        {{ if eq .ID $.Household.AdminID }}<span class="badge bg-primary ms-1"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
-                    </span>
-                    {{ if and $.IsAdmin (ne .ID $.Household.AdminID) }}
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-member"
-                            data-id="{{ .ID }}" aria-label="Remove member">
-                        <i class="bi bi-person-dash"></i>
-                    </button>
-                    {{ end }}
-                </li>
-                {{ end }}
-            </ul>
-            <div id="membersAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
-        </div>
-    </div>
-    {{ end }}
-
-    {{/* Leave household */}}
-    <div class="row g-5 p-3 align-items-center justify-content-between">
-        <div class="col">
-            <h5 class="mb-0"><i class="bi bi-box-arrow-left me-2"></i>Leave Household</h5>
-            <p class="text-body-secondary small mb-0 mt-1">You will be assigned a new personal household. If you are the sole member, your products will be moved with you.</p>
-        </div>
-        <div class="col col-auto">
-            <button type="button" class="btn btn-outline-danger" id="btnLeaveHousehold">Leave</button>
-        </div>
-    </div>
-    <div class="row gx-5 px-3 mb-1">
-        <div class="col">
-            <div id="leaveHouseholdAlert" class="alert alert-danger fade d-none" role="alert"><span></span></div>
-        </div>
-    </div>
-
-    {{/* Create new household */}}
-    <div class="row g-5 p-3 align-items-center justify-content-between">
-        <div class="col">
-            <h5 class="mb-0"><i class="bi bi-house-add me-2"></i>Create New Household</h5>
-            <p class="text-body-secondary small mb-0 mt-1">Create a new household and switch to it. If you are currently the sole member, your products will be moved.</p>
-        </div>
-    </div>
-    <div class="row gx-5 px-3 mb-1">
-        <div class="col">
-            <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-house"></i></span>
-                <input type="text" class="form-control" id="inputNewHouseholdName" placeholder="Household name" aria-label="New household name">
-                <button type="button" class="btn btn-outline-primary" id="btnCreateHousehold">Create &amp; Switch</button>
-            </div>
-            <div id="createHouseholdAlert" class="alert alert-danger fade mt-3 d-none" role="alert"><span></span></div>
-        </div>
-    </div>
-
-    {{/* Apply to join a household */}}
-    <div class="row g-5 p-3 align-items-center justify-content-between">
-        <div class="col">
-            <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>Apply to Join a Household</h5>
-            <p class="text-body-secondary small mb-0 mt-1">Enter the ID of the household you want to join. The admin will need to approve your request.</p>
-        </div>
-    </div>
-    <div class="row gx-5 px-3 mb-1">
-        <div class="col">
-            <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-hash"></i></span>
-                <input type="number" class="form-control" id="inputApplyHouseholdID" placeholder="Household ID" aria-label="Household ID to join" min="1">
-                <button type="button" class="btn btn-outline-primary" id="btnApplyHousehold">Apply</button>
-            </div>
-            <div id="applyHouseholdAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
-        </div>
-    </div>
-
-    {{/* Pending applications — admin only */}}
-    {{ if .IsAdmin }}
-    {{ if .PendingApplications }}
-    <div class="row gx-5 px-3 mb-3">
-        <div class="col">
-            <h5><i class="bi bi-people me-2"></i>Pending Join Requests</h5>
-            <ul class="list-group" id="applicationList">
-                {{ range .PendingApplications }}
-                <li class="list-group-item d-flex justify-content-between align-items-center" id="application-{{ .ID }}">
-                    <span><i class="bi bi-person me-2"></i>User #{{ .ApplicantID }}</span>
-                    <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-outline-success btn-approve-application" data-id="{{ .ID }}" aria-label="Approve">
-                            <i class="bi bi-check-lg"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-danger btn-reject-application" data-id="{{ .ID }}" aria-label="Reject">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
-                </li>
-                {{ end }}
-            </ul>
-            <div id="applicationsAlert" class="alert alert-danger fade mt-3 d-none" role="alert"><span></span></div>
-        </div>
-    </div>
-    {{ end }}
-    {{ end }}
-
-    {{/* Outgoing pending applications */}}
-    {{ if .MyApplications }}
-    <div class="row g-5 p-3 align-items-center justify-content-between">
-        <div class="col">
-            <h5 class="mb-0"><i class="bi bi-send me-2"></i>Your Pending Applications</h5>
-            <p class="text-body-secondary small mb-0 mt-1">Awaiting admin approval.</p>
-        </div>
-    </div>
-    <div class="row gx-5 px-3 mb-3">
-        <div class="col">
-            <ul class="list-group" id="myApplicationList">
-                {{ range .MyApplications }}
-                <li class="list-group-item d-flex justify-content-between align-items-center" id="my-application-{{ .ID }}">
-                    <span><i class="bi bi-house me-2"></i>Household #{{ .HouseholdID }}</span>
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-cancel-application"
-                            data-id="{{ .ID }}" aria-label="Cancel application">
-                        <i class="bi bi-x-lg"></i> Cancel
-                    </button>
-                </li>
-                {{ end }}
-            </ul>
-            <div id="myApplicationsAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
-        </div>
-    </div>
-    {{ end }}
-
-    {{/* Invitation management */}}
-    <div class="row g-5 p-3 align-items-center justify-content-between">
-        <div class="col">
-            <h5 class="mb-0"><i class="bi bi-envelope-paper me-2"></i>Invite by Email</h5>
-            <p class="text-body-secondary small mb-0 mt-1">Send an invitation to join this household. The recipient will receive an email with a magic link to accept.</p>
-        </div>
-    </div>
-    <div class="row gx-5 px-3 mb-3">
-        <div class="col">
-            <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-at"></i></span>
-                <input type="email" class="form-control" id="inputInviteEmail" placeholder="user@example.com" aria-label="Email address to invite">
-                <button type="button" class="btn btn-outline-primary" id="btnSendInvitation">Send Invite</button>
-            </div>
-            <div id="sendInviteAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
-        </div>
-    </div>
-
-    {{/* Pending invitations */}}
-    {{ if .Invitations }}
-    <div class="row g-5 p-3 align-items-center justify-content-between">
-        <div class="col">
-            <h5 class="mb-0"><i class="bi bi-send me-2"></i>Sent Invitations</h5>
-            <p class="text-body-secondary small mb-0 mt-1">Invitations you have sent. Cancelled invitations are hidden by default.</p>
-        </div>
-    </div>
-    <div class="row gx-5 px-3 mb-3">
-        <div class="col">
-            <ul class="list-group" id="invitationList">
-                {{ range .Invitations }}
-                {{ if ne .Status "cancelled" }}
-                <li class="list-group-item d-flex justify-content-between align-items-center" id="invitation-{{ .ID }}">
-                    <span>
-                        <i class="bi bi-envelope me-2"></i>{{ .Email }}
-                        <span class="badge bg-secondary ms-2">{{ .Status }}</span>
-                        <small class="text-muted ms-2">Expires: {{ .ExpiresAt.Format "2006-01-02" }}</small>
-                    </span>
-                    {{ if eq .Status "pending" }}
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-cancel-invitation"
-                            data-id="{{ .ID }}" aria-label="Cancel invitation">
-                        <i class="bi bi-x-lg"></i> Cancel
-                    </button>
-                    {{ end }}
-                </li>
-                {{ end }}
-                {{ end }}
-            </ul>
-
-            {{/* Collapsible section for cancelled invitations */}}
-            {{ $hasCancelled := false }}
-            {{ range .Invitations }}
-            {{ if eq .Status "cancelled" }}{{ $hasCancelled = true }}{{ end }}
-            {{ end }}
-            {{ if $hasCancelled }}
-            <div class="mt-3">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#cancelledInvitations" aria-expanded="false" aria-controls="cancelledInvitations">
-                    <i class="bi bi-chevron-down me-1"></i>Show cancelled invitations
-                </button>
-            </div>
-            <div class="collapse mt-2" id="cancelledInvitations">
-                <ul class="list-group">
-                    {{ range .Invitations }}
-                    {{ if eq .Status "cancelled" }}
-                    <li class="list-group-item d-flex justify-content-between align-items-center text-muted" id="invitation-{{ .ID }}">
-                        <span>
-                            <i class="bi bi-envelope me-2"></i>{{ .Email }}
-                            <span class="badge bg-secondary ms-2">{{ .Status }}</span>
-                        </span>
-                    </li>
-                    {{ end }}
-                    {{ end }}
-                </ul>
-            </div>
-            {{ end }}
-
-            <div id="invitationsAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
-        </div>
-    </div>
-    {{ end }}
-
-    <hr>
-    <div class="row g-5 p-3 align-items-center justify-content-between">
-        <div class="col">
-            <h4>Notification Settings</h4>
-        </div>
-        <div class="col col-auto">
-            <button type="button" class="btn btn-outline-primary" id="btnUpdateNotificationSettings">
+    {{/* ── Password ─────────────────────────────────────────────── */}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+            <h2 class="h5 mb-0 fw-semibold">Password</h2>
+            <button class="btn btn-sm btn-outline-primary" type="button" id="btnUpdatePassword">
                 Update
             </button>
         </div>
+        <div class="card-body px-4 py-4">
+            <form id="passwordUpdate" novalidate>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="inputPassword" class="form-label fw-medium">
+                            New Password <span class="text-danger" aria-hidden="true">*</span>
+                        </label>
+                        <input id="inputPassword" type="password" class="form-control"
+                               aria-required="true" autocomplete="new-password">
+                        <div class="invalid-feedback">Please enter a new password.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputPasswordVerification" class="form-label fw-medium">
+                            Confirm Password <span class="text-danger" aria-hidden="true">*</span>
+                        </label>
+                        <input id="inputPasswordVerification" type="password" class="form-control"
+                               aria-required="true" autocomplete="new-password">
+                        <div class="invalid-feedback">Passwords must match.</div>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
-    <div class="row gx-5 p-3 my-3">
-        <div class="col">
+
+    {{/* ── Notification Settings ───────────────────────────────── */}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+            <h2 class="h5 mb-0 fw-semibold">Notification Settings</h2>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnUpdateNotificationSettings">
+                Update
+            </button>
+        </div>
+        <div class="card-body px-4 py-4">
             <form id="notificationSettings" novalidate>
-                <div class="mb-3">
-                    <h5>Notification Methods</h5>
+                <div class="mb-4">
+                    <h3 class="h6 fw-medium mb-2">Notification Methods</h3>
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="toggleEmailNotifications" {{if .User.NotificationPreferences.EmailEnabled}}checked{{end}}>
+                        <input class="form-check-input" type="checkbox" id="toggleEmailNotifications"
+                               {{if .User.NotificationPreferences.EmailEnabled}}checked{{end}}>
                         <label class="form-check-label" for="toggleEmailNotifications">Email Notifications</label>
                     </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="toggleNtfyNotifications" {{if .User.NotificationPreferences.NtfyEnabled}}checked{{end}}>
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" id="toggleNtfyNotifications"
+                               {{if .User.NotificationPreferences.NtfyEnabled}}checked{{end}}>
                         <label class="form-check-label" for="toggleNtfyNotifications">ntfy.sh Notifications</label>
                     </div>
                 </div>
 
-                <div class="mb-3 mt-3">
-                    <h5>Expiry Threshold</h5>
+                <div class="mb-4">
+                    <label for="inputNotificationThreshold" class="form-label fw-medium">Expiry Threshold</label>
                     <p class="text-body-secondary small mb-2">Notify this many days <strong>before</strong> a product expires. Set to 0 to only notify on or after the expiry date.</p>
                     <div class="input-group" style="max-width: 260px;">
                         <span class="input-group-text"><i class="bi bi-alarm"></i></span>
                         <input type="number" class="form-control" id="inputNotificationThreshold"
                                min="0" step="1"
                                value="{{ .User.NotificationPreferences.NotificationThresholdDays }}"
-                               aria-label="Notification threshold in days">
+                               aria-required="true">
                         <span class="input-group-text">days</span>
                     </div>
+                    <div class="invalid-feedback" id="thresholdFeedback"></div>
                 </div>
 
                 <div id="ntfySettings" {{if not .User.NotificationPreferences.NtfyEnabled}}style="display: none;"{{end}}>
-                    <h5 class="mt-3">ntfy.sh Configuration</h5>
-                    <div class="input-group mb-3">
-                        <span class="input-group-text">ntfy.sh URL</span>
-                        <input type="text" class="form-control" placeholder="https://ntfy.sh" id="inputNtfyUrl" value="{{.User.NotificationPreferences.NtfyURL}}">
-                        <span class="input-group-text">Topic</span>
-                        <input type="text" class="form-control" placeholder="your_topic" id="inputNtfyTopic" value="{{.User.NotificationPreferences.NtfyTopic}}">
+                    <h3 class="h6 fw-medium mb-3">ntfy.sh Configuration</h3>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="inputNtfyUrl" class="form-label fw-medium">
+                                ntfy.sh URL <span class="text-danger" aria-hidden="true">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="inputNtfyUrl"
+                                   placeholder="https://ntfy.sh" value="{{.User.NotificationPreferences.NtfyURL}}"
+                                   autocomplete="off">
+                            <div class="invalid-feedback">ntfy.sh URL is required when ntfy notifications are enabled.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputNtfyTopic" class="form-label fw-medium">
+                                Topic <span class="text-danger" aria-hidden="true">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="inputNtfyTopic"
+                                   placeholder="your_topic" value="{{.User.NotificationPreferences.NtfyTopic}}"
+                                   autocomplete="off">
+                            <div class="invalid-feedback">Topic is required when ntfy notifications are enabled.</div>
+                        </div>
                     </div>
-                    <div class="input-group mb-3">
-                        <span class="input-group-text">Access Token (optional)</span>
-                        <input type="password" class="form-control" placeholder="Optional access token" id="inputNtfyToken">
+                    <div class="mb-3">
+                        <label for="inputNtfyToken" class="form-label fw-medium">
+                            Access Token <span class="text-body-secondary fw-normal">(optional)</span>
+                        </label>
+                        <input type="password" class="form-control" id="inputNtfyToken"
+                               placeholder="Optional access token" autocomplete="new-password"
+                               style="max-width: 360px;">
                     </div>
                 </div>
             </form>
-            <div id="notificationAlert" class="alert alert-danger fade mt-3 d-none" role="alert">
-                <span id="notificationAlertMessage"></span>
-            </div>
         </div>
     </div>
 
-    <hr>
-    <div class="row g-5 p-3">
-        <div class="col">
-            <h4>
-                Password settings
-            </h4>
+    {{/* ── Household ────────────────────────────────────────────── */}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 px-4">
+            <h2 class="h5 mb-0 fw-semibold">Household</h2>
         </div>
-    </div>
-    <div class="row gx-5 p-3 my-3">
-        <div class="col">
-            <form id="passwordUpdate" novalidate>
-                <div class="input-group">
-                    <span class="input-group-text">Password</span>
-                    <input id="inputPassword" type="password" aria-label="Password" class="form-control" autocomplete="new-password">
-                    <input id="inputPasswordVerification" type="password" aria-label="Password Verification" class="form-control" autocomplete="new-password">
-                    <button class="btn btn-outline-primary" type="button" id="btnUpdatePassword">Update Password</button>
-                </div>
-            </form>
-            <div id="passwordAlert" class="alert alert-danger fade mt-3 d-none" role="alert">
-                <span id="passwordAlertMessage"></span>
+        <div class="card-body px-4 py-4">
+
+            {{/* Current household info */}}
+            <div class="d-flex align-items-center gap-2 p-3 rounded bg-light mb-4">
+                <span class="badge bg-secondary">ID: {{ .Household.ID }}</span>
+                <strong>{{ .Household.Name }}</strong>
+                {{ if .IsAdmin }}<span class="badge bg-primary"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
             </div>
+
+            {{/* Rename household — admin only */}}
+            {{ if .IsAdmin }}
+            <div class="mb-4">
+                <h3 class="h6 fw-medium mb-2"><i class="bi bi-pencil me-1"></i>Rename Household</h3>
+                <div class="input-group" style="max-width: 480px;">
+                    <input type="text" class="form-control" id="inputHouseholdName"
+                           placeholder="New household name" aria-label="New household name"
+                           value="{{ .Household.Name }}">
+                    <button type="button" class="btn btn-outline-primary" id="btnUpdateHouseholdName">Rename</button>
+                </div>
+                <div id="updateNameAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
+            </div>
+            {{ end }}
+
+            {{/* Members list */}}
+            {{ if .Members }}
+            <div class="mb-4">
+                <h3 class="h6 fw-medium mb-2"><i class="bi bi-people me-1"></i>Members</h3>
+                <ul class="list-group" id="memberList">
+                    {{ range .Members }}
+                    <li class="list-group-item d-flex justify-content-between align-items-center" id="member-{{ .ID }}">
+                        <span>
+                            <i class="bi bi-person me-2"></i>{{ .Username }}
+                            {{ if eq .ID $.User.ID }}<span class="badge bg-secondary ms-1">You</span>{{ end }}
+                            {{ if eq .ID $.Household.AdminID }}<span class="badge bg-primary ms-1"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
+                        </span>
+                        {{ if and $.IsAdmin (ne .ID $.Household.AdminID) }}
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-member"
+                                data-id="{{ .ID }}" aria-label="Remove {{ .Username }}">
+                            <i class="bi bi-person-dash"></i>
+                        </button>
+                        {{ end }}
+                    </li>
+                    {{ end }}
+                </ul>
+                <div id="membersAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
+            </div>
+            {{ end }}
+
+            {{/* ── Join & Invite ───────────────────────────────── */}}
+            <div class="mt-4 pt-4 border-top">
+                <h3 class="h6 fw-medium text-muted mb-3"><i class="bi bi-person-plus me-1"></i>Join &amp; Invite</h3>
+
+                {{/* Apply to join a household */}}
+                <div class="mb-4">
+                    <label for="inputApplyHouseholdID" class="form-label fw-medium">
+                        Apply to Join a Household
+                    </label>
+                    <p class="text-body-secondary small mb-2">Enter the ID of the household you want to join. The admin will need to approve your request.</p>
+                    <div class="input-group" style="max-width: 360px;">
+                        <span class="input-group-text"><i class="bi bi-hash"></i></span>
+                        <input type="number" class="form-control" id="inputApplyHouseholdID"
+                               placeholder="Household ID" aria-required="true" min="1">
+                        <button type="button" class="btn btn-outline-primary" id="btnApplyHousehold">Apply</button>
+                    </div>
+                    <div id="applyHouseholdAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
+                </div>
+
+                {{/* Outgoing pending applications */}}
+                {{ if .MyApplications }}
+                <div class="mb-4">
+                    <h3 class="h6 fw-medium mb-2"><i class="bi bi-send me-1"></i>Your Pending Applications</h3>
+                    <p class="text-body-secondary small mb-2">Awaiting admin approval.</p>
+                    <ul class="list-group" id="myApplicationList">
+                        {{ range .MyApplications }}
+                        <li class="list-group-item d-flex justify-content-between align-items-center" id="my-application-{{ .ID }}">
+                            <span><i class="bi bi-house me-2"></i>Household #{{ .HouseholdID }}</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-cancel-application"
+                                    data-id="{{ .ID }}" aria-label="Cancel application for household #{{ .HouseholdID }}">
+                                <i class="bi bi-x-lg"></i> Cancel
+                            </button>
+                        </li>
+                        {{ end }}
+                    </ul>
+                </div>
+                {{ end }}
+
+                {{/* Invite by email */}}
+                <div class="mb-4">
+                    <label for="inputInviteEmail" class="form-label fw-medium">
+                        <i class="bi bi-envelope-paper me-1"></i>Invite by Email
+                    </label>
+                    <p class="text-body-secondary small mb-2">Send an invitation to join this household. The recipient will receive an email with a magic link to accept.</p>
+                    <div class="input-group" style="max-width: 480px;">
+                        <span class="input-group-text"><i class="bi bi-at"></i></span>
+                        <input type="email" class="form-control" id="inputInviteEmail"
+                               placeholder="user@example.com" aria-label="Email address to invite" autocomplete="email">
+                        <button type="button" class="btn btn-outline-primary" id="btnSendInvitation">Send Invite</button>
+                    </div>
+                    <div id="sendInviteAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
+                </div>
+
+                {{/* Sent invitations list */}}
+                {{ if .Invitations }}
+                <div class="mb-3">
+                    <h3 class="h6 fw-medium mb-2"><i class="bi bi-send me-1"></i>Sent Invitations</h3>
+                    <p class="text-body-secondary small mb-2">Invitations you have sent. Cancelled invitations are hidden by default.</p>
+                    <ul class="list-group" id="invitationList">
+                        {{ range .Invitations }}
+                        {{ if ne .Status "cancelled" }}
+                        <li class="list-group-item d-flex justify-content-between align-items-center" id="invitation-{{ .ID }}">
+                            <span>
+                                <i class="bi bi-envelope me-2"></i>{{ .Email }}
+                                <span class="badge bg-secondary ms-2">{{ .Status }}</span>
+                                <small class="text-muted ms-2">Expires: {{ .ExpiresAt.Format "2006-01-02" }}</small>
+                            </span>
+                            {{ if eq .Status "pending" }}
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-cancel-invitation"
+                                    data-id="{{ .ID }}" aria-label="Cancel invitation for {{ .Email }}">
+                                <i class="bi bi-x-lg"></i> Cancel
+                            </button>
+                            {{ end }}
+                        </li>
+                        {{ end }}
+                        {{ end }}
+                    </ul>
+
+                    {{/* Collapsible cancelled invitations */}}
+                    {{ $hasCancelled := false }}
+                    {{ range .Invitations }}
+                    {{ if eq .Status "cancelled" }}{{ $hasCancelled = true }}{{ end }}
+                    {{ end }}
+                    {{ if $hasCancelled }}
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="collapse" data-bs-target="#cancelledInvitations"
+                                aria-expanded="false" aria-controls="cancelledInvitations">
+                            <i class="bi bi-chevron-down me-1"></i>Show cancelled invitations
+                        </button>
+                    </div>
+                    <div class="collapse mt-2" id="cancelledInvitations">
+                        <ul class="list-group">
+                            {{ range .Invitations }}
+                            {{ if eq .Status "cancelled" }}
+                            <li class="list-group-item d-flex justify-content-between align-items-center text-muted" id="invitation-{{ .ID }}">
+                                <span>
+                                    <i class="bi bi-envelope me-2"></i>{{ .Email }}
+                                    <span class="badge bg-secondary ms-2">{{ .Status }}</span>
+                                </span>
+                            </li>
+                            {{ end }}
+                            {{ end }}
+                        </ul>
+                    </div>
+                    {{ end }}
+                </div>
+                {{ end }}
+            </div>
+
+            {{/* Admin: Pending join requests */}}
+            {{ if .IsAdmin }}
+            {{ if .PendingApplications }}
+            <div class="mt-4 pt-4 border-top">
+                <h3 class="h6 fw-medium mb-2"><i class="bi bi-people me-1"></i>Pending Join Requests</h3>
+                <ul class="list-group" id="applicationList">
+                    {{ range .PendingApplications }}
+                    <li class="list-group-item d-flex justify-content-between align-items-center" id="application-{{ .ID }}">
+                        <span><i class="bi bi-person me-2"></i>User #{{ .ApplicantID }}</span>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-success btn-approve-application"
+                                    data-id="{{ .ID }}" aria-label="Approve application from user #{{ .ApplicantID }}">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-reject-application"
+                                    data-id="{{ .ID }}" aria-label="Reject application from user #{{ .ApplicantID }}">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </li>
+                    {{ end }}
+                </ul>
+                <div id="applicationsAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
+            </div>
+            {{ end }}
+            {{ end }}
+
+            {{/* ── Danger Zone ─────────────────────────────────── */}}
+            <div class="mt-4 pt-4 border-top border-danger border-opacity-25">
+                <h3 class="h6 fw-medium text-danger mb-3">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Danger Zone
+                </h3>
+
+                {{/* Create new household */}}
+                <div class="mb-4">
+                    <label for="inputNewHouseholdName" class="form-label fw-medium">
+                        <i class="bi bi-house-add me-1"></i>Create New Household
+                    </label>
+                    <p class="text-body-secondary small mb-2">Create a new household and switch to it. If you are currently the sole member, your products will be moved.</p>
+                    <div class="input-group" style="max-width: 480px;">
+                        <span class="input-group-text"><i class="bi bi-house"></i></span>
+                        <input type="text" class="form-control" id="inputNewHouseholdName"
+                               placeholder="Household name" aria-label="New household name">
+                        <button type="button" class="btn btn-outline-primary" id="btnCreateHousehold">
+                            Create &amp; Switch
+                        </button>
+                    </div>
+                    <div id="createHouseholdAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
+                </div>
+
+                {{/* Leave household */}}
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <p class="fw-medium mb-1"><i class="bi bi-box-arrow-left me-1"></i>Leave Household</p>
+                        <p class="text-body-secondary small mb-0">You will be assigned a new personal household. If you are the sole member, your products will be moved with you.</p>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger flex-shrink-0" id="btnLeaveHousehold">Leave</button>
+                </div>
+                <div id="leaveHouseholdAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
+            </div>
+
         </div>
     </div>
+
+
 </div>
 
 <script src="/assets/js/userSettings.js"></script>
