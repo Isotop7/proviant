@@ -582,6 +582,7 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	dbProduct.Countries = product.Countries
 	dbProduct.ImageURL = product.ImageURL
 	dbProduct.ExpireAt = product.ExpireAt
+	dbProduct.Amount = product.Amount
 
 	// Save updated product
 	saveResult := dbc.DBHandle.Save(&dbProduct)
@@ -591,6 +592,54 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 	} else {
 		return nil
 	}
+}
+
+// UpdateProductAmount applies a delta to a product's amount field.
+// If the resulting amount is <= 0, the product is hard-deleted.
+// Returns deleted=true when the product was removed, deleted=false when it was updated.
+func (dbc DatabaseController) UpdateProductAmount(productID int, userID uint, delta int) (bool, error) {
+	// Check if id is valid
+	if productID <= 0 {
+		return false, gorm.ErrNotImplemented
+	}
+
+	// Try to get product
+	var dbProduct database.Product
+	getError := dbc.DBHandle.First(&dbProduct, productID)
+	if getError.Error != nil {
+		return false, getError.Error
+	}
+
+	// Try to get user object from database
+	user, userErr := dbc.GetUserByID(userID)
+	if userErr != nil {
+		return false, userErr
+	}
+
+	// Check if supplied user is allowed to update the product
+	if dbProduct.HouseholdID != user.HouseholdID {
+		return false, errors.ErrMismatcherUserID
+	}
+
+	// Apply delta, floor at 0
+	newAmount := dbProduct.Amount + delta
+	if newAmount < 0 {
+		newAmount = 0
+	}
+	dbProduct.Amount = newAmount
+
+	// Hard-delete products when amount reaches 0
+	if dbProduct.Amount <= 0 {
+		deleteResult := dbc.DBHandle.Unscoped().Delete(&database.Product{}, dbProduct.ID)
+		return true, deleteResult.Error
+	}
+
+	// Save updated product
+	saveResult := dbc.DBHandle.Save(&dbProduct)
+	if saveResult.Error != nil {
+		return false, saveResult.Error
+	}
+	return false, nil
 }
 
 // DeleteProduct deletes a product (based on product ID) of a user (based on user ID)

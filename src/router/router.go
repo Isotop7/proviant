@@ -216,6 +216,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedProductAPI.Use(jwtAPIUserAwareMiddleware.MiddlewareFunc())
 	protectedProductAPI.GET("/:id", v1.GetProduct)
 	protectedProductAPI.PATCH("/:id", v1.UpdateProduct)
+	protectedProductAPI.PATCH("/:id/amount", v1.UpdateProductAmount)
 	protectedProductAPI.DELETE("/:id", v1.DeleteProduct)
 	protectedProductAPI.POST("/:id/restore", v1.RestoreProduct)
 	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)

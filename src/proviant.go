@@ -201,6 +201,11 @@ func main() {
 		panic(breakingMigrationsError)
 	}
 
+	// Backfill default amount for existing products
+	if amountMigrationError := migrations.SetDefaultProductAmounts(logger, dbHandle); amountMigrationError != nil {
+		panic(amountMigrationError)
+	}
+
 	// Check API controller config and create instance
 	validateAPIs(proviantConfiguration)
 	offacntrl := &controllers.OpenFoodFactsAPIController{

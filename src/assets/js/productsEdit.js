@@ -7,6 +7,7 @@ function getFormElements() {
         inputCategories: document.getElementById('inputCategories'),
         inputCountries: document.getElementById('inputCountries'),
         inputExpireAt: document.getElementById('inputExpireAt'),
+        inputAmount: document.getElementById('inputAmount'),
         labelProductID: document.getElementById('labelProductID'),
         imgProduct: document.getElementById('imgProduct'),
         alertEditProduct: document.getElementById('alertEditProduct'),
@@ -20,7 +21,7 @@ function checkFormValidity() {
 
 function editProduct() {
     const els = getFormElements();
-    if (!els.form || !els.labelProductID || !els.inputProductName || 
+    if (!els.form || !els.labelProductID || !els.inputProductName ||
         !els.inputCategories || !els.inputCountries || !els.inputImageURL || !els.inputExpireAt) {
         return;
     }
@@ -33,14 +34,15 @@ function editProduct() {
     // Get form values
     const productID = Number.parseInt(els.labelProductID.innerText.trim());
     const expireDate = els.inputExpireAt.valueAsDate;
-    
+
     const product = {
         "ID": productID,
         "productName": els.inputProductName.value.trim(),
         "categories": els.inputCategories.value.trim(),
         "countries": els.inputCountries.value.trim(),
         "imageUrl": els.inputImageURL.value.trim(),
-        "expireAt": expireDate ? expireDate.toISOString() : null
+        "expireAt": expireDate ? expireDate.toISOString() : null,
+        "amount": els.inputAmount ? Number.parseInt(els.inputAmount.value) || 0 : 0,
     };
 
     // Edit product

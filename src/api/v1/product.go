@@ -348,9 +348,10 @@ func CreateProduct(ctx *gin.Context) {
 	var apiProduct dbModel.Product
 	apiProduct, err := offacntrl.GetDataset(product.Barcode)
 	if err == nil {
-		// Preserve timestamps
+		// Preserve request fields
 		apiProduct.ScannedAt = time.Now()
 		apiProduct.ExpireAt = product.ExpireAt
+		apiProduct.Amount = product.Amount
 		product = apiProduct
 	}
 
@@ -437,6 +438,81 @@ func UpdateProduct(ctx *gin.Context) {
 	// Unspecified error
 	default:
 		logger.Error().Msgf("Error saving product: %s", updateErr)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: updateErr.Error()})
+		return
+	}
+}
+
+// UpdateProductAmount updates the amount of a product by a given delta.
+// If the resulting amount is <= 0, the product is hard-deleted.
+// @Summary      	Update product amount
+// @Description  	Applies a delta to a product's amount. Hard-deletes the product when amount reaches 0.
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Param        	id   	path	int							true  	"Product ID"
+// @Param        	delta	body	api.ProductAmountDTO		true	"Amount delta"
+// @Success      	200  {object}  database.Product
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/products/{id}/amount [patch]
+func UpdateProductAmount(ctx *gin.Context) {
+	// Get zerolog instance from context
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get and parse parameter id
+	idParam := ctx.Param("id")
+	var productID int
+	var convErr error
+	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
+		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, idParam)})
+		return
+	}
+
+	// Get database instance from context
+	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !dbErr {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	// Extract JWT claims from context
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return
+	}
+
+	// Get and parse body
+	var amountDTO apiModel.ProductAmountDTO
+	if err := ctx.ShouldBindJSON(&amountDTO); err != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		return
+	}
+
+	// Create database controller
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+	deleted, updateErr := dbController.UpdateProductAmount(productID, userID, amountDTO.Delta)
+
+	switch updateErr {
+	case nil:
+		if deleted {
+			ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d deleted (amount reached 0)", productID)})
+		} else {
+			ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d amount updated", productID)})
+		}
+		return
+	case gorm.ErrRecordNotFound:
+		logger.Error().Msgf(errors.FormatProductNotFound, productID)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
+		return
+	default:
+		logger.Error().Msgf("Error updating product amount: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: updateErr.Error()})
 		return
 	}

@@ -54,9 +54,9 @@ proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confir
   bootstrap.Modal.getOrCreateInstance(modal).show();
 };
 
-proviant.createProduct = async function (barcode, expireAt) {
+proviant.createProduct = async function (barcode, expireAt, amount) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  let data = JSON.stringify({ barcode, expireAt });
+  let data = JSON.stringify({ barcode, expireAt, amount: amount || 1 });
   const apiCall = await fetch(url, {
     method: "POST",
     headers: {
@@ -120,6 +120,23 @@ proviant.editProduct = async function (product) {
     message: body.message,
   };
   return response;
+};
+
+proviant.updateProductAmount = async function (productID, delta) {
+  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/amount`;
+  const apiCall = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ delta: delta }),
+  });
+  const body = await apiCall.json();
+  return {
+    code: apiCall.status,
+    message: body.message,
+    deleted: apiCall.status === 200 && typeof body.message === "string" && body.message.includes("deleted"),
+  };
 };
 
 proviant.deleteProduct = async function (productID, archiveOnly) {

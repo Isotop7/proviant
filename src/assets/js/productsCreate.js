@@ -291,7 +291,9 @@ function handleBtnAddProduct() {
             throw new Error('Barcode cannot be empty');
         }
         const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
-        proviant.createProduct(barcode, expireAt).then((response) => {
+        const amountEl = document.getElementById('amount');
+        const amount = amountEl ? parseInt(amountEl.value, 10) || 1 : 1;
+        proviant.createProduct(barcode, expireAt, amount).then((response) => {
             switch (response.code) {
                 case 201:
                     showAlert(true, `Product with barcode '${barcode}' was created successfully`);
@@ -435,6 +437,30 @@ document.addEventListener('click', function (event) {
     if (target.closest('#btnScan')) {
         event.preventDefault();
         handleScanButton();
+        return;
+    }
+
+    if (target.closest('#btnAmountDec')) {
+        event.preventDefault();
+        const hiddenInput = document.getElementById('amount');
+        const display = document.getElementById('amountDisplay');
+        if (hiddenInput && display) {
+            const newVal = Math.max(1, parseInt(hiddenInput.value, 10) - 1);
+            hiddenInput.value = newVal;
+            display.textContent = newVal;
+        }
+        return;
+    }
+
+    if (target.closest('#btnAmountInc')) {
+        event.preventDefault();
+        const hiddenInput = document.getElementById('amount');
+        const display = document.getElementById('amountDisplay');
+        if (hiddenInput && display) {
+            const newVal = parseInt(hiddenInput.value, 10) + 1;
+            hiddenInput.value = newVal;
+            display.textContent = newVal;
+        }
         return;
     }
 

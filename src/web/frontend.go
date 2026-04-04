@@ -173,7 +173,6 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	queryValue := ctx.Query("queryValue")
 	sort := ctx.DefaultQuery("sort", "created_at")
 	order := ctx.DefaultQuery("order", "asc")
-
 	dbController := database.DatabaseController{DBHandle: dbHandle}
 
 	var products []dbModel.Product
