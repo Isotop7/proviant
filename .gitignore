@@ -33,3 +33,6 @@ src/data
 
 # Claude Code CLI
 .claude/
+
+# Issue sync
+issues/
