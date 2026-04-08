@@ -10,6 +10,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -96,7 +97,7 @@ func CreateInvitation(ctx *gin.Context) {
 	}
 
 	// Send invitation email via NotificationController
-	baseURL, _ := ctx.MustGet("baseURL").(string)
+	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
 	notificationController, _ := ctx.MustGet("notificationController").(*controllers.NotificationController)
 	if notificationController != nil {
 		inviterName := user.Username
@@ -106,7 +107,7 @@ func CreateInvitation(ctx *gin.Context) {
 			householdName = household.Name
 		}
 
-		if err := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, baseURL); err != nil {
+		if err := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL); err != nil {
 			logger.Error().Msgf("Failed to send invitation email to %s: %s", req.Email, err)
 			// Don't fail the request, invitation is still created; retry handled by dispatcher
 		} else {
