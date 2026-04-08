@@ -34,5 +34,8 @@ src/data
 # Claude Code CLI
 .claude/
 
+# Kilo
+.kilo/plans
+
 # Issue sync
 issues/

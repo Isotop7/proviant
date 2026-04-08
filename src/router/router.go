@@ -87,6 +87,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		ctx.Next()
 	})
 
+	// Proviant configuration for access in handlers
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("proviantConfig", proviantConfiguration)
+		ctx.Next()
+	})
+
 	// Setup JWT authentication middleware for API
 	jwtAPIMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedAPIFunc)
 	if jwtAPIAuthSetupErr != nil {
@@ -149,10 +155,10 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	})
 
 	// Authentication routes
-	engine.POST("/auth/login", jwtAPIMiddleware.LoginHandler)
+	engine.POST("/auth/login", loginRateLimitMiddleware, jwtAPIMiddleware.LoginHandler)
 
 	// Signup routes
-	engine.POST("/auth/signup", auth.Signup)
+	engine.POST("/auth/signup", signupRateLimitMiddleware, auth.Signup)
 	engine.POST("/auth/invite/accept", auth.AcceptInvitation)
 	engine.GET("/auth/refresh_token", jwtAPIMiddleware.RefreshHandler)
 

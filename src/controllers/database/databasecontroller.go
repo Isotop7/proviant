@@ -1627,3 +1627,43 @@ func (dbc DatabaseController) GetOpenFoodFactsCacheByBarcode(barcode string) (da
 func (dbc DatabaseController) CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error {
 	return dbc.DBHandle.Create(entry).Error
 }
+
+const (
+	DefaultMaxLoginAttempts    = 10
+	DefaultLockoutDurationMins = 15
+)
+
+func (dbc DatabaseController) IsAccountLocked(userID uint, maxLoginAttempts int, lockoutDurationMins int) (bool, time.Duration) {
+	var user authentication.User
+	if err := dbc.DBHandle.First(&user, userID).Error; err != nil {
+		return false, 0
+	}
+	if user.LockedUntil.Valid && time.Now().Before(user.LockedUntil.Time) {
+		remaining := time.Until(user.LockedUntil.Time)
+		return true, remaining
+	}
+	return false, 0
+}
+
+func (dbc DatabaseController) RecordFailedLoginAttempt(userID uint, maxLoginAttempts int, lockoutDurationMins int) error {
+	var user authentication.User
+	if err := dbc.DBHandle.First(&user, userID).Error; err != nil {
+		return err
+	}
+	user.FailedLoginAttempts++
+	if user.FailedLoginAttempts >= uint(maxLoginAttempts) {
+		lockoutUntil := time.Now().Add(time.Duration(lockoutDurationMins) * time.Minute)
+		return dbc.DBHandle.Model(&user).Updates(map[string]interface{}{
+			"failed_login_attempts": user.FailedLoginAttempts,
+			"deleted_at":            lockoutUntil,
+		}).Error
+	}
+	return dbc.DBHandle.Model(&user).Update("failed_login_attempts", user.FailedLoginAttempts).Error
+}
+
+func (dbc DatabaseController) ResetFailedLoginAttempts(userID uint) error {
+	return dbc.DBHandle.Model(&authentication.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"failed_login_attempts": 0,
+		"deleted_at":            nil,
+	}).Error
+}
