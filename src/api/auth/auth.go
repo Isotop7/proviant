@@ -5,8 +5,10 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/models/configuration"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -92,16 +94,55 @@ func Signup(ctx *gin.Context) {
 
 	logger.Info().Msgf("New User '%s' with ID '%d' created", user.Username, user.ID)
 
-	// Auto-accept invitation if token was provided during signup
 	if signup.InviteToken != "" {
 		acceptErr := dbController.AcceptInvitation(signup.InviteToken, user.MailAddress, user.ID)
 		if acceptErr != nil {
 			logger.Warn().Msgf("Failed to auto-accept invitation after signup: %s", acceptErr.Error())
-			// Don't fail the signup, just log the warning
 		} else {
 			logger.Info().Msgf("Successfully auto-accepted invitation for user '%s'", user.Username)
 		}
 	}
+
+	notificationControllerInterface, ncOk := ctx.Get("notificationController")
+	if !ncOk {
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
+		return
+	}
+	notificationController, ok := notificationControllerInterface.(*controllers.NotificationController)
+	if !ok {
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
+		return
+	}
+	proviantConfigInterface, pcOk := ctx.Get("proviantConfig")
+	if !pcOk {
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
+		return
+	}
+	proviantConfig, ok := proviantConfigInterface.(*configuration.ProviantConfiguration)
+	if !ok {
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
+		return
+	}
+
+	token, expiresAt, tokenErr := controllers.GenerateEmailVerificationToken()
+	if tokenErr != nil {
+		logger.Error().Msgf("Failed to generate email verification token: %s", tokenErr.Error())
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
+		return
+	}
+	if err := dbController.CreateEmailVerification(user.ID, token, expiresAt); err != nil {
+		logger.Error().Msgf("Failed to create email verification record: %s", err.Error())
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
+		return
+	}
+
+	go func() {
+		if sendErr := notificationController.SendEmailVerification(user.MailAddress, user.Username, token, proviantConfig.Server.BaseURL, expiresAt); sendErr != nil {
+			logger.Error().Msgf("Failed to send email verification: %s", sendErr.Error())
+		} else {
+			logger.Info().Msgf("Email verification sent to %s", user.MailAddress)
+		}
+	}()
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
 }

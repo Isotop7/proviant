@@ -147,6 +147,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Signup routes
 	engine.POST("/auth/signup", signupRateLimitMiddleware, auth.Signup)
+	engine.POST("/auth/verify-email", auth.VerifyEmail)
 	engine.POST("/auth/invite/accept", auth.AcceptInvitation)
 	engine.GET("/auth/refresh_token", jwtAPIMiddleware.RefreshHandler)
 
@@ -255,6 +256,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Public invite acceptance page (no auth required)
 	engine.GET("/web/invite/accept", webFrontendHandler.AcceptInvite)
+
+	// Public email verification page (no auth required)
+	engine.GET("/web/verify-email", webFrontendHandler.VerifyEmail)
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")

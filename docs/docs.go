@@ -2104,6 +2104,9 @@ const docTemplate = `{
                 "deletedAt": {
                     "$ref": "#/definitions/gorm.DeletedAt"
                 },
+                "emailVerifiedAt": {
+                    "type": "string"
+                },
                 "household": {
                     "$ref": "#/definitions/database.Household"
                 },

@@ -89,6 +89,52 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 	return mailDialer.DialAndSend(mail)
 }
 
+// SendEmailVerificationEmail sends an email verification email to the recipient
+func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, token, baseURL string, expiresAt time.Time) error {
+	magicLink := fmt.Sprintf("%s/web/verify-email?token=%s", baseURL, token)
+
+	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/invitation.html")
+	if templErr != nil {
+		return templErr
+	}
+	var bodyBuf bytes.Buffer
+	templExecErr := templ.Execute(&bodyBuf, struct {
+		InviterName   string
+		HouseholdName string
+		MagicLink     string
+		ExpiresAt     string
+		Email         string
+	}{
+		InviterName:   username,
+		HouseholdName: "Proviant",
+		MagicLink:     magicLink,
+		ExpiresAt:     expiresAt.Format("2006-01-02 15:04"),
+		Email:         email,
+	})
+	if templExecErr != nil {
+		return templExecErr
+	}
+
+	mail := gomail.NewMessage()
+	mail.SetHeader("From", e.Configuration.FromAddress)
+	mail.SetHeader("To", email)
+	mail.SetHeader("Subject", "Verify your email address for Proviant")
+	mail.SetBody("text/html", bodyBuf.String())
+
+	mailDialer := gomail.Dialer{
+		Host: e.Configuration.Host,
+		Port: e.Configuration.Port,
+		SSL:  e.Configuration.SSL,
+	}
+
+	if e.Configuration.User != "" && e.Configuration.Password != "" {
+		mailDialer.Username = e.Configuration.User
+		mailDialer.Password = e.Configuration.Password
+	}
+
+	return mailDialer.DialAndSend(mail)
+}
+
 // SendInvitationEmail sends an invitation email to the recipient
 func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
 	// Construct magic link
