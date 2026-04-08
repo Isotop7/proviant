@@ -39,7 +39,44 @@ func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
 }
 
 func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
-	ctx.AbortWithStatus(http.StatusUnauthorized)
+	failedUserID, failedUserIDExists := ctx.Get("failedUserID")
+	if !failedUserIDExists {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	dbController := database.DatabaseController{DBHandle: dbHandle}
+
+	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
+	maxLoginAttempts := database.DefaultMaxLoginAttempts
+	lockoutDurationMins := database.DefaultLockoutDurationMins
+	if proviantConfig != nil {
+		if proviantConfig.Server.Authentication.MaxLoginAttempts > 0 {
+			maxLoginAttempts = proviantConfig.Server.Authentication.MaxLoginAttempts
+		}
+		if proviantConfig.Server.Authentication.LockoutDurationMins > 0 {
+			lockoutDurationMins = proviantConfig.Server.Authentication.LockoutDurationMins
+		}
+	}
+
+	locked, remaining := dbController.IsAccountLocked(failedUserID.(uint), maxLoginAttempts, lockoutDurationMins)
+	if !locked {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	retryAfter := int(remaining.Seconds())
+	ctx.Header("Retry-After", strconv.Itoa(retryAfter))
+	ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
+		"code":    "ACCOUNT_LOCKED",
+		"message": "Too many failed login attempts. Account is temporarily locked.",
+	})
 }
 
 func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string) {
@@ -134,9 +171,28 @@ func JWTMiddleware(
 
 			// Create database controller
 			dbController := database.DatabaseController{DBHandle: dbHandle}
+
+			// Get config values with defaults
+			maxLoginAttempts := database.DefaultMaxLoginAttempts
+			lockoutDurationMins := database.DefaultLockoutDurationMins
+			if proviantConfiguration != nil {
+				if proviantConfiguration.Server.Authentication.MaxLoginAttempts > 0 {
+					maxLoginAttempts = proviantConfiguration.Server.Authentication.MaxLoginAttempts
+				}
+				if proviantConfiguration.Server.Authentication.LockoutDurationMins > 0 {
+					lockoutDurationMins = proviantConfiguration.Server.Authentication.LockoutDurationMins
+				}
+			}
+
 			// Get user object by username
 			user, err := dbController.GetUserByUsername(loginVals.Username)
 			if err != nil {
+				return nil, jwt.ErrFailedAuthentication
+			}
+
+			// Check if account is already locked
+			if locked, _ := dbController.IsAccountLocked(user.ID, maxLoginAttempts, lockoutDurationMins); locked {
+				ctx.Set("failedUserID", user.ID)
 				return nil, jwt.ErrFailedAuthentication
 			}
 
@@ -144,10 +200,14 @@ func JWTMiddleware(
 			// Return result of comparison
 			authErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginVals.Password))
 			if authErr != nil {
+				_ = dbController.RecordFailedLoginAttempt(user.ID, maxLoginAttempts, lockoutDurationMins)
+				ctx.Set("failedUserID", user.ID)
 				return nil, jwt.ErrFailedAuthentication
-			} else {
-				return user, nil
 			}
+
+			// Successful login - reset failed attempts
+			_ = dbController.ResetFailedLoginAttempts(user.ID)
+			return user, nil
 		},
 		// Authorizator checks if user is authorized to emit operation
 		Authorizator: authorizatorFunc,

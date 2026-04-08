@@ -367,6 +367,9 @@ var (
     // ErrUserIDFromToken is thrown if no user id is found in token
     ErrUserIDFromToken = errors.New("error getting user id from JWT token")
 
+    // ErrAccountLocked is thrown when an account is temporarily locked due to too many failed login attempts
+    ErrAccountLocked = errors.New("account is temporarily locked due to too many failed login attempts")
+
     // ErrProductSearchInvalidQuery is thrown if a search is ommited but no valid parameter is supplied
     ErrProductSearchInvalidQuery = errors.New("invalid search query specified")
 
@@ -435,6 +438,9 @@ var (
      */
     // ErrNotificationInvalidInterval is thrown if an invalid notification interval was specified
     ErrNotificationInvalidInterval = errors.New("notification interval must be greater than 0")
+
+    // ErrNotificationInvalidThreshold is thrown if a negative notification threshold is specified
+    ErrNotificationInvalidThreshold = errors.New("notification threshold must be 0 or greater")
 
     // ErrNotificationInvalidSMTPPort is thrown if an invalid SMTP port was specified
     ErrNotificationInvalidSMTPPort = errors.New("SMTP port must be greater than 0")
@@ -582,6 +588,7 @@ import "codeberg.org/isotop7/proviant/migrations"
 
 - [func AddNotificationPreferencesMigration\(db \*gorm.DB\) error](<#AddNotificationPreferencesMigration>)
 - [func RunBreakingDatabaseMigrations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RunBreakingDatabaseMigrations>)
+- [func SetDefaultProductAmounts\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SetDefaultProductAmounts>)
 
 
 <a name="AddNotificationPreferencesMigration"></a>
@@ -602,6 +609,15 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error
 
 
 
+<a name="SetDefaultProductAmounts"></a>
+## func SetDefaultProductAmounts
+
+```go
+func SetDefaultProductAmounts(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+SetDefaultProductAmounts sets amount=1 for all existing products that have amount=0 or NULL. When the amount column is first added via AutoMigrate, existing rows receive NULL \(not 0\), so both cases must be handled.
+
 # models
 
 ```go
@@ -620,10 +636,11 @@ NotificationRecipientInfo contains recipient information for different notificat
 
 ```go
 type NotificationRecipientInfo struct {
-    EmailAddress string
-    NtfyURL      string
-    NtfyTopic    string
-    NtfyToken    string
+    EmailAddress              string
+    NtfyURL                   string
+    NtfyTopic                 string
+    NtfyToken                 string
+    NotificationThresholdDays int
 }
 ```
 
@@ -1047,6 +1064,7 @@ v1 implements version 1 of the proviant API
 - [func SetExpireAt\(ctx \*gin.Context\)](<#SetExpireAt>)
 - [func UpdateHouseholdName\(ctx \*gin.Context\)](<#UpdateHouseholdName>)
 - [func UpdateProduct\(ctx \*gin.Context\)](<#UpdateProduct>)
+- [func UpdateProductAmount\(ctx \*gin.Context\)](<#UpdateProductAmount>)
 - [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
 - [func UpdateUserNotificationPreferences\(ctx \*gin.Context\)](<#UpdateUserNotificationPreferences>)
 - [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
@@ -1333,6 +1351,15 @@ func UpdateProduct(ctx *gin.Context)
 
 UpdateProduct updates a product of a user @Summary Updates a product @Description Updates a product with new values @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.Product true "Product" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[patch\]
 
+<a name="UpdateProductAmount"></a>
+## func UpdateProductAmount
+
+```go
+func UpdateProductAmount(ctx *gin.Context)
+```
+
+UpdateProductAmount updates the amount of a product by a given delta. If the resulting amount is \<= 0, the product is hard\-deleted. @Summary Update product amount @Description Applies a delta to a product's amount. Hard\-deletes the product when amount reaches 0. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param delta body api.ProductAmountDTO true "Amount delta" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/amount \[patch\]
+
 <a name="UpdateUser"></a>
 ## func UpdateUser
 
@@ -1401,6 +1428,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetInvitationsForHousehold>)
   - [func \(dbc DatabaseController\) GetLastInsertedProduct\(householdID uint\) \(database.Product, error\)](<#DatabaseController.GetLastInsertedProduct>)
   - [func \(dbc DatabaseController\) GetLastNotifiedProduct\(householdID uint\) \(database.Product, error\)](<#DatabaseController.GetLastNotifiedProduct>)
+  - [func \(dbc DatabaseController\) GetMaxNotificationThresholdDays\(\) int](<#DatabaseController.GetMaxNotificationThresholdDays>)
   - [func \(dbc DatabaseController\) GetNextUserID\(\) uint](<#DatabaseController.GetNextUserID>)
   - [func \(dbc DatabaseController\) GetOnboardingState\(userID uint\) \(database.OnboardingState, error\)](<#DatabaseController.GetOnboardingState>)
   - [func \(dbc DatabaseController\) GetOpenFoodFactsCacheByBarcode\(barcode string\) \(database.OpenFoodFactsCache, error\)](<#DatabaseController.GetOpenFoodFactsCacheByBarcode>)
@@ -1411,7 +1439,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetProductByID>)
   - [func \(dbc DatabaseController\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#DatabaseController.GetProductCategoryBreakdown>)
   - [func \(dbc DatabaseController\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#DatabaseController.GetProductsExpired>)
-  - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
+  - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration, maxLookAheadDays int\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
   - [func \(dbc DatabaseController\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]database.HouseholdWithMemberCount, error\)](<#DatabaseController.GetPublicHouseholds>)
   - [func \(dbc DatabaseController\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetTopArchivedProducts>)
   - [func \(dbc DatabaseController\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserArchivedProductsBulk>)
@@ -1420,20 +1448,24 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#DatabaseController.GetUserHouseholdByID>)
   - [func \(dbc DatabaseController\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulk>)
   - [func \(dbc DatabaseController\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulkByBarcode>)
+  - [func \(dbc DatabaseController\) IsAccountLocked\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) \(bool, time.Duration\)](<#DatabaseController.IsAccountLocked>)
   - [func \(dbc DatabaseController\) LeaveHousehold\(userID uint\) error](<#DatabaseController.LeaveHousehold>)
   - [func \(dbc DatabaseController\) MarkHouseholdStepDone\(userID uint\) error](<#DatabaseController.MarkHouseholdStepDone>)
   - [func \(dbc DatabaseController\) MarkInvitationSendFailed\(invitationID uint\) error](<#DatabaseController.MarkInvitationSendFailed>)
   - [func \(dbc DatabaseController\) MarkInvitationSent\(invitationID uint\) error](<#DatabaseController.MarkInvitationSent>)
   - [func \(dbc DatabaseController\) MarkNotificationsSetup\(userID uint\) error](<#DatabaseController.MarkNotificationsSetup>)
   - [func \(dbc DatabaseController\) MarkOnboardingComplete\(userID uint\) error](<#DatabaseController.MarkOnboardingComplete>)
+  - [func \(dbc DatabaseController\) RecordFailedLoginAttempt\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) error](<#DatabaseController.RecordFailedLoginAttempt>)
   - [func \(dbc DatabaseController\) RejectApplication\(applicationID, adminUserID uint\) error](<#DatabaseController.RejectApplication>)
   - [func \(dbc DatabaseController\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#DatabaseController.RemoveMemberFromHousehold>)
+  - [func \(dbc DatabaseController\) ResetFailedLoginAttempts\(userID uint\) error](<#DatabaseController.ResetFailedLoginAttempts>)
   - [func \(dbc DatabaseController\) RestoreProduct\(productID int, userID uint\) error](<#DatabaseController.RestoreProduct>)
   - [func \(dbc DatabaseController\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#DatabaseController.SearchProducts>)
   - [func \(dbc DatabaseController\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#DatabaseController.SetProductExpireAt>)
   - [func \(dbc DatabaseController\) SetProductNotifiedAt\(productID uint\) error](<#DatabaseController.SetProductNotifiedAt>)
   - [func \(dbc DatabaseController\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#DatabaseController.UpdateHouseholdName>)
   - [func \(dbc DatabaseController\) UpdateProduct\(productID int, userID uint, product \*database.ProductDTOPatch\) error](<#DatabaseController.UpdateProduct>)
+  - [func \(dbc DatabaseController\) UpdateProductAmount\(productID int, userID uint, delta int\) \(bool, error\)](<#DatabaseController.UpdateProductAmount>)
   - [func \(dbc DatabaseController\) UpdateUser\(userID uint, user \*authentication.User\) error](<#DatabaseController.UpdateUser>)
   - [func \(dbc DatabaseController\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#DatabaseController.UpdateUserPassword>)
   - [func \(dbc DatabaseController\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#DatabaseController.UserExistsByMailAddress>)
@@ -1447,6 +1479,15 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 
 
 ## Constants
+
+<a name="DefaultMaxLoginAttempts"></a>
+
+```go
+const (
+    DefaultMaxLoginAttempts    = 10
+    DefaultLockoutDurationMins = 15
+)
+```
 
 <a name="GeneratedPrefix"></a>
 
@@ -1752,6 +1793,15 @@ func (dbc DatabaseController) GetLastNotifiedProduct(householdID uint) (database
 
 GetLastNotifiedProduct returns the last notified product for a user
 
+<a name="DatabaseController.GetMaxNotificationThresholdDays"></a>
+### func \(DatabaseController\) GetMaxNotificationThresholdDays
+
+```go
+func (dbc DatabaseController) GetMaxNotificationThresholdDays() int
+```
+
+GetMaxNotificationThresholdDays returns the highest NotificationThresholdDays value set across all users. Returns 0 if no user has a threshold configured.
+
 <a name="DatabaseController.GetNextUserID"></a>
 ### func \(DatabaseController\) GetNextUserID
 
@@ -1846,10 +1896,10 @@ GetProductsExpired returns an array of products of a user \(based on user ID\) t
 ### func \(DatabaseController\) GetProductsExpiredAndNotificationPending
 
 ```go
-func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error)
+func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error)
 ```
 
-GetProductsExpiredAndNotificationPending returns an array of products which are expired and have a pending notification
+GetProductsExpiredAndNotificationPending returns products that are expired or expiring within maxLookAheadDays and have a pending notification \(i.e., not notified within the last sleepInterval\).
 
 <a name="DatabaseController.GetPublicHouseholds"></a>
 ### func \(DatabaseController\) GetPublicHouseholds
@@ -1923,6 +1973,15 @@ func (dbc DatabaseController) GetUserProductsBulkByBarcode(userID uint, barcode 
 
 GetUserProductsBulkByBarcode returns an array of products of a user \(based on user ID\) matching a barcode The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.IsAccountLocked"></a>
+### func \(DatabaseController\) IsAccountLocked
+
+```go
+func (dbc DatabaseController) IsAccountLocked(userID uint, maxLoginAttempts int, lockoutDurationMins int) (bool, time.Duration)
+```
+
+
+
 <a name="DatabaseController.LeaveHousehold"></a>
 ### func \(DatabaseController\) LeaveHousehold
 
@@ -1977,6 +2036,15 @@ func (dbc DatabaseController) MarkOnboardingComplete(userID uint) error
 
 MarkOnboardingComplete marks onboarding as fully complete for a user
 
+<a name="DatabaseController.RecordFailedLoginAttempt"></a>
+### func \(DatabaseController\) RecordFailedLoginAttempt
+
+```go
+func (dbc DatabaseController) RecordFailedLoginAttempt(userID uint, maxLoginAttempts int, lockoutDurationMins int) error
+```
+
+
+
 <a name="DatabaseController.RejectApplication"></a>
 ### func \(DatabaseController\) RejectApplication
 
@@ -1994,6 +2062,15 @@ func (dbc DatabaseController) RemoveMemberFromHousehold(memberUserID, adminUserI
 ```
 
 RemoveMemberFromHousehold removes a member from the admin's household and assigns them a new personal household.
+
+<a name="DatabaseController.ResetFailedLoginAttempts"></a>
+### func \(DatabaseController\) ResetFailedLoginAttempts
+
+```go
+func (dbc DatabaseController) ResetFailedLoginAttempts(userID uint) error
+```
+
+
 
 <a name="DatabaseController.RestoreProduct"></a>
 ### func \(DatabaseController\) RestoreProduct
@@ -2049,6 +2126,15 @@ func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product 
 
 UpdateProduct gets a product \(based on product ID\) of a user \(based on user ID\) and updates its contents with the contents of a supplied reference to the updated product If the database operations return an error, the error is also returned \(otherwise nil\)
 
+<a name="DatabaseController.UpdateProductAmount"></a>
+### func \(DatabaseController\) UpdateProductAmount
+
+```go
+func (dbc DatabaseController) UpdateProductAmount(productID int, userID uint, delta int) (bool, error)
+```
+
+UpdateProductAmount applies a delta to a product's amount field. If the resulting amount is \<= 0, the product is hard\-deleted. Returns deleted=true when the product was removed, deleted=false when it was updated.
+
 <a name="DatabaseController.UpdateUser"></a>
 ### func \(DatabaseController\) UpdateUser
 
@@ -2101,7 +2187,8 @@ DatabaseControllerInterface defines the interface for database operations needed
 
 ```go
 type DatabaseControllerInterface interface {
-    GetProductsExpiredAndNotificationPending(sleepInterval time.Duration) ([]database.Product, error)
+    GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error)
+    GetMaxNotificationThresholdDays() int
     GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
     GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
     SetProductNotifiedAt(productID uint) error
@@ -2192,6 +2279,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type NotificationItem](<#NotificationItem>)
 - [type NotificationsResponse](<#NotificationsResponse>)
 - [type OnboardingStateResponse](<#OnboardingStateResponse>)
+- [type ProductAmountDTO](<#ProductAmountDTO>)
 - [type ProductStatsResponse](<#ProductStatsResponse>)
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
@@ -2261,6 +2349,17 @@ type OnboardingStateResponse struct {
 }
 ```
 
+<a name="ProductAmountDTO"></a>
+## type ProductAmountDTO
+
+ProductAmountDTO is the request body for updating a product's amount
+
+```go
+type ProductAmountDTO struct {
+    Delta int `json:"delta" binding:"required"`
+}
+```
+
 <a name="ProductStatsResponse"></a>
 ## type ProductStatsResponse
 
@@ -2275,6 +2374,7 @@ type ProductStatsResponse struct {
     UniqueArchived      int                    `json:"uniqueArchived"`
     LastInsertedProduct string                 `json:"lastInsertedProduct"`
     ExpiringSoon        []StatsExpiringProduct `json:"expiringSoon"`
+    ExpiringSoonDays    int                    `json:"expiringSoonDays"`
     Categories          map[string]int         `json:"categories"`
     ExpiryTrend         []StatsMonthlyCount    `json:"expiryTrend"`
 }
@@ -2349,11 +2449,12 @@ NotificationPreferences contains user\-specific notification settings
 
 ```go
 type NotificationPreferences struct {
-    EmailEnabled bool   `json:"emailEnabled" gorm:"default:true"`
-    NtfyEnabled  bool   `json:"ntfyEnabled" gorm:"default:false"`
-    NtfyURL      string `json:"ntfyUrl,omitempty"`
-    NtfyTopic    string `json:"ntfyTopic,omitempty"`
-    NtfyToken    string `json:"ntfyToken,omitempty"`
+    EmailEnabled              bool   `json:"emailEnabled" gorm:"default:true"`
+    NtfyEnabled               bool   `json:"ntfyEnabled" gorm:"default:false"`
+    NtfyURL                   string `json:"ntfyUrl,omitempty"`
+    NtfyTopic                 string `json:"ntfyTopic,omitempty"`
+    NtfyToken                 string `json:"ntfyToken,omitempty"`
+    NotificationThresholdDays int    `json:"notificationThresholdDays" gorm:"default:0"`
 }
 ```
 
@@ -2395,6 +2496,8 @@ type User struct {
     HouseholdID             uint   `gorm:"index"`
     Household               database.Household
     NotificationPreferences NotificationPreferences `gorm:"embedded"`
+    FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`
+    LockedUntil             gorm.DeletedAt          `json:"-"`
 }
 ```
 
@@ -2441,8 +2544,10 @@ AuthenticationConfiguration contains all properties regarding the JSON Web Token
 
 ```go
 type AuthenticationConfiguration struct {
-    TokenPassword string
-    TokenLifetime int
+    TokenPassword       string
+    TokenLifetime       int
+    MaxLoginAttempts    int
+    LockoutDurationMins int
 }
 ```
 
@@ -2818,6 +2923,7 @@ type Product struct {
     DeletedAt   gorm.DeletedAt `gorm:"index"`
     HouseholdID uint           `gorm:"index, not null" json:"-"`
     Household   Household      `json:"-"`
+    Amount      int            `json:"amount"`
 }
 ```
 
@@ -2858,6 +2964,7 @@ type ProductDTOPatch struct {
     Countries   string    `json:"countries"`
     ImageURL    string    `json:"imageUrl"`
     ExpireAt    time.Time `json:"expireAt"`
+    Amount      int       `json:"amount"`
 }
 ```
 

@@ -49,6 +49,9 @@ var (
 	// ErrUserIDFromToken is thrown if no user id is found in token
 	ErrUserIDFromToken = errors.New("error getting user id from JWT token")
 
+	// ErrAccountLocked is thrown when an account is temporarily locked due to too many failed login attempts
+	ErrAccountLocked = errors.New("account is temporarily locked due to too many failed login attempts")
+
 	// ErrProductSearchInvalidQuery is thrown if a search is ommited but no valid parameter is supplied
 	ErrProductSearchInvalidQuery = errors.New("invalid search query specified")
 

@@ -30,6 +30,8 @@ type User struct {
 	HouseholdID             uint   `gorm:"index"`
 	Household               database.Household
 	NotificationPreferences NotificationPreferences `gorm:"embedded"`
+	FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`
+	LockedUntil             gorm.DeletedAt          `json:"-"`
 }
 
 // IsValid is a simple validator function to check for valid properties

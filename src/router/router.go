@@ -75,15 +75,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		ctx.Next()
 	})
 
-	// SMTP configuration for invitation emails
+	// Proviant configuration for access in handlers
 	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("smtpConfig", proviantConfiguration.Notification.SMTP)
-		ctx.Next()
-	})
-
-	// Base URL for constructing magic links
-	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("baseURL", proviantConfiguration.Server.BaseURL)
+		ctx.Set("proviantConfig", proviantConfiguration)
 		ctx.Next()
 	})
 
@@ -149,10 +143,10 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	})
 
 	// Authentication routes
-	engine.POST("/auth/login", jwtAPIMiddleware.LoginHandler)
+	engine.POST("/auth/login", loginRateLimitMiddleware, jwtAPIMiddleware.LoginHandler)
 
 	// Signup routes
-	engine.POST("/auth/signup", auth.Signup)
+	engine.POST("/auth/signup", signupRateLimitMiddleware, auth.Signup)
 	engine.POST("/auth/invite/accept", auth.AcceptInvitation)
 	engine.GET("/auth/refresh_token", jwtAPIMiddleware.RefreshHandler)
 
