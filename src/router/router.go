@@ -75,18 +75,6 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		ctx.Next()
 	})
 
-	// SMTP configuration for invitation emails
-	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("smtpConfig", proviantConfiguration.Notification.SMTP)
-		ctx.Next()
-	})
-
-	// Base URL for constructing magic links
-	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("baseURL", proviantConfiguration.Server.BaseURL)
-		ctx.Next()
-	})
-
 	// Proviant configuration for access in handlers
 	engine.Use(func(ctx *gin.Context) {
 		ctx.Set("proviantConfig", proviantConfiguration)
