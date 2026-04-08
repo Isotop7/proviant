@@ -148,7 +148,6 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Signup routes
 	engine.POST("/auth/signup", signupRateLimitMiddleware, auth.Signup)
 	engine.POST("/auth/verify-email", auth.VerifyEmail)
-	engine.GET("/auth/verify-email", auth.VerifyEmail)
 	engine.POST("/auth/invite/accept", auth.AcceptInvitation)
 	engine.GET("/auth/refresh_token", jwtAPIMiddleware.RefreshHandler)
 
