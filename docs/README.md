@@ -90,15 +90,19 @@ import "codeberg.org/isotop7/proviant/controllers"
 
 ## Index
 
+- [Constants](<#constants>)
+- [func GenerateEmailVerificationToken\(\) \(string, time.Time, error\)](<#GenerateEmailVerificationToken>)
 - [type EmailNotificationProvider](<#EmailNotificationProvider>)
   - [func \(e \*EmailNotificationProvider\) GetProviderType\(\) string](<#EmailNotificationProvider.GetProviderType>)
   - [func \(e \*EmailNotificationProvider\) IsConfigured\(\) bool](<#EmailNotificationProvider.IsConfigured>)
+  - [func \(e \*EmailNotificationProvider\) SendEmailVerificationEmail\(email, username, token, baseURL string, expiresAt time.Time\) error](<#EmailNotificationProvider.SendEmailVerificationEmail>)
   - [func \(e \*EmailNotificationProvider\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#EmailNotificationProvider.SendInvitationEmail>)
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
 - [type NotificationController](<#NotificationController>)
   - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, dbc dbController.DatabaseControllerInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
   - [func \(nc \*NotificationController\) DispatchInvitations\(baseURL string\)](<#NotificationController.DispatchInvitations>)
+  - [func \(nc \*NotificationController\) SendEmailVerification\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendEmailVerification>)
   - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#NotificationController.SendInvitationEmail>)
   - [func \(nc \*NotificationController\) SendVerificationEmail\(invitation \*dbModel.HouseholdInvitation, username, baseURL string\) error](<#NotificationController.SendVerificationEmail>)
 - [type NotificationProvider](<#NotificationProvider>)
@@ -109,6 +113,29 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
 - [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
+
+
+## Constants
+
+<a name="EmailVerificationTokenDuration"></a>
+
+```go
+const EmailVerificationTokenDuration = 24 * time.Hour
+```
+
+<a name="EmailVerificationTokenLength"></a>
+
+```go
+const EmailVerificationTokenLength = 32
+```
+
+<a name="GenerateEmailVerificationToken"></a>
+## func GenerateEmailVerificationToken
+
+```go
+func GenerateEmailVerificationToken() (string, time.Time, error)
+```
+
 
 
 <a name="EmailNotificationProvider"></a>
@@ -140,6 +167,15 @@ func (e *EmailNotificationProvider) IsConfigured() bool
 ```
 
 
+
+<a name="EmailNotificationProvider.SendEmailVerificationEmail"></a>
+### func \(\*EmailNotificationProvider\) SendEmailVerificationEmail
+
+```go
+func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, token, baseURL string, expiresAt time.Time) error
+```
+
+SendEmailVerificationEmail sends an email verification email to the recipient
 
 <a name="EmailNotificationProvider.SendInvitationEmail"></a>
 ### func \(\*EmailNotificationProvider\) SendInvitationEmail
@@ -199,6 +235,15 @@ func (nc *NotificationController) DispatchInvitations(baseURL string)
 ```
 
 DispatchInvitations starts a background goroutine that periodically retries sending pending invitation emails. It runs once immediately on startup, then every Interval hours \(reusing the same config as product notifications\).
+
+<a name="NotificationController.SendEmailVerification"></a>
+### func \(\*NotificationController\) SendEmailVerification
+
+```go
+func (nc *NotificationController) SendEmailVerification(email, username, token, baseURL string, expiresAt time.Time) error
+```
+
+SendEmailVerification sends a verification email directly to the user with a verification token.
 
 <a name="NotificationController.SendInvitationEmail"></a>
 ### func \(\*NotificationController\) SendInvitationEmail
@@ -501,6 +546,12 @@ var (
 
     // ErrInvitationNotAuthorized is thrown when a user tries to manage an invitation they did not create
     ErrInvitationNotAuthorized = errors.New("not authorized to manage this invitation")
+
+    /*
+     * Email verification related errors
+     */
+    // ErrEmailNotVerified is thrown when a user attempts to login without verifying their email
+    ErrEmailNotVerified = errors.New("email address not verified")
 )
 ```
 
@@ -587,6 +638,7 @@ import "codeberg.org/isotop7/proviant/migrations"
 ## Index
 
 - [func AddNotificationPreferencesMigration\(db \*gorm.DB\) error](<#AddNotificationPreferencesMigration>)
+- [func BackfillEmailVerification\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillEmailVerification>)
 - [func RunBreakingDatabaseMigrations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RunBreakingDatabaseMigrations>)
 - [func SetDefaultProductAmounts\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SetDefaultProductAmounts>)
 
@@ -599,6 +651,15 @@ func AddNotificationPreferencesMigration(db *gorm.DB) error
 ```
 
 AddNotificationPreferencesMigration adds notification preference columns to users table
+
+<a name="BackfillEmailVerification"></a>
+## func BackfillEmailVerification
+
+```go
+func BackfillEmailVerification(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+BackfillEmailVerification sets EmailVerifiedAt for all existing users that don't have it set. This is a one\-time migration to ensure existing users aren't locked out after email verification is introduced.
 
 <a name="RunBreakingDatabaseMigrations"></a>
 ## func RunBreakingDatabaseMigrations
@@ -796,6 +857,7 @@ import "codeberg.org/isotop7/proviant/web"
   - [func \(frontend \*Frontend\) Root\(ctx \*gin.Context\)](<#Frontend.Root>)
   - [func \(frontend \*Frontend\) User\(ctx \*gin.Context\)](<#Frontend.User>)
   - [func \(frontend \*Frontend\) UserSettings\(ctx \*gin.Context\)](<#Frontend.UserSettings>)
+  - [func \(frontend \*Frontend\) VerifyEmail\(ctx \*gin.Context\)](<#Frontend.VerifyEmail>)
 
 
 <a name="Frontend"></a>
@@ -917,6 +979,15 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context)
 
 
 
+<a name="Frontend.VerifyEmail"></a>
+### func \(\*Frontend\) VerifyEmail
+
+```go
+func (frontend *Frontend) VerifyEmail(ctx *gin.Context)
+```
+
+VerifyEmail renders the email verification page
+
 # auth
 
 ```go
@@ -929,6 +1000,7 @@ auth contains authentication method handlers
 
 - [func AcceptInvitation\(ctx \*gin.Context\)](<#AcceptInvitation>)
 - [func Signup\(ctx \*gin.Context\)](<#Signup>)
+- [func VerifyEmail\(ctx \*gin.Context\)](<#VerifyEmail>)
 
 
 <a name="AcceptInvitation"></a>
@@ -948,6 +1020,15 @@ func Signup(ctx *gin.Context)
 ```
 
 Signup creates a new user object in the database @Summary Creates a new user @Description Creates a new new user in the database @Tags user @Accept json @Produce json @Param signup body authentication.Signup true "Signup" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/signup \[post\]
+
+<a name="VerifyEmail"></a>
+## func VerifyEmail
+
+```go
+func VerifyEmail(ctx *gin.Context)
+```
+
+
 
 # common
 
@@ -1408,6 +1489,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) CancelApplication\(applicationID, applicantUserID uint\) error](<#DatabaseController.CancelApplication>)
   - [func \(dbc DatabaseController\) CancelInvitation\(invitationID, userID uint\) error](<#DatabaseController.CancelInvitation>)
   - [func \(dbc DatabaseController\) CreateAndSwitchHousehold\(userID uint, name string\) error](<#DatabaseController.CreateAndSwitchHousehold>)
+  - [func \(dbc DatabaseController\) CreateEmailVerification\(userID uint, token string, expiresAt time.Time\) error](<#DatabaseController.CreateEmailVerification>)
   - [func \(dbc DatabaseController\) CreateInvitation\(householdID, inviterID uint, email string\) \(database.HouseholdInvitation, error\)](<#DatabaseController.CreateInvitation>)
   - [func \(dbc DatabaseController\) CreateOpenFoodFactsCache\(entry \*database.OpenFoodFactsCache\) error](<#DatabaseController.CreateOpenFoodFactsCache>)
   - [func \(dbc DatabaseController\) CreateProduct\(userID uint, product \*database.Product\) error](<#DatabaseController.CreateProduct>)
@@ -1416,6 +1498,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#DatabaseController.GetActiveProductsCount>)
   - [func \(dbc DatabaseController\) GetArchivedProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetArchivedProductByID>)
   - [func \(dbc DatabaseController\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#DatabaseController.GetArchivedProductsGroupedByBarcode>)
+  - [func \(dbc DatabaseController\) GetEmailVerificationByToken\(token string\) \(database.EmailVerification, error\)](<#DatabaseController.GetEmailVerificationByToken>)
   - [func \(dbc DatabaseController\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#DatabaseController.GetExpiredProductsCount>)
   - [func \(dbc DatabaseController\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#DatabaseController.GetExpiringSoonProducts>)
   - [func \(dbc DatabaseController\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#DatabaseController.GetExpiryTrend>)
@@ -1463,10 +1546,12 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(dbc DatabaseController\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#DatabaseController.SearchProducts>)
   - [func \(dbc DatabaseController\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#DatabaseController.SetProductExpireAt>)
   - [func \(dbc DatabaseController\) SetProductNotifiedAt\(productID uint\) error](<#DatabaseController.SetProductNotifiedAt>)
+  - [func \(dbc DatabaseController\) UpdateEmailVerificationStatus\(token string, status string\) error](<#DatabaseController.UpdateEmailVerificationStatus>)
   - [func \(dbc DatabaseController\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#DatabaseController.UpdateHouseholdName>)
   - [func \(dbc DatabaseController\) UpdateProduct\(productID int, userID uint, product \*database.ProductDTOPatch\) error](<#DatabaseController.UpdateProduct>)
   - [func \(dbc DatabaseController\) UpdateProductAmount\(productID int, userID uint, delta int\) \(bool, error\)](<#DatabaseController.UpdateProductAmount>)
   - [func \(dbc DatabaseController\) UpdateUser\(userID uint, user \*authentication.User\) error](<#DatabaseController.UpdateUser>)
+  - [func \(dbc DatabaseController\) UpdateUserEmailVerified\(userID uint, verifiedAt time.Time\) error](<#DatabaseController.UpdateUserEmailVerified>)
   - [func \(dbc DatabaseController\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#DatabaseController.UpdateUserPassword>)
   - [func \(dbc DatabaseController\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#DatabaseController.UserExistsByMailAddress>)
   - [func \(dbc DatabaseController\) UserExistsByUsername\(user \*authentication.User\) bool](<#DatabaseController.UserExistsByUsername>)
@@ -1613,6 +1698,15 @@ func (dbc DatabaseController) CreateAndSwitchHousehold(userID uint, name string)
 
 CreateAndSwitchHousehold creates a new named household and switches the user to it. Products are moved from the old household when the user was its sole member.
 
+<a name="DatabaseController.CreateEmailVerification"></a>
+### func \(DatabaseController\) CreateEmailVerification
+
+```go
+func (dbc DatabaseController) CreateEmailVerification(userID uint, token string, expiresAt time.Time) error
+```
+
+
+
 <a name="DatabaseController.CreateInvitation"></a>
 ### func \(DatabaseController\) CreateInvitation
 
@@ -1684,6 +1778,15 @@ func (dbc DatabaseController) GetArchivedProductsGroupedByBarcode(userID uint) (
 ```
 
 GetArchivedProductsGroupedByBarcode returns archived products grouped by barcode with counts
+
+<a name="DatabaseController.GetEmailVerificationByToken"></a>
+### func \(DatabaseController\) GetEmailVerificationByToken
+
+```go
+func (dbc DatabaseController) GetEmailVerificationByToken(token string) (database.EmailVerification, error)
+```
+
+
 
 <a name="DatabaseController.GetExpiredProductsCount"></a>
 ### func \(DatabaseController\) GetExpiredProductsCount
@@ -2108,6 +2211,15 @@ func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error
 
 SetProductNotifiedAt sets the notified\_at timestamp to the current time
 
+<a name="DatabaseController.UpdateEmailVerificationStatus"></a>
+### func \(DatabaseController\) UpdateEmailVerificationStatus
+
+```go
+func (dbc DatabaseController) UpdateEmailVerificationStatus(token string, status string) error
+```
+
+
+
 <a name="DatabaseController.UpdateHouseholdName"></a>
 ### func \(DatabaseController\) UpdateHouseholdName
 
@@ -2143,6 +2255,15 @@ func (dbc DatabaseController) UpdateUser(userID uint, user *authentication.User)
 ```
 
 UpdateUser gets a user \(based on user ID\) and updates its contents with the contents of a supplied reference to the updated user If the database operations return an error, the error is also returned \(otherwise nil\)
+
+<a name="DatabaseController.UpdateUserEmailVerified"></a>
+### func \(DatabaseController\) UpdateUserEmailVerified
+
+```go
+func (dbc DatabaseController) UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
+```
+
+
 
 <a name="DatabaseController.UpdateUserPassword"></a>
 ### func \(DatabaseController\) UpdateUserPassword
@@ -2489,11 +2610,12 @@ User is the struct for the database definition and the JWT claims A single user 
 ```go
 type User struct {
     gorm.Model
-    ID                      uint   `gorm:"primaryKey,unique"`
-    Username                string `json:"username"`
-    MailAddress             string `json:"mailAddress"`
-    Password                string `json:"-"`
-    HouseholdID             uint   `gorm:"index"`
+    ID                      uint       `gorm:"primaryKey,unique"`
+    Username                string     `json:"username"`
+    MailAddress             string     `json:"mailAddress"`
+    Password                string     `json:"-"`
+    EmailVerifiedAt         *time.Time `json:"emailVerifiedAt,omitempty"`
+    HouseholdID             uint       `gorm:"index"`
     Household               database.Household
     NotificationPreferences NotificationPreferences `gorm:"embedded"`
     FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`
@@ -2742,6 +2864,7 @@ import "codeberg.org/isotop7/proviant/models/database"
   - [func \(d Date\) Format\(s string\) string](<#Date.Format>)
   - [func \(d Date\) MarshalJSON\(\) \(\[\]byte, error\)](<#Date.MarshalJSON>)
   - [func \(d \*Date\) UnmarshalJSON\(b \[\]byte\) error](<#Date.UnmarshalJSON>)
+- [type EmailVerification](<#EmailVerification>)
 - [type Household](<#Household>)
 - [type HouseholdApplication](<#HouseholdApplication>)
 - [type HouseholdInvitation](<#HouseholdInvitation>)
@@ -2756,6 +2879,16 @@ import "codeberg.org/isotop7/proviant/models/database"
 
 
 ## Constants
+
+<a name="EmailVerificationStatusPending"></a>
+
+```go
+const (
+    EmailVerificationStatusPending  = "pending"
+    EmailVerificationStatusVerified = "verified"
+    EmailVerificationStatusExpired  = "expired"
+)
+```
 
 <a name="ApplicationStatusPending"></a>
 
@@ -2813,6 +2946,21 @@ func (d *Date) UnmarshalJSON(b []byte) error
 ```
 
 UnmarshalJSON parses JSON into Date
+
+<a name="EmailVerification"></a>
+## type EmailVerification
+
+
+
+```go
+type EmailVerification struct {
+    gorm.Model
+    UserID    uint      `gorm:"uniqueIndex,not null"`
+    Token     string    `gorm:"uniqueIndex,not null"`
+    ExpiresAt time.Time `gorm:"not null"`
+    Status    string    `gorm:"not null;default:'pending'"`
+}
+```
 
 <a name="Household"></a>
 ## type Household
