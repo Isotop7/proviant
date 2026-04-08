@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"net/mail"
+	"time"
 
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/database"
@@ -23,11 +24,12 @@ type NotificationPreferences struct {
 // A single user can own many products
 type User struct {
 	gorm.Model
-	ID                      uint   `gorm:"primaryKey,unique"`
-	Username                string `json:"username"`
-	MailAddress             string `json:"mailAddress"`
-	Password                string `json:"-"`
-	HouseholdID             uint   `gorm:"index"`
+	ID                      uint       `gorm:"primaryKey,unique"`
+	Username                string     `json:"username"`
+	MailAddress             string     `json:"mailAddress"`
+	Password                string     `json:"-"`
+	EmailVerifiedAt         *time.Time `json:"emailVerifiedAt,omitempty"`
+	HouseholdID             uint       `gorm:"index"`
 	Household               database.Household
 	NotificationPreferences NotificationPreferences `gorm:"embedded"`
 	FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`

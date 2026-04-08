@@ -251,6 +251,26 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 	return nil
 }
 
+// SendEmailVerification sends a verification email directly to the user with a verification token.
+func (nc *NotificationController) SendEmailVerification(email, username, token, baseURL string, expiresAt time.Time) error {
+	emailProvider := &EmailNotificationProvider{
+		Configuration: nc.Configuration.SMTP,
+		Logger:        nc.Logger,
+	}
+
+	if !emailProvider.IsConfigured() {
+		return fmt.Errorf("email provider not configured")
+	}
+
+	if err := emailProvider.SendEmailVerificationEmail(email, username, token, baseURL, expiresAt); err != nil {
+		nc.Logger.Error().Msgf("Failed to send email verification to %s: %s", email, err)
+		return err
+	}
+
+	nc.Logger.Info().Msgf("Email verification sent successfully to %s", email)
+	return nil
+}
+
 // processPendingInvitations fetches all pending invitations that need to be sent or retried.
 func (nc *NotificationController) processPendingInvitations(emailProvider *EmailNotificationProvider, baseURL string) {
 	sleepInterval := time.Hour * time.Duration(nc.Configuration.Interval)

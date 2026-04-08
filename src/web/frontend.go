@@ -467,6 +467,25 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	})
 }
 
+// VerifyEmail renders the email verification page
+func (frontend *Frontend) VerifyEmail(ctx *gin.Context) {
+	token := ctx.Query("token")
+
+	if token == "" {
+		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "baseAuth", "verifyEmail.tmpl", map[string]any{
+			"Title": "Verify Email",
+			"Error": "No verification token provided.",
+		})
+		return
+	}
+
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "verifyEmail.tmpl", map[string]any{
+		"Title":     "Verify Email",
+		"Verifying": true,
+		"Token":     token,
+	})
+}
+
 // Onboarding renders the post-signup onboarding wizard
 func (frontend *Frontend) Onboarding(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)

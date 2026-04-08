@@ -205,6 +205,15 @@ func JWTMiddleware(
 				return nil, jwt.ErrFailedAuthentication
 			}
 
+			// Check email verification
+			if user.EmailVerifiedAt == nil {
+				ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"code":    "EMAIL_NOT_VERIFIED",
+					"message": "Please verify your email address before logging in",
+				})
+				return nil, jwt.ErrFailedAuthentication
+			}
+
 			// Successful login - reset failed attempts
 			_ = dbController.ResetFailedLoginAttempts(user.ID)
 			return user, nil

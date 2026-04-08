@@ -1667,3 +1667,27 @@ func (dbc DatabaseController) ResetFailedLoginAttempts(userID uint) error {
 		"deleted_at":            nil,
 	}).Error
 }
+
+func (dbc DatabaseController) CreateEmailVerification(userID uint, token string, expiresAt time.Time) error {
+	verification := database.EmailVerification{
+		UserID:    userID,
+		Token:     token,
+		ExpiresAt: expiresAt,
+		Status:    database.EmailVerificationStatusPending,
+	}
+	return dbc.DBHandle.Create(&verification).Error
+}
+
+func (dbc DatabaseController) GetEmailVerificationByToken(token string) (database.EmailVerification, error) {
+	var verification database.EmailVerification
+	result := dbc.DBHandle.Where("token = ?", token).First(&verification)
+	return verification, result.Error
+}
+
+func (dbc DatabaseController) UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error {
+	return dbc.DBHandle.Model(&authentication.User{}).Where("id = ?", userID).Update("email_verified_at", verifiedAt).Error
+}
+
+func (dbc DatabaseController) UpdateEmailVerificationStatus(token string, status string) error {
+	return dbc.DBHandle.Model(&database.EmailVerification{}).Where("token = ?", token).Update("status", status).Error
+}
