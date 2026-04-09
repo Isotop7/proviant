@@ -52,7 +52,7 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	userRepo := database.NewUserRepository(dbHandle)
 
 	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
 	maxLoginAttempts := database.DefaultMaxLoginAttempts
@@ -66,7 +66,7 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 		}
 	}
 
-	locked, remaining := dbController.IsAccountLocked(failedUserID.(uint), maxLoginAttempts, lockoutDurationMins)
+	locked, remaining := userRepo.IsAccountLocked(failedUserID.(uint), maxLoginAttempts, lockoutDurationMins)
 	if !locked {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
@@ -121,10 +121,8 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
 	if !ok {
 		return false
 	}
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Call database controller function that returns owner state
-	return dbController.UserHasProductAccess(user.ID, productID)
+	productRepo := database.NewProductRepository(dbHandle)
+	return productRepo.UserHasProductAccess(user.ID, productID)
 }
 
 // isTokenRevoked checks if the current token's JTI is in the revoked tokens list
@@ -222,10 +220,8 @@ func JWTMiddleware(
 				return "", jwt.ErrMissingLoginValues
 			}
 
-			// Create database controller
-			dbController := database.DatabaseController{DBHandle: dbHandle}
+			userRepo := database.NewUserRepository(dbHandle)
 
-			// Get config values with defaults
 			maxLoginAttempts := database.DefaultMaxLoginAttempts
 			lockoutDurationMins := database.DefaultLockoutDurationMins
 			if proviantConfiguration != nil {
@@ -237,23 +233,19 @@ func JWTMiddleware(
 				}
 			}
 
-			// Get user object by username
-			user, err := dbController.GetUserByUsername(loginVals.Username)
+			user, err := userRepo.GetUserByUsername(loginVals.Username)
 			if err != nil {
 				return nil, jwt.ErrFailedAuthentication
 			}
 
-			// Check if account is already locked
-			if locked, _ := dbController.IsAccountLocked(user.ID, maxLoginAttempts, lockoutDurationMins); locked {
+			if locked, _ := userRepo.IsAccountLocked(user.ID, maxLoginAttempts, lockoutDurationMins); locked {
 				ctx.Set("failedUserID", user.ID)
 				return nil, jwt.ErrFailedAuthentication
 			}
 
-			// Compare supplied password with database hash
-			// Return result of comparison
 			authErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginVals.Password))
 			if authErr != nil {
-				_ = dbController.RecordFailedLoginAttempt(user.ID, maxLoginAttempts, lockoutDurationMins)
+				_ = userRepo.RecordFailedLoginAttempt(user.ID, maxLoginAttempts, lockoutDurationMins)
 				ctx.Set("failedUserID", user.ID)
 				return nil, jwt.ErrFailedAuthentication
 			}
@@ -267,8 +259,7 @@ func JWTMiddleware(
 				return nil, jwt.ErrFailedAuthentication
 			}
 
-			// Successful login - reset failed attempts
-			_ = dbController.ResetFailedLoginAttempts(user.ID)
+			_ = userRepo.ResetFailedLoginAttempts(user.ID)
 			return user, nil
 		},
 		// Authorizator checks if user is authorized to emit operation

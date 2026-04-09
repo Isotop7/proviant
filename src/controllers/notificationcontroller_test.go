@@ -14,30 +14,25 @@ import (
 	"gorm.io/gorm"
 )
 
-// MockDatabaseController is a mock implementation for testing
-type MockDatabaseController struct{}
+type MockNotificationRepository struct{}
 
-func (m *MockDatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]dbModel.Product, error) {
-	// Return empty for testing
+func (m *MockNotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]dbModel.Product, error) {
 	return []dbModel.Product{}, nil
 }
 
-func (m *MockDatabaseController) GetMaxNotificationThresholdDays() int {
+func (m *MockNotificationRepository) GetMaxNotificationThresholdDays() int {
 	return 0
 }
 
-func (m *MockDatabaseController) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error) {
-	// Return mock email addresses for testing
+func (m *MockNotificationRepository) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error) {
 	return []string{"test@example.com"}, nil
 }
 
-func (m *MockDatabaseController) SetProductNotifiedAt(productID uint) error {
-	// Mock successful update
+func (m *MockNotificationRepository) SetProductNotifiedAt(productID uint) error {
 	return nil
 }
 
-func (m *MockDatabaseController) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error) {
-	// Return mock notification preferences for testing
+func (m *MockNotificationRepository) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error) {
 	return []models.NotificationRecipientInfo{
 		{
 			EmailAddress: "test@example.com",
@@ -48,64 +43,110 @@ func (m *MockDatabaseController) GetHouseholdMembersNotificationPreferences(hous
 	}, nil
 }
 
-// Ensure MockDatabaseController implements the interface
-var _ dbController.DatabaseControllerInterface = (*MockDatabaseController)(nil)
+func (m *MockNotificationRepository) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error) {
+	return dbModel.HouseholdInvitation{}, nil
+}
 
-// TestNotificationControllerInitialization tests that the controller can be initialized
+func (m *MockNotificationRepository) GetInvitationsForHousehold(householdID, inviterID uint) ([]dbModel.HouseholdInvitation, error) {
+	return nil, nil
+}
+
+func (m *MockNotificationRepository) GetInvitationByToken(token string) (dbModel.HouseholdInvitation, error) {
+	return dbModel.HouseholdInvitation{}, nil
+}
+
+func (m *MockNotificationRepository) AcceptInvitation(token, email string, userID uint) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) CancelInvitation(invitationID, userID uint) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]dbModel.HouseholdInvitation, error) {
+	return nil, nil
+}
+
+func (m *MockNotificationRepository) MarkInvitationSent(invitationID uint) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) MarkInvitationSendFailed(invitationID uint) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) GetUserByID(userID uint) (authentication.User, error) {
+	return authentication.User{}, nil
+}
+
+func (m *MockNotificationRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error) {
+	return dbModel.Household{}, nil
+}
+
+func (m *MockNotificationRepository) GetOnboardingState(userID uint) (dbModel.OnboardingState, error) {
+	return dbModel.OnboardingState{}, nil
+}
+
+func (m *MockNotificationRepository) MarkNotificationsSetup(userID uint) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) MarkHouseholdStepDone(userID uint) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) MarkOnboardingComplete(userID uint) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]dbModel.HouseholdWithMemberCount, error) {
+	return nil, nil
+}
+
+var _ dbController.NotificationRepositoryInterface = (*MockNotificationRepository)(nil)
+
 func TestNotificationControllerInitialization(t *testing.T) {
-	// Setup logger
 	logger := zerolog.Nop()
 
-	// Setup mock database controller
-	mockDB := &MockDatabaseController{}
+	mockRepo := &MockNotificationRepository{}
 
-	// Setup notification controller with dependency injection
 	nc := &NotificationController{
-		Logger:             &logger,
-		Configuration:      &configuration.NotificationConfiguration{},
-		DatabaseController: mockDB,
+		Logger:           &logger,
+		Configuration:    &configuration.NotificationConfiguration{},
+		NotificationRepo: mockRepo,
 	}
 
-	// Verify the mock database controller was set
-	if nc.DatabaseController == nil {
-		t.Error("Expected database controller to be set, got nil")
+	if nc.NotificationRepo == nil {
+		t.Error("Expected notification repository to be set, got nil")
 	}
 }
 
-// TestNotificationControllerWithMockDB tests the controller with a mock database
 func TestNotificationControllerWithMockDB(t *testing.T) {
-	// Setup logger
 	logger := zerolog.Nop()
 
-	// Setup mock database controller
-	mockDB := &MockDatabaseController{}
+	mockRepo := &MockNotificationRepository{}
 
-	// Setup notification controller with dependency injection
 	nc := &NotificationController{
-		Logger:             &logger,
-		Configuration:      &configuration.NotificationConfiguration{},
-		DatabaseController: mockDB,
+		Logger:           &logger,
+		Configuration:    &configuration.NotificationConfiguration{},
+		NotificationRepo: mockRepo,
 	}
 
-	// Verify the mock database controller was set
-	if nc.DatabaseController == nil {
-		t.Error("Expected database controller to be set, got nil")
+	if nc.NotificationRepo == nil {
+		t.Error("Expected notification repository to be set, got nil")
 	}
 
-	// Test that the mock implements the interface
-	var _ = nc.DatabaseController
+	var _ = nc.NotificationRepo
 }
 
-// TestProductExpirationDetection tests the logic for detecting expired products
 func TestProductExpirationDetection(t *testing.T) {
-	// Create test products
 	expiredProduct := dbModel.Product{
 		Model: gorm.Model{
 			ID: 1,
 		},
 		Barcode:     "1234567890123",
 		ProductName: "Expired Product",
-		ExpireAt:    time.Now().Add(-24 * time.Hour), // Expired 24 hours ago
+		ExpireAt:    time.Now().Add(-24 * time.Hour),
 	}
 
 	futureProduct := dbModel.Product{
@@ -114,10 +155,9 @@ func TestProductExpirationDetection(t *testing.T) {
 		},
 		Barcode:     "9876543210987",
 		ProductName: "Future Product",
-		ExpireAt:    time.Now().Add(24 * time.Hour), // Expires in 24 hours
+		ExpireAt:    time.Now().Add(24 * time.Hour),
 	}
 
-	// Test expiration detection
 	if expiredProduct.ExpireAt.After(time.Now()) {
 		t.Error("Expected expired product to have past expiration date")
 	}
@@ -127,9 +167,7 @@ func TestProductExpirationDetection(t *testing.T) {
 	}
 }
 
-// TestNotificationConfiguration tests configuration parsing
 func TestNotificationConfiguration(t *testing.T) {
-	// Test basic configuration
 	config := configuration.NotificationConfiguration{
 		Interval: 24,
 		SMTP: configuration.SMTPConfiguration{
@@ -142,7 +180,6 @@ func TestNotificationConfiguration(t *testing.T) {
 		},
 	}
 
-	// Verify configuration values
 	if config.Interval != 24 {
 		t.Errorf("Expected interval to be 24, got %d", config.Interval)
 	}
@@ -154,52 +191,4 @@ func TestNotificationConfiguration(t *testing.T) {
 	if config.SMTP.Host != "smtp.example.com" {
 		t.Errorf("Expected SMTP host to be 'smtp.example.com', got %s", config.SMTP.Host)
 	}
-}
-
-func (m *MockDatabaseController) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error) {
-	return dbModel.HouseholdInvitation{}, nil
-}
-func (m *MockDatabaseController) GetInvitationsForHousehold(householdID, inviterID uint) ([]dbModel.HouseholdInvitation, error) {
-	return nil, nil
-}
-func (m *MockDatabaseController) GetInvitationByToken(token string) (dbModel.HouseholdInvitation, error) {
-	return dbModel.HouseholdInvitation{}, nil
-}
-func (m *MockDatabaseController) AcceptInvitation(token, email string, userID uint) error {
-	return nil
-}
-func (m *MockDatabaseController) CancelInvitation(invitationID, userID uint) error {
-	return nil
-}
-
-func (m *MockDatabaseController) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]dbModel.HouseholdInvitation, error) {
-	return nil, nil
-}
-func (m *MockDatabaseController) MarkInvitationSent(invitationID uint) error {
-	return nil
-}
-func (m *MockDatabaseController) MarkInvitationSendFailed(invitationID uint) error {
-	return nil
-}
-
-func (m *MockDatabaseController) GetUserByID(userID uint) (authentication.User, error) {
-	return authentication.User{}, nil
-}
-func (m *MockDatabaseController) GetHouseholdByID(householdID uint) (dbModel.Household, error) {
-	return dbModel.Household{}, nil
-}
-func (m *MockDatabaseController) GetOnboardingState(userID uint) (dbModel.OnboardingState, error) {
-	return dbModel.OnboardingState{}, nil
-}
-func (m *MockDatabaseController) MarkNotificationsSetup(userID uint) error {
-	return nil
-}
-func (m *MockDatabaseController) MarkHouseholdStepDone(userID uint) error {
-	return nil
-}
-func (m *MockDatabaseController) MarkOnboardingComplete(userID uint) error {
-	return nil
-}
-func (m *MockDatabaseController) GetPublicHouseholds(excludeHouseholdID uint) ([]dbModel.HouseholdWithMemberCount, error) {
-	return nil, nil
 }

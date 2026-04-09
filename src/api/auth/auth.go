@@ -45,10 +45,9 @@ func Signup(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller object
-	dbController := database.DatabaseController{DBHandle: dbHandle.(*gorm.DB)}
+	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
+	invitationRepo := database.NewInvitationRepository(dbHandle.(*gorm.DB))
 
-	// Parse request body to Login
 	var signup authentication.Signup
 	if err := ctx.ShouldBindJSON(&signup); err != nil {
 		logger.Error().Msgf("Error parsing body: %s", err.Error())
@@ -56,7 +55,6 @@ func Signup(ctx *gin.Context) {
 		return
 	}
 
-	// Check if signup object is valid
 	validationErr := signup.IsValid()
 	if validationErr != nil {
 		logger.Error().Msgf("User data was invalid: '%s'", validationErr.Error())
@@ -66,28 +64,28 @@ func Signup(ctx *gin.Context) {
 
 	// Create new user object
 	user := authentication.User{
-		ID:          dbController.GetNextUserID(),
+		ID:          userRepo.GetNextUserID(),
 		Username:    signup.Username,
 		Password:    signup.Password,
 		MailAddress: signup.MailAddress,
 	}
 
 	// Check if user with username already exists
-	if dbController.UserExistsByUsername(&user) {
+	if userRepo.UserExistsByUsername(&user) {
 		logger.Error().Msgf("User '%s' already exists", user.Username)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithUsernameExists)
 		return
 	}
 
 	// Check if user with mail address already exists
-	if dbController.UserExistsByMailAddress(&user) {
+	if userRepo.UserExistsByMailAddress(&user) {
 		logger.Error().Msgf("User with mail address '%s' already exists", user.MailAddress)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithMailAddressExists)
 		return
 	}
 
 	// Create user object in database
-	createError := dbController.CreateUser(&user)
+	createError := userRepo.CreateUser(&user)
 	if createError != nil {
 		logger.Error().Msgf("User '%s' with ID '%d' could not be created. Error: %s", user.Username, user.ID, createError.Error())
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
@@ -97,7 +95,7 @@ func Signup(ctx *gin.Context) {
 	logger.Info().Msgf("New User '%s' with ID '%d' created", user.Username, user.ID)
 
 	if signup.InviteToken != "" {
-		acceptErr := dbController.AcceptInvitation(signup.InviteToken, user.MailAddress, user.ID)
+		acceptErr := invitationRepo.AcceptInvitation(signup.InviteToken, user.MailAddress, user.ID)
 		if acceptErr != nil {
 			logger.Warn().Msgf("Failed to auto-accept invitation after signup: %s", acceptErr.Error())
 		} else {
@@ -132,7 +130,7 @@ func Signup(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
 		return
 	}
-	if err := dbController.CreateEmailVerification(user.ID, token, expiresAt); err != nil {
+	if err := userRepo.CreateEmailVerification(user.ID, token, expiresAt); err != nil {
 		logger.Error().Msgf("Failed to create email verification record: %s", err.Error())
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
 		return

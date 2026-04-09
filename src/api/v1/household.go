@@ -41,8 +41,8 @@ func LeaveHousehold(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	if err := dbController.LeaveHousehold(userID); err != nil {
+	householdRepo := database.NewHouseholdRepository(dbHandle)
+	if err := householdRepo.LeaveHousehold(userID); err != nil {
 		logger.Error().Msgf("Error leaving household: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 		return
@@ -91,8 +91,8 @@ func CreateHousehold(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	if err := dbController.CreateAndSwitchHousehold(userID, req.Name); err != nil {
+	householdRepo := database.NewHouseholdRepository(dbHandle)
+	if err := householdRepo.CreateAndSwitchHousehold(userID, req.Name); err != nil {
 		logger.Error().Msgf("Error creating household: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 		return
@@ -139,8 +139,8 @@ func ApplyForHousehold(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	applyErr := dbController.ApplyForHousehold(userID, uint(householdID))
+	householdRepo := database.NewHouseholdRepository(dbHandle)
+	applyErr := householdRepo.ApplyForHousehold(userID, uint(householdID))
 	switch applyErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application submitted"})
@@ -182,8 +182,8 @@ func GetHouseholdApplications(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	applications, err := dbController.GetPendingApplicationsForAdmin(userID)
+	householdRepo := database.NewHouseholdRepository(dbHandle)
+	applications, err := householdRepo.GetPendingApplicationsForAdmin(userID)
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, applications)
@@ -233,8 +233,8 @@ func ApproveHouseholdApplication(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	approveErr := dbController.ApproveApplication(uint(applicationID), userID)
+	householdRepo := database.NewHouseholdRepository(dbHandle)
+	approveErr := householdRepo.ApproveApplication(uint(applicationID), userID)
 	switch approveErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application approved"})
@@ -286,8 +286,8 @@ func RejectHouseholdApplication(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	rejectErr := dbController.RejectApplication(uint(applicationID), userID)
+	householdRepo := database.NewHouseholdRepository(dbHandle)
+	rejectErr := householdRepo.RejectApplication(uint(applicationID), userID)
 	switch rejectErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application rejected"})
@@ -342,14 +342,15 @@ func UpdateHouseholdName(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	user, userErr := dbController.GetUserByID(userID)
+	householdRepo := database.NewHouseholdRepository(dbHandle)
+	userRepo := database.NewUserRepository(dbHandle)
+	user, userErr := userRepo.GetUserByID(userID)
 	if userErr != nil {
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
 		return
 	}
 
-	updateErr := dbController.UpdateHouseholdName(user.HouseholdID, userID, req.Name)
+	updateErr := householdRepo.UpdateHouseholdName(user.HouseholdID, userID, req.Name)
 	switch updateErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Household name updated"})
@@ -400,8 +401,8 @@ func CancelHouseholdApplication(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	cancelErr := dbController.CancelApplication(uint(applicationID), userID)
+	householdRepo := database.NewHouseholdRepository(dbHandle)
+	cancelErr := householdRepo.CancelApplication(uint(applicationID), userID)
 	switch cancelErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application cancelled"})
@@ -452,8 +453,8 @@ func RemoveHouseholdMember(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	removeErr := dbController.RemoveMemberFromHousehold(uint(memberID), userID)
+	householdRepo := database.NewHouseholdRepository(dbHandle)
+	removeErr := householdRepo.RemoveMemberFromHousehold(uint(memberID), userID)
 	switch removeErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Member removed from household"})

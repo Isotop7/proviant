@@ -62,14 +62,11 @@ func UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	userRepo := database.NewUserRepository(dbHandle)
 
-	// Force set user id from token
 	user.ID = userID
 
-	// Update user in database
-	updateErr := dbController.UpdateUser(user.ID, &user)
+	updateErr := userRepo.UpdateUser(user.ID, &user)
 
 	switch updateErr {
 	// No error => user was updated
@@ -137,11 +134,9 @@ func UpdateUserPassword(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	userRepo := database.NewUserRepository(dbHandle)
 
-	// Update user in database
-	updateErr := dbController.UpdateUserPassword(userID, &login)
+	updateErr := userRepo.UpdateUserPassword(userID, &login)
 
 	switch updateErr {
 	// No error => password was updated
@@ -192,18 +187,15 @@ func GetUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	userRepo := database.NewUserRepository(dbHandle)
 
-	// Get user from database
-	user, getErr := dbController.GetUserByID(userID)
+	user, getErr := userRepo.GetUserByID(userID)
 	if getErr != nil {
 		logger.Error().Msgf("Error getting user: %s", getErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(getErr))
 		return
 	}
 
-	// Return notification preferences
 	ctx.JSON(http.StatusOK, user.NotificationPreferences)
 }
 
@@ -265,21 +257,18 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	userRepo := database.NewUserRepository(dbHandle)
 
-	// Get user from database
-	user, getErr := dbController.GetUserByID(userID)
+	user, getErr := userRepo.GetUserByID(userID)
 	if getErr != nil {
 		logger.Error().Msgf("Error getting user: %s", getErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(getErr))
 		return
 	}
 
-	// Update notification preferences
 	user.NotificationPreferences = preferences
 
-	// Update user in database
-	updateErr := dbController.UpdateUser(user.ID, &user)
+	updateErr := userRepo.UpdateUser(user.ID, &user)
 	if updateErr != nil {
 		logger.Error().Msgf("Error updating notification preferences: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))

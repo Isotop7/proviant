@@ -70,10 +70,11 @@ func setupDatabase(logger *zerolog.Logger, databaseConfiguration *configuration.
 
 // setupNotificationController initializes the notification controller and starts the notification handler goroutine.
 func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB) *controllers.NotificationController {
+	notificationRepo := dbController.NewNotificationRepository(dbHandle)
 	notificationController := controllers.NewNotificationController(
 		logger,
 		&proviantConfiguration.Notification,
-		&dbController.DatabaseController{DBHandle: dbHandle},
+		notificationRepo,
 	)
 	// Dispatch notification handler goroutine
 	notificationController.Dispatch()
