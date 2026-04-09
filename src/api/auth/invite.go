@@ -53,9 +53,8 @@ func AcceptInvitation(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	invitationRepo := database.NewInvitationRepository(dbHandle)
 
-	// Get user's email
 	var user authentication.User
 	if err := dbHandle.First(&user, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -68,7 +67,7 @@ func AcceptInvitation(ctx *gin.Context) {
 		return
 	}
 
-	if err := dbController.AcceptInvitation(req.Token, user.MailAddress, userID); err != nil {
+	if err := invitationRepo.AcceptInvitation(req.Token, user.MailAddress, userID); err != nil {
 		switch err {
 		case errors.ErrInvitationNotFound:
 			logger.Error().Msgf("Invitation not found: %s", err)

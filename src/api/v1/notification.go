@@ -44,10 +44,12 @@ func GetNotifications(ctx *gin.Context) {
 		return
 	}
 
-	dbc := database.DatabaseController{DBHandle: dbHandle}
+	userRepo := database.NewUserRepository(dbHandle)
+	householdRepo := database.NewHouseholdRepository(dbHandle)
+	invitationRepo := database.NewInvitationRepository(dbHandle)
 	items := []apiModel.NotificationItem{}
 
-	user, err := dbc.GetUserByID(userID)
+	user, err := userRepo.GetUserByID(userID)
 	if err != nil {
 		logger.Error().Msgf("Error fetching user %d: %s", userID, err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
@@ -56,7 +58,7 @@ func GetNotifications(ctx *gin.Context) {
 
 	if user.HouseholdID != 0 {
 		// Pending invitations sent by any member of the user's household
-		invitations, invErr := dbc.GetPendingInvitationsForHousehold(user.HouseholdID)
+		invitations, invErr := invitationRepo.GetPendingInvitationsForHousehold(user.HouseholdID)
 		if invErr != nil {
 			logger.Error().Msgf("Error fetching pending invitations: %s", invErr)
 		} else {
@@ -72,15 +74,15 @@ func GetNotifications(ctx *gin.Context) {
 		}
 
 		// If the user is the household admin, surface incoming join requests
-		household, householdErr := dbc.GetHouseholdByID(user.HouseholdID)
+		household, householdErr := householdRepo.GetHouseholdByID(user.HouseholdID)
 		if householdErr == nil && household.AdminID == userID {
-			applications, appErr := dbc.GetPendingApplicationsForAdmin(userID)
+			applications, appErr := householdRepo.GetPendingApplicationsForAdmin(userID)
 			if appErr != nil {
 				logger.Error().Msgf("Error fetching pending applications for admin: %s", appErr)
 			} else {
 				for _, app := range applications {
 					applicantName := fmt.Sprintf("User #%d", app.ApplicantID)
-					if applicant, uErr := dbc.GetUserByID(app.ApplicantID); uErr == nil {
+					if applicant, uErr := userRepo.GetUserByID(app.ApplicantID); uErr == nil {
 						applicantName = applicant.Username
 					}
 					items = append(items, apiModel.NotificationItem{
@@ -95,13 +97,13 @@ func GetNotifications(ctx *gin.Context) {
 	}
 
 	// User's own outgoing pending applications to other households
-	ownApplications, ownErr := dbc.GetPendingApplicationsForApplicant(userID)
+	ownApplications, ownErr := householdRepo.GetPendingApplicationsForApplicant(userID)
 	if ownErr != nil {
 		logger.Error().Msgf("Error fetching user's pending applications: %s", ownErr)
 	} else {
 		for _, app := range ownApplications {
 			householdName := fmt.Sprintf("Household #%d", app.HouseholdID)
-			if h, hErr := dbc.GetHouseholdByID(app.HouseholdID); hErr == nil {
+			if h, hErr := householdRepo.GetHouseholdByID(app.HouseholdID); hErr == nil {
 				householdName = h.Name
 			}
 			items = append(items, apiModel.NotificationItem{

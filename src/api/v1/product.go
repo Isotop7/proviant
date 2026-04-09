@@ -81,10 +81,8 @@ func GetProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get products of user from database with optional limit
-	products, productBulkErr := dbController.GetUserProductsBulk(userID, limit)
+	productRepo := database.NewProductRepository(dbHandle)
+	products, productBulkErr := productRepo.GetUserProductsBulk(userID, limit)
 	if productBulkErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
@@ -141,10 +139,8 @@ func GetArchivedProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get products of user from database with optional limit
-	products, productBulkErr := dbController.GetUserArchivedProductsBulk(userID, limit)
+	productRepo := database.NewProductRepository(dbHandle)
+	products, productBulkErr := productRepo.GetUserArchivedProductsBulk(userID, limit)
 	if productBulkErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
@@ -196,10 +192,8 @@ func GetProduct(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get product from database
-	product, getError := dbController.GetProductByID(productID, userID)
+	productRepo := database.NewProductRepository(dbHandle)
+	product, getError := productRepo.GetProductByID(productID, userID)
 
 	switch getError {
 	// No error: return product
@@ -267,10 +261,8 @@ func GetProductsByBarcode(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get product from database
-	products, getError := dbController.GetUserProductsBulkByBarcode(userID, barcode)
+	productRepo := database.NewProductRepository(dbHandle)
+	products, getError := productRepo.GetUserProductsBulkByBarcode(userID, barcode)
 
 	switch getError {
 	// No error: return product
@@ -355,10 +347,8 @@ func CreateProduct(ctx *gin.Context) {
 		product = apiProduct
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Create product in database
-	createResult := dbController.CreateProduct(userID, &product)
+	productRepo := database.NewProductRepository(dbHandle)
+	createResult := productRepo.CreateProduct(userID, &product)
 	if createResult != nil {
 		logger.Error().Msgf("Error creating product: %s", createResult)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: createResult.Error()})
@@ -420,10 +410,8 @@ func UpdateProduct(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Update product in database
-	updateErr := dbController.UpdateProduct(productID, userID, &product)
+	productRepo := database.NewProductRepository(dbHandle)
+	updateErr := productRepo.UpdateProduct(productID, userID, &product)
 
 	switch updateErr {
 	// No error => product was updated
@@ -495,9 +483,8 @@ func UpdateProductAmount(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	deleted, updateErr := dbController.UpdateProductAmount(productID, userID, amountDTO.Delta)
+	productRepo := database.NewProductRepository(dbHandle)
+	deleted, updateErr := productRepo.UpdateProductAmount(productID, userID, amountDTO.Delta)
 
 	switch updateErr {
 	case nil:
@@ -578,10 +565,8 @@ func DeleteProduct(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Delete product from database
-	deleteResult := dbController.DeleteProduct(productID, userID, archiveOnly)
+	productRepo := database.NewProductRepository(dbHandle)
+	deleteResult := productRepo.DeleteProduct(productID, userID, archiveOnly)
 	if deleteResult != nil {
 		logger.Error().Msgf("Error deleting product: %s", deleteResult)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: deleteResult.Error()})
@@ -644,10 +629,8 @@ func BulkDeleteProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Delete product from database
-	bulkDeleteResultError := dbController.BulkDeleteProducts(convertedProductIDs, userID)
+	productRepo := database.NewProductRepository(dbHandle)
+	bulkDeleteResultError := productRepo.BulkDeleteProducts(convertedProductIDs, userID)
 	// Check for errors
 	if len(bulkDeleteResultError) > 0 {
 		// If error is not nil, log error and return error response as one string
@@ -720,10 +703,8 @@ func BulkArchiveProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Bulk archive products
-	bulkArchiveError := dbController.BulkArchiveProducts(convertedProductIDs, userID)
+	productRepo := database.NewProductRepository(dbHandle)
+	bulkArchiveError := productRepo.BulkArchiveProducts(convertedProductIDs, userID)
 	// Check for errors
 	if len(bulkArchiveError) > 0 {
 		// If error is not nil, log error and return error response as one string
@@ -786,10 +767,8 @@ func RestoreProduct(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Delete product from database
-	restoreResult := dbController.RestoreProduct(productID, userID)
+	productRepo := database.NewProductRepository(dbHandle)
+	restoreResult := productRepo.RestoreProduct(productID, userID)
 	if restoreResult != nil {
 		logger.Error().Msgf("Error restoring product: %s", restoreResult)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: restoreResult.Error()})
@@ -852,10 +831,8 @@ func BulkRestoreProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Bulk restore products
-	bulkRestoreError := dbController.BulkRestoreProducts(convertedProductIDs, userID)
+	productRepo := database.NewProductRepository(dbHandle)
+	bulkRestoreError := productRepo.BulkRestoreProducts(convertedProductIDs, userID)
 	// Check for errors
 	if len(bulkRestoreError) > 0 {
 		// If error is not nil, log error and return error response as one string
@@ -928,17 +905,15 @@ func SetExpireAt(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	product, getErr := dbController.GetProductByID(productID, userID)
+	productRepo := database.NewProductRepository(dbHandle)
+	product, getErr := productRepo.GetProductByID(productID, userID)
 	if getErr != nil {
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
 		return
 	}
 
-	// Update expire date of product
-	updateErr := dbController.SetProductExpireAt(productID, userID, expireAt)
+	updateErr := productRepo.SetProductExpireAt(productID, userID, expireAt)
 
 	switch updateErr {
 	// No error => product was updated and dto is returned
@@ -999,10 +974,8 @@ func GetExpired(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get expired products of user from database
-	products, getExpiredErr := dbController.GetProductsExpired(userID)
+	productRepo := database.NewProductRepository(dbHandle)
+	products, getExpiredErr := productRepo.GetProductsExpired(userID)
 
 	// Check for error or return products
 	if getExpiredErr != nil {
@@ -1168,10 +1141,8 @@ func SearchProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get products of user from database with optional limit
-	products, productErr := dbController.SearchProducts(enumParam, queryValue, sort, order, userID)
+	productRepo := database.NewProductRepository(dbHandle)
+	products, productErr := productRepo.SearchProducts(enumParam, queryValue, sort, order, userID)
 	if productErr != nil {
 		logger.Error().Msgf("Error getting products: %s", productErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})
@@ -1217,10 +1188,10 @@ func GetOpenFoodFactsData(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	productRepo := database.NewProductRepository(dbHandle)
 
 	if offacntrl.Configuration.CacheEnabled {
-		cached, cacheErr := dbController.GetOpenFoodFactsCacheByBarcode(barcode)
+		cached, cacheErr := productRepo.GetOpenFoodFactsCacheByBarcode(barcode)
 		if cacheErr == nil {
 			logger.Info().Msgf("Cache hit for barcode '%s'", barcode)
 			ctx.JSON(http.StatusOK, cached)
@@ -1247,7 +1218,7 @@ func GetOpenFoodFactsData(ctx *gin.Context) {
 	}
 
 	if offacntrl.Configuration.CacheEnabled {
-		if storeErr := dbController.CreateOpenFoodFactsCache(&entry); storeErr != nil {
+		if storeErr := productRepo.CreateOpenFoodFactsCache(&entry); storeErr != nil {
 			logger.Warn().Msgf("Failed to store cache entry for barcode '%s': %s", barcode, storeErr)
 		}
 	}
@@ -1286,16 +1257,16 @@ func GetProductStats(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	productRepo := database.NewProductRepository(dbHandle)
 
-	totalActive, err := dbController.GetActiveProductsCount(userID)
+	totalActive, err := productRepo.GetActiveProductsCount(userID)
 	if err != nil {
 		logger.Error().Msgf("GetActiveProductsCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing active product count"})
 		return
 	}
 
-	wasteCount, err := dbController.GetExpiredProductsCount(userID)
+	wasteCount, err := productRepo.GetExpiredProductsCount(userID)
 	if err != nil {
 		logger.Error().Msgf("GetExpiredProductsCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing waste count"})
@@ -1308,32 +1279,32 @@ func GetProductStats(ctx *gin.Context) {
 	}
 
 	expiringSoonDays := 7
-	if user, userErr := dbController.GetUserByID(userID); userErr == nil && user.NotificationPreferences.NotificationThresholdDays > 0 {
+	if user, userErr := productRepo.GetUserByID(userID); userErr == nil && user.NotificationPreferences.NotificationThresholdDays > 0 {
 		expiringSoonDays = user.NotificationPreferences.NotificationThresholdDays
 	}
 
-	expiringSoon, err := dbController.GetExpiringSoonProducts(userID, expiringSoonDays)
+	expiringSoon, err := productRepo.GetExpiringSoonProducts(userID, expiringSoonDays)
 	if err != nil {
 		logger.Error().Msgf("GetExpiringSoonProducts: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon products"})
 		return
 	}
 
-	categories, err := dbController.GetProductCategoryBreakdown(userID)
+	categories, err := productRepo.GetProductCategoryBreakdown(userID)
 	if err != nil {
 		logger.Error().Msgf("GetProductCategoryBreakdown: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing category breakdown"})
 		return
 	}
 
-	expiryTrend, err := dbController.GetExpiryTrend(userID)
+	expiryTrend, err := productRepo.GetExpiryTrend(userID)
 	if err != nil {
 		logger.Error().Msgf("GetExpiryTrend: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiry trend"})
 		return
 	}
 
-	archivedProducts, err := dbController.GetUserArchivedProductsBulk(userID, -1)
+	archivedProducts, err := productRepo.GetUserArchivedProductsBulk(userID, -1)
 	if err != nil {
 		logger.Error().Msgf("GetUserArchivedProductsBulk: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing archived count"})
@@ -1341,7 +1312,7 @@ func GetProductStats(ctx *gin.Context) {
 	}
 	totalArchived := len(archivedProducts)
 
-	uniqueArchivedMap, err := dbController.GetArchivedProductsGroupedByBarcode(userID)
+	uniqueArchivedMap, err := productRepo.GetArchivedProductsGroupedByBarcode(userID)
 	if err != nil {
 		logger.Error().Msgf("GetArchivedProductsGroupedByBarcode: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing unique archived count"})
@@ -1350,9 +1321,9 @@ func GetProductStats(ctx *gin.Context) {
 	uniqueArchived := len(uniqueArchivedMap)
 
 	var lastInsertedProduct string
-	householdID, householdErr := dbController.GetUserHouseholdByID(userID)
+	householdID, householdErr := productRepo.GetUserHouseholdByID(userID)
 	if householdErr == nil && householdID > 0 {
-		lastProduct, lastErr := dbController.GetLastInsertedProduct(householdID)
+		lastProduct, lastErr := productRepo.GetLastInsertedProduct(householdID)
 		if lastErr == nil && lastProduct.ID != 0 {
 			lastInsertedProduct = lastProduct.ProductName
 		}

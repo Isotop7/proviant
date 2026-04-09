@@ -44,11 +44,9 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller object
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get user household
+	userRepo := database.NewUserRepository(dbHandle)
 	var hasHousehold bool
-	userHouseholdID, userErr := dbController.GetUserHouseholdByID(userID)
+	userHouseholdID, userErr := userRepo.GetUserHouseholdByID(userID)
 	if userErr != nil {
 		logger.Error().Msg(userErr.Error())
 	}
@@ -103,17 +101,17 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller object
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get user object
-	user, userErr := dbController.GetUserByID(userID)
+	userRepo := database.NewUserRepository(dbHandle)
+	householdRepo := database.NewHouseholdRepository(dbHandle)
+	invitationRepo := database.NewInvitationRepository(dbHandle)
+
+	user, userErr := userRepo.GetUserByID(userID)
 	if userErr != nil {
 		logger.Error().Msg(api.ResponseErrInvalidUserData.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
 		return
 	}
-	// Get household object
-	household, householdErr := dbController.GetHouseholdByID(user.HouseholdID)
+	household, householdErr := householdRepo.GetHouseholdByID(user.HouseholdID)
 	if householdErr != nil {
 		logger.Error().Msg(api.ResponseErrInvalidUserData.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
@@ -122,11 +120,11 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 
 	isAdmin := household.AdminID == userID
 
-	members, _ := dbController.GetHouseholdMembers(user.HouseholdID)
+	members, _ := householdRepo.GetHouseholdMembers(user.HouseholdID)
 
-	pendingApplications, _ := dbController.GetPendingApplicationsForAdmin(userID)
+	pendingApplications, _ := householdRepo.GetPendingApplicationsForAdmin(userID)
 
-	myApplications, _ := dbController.GetPendingApplicationsForApplicant(userID)
+	myApplications, _ := householdRepo.GetPendingApplicationsForApplicant(userID)
 
 	pageData := map[string]any{
 		"InviteToken":         ctx.Query("invite_token"),
@@ -139,9 +137,8 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"MyApplications":      myApplications,
 	}
 
-	// Only admins can see and manage invitations
 	if isAdmin {
-		invitations, _ := dbController.GetInvitationsForHousehold(user.HouseholdID, userID)
+		invitations, _ := invitationRepo.GetInvitationsForHousehold(user.HouseholdID, userID)
 		pageData["Invitations"] = invitations
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
@@ -169,11 +166,12 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	}
 
 	// Get query parameters
+	productRepo := database.NewProductRepository(dbHandle)
+
 	queryParam := ctx.Query("queryParam")
 	queryValue := ctx.Query("queryValue")
 	sort := ctx.DefaultQuery("sort", "created_at")
 	order := ctx.DefaultQuery("order", "asc")
-	dbController := database.DatabaseController{DBHandle: dbHandle}
 
 	var products []dbModel.Product
 	var productErr error
@@ -185,9 +183,9 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 			templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrProductSearchInvalidQuery.Error())
 			return
 		}
-		products, productErr = dbController.SearchProducts(enumParam, queryValue, sort, order, userID)
+		products, productErr = productRepo.SearchProducts(enumParam, queryValue, sort, order, userID)
 	} else {
-		products, productErr = dbController.GetUserProductsBulk(userID, -1)
+		products, productErr = productRepo.GetUserProductsBulk(userID, -1)
 	}
 
 	if productErr != nil {
@@ -229,10 +227,8 @@ func (frontend *Frontend) ProductsArchived(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get archived products of user from database with optional limit
-	archivedProducts, productBulkErr := dbController.GetUserArchivedProductsBulk(userID, -1)
+	productRepo := database.NewProductRepository(dbHandle)
+	archivedProducts, productBulkErr := productRepo.GetUserArchivedProductsBulk(userID, -1)
 	if productBulkErr != nil {
 		logger.Error().Msgf("Error getting archivedproducts of user: %s", productBulkErr)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
@@ -294,10 +290,8 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get products of user from database with optional limit
-	product, productErr := dbController.GetProductByID(productID, userID)
+	productRepo := database.NewProductRepository(dbHandle)
+	product, productErr := productRepo.GetProductByID(productID, userID)
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
@@ -343,10 +337,8 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 		return
 	}
 
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Get products of user from database with optional limit
-	product, productErr := dbController.GetProductByID(productID, userID)
+	productRepo := database.NewProductRepository(dbHandle)
+	product, productErr := productRepo.GetProductByID(productID, userID)
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
@@ -385,10 +377,10 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	invitationRepo := database.NewInvitationRepository(dbHandle)
+	householdRepo := database.NewHouseholdRepository(dbHandle)
 
-	// Look up the invitation
-	invitation, invErr := dbController.GetInvitationByToken(token)
+	invitation, invErr := invitationRepo.GetInvitationByToken(token)
 	if invErr != nil {
 		if invErr == errors.ErrInvitationNotFound {
 			templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "base", "acceptInvite.tmpl", map[string]any{
@@ -405,7 +397,6 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		return
 	}
 
-	// Check if invitation is still valid
 	if invitation.Status != dbModel.InvitationStatusPending {
 		var msg string
 		switch invitation.Status {
@@ -424,8 +415,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	}
 
 	if time.Now().After(invitation.ExpiresAt) {
-		// Mark as expired
-		_ = dbController.DBHandle.Model(&dbModel.HouseholdInvitation{}).Where("id = ?", invitation.ID).Update("status", dbModel.InvitationStatusExpired)
+		_ = dbHandle.Model(&dbModel.HouseholdInvitation{}).Where("id = ?", invitation.ID).Update("status", dbModel.InvitationStatusExpired)
 		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", "acceptInvite.tmpl", map[string]any{
 			"Title": "Accept Invitation",
 			"Error": "This invitation has expired.",
@@ -433,8 +423,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		return
 	}
 
-	// Get household name for display
-	household, householdErr := dbController.GetHouseholdByID(invitation.HouseholdID)
+	household, householdErr := householdRepo.GetHouseholdByID(invitation.HouseholdID)
 	householdName := fmt.Sprintf("Household #%d", invitation.HouseholdID)
 	if householdErr == nil {
 		householdName = household.Name
@@ -505,8 +494,8 @@ func (frontend *Frontend) Onboarding(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	user, userErr := dbController.GetUserByID(userID)
+	userRepo := database.NewUserRepository(dbHandle)
+	user, userErr := userRepo.GetUserByID(userID)
 	if userErr != nil {
 		logger.Error().Msg(api.ResponseErrInvalidUserData.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
