@@ -151,6 +151,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	engine.POST("/auth/invite/accept", auth.AcceptInvitation)
 	engine.GET("/auth/refresh_token", jwtAPIMiddleware.RefreshHandler)
 
+	// Logout route (requires authentication)
+	logoutAuth := engine.Group("/auth")
+	logoutAuth.Use(jwtAPIMiddleware.MiddlewareFunc())
+	logoutAuth.POST("/logout", auth.Logout)
+
 	// Public product routes
 	publicProductAPI := engine.Group("/api/v1/products")
 	publicProductAPI.Use(jwtAPIMiddleware.MiddlewareFunc())

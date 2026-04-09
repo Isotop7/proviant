@@ -13,6 +13,9 @@ var (
 	// Name of username key in tokens
 	TokenUsernameKey = "username"
 
+	// Name of JTI key in tokens
+	TokenJTIKey = "jti"
+
 	// Name of authentication header in token
 	TokenHeadName = "Bearer"
 
