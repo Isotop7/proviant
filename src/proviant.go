@@ -185,6 +185,7 @@ func main() {
 	migrationError := dbHandle.AutoMigrate(
 		&dbModel.Household{},
 		&authentication.User{},
+		&authentication.RevokedToken{},
 		&dbModel.Product{},
 		&dbModel.HouseholdApplication{},
 		&dbModel.HouseholdInvitation{},
@@ -235,5 +236,30 @@ func main() {
 
 	notificationController := setupNotificationController(logger, proviantConfiguration, dbHandle)
 
+	// Start background cleanup of expired revoked tokens
+	go startRevokedTokenCleanup(logger, dbHandle)
+
 	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl, notificationController)
+}
+
+// startRevokedTokenCleanup runs a goroutine that periodically cleans up expired revoked tokens
+func startRevokedTokenCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	ticker := time.NewTicker(1 * time.Hour) // Clean up every hour
+	defer ticker.Stop()
+
+	for range ticker.C {
+		cleanupExpiredRevokedTokens(logger, dbHandle)
+	}
+}
+
+// cleanupExpiredRevokedTokens deletes revoked tokens that have expired
+func cleanupExpiredRevokedTokens(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	result := dbHandle.Where("expires_at < ?", time.Now()).Delete(&authentication.RevokedToken{})
+	if result.Error != nil {
+		logger.Error().Msgf("Failed to cleanup expired revoked tokens: %s", result.Error.Error())
+		return
+	}
+	if result.RowsAffected > 0 {
+		logger.Info().Msgf("Cleaned up %d expired revoked tokens", result.RowsAffected)
+	}
 }

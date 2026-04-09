@@ -13,6 +13,7 @@ import (
 	"codeberg.org/isotop7/proviant/templates"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -96,6 +97,11 @@ func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string) {
 }
 
 func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
+	// Check if token is revoked
+	if isTokenRevoked(ctx) {
+		return false
+	}
+
 	// Get user data from data context
 	user, ok := data.(*authentication.User)
 	if !ok {
@@ -121,7 +127,53 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
 	return dbController.UserHasProductAccess(user.ID, productID)
 }
 
+// isTokenRevoked checks if the current token's JTI is in the revoked tokens list
+func isTokenRevoked(ctx *gin.Context) bool {
+	claims := jwt.ExtractClaims(ctx)
+	jti, exists := claims[static.TokenJTIKey]
+	if !exists {
+		// If no JTI, allow (for backward compatibility)
+		return false
+	}
+
+	jtiStr, ok := jti.(string)
+	if !ok {
+		// If JTI not string, allow
+		return false
+	}
+
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		return false
+	}
+
+	var revokedToken authentication.RevokedToken
+	err := dbHandle.Where("jti = ?", jtiStr).First(&revokedToken).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// Not revoked
+			return false
+		}
+		// Error querying, allow to avoid blocking valid users
+		return false
+	}
+
+	// Check if token is expired (cleanup might not have run yet)
+	if revokedToken.ExpiresAt.Before(time.Now()) {
+		// Expired, can clean up in background
+		return false
+	}
+
+	// Token is revoked
+	return true
+}
+
 func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool {
+	// Check if token is revoked
+	if isTokenRevoked(ctx) {
+		return false
+	}
+
 	// Always return true
 	return true
 }
@@ -149,6 +201,7 @@ func JWTMiddleware(
 				return jwt.MapClaims{
 					static.TokenIdentityKey: v.ID,
 					static.TokenUsernameKey: v.Username,
+					static.TokenJTIKey:      uuid.New().String(),
 				}
 			}
 			return jwt.MapClaims{}
