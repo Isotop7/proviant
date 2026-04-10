@@ -390,7 +390,43 @@ proviant.rejectApplication = async function (applicationID) {
   return { code: apiCall.status, message: body.message };
 };
 
-proviant.logoutUser = function () {
+// Helper function to get JWT token from cookie
+proviant.getToken = function () {
+  const name = "jwt=";
+  const decodedCookie = decodeURIComponent(document.cookie);
+  const ca = decodedCookie.split(';');
+  // Iterate over each cookie entry
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    // Trim leading whitespace from cookie string
+    while (c.charAt(0) == ' ') {
+      c = c.substring(1);
+    }
+    // Check if this cookie starts with the target name (e.g., "jwt=")
+    if (c.indexOf(name) == 0) {
+      // Extract and return the cookie value (everything after name)
+      return c.substring(name.length, c.length);
+    }
+  }
+  return "";
+};
+
+proviant.logoutUser = async function () {
+  // Get the current JWT token from cookie
+  const token = proviant.getToken();
+  if (token) {
+    try {
+      // Call logout endpoint to revoke the token
+      await fetch('/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (error) {
+      console.error('Logout request failed:', error);
+      // Continue with cookie expiration even if API call fails
+    }
+  }
+  // Expire the JWT cookie
   document.cookie = "jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
 };
 

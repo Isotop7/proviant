@@ -101,16 +101,34 @@ type Product struct {
 - Define custom errors in `src/errors/errors.go` as package variables
 - Use predefined errors from the `errors` package instead of generic strings
 - Return errors from functions (don't use `panic` in normal flow)
+- **Use early returns instead of nested if-clauses** — check for error conditions first and return immediately, keeping the main logic at the base indentation level
 - Example:
 ```go
-// Return custom error
-if productID <= 0 {
-    return database.Product{}, gorm.ErrNotImplemented
+// WRONG: nested if-clauses
+if ncOk {
+    if ncIsType {
+        if tokenErr == nil {
+            if createErr == nil {
+                // main logic here
+            }
+        }
+    }
 }
-// Use custom error
-if user.HouseholdID != product.HouseholdID {
-    return database.Product{}, errors.ErrMismatcherUserID
+
+// CORRECT: early returns
+if !ncOk {
+    return
 }
+if !ok {
+    return
+}
+if tokenErr != nil {
+    return
+}
+if createErr != nil {
+    return
+}
+// main logic here at base level
 ```
 
 ### Database Operations

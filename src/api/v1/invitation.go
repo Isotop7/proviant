@@ -10,6 +10,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -56,7 +57,8 @@ func CreateInvitation(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	invitationRepo := database.NewInvitationRepository(dbHandle)
+	userRepo := database.NewUserRepository(dbHandle)
 
 	// Get user's household
 	var user authentication.User
@@ -77,7 +79,7 @@ func CreateInvitation(ctx *gin.Context) {
 		return
 	}
 
-	invitation, err := dbController.CreateInvitation(user.HouseholdID, userID, req.Email)
+	invitation, err := invitationRepo.CreateInvitation(user.HouseholdID, userID, req.Email)
 	if err != nil {
 		switch err {
 		case errors.ErrDuplicateInvitation:
@@ -96,17 +98,17 @@ func CreateInvitation(ctx *gin.Context) {
 	}
 
 	// Send invitation email via NotificationController
-	baseURL, _ := ctx.MustGet("baseURL").(string)
+	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
 	notificationController, _ := ctx.MustGet("notificationController").(*controllers.NotificationController)
 	if notificationController != nil {
 		inviterName := user.Username
-		household, householdErr := dbController.GetHouseholdByID(user.HouseholdID)
+		household, householdErr := userRepo.GetHouseholdByID(user.HouseholdID)
 		householdName := fmt.Sprintf("Household #%d", user.HouseholdID)
 		if householdErr == nil {
 			householdName = household.Name
 		}
 
-		if err := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, baseURL); err != nil {
+		if err := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL); err != nil {
 			logger.Error().Msgf("Failed to send invitation email to %s: %s", req.Email, err)
 			// Don't fail the request, invitation is still created; retry handled by dispatcher
 		} else {
@@ -147,9 +149,8 @@ func GetInvitations(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
+	invitationRepo := database.NewInvitationRepository(dbHandle)
 
-	// Get user's household
 	var user authentication.User
 	if err := dbHandle.First(&user, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -168,7 +169,7 @@ func GetInvitations(ctx *gin.Context) {
 		return
 	}
 
-	invitations, err := dbController.GetInvitationsForHousehold(user.HouseholdID, userID)
+	invitations, err := invitationRepo.GetInvitationsForHousehold(user.HouseholdID, userID)
 	if err != nil {
 		logger.Error().Msgf("Error fetching invitations: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
@@ -216,8 +217,8 @@ func CancelInvitation(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	if err := dbController.CancelInvitation(uint(invitationID), userID); err != nil {
+	invitationRepo := database.NewInvitationRepository(dbHandle)
+	if err := invitationRepo.CancelInvitation(uint(invitationID), userID); err != nil {
 		switch err {
 		case errors.ErrInvitationNotFound:
 			logger.Error().Msgf("Invitation %d not found: %s", invitationID, err)

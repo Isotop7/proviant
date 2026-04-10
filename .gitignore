@@ -30,6 +30,13 @@ src/test/*.httpie
 .vscode/
 proviant.log
 src/data
+/proviant
 
 # Claude Code CLI
 .claude/
+
+# Kilo
+.kilo/plans
+
+# Issue sync
+issues/

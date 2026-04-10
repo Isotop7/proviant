@@ -13,6 +13,7 @@ import (
 	"codeberg.org/isotop7/proviant/templates"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -39,7 +40,44 @@ func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
 }
 
 func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
-	ctx.AbortWithStatus(http.StatusUnauthorized)
+	failedUserID, failedUserIDExists := ctx.Get("failedUserID")
+	if !failedUserIDExists {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	userRepo := database.NewUserRepository(dbHandle)
+
+	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
+	maxLoginAttempts := database.DefaultMaxLoginAttempts
+	lockoutDurationMins := database.DefaultLockoutDurationMins
+	if proviantConfig != nil {
+		if proviantConfig.Server.Authentication.MaxLoginAttempts > 0 {
+			maxLoginAttempts = proviantConfig.Server.Authentication.MaxLoginAttempts
+		}
+		if proviantConfig.Server.Authentication.LockoutDurationMins > 0 {
+			lockoutDurationMins = proviantConfig.Server.Authentication.LockoutDurationMins
+		}
+	}
+
+	locked, remaining := userRepo.IsAccountLocked(failedUserID.(uint), maxLoginAttempts, lockoutDurationMins)
+	if !locked {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	retryAfter := int(remaining.Seconds())
+	ctx.Header("Retry-After", strconv.Itoa(retryAfter))
+	ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
+		"code":    "ACCOUNT_LOCKED",
+		"message": "Too many failed login attempts. Account is temporarily locked.",
+	})
 }
 
 func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string) {
@@ -59,6 +97,11 @@ func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string) {
 }
 
 func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
+	// Check if token is revoked
+	if isTokenRevoked(ctx) {
+		return false
+	}
+
 	// Get user data from data context
 	user, ok := data.(*authentication.User)
 	if !ok {
@@ -78,13 +121,57 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
 	if !ok {
 		return false
 	}
-	// Create database controller
-	dbController := database.DatabaseController{DBHandle: dbHandle}
-	// Call database controller function that returns owner state
-	return dbController.UserHasProductAccess(user.ID, productID)
+	productRepo := database.NewProductRepository(dbHandle)
+	return productRepo.UserHasProductAccess(user.ID, productID)
+}
+
+// isTokenRevoked checks if the current token's JTI is in the revoked tokens list
+func isTokenRevoked(ctx *gin.Context) bool {
+	claims := jwt.ExtractClaims(ctx)
+	jti, exists := claims[static.TokenJTIKey]
+	if !exists {
+		// If no JTI, allow (for backward compatibility)
+		return false
+	}
+
+	jtiStr, ok := jti.(string)
+	if !ok {
+		// If JTI not string, allow
+		return false
+	}
+
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		return false
+	}
+
+	var revokedToken authentication.RevokedToken
+	err := dbHandle.Where("jti = ?", jtiStr).First(&revokedToken).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// Not revoked
+			return false
+		}
+		// Error querying, allow to avoid blocking valid users
+		return false
+	}
+
+	// Check if token is expired (cleanup might not have run yet)
+	if revokedToken.ExpiresAt.Before(time.Now()) {
+		// Expired, can clean up in background
+		return false
+	}
+
+	// Token is revoked
+	return true
 }
 
 func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool {
+	// Check if token is revoked
+	if isTokenRevoked(ctx) {
+		return false
+	}
+
 	// Always return true
 	return true
 }
@@ -112,6 +199,7 @@ func JWTMiddleware(
 				return jwt.MapClaims{
 					static.TokenIdentityKey: v.ID,
 					static.TokenUsernameKey: v.Username,
+					static.TokenJTIKey:      uuid.New().String(),
 				}
 			}
 			return jwt.MapClaims{}
@@ -132,22 +220,47 @@ func JWTMiddleware(
 				return "", jwt.ErrMissingLoginValues
 			}
 
-			// Create database controller
-			dbController := database.DatabaseController{DBHandle: dbHandle}
-			// Get user object by username
-			user, err := dbController.GetUserByUsername(loginVals.Username)
+			userRepo := database.NewUserRepository(dbHandle)
+
+			maxLoginAttempts := database.DefaultMaxLoginAttempts
+			lockoutDurationMins := database.DefaultLockoutDurationMins
+			if proviantConfiguration != nil {
+				if proviantConfiguration.Server.Authentication.MaxLoginAttempts > 0 {
+					maxLoginAttempts = proviantConfiguration.Server.Authentication.MaxLoginAttempts
+				}
+				if proviantConfiguration.Server.Authentication.LockoutDurationMins > 0 {
+					lockoutDurationMins = proviantConfiguration.Server.Authentication.LockoutDurationMins
+				}
+			}
+
+			user, err := userRepo.GetUserByUsername(loginVals.Username)
 			if err != nil {
 				return nil, jwt.ErrFailedAuthentication
 			}
 
-			// Compare supplied password with database hash
-			// Return result of comparison
+			if locked, _ := userRepo.IsAccountLocked(user.ID, maxLoginAttempts, lockoutDurationMins); locked {
+				ctx.Set("failedUserID", user.ID)
+				return nil, jwt.ErrFailedAuthentication
+			}
+
 			authErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginVals.Password))
 			if authErr != nil {
+				_ = userRepo.RecordFailedLoginAttempt(user.ID, maxLoginAttempts, lockoutDurationMins)
+				ctx.Set("failedUserID", user.ID)
 				return nil, jwt.ErrFailedAuthentication
-			} else {
-				return user, nil
 			}
+
+			// Check email verification
+			if user.EmailVerifiedAt == nil {
+				ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"code":    "EMAIL_NOT_VERIFIED",
+					"message": "Please verify your email address before logging in",
+				})
+				return nil, jwt.ErrFailedAuthentication
+			}
+
+			_ = userRepo.ResetFailedLoginAttempts(user.ID)
+			return user, nil
 		},
 		// Authorizator checks if user is authorized to emit operation
 		Authorizator: authorizatorFunc,

@@ -1434,6 +1434,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/{id}/amount": {
+            "patch": {
+                "description": "Applies a delta to a product's amount. Hard-deletes the product when amount reaches 0.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Update product amount",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Amount delta",
+                        "name": "delta",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductAmountDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.Product"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/productsByBarcode": {
             "get": {
                 "description": "Returns a list of products of user matching the given barcode",
@@ -1774,6 +1827,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revokes the current JWT token by adding its JTI to the blocklist",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout user by revoking token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/signup": {
             "post": {
                 "description": "Creates a new new user in the database",
@@ -1892,6 +1985,17 @@ const docTemplate = `{
                 }
             }
         },
+        "api.ProductAmountDTO": {
+            "type": "object",
+            "required": [
+                "delta"
+            ],
+            "properties": {
+                "delta": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.ProductStatsResponse": {
             "type": "object",
             "properties": {
@@ -1906,6 +2010,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/api.StatsExpiringProduct"
                     }
+                },
+                "expiringSoonDays": {
+                    "type": "integer"
                 },
                 "expiryTrend": {
                     "type": "array",
@@ -1989,6 +2096,9 @@ const docTemplate = `{
                 "emailEnabled": {
                     "type": "boolean"
                 },
+                "notificationThresholdDays": {
+                    "type": "integer"
+                },
                 "ntfyEnabled": {
                     "type": "boolean"
                 },
@@ -2033,6 +2143,9 @@ const docTemplate = `{
                 },
                 "deletedAt": {
                     "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "emailVerifiedAt": {
+                    "type": "string"
                 },
                 "household": {
                     "$ref": "#/definitions/database.Household"
@@ -2182,6 +2295,9 @@ const docTemplate = `{
         "database.Product": {
             "type": "object",
             "properties": {
+                "amount": {
+                    "type": "integer"
+                },
                 "barcode": {
                     "type": "string"
                 },

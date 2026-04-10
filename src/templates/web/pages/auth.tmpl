@@ -53,4 +53,27 @@
     </main>
 </div>
 
+<!-- Password requirements modal -->
+<div class="modal fade" id="passwordRequirementsModal" tabindex="-1" aria-labelledby="passwordRequirementsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="passwordRequirementsModalLabel">Password Requirements</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Your password must meet the following requirements:</p>
+                <ul class="list-unstyled mb-0">
+                    <li id="req-length" class="text-danger">
+                        <i class="bi bi-x-circle-fill me-2"></i>At least 12 characters long
+                    </li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{ end }}

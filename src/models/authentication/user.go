@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"net/mail"
+	"time"
 
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/database"
@@ -23,17 +24,25 @@ type NotificationPreferences struct {
 // A single user can own many products
 type User struct {
 	gorm.Model
-	ID                      uint   `gorm:"primaryKey,unique"`
-	Username                string `json:"username"`
-	MailAddress             string `json:"mailAddress"`
-	Password                string `json:"-"`
-	HouseholdID             uint   `gorm:"index"`
+	ID                      uint       `gorm:"primaryKey,unique"`
+	Username                string     `json:"username"`
+	MailAddress             string     `json:"mailAddress"`
+	Password                string     `json:"-"`
+	EmailVerifiedAt         *time.Time `json:"emailVerifiedAt,omitempty"`
+	HouseholdID             uint       `gorm:"index"`
 	Household               database.Household
 	NotificationPreferences NotificationPreferences `gorm:"embedded"`
+	FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`
+	LockedUntil             gorm.DeletedAt          `json:"-"`
 }
 
 // IsValid is a simple validator function to check for valid properties
 func (user *User) IsValid(skipPassword bool) error {
+	return user.IsValidWithValidator(skipPassword, defaultPasswordValidator)
+}
+
+// IsValidWithValidator checks if the given user instance is valid using a custom validator
+func (user *User) IsValidWithValidator(skipPassword bool, validator *PasswordValidator) error {
 	if user.ID < 1 {
 		return errors.ErrInvalidUserID
 	}
@@ -43,8 +52,8 @@ func (user *User) IsValid(skipPassword bool) error {
 	}
 
 	if !skipPassword {
-		if len(user.Password) < 8 {
-			return errors.ErrPasswordTooShort
+		if err := validator.Validate(user.Password); err != nil {
+			return err
 		}
 	}
 

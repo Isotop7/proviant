@@ -1,0 +1,37 @@
+name: Weekly Vulnerability Scan
+
+env:
+  GO_VERSION: 1.25.8
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  check:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Scan for vulnerabilities
+        run: |
+          cd ./src
+          go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  frontend-check:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install
+      - name: Audit dependencies
+        run: npm audit --audit-level=high

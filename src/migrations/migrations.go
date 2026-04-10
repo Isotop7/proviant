@@ -3,6 +3,7 @@ package migrations
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
@@ -83,5 +84,31 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 		return err
 	}
 
+	// Backfill email verification for existing users
+	logger.Info().Msg("Running database migrations for email verification backfill")
+	if err := BackfillEmailVerification(logger, db); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// BackfillEmailVerification sets EmailVerifiedAt for all existing users that don't have it set.
+// This is a one-time migration to ensure existing users aren't locked out after email verification is introduced.
+func BackfillEmailVerification(logger *zerolog.Logger, db *gorm.DB) error {
+	logger.Info().Msg("Running database migrations for backfilling email verification")
+
+	var users []*authentication.User
+	if err := db.Where("email_verified_at IS NULL").Find(&users).Error; err != nil {
+		return err
+	}
+
+	for _, user := range users {
+		if err := db.Model(user).Update("email_verified_at", time.Now()).Error; err != nil {
+			return err
+		}
+	}
+
+	logger.Info().Msgf("Backfilled email verification for %d users", len(users))
 	return nil
 }

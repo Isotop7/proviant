@@ -44,6 +44,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	corsConfig.AllowCredentials = true
 	engine.Use(cors.New(corsConfig))
 
+	// Setup security headers
+	engine.Use(SecurityHeadersMiddleware(proviantConfiguration))
+
 	// Pass references to gin context
 	// Logging
 	engine.Use(func(ctx *gin.Context) {
@@ -75,15 +78,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		ctx.Next()
 	})
 
-	// SMTP configuration for invitation emails
+	// Proviant configuration for access in handlers
 	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("smtpConfig", proviantConfiguration.Notification.SMTP)
-		ctx.Next()
-	})
-
-	// Base URL for constructing magic links
-	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("baseURL", proviantConfiguration.Server.BaseURL)
+		ctx.Set("proviantConfig", proviantConfiguration)
 		ctx.Next()
 	})
 
@@ -149,12 +146,18 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	})
 
 	// Authentication routes
-	engine.POST("/auth/login", jwtAPIMiddleware.LoginHandler)
+	engine.POST("/auth/login", loginRateLimitMiddleware, jwtAPIMiddleware.LoginHandler)
 
 	// Signup routes
-	engine.POST("/auth/signup", auth.Signup)
+	engine.POST("/auth/signup", signupRateLimitMiddleware, auth.Signup)
+	engine.POST("/auth/verify-email", auth.VerifyEmail)
 	engine.POST("/auth/invite/accept", auth.AcceptInvitation)
 	engine.GET("/auth/refresh_token", jwtAPIMiddleware.RefreshHandler)
+
+	// Logout route (requires authentication)
+	logoutAuth := engine.Group("/auth")
+	logoutAuth.Use(jwtAPIMiddleware.MiddlewareFunc())
+	logoutAuth.POST("/logout", auth.Logout)
 
 	// Public product routes
 	publicProductAPI := engine.Group("/api/v1/products")
@@ -261,6 +264,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Public invite acceptance page (no auth required)
 	engine.GET("/web/invite/accept", webFrontendHandler.AcceptInvite)
+
+	// Public email verification page (no auth required)
+	engine.GET("/web/verify-email", webFrontendHandler.VerifyEmail)
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")

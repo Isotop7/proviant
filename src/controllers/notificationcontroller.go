@@ -14,24 +14,22 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// NotificationController is the object struct to generate and send notifications for expired products
 type NotificationController struct {
-	Logger             *zerolog.Logger
-	Configuration      *configuration.NotificationConfiguration
-	DatabaseController dbController.DatabaseControllerInterface
-	Providers          []NotificationProvider
+	Logger           *zerolog.Logger
+	Configuration    *configuration.NotificationConfiguration
+	NotificationRepo dbController.NotificationRepositoryInterface
+	Providers        []NotificationProvider
 }
 
-// NewNotificationController creates a new NotificationController with configured providers
 func NewNotificationController(
 	logger *zerolog.Logger,
 	config *configuration.NotificationConfiguration,
-	dbc dbController.DatabaseControllerInterface,
+	notificationRepo dbController.NotificationRepositoryInterface,
 ) *NotificationController {
 	nc := &NotificationController{
-		Logger:             logger,
-		Configuration:      config,
-		DatabaseController: dbc,
+		Logger:           logger,
+		Configuration:    config,
+		NotificationRepo: notificationRepo,
 	}
 
 	// Initialize providers
@@ -78,8 +76,8 @@ func (nc *NotificationController) Dispatch() {
 		nc.Logger.Debug().Msg("New NotificationController run dispatched")
 		for {
 			// Get affected products (widen query window to cover the highest per-user threshold)
-			maxThreshold := nc.DatabaseController.GetMaxNotificationThresholdDays()
-			notificationProducts, getError := nc.DatabaseController.GetProductsExpiredAndNotificationPending(sleepInterval, maxThreshold)
+			maxThreshold := nc.NotificationRepo.GetMaxNotificationThresholdDays()
+			notificationProducts, getError := nc.NotificationRepo.GetProductsExpiredAndNotificationPending(sleepInterval, maxThreshold)
 			if getError != nil {
 				nc.Logger.Error().Msg(getError.Error())
 				continue
@@ -103,7 +101,7 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 		product := &(*notificationProducts)[idx]
 
 		// Get notification preferences for household members
-		preferences, getError := nc.DatabaseController.GetHouseholdMembersNotificationPreferences(product.HouseholdID)
+		preferences, getError := nc.NotificationRepo.GetHouseholdMembersNotificationPreferences(product.HouseholdID)
 		if getError != nil {
 			nc.Logger.Error().Msg(getError.Error())
 			continue
@@ -154,7 +152,7 @@ func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel
 
 		// Only update NotifiedAt on first successful notification
 		if success {
-			updateErr := nc.DatabaseController.SetProductNotifiedAt(product.ID)
+			updateErr := nc.NotificationRepo.SetProductNotifiedAt(product.ID)
 			if updateErr != nil {
 				nc.Logger.Error().Msg(updateErr.Error())
 			} else {
@@ -208,13 +206,13 @@ func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.Househ
 
 	if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
 		nc.Logger.Error().Msgf("Failed to send invitation email to %s: %s", invitation.Email, err)
-		if markErr := nc.DatabaseController.MarkInvitationSendFailed(invitation.ID); markErr != nil {
+		if markErr := nc.NotificationRepo.MarkInvitationSendFailed(invitation.ID); markErr != nil {
 			nc.Logger.Error().Msgf("Failed to mark invitation %d as send-failed: %s", invitation.ID, markErr)
 		}
 		return err
 	}
 
-	if err := nc.DatabaseController.MarkInvitationSent(invitation.ID); err != nil {
+	if err := nc.NotificationRepo.MarkInvitationSent(invitation.ID); err != nil {
 		nc.Logger.Error().Msgf("Failed to mark invitation %d as sent: %s", invitation.ID, err)
 		return err
 	}
@@ -236,13 +234,13 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 
 	if err := emailProvider.SendInvitationEmail(invitation, username, "your household", baseURL); err != nil {
 		nc.Logger.Error().Msgf("Failed to send verification email to %s: %s", invitation.Email, err)
-		if markErr := nc.DatabaseController.MarkInvitationSendFailed(invitation.ID); markErr != nil {
+		if markErr := nc.NotificationRepo.MarkInvitationSendFailed(invitation.ID); markErr != nil {
 			nc.Logger.Error().Msgf("Failed to mark verification invitation %d as send-failed: %s", invitation.ID, markErr)
 		}
 		return err
 	}
 
-	if err := nc.DatabaseController.MarkInvitationSent(invitation.ID); err != nil {
+	if err := nc.NotificationRepo.MarkInvitationSent(invitation.ID); err != nil {
 		nc.Logger.Error().Msgf("Failed to mark verification invitation %d as sent: %s", invitation.ID, err)
 		return err
 	}
@@ -251,11 +249,31 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 	return nil
 }
 
+// SendEmailVerification sends a verification email directly to the user with a verification token.
+func (nc *NotificationController) SendEmailVerification(email, username, token, baseURL string, expiresAt time.Time) error {
+	emailProvider := &EmailNotificationProvider{
+		Configuration: nc.Configuration.SMTP,
+		Logger:        nc.Logger,
+	}
+
+	if !emailProvider.IsConfigured() {
+		return fmt.Errorf("email provider not configured")
+	}
+
+	if err := emailProvider.SendEmailVerificationEmail(email, username, token, baseURL, expiresAt); err != nil {
+		nc.Logger.Error().Msgf("Failed to send email verification to %s: %s", email, err)
+		return err
+	}
+
+	nc.Logger.Info().Msgf("Email verification sent successfully to %s", email)
+	return nil
+}
+
 // processPendingInvitations fetches all pending invitations that need to be sent or retried.
 func (nc *NotificationController) processPendingInvitations(emailProvider *EmailNotificationProvider, baseURL string) {
 	sleepInterval := time.Hour * time.Duration(nc.Configuration.Interval)
 
-	invitations, err := nc.DatabaseController.GetPendingInvitationsNotSent(sleepInterval)
+	invitations, err := nc.NotificationRepo.GetPendingInvitationsNotSent(sleepInterval)
 	if err != nil {
 		nc.Logger.Error().Msgf("Failed to fetch pending invitations: %s", err)
 		return
@@ -270,13 +288,13 @@ func (nc *NotificationController) processPendingInvitations(emailProvider *Email
 
 	for i := range invitations {
 		invitation := &invitations[i]
-		user, userErr := nc.DatabaseController.GetUserByID(invitation.InviterID)
+		user, userErr := nc.NotificationRepo.GetUserByID(invitation.InviterID)
 		inviterName := "A household member"
 		if userErr == nil {
 			inviterName = user.Username
 		}
 
-		household, householdErr := nc.DatabaseController.GetHouseholdByID(invitation.HouseholdID)
+		household, householdErr := nc.NotificationRepo.GetHouseholdByID(invitation.HouseholdID)
 		householdName := fmt.Sprintf("Household #%d", invitation.HouseholdID)
 		if householdErr == nil {
 			householdName = household.Name
@@ -284,11 +302,11 @@ func (nc *NotificationController) processPendingInvitations(emailProvider *Email
 
 		if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
 			nc.Logger.Error().Msgf("Failed to send invitation %d to %s: %s", invitation.ID, invitation.Email, err)
-			if markErr := nc.DatabaseController.MarkInvitationSendFailed(invitation.ID); markErr != nil {
+			if markErr := nc.NotificationRepo.MarkInvitationSendFailed(invitation.ID); markErr != nil {
 				nc.Logger.Error().Msgf("Failed to mark invitation %d as send-failed: %s", invitation.ID, markErr)
 			}
 		} else {
-			if markErr := nc.DatabaseController.MarkInvitationSent(invitation.ID); markErr != nil {
+			if markErr := nc.NotificationRepo.MarkInvitationSent(invitation.ID); markErr != nil {
 				nc.Logger.Error().Msgf("Failed to mark invitation %d as sent: %s", invitation.ID, markErr)
 			} else {
 				nc.Logger.Info().Msgf("Invitation email sent successfully to %s", invitation.Email)

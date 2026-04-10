@@ -43,9 +43,9 @@ func GetOnboardingState(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle.(*gorm.DB)}
+	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
 
-	onboardingState, err := dbController.GetOnboardingState(userID)
+	onboardingState, err := userRepo.GetOnboardingState(userID)
 	if err != nil {
 		// No onboarding state exists — this is an existing user, treat as completed
 		logger.Debug().Msgf("No onboarding state for user %d, treating as completed", userID)
@@ -93,16 +93,17 @@ func GetAvailableHouseholds(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle.(*gorm.DB)}
+	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
+	householdRepo := database.NewHouseholdRepository(dbHandle.(*gorm.DB))
 
-	user, userErr := dbController.GetUserByID(userID)
+	user, userErr := userRepo.GetUserByID(userID)
 	if userErr != nil {
 		logger.Error().Msgf("Failed to get user: %s", userErr.Error())
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get user"})
 		return
 	}
 
-	households, err := dbController.GetPublicHouseholds(user.HouseholdID)
+	households, err := householdRepo.GetPublicHouseholds(user.HouseholdID)
 	if err != nil {
 		logger.Error().Msgf("Failed to get households: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get households"})
@@ -151,7 +152,8 @@ func ApplyForHousehold(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle.(*gorm.DB)}
+	householdRepo := database.NewHouseholdRepository(dbHandle.(*gorm.DB))
+	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
 
 	var req struct {
 		HouseholdID uint `json:"householdId" binding:"required"`
@@ -168,16 +170,14 @@ func ApplyForHousehold(ctx *gin.Context) {
 		return
 	}
 
-	// Apply for the household (signature: applicantID, householdID)
-	err := dbController.ApplyForHousehold(userID, req.HouseholdID)
+	err := householdRepo.ApplyForHousehold(userID, req.HouseholdID)
 	if err != nil {
 		logger.Error().Msgf("Failed to apply for household: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
 
-	// Mark household step as done in onboarding
-	if markErr := dbController.MarkHouseholdStepDone(userID); markErr != nil {
+	if markErr := userRepo.MarkHouseholdStepDone(userID); markErr != nil {
 		logger.Warn().Msgf("Failed to mark household step done: %s", markErr.Error())
 	}
 
@@ -212,9 +212,9 @@ func CompleteOnboarding(ctx *gin.Context) {
 		return
 	}
 
-	dbController := database.DatabaseController{DBHandle: dbHandle.(*gorm.DB)}
+	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
 
-	err := dbController.MarkOnboardingComplete(userID)
+	err := userRepo.MarkOnboardingComplete(userID)
 	if err != nil {
 		logger.Error().Msgf("Failed to complete onboarding: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to complete onboarding"})

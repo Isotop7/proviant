@@ -32,8 +32,15 @@ type DatabaseConfiguration struct {
 
 // AuthenticationConfiguration contains all properties regarding the JSON Web Tokens
 type AuthenticationConfiguration struct {
-	TokenPassword string
-	TokenLifetime int
+	TokenPassword            string
+	TokenLifetime            int
+	MaxLoginAttempts         int
+	LockoutDurationMins      int
+	PasswordMinLength        int
+	PasswordRequireUppercase bool
+	PasswordRequireDigit     bool
+	PasswordRequireSpecial   bool
+	PasswordCheckBreached    bool
 }
 
 // CorsConfiguration contains all properties for the CORS configuration of the proviant server
@@ -42,12 +49,18 @@ type CorsConfiguration struct {
 	AllowedOrigins  []string
 }
 
+// SecurityHeadersConfiguration contains all properties for HTTP security headers
+type SecurityHeadersConfiguration struct {
+	ContentSecurityPolicy string
+}
+
 // ServerConfiguration contains all properties regarding the proviant server
 type ServerConfiguration struct {
-	Port           int
-	Authentication AuthenticationConfiguration
-	CORS           CorsConfiguration
-	BaseURL        string
+	Port            int
+	Authentication  AuthenticationConfiguration
+	CORS            CorsConfiguration
+	BaseURL         string
+	SecurityHeaders SecurityHeadersConfiguration
 }
 
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog

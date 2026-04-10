@@ -70,10 +70,11 @@ func setupDatabase(logger *zerolog.Logger, databaseConfiguration *configuration.
 
 // setupNotificationController initializes the notification controller and starts the notification handler goroutine.
 func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB) *controllers.NotificationController {
+	notificationRepo := dbController.NewNotificationRepository(dbHandle)
 	notificationController := controllers.NewNotificationController(
 		logger,
 		&proviantConfiguration.Notification,
-		&dbController.DatabaseController{DBHandle: dbHandle},
+		notificationRepo,
 	)
 	// Dispatch notification handler goroutine
 	notificationController.Dispatch()
@@ -92,6 +93,13 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetEnvPrefix("PROVIANT")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// Set default password policy
+	viper.SetDefault("server.authentication.passwordMinLength", 12)
+	viper.SetDefault("server.authentication.passwordRequireUppercase", false)
+	viper.SetDefault("server.authentication.passwordRequireDigit", false)
+	viper.SetDefault("server.authentication.passwordRequireSpecial", false)
+	viper.SetDefault("server.authentication.passwordCheckBreached", true)
 
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
@@ -185,11 +193,13 @@ func main() {
 	migrationError := dbHandle.AutoMigrate(
 		&dbModel.Household{},
 		&authentication.User{},
+		&authentication.RevokedToken{},
 		&dbModel.Product{},
 		&dbModel.HouseholdApplication{},
 		&dbModel.HouseholdInvitation{},
 		&dbModel.OnboardingState{},
 		&dbModel.OpenFoodFactsCache{},
+		&dbModel.EmailVerification{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
@@ -234,5 +244,30 @@ func main() {
 
 	notificationController := setupNotificationController(logger, proviantConfiguration, dbHandle)
 
+	// Start background cleanup of expired revoked tokens
+	go startRevokedTokenCleanup(logger, dbHandle)
+
 	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl, notificationController)
+}
+
+// startRevokedTokenCleanup runs a goroutine that periodically cleans up expired revoked tokens
+func startRevokedTokenCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	ticker := time.NewTicker(1 * time.Hour) // Clean up every hour
+	defer ticker.Stop()
+
+	for range ticker.C {
+		cleanupExpiredRevokedTokens(logger, dbHandle)
+	}
+}
+
+// cleanupExpiredRevokedTokens deletes revoked tokens that have expired
+func cleanupExpiredRevokedTokens(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	result := dbHandle.Where("expires_at < ?", time.Now()).Delete(&authentication.RevokedToken{})
+	if result.Error != nil {
+		logger.Error().Msgf("Failed to cleanup expired revoked tokens: %s", result.Error.Error())
+		return
+	}
+	if result.RowsAffected > 0 {
+		logger.Info().Msgf("Cleaned up %d expired revoked tokens", result.RowsAffected)
+	}
 }

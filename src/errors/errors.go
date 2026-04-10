@@ -14,7 +14,19 @@ var (
 	ErrUsernameEmpty = errors.New("username can't be empty")
 
 	// ErrPasswordTooShort is thrown when the given password is too short
-	ErrPasswordTooShort = errors.New("password must at least be 8 characters long")
+	ErrPasswordTooShort = errors.New("password must be at least 12 characters long")
+
+	// ErrPasswordUppercaseRequired is thrown when a password lacks uppercase letters
+	ErrPasswordUppercaseRequired = errors.New("password must contain at least one uppercase letter")
+
+	// ErrPasswordDigitRequired is thrown when a password lacks a digit
+	ErrPasswordDigitRequired = errors.New("password must contain at least one digit")
+
+	// ErrPasswordSpecialRequired is thrown when a password lacks a special character
+	ErrPasswordSpecialRequired = errors.New("password must contain at least one special character")
+
+	// ErrPasswordBreached is thrown when a password has been found in a data breach
+	ErrPasswordBreached = errors.New("password has been found in a data breach, please choose a different password")
 
 	// ErrUserHasNoMailAddress is thrown if a given user has no mail address
 	ErrUserHasNoMailAddress = errors.New("user has no mail address")
@@ -48,6 +60,9 @@ var (
 
 	// ErrUserIDFromToken is thrown if no user id is found in token
 	ErrUserIDFromToken = errors.New("error getting user id from JWT token")
+
+	// ErrAccountLocked is thrown when an account is temporarily locked due to too many failed login attempts
+	ErrAccountLocked = errors.New("account is temporarily locked due to too many failed login attempts")
 
 	// ErrProductSearchInvalidQuery is thrown if a search is ommited but no valid parameter is supplied
 	ErrProductSearchInvalidQuery = errors.New("invalid search query specified")
@@ -180,4 +195,10 @@ var (
 
 	// ErrInvitationNotAuthorized is thrown when a user tries to manage an invitation they did not create
 	ErrInvitationNotAuthorized = errors.New("not authorized to manage this invitation")
+
+	/*
+	 * Email verification related errors
+	 */
+	// ErrEmailNotVerified is thrown when a user attempts to login without verifying their email
+	ErrEmailNotVerified = errors.New("email address not verified")
 )

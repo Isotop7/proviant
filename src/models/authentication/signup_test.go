@@ -12,7 +12,7 @@ func TestSignupIsValid(t *testing.T) {
 			name: "valid signup",
 			signup: Signup{
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "test@example.com",
 			},
 			wantErr: false,
@@ -21,7 +21,7 @@ func TestSignupIsValid(t *testing.T) {
 			name: "valid signup with longer password",
 			signup: Signup{
 				Username:    "testuser",
-				Password:    "verylongpassword123",
+				Password:    "verylongpassword123supersafe",
 				MailAddress: "test@example.com",
 			},
 			wantErr: false,
@@ -30,7 +30,7 @@ func TestSignupIsValid(t *testing.T) {
 			name: "empty username",
 			signup: Signup{
 				Username:    "",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "test@example.com",
 			},
 			wantErr: true,
@@ -45,19 +45,19 @@ func TestSignupIsValid(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "password exactly 8 characters",
+			name: "password exactly 12 characters",
 			signup: Signup{
 				Username:    "testuser",
-				Password:    "12345678",
+				Password:    "AbcdEfgh12!@",
 				MailAddress: "test@example.com",
 			},
 			wantErr: false,
 		},
 		{
-			name: "password 7 characters",
+			name: "password 11 characters",
 			signup: Signup{
 				Username:    "testuser",
-				Password:    "1234567",
+				Password:    "12345678901",
 				MailAddress: "test@example.com",
 			},
 			wantErr: true,
@@ -66,7 +66,7 @@ func TestSignupIsValid(t *testing.T) {
 			name: "invalid email - no @",
 			signup: Signup{
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "invalidemail.com",
 			},
 			wantErr: true,
@@ -75,7 +75,7 @@ func TestSignupIsValid(t *testing.T) {
 			name: "invalid email - no domain",
 			signup: Signup{
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "test@",
 			},
 			wantErr: true,
@@ -84,7 +84,7 @@ func TestSignupIsValid(t *testing.T) {
 			name: "invalid email - no local part",
 			signup: Signup{
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "@example.com",
 			},
 			wantErr: true,
@@ -93,7 +93,7 @@ func TestSignupIsValid(t *testing.T) {
 			name: "empty email",
 			signup: Signup{
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "",
 			},
 			wantErr: true,
@@ -102,7 +102,7 @@ func TestSignupIsValid(t *testing.T) {
 			name: "valid email with subdomain",
 			signup: Signup{
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "user@mail.example.com",
 			},
 			wantErr: false,
@@ -111,7 +111,7 @@ func TestSignupIsValid(t *testing.T) {
 			name: "valid email with plus sign",
 			signup: Signup{
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "user+tag@example.com",
 			},
 			wantErr: false,
