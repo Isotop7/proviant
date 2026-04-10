@@ -16,12 +16,17 @@ type Signup struct {
 
 // IsValid checks if the given signup instance is valid
 func (signup *Signup) IsValid() error {
+	return signup.IsValidWithValidator(defaultPasswordValidator)
+}
+
+// IsValidWithValidator checks if the given signup instance is valid using a custom validator
+func (signup *Signup) IsValidWithValidator(validator *PasswordValidator) error {
 	if signup.Username == "" {
 		return errors.ErrUsernameEmpty
 	}
 
-	if len(signup.Password) < 8 {
-		return errors.ErrPasswordTooShort
+	if err := validator.Validate(signup.Password); err != nil {
+		return err
 	}
 
 	_, mailParseErr := mail.ParseAddress(signup.MailAddress)

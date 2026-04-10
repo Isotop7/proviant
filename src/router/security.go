@@ -24,7 +24,7 @@ func SecurityHeadersMiddleware(proviantConfig *configuration.ProviantConfigurati
 	})
 
 	return func(c *gin.Context) {
-		secureMiddleware.Process(c.Writer, c.Request)
+		_ = secureMiddleware.Process(c.Writer, c.Request)
 		c.Next()
 	}
 }

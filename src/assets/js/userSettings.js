@@ -77,6 +77,10 @@ function UpdatePassword() {
     inputPassword.classList.add("is-invalid");
     formIsValid = false;
   }
+  if (password && password.length < 12) {
+    inputPassword.classList.add("is-invalid");
+    formIsValid = false;
+  }
   if (!passwordVerification) {
     inputPasswordVerification.classList.add("is-invalid");
     formIsValid = false;

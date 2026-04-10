@@ -57,46 +57,54 @@ The app can be configured with environment variables:
 
 ```bash
 # Server configuration
-PROVIANT_SERVER_PORT=5050                                                     # Listening port of server
+PROVIANT_SERVER_PORT=5050                                                      # Listening port of server
 PROVIANT_SERVER_BASEURL="https://proviant.local.de"                           # URL of Proviant with protocol
-PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD="secret key"                     # Secret used for JSON Web Tokens
-PROVIANT_SERVER_AUTHENTICATION_TOKENLIFETIME=8                                # Lifetime of JSON Web Tokens
-PROVIANT_SERVER_CORS_ALLOWALLORIGINS=true                                     # Allow all requests to API
-PROVIANT_SERVER_CORS_ALLOWEDORIGINS="http://localhost https://myapi.com"      # Allow this list of hosts to access API
+PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD="secret key"                       # Secret used for JSON Web Tokens
+PROVIANT_SERVER_AUTHENTICATION_TOKENLIFETIME=8                                # Lifetime of JSON Web Tokens in hours
+PROVIANT_SERVER_AUTHENTICATION_MAXLOGINATTEMPTS=3                             # Maximum failed login attempts before lockout
+PROVIANT_SERVER_AUTHENTICATION_LOCKOUTDURATIONMINS=10                        # Lockout duration in minutes after max failed attempts
+PROVIANT_SERVER_AUTHENTICATION_PASSWORDMINLENGTH=12                           # Minimum password length
+PROVIANT_SERVER_AUTHENTICATION_PASSWORDREQUIREUPPERCASE=false                 # Require at least one uppercase letter
+PROVIANT_SERVER_AUTHENTICATION_PASSWORDREQUIREDIGIT=false                     # Require at least one digit
+PROVIANT_SERVER_AUTHENTICATION_PASSWORDREQUIRESPECIAL=false                   # Require at least one special character
+PROVIANT_SERVER_AUTHENTICATION_PASSWORDCHECKBREACHED=true                      # Check passwords against HaveIBeenPwned API
+PROVIANT_SERVER_CORS_ALLOWALLORIGINS=true                                     # Allow all origins (true) or use allowedOrigins list (false)
+PROVIANT_SERVER_CORS_ALLOWEDORIGINS="http://localhost https://myapi.com"      # List of allowed origins when allowAllOrigins is false
+PROVIANT_SERVER_SECURITYHEADERS_CONTENT_SECURITY_POLICY="default-src 'self'"   # Content Security Policy header
 
 # Database configuration
 ## SQLite
-PROVIANT_ENGINE="sqlite"                                                              # Use sqlite
-PROVIANT_SQLITE_FILEPATH="data/proviant.db"                                             # Path to database file, this folder needs to exist
+PROVIANT_DATABASE_ENGINE="sqlite"                                            # Database engine (sqlite or mariadb)
+PROVIANT_DATABASE_SQLITE_FILEPATH="data/proviant.db"                         # Path to SQLite database file (folder must exist)
 ## MariaDB
-PROVIANT_ENGINE="mariadb"                                                             # Use mariadb
-PROVIANT_MARIADB_DATABASE_HOST="127.0.0.1"                                            # Database server IP or hostname
-PROVIANT_MARIADB_DATABASE_PORT=3306                                                   # Database server port
-PROVIANT_MARIADB_DATABASE_NAME="proviant"                                               # Database name
-PROVIANT_MARIADB_DATABASE_USER="proviant"                                               # Database user
-PROVIANT_MARIADB_DATABASE_PASSWORD="password"                                         # Database user password
+PROVIANT_DATABASE_ENGINE="mariadb"                                          # Database engine (sqlite or mariadb)
+PROVIANT_DATABASE_MARIADB_HOST="127.0.0.1"                                  # MariaDB server IP or hostname
+PROVIANT_DATABASE_MARIADB_PORT=3306                                          # MariaDB server port
+PROVIANT_DATABASE_MARIADB_NAME="proviant"                                    # Database name
+PROVIANT_DATABASE_MARIADB_USER="proviant"                                    # Database user
+PROVIANT_DATABASE_MARIADB_PASSWORD="password"                                # Database user password
 
 # Logging configuration
-PROVIANT_LOGGING_ENABLED=true                                                 # Enable file logging
-PROVIANT_LOGGING_FILE="proviant.log"                                            # Path to log file
+PROVIANT_LOGGING_ENABLED=true                                                # Enable file logging
+PROVIANT_LOGGING_FILE="proviant.log"                                         # Path to log file
 
 # Notification configuration
-PROVIANT_NOTIFICATION_ENABLED=true                          # Enable notifications
-PROVIANT_NOTIFICATION_INTERVAL=12                           # Interval in hours when notifications should be send
-PROVIANT_NOTIFICATION_SMTP_FROMADDRESS="sender@local.net"   # Sender address for notifications
-PROVIANT_NOTIFICATION_SMTP_HOST="127.0.0.1"                 # Host or IP address of SMTP server
-PROVIANT_NOTIFICATION_SMTP_PORT=25                          # Port of SMTP server
-PROVIANT_NOTIFICATION_SMTP_SSL=false                        # Enables/disables SSL
-PROVIANT_NOTIFICATION_SMTP_USER="user"                      # Username used for sending notifications via SMTP server
-PROVIANT_NOTIFICATION_SMTP_PASSWORD="password"              # Password used for sending notifications via SMTP server
-PROVIANT_NOTIFICATION_NTFY_URL="https://ntfy.sh"            # Default Ntfy URL
-PROVIANT_NOTIFICATION_NTFY_TOPIC="default_topic"            # Default Ntfy topic
-PROVIANT_NOTIFICATION_NTFY_TIMEOUT=60                       # Ntfy message timeout
+PROVIANT_NOTIFICATION_ENABLED=true                                            # Enable notifications
+PROVIANT_NOTIFICATION_INTERVAL=12                                            # Interval in hours when notifications should be sent
+PROVIANT_NOTIFICATION_SMTP_HOST="127.0.0.1"                                  # SMTP server host or IP address
+PROVIANT_NOTIFICATION_SMTP_PORT=25                                           # SMTP server port
+PROVIANT_NOTIFICATION_SMTP_SSL=false                                         # Enable/disable SSL for SMTP
+PROVIANT_NOTIFICATION_SMTP_USER="user"                                       # SMTP username
+PROVIANT_NOTIFICATION_SMTP_PASSWORD="password"                                # SMTP password
+PROVIANT_NOTIFICATION_SMTP_FROMADDRESS="sender@local.net"                     # Sender email address for notifications
+PROVIANT_NOTIFICATION_NTFY_URL="https://ntfy.sh"                             # Ntfy server URL
+PROVIANT_NOTIFICATION_NTFY_TOPIC="default_topic"                             # Default Ntfy topic/channel
+PROVIANT_NOTIFICATION_NTFY_TIMEOUT=60                                         # Ntfy message timeout in seconds
 
 # OpenFoodFacts configuration
-PROVIANT_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"   # Address of API backend of OpenFoodFacts
-PROVIANT_OPENFOODFACTS_TIMEOUT=5                                              # Timeout of API requests to OpenFoodFacts API
-PROVIANT_OPENFOODFACTS_CACHEENABLED=true                                      # Cache OpenFoodFacts responses in the database for offline use
+PROVIANT_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"  # OpenFoodFacts API URL
+PROVIANT_OPENFOODFACTS_TIMEOUT=5                                             # API request timeout in seconds
+PROVIANT_OPENFOODFACTS_CACHEENABLED=true                                     # Cache API responses in database for offline use
 ```
 
 Additionally `Gin` supports a debug mode, which also can be set with a environment variable:

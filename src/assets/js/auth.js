@@ -15,6 +15,14 @@ function hideLoginError() {
     }
 }
 
+function showPasswordRequirementsModal() {
+    const modal = document.getElementById("passwordRequirementsModal");
+    if (modal) {
+        const modalBootstrap = new bootstrap.Modal(modal);
+        modalBootstrap.show();
+    }
+}
+
 function showSignupError(message) {
     const signupAlert = document.getElementById("signupAlert");
     if (signupAlert) {
@@ -90,6 +98,14 @@ function Login() {
         }
         formIsValid = false;
     }
+    if (password != "" && password.length < 12) {
+        if (!passwordInput.classList.contains("is-invalid")) {
+            passwordInput.classList.toggle("is-invalid");
+        }
+        formIsValid = false;
+        showPasswordRequirementsModal();
+        return;
+    }
 
     if (!formIsValid) {
         return;
@@ -149,6 +165,14 @@ function Signup() {
         }
         formIsValid = false;
     }
+    if (password != "" && password.length < 12) {
+        if (!passwordInput.classList.contains("is-invalid")) {
+            passwordInput.classList.toggle("is-invalid");
+        }
+        formIsValid = false;
+        showPasswordRequirementsModal();
+        return;
+    }
     if (mailAddress == "") {
         if (!inputMailAddress.classList.contains("is-invalid")) {
             inputMailAddress.classList.toggle("is-invalid");
@@ -195,6 +219,15 @@ document.addEventListener("click", function (event) {
     if (target.closest("#btnSignup")) {
         event.preventDefault();
         Signup();
+        return;
+    }
+
+    // Logout button
+    if (target.closest("#btnLogout")) {
+        event.preventDefault();
+        proviant.logoutUser().then(() => {
+            window.location.href = '/web';
+        });
         return;
     }
 });

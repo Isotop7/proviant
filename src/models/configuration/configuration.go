@@ -32,10 +32,15 @@ type DatabaseConfiguration struct {
 
 // AuthenticationConfiguration contains all properties regarding the JSON Web Tokens
 type AuthenticationConfiguration struct {
-	TokenPassword       string
-	TokenLifetime       int
-	MaxLoginAttempts    int
-	LockoutDurationMins int
+	TokenPassword            string
+	TokenLifetime            int
+	MaxLoginAttempts         int
+	LockoutDurationMins      int
+	PasswordMinLength        int
+	PasswordRequireUppercase bool
+	PasswordRequireDigit     bool
+	PasswordRequireSpecial   bool
+	PasswordCheckBreached    bool
 }
 
 // CorsConfiguration contains all properties for the CORS configuration of the proviant server

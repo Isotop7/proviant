@@ -14,7 +14,7 @@ func TestUserIsValid(t *testing.T) {
 			user: User{
 				ID:          1,
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "test@example.com",
 			},
 			skipPassword: false,
@@ -35,7 +35,7 @@ func TestUserIsValid(t *testing.T) {
 			user: User{
 				ID:          0,
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "test@example.com",
 			},
 			skipPassword: false,
@@ -46,7 +46,7 @@ func TestUserIsValid(t *testing.T) {
 			user: User{
 				ID:          0,
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "test@example.com",
 			},
 			skipPassword: false,
@@ -57,7 +57,7 @@ func TestUserIsValid(t *testing.T) {
 			user: User{
 				ID:          1,
 				Username:    "",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "test@example.com",
 			},
 			skipPassword: false,
@@ -111,7 +111,7 @@ func TestUserIsValid(t *testing.T) {
 			user: User{
 				ID:          1,
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "invalidemail.com",
 			},
 			skipPassword: false,
@@ -122,7 +122,7 @@ func TestUserIsValid(t *testing.T) {
 			user: User{
 				ID:          1,
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "test@",
 			},
 			skipPassword: false,
@@ -133,7 +133,7 @@ func TestUserIsValid(t *testing.T) {
 			user: User{
 				ID:          1,
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "",
 			},
 			skipPassword: false,
@@ -144,18 +144,18 @@ func TestUserIsValid(t *testing.T) {
 			user: User{
 				ID:          1,
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "user@mail.example.com",
 			},
 			skipPassword: false,
 			wantErr:      false,
 		},
 		{
-			name: "password exactly 8 characters",
+			name: "password exactly 12 characters",
 			user: User{
 				ID:          1,
 				Username:    "testuser",
-				Password:    "12345678",
+				Password:    "AbcdEfgh12!@",
 				MailAddress: "test@example.com",
 			},
 			skipPassword: false,
@@ -166,7 +166,7 @@ func TestUserIsValid(t *testing.T) {
 			user: User{
 				ID:          999999,
 				Username:    "testuser",
-				Password:    "password123",
+				Password:    "ThisIsAVeryStrongPass123!",
 				MailAddress: "test@example.com",
 			},
 			skipPassword: false,

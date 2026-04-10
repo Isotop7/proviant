@@ -36,8 +36,8 @@ func TestErrorDefinitions(t *testing.T) {
 		if ErrPasswordTooShort == nil {
 			t.Error("ErrPasswordTooShort is nil")
 		}
-		if ErrPasswordTooShort.Error() != "password must at least be 8 characters long" {
-			t.Errorf("ErrPasswordTooShort.Error() = %v, want password must at least be 8 characters long", ErrPasswordTooShort.Error())
+		if ErrPasswordTooShort.Error() != "password must be at least 12 characters long" {
+			t.Errorf("ErrPasswordTooShort.Error() = %v, want password must be at least 12 characters long", ErrPasswordTooShort.Error())
 		}
 	})
 

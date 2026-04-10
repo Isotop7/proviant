@@ -197,7 +197,7 @@ func TestUpdateUserPassword(t *testing.T) {
 		// Request body
 		loginData := authentication.Login{
 			Username: "testuser",
-			Password: "newpassword123",
+			Password: "NewSecureTestPassword789!",
 		}
 		body, _ := json.Marshal(loginData)
 		ctx.Request = &http.Request{

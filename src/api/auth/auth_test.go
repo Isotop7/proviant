@@ -57,7 +57,7 @@ func TestSignupWithoutLogger(t *testing.T) {
 	// Create test request body
 	signup := authentication.Signup{
 		Username:    "testuser",
-		Password:    "testpassword123",
+		Password:    "ThisIsAVeryStrongTestPass123!",
 		MailAddress: "test@example.com",
 	}
 
@@ -89,7 +89,7 @@ func TestSignupWithoutDatabase(t *testing.T) {
 	// Create test request body
 	signup := authentication.Signup{
 		Username:    "testuser",
-		Password:    "testpassword123",
+		Password:    "ThisIsAVeryStrongTestPass123!",
 		MailAddress: "test@example.com",
 	}
 
@@ -165,7 +165,7 @@ func TestSignupSuccess(t *testing.T) {
 	// Create test request body
 	signup := authentication.Signup{
 		Username:    "testuser",
-		Password:    "testpassword123",
+		Password:    "ThisIsAVeryStrongTestPass123!",
 		MailAddress: "test@example.com",
 	}
 
@@ -256,7 +256,7 @@ func TestSignupInvalidEmail(t *testing.T) {
 	// Create test request with invalid email
 	signup := authentication.Signup{
 		Username:    "testuser",
-		Password:    "testpassword123",
+		Password:    "ThisIsAVeryStrongTestPass999!",
 		MailAddress: "invalid-email",
 	}
 
@@ -305,7 +305,7 @@ func TestSignupShortPassword(t *testing.T) {
 	var response map[string]string
 	err = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Contains(t, response["message"], "password must at least be 8 characters long")
+	assert.Contains(t, response["message"], "password must be at least 12 characters long")
 }
 
 // TestSignupDuplicateUsername tests signup with duplicate username
@@ -337,7 +337,7 @@ func TestSignupDuplicateUsername(t *testing.T) {
 	// Create test request with duplicate username
 	signup := authentication.Signup{
 		Username:    "testuser",
-		Password:    "anotherpassword123",
+		Password:    "AnotherVeryStrongTestPass456!",
 		MailAddress: "another@example.com",
 	}
 
@@ -372,7 +372,7 @@ func TestSignupDuplicateEmail(t *testing.T) {
 	// Create first user directly in database
 	firstUser := authentication.User{
 		Username:    "testuser",
-		Password:    "testpassword123",
+		Password:    "ThisIsAVeryStrongTestPass123!",
 		MailAddress: "test@example.com",
 	}
 	if err := db.Create(&firstUser).Error; err != nil {
@@ -385,7 +385,7 @@ func TestSignupDuplicateEmail(t *testing.T) {
 	// Create test request with duplicate email
 	signup := authentication.Signup{
 		Username:    "anotheruser",
-		Password:    "anotherpassword123",
+		Password:    "AnotherVeryStrongTestPass456!",
 		MailAddress: "test@example.com",
 	}
 

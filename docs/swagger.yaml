@@ -1534,6 +1534,31 @@ paths:
       summary: Accept invitation
       tags:
       - Invitation
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Revokes the current JWT token by adding its JTI to the blocklist
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout user by revoking token
+      tags:
+      - auth
   /auth/signup:
     post:
       consumes:

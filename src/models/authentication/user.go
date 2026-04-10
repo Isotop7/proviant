@@ -38,6 +38,11 @@ type User struct {
 
 // IsValid is a simple validator function to check for valid properties
 func (user *User) IsValid(skipPassword bool) error {
+	return user.IsValidWithValidator(skipPassword, defaultPasswordValidator)
+}
+
+// IsValidWithValidator checks if the given user instance is valid using a custom validator
+func (user *User) IsValidWithValidator(skipPassword bool, validator *PasswordValidator) error {
 	if user.ID < 1 {
 		return errors.ErrInvalidUserID
 	}
@@ -47,8 +52,8 @@ func (user *User) IsValid(skipPassword bool) error {
 	}
 
 	if !skipPassword {
-		if len(user.Password) < 8 {
-			return errors.ErrPasswordTooShort
+		if err := validator.Validate(user.Password); err != nil {
+			return err
 		}
 	}
 
