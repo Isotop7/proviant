@@ -44,6 +44,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	corsConfig.AllowCredentials = true
 	engine.Use(cors.New(corsConfig))
 
+	// Setup security headers
+	engine.Use(SecurityHeadersMiddleware(proviantConfiguration))
+
 	// Pass references to gin context
 	// Logging
 	engine.Use(func(ctx *gin.Context) {

@@ -12,6 +12,8 @@ server:
     allowedOrigins:
       - "http://localhost"
       - "http://myproviant.instance"
+  securityHeaders:
+    contentSecurityPolicy: "default-src 'self'"
 
 database:
   engine: mariadb
