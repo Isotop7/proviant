@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {
-  const token = document.querySelector('meta[name="csrf_token"]')?.content;
   const urlParams = new URLSearchParams(window.location.search);
   const verifyToken = urlParams.get("token");
 
@@ -16,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .then(function (response) {
       return response.json();
     })
-    .then(function (data) {
+    .then(function () {
       const container = document.querySelector(".card-body");
       container.innerHTML =
         '<div class="text-center mb-4">' +
@@ -32,7 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
         '<a href="/web/auth" class="btn btn-primary">Log In</a>' +
         "</div>";
     })
-    .catch(function (error) {
+    .catch(function () {
       const container = document.querySelector(".card-body");
       container.innerHTML =
         '<div class="text-center mb-4">' +

@@ -44,12 +44,18 @@ type CorsConfiguration struct {
 	AllowedOrigins  []string
 }
 
+// SecurityHeadersConfiguration contains all properties for HTTP security headers
+type SecurityHeadersConfiguration struct {
+	ContentSecurityPolicy string
+}
+
 // ServerConfiguration contains all properties regarding the proviant server
 type ServerConfiguration struct {
-	Port           int
-	Authentication AuthenticationConfiguration
-	CORS           CorsConfiguration
-	BaseURL        string
+	Port            int
+	Authentication  AuthenticationConfiguration
+	CORS            CorsConfiguration
+	BaseURL         string
+	SecurityHeaders SecurityHeadersConfiguration
 }
 
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog
