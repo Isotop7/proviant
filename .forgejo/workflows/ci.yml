@@ -27,6 +27,10 @@ jobs:
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: src
+      - name: Scan for vulnerabilities
+        run: |
+          cd ./src
+          go run golang.org/x/vuln/cmd/govulncheck@latest ./...
       - name: Test code
         run: |
           cd ./src
@@ -52,6 +56,8 @@ jobs:
           node-version: '22'
       - name: Install dependencies
         run: npm install
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
       - name: Lint CSS
         run: npm run lint-css
       - name: Lint JS

@@ -151,3 +151,18 @@ tasks:
   lint:
     desc: Run all frontend linters (CSS, JS, HTML)
     deps: [lint-css, lint-js, lint-html]
+
+  vuln-go:
+    desc: Scan Go dependencies for vulnerabilities
+    dir: src
+    cmds:
+      - go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  vuln-npm:
+    desc: Audit frontend dependencies for vulnerabilities
+    cmds:
+      - npm audit --audit-level=high
+
+  vuln:
+    desc: Scan all dependencies for vulnerabilities
+    deps: [vuln-go, vuln-npm]
