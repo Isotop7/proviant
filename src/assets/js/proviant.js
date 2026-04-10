@@ -419,10 +419,7 @@ proviant.logoutUser = async function () {
       // Call logout endpoint to revoke the token
       await fetch('/auth/logout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({}) // Empty body for POST
+        credentials: 'include'
       });
     } catch (error) {
       console.error('Logout request failed:', error);

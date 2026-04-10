@@ -94,6 +94,13 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
+	// Set default password policy
+	viper.SetDefault("server.authentication.passwordMinLength", 12)
+	viper.SetDefault("server.authentication.passwordRequireUppercase", false)
+	viper.SetDefault("server.authentication.passwordRequireDigit", false)
+	viper.SetDefault("server.authentication.passwordRequireSpecial", false)
+	viper.SetDefault("server.authentication.passwordCheckBreached", true)
+
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
 		panic(err.Error())

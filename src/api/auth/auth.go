@@ -55,7 +55,31 @@ func Signup(ctx *gin.Context) {
 		return
 	}
 
-	validationErr := signup.IsValid()
+	var proviantConfig *configuration.ProviantConfiguration
+	proviantConfigInterface, pcOk := ctx.Get("proviantConfig")
+	if pcOk {
+		var ok bool
+		proviantConfig, ok = proviantConfigInterface.(*configuration.ProviantConfiguration)
+		if !ok {
+			proviantConfig = nil
+		}
+	}
+
+	var passwordValidator *authentication.PasswordValidator
+	if proviantConfig != nil {
+		passwordValidator = authentication.PasswordValidatorFromConfig(authentication.PasswordConfig{
+			MinLength:        proviantConfig.Server.Authentication.PasswordMinLength,
+			RequireUppercase: proviantConfig.Server.Authentication.PasswordRequireUppercase,
+			RequireDigit:     proviantConfig.Server.Authentication.PasswordRequireDigit,
+			RequireSpecial:   proviantConfig.Server.Authentication.PasswordRequireSpecial,
+			CheckBreached:    proviantConfig.Server.Authentication.PasswordCheckBreached,
+		})
+	}
+	if passwordValidator == nil {
+		passwordValidator = authentication.DefaultPasswordValidator()
+	}
+
+	validationErr := signup.IsValidWithValidator(passwordValidator)
 	if validationErr != nil {
 		logger.Error().Msgf("User data was invalid: '%s'", validationErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(validationErr))
@@ -113,13 +137,7 @@ func Signup(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
 		return
 	}
-	proviantConfigInterface, pcOk := ctx.Get("proviantConfig")
-	if !pcOk {
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
-		return
-	}
-	proviantConfig, ok := proviantConfigInterface.(*configuration.ProviantConfiguration)
-	if !ok {
+	if proviantConfig == nil {
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
 		return
 	}

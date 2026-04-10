@@ -99,7 +99,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(e \*EmailNotificationProvider\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#EmailNotificationProvider.SendInvitationEmail>)
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
 - [type NotificationController](<#NotificationController>)
-  - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, dbc dbController.DatabaseControllerInterface\) \*NotificationController](<#NewNotificationController>)
+  - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
   - [func \(nc \*NotificationController\) DispatchInvitations\(baseURL string\)](<#NotificationController.DispatchInvitations>)
   - [func \(nc \*NotificationController\) SendEmailVerification\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendEmailVerification>)
@@ -198,14 +198,14 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 <a name="NotificationController"></a>
 ## type NotificationController
 
-NotificationController is the object struct to generate and send notifications for expired products
+
 
 ```go
 type NotificationController struct {
-    Logger             *zerolog.Logger
-    Configuration      *configuration.NotificationConfiguration
-    DatabaseController dbController.DatabaseControllerInterface
-    Providers          []NotificationProvider
+    Logger           *zerolog.Logger
+    Configuration    *configuration.NotificationConfiguration
+    NotificationRepo dbController.NotificationRepositoryInterface
+    Providers        []NotificationProvider
 }
 ```
 
@@ -213,10 +213,10 @@ type NotificationController struct {
 ### func NewNotificationController
 
 ```go
-func NewNotificationController(logger *zerolog.Logger, config *configuration.NotificationConfiguration, dbc dbController.DatabaseControllerInterface) *NotificationController
+func NewNotificationController(logger *zerolog.Logger, config *configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface) *NotificationController
 ```
 
-NewNotificationController creates a new NotificationController with configured providers
+
 
 <a name="NotificationController.Dispatch"></a>
 ### func \(\*NotificationController\) Dispatch
@@ -377,7 +377,19 @@ var (
     ErrUsernameEmpty = errors.New("username can't be empty")
 
     // ErrPasswordTooShort is thrown when the given password is too short
-    ErrPasswordTooShort = errors.New("password must at least be 8 characters long")
+    ErrPasswordTooShort = errors.New("password must be at least 12 characters long")
+
+    // ErrPasswordUppercaseRequired is thrown when a password lacks uppercase letters
+    ErrPasswordUppercaseRequired = errors.New("password must contain at least one uppercase letter")
+
+    // ErrPasswordDigitRequired is thrown when a password lacks a digit
+    ErrPasswordDigitRequired = errors.New("password must contain at least one digit")
+
+    // ErrPasswordSpecialRequired is thrown when a password lacks a special character
+    ErrPasswordSpecialRequired = errors.New("password must contain at least one special character")
+
+    // ErrPasswordBreached is thrown when a password has been found in a data breach
+    ErrPasswordBreached = errors.New("password has been found in a data breach, please choose a different password")
 
     // ErrUserHasNoMailAddress is thrown if a given user has no mail address
     ErrUserHasNoMailAddress = errors.New("user has no mail address")
@@ -718,6 +730,7 @@ router contains the gin router definitions and maps requests to handlers
 - [func AuthorizatorNotUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorNotUserAware>)
 - [func AuthorizatorUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorUserAware>)
 - [func JWTMiddleware\(proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
+- [func SecurityHeadersMiddleware\(proviantConfig \*configuration.ProviantConfiguration\) gin.HandlerFunc](<#SecurityHeadersMiddleware>)
 - [func SetupRouter\(logger \*zerolog.Logger, proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl \*controllers.OpenFoodFactsAPIController, notificationController \*controllers.NotificationController\) \*gin.Engine](<#SetupRouter>)
 - [func UnauthorizedAPIFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedAPIFunc>)
 - [func UnauthorizedFrontendFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedFrontendFunc>)
@@ -750,6 +763,15 @@ func JWTMiddleware(proviantConfiguration *configuration.ProviantConfiguration, d
 ```
 
 JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization \(optional\)
+
+<a name="SecurityHeadersMiddleware"></a>
+## func SecurityHeadersMiddleware
+
+```go
+func SecurityHeadersMiddleware(proviantConfig *configuration.ProviantConfiguration) gin.HandlerFunc
+```
+
+
 
 <a name="SetupRouter"></a>
 ## func SetupRouter
@@ -999,6 +1021,7 @@ auth contains authentication method handlers
 ## Index
 
 - [func AcceptInvitation\(ctx \*gin.Context\)](<#AcceptInvitation>)
+- [func Logout\(ctx \*gin.Context\)](<#Logout>)
 - [func Signup\(ctx \*gin.Context\)](<#Signup>)
 - [func VerifyEmail\(ctx \*gin.Context\)](<#VerifyEmail>)
 
@@ -1011,6 +1034,15 @@ func AcceptInvitation(ctx *gin.Context)
 ```
 
 AcceptInvitation accepts a household invitation for the authenticated user. @Summary Accept invitation @Description Accepts a household invitation using a token @Tags Invitation @Accept json @Produce json @Param request body acceptInvitationRequest true "Accept invitation request" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/invite/accept \[post\]
+
+<a name="Logout"></a>
+## func Logout
+
+```go
+func Logout(ctx *gin.Context)
+```
+
+Logout revokes the current JWT token @Summary Logout user by revoking token @Description Revokes the current JWT token by adding its JTI to the blocklist @Tags auth @Accept json @Produce json @Security BearerAuth @Success 200 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/logout \[post\]
 
 <a name="Signup"></a>
 ## func Signup
@@ -1109,6 +1141,14 @@ GetOnboardingState returns the current onboarding progress for the authenticated
 ```go
 import "codeberg.org/isotop7/proviant/api/v1"
 ```
+
+v1 implements version 1 of the proviant API
+
+v1 implements version 1 of the proviant API
+
+v1 implements version 1 of the proviant API
+
+v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
@@ -1479,88 +1519,117 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 - [Constants](<#constants>)
 - [type BulkOperationError](<#BulkOperationError>)
   - [func \(b \*BulkOperationError\) Error\(\) string](<#BulkOperationError.Error>)
-- [type DatabaseController](<#DatabaseController>)
-  - [func \(dbc DatabaseController\) AcceptInvitation\(token, email string, userID uint\) error](<#DatabaseController.AcceptInvitation>)
-  - [func \(dbc DatabaseController\) ApplyForHousehold\(applicantID, householdID uint\) error](<#DatabaseController.ApplyForHousehold>)
-  - [func \(dbc DatabaseController\) ApproveApplication\(applicationID, adminUserID uint\) error](<#DatabaseController.ApproveApplication>)
-  - [func \(dbc DatabaseController\) BulkArchiveProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkArchiveProducts>)
-  - [func \(dbc DatabaseController\) BulkDeleteProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkDeleteProducts>)
-  - [func \(dbc DatabaseController\) BulkRestoreProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#DatabaseController.BulkRestoreProducts>)
-  - [func \(dbc DatabaseController\) CancelApplication\(applicationID, applicantUserID uint\) error](<#DatabaseController.CancelApplication>)
-  - [func \(dbc DatabaseController\) CancelInvitation\(invitationID, userID uint\) error](<#DatabaseController.CancelInvitation>)
-  - [func \(dbc DatabaseController\) CreateAndSwitchHousehold\(userID uint, name string\) error](<#DatabaseController.CreateAndSwitchHousehold>)
-  - [func \(dbc DatabaseController\) CreateEmailVerification\(userID uint, token string, expiresAt time.Time\) error](<#DatabaseController.CreateEmailVerification>)
-  - [func \(dbc DatabaseController\) CreateInvitation\(householdID, inviterID uint, email string\) \(database.HouseholdInvitation, error\)](<#DatabaseController.CreateInvitation>)
-  - [func \(dbc DatabaseController\) CreateOpenFoodFactsCache\(entry \*database.OpenFoodFactsCache\) error](<#DatabaseController.CreateOpenFoodFactsCache>)
-  - [func \(dbc DatabaseController\) CreateProduct\(userID uint, product \*database.Product\) error](<#DatabaseController.CreateProduct>)
-  - [func \(dbc DatabaseController\) CreateUser\(user \*authentication.User\) error](<#DatabaseController.CreateUser>)
-  - [func \(dbc DatabaseController\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#DatabaseController.DeleteProduct>)
-  - [func \(dbc DatabaseController\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#DatabaseController.GetActiveProductsCount>)
-  - [func \(dbc DatabaseController\) GetArchivedProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetArchivedProductByID>)
-  - [func \(dbc DatabaseController\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#DatabaseController.GetArchivedProductsGroupedByBarcode>)
-  - [func \(dbc DatabaseController\) GetEmailVerificationByToken\(token string\) \(database.EmailVerification, error\)](<#DatabaseController.GetEmailVerificationByToken>)
-  - [func \(dbc DatabaseController\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#DatabaseController.GetExpiredProductsCount>)
-  - [func \(dbc DatabaseController\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#DatabaseController.GetExpiringSoonProducts>)
-  - [func \(dbc DatabaseController\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#DatabaseController.GetExpiryTrend>)
-  - [func \(dbc DatabaseController\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#DatabaseController.GetHouseholdByID>)
-  - [func \(dbc DatabaseController\) GetHouseholdMemberCount\(householdID uint\) \(int64, error\)](<#DatabaseController.GetHouseholdMemberCount>)
-  - [func \(dbc DatabaseController\) GetHouseholdMembers\(householdID uint\) \(\[\]authentication.User, error\)](<#DatabaseController.GetHouseholdMembers>)
-  - [func \(dbc DatabaseController\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#DatabaseController.GetHouseholdMembersMailAddressesByID>)
-  - [func \(dbc DatabaseController\) GetHouseholdMembersNotificationPreferences\(householdID uint\) \(\[\]models.NotificationRecipientInfo, error\)](<#DatabaseController.GetHouseholdMembersNotificationPreferences>)
-  - [func \(dbc DatabaseController\) GetInvitationByToken\(token string\) \(database.HouseholdInvitation, error\)](<#DatabaseController.GetInvitationByToken>)
-  - [func \(dbc DatabaseController\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetInvitationsForHousehold>)
-  - [func \(dbc DatabaseController\) GetLastInsertedProduct\(householdID uint\) \(database.Product, error\)](<#DatabaseController.GetLastInsertedProduct>)
-  - [func \(dbc DatabaseController\) GetLastNotifiedProduct\(householdID uint\) \(database.Product, error\)](<#DatabaseController.GetLastNotifiedProduct>)
-  - [func \(dbc DatabaseController\) GetMaxNotificationThresholdDays\(\) int](<#DatabaseController.GetMaxNotificationThresholdDays>)
-  - [func \(dbc DatabaseController\) GetNextUserID\(\) uint](<#DatabaseController.GetNextUserID>)
-  - [func \(dbc DatabaseController\) GetOnboardingState\(userID uint\) \(database.OnboardingState, error\)](<#DatabaseController.GetOnboardingState>)
-  - [func \(dbc DatabaseController\) GetOpenFoodFactsCacheByBarcode\(barcode string\) \(database.OpenFoodFactsCache, error\)](<#DatabaseController.GetOpenFoodFactsCacheByBarcode>)
-  - [func \(dbc DatabaseController\) GetPendingApplicationsForAdmin\(adminUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#DatabaseController.GetPendingApplicationsForAdmin>)
-  - [func \(dbc DatabaseController\) GetPendingApplicationsForApplicant\(applicantUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#DatabaseController.GetPendingApplicationsForApplicant>)
-  - [func \(dbc DatabaseController\) GetPendingInvitationsForHousehold\(householdID uint\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetPendingInvitationsForHousehold>)
-  - [func \(dbc DatabaseController\) GetPendingInvitationsNotSent\(retryInterval time.Duration\) \(\[\]database.HouseholdInvitation, error\)](<#DatabaseController.GetPendingInvitationsNotSent>)
-  - [func \(dbc DatabaseController\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#DatabaseController.GetProductByID>)
-  - [func \(dbc DatabaseController\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#DatabaseController.GetProductCategoryBreakdown>)
-  - [func \(dbc DatabaseController\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#DatabaseController.GetProductsExpired>)
-  - [func \(dbc DatabaseController\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration, maxLookAheadDays int\) \(\[\]database.Product, error\)](<#DatabaseController.GetProductsExpiredAndNotificationPending>)
-  - [func \(dbc DatabaseController\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]database.HouseholdWithMemberCount, error\)](<#DatabaseController.GetPublicHouseholds>)
-  - [func \(dbc DatabaseController\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetTopArchivedProducts>)
-  - [func \(dbc DatabaseController\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserArchivedProductsBulk>)
-  - [func \(dbc DatabaseController\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#DatabaseController.GetUserByID>)
-  - [func \(dbc DatabaseController\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#DatabaseController.GetUserByUsername>)
-  - [func \(dbc DatabaseController\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#DatabaseController.GetUserHouseholdByID>)
-  - [func \(dbc DatabaseController\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulk>)
-  - [func \(dbc DatabaseController\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#DatabaseController.GetUserProductsBulkByBarcode>)
-  - [func \(dbc DatabaseController\) IsAccountLocked\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) \(bool, time.Duration\)](<#DatabaseController.IsAccountLocked>)
-  - [func \(dbc DatabaseController\) LeaveHousehold\(userID uint\) error](<#DatabaseController.LeaveHousehold>)
-  - [func \(dbc DatabaseController\) MarkHouseholdStepDone\(userID uint\) error](<#DatabaseController.MarkHouseholdStepDone>)
-  - [func \(dbc DatabaseController\) MarkInvitationSendFailed\(invitationID uint\) error](<#DatabaseController.MarkInvitationSendFailed>)
-  - [func \(dbc DatabaseController\) MarkInvitationSent\(invitationID uint\) error](<#DatabaseController.MarkInvitationSent>)
-  - [func \(dbc DatabaseController\) MarkNotificationsSetup\(userID uint\) error](<#DatabaseController.MarkNotificationsSetup>)
-  - [func \(dbc DatabaseController\) MarkOnboardingComplete\(userID uint\) error](<#DatabaseController.MarkOnboardingComplete>)
-  - [func \(dbc DatabaseController\) RecordFailedLoginAttempt\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) error](<#DatabaseController.RecordFailedLoginAttempt>)
-  - [func \(dbc DatabaseController\) RejectApplication\(applicationID, adminUserID uint\) error](<#DatabaseController.RejectApplication>)
-  - [func \(dbc DatabaseController\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#DatabaseController.RemoveMemberFromHousehold>)
-  - [func \(dbc DatabaseController\) ResetFailedLoginAttempts\(userID uint\) error](<#DatabaseController.ResetFailedLoginAttempts>)
-  - [func \(dbc DatabaseController\) RestoreProduct\(productID int, userID uint\) error](<#DatabaseController.RestoreProduct>)
-  - [func \(dbc DatabaseController\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#DatabaseController.SearchProducts>)
-  - [func \(dbc DatabaseController\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#DatabaseController.SetProductExpireAt>)
-  - [func \(dbc DatabaseController\) SetProductNotifiedAt\(productID uint\) error](<#DatabaseController.SetProductNotifiedAt>)
-  - [func \(dbc DatabaseController\) UpdateEmailVerificationStatus\(token string, status string\) error](<#DatabaseController.UpdateEmailVerificationStatus>)
-  - [func \(dbc DatabaseController\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#DatabaseController.UpdateHouseholdName>)
-  - [func \(dbc DatabaseController\) UpdateProduct\(productID int, userID uint, product \*database.ProductDTOPatch\) error](<#DatabaseController.UpdateProduct>)
-  - [func \(dbc DatabaseController\) UpdateProductAmount\(productID int, userID uint, delta int\) \(bool, error\)](<#DatabaseController.UpdateProductAmount>)
-  - [func \(dbc DatabaseController\) UpdateUser\(userID uint, user \*authentication.User\) error](<#DatabaseController.UpdateUser>)
-  - [func \(dbc DatabaseController\) UpdateUserEmailVerified\(userID uint, verifiedAt time.Time\) error](<#DatabaseController.UpdateUserEmailVerified>)
-  - [func \(dbc DatabaseController\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#DatabaseController.UpdateUserPassword>)
-  - [func \(dbc DatabaseController\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#DatabaseController.UserExistsByMailAddress>)
-  - [func \(dbc DatabaseController\) UserExistsByUsername\(user \*authentication.User\) bool](<#DatabaseController.UserExistsByUsername>)
-  - [func \(dbc DatabaseController\) UserHasProductAccess\(userID uint, productID int\) bool](<#DatabaseController.UserHasProductAccess>)
-- [type DatabaseControllerInterface](<#DatabaseControllerInterface>)
+- [type HouseholdRepository](<#HouseholdRepository>)
+  - [func NewHouseholdRepository\(db \*gorm.DB\) \*HouseholdRepository](<#NewHouseholdRepository>)
+  - [func \(r \*HouseholdRepository\) ApplyForHousehold\(applicantID, householdID uint\) error](<#HouseholdRepository.ApplyForHousehold>)
+  - [func \(r \*HouseholdRepository\) ApproveApplication\(applicationID, adminUserID uint\) error](<#HouseholdRepository.ApproveApplication>)
+  - [func \(r \*HouseholdRepository\) CancelApplication\(applicationID, applicantUserID uint\) error](<#HouseholdRepository.CancelApplication>)
+  - [func \(r \*HouseholdRepository\) CreateAndSwitchHousehold\(userID uint, name string\) error](<#HouseholdRepository.CreateAndSwitchHousehold>)
+  - [func \(r \*HouseholdRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#HouseholdRepository.GetHouseholdByID>)
+  - [func \(r \*HouseholdRepository\) GetHouseholdMemberCount\(householdID uint\) \(int64, error\)](<#HouseholdRepository.GetHouseholdMemberCount>)
+  - [func \(r \*HouseholdRepository\) GetHouseholdMembers\(householdID uint\) \(\[\]authentication.User, error\)](<#HouseholdRepository.GetHouseholdMembers>)
+  - [func \(r \*HouseholdRepository\) GetPendingApplicationsForAdmin\(adminUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#HouseholdRepository.GetPendingApplicationsForAdmin>)
+  - [func \(r \*HouseholdRepository\) GetPendingApplicationsForApplicant\(applicantUserID uint\) \(\[\]database.HouseholdApplication, error\)](<#HouseholdRepository.GetPendingApplicationsForApplicant>)
+  - [func \(r \*HouseholdRepository\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]database.HouseholdWithMemberCount, error\)](<#HouseholdRepository.GetPublicHouseholds>)
+  - [func \(r \*HouseholdRepository\) LeaveHousehold\(userID uint\) error](<#HouseholdRepository.LeaveHousehold>)
+  - [func \(r \*HouseholdRepository\) RejectApplication\(applicationID, adminUserID uint\) error](<#HouseholdRepository.RejectApplication>)
+  - [func \(r \*HouseholdRepository\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#HouseholdRepository.RemoveMemberFromHousehold>)
+  - [func \(r \*HouseholdRepository\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#HouseholdRepository.UpdateHouseholdName>)
+- [type InvitationRepository](<#InvitationRepository>)
+  - [func NewInvitationRepository\(db \*gorm.DB\) \*InvitationRepository](<#NewInvitationRepository>)
+  - [func \(r \*InvitationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#InvitationRepository.AcceptInvitation>)
+  - [func \(r \*InvitationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#InvitationRepository.CancelInvitation>)
+  - [func \(r \*InvitationRepository\) CreateInvitation\(householdID, inviterID uint, email string\) \(database.HouseholdInvitation, error\)](<#InvitationRepository.CreateInvitation>)
+  - [func \(r \*InvitationRepository\) GetInvitationByToken\(token string\) \(database.HouseholdInvitation, error\)](<#InvitationRepository.GetInvitationByToken>)
+  - [func \(r \*InvitationRepository\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]database.HouseholdInvitation, error\)](<#InvitationRepository.GetInvitationsForHousehold>)
+  - [func \(r \*InvitationRepository\) GetPendingInvitationsForHousehold\(householdID uint\) \(\[\]database.HouseholdInvitation, error\)](<#InvitationRepository.GetPendingInvitationsForHousehold>)
+  - [func \(r \*InvitationRepository\) GetPendingInvitationsNotSent\(retryInterval time.Duration\) \(\[\]database.HouseholdInvitation, error\)](<#InvitationRepository.GetPendingInvitationsNotSent>)
+  - [func \(r \*InvitationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#InvitationRepository.MarkInvitationSendFailed>)
+  - [func \(r \*InvitationRepository\) MarkInvitationSent\(invitationID uint\) error](<#InvitationRepository.MarkInvitationSent>)
+- [type NotificationRepository](<#NotificationRepository>)
+  - [func NewNotificationRepository\(db \*gorm.DB\) \*NotificationRepository](<#NewNotificationRepository>)
+  - [func \(r \*NotificationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#NotificationRepository.AcceptInvitation>)
+  - [func \(r \*NotificationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#NotificationRepository.CancelInvitation>)
+  - [func \(r \*NotificationRepository\) CreateInvitation\(householdID, inviterID uint, email string\) \(database.HouseholdInvitation, error\)](<#NotificationRepository.CreateInvitation>)
+  - [func \(r \*NotificationRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#NotificationRepository.GetHouseholdByID>)
+  - [func \(r \*NotificationRepository\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#NotificationRepository.GetHouseholdMembersMailAddressesByID>)
+  - [func \(r \*NotificationRepository\) GetHouseholdMembersNotificationPreferences\(householdID uint\) \(\[\]models.NotificationRecipientInfo, error\)](<#NotificationRepository.GetHouseholdMembersNotificationPreferences>)
+  - [func \(r \*NotificationRepository\) GetInvitationByToken\(token string\) \(database.HouseholdInvitation, error\)](<#NotificationRepository.GetInvitationByToken>)
+  - [func \(r \*NotificationRepository\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]database.HouseholdInvitation, error\)](<#NotificationRepository.GetInvitationsForHousehold>)
+  - [func \(r \*NotificationRepository\) GetMaxNotificationThresholdDays\(\) int](<#NotificationRepository.GetMaxNotificationThresholdDays>)
+  - [func \(r \*NotificationRepository\) GetOnboardingState\(userID uint\) \(database.OnboardingState, error\)](<#NotificationRepository.GetOnboardingState>)
+  - [func \(r \*NotificationRepository\) GetPendingInvitationsNotSent\(retryInterval time.Duration\) \(\[\]database.HouseholdInvitation, error\)](<#NotificationRepository.GetPendingInvitationsNotSent>)
+  - [func \(r \*NotificationRepository\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration, maxLookAheadDays int\) \(\[\]database.Product, error\)](<#NotificationRepository.GetProductsExpiredAndNotificationPending>)
+  - [func \(r \*NotificationRepository\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]database.HouseholdWithMemberCount, error\)](<#NotificationRepository.GetPublicHouseholds>)
+  - [func \(r \*NotificationRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#NotificationRepository.GetUserByID>)
+  - [func \(r \*NotificationRepository\) MarkHouseholdStepDone\(userID uint\) error](<#NotificationRepository.MarkHouseholdStepDone>)
+  - [func \(r \*NotificationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#NotificationRepository.MarkInvitationSendFailed>)
+  - [func \(r \*NotificationRepository\) MarkInvitationSent\(invitationID uint\) error](<#NotificationRepository.MarkInvitationSent>)
+  - [func \(r \*NotificationRepository\) MarkNotificationsSetup\(userID uint\) error](<#NotificationRepository.MarkNotificationsSetup>)
+  - [func \(r \*NotificationRepository\) MarkOnboardingComplete\(userID uint\) error](<#NotificationRepository.MarkOnboardingComplete>)
+  - [func \(r \*NotificationRepository\) SetProductNotifiedAt\(productID uint\) error](<#NotificationRepository.SetProductNotifiedAt>)
+- [type NotificationRepositoryInterface](<#NotificationRepositoryInterface>)
+- [type ProductRepository](<#ProductRepository>)
+  - [func NewProductRepository\(db \*gorm.DB\) \*ProductRepository](<#NewProductRepository>)
+  - [func \(r \*ProductRepository\) BulkArchiveProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkArchiveProducts>)
+  - [func \(r \*ProductRepository\) BulkDeleteProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkDeleteProducts>)
+  - [func \(r \*ProductRepository\) BulkRestoreProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkRestoreProducts>)
+  - [func \(r \*ProductRepository\) CreateOpenFoodFactsCache\(entry \*database.OpenFoodFactsCache\) error](<#ProductRepository.CreateOpenFoodFactsCache>)
+  - [func \(r \*ProductRepository\) CreateProduct\(userID uint, product \*database.Product\) error](<#ProductRepository.CreateProduct>)
+  - [func \(r \*ProductRepository\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#ProductRepository.DeleteProduct>)
+  - [func \(r \*ProductRepository\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetActiveProductsCount>)
+  - [func \(r \*ProductRepository\) GetArchivedProductByID\(productID int, userID uint\) \(database.Product, error\)](<#ProductRepository.GetArchivedProductByID>)
+  - [func \(r \*ProductRepository\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetArchivedProductsGroupedByBarcode>)
+  - [func \(r \*ProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetExpiredProductsCount>)
+  - [func \(r \*ProductRepository\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#ProductRepository.GetExpiringSoonProducts>)
+  - [func \(r \*ProductRepository\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#ProductRepository.GetExpiryTrend>)
+  - [func \(r \*ProductRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#ProductRepository.GetHouseholdByID>)
+  - [func \(r \*ProductRepository\) GetLastInsertedProduct\(householdID uint\) \(database.Product, error\)](<#ProductRepository.GetLastInsertedProduct>)
+  - [func \(r \*ProductRepository\) GetLastNotifiedProduct\(householdID uint\) \(database.Product, error\)](<#ProductRepository.GetLastNotifiedProduct>)
+  - [func \(r \*ProductRepository\) GetOpenFoodFactsCacheByBarcode\(barcode string\) \(database.OpenFoodFactsCache, error\)](<#ProductRepository.GetOpenFoodFactsCacheByBarcode>)
+  - [func \(r \*ProductRepository\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#ProductRepository.GetProductByID>)
+  - [func \(r \*ProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetProductCategoryBreakdown>)
+  - [func \(r \*ProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#ProductRepository.GetProductsExpired>)
+  - [func \(r \*ProductRepository\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetTopArchivedProducts>)
+  - [func \(r \*ProductRepository\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserArchivedProductsBulk>)
+  - [func \(r \*ProductRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#ProductRepository.GetUserByID>)
+  - [func \(r \*ProductRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#ProductRepository.GetUserHouseholdByID>)
+  - [func \(r \*ProductRepository\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsBulk>)
+  - [func \(r \*ProductRepository\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsBulkByBarcode>)
+  - [func \(r \*ProductRepository\) RestoreProduct\(productID int, userID uint\) error](<#ProductRepository.RestoreProduct>)
+  - [func \(r \*ProductRepository\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.SearchProducts>)
+  - [func \(r \*ProductRepository\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#ProductRepository.SetProductExpireAt>)
+  - [func \(r \*ProductRepository\) SetProductNotifiedAt\(productID uint\) error](<#ProductRepository.SetProductNotifiedAt>)
+  - [func \(r \*ProductRepository\) UpdateProduct\(productID int, userID uint, product \*database.ProductDTOPatch\) error](<#ProductRepository.UpdateProduct>)
+  - [func \(r \*ProductRepository\) UpdateProductAmount\(productID int, userID uint, delta int\) \(bool, error\)](<#ProductRepository.UpdateProductAmount>)
+  - [func \(r \*ProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#ProductRepository.UserHasProductAccess>)
 - [type SearchParameterEnum](<#SearchParameterEnum>)
   - [func SearchParameterEnumFromString\(str string\) SearchParameterEnum](<#SearchParameterEnumFromString>)
 - [type SupportedEngines](<#SupportedEngines>)
   - [func SupportedEnginesFromString\(str string\) SupportedEngines](<#SupportedEnginesFromString>)
+- [type UserRepository](<#UserRepository>)
+  - [func NewUserRepository\(db \*gorm.DB\) \*UserRepository](<#NewUserRepository>)
+  - [func \(r \*UserRepository\) CreateEmailVerification\(userID uint, token string, expiresAt time.Time\) error](<#UserRepository.CreateEmailVerification>)
+  - [func \(r \*UserRepository\) CreateUser\(user \*authentication.User\) error](<#UserRepository.CreateUser>)
+  - [func \(r \*UserRepository\) GetEmailVerificationByToken\(token string\) \(database.EmailVerification, error\)](<#UserRepository.GetEmailVerificationByToken>)
+  - [func \(r \*UserRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#UserRepository.GetHouseholdByID>)
+  - [func \(r \*UserRepository\) GetNextUserID\(\) uint](<#UserRepository.GetNextUserID>)
+  - [func \(r \*UserRepository\) GetOnboardingState\(userID uint\) \(database.OnboardingState, error\)](<#UserRepository.GetOnboardingState>)
+  - [func \(r \*UserRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#UserRepository.GetUserByID>)
+  - [func \(r \*UserRepository\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#UserRepository.GetUserByUsername>)
+  - [func \(r \*UserRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#UserRepository.GetUserHouseholdByID>)
+  - [func \(r \*UserRepository\) IsAccountLocked\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) \(bool, time.Duration\)](<#UserRepository.IsAccountLocked>)
+  - [func \(r \*UserRepository\) MarkHouseholdStepDone\(userID uint\) error](<#UserRepository.MarkHouseholdStepDone>)
+  - [func \(r \*UserRepository\) MarkNotificationsSetup\(userID uint\) error](<#UserRepository.MarkNotificationsSetup>)
+  - [func \(r \*UserRepository\) MarkOnboardingComplete\(userID uint\) error](<#UserRepository.MarkOnboardingComplete>)
+  - [func \(r \*UserRepository\) RecordFailedLoginAttempt\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) error](<#UserRepository.RecordFailedLoginAttempt>)
+  - [func \(r \*UserRepository\) ResetFailedLoginAttempts\(userID uint\) error](<#UserRepository.ResetFailedLoginAttempts>)
+  - [func \(r \*UserRepository\) UpdateEmailVerificationStatus\(token string, status string\) error](<#UserRepository.UpdateEmailVerificationStatus>)
+  - [func \(r \*UserRepository\) UpdateUser\(userID uint, user \*authentication.User\) error](<#UserRepository.UpdateUser>)
+  - [func \(r \*UserRepository\) UpdateUserEmailVerified\(userID uint, verifiedAt time.Time\) error](<#UserRepository.UpdateUserEmailVerified>)
+  - [func \(r \*UserRepository\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#UserRepository.UpdateUserPassword>)
+  - [func \(r \*UserRepository\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#UserRepository.UserExistsByMailAddress>)
+  - [func \(r \*UserRepository\) UserExistsByUsername\(user \*authentication.User\) bool](<#UserRepository.UserExistsByUsername>)
 
 
 ## Constants
@@ -1574,22 +1643,10 @@ const (
 )
 ```
 
-<a name="GeneratedPrefix"></a>
-
-```go
-const GeneratedPrefix = "Generated @ %s"
-```
-
-<a name="PreferredTimeFormat"></a>PreferredTimeFormat is the preferred time format for database operations
-
-```go
-const PreferredTimeFormat = "02.01.2006 15:04"
-```
-
 <a name="BulkOperationError"></a>
 ## type BulkOperationError
 
-BulkOperationError is an error type for bulk operations
+
 
 ```go
 type BulkOperationError struct {
@@ -1604,710 +1661,462 @@ type BulkOperationError struct {
 func (b *BulkOperationError) Error() string
 ```
 
-Error returns a string representation of the error
 
-<a name="DatabaseController"></a>
-## type DatabaseController
 
-DatabaseController is the object struct for interacting with the gorm\-backed database
+<a name="HouseholdRepository"></a>
+## type HouseholdRepository
+
+
 
 ```go
-type DatabaseController struct {
-    DBHandle *gorm.DB
+type HouseholdRepository struct {
+    DB *gorm.DB
 }
 ```
 
-<a name="DatabaseController.AcceptInvitation"></a>
-### func \(DatabaseController\) AcceptInvitation
+<a name="NewHouseholdRepository"></a>
+### func NewHouseholdRepository
 
 ```go
-func (dbc DatabaseController) AcceptInvitation(token, email string, userID uint) error
+func NewHouseholdRepository(db *gorm.DB) *HouseholdRepository
 ```
 
-AcceptInvitation processes an invitation acceptance, updating the user's household and marking the invitation as accepted
 
-<a name="DatabaseController.ApplyForHousehold"></a>
-### func \(DatabaseController\) ApplyForHousehold
 
-```go
-func (dbc DatabaseController) ApplyForHousehold(applicantID, householdID uint) error
-```
-
-ApplyForHousehold creates a pending HouseholdApplication for the given user and target household. Returns ErrHouseholdNotFound if the target household does not exist, or ErrApplicationAlreadyPending if a pending application already exists.
+<a name="HouseholdRepository.ApplyForHousehold"></a>
+### func \(\*HouseholdRepository\) ApplyForHousehold
 
-<a name="DatabaseController.ApproveApplication"></a>
-### func \(DatabaseController\) ApproveApplication
-
 ```go
-func (dbc DatabaseController) ApproveApplication(applicationID, adminUserID uint) error
+func (r *HouseholdRepository) ApplyForHousehold(applicantID, householdID uint) error
 ```
-
-ApproveApplication approves a household application: moves the applicant into the household. Only the household admin may call this.
 
-<a name="DatabaseController.BulkArchiveProducts"></a>
-### func \(DatabaseController\) BulkArchiveProducts
-
-```go
-func (dbc DatabaseController) BulkArchiveProducts(productIDs []int, userID uint) []BulkOperationError
-```
 
-BulkDeleteProducts deletes a list of products \(based on product ID\) of a user \(based on user ID\) given as a slice of product IDs If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
 
-<a name="DatabaseController.BulkDeleteProducts"></a>
-### func \(DatabaseController\) BulkDeleteProducts
+<a name="HouseholdRepository.ApproveApplication"></a>
+### func \(\*HouseholdRepository\) ApproveApplication
 
 ```go
-func (dbc DatabaseController) BulkDeleteProducts(productIDs []int, userID uint) []BulkOperationError
+func (r *HouseholdRepository) ApproveApplication(applicationID, adminUserID uint) error
 ```
-
-BulkDeleteProducts deletes a list of products \(based on product ID\) of a user \(based on user ID\) given as a slice of product IDs If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
-
-<a name="DatabaseController.BulkRestoreProducts"></a>
-### func \(DatabaseController\) BulkRestoreProducts
 
-```go
-func (dbc DatabaseController) BulkRestoreProducts(productIDs []int, userID uint) []BulkOperationError
-```
 
-BulkRestoreProducts restores a list of products \(based on product ID\) of a user \(based on user ID\) given as a slice of product IDs If the database operations return an error, the error is added to a wrapper slice which is returned at the end of the function
 
-<a name="DatabaseController.CancelApplication"></a>
-### func \(DatabaseController\) CancelApplication
+<a name="HouseholdRepository.CancelApplication"></a>
+### func \(\*HouseholdRepository\) CancelApplication
 
 ```go
-func (dbc DatabaseController) CancelApplication(applicationID, applicantUserID uint) error
+func (r *HouseholdRepository) CancelApplication(applicationID, applicantUserID uint) error
 ```
-
-CancelApplication cancels a pending application. The caller must be the applicant.
-
-<a name="DatabaseController.CancelInvitation"></a>
-### func \(DatabaseController\) CancelInvitation
 
-```go
-func (dbc DatabaseController) CancelInvitation(invitationID, userID uint) error
-```
 
-CancelInvitation cancels a pending invitation after verifying the caller is a member of the invitation's household
 
-<a name="DatabaseController.CreateAndSwitchHousehold"></a>
-### func \(DatabaseController\) CreateAndSwitchHousehold
+<a name="HouseholdRepository.CreateAndSwitchHousehold"></a>
+### func \(\*HouseholdRepository\) CreateAndSwitchHousehold
 
 ```go
-func (dbc DatabaseController) CreateAndSwitchHousehold(userID uint, name string) error
+func (r *HouseholdRepository) CreateAndSwitchHousehold(userID uint, name string) error
 ```
+
 
-CreateAndSwitchHousehold creates a new named household and switches the user to it. Products are moved from the old household when the user was its sole member.
 
-<a name="DatabaseController.CreateEmailVerification"></a>
-### func \(DatabaseController\) CreateEmailVerification
+<a name="HouseholdRepository.GetHouseholdByID"></a>
+### func \(\*HouseholdRepository\) GetHouseholdByID
 
 ```go
-func (dbc DatabaseController) CreateEmailVerification(userID uint, token string, expiresAt time.Time) error
+func (r *HouseholdRepository) GetHouseholdByID(householdID uint) (database.Household, error)
 ```
 
 
 
-<a name="DatabaseController.CreateInvitation"></a>
-### func \(DatabaseController\) CreateInvitation
+<a name="HouseholdRepository.GetHouseholdMemberCount"></a>
+### func \(\*HouseholdRepository\) GetHouseholdMemberCount
 
 ```go
-func (dbc DatabaseController) CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
+func (r *HouseholdRepository) GetHouseholdMemberCount(householdID uint) (int64, error)
 ```
 
-CreateInvitation creates a new household invitation after verifying the inviter is a member and no pending invitation exists for the same email.
-
-<a name="DatabaseController.CreateOpenFoodFactsCache"></a>
-### func \(DatabaseController\) CreateOpenFoodFactsCache
-
-```go
-func (dbc DatabaseController) CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error
-```
 
-CreateOpenFoodFactsCache persists a new OpenFoodFacts cache entry.
 
-<a name="DatabaseController.CreateProduct"></a>
-### func \(DatabaseController\) CreateProduct
+<a name="HouseholdRepository.GetHouseholdMembers"></a>
+### func \(\*HouseholdRepository\) GetHouseholdMembers
 
 ```go
-func (dbc DatabaseController) CreateProduct(userID uint, product *database.Product) error
+func (r *HouseholdRepository) GetHouseholdMembers(householdID uint) ([]authentication.User, error)
 ```
 
-CreateProduct creates a product in the database and connects it to the user If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.CreateUser"></a>
-### func \(DatabaseController\) CreateUser
 
-```go
-func (dbc DatabaseController) CreateUser(user *authentication.User) error
-```
-
-CreateUser creates a new user based on a given user object Before creation, the user password is hashed with brcypt If the database operations return an error, the error is also returned \(otherwise nil\)
-
-<a name="DatabaseController.DeleteProduct"></a>
-### func \(DatabaseController\) DeleteProduct
+<a name="HouseholdRepository.GetPendingApplicationsForAdmin"></a>
+### func \(\*HouseholdRepository\) GetPendingApplicationsForAdmin
 
 ```go
-func (dbc DatabaseController) DeleteProduct(productID int, userID uint, archiveOnly bool) error
+func (r *HouseholdRepository) GetPendingApplicationsForAdmin(adminUserID uint) ([]database.HouseholdApplication, error)
 ```
 
-DeleteProduct deletes a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
-
-<a name="DatabaseController.GetActiveProductsCount"></a>
-### func \(DatabaseController\) GetActiveProductsCount
-
-```go
-func (dbc DatabaseController) GetActiveProductsCount(userID uint) (int, error)
-```
 
-GetActiveProductsCount returns the count of active \(non\-archived\) products for a user
 
-<a name="DatabaseController.GetArchivedProductByID"></a>
-### func \(DatabaseController\) GetArchivedProductByID
+<a name="HouseholdRepository.GetPendingApplicationsForApplicant"></a>
+### func \(\*HouseholdRepository\) GetPendingApplicationsForApplicant
 
 ```go
-func (dbc DatabaseController) GetArchivedProductByID(productID int, userID uint) (database.Product, error)
+func (r *HouseholdRepository) GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error)
 ```
 
-GetArchivedProductByID returns an archived product object \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.GetArchivedProductsGroupedByBarcode"></a>
-### func \(DatabaseController\) GetArchivedProductsGroupedByBarcode
 
-```go
-func (dbc DatabaseController) GetArchivedProductsGroupedByBarcode(userID uint) (map[string]int, error)
-```
-
-GetArchivedProductsGroupedByBarcode returns archived products grouped by barcode with counts
+<a name="HouseholdRepository.GetPublicHouseholds"></a>
+### func \(\*HouseholdRepository\) GetPublicHouseholds
 
-<a name="DatabaseController.GetEmailVerificationByToken"></a>
-### func \(DatabaseController\) GetEmailVerificationByToken
-
 ```go
-func (dbc DatabaseController) GetEmailVerificationByToken(token string) (database.EmailVerification, error)
+func (r *HouseholdRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
 ```
 
 
 
-<a name="DatabaseController.GetExpiredProductsCount"></a>
-### func \(DatabaseController\) GetExpiredProductsCount
+<a name="HouseholdRepository.LeaveHousehold"></a>
+### func \(\*HouseholdRepository\) LeaveHousehold
 
 ```go
-func (dbc DatabaseController) GetExpiredProductsCount(userID uint) (int, error)
+func (r *HouseholdRepository) LeaveHousehold(userID uint) error
 ```
-
-GetExpiredProductsCount returns the count of expired products for a user
 
-<a name="DatabaseController.GetExpiringSoonProducts"></a>
-### func \(DatabaseController\) GetExpiringSoonProducts
-
-```go
-func (dbc DatabaseController) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
-```
 
-GetExpiringSoonProducts returns active products whose expiry date falls within the next \`days\` calendar days, including today. Results are sorted ascending by expiry date.
 
-<a name="DatabaseController.GetExpiryTrend"></a>
-### func \(DatabaseController\) GetExpiryTrend
+<a name="HouseholdRepository.RejectApplication"></a>
+### func \(\*HouseholdRepository\) RejectApplication
 
 ```go
-func (dbc DatabaseController) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
+func (r *HouseholdRepository) RejectApplication(applicationID, adminUserID uint) error
 ```
-
-GetExpiryTrend returns the count of active products expiring in each of the next 12 calendar months, starting from the current month.
 
-<a name="DatabaseController.GetHouseholdByID"></a>
-### func \(DatabaseController\) GetHouseholdByID
-
-```go
-func (dbc DatabaseController) GetHouseholdByID(householdID uint) (database.Household, error)
-```
 
-GetHouseholdByID uses a given household ID and returns the matching household object If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.GetHouseholdMemberCount"></a>
-### func \(DatabaseController\) GetHouseholdMemberCount
+<a name="HouseholdRepository.RemoveMemberFromHousehold"></a>
+### func \(\*HouseholdRepository\) RemoveMemberFromHousehold
 
 ```go
-func (dbc DatabaseController) GetHouseholdMemberCount(householdID uint) (int64, error)
+func (r *HouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
 ```
-
-GetHouseholdMemberCount returns how many users currently belong to a household
 
-<a name="DatabaseController.GetHouseholdMembers"></a>
-### func \(DatabaseController\) GetHouseholdMembers
-
-```go
-func (dbc DatabaseController) GetHouseholdMembers(householdID uint) ([]authentication.User, error)
-```
 
-GetHouseholdMembers returns all users that belong to the given household.
 
-<a name="DatabaseController.GetHouseholdMembersMailAddressesByID"></a>
-### func \(DatabaseController\) GetHouseholdMembersMailAddressesByID
+<a name="HouseholdRepository.UpdateHouseholdName"></a>
+### func \(\*HouseholdRepository\) UpdateHouseholdName
 
 ```go
-func (dbc DatabaseController) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
+func (r *HouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint, name string) error
 ```
 
-GetHouseholdMembersMailAddressesByID returns the mail addresses of all users of a household
 
-<a name="DatabaseController.GetHouseholdMembersNotificationPreferences"></a>
-### func \(DatabaseController\) GetHouseholdMembersNotificationPreferences
 
-```go
-func (dbc DatabaseController) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
-```
+<a name="InvitationRepository"></a>
+## type InvitationRepository
 
-GetHouseholdMembersNotificationPreferences returns the notification preferences of all users of a household
 
-<a name="DatabaseController.GetInvitationByToken"></a>
-### func \(DatabaseController\) GetInvitationByToken
 
 ```go
-func (dbc DatabaseController) GetInvitationByToken(token string) (database.HouseholdInvitation, error)
+type InvitationRepository struct {
+    DB *gorm.DB
+}
 ```
 
-GetInvitationByToken looks up an invitation by its token
+<a name="NewInvitationRepository"></a>
+### func NewInvitationRepository
 
-<a name="DatabaseController.GetInvitationsForHousehold"></a>
-### func \(DatabaseController\) GetInvitationsForHousehold
-
 ```go
-func (dbc DatabaseController) GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
+func NewInvitationRepository(db *gorm.DB) *InvitationRepository
 ```
+
 
-GetInvitationsForHousehold returns all non\-deleted invitations for the household, ordered by CreatedAt DESC
 
-<a name="DatabaseController.GetLastInsertedProduct"></a>
-### func \(DatabaseController\) GetLastInsertedProduct
+<a name="InvitationRepository.AcceptInvitation"></a>
+### func \(\*InvitationRepository\) AcceptInvitation
 
 ```go
-func (dbc DatabaseController) GetLastInsertedProduct(householdID uint) (database.Product, error)
+func (r *InvitationRepository) AcceptInvitation(token, email string, userID uint) error
 ```
 
 
 
-<a name="DatabaseController.GetLastNotifiedProduct"></a>
-### func \(DatabaseController\) GetLastNotifiedProduct
+<a name="InvitationRepository.CancelInvitation"></a>
+### func \(\*InvitationRepository\) CancelInvitation
 
 ```go
-func (dbc DatabaseController) GetLastNotifiedProduct(householdID uint) (database.Product, error)
+func (r *InvitationRepository) CancelInvitation(invitationID, userID uint) error
 ```
-
-GetLastNotifiedProduct returns the last notified product for a user
-
-<a name="DatabaseController.GetMaxNotificationThresholdDays"></a>
-### func \(DatabaseController\) GetMaxNotificationThresholdDays
 
-```go
-func (dbc DatabaseController) GetMaxNotificationThresholdDays() int
-```
 
-GetMaxNotificationThresholdDays returns the highest NotificationThresholdDays value set across all users. Returns 0 if no user has a threshold configured.
 
-<a name="DatabaseController.GetNextUserID"></a>
-### func \(DatabaseController\) GetNextUserID
+<a name="InvitationRepository.CreateInvitation"></a>
+### func \(\*InvitationRepository\) CreateInvitation
 
 ```go
-func (dbc DatabaseController) GetNextUserID() uint
+func (r *InvitationRepository) CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
 ```
-
-GetNextUserID returns the next available user ID
-
-<a name="DatabaseController.GetOnboardingState"></a>
-### func \(DatabaseController\) GetOnboardingState
 
-```go
-func (dbc DatabaseController) GetOnboardingState(userID uint) (database.OnboardingState, error)
-```
 
-GetOnboardingState retrieves the onboarding state for a user
 
-<a name="DatabaseController.GetOpenFoodFactsCacheByBarcode"></a>
-### func \(DatabaseController\) GetOpenFoodFactsCacheByBarcode
+<a name="InvitationRepository.GetInvitationByToken"></a>
+### func \(\*InvitationRepository\) GetInvitationByToken
 
 ```go
-func (dbc DatabaseController) GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error)
+func (r *InvitationRepository) GetInvitationByToken(token string) (database.HouseholdInvitation, error)
 ```
-
-GetOpenFoodFactsCacheByBarcode retrieves a cached OpenFoodFacts entry by barcode. Returns gorm.ErrRecordNotFound if no entry exists.
-
-<a name="DatabaseController.GetPendingApplicationsForAdmin"></a>
-### func \(DatabaseController\) GetPendingApplicationsForAdmin
 
-```go
-func (dbc DatabaseController) GetPendingApplicationsForAdmin(adminUserID uint) ([]database.HouseholdApplication, error)
-```
 
-GetPendingApplicationsForAdmin returns all pending applications for the household the given user administrates. Returns ErrNotHouseholdAdmin if the user is not the admin of their household.
 
-<a name="DatabaseController.GetPendingApplicationsForApplicant"></a>
-### func \(DatabaseController\) GetPendingApplicationsForApplicant
+<a name="InvitationRepository.GetInvitationsForHousehold"></a>
+### func \(\*InvitationRepository\) GetInvitationsForHousehold
 
 ```go
-func (dbc DatabaseController) GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error)
+func (r *InvitationRepository) GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
 ```
-
-GetPendingApplicationsForApplicant returns all pending applications submitted by the given user.
 
-<a name="DatabaseController.GetPendingInvitationsForHousehold"></a>
-### func \(DatabaseController\) GetPendingInvitationsForHousehold
 
-```go
-func (dbc DatabaseController) GetPendingInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
-```
 
-GetPendingInvitationsForHousehold returns all pending invitations for a household, regardless of who sent them.
+<a name="InvitationRepository.GetPendingInvitationsForHousehold"></a>
+### func \(\*InvitationRepository\) GetPendingInvitationsForHousehold
 
-<a name="DatabaseController.GetPendingInvitationsNotSent"></a>
-### func \(DatabaseController\) GetPendingInvitationsNotSent
-
 ```go
-func (dbc DatabaseController) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
+func (r *InvitationRepository) GetPendingInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
 ```
-
-GetPendingInvitationsNotSent returns all pending invitations that have not been successfully sent yet, or that failed and are due for a retry based on the given retry interval.
 
-<a name="DatabaseController.GetProductByID"></a>
-### func \(DatabaseController\) GetProductByID
 
-```go
-func (dbc DatabaseController) GetProductByID(productID int, userID uint) (database.Product, error)
-```
 
-GetProductByID returns a product object \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
+<a name="InvitationRepository.GetPendingInvitationsNotSent"></a>
+### func \(\*InvitationRepository\) GetPendingInvitationsNotSent
 
-<a name="DatabaseController.GetProductCategoryBreakdown"></a>
-### func \(DatabaseController\) GetProductCategoryBreakdown
-
 ```go
-func (dbc DatabaseController) GetProductCategoryBreakdown(userID uint) (map[string]int, error)
+func (r *InvitationRepository) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
 ```
-
-GetProductCategoryBreakdown returns a map of category name → product count for active products. Language prefixes \(e.g. "en:"\) are stripped. The top 8 categories are kept; the rest are grouped under "Other". Products with no category are counted under "Uncategorized".
 
-<a name="DatabaseController.GetProductsExpired"></a>
-### func \(DatabaseController\) GetProductsExpired
 
-```go
-func (dbc DatabaseController) GetProductsExpired(userID uint) ([]*database.Product, error)
-```
 
-GetProductsExpired returns an array of products of a user \(based on user ID\) that are already expired If the database operations return an error, the error is also returned \(otherwise nil\) If the user has no products assigned, the function returns an empty dataset
+<a name="InvitationRepository.MarkInvitationSendFailed"></a>
+### func \(\*InvitationRepository\) MarkInvitationSendFailed
 
-<a name="DatabaseController.GetProductsExpiredAndNotificationPending"></a>
-### func \(DatabaseController\) GetProductsExpiredAndNotificationPending
-
 ```go
-func (dbc DatabaseController) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error)
+func (r *InvitationRepository) MarkInvitationSendFailed(invitationID uint) error
 ```
-
-GetProductsExpiredAndNotificationPending returns products that are expired or expiring within maxLookAheadDays and have a pending notification \(i.e., not notified within the last sleepInterval\).
 
-<a name="DatabaseController.GetPublicHouseholds"></a>
-### func \(DatabaseController\) GetPublicHouseholds
 
-```go
-func (dbc DatabaseController) GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
-```
-
-GetPublicHouseholds returns all households except the one the user already belongs to.
 
-<a name="DatabaseController.GetTopArchivedProducts"></a>
-### func \(DatabaseController\) GetTopArchivedProducts
+<a name="InvitationRepository.MarkInvitationSent"></a>
+### func \(\*InvitationRepository\) MarkInvitationSent
 
 ```go
-func (dbc DatabaseController) GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error)
+func (r *InvitationRepository) MarkInvitationSent(invitationID uint) error
 ```
 
-GetTopArchivedProducts returns the top N most frequently archived products
 
-<a name="DatabaseController.GetUserArchivedProductsBulk"></a>
-### func \(DatabaseController\) GetUserArchivedProductsBulk
 
-```go
-func (dbc DatabaseController) GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
-```
+<a name="NotificationRepository"></a>
+## type NotificationRepository
 
-GetUserArchivedProductsBulk returns an array of archived products of a user \(based on user ID\) The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.GetUserByID"></a>
-### func \(DatabaseController\) GetUserByID
 
 ```go
-func (dbc DatabaseController) GetUserByID(userID uint) (authentication.User, error)
+type NotificationRepository struct {
+    DB *gorm.DB
+}
 ```
 
-GetUserByID uses a given user ID and returns the matching user object If the database operations return an error, the error is also returned \(otherwise nil\)
+<a name="NewNotificationRepository"></a>
+### func NewNotificationRepository
 
-<a name="DatabaseController.GetUserByUsername"></a>
-### func \(DatabaseController\) GetUserByUsername
-
 ```go
-func (dbc DatabaseController) GetUserByUsername(username string) (authentication.User, error)
+func NewNotificationRepository(db *gorm.DB) *NotificationRepository
 ```
-
-GetUserByUsername uses a given username and returns the matching user object If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.GetUserHouseholdByID"></a>
-### func \(DatabaseController\) GetUserHouseholdByID
 
-```go
-func (dbc DatabaseController) GetUserHouseholdByID(userID uint) (uint, error)
-```
 
-GetUserHouseholdByID uses a given user ID and returns the connected household id If the database operations return an error, the error is also returned \(otherwise nil\)
+<a name="NotificationRepository.AcceptInvitation"></a>
+### func \(\*NotificationRepository\) AcceptInvitation
 
-<a name="DatabaseController.GetUserProductsBulk"></a>
-### func \(DatabaseController\) GetUserProductsBulk
-
 ```go
-func (dbc DatabaseController) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
+func (r *NotificationRepository) AcceptInvitation(token, email string, userID uint) error
 ```
-
-GetUserProductsBulk returns an array of products of a user \(based on user ID\) The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.GetUserProductsBulkByBarcode"></a>
-### func \(DatabaseController\) GetUserProductsBulkByBarcode
 
-```go
-func (dbc DatabaseController) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
-```
 
-GetUserProductsBulkByBarcode returns an array of products of a user \(based on user ID\) matching a barcode The returned dataset can be limitied by supplying 'limit' If the database operations return an error, the error is also returned \(otherwise nil\)
+<a name="NotificationRepository.CancelInvitation"></a>
+### func \(\*NotificationRepository\) CancelInvitation
 
-<a name="DatabaseController.IsAccountLocked"></a>
-### func \(DatabaseController\) IsAccountLocked
-
 ```go
-func (dbc DatabaseController) IsAccountLocked(userID uint, maxLoginAttempts int, lockoutDurationMins int) (bool, time.Duration)
+func (r *NotificationRepository) CancelInvitation(invitationID, userID uint) error
 ```
 
 
 
-<a name="DatabaseController.LeaveHousehold"></a>
-### func \(DatabaseController\) LeaveHousehold
+<a name="NotificationRepository.CreateInvitation"></a>
+### func \(\*NotificationRepository\) CreateInvitation
 
 ```go
-func (dbc DatabaseController) LeaveHousehold(userID uint) error
+func (r *NotificationRepository) CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
 ```
-
-LeaveHousehold creates a new personal household for the user, moves all products if they were the sole member, then updates the user's HouseholdID to the new household.
 
-<a name="DatabaseController.MarkHouseholdStepDone"></a>
-### func \(DatabaseController\) MarkHouseholdStepDone
 
-```go
-func (dbc DatabaseController) MarkHouseholdStepDone(userID uint) error
-```
-
-MarkHouseholdStepDone marks the household onboarding step as done \(e.g. application submitted or skipped\)
 
-<a name="DatabaseController.MarkInvitationSendFailed"></a>
-### func \(DatabaseController\) MarkInvitationSendFailed
+<a name="NotificationRepository.GetHouseholdByID"></a>
+### func \(\*NotificationRepository\) GetHouseholdByID
 
 ```go
-func (dbc DatabaseController) MarkInvitationSendFailed(invitationID uint) error
+func (r *NotificationRepository) GetHouseholdByID(householdID uint) (database.Household, error)
 ```
 
-MarkInvitationSendFailed increments the send attempt counter without marking as sent
-
-<a name="DatabaseController.MarkInvitationSent"></a>
-### func \(DatabaseController\) MarkInvitationSent
-
-```go
-func (dbc DatabaseController) MarkInvitationSent(invitationID uint) error
-```
 
-MarkInvitationSent marks an invitation as successfully sent
 
-<a name="DatabaseController.MarkNotificationsSetup"></a>
-### func \(DatabaseController\) MarkNotificationsSetup
+<a name="NotificationRepository.GetHouseholdMembersMailAddressesByID"></a>
+### func \(\*NotificationRepository\) GetHouseholdMembersMailAddressesByID
 
 ```go
-func (dbc DatabaseController) MarkNotificationsSetup(userID uint) error
+func (r *NotificationRepository) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
 ```
 
-MarkNotificationsSetup marks notifications as configured for a user's onboarding state
 
-<a name="DatabaseController.MarkOnboardingComplete"></a>
-### func \(DatabaseController\) MarkOnboardingComplete
 
-```go
-func (dbc DatabaseController) MarkOnboardingComplete(userID uint) error
-```
-
-MarkOnboardingComplete marks onboarding as fully complete for a user
-
-<a name="DatabaseController.RecordFailedLoginAttempt"></a>
-### func \(DatabaseController\) RecordFailedLoginAttempt
+<a name="NotificationRepository.GetHouseholdMembersNotificationPreferences"></a>
+### func \(\*NotificationRepository\) GetHouseholdMembersNotificationPreferences
 
 ```go
-func (dbc DatabaseController) RecordFailedLoginAttempt(userID uint, maxLoginAttempts int, lockoutDurationMins int) error
+func (r *NotificationRepository) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
 ```
 
 
 
-<a name="DatabaseController.RejectApplication"></a>
-### func \(DatabaseController\) RejectApplication
+<a name="NotificationRepository.GetInvitationByToken"></a>
+### func \(\*NotificationRepository\) GetInvitationByToken
 
 ```go
-func (dbc DatabaseController) RejectApplication(applicationID, adminUserID uint) error
+func (r *NotificationRepository) GetInvitationByToken(token string) (database.HouseholdInvitation, error)
 ```
 
-RejectApplication rejects a household application. Only the household admin may call this.
-
-<a name="DatabaseController.RemoveMemberFromHousehold"></a>
-### func \(DatabaseController\) RemoveMemberFromHousehold
-
-```go
-func (dbc DatabaseController) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
-```
 
-RemoveMemberFromHousehold removes a member from the admin's household and assigns them a new personal household.
 
-<a name="DatabaseController.ResetFailedLoginAttempts"></a>
-### func \(DatabaseController\) ResetFailedLoginAttempts
+<a name="NotificationRepository.GetInvitationsForHousehold"></a>
+### func \(\*NotificationRepository\) GetInvitationsForHousehold
 
 ```go
-func (dbc DatabaseController) ResetFailedLoginAttempts(userID uint) error
+func (r *NotificationRepository) GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
 ```
 
 
 
-<a name="DatabaseController.RestoreProduct"></a>
-### func \(DatabaseController\) RestoreProduct
+<a name="NotificationRepository.GetMaxNotificationThresholdDays"></a>
+### func \(\*NotificationRepository\) GetMaxNotificationThresholdDays
 
 ```go
-func (dbc DatabaseController) RestoreProduct(productID int, userID uint) error
+func (r *NotificationRepository) GetMaxNotificationThresholdDays() int
 ```
 
-RestoreProduct restores a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.SearchProducts"></a>
-### func \(DatabaseController\) SearchProducts
 
-```go
-func (dbc DatabaseController) SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
-```
-
-SearchProducts returns an array of products of a user matching a search paramater and a query
+<a name="NotificationRepository.GetOnboardingState"></a>
+### func \(\*NotificationRepository\) GetOnboardingState
 
-<a name="DatabaseController.SetProductExpireAt"></a>
-### func \(DatabaseController\) SetProductExpireAt
-
 ```go
-func (dbc DatabaseController) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error
+func (r *NotificationRepository) GetOnboardingState(userID uint) (database.OnboardingState, error)
 ```
+
 
-SetProductExpireAt updates the expiry date of a product \(based on product ID\) of a user \(based on user ID\) If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.SetProductNotifiedAt"></a>
-### func \(DatabaseController\) SetProductNotifiedAt
+<a name="NotificationRepository.GetPendingInvitationsNotSent"></a>
+### func \(\*NotificationRepository\) GetPendingInvitationsNotSent
 
 ```go
-func (dbc DatabaseController) SetProductNotifiedAt(productID uint) error
+func (r *NotificationRepository) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
 ```
 
-SetProductNotifiedAt sets the notified\_at timestamp to the current time
 
-<a name="DatabaseController.UpdateEmailVerificationStatus"></a>
-### func \(DatabaseController\) UpdateEmailVerificationStatus
 
+<a name="NotificationRepository.GetProductsExpiredAndNotificationPending"></a>
+### func \(\*NotificationRepository\) GetProductsExpiredAndNotificationPending
+
 ```go
-func (dbc DatabaseController) UpdateEmailVerificationStatus(token string, status string) error
+func (r *NotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error)
 ```
 
 
 
-<a name="DatabaseController.UpdateHouseholdName"></a>
-### func \(DatabaseController\) UpdateHouseholdName
+<a name="NotificationRepository.GetPublicHouseholds"></a>
+### func \(\*NotificationRepository\) GetPublicHouseholds
 
 ```go
-func (dbc DatabaseController) UpdateHouseholdName(householdID, adminUserID uint, name string) error
+func (r *NotificationRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
 ```
+
 
-UpdateHouseholdName renames a household. The caller must be the household admin.
 
-<a name="DatabaseController.UpdateProduct"></a>
-### func \(DatabaseController\) UpdateProduct
+<a name="NotificationRepository.GetUserByID"></a>
+### func \(\*NotificationRepository\) GetUserByID
 
 ```go
-func (dbc DatabaseController) UpdateProduct(productID int, userID uint, product *database.ProductDTOPatch) error
+func (r *NotificationRepository) GetUserByID(userID uint) (authentication.User, error)
 ```
 
-UpdateProduct gets a product \(based on product ID\) of a user \(based on user ID\) and updates its contents with the contents of a supplied reference to the updated product If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.UpdateProductAmount"></a>
-### func \(DatabaseController\) UpdateProductAmount
 
+<a name="NotificationRepository.MarkHouseholdStepDone"></a>
+### func \(\*NotificationRepository\) MarkHouseholdStepDone
+
 ```go
-func (dbc DatabaseController) UpdateProductAmount(productID int, userID uint, delta int) (bool, error)
+func (r *NotificationRepository) MarkHouseholdStepDone(userID uint) error
 ```
+
 
-UpdateProductAmount applies a delta to a product's amount field. If the resulting amount is \<= 0, the product is hard\-deleted. Returns deleted=true when the product was removed, deleted=false when it was updated.
 
-<a name="DatabaseController.UpdateUser"></a>
-### func \(DatabaseController\) UpdateUser
+<a name="NotificationRepository.MarkInvitationSendFailed"></a>
+### func \(\*NotificationRepository\) MarkInvitationSendFailed
 
 ```go
-func (dbc DatabaseController) UpdateUser(userID uint, user *authentication.User) error
+func (r *NotificationRepository) MarkInvitationSendFailed(invitationID uint) error
 ```
 
-UpdateUser gets a user \(based on user ID\) and updates its contents with the contents of a supplied reference to the updated user If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.UpdateUserEmailVerified"></a>
-### func \(DatabaseController\) UpdateUserEmailVerified
 
+<a name="NotificationRepository.MarkInvitationSent"></a>
+### func \(\*NotificationRepository\) MarkInvitationSent
+
 ```go
-func (dbc DatabaseController) UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
+func (r *NotificationRepository) MarkInvitationSent(invitationID uint) error
 ```
 
 
 
-<a name="DatabaseController.UpdateUserPassword"></a>
-### func \(DatabaseController\) UpdateUserPassword
+<a name="NotificationRepository.MarkNotificationsSetup"></a>
+### func \(\*NotificationRepository\) MarkNotificationsSetup
 
 ```go
-func (dbc DatabaseController) UpdateUserPassword(userID uint, login *authentication.Login) error
+func (r *NotificationRepository) MarkNotificationsSetup(userID uint) error
 ```
+
 
-UpdateUserPassword gets a user \(based on user ID\) and updates its password with the contents of a supplied reference to the updated login data If the database operations return an error, the error is also returned \(otherwise nil\)
 
-<a name="DatabaseController.UserExistsByMailAddress"></a>
-### func \(DatabaseController\) UserExistsByMailAddress
+<a name="NotificationRepository.MarkOnboardingComplete"></a>
+### func \(\*NotificationRepository\) MarkOnboardingComplete
 
 ```go
-func (dbc DatabaseController) UserExistsByMailAddress(user *authentication.User) bool
+func (r *NotificationRepository) MarkOnboardingComplete(userID uint) error
 ```
 
-UserExistsByMailAddress returns if a given user object exists in the database based on the property 'mailAddress'
 
-<a name="DatabaseController.UserExistsByUsername"></a>
-### func \(DatabaseController\) UserExistsByUsername
 
+<a name="NotificationRepository.SetProductNotifiedAt"></a>
+### func \(\*NotificationRepository\) SetProductNotifiedAt
+
 ```go
-func (dbc DatabaseController) UserExistsByUsername(user *authentication.User) bool
+func (r *NotificationRepository) SetProductNotifiedAt(productID uint) error
 ```
-
-UserExistsByUsername returns if a given user object exists in the database based on the property 'username'
 
-<a name="DatabaseController.UserHasProductAccess"></a>
-### func \(DatabaseController\) UserHasProductAccess
 
-```go
-func (dbc DatabaseController) UserHasProductAccess(userID uint, productID int) bool
-```
 
-UserHasProductAccess checks if user \(based on user ID\) is the matching owner of a product \(based on product ID\)
+<a name="NotificationRepositoryInterface"></a>
+## type NotificationRepositoryInterface
 
-<a name="DatabaseControllerInterface"></a>
-## type DatabaseControllerInterface
 
-DatabaseControllerInterface defines the interface for database operations needed by other controllers
 
 ```go
-type DatabaseControllerInterface interface {
+type NotificationRepositoryInterface interface {
     GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error)
     GetMaxNotificationThresholdDays() int
     GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
@@ -2331,10 +2140,318 @@ type DatabaseControllerInterface interface {
 }
 ```
 
+<a name="ProductRepository"></a>
+## type ProductRepository
+
+
+
+```go
+type ProductRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewProductRepository"></a>
+### func NewProductRepository
+
+```go
+func NewProductRepository(db *gorm.DB) *ProductRepository
+```
+
+
+
+<a name="ProductRepository.BulkArchiveProducts"></a>
+### func \(\*ProductRepository\) BulkArchiveProducts
+
+```go
+func (r *ProductRepository) BulkArchiveProducts(productIDs []int, userID uint) []BulkOperationError
+```
+
+
+
+<a name="ProductRepository.BulkDeleteProducts"></a>
+### func \(\*ProductRepository\) BulkDeleteProducts
+
+```go
+func (r *ProductRepository) BulkDeleteProducts(productIDs []int, userID uint) []BulkOperationError
+```
+
+
+
+<a name="ProductRepository.BulkRestoreProducts"></a>
+### func \(\*ProductRepository\) BulkRestoreProducts
+
+```go
+func (r *ProductRepository) BulkRestoreProducts(productIDs []int, userID uint) []BulkOperationError
+```
+
+
+
+<a name="ProductRepository.CreateOpenFoodFactsCache"></a>
+### func \(\*ProductRepository\) CreateOpenFoodFactsCache
+
+```go
+func (r *ProductRepository) CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error
+```
+
+
+
+<a name="ProductRepository.CreateProduct"></a>
+### func \(\*ProductRepository\) CreateProduct
+
+```go
+func (r *ProductRepository) CreateProduct(userID uint, product *database.Product) error
+```
+
+
+
+<a name="ProductRepository.DeleteProduct"></a>
+### func \(\*ProductRepository\) DeleteProduct
+
+```go
+func (r *ProductRepository) DeleteProduct(productID int, userID uint, archiveOnly bool) error
+```
+
+
+
+<a name="ProductRepository.GetActiveProductsCount"></a>
+### func \(\*ProductRepository\) GetActiveProductsCount
+
+```go
+func (r *ProductRepository) GetActiveProductsCount(userID uint) (int, error)
+```
+
+
+
+<a name="ProductRepository.GetArchivedProductByID"></a>
+### func \(\*ProductRepository\) GetArchivedProductByID
+
+```go
+func (r *ProductRepository) GetArchivedProductByID(productID int, userID uint) (database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetArchivedProductsGroupedByBarcode"></a>
+### func \(\*ProductRepository\) GetArchivedProductsGroupedByBarcode
+
+```go
+func (r *ProductRepository) GetArchivedProductsGroupedByBarcode(userID uint) (map[string]int, error)
+```
+
+
+
+<a name="ProductRepository.GetExpiredProductsCount"></a>
+### func \(\*ProductRepository\) GetExpiredProductsCount
+
+```go
+func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error)
+```
+
+
+
+<a name="ProductRepository.GetExpiringSoonProducts"></a>
+### func \(\*ProductRepository\) GetExpiringSoonProducts
+
+```go
+func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
+```
+
+
+
+<a name="ProductRepository.GetExpiryTrend"></a>
+### func \(\*ProductRepository\) GetExpiryTrend
+
+```go
+func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
+```
+
+
+
+<a name="ProductRepository.GetHouseholdByID"></a>
+### func \(\*ProductRepository\) GetHouseholdByID
+
+```go
+func (r *ProductRepository) GetHouseholdByID(householdID uint) (database.Household, error)
+```
+
+
+
+<a name="ProductRepository.GetLastInsertedProduct"></a>
+### func \(\*ProductRepository\) GetLastInsertedProduct
+
+```go
+func (r *ProductRepository) GetLastInsertedProduct(householdID uint) (database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetLastNotifiedProduct"></a>
+### func \(\*ProductRepository\) GetLastNotifiedProduct
+
+```go
+func (r *ProductRepository) GetLastNotifiedProduct(householdID uint) (database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetOpenFoodFactsCacheByBarcode"></a>
+### func \(\*ProductRepository\) GetOpenFoodFactsCacheByBarcode
+
+```go
+func (r *ProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error)
+```
+
+
+
+<a name="ProductRepository.GetProductByID"></a>
+### func \(\*ProductRepository\) GetProductByID
+
+```go
+func (r *ProductRepository) GetProductByID(productID int, userID uint) (database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetProductCategoryBreakdown"></a>
+### func \(\*ProductRepository\) GetProductCategoryBreakdown
+
+```go
+func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string]int, error)
+```
+
+
+
+<a name="ProductRepository.GetProductsExpired"></a>
+### func \(\*ProductRepository\) GetProductsExpired
+
+```go
+func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetTopArchivedProducts"></a>
+### func \(\*ProductRepository\) GetTopArchivedProducts
+
+```go
+func (r *ProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetUserArchivedProductsBulk"></a>
+### func \(\*ProductRepository\) GetUserArchivedProductsBulk
+
+```go
+func (r *ProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetUserByID"></a>
+### func \(\*ProductRepository\) GetUserByID
+
+```go
+func (r *ProductRepository) GetUserByID(userID uint) (authentication.User, error)
+```
+
+
+
+<a name="ProductRepository.GetUserHouseholdByID"></a>
+### func \(\*ProductRepository\) GetUserHouseholdByID
+
+```go
+func (r *ProductRepository) GetUserHouseholdByID(userID uint) (uint, error)
+```
+
+
+
+<a name="ProductRepository.GetUserProductsBulk"></a>
+### func \(\*ProductRepository\) GetUserProductsBulk
+
+```go
+func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetUserProductsBulkByBarcode"></a>
+### func \(\*ProductRepository\) GetUserProductsBulkByBarcode
+
+```go
+func (r *ProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
+```
+
+
+
+<a name="ProductRepository.RestoreProduct"></a>
+### func \(\*ProductRepository\) RestoreProduct
+
+```go
+func (r *ProductRepository) RestoreProduct(productID int, userID uint) error
+```
+
+
+
+<a name="ProductRepository.SearchProducts"></a>
+### func \(\*ProductRepository\) SearchProducts
+
+```go
+func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
+```
+
+
+
+<a name="ProductRepository.SetProductExpireAt"></a>
+### func \(\*ProductRepository\) SetProductExpireAt
+
+```go
+func (r *ProductRepository) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error
+```
+
+
+
+<a name="ProductRepository.SetProductNotifiedAt"></a>
+### func \(\*ProductRepository\) SetProductNotifiedAt
+
+```go
+func (r *ProductRepository) SetProductNotifiedAt(productID uint) error
+```
+
+
+
+<a name="ProductRepository.UpdateProduct"></a>
+### func \(\*ProductRepository\) UpdateProduct
+
+```go
+func (r *ProductRepository) UpdateProduct(productID int, userID uint, product *database.ProductDTOPatch) error
+```
+
+
+
+<a name="ProductRepository.UpdateProductAmount"></a>
+### func \(\*ProductRepository\) UpdateProductAmount
+
+```go
+func (r *ProductRepository) UpdateProductAmount(productID int, userID uint, delta int) (bool, error)
+```
+
+
+
+<a name="ProductRepository.UserHasProductAccess"></a>
+### func \(\*ProductRepository\) UserHasProductAccess
+
+```go
+func (r *ProductRepository) UserHasProductAccess(userID uint, productID int) bool
+```
+
+
+
 <a name="SearchParameterEnum"></a>
 ## type SearchParameterEnum
 
-SearchParameterEnum is a int value specifying a valid search parameter
+
 
 ```go
 type SearchParameterEnum int
@@ -2357,7 +2474,7 @@ const (
 func SearchParameterEnumFromString(str string) SearchParameterEnum
 ```
 
-SearchParameterEnumFromString parses and converts a given string to the matching enum value If the enum value can't be matched, enum value 'InvalidParameter' is used
+
 
 <a name="SupportedEngines"></a>
 ## type SupportedEngines
@@ -2386,6 +2503,215 @@ func SupportedEnginesFromString(str string) SupportedEngines
 ```
 
 SupportedEnginesFromString parses and converts a given string to the matching enum value If the enum value can't be matched, enum value 'InvalidEngine' is used
+
+<a name="UserRepository"></a>
+## type UserRepository
+
+
+
+```go
+type UserRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewUserRepository"></a>
+### func NewUserRepository
+
+```go
+func NewUserRepository(db *gorm.DB) *UserRepository
+```
+
+
+
+<a name="UserRepository.CreateEmailVerification"></a>
+### func \(\*UserRepository\) CreateEmailVerification
+
+```go
+func (r *UserRepository) CreateEmailVerification(userID uint, token string, expiresAt time.Time) error
+```
+
+
+
+<a name="UserRepository.CreateUser"></a>
+### func \(\*UserRepository\) CreateUser
+
+```go
+func (r *UserRepository) CreateUser(user *authentication.User) error
+```
+
+
+
+<a name="UserRepository.GetEmailVerificationByToken"></a>
+### func \(\*UserRepository\) GetEmailVerificationByToken
+
+```go
+func (r *UserRepository) GetEmailVerificationByToken(token string) (database.EmailVerification, error)
+```
+
+
+
+<a name="UserRepository.GetHouseholdByID"></a>
+### func \(\*UserRepository\) GetHouseholdByID
+
+```go
+func (r *UserRepository) GetHouseholdByID(householdID uint) (database.Household, error)
+```
+
+
+
+<a name="UserRepository.GetNextUserID"></a>
+### func \(\*UserRepository\) GetNextUserID
+
+```go
+func (r *UserRepository) GetNextUserID() uint
+```
+
+
+
+<a name="UserRepository.GetOnboardingState"></a>
+### func \(\*UserRepository\) GetOnboardingState
+
+```go
+func (r *UserRepository) GetOnboardingState(userID uint) (database.OnboardingState, error)
+```
+
+
+
+<a name="UserRepository.GetUserByID"></a>
+### func \(\*UserRepository\) GetUserByID
+
+```go
+func (r *UserRepository) GetUserByID(userID uint) (authentication.User, error)
+```
+
+
+
+<a name="UserRepository.GetUserByUsername"></a>
+### func \(\*UserRepository\) GetUserByUsername
+
+```go
+func (r *UserRepository) GetUserByUsername(username string) (authentication.User, error)
+```
+
+
+
+<a name="UserRepository.GetUserHouseholdByID"></a>
+### func \(\*UserRepository\) GetUserHouseholdByID
+
+```go
+func (r *UserRepository) GetUserHouseholdByID(userID uint) (uint, error)
+```
+
+
+
+<a name="UserRepository.IsAccountLocked"></a>
+### func \(\*UserRepository\) IsAccountLocked
+
+```go
+func (r *UserRepository) IsAccountLocked(userID uint, maxLoginAttempts int, lockoutDurationMins int) (bool, time.Duration)
+```
+
+
+
+<a name="UserRepository.MarkHouseholdStepDone"></a>
+### func \(\*UserRepository\) MarkHouseholdStepDone
+
+```go
+func (r *UserRepository) MarkHouseholdStepDone(userID uint) error
+```
+
+
+
+<a name="UserRepository.MarkNotificationsSetup"></a>
+### func \(\*UserRepository\) MarkNotificationsSetup
+
+```go
+func (r *UserRepository) MarkNotificationsSetup(userID uint) error
+```
+
+
+
+<a name="UserRepository.MarkOnboardingComplete"></a>
+### func \(\*UserRepository\) MarkOnboardingComplete
+
+```go
+func (r *UserRepository) MarkOnboardingComplete(userID uint) error
+```
+
+
+
+<a name="UserRepository.RecordFailedLoginAttempt"></a>
+### func \(\*UserRepository\) RecordFailedLoginAttempt
+
+```go
+func (r *UserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttempts int, lockoutDurationMins int) error
+```
+
+
+
+<a name="UserRepository.ResetFailedLoginAttempts"></a>
+### func \(\*UserRepository\) ResetFailedLoginAttempts
+
+```go
+func (r *UserRepository) ResetFailedLoginAttempts(userID uint) error
+```
+
+
+
+<a name="UserRepository.UpdateEmailVerificationStatus"></a>
+### func \(\*UserRepository\) UpdateEmailVerificationStatus
+
+```go
+func (r *UserRepository) UpdateEmailVerificationStatus(token string, status string) error
+```
+
+
+
+<a name="UserRepository.UpdateUser"></a>
+### func \(\*UserRepository\) UpdateUser
+
+```go
+func (r *UserRepository) UpdateUser(userID uint, user *authentication.User) error
+```
+
+
+
+<a name="UserRepository.UpdateUserEmailVerified"></a>
+### func \(\*UserRepository\) UpdateUserEmailVerified
+
+```go
+func (r *UserRepository) UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
+```
+
+
+
+<a name="UserRepository.UpdateUserPassword"></a>
+### func \(\*UserRepository\) UpdateUserPassword
+
+```go
+func (r *UserRepository) UpdateUserPassword(userID uint, login *authentication.Login) error
+```
+
+
+
+<a name="UserRepository.UserExistsByMailAddress"></a>
+### func \(\*UserRepository\) UserExistsByMailAddress
+
+```go
+func (r *UserRepository) UserExistsByMailAddress(user *authentication.User) bool
+```
+
+
+
+<a name="UserRepository.UserExistsByUsername"></a>
+### func \(\*UserRepository\) UserExistsByUsername
+
+```go
+func (r *UserRepository) UserExistsByUsername(user *authentication.User) bool
+```
+
+
 
 # api
 
@@ -2535,11 +2861,22 @@ import "codeberg.org/isotop7/proviant/models/authentication"
 
 - [type Login](<#Login>)
   - [func \(login \*Login\) IsValid\(\) error](<#Login.IsValid>)
+  - [func \(login \*Login\) IsValidWithValidator\(validator \*PasswordValidator\) error](<#Login.IsValidWithValidator>)
 - [type NotificationPreferences](<#NotificationPreferences>)
+- [type PasswordConfig](<#PasswordConfig>)
+- [type PasswordValidator](<#PasswordValidator>)
+  - [func DefaultPasswordValidator\(\) \*PasswordValidator](<#DefaultPasswordValidator>)
+  - [func NewPasswordValidator\(cfg PasswordConfig\) \*PasswordValidator](<#NewPasswordValidator>)
+  - [func PasswordValidatorFromConfig\(cfg PasswordConfig\) \*PasswordValidator](<#PasswordValidatorFromConfig>)
+  - [func \(pv \*PasswordValidator\) Validate\(password string\) error](<#PasswordValidator.Validate>)
+  - [func \(pv \*PasswordValidator\) ValidateAll\(password string\) \[\]error](<#PasswordValidator.ValidateAll>)
+- [type RevokedToken](<#RevokedToken>)
 - [type Signup](<#Signup>)
   - [func \(signup \*Signup\) IsValid\(\) error](<#Signup.IsValid>)
+  - [func \(signup \*Signup\) IsValidWithValidator\(validator \*PasswordValidator\) error](<#Signup.IsValidWithValidator>)
 - [type User](<#User>)
   - [func \(user \*User\) IsValid\(skipPassword bool\) error](<#User.IsValid>)
+  - [func \(user \*User\) IsValidWithValidator\(skipPassword bool, validator \*PasswordValidator\) error](<#User.IsValidWithValidator>)
 
 
 <a name="Login"></a>
@@ -2563,6 +2900,15 @@ func (login *Login) IsValid() error
 
 IsValid checks if the given login instance is valid
 
+<a name="Login.IsValidWithValidator"></a>
+### func \(\*Login\) IsValidWithValidator
+
+```go
+func (login *Login) IsValidWithValidator(validator *PasswordValidator) error
+```
+
+IsValidWithValidator checks if the given login instance is valid using a custom validator
+
 <a name="NotificationPreferences"></a>
 ## type NotificationPreferences
 
@@ -2576,6 +2922,90 @@ type NotificationPreferences struct {
     NtfyTopic                 string `json:"ntfyTopic,omitempty"`
     NtfyToken                 string `json:"ntfyToken,omitempty"`
     NotificationThresholdDays int    `json:"notificationThresholdDays" gorm:"default:0"`
+}
+```
+
+<a name="PasswordConfig"></a>
+## type PasswordConfig
+
+
+
+```go
+type PasswordConfig struct {
+    MinLength        int
+    RequireUppercase bool
+    RequireDigit     bool
+    RequireSpecial   bool
+    CheckBreached    bool
+}
+```
+
+<a name="PasswordValidator"></a>
+## type PasswordValidator
+
+
+
+```go
+type PasswordValidator struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="DefaultPasswordValidator"></a>
+### func DefaultPasswordValidator
+
+```go
+func DefaultPasswordValidator() *PasswordValidator
+```
+
+
+
+<a name="NewPasswordValidator"></a>
+### func NewPasswordValidator
+
+```go
+func NewPasswordValidator(cfg PasswordConfig) *PasswordValidator
+```
+
+
+
+<a name="PasswordValidatorFromConfig"></a>
+### func PasswordValidatorFromConfig
+
+```go
+func PasswordValidatorFromConfig(cfg PasswordConfig) *PasswordValidator
+```
+
+
+
+<a name="PasswordValidator.Validate"></a>
+### func \(\*PasswordValidator\) Validate
+
+```go
+func (pv *PasswordValidator) Validate(password string) error
+```
+
+
+
+<a name="PasswordValidator.ValidateAll"></a>
+### func \(\*PasswordValidator\) ValidateAll
+
+```go
+func (pv *PasswordValidator) ValidateAll(password string) []error
+```
+
+
+
+<a name="RevokedToken"></a>
+## type RevokedToken
+
+RevokedToken represents a revoked JWT token identified by its JTI
+
+```go
+type RevokedToken struct {
+    gorm.Model
+    JTI       string    `gorm:"uniqueIndex;not null"`
+    ExpiresAt time.Time `gorm:"index;not null"`
 }
 ```
 
@@ -2601,6 +3031,15 @@ func (signup *Signup) IsValid() error
 ```
 
 IsValid checks if the given signup instance is valid
+
+<a name="Signup.IsValidWithValidator"></a>
+### func \(\*Signup\) IsValidWithValidator
+
+```go
+func (signup *Signup) IsValidWithValidator(validator *PasswordValidator) error
+```
+
+IsValidWithValidator checks if the given signup instance is valid using a custom validator
 
 <a name="User"></a>
 ## type User
@@ -2632,6 +3071,15 @@ func (user *User) IsValid(skipPassword bool) error
 
 IsValid is a simple validator function to check for valid properties
 
+<a name="User.IsValidWithValidator"></a>
+### func \(\*User\) IsValidWithValidator
+
+```go
+func (user *User) IsValidWithValidator(skipPassword bool, validator *PasswordValidator) error
+```
+
+IsValidWithValidator checks if the given user instance is valid using a custom validator
+
 # configuration
 
 ```go
@@ -2656,6 +3104,7 @@ configuration defines structs and methods for proviants configuration and specif
   - [func \(ec \*ProviantConfiguration\) ValidateNotificationConfiguration\(\) error](<#ProviantConfiguration.ValidateNotificationConfiguration>)
   - [func \(ec \*ProviantConfiguration\) ValidateOpenFoodFactsConfiguration\(\) error](<#ProviantConfiguration.ValidateOpenFoodFactsConfiguration>)
 - [type SMTPConfiguration](<#SMTPConfiguration>)
+- [type SecurityHeadersConfiguration](<#SecurityHeadersConfiguration>)
 - [type ServerConfiguration](<#ServerConfiguration>)
 
 
@@ -2666,10 +3115,15 @@ AuthenticationConfiguration contains all properties regarding the JSON Web Token
 
 ```go
 type AuthenticationConfiguration struct {
-    TokenPassword       string
-    TokenLifetime       int
-    MaxLoginAttempts    int
-    LockoutDurationMins int
+    TokenPassword            string
+    TokenLifetime            int
+    MaxLoginAttempts         int
+    LockoutDurationMins      int
+    PasswordMinLength        int
+    PasswordRequireUppercase bool
+    PasswordRequireDigit     bool
+    PasswordRequireSpecial   bool
+    PasswordCheckBreached    bool
 }
 ```
 
@@ -2837,6 +3291,17 @@ type SMTPConfiguration struct {
 }
 ```
 
+<a name="SecurityHeadersConfiguration"></a>
+## type SecurityHeadersConfiguration
+
+SecurityHeadersConfiguration contains all properties for HTTP security headers
+
+```go
+type SecurityHeadersConfiguration struct {
+    ContentSecurityPolicy string
+}
+```
+
 <a name="ServerConfiguration"></a>
 ## type ServerConfiguration
 
@@ -2844,10 +3309,11 @@ ServerConfiguration contains all properties regarding the proviant server
 
 ```go
 type ServerConfiguration struct {
-    Port           int
-    Authentication AuthenticationConfiguration
-    CORS           CorsConfiguration
-    BaseURL        string
+    Port            int
+    Authentication  AuthenticationConfiguration
+    CORS            CorsConfiguration
+    BaseURL         string
+    SecurityHeaders SecurityHeadersConfiguration
 }
 ```
 
@@ -3200,6 +3666,9 @@ var (
 
     // Name of username key in tokens
     TokenUsernameKey = "username"
+
+    // Name of JTI key in tokens
+    TokenJTIKey = "jti"
 
     // Name of authentication header in token
     TokenHeadName = "Bearer"

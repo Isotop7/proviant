@@ -12,7 +12,7 @@ func TestLoginIsValid(t *testing.T) {
 			name: "valid login",
 			login: Login{
 				Username: "testuser",
-				Password: "password123",
+				Password: "ThisIsAVeryStrongPass123!",
 			},
 			wantErr: false,
 		},
@@ -20,7 +20,7 @@ func TestLoginIsValid(t *testing.T) {
 			name: "valid login with longer password",
 			login: Login{
 				Username: "testuser",
-				Password: "verylongpassword123",
+				Password: "verylongpassword123supersafe",
 			},
 			wantErr: false,
 		},
@@ -28,7 +28,7 @@ func TestLoginIsValid(t *testing.T) {
 			name: "empty username",
 			login: Login{
 				Username: "",
-				Password: "password123",
+				Password: "ThisIsAVeryStrongPass123!",
 			},
 			wantErr: true,
 		},
@@ -36,7 +36,7 @@ func TestLoginIsValid(t *testing.T) {
 			name: "whitespace only username passes validation",
 			login: Login{
 				Username: "   ",
-				Password: "password123",
+				Password: "ThisIsAVeryStrongPass123!",
 			},
 			wantErr: false,
 		},
@@ -49,18 +49,18 @@ func TestLoginIsValid(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "password exactly 8 characters",
+			name: "password exactly 12 characters",
 			login: Login{
 				Username: "testuser",
-				Password: "12345678",
+				Password: "AbcdEfgh12!@",
 			},
 			wantErr: false,
 		},
 		{
-			name: "password 7 characters",
+			name: "password 11 characters",
 			login: Login{
 				Username: "testuser",
-				Password: "1234567",
+				Password: "12345678901",
 			},
 			wantErr: true,
 		},
@@ -92,7 +92,7 @@ func TestLoginIsValid(t *testing.T) {
 			name: "username with special characters",
 			login: Login{
 				Username: "user-name_123",
-				Password: "password123",
+				Password: "ThisIsAVeryStrongPass123!",
 			},
 			wantErr: false,
 		},
@@ -100,7 +100,7 @@ func TestLoginIsValid(t *testing.T) {
 			name: "password with special characters",
 			login: Login{
 				Username: "testuser",
-				Password: "p@ssw0rd!",
+				Password: "MyS3cur3P@ss!Word",
 			},
 			wantErr: false,
 		},

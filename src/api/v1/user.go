@@ -8,6 +8,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -126,8 +127,26 @@ func UpdateUserPassword(ctx *gin.Context) {
 		return
 	}
 
+	proviantConfigInterface, pcOk := ctx.Get("proviantConfig")
+	var passwordValidator *authentication.PasswordValidator
+	if pcOk {
+		proviantConfig, ok := proviantConfigInterface.(*configuration.ProviantConfiguration)
+		if ok {
+			passwordValidator = authentication.PasswordValidatorFromConfig(authentication.PasswordConfig{
+				MinLength:        proviantConfig.Server.Authentication.PasswordMinLength,
+				RequireUppercase: proviantConfig.Server.Authentication.PasswordRequireUppercase,
+				RequireDigit:     proviantConfig.Server.Authentication.PasswordRequireDigit,
+				RequireSpecial:   proviantConfig.Server.Authentication.PasswordRequireSpecial,
+				CheckBreached:    proviantConfig.Server.Authentication.PasswordCheckBreached,
+			})
+		}
+	}
+	if passwordValidator == nil {
+		passwordValidator = authentication.DefaultPasswordValidator()
+	}
+
 	// Check for valid login credentials
-	validationErr := login.IsValid()
+	validationErr := login.IsValidWithValidator(passwordValidator)
 	if validationErr != nil {
 		logger.Error().Msg(validationErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(validationErr))
