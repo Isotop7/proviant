@@ -125,26 +125,26 @@ User-facing important changes are documented in the [CHANGELOG.md](./CHANGELOG.m
 
 Documentation is generated with `gomarkdoc` and `swagger`:
 
-- [Package documentation](./docs/README.md)
-- [Swagger definition](./docs/swagger.yaml)
+- [Package documentation](./src/docs/README.md)
+- [Swagger definition](./src/docs/swagger.yaml)
 
 ## Screenshots
 
 - Login and Signup page for multi user mode
 
-![Login](./docs/screenshots/login.png)
+![Login](./screenshots/login.png)
 
 - Portal view with activity tiles
 
-![Portal](./docs/screenshots/portal.png)
+![Portal](./screenshots/portal.png)
 
 - Create product and query data from OpenFoodFactAPI
 
-![Create product](./docs/screenshots/create.png)
+![Create product](./screenshots/create.png)
 
 - Search all products based on parameters
 
-![Search products](./docs/screenshots/search.png)
+![Search products](./screenshots/search.png)
 
 ## Contributing
 
