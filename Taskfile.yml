@@ -132,6 +132,7 @@ tasks:
       - cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js ./src/assets/js/
       - cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js.map ./src/assets/js/
       - cp ./node_modules/chart.js/dist/chart.umd.min.js ./src/assets/js/
+      - cp ./node_modules/chart.js/dist/chart.umd.min.js.map ./src/assets/js/
 
   lint-css:
     desc: Lint SCSS files

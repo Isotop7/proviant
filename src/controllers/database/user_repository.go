@@ -244,10 +244,33 @@ func (r *UserRepository) MarkOnboardingComplete(userID uint) error {
 		Update("onboarding_completed", true).Error
 }
 
+func (r *UserRepository) EnsureOnboardingState(userID uint) error {
+	var existing database.OnboardingState
+	findErr := r.DB.Where("user_id = ?", userID).First(&existing).Error
+	if findErr == nil {
+		return nil
+	}
+	if findErr != gorm.ErrRecordNotFound {
+		return findErr
+	}
+	state := database.OnboardingState{UserID: userID}
+	return r.DB.Create(&state).Error
+}
+
 func (r *UserRepository) GetHouseholdByID(householdID uint) (database.Household, error) {
 	var household database.Household
 	selectErr := r.DB.First(&household, householdID)
 	return household, selectErr.Error
+}
+
+func (r *UserRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error) {
+	var users []authentication.User
+	err := r.DB.Where("household_id = ?", householdID).Find(&users).Error
+	return users, err
+}
+
+func (r *UserRepository) DeleteUser(userID uint) error {
+	return r.DB.Delete(&authentication.User{}, userID).Error
 }
 
 var _ = (*UserRepository)(nil)

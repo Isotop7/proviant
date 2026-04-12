@@ -157,6 +157,7 @@
     }
 
     function skipOnboarding() {
+        proviant.completeOnboarding().catch(function () {});
         window.location.href = "/web";
     }
 

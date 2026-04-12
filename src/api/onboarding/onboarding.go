@@ -214,6 +214,7 @@ func CompleteOnboarding(ctx *gin.Context) {
 
 	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
 
+	_ = userRepo.EnsureOnboardingState(userID)
 	err := userRepo.MarkOnboardingComplete(userID)
 	if err != nil {
 		logger.Error().Msgf("Failed to complete onboarding: %s", err.Error())
