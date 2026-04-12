@@ -334,6 +334,56 @@
             {{ end }}
             {{ end }}
 
+            {{/* Admin: User Management */}}
+            {{ if .IsAdmin }}
+            <div class="mt-4 pt-4 border-top">
+                <h3 class="h6 fw-medium mb-2"><i class="bi bi-person-gear me-1"></i>User Management</h3>
+                <p class="text-body-secondary small mb-3">Manage household members. Click edit to update username or email, reset password to send a password reset link, or remove to delete the user.</p>
+
+                <div class="mb-3">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnRefreshUsers">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                    </button>
+                </div>
+                <ul class="list-group" id="adminUserList">
+                    <li class="list-group-item text-center text-muted py-3" id="adminUserLoading">
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
+                    </li>
+                </ul>
+                <div id="adminUserAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
+
+                <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="editUserForm" novalidate>
+                                    <input type="hidden" id="editUserID">
+                                    <div class="mb-3">
+                                        <label for="editUsername" class="form-label fw-medium">Username</label>
+                                        <input type="text" class="form-control" id="editUsername" required>
+                                        <div class="invalid-feedback">Username is required.</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="editMailAddress" class="form-label fw-medium">Email Address</label>
+                                        <input type="email" class="form-control" id="editMailAddress" required>
+                                        <div class="invalid-feedback">Valid email is required.</div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" id="btnSaveUserEdit">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{ end }}
+
             {{/* ── Danger Zone ─────────────────────────────────── */}}
             <div class="mt-4 pt-4 border-top border-danger border-opacity-25">
                 <h3 class="h6 fw-medium text-danger mb-3">

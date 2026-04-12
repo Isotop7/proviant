@@ -23,6 +23,16 @@ function showPasswordRequirementsModal() {
     }
 }
 
+function showEmailVerificationModal(email) {
+    const modal = document.getElementById("emailVerificationModal");
+    if (modal) {
+        const addressEl = document.getElementById("emailVerificationAddress");
+        if (addressEl) addressEl.textContent = email || "your email address";
+        const modalBootstrap = new bootstrap.Modal(modal);
+        modalBootstrap.show();
+    }
+}
+
 function showSignupError(message) {
     const signupAlert = document.getElementById("signupAlert");
     if (signupAlert) {
@@ -126,6 +136,14 @@ function Login() {
                 break;
             case 401:
                 showLoginError("Authentication failed!");
+                clearLoginInputs();
+                break;
+            case 403:
+                if (response.body && response.body.toLowerCase().includes("verify")) {
+                    showEmailVerificationModal(username);
+                } else {
+                    showLoginError(response.message || "Access denied.");
+                }
                 clearLoginInputs();
                 break;
             default:

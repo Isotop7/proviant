@@ -172,6 +172,9 @@ var (
 	// ErrMemberNotInHousehold is thrown when the target user is not a member of the caller's household
 	ErrMemberNotInHousehold = errors.New("user is not a member of this household")
 
+	// ErrUserNotInHousehold is thrown when an admin targets a user not in their household
+	ErrUserNotInHousehold = errors.New("user is not a member of this household")
+
 	/*
 	 * Invitation related errors
 	 */

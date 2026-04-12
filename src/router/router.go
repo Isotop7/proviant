@@ -214,6 +214,14 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAPI.GET("/invitations", v1.GetInvitations)
 	householdAPI.DELETE("/invitations/:id", v1.CancelInvitation)
 
+	// Admin user management routes
+	adminAPI := engine.Group("/api/v1/admin/users")
+	adminAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	adminAPI.GET("", v1.GetHouseholdUsers)
+	adminAPI.PATCH("/:id", v1.UpdateHouseholdUser)
+	adminAPI.DELETE("/:id", v1.DeleteHouseholdUser)
+	adminAPI.POST("/:id/reset-password", v1.AdminResetUserPassword)
+
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")
 	protectedProductAPI.Use(jwtAPIUserAwareMiddleware.MiddlewareFunc())

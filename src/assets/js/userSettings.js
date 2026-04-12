@@ -383,6 +383,169 @@ function handleSendInvitation() {
   });
 }
 
+/* ── Admin User Management ─────────────────────────────────────── */
+function showAdminUserAlert(message, isSuccess) {
+  const el = document.getElementById("adminUserAlert");
+  if (!el) return;
+  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
+  const span = el.querySelector("span") || el;
+  span.textContent = message;
+  el.classList.remove("d-none");
+  el.classList.add("show");
+}
+
+function renderAdminUserRow(user, currentUserID) {
+  if (!user || !user.username) return "";
+  const isSelf = user.id === currentUserID;
+  return `
+    <li class="list-group-item d-flex justify-content-between align-items-center" id="admin-user-${user.id}">
+      <span>
+        <i class="bi bi-person me-2"></i>${user.username}
+        <span class="text-muted ms-1">&lt;${user.mailAddress || ""}&gt;</span>
+        ${isSelf ? '<span class="badge bg-secondary ms-1">You</span>' : ""}
+      </span>
+      <div class="btn-group btn-group-sm">
+        <button type="button" class="btn btn-outline-primary btn-edit-user" data-id="${user.id}" data-username="${user.username}" data-email="${user.mailAddress || ""}" title="Edit user">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button type="button" class="btn btn-outline-warning btn-reset-password" data-id="${user.id}" title="Reset password">
+          <i class="bi bi-key"></i>
+        </button>
+        ${!isSelf ? `
+        <button type="button" class="btn btn-outline-danger btn-delete-user" data-id="${user.id}" title="Delete user">
+          <i class="bi bi-trash"></i>
+        </button>` : ""}
+      </div>
+    </li>
+  `;
+}
+
+function loadAdminUsers() {
+  const list = document.getElementById("adminUserList");
+  const loading = document.getElementById("adminUserLoading");
+  if (!list) return;
+
+  if (loading) loading.style.display = "";
+
+  proviant.getHouseholdUsers().then((response) => {
+    if (loading) loading.style.display = "none";
+    if (response.code === 200) {
+      const users = response.message;
+      if (!users || !Array.isArray(users) || users.length === 0) {
+        list.innerHTML = '<li class="list-group-item text-center text-muted py-3">No users in household.</li>';
+        return;
+      }
+      const currentUserID = parseInt(document.querySelector('span.badge.bg-primary[ID]')?.textContent?.replace("#", "") || "0", 10);
+      const rendered = users.map((u) => renderAdminUserRow(u, currentUserID)).join("");
+      if (!rendered) {
+        list.innerHTML = '<li class="list-group-item text-center text-muted py-3">No users in household.</li>';
+        return;
+      }
+      list.innerHTML = rendered;
+    } else if (response.code === 403) {
+      list.innerHTML = '<li class="list-group-item text-danger py-3">Access denied.</li>';
+    } else {
+      showAdminUserAlert(`Error: ${response.message || "Unknown error"}`, false);
+    }
+  });
+}
+
+function handleRefreshUsers() {
+  loadAdminUsers();
+}
+
+function handleEditUser(btn) {
+  const userID = btn.dataset.id;
+  const username = btn.dataset.username;
+  const email = btn.dataset.email;
+  document.getElementById("editUserID").value = userID;
+  document.getElementById("editUsername").value = username;
+  document.getElementById("editMailAddress").value = email;
+  const modalEl = document.getElementById("editUserModal");
+  if (window.bootstrap) {
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+  }
+}
+
+function handleSaveUserEdit() {
+  const userID = document.getElementById("editUserID").value;
+  const username = document.getElementById("editUsername").value.trim();
+  const email = document.getElementById("editMailAddress").value.trim();
+  let formValid = true;
+  const usernameInput = document.getElementById("editUsername");
+  const emailInput = document.getElementById("editMailAddress");
+
+  if (!username) {
+    usernameInput.classList.add("is-invalid");
+    formValid = false;
+  } else {
+    usernameInput.classList.remove("is-invalid");
+  }
+  if (!email || !email.includes("@")) {
+    emailInput.classList.add("is-invalid");
+    formValid = false;
+  } else {
+    emailInput.classList.remove("is-invalid");
+  }
+  if (!formValid) return;
+
+  const btn = document.getElementById("btnSaveUserEdit");
+  setButtonLoading(btn, true);
+
+  proviant.updateHouseholdUser(userID, username, email).then((response) => {
+    setButtonLoading(btn, false);
+    if (response.code === 200) {
+      const modalEl = document.getElementById("editUserModal");
+      if (window.bootstrap) {
+        bootstrap.Modal.getInstance(modalEl)?.hide();
+      }
+      loadAdminUsers();
+    } else {
+      showAdminUserAlert(`Error: ${response.message}`, false);
+    }
+  });
+}
+
+function handleResetPassword(btn) {
+  const userID = btn.dataset.id;
+  proviant.showConfirm(
+    "Reset Password",
+    "Send a password reset email to this user?",
+    function () {
+      proviant.resetHouseholdUserPassword(userID).then((response) => {
+        if (response.code === 200) {
+          proviant.showFeedback("success", "Done", "Password reset email sent.");
+        } else {
+          proviant.showFeedback("error", "Error", response.message || "Could not reset password.");
+        }
+      });
+    },
+    "Reset",
+    "warning"
+  );
+}
+
+function handleDeleteUser(btn) {
+  const userID = btn.dataset.id;
+  proviant.showConfirm(
+    "Delete User",
+    "Permanently delete this user? This cannot be undone.",
+    function () {
+      proviant.deleteHouseholdUser(userID).then((response) => {
+        if (response.code === 200) {
+          const row = document.getElementById(`admin-user-${userID}`);
+          if (row) row.remove();
+        } else {
+          showAdminUserAlert(`Error: ${response.message}`, false);
+        }
+      });
+    },
+    "Delete",
+    "danger"
+  );
+}
+
 /* ── Event delegation — clicks ───────────────────────────────────── */
 document.addEventListener("click", function (event) {
   const target = event.target;
@@ -432,6 +595,39 @@ document.addEventListener("click", function (event) {
   if (target.closest("#btnSendInvitation")) {
     event.preventDefault();
     handleSendInvitation();
+    return;
+  }
+
+  if (target.closest("#btnRefreshUsers")) {
+    event.preventDefault();
+    handleRefreshUsers();
+    return;
+  }
+
+  const editBtn = target.closest(".btn-edit-user");
+  if (editBtn) {
+    event.preventDefault();
+    handleEditUser(editBtn);
+    return;
+  }
+
+  if (target.closest("#btnSaveUserEdit")) {
+    event.preventDefault();
+    handleSaveUserEdit();
+    return;
+  }
+
+  const resetBtn = target.closest(".btn-reset-password");
+  if (resetBtn) {
+    event.preventDefault();
+    handleResetPassword(resetBtn);
+    return;
+  }
+
+  const deleteBtn = target.closest(".btn-delete-user");
+  if (deleteBtn) {
+    event.preventDefault();
+    handleDeleteUser(deleteBtn);
     return;
   }
 
@@ -502,6 +698,10 @@ document.addEventListener("input", function (event) {
     case "inputNotificationThreshold":
       clearInvalid(target);
       break;
+    case "editUsername":
+    case "editMailAddress":
+      clearInvalid(target);
+      break;
   }
 });
 
@@ -510,4 +710,9 @@ document.addEventListener("change", function (event) {
   if (event.target.id === "toggleNtfyNotifications") {
     toggleNtfySettings();
   }
+});
+
+/* ── Auto-load admin users on page load ─────────────────────────── */
+document.addEventListener("DOMContentLoaded", function () {
+  loadAdminUsers();
 });

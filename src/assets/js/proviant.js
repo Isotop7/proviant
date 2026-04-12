@@ -234,16 +234,10 @@ proviant.loginUser = async function (username, password) {
     },
     body: JSON.stringify({ username, password }),
   });
-  if (!apiCall.ok) {
-    return {
-      code: apiCall.status,
-      body: "Error logging in",
-    };
-  }
   const body = await apiCall.json();
   const response = {
     code: apiCall.status,
-    body: body.message,
+    body: body.message || body.code || "",
   };
   return response;
 };
@@ -385,6 +379,38 @@ proviant.approveApplication = async function (applicationID) {
 
 proviant.rejectApplication = async function (applicationID) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/applications/${applicationID}/reject`;
+  const apiCall = await fetch(url, { method: "POST" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.getHouseholdUsers = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users`;
+  const apiCall = await fetch(url, { method: "GET" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.updateHouseholdUser = async function (userID, username, mailAddress) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}`;
+  const apiCall = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, mailAddress }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.deleteHouseholdUser = async function (userID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}`;
+  const apiCall = await fetch(url, { method: "DELETE" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.resetHouseholdUserPassword = async function (userID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}/reset-password`;
   const apiCall = await fetch(url, { method: "POST" });
   const body = await apiCall.json();
   return { code: apiCall.status, message: body.message };
