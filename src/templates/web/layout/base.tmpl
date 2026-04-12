@@ -75,20 +75,6 @@
   <script src="/assets/js/bootstrap.bundle.min.js"></script>
   <script src="/assets/js/main.js"></script>
   <script src="/assets/js/notifications.js" defer></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-      tooltipEls.forEach(function (el) { new bootstrap.Tooltip(el); });
-    });
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/sw.js').catch(function (err) {
-          console.warn('Service worker registration failed:', err);
-        });
-      });
-    }
-  </script>
 </body>
 
 </html>

@@ -98,7 +98,7 @@
                 <div class="mb-4">
                     <label for="inputNotificationThreshold" class="form-label fw-medium">Expiry Threshold</label>
                     <p class="text-body-secondary small mb-2">Notify this many days <strong>before</strong> a product expires. Set to 0 to only notify on or after the expiry date.</p>
-                    <div class="input-group" style="max-width: 260px;">
+                    <div class="input-group input-width-260">
                         <span class="input-group-text"><i class="bi bi-alarm"></i></span>
                         <input type="number" class="form-control" id="inputNotificationThreshold"
                                min="0" step="1"
@@ -109,7 +109,7 @@
                     <div class="invalid-feedback" id="thresholdFeedback"></div>
                 </div>
 
-                <div id="ntfySettings" {{if not .User.NotificationPreferences.NtfyEnabled}}style="display: none;"{{end}}>
+                <div id="ntfySettings" {{if not .User.NotificationPreferences.NtfyEnabled}}class="d-none"{{end}}>
                     <h3 class="h6 fw-medium mb-3">ntfy.sh Configuration</h3>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
@@ -135,9 +135,8 @@
                         <label for="inputNtfyToken" class="form-label fw-medium">
                             Access Token <span class="text-body-secondary fw-normal">(optional)</span>
                         </label>
-                        <input type="password" class="form-control" id="inputNtfyToken"
-                               placeholder="Optional access token" autocomplete="new-password"
-                               style="max-width: 360px;">
+                        <input type="password" class="form-control input-width-360" id="inputNtfyToken"
+                               placeholder="Optional access token" autocomplete="new-password">
                     </div>
                 </div>
             </form>
@@ -162,7 +161,7 @@
             {{ if .IsAdmin }}
             <div class="mb-4">
                 <h3 class="h6 fw-medium mb-2"><i class="bi bi-pencil me-1"></i>Rename Household</h3>
-                <div class="input-group" style="max-width: 480px;">
+                <div class="input-group input-width-480">
                     <input type="text" class="form-control" id="inputHouseholdName"
                            placeholder="New household name" aria-label="New household name"
                            value="{{ .Household.Name }}">
@@ -207,7 +206,7 @@
                         Apply to Join a Household
                     </label>
                     <p class="text-body-secondary small mb-2">Enter the ID of the household you want to join. The admin will need to approve your request.</p>
-                    <div class="input-group" style="max-width: 360px;">
+                    <div class="input-group input-width-360">
                         <span class="input-group-text"><i class="bi bi-hash"></i></span>
                         <input type="number" class="form-control" id="inputApplyHouseholdID"
                                placeholder="Household ID" aria-required="true" min="1">
@@ -241,7 +240,7 @@
                         <i class="bi bi-envelope-paper me-1"></i>Invite by Email
                     </label>
                     <p class="text-body-secondary small mb-2">Send an invitation to join this household. The recipient will receive an email with a magic link to accept.</p>
-                    <div class="input-group" style="max-width: 480px;">
+                    <div class="input-group input-width-480">
                         <span class="input-group-text"><i class="bi bi-at"></i></span>
                         <input type="email" class="form-control" id="inputInviteEmail"
                                placeholder="user@example.com" aria-label="Email address to invite" autocomplete="email">
@@ -396,7 +395,7 @@
                         <i class="bi bi-house-add me-1"></i>Create New Household
                     </label>
                     <p class="text-body-secondary small mb-2">Create a new household and switch to it. If you are currently the sole member, your products will be moved.</p>
-                    <div class="input-group" style="max-width: 480px;">
+                    <div class="input-group input-width-480">
                         <span class="input-group-text"><i class="bi bi-house"></i></span>
                         <input type="text" class="form-control" id="inputNewHouseholdName"
                                placeholder="Household name" aria-label="New household name">

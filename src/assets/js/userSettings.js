@@ -123,7 +123,7 @@ function toggleNtfySettings() {
   const toggleNtfyNotifications = document.getElementById("toggleNtfyNotifications");
   const ntfySettings = document.getElementById("ntfySettings");
   if (ntfySettings && toggleNtfyNotifications) {
-    ntfySettings.style.display = toggleNtfyNotifications.checked ? "" : "none";
+    ntfySettings.classList.toggle("d-none", !toggleNtfyNotifications.checked);
   }
 }
 
@@ -425,10 +425,10 @@ function loadAdminUsers() {
   const loading = document.getElementById("adminUserLoading");
   if (!list) return;
 
-  if (loading) loading.style.display = "";
+  if (loading) loading.classList.remove("d-none");
 
   proviant.getHouseholdUsers().then((response) => {
-    if (loading) loading.style.display = "none";
+    if (loading) loading.classList.add("d-none");
     if (response.code === 200) {
       const users = response.message;
       if (!users || !Array.isArray(users) || users.length === 0) {

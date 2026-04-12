@@ -371,6 +371,13 @@ th a {
 }
 
 //
+// Input width utilities
+//
+.input-width-260 { max-width: 260px; }
+.input-width-360 { max-width: 360px; }
+.input-width-480 { max-width: 480px; }
+
+//
 // Reduced motion — respect system preference
 //
 @media (prefers-reduced-motion: reduce) {
