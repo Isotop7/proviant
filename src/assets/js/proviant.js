@@ -665,3 +665,48 @@ proviant.exportArchiveCSV = function (from, to) {
 proviant.exportFullJSON = function () {
   window.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/full.json`;
 };
+
+/* Calendar sync API methods */
+proviant.getCalendarTokenStatus = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.createCalendarToken = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.deleteCalendarToken = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`;
+  const apiCall = await fetch(url, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.downloadCalendarICS = function (token) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/export.ics?token=${encodeURIComponent(token)}`;
+  window.location.href = url;
+};
+
+proviant.copyToClipboard = async function (text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+};

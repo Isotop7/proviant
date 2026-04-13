@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+	"strings"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
@@ -98,6 +99,9 @@ func CreateCalendarToken(ctx *gin.Context) {
 	}
 	if baseURL == "" {
 		baseURL = "/"
+	}
+	if !strings.HasSuffix(baseURL, "/") {
+		baseURL += "/"
 	}
 
 	resp := CalendarTokenResponse{
