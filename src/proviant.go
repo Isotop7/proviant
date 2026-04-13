@@ -194,6 +194,7 @@ func main() {
 		&dbModel.Household{},
 		&authentication.User{},
 		&authentication.RevokedToken{},
+		&authentication.PersonalAccessToken{},
 		&dbModel.Product{},
 		&dbModel.HouseholdApplication{},
 		&dbModel.HouseholdInvitation{},

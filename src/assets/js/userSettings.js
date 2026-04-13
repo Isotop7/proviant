@@ -546,6 +546,127 @@ function handleDeleteUser(btn) {
   );
 }
 
+/* ── PAT (Personal Access Token) helpers ──────────────────────── */
+function showPATAlert(message, isSuccess) {
+  const el = document.getElementById("patAlert");
+  if (!el) return;
+  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
+  const span = el.querySelector("span") || el;
+  span.textContent = message;
+  el.classList.remove("d-none");
+  el.classList.add("show");
+}
+
+function renderPATRow(pat) {
+  const expiresText = pat.expiresAt ? `Expires: ${new Date(pat.expiresAt).toLocaleDateString()}` : "No expiry";
+  const lastUsedText = pat.lastUsedAt ? `Last used: ${new Date(pat.lastUsedAt).toLocaleString()}` : "Never used";
+  return `
+    <li class="list-group-item d-flex justify-content-between align-items-center" id="pat-${pat.id}">
+      <span>
+        <i class="bi bi-key me-2"></i>${pat.name}
+        <small class="text-muted d-block">${lastUsedText} · ${expiresText}</small>
+      </span>
+      <button type="button" class="btn btn-sm btn-outline-danger btn-delete-pat" data-id="${pat.id}" title="Delete token">
+        <i class="bi bi-trash"></i>
+      </button>
+    </li>
+  `;
+}
+
+function loadPATs() {
+  const list = document.getElementById("patList");
+  const loading = document.getElementById("patLoading");
+  if (!list) return;
+
+  if (loading) loading.classList.remove("d-none");
+
+  proviant.getPATs().then((response) => {
+    if (loading) loading.classList.add("d-none");
+    if (response.code === 200) {
+      const pats = response.message;
+      if (!pats || !Array.isArray(pats) || pats.length === 0) {
+        list.innerHTML = '<li class="list-group-item text-center text-muted py-3">No tokens created yet.</li>';
+        return;
+      }
+      list.innerHTML = pats.map((p) => renderPATRow(p)).join("");
+    } else {
+      showPATAlert(`Error: ${response.message || "Unknown error"}`, false);
+    }
+  });
+}
+
+function handleCreatePAT() {
+  const modalEl = document.getElementById("createPatModal");
+  const nameInput = document.getElementById("inputPatName");
+  const expiryInput = document.getElementById("inputPatExpiry");
+  const tokenDisplay = document.getElementById("newTokenDisplay");
+  const tokenValue = document.getElementById("newTokenValue");
+
+  nameInput.value = "";
+  expiryInput.value = "";
+  tokenDisplay.classList.add("d-none");
+  tokenValue.textContent = "";
+
+  if (window.bootstrap) {
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+  }
+}
+
+function handleSavePAT() {
+  const nameInput = document.getElementById("inputPatName");
+  const expiryInput = document.getElementById("inputPatExpiry");
+  const name = nameInput ? nameInput.value.trim() : "";
+
+  if (!name) {
+    if (nameInput) nameInput.classList.add("is-invalid");
+    return;
+  }
+  if (nameInput) nameInput.classList.remove("is-invalid");
+
+  const btn = document.getElementById("btnSavePAT");
+  setButtonLoading(btn, true);
+
+  let expiresAt = null;
+  const expiryInputVal = expiryInput ? expiryInput.value : "";
+  if (expiryInputVal) {
+    expiresAt = new Date(expiryInputVal).toISOString();
+  }
+
+  proviant.createPAT(name, expiresAt).then((response) => {
+    setButtonLoading(btn, false);
+    if (response.code === 201) {
+      const tokenDisplay = document.getElementById("newTokenDisplay");
+      const tokenValue = document.getElementById("newTokenValue");
+      tokenValue.textContent = response.message.token;
+      tokenDisplay.classList.remove("d-none");
+      loadPATs();
+    } else {
+      showPATAlert(`Error: ${response.message || "Failed to create token"}`, false);
+    }
+  });
+}
+
+function handleDeletePAT(btn) {
+  const patID = btn.dataset.id;
+  proviant.showConfirm(
+    "Delete Token",
+    "Permanently delete this API token? This cannot be undone.",
+    function () {
+      proviant.deletePAT(patID).then((response) => {
+        if (response.code === 200) {
+          const row = document.getElementById(`pat-${patID}`);
+          if (row) row.remove();
+        } else {
+          showPATAlert(`Error: ${response.message || "Could not delete token"}`, false);
+        }
+      });
+    },
+    "Delete",
+    "danger"
+  );
+}
+
 /* ── Event delegation — clicks ───────────────────────────────────── */
 document.addEventListener("click", function (event) {
   const target = event.target;
@@ -565,6 +686,25 @@ document.addEventListener("click", function (event) {
   if (target.closest("#btnUpdateNotificationSettings")) {
     event.preventDefault();
     UpdateNotificationSettings();
+    return;
+  }
+
+  if (target.closest("#btnCreatePAT")) {
+    event.preventDefault();
+    handleCreatePAT();
+    return;
+  }
+
+  if (target.closest("#btnSavePAT")) {
+    event.preventDefault();
+    handleSavePAT();
+    return;
+  }
+
+  const deletePatBtn = target.closest(".btn-delete-pat");
+  if (deletePatBtn) {
+    event.preventDefault();
+    handleDeletePAT(deletePatBtn);
     return;
   }
 
@@ -715,4 +855,5 @@ document.addEventListener("change", function (event) {
 /* ── Auto-load admin users on page load ─────────────────────────── */
 document.addEventListener("DOMContentLoaded", function () {
   loadAdminUsers();
+  loadPATs();
 });

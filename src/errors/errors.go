@@ -204,4 +204,19 @@ var (
 	 */
 	// ErrEmailNotVerified is thrown when a user attempts to login without verifying their email
 	ErrEmailNotVerified = errors.New("email address not verified")
+
+	/*
+	 * Personal Access Token related errors
+	 */
+	// ErrPATNotFound is thrown when a PAT does not exist
+	ErrPATNotFound = errors.New("personal access token not found")
+
+	// ErrPATExpired is thrown when a PAT has expired
+	ErrPATExpired = errors.New("personal access token expired")
+
+	// ErrPATInvalid is thrown when a PAT is invalid
+	ErrPATInvalid = errors.New("invalid personal access token")
+
+	// ErrPATInsufficientScope is thrown when a PAT lacks required scope
+	ErrPATInsufficientScope = errors.New("insufficient token scope")
 )

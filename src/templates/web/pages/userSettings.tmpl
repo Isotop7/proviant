@@ -143,6 +143,61 @@
         </div>
     </div>
 
+    {{/* ── API Tokens ──────────────────────────────────────────── */}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+            <h2 class="h5 mb-0 fw-semibold">API Tokens</h2>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnCreatePAT">
+                Create Token
+            </button>
+        </div>
+        <div class="card-body px-4 py-4">
+            <p class="text-body-secondary small mb-3">Personal access tokens let you authenticate with the API without a browser session.</p>
+            <ul class="list-group" id="patList">
+                <li class="list-group-item text-center text-muted py-3" id="patLoading">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
+                </li>
+            </ul>
+            <div id="patAlert" class="alert fade mt-2 d-none" role="alert"><span></span></div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="createPatModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create API Token</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createPatForm">
+                        <div class="mb-3">
+                            <label for="inputPatName" class="form-label fw-medium">
+                                Token Name <span class="text-danger" aria-hidden="true">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="inputPatName" required>
+                            <div class="invalid-feedback">Please enter a token name.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="inputPatExpiry" class="form-label fw-medium">
+                                Expires At <span class="text-body-secondary fw-normal">(optional)</span>
+                            </label>
+                            <input type="datetime-local" class="form-control" id="inputPatExpiry">
+                        </div>
+                    </form>
+                    <div id="newTokenDisplay" class="alert alert-success d-none">
+                        <strong>Token created!</strong> Copy it now. You won't see it again.
+                        <pre class="mt-2 mb-0 font-monospace" id="newTokenValue"></pre>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="btnSavePAT">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{/* ── Household ────────────────────────────────────────────── */}}
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white py-3 px-4">
