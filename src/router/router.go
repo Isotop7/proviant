@@ -130,11 +130,15 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
 	}
 	// Initialize JWT authentication and authorization middleware
-	jwtFrontendAuthUserAwareMiddlewareInitErr := jwtFrontendUserAwareMiddleware.MiddlewareInit()
-	if jwtFrontendAuthUserAwareMiddlewareInitErr != nil {
+	jwtAuthUserAwareMiddlewareInitErr = jwtAPIUserAwareMiddleware.MiddlewareInit()
+	if jwtAuthUserAwareMiddlewareInitErr != nil {
 		logger.Error().Msg(errors.ErrUserAwareAuthMiddlewareInit.Error())
 		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
 	}
+
+	// Wrap JWT middlewares with PAT support
+	jwtAPIMiddlewareWithPAT := PATMiddleware(jwtAPIMiddleware)
+	jwtAPIUserAwareMiddlewareWithPAT := PATMiddleware(jwtAPIUserAwareMiddleware)
 
 	// Map routes to handlers
 	// Health routes
@@ -156,12 +160,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Logout route (requires authentication)
 	logoutAuth := engine.Group("/auth")
-	logoutAuth.Use(jwtAPIMiddleware.MiddlewareFunc())
+	logoutAuth.Use(jwtAPIMiddlewareWithPAT)
 	logoutAuth.POST("/logout", auth.Logout)
 
 	// Public product routes
 	publicProductAPI := engine.Group("/api/v1/products")
-	publicProductAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	publicProductAPI.Use(jwtAPIMiddlewareWithPAT)
 	publicProductAPI.GET("", v1.GetProducts)
 	publicProductAPI.GET("/archived", v1.GetArchivedProducts)
 	publicProductAPI.GET("/expired", v1.GetExpired)
@@ -177,17 +181,20 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Protected user routes
 	protectedUserAPI := engine.Group("/api/v1/user")
-	protectedUserAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	protectedUserAPI.Use(jwtAPIMiddlewareWithPAT)
 	protectedUserAPI.PATCH("", v1.UpdateUser)
 	protectedUserAPI.POST("/password", v1.UpdateUserPassword)
 	protectedUserAPI.GET("/notification-preferences", v1.GetUserNotificationPreferences)
 	protectedUserAPI.POST("/notification-preferences", v1.UpdateUserNotificationPreferences)
 	protectedUserAPI.POST("/household/leave", v1.LeaveHousehold)
 	protectedUserAPI.POST("/household/create", v1.CreateHousehold)
+	protectedUserAPI.POST("/tokens", v1.CreateUserToken)
+	protectedUserAPI.GET("/tokens", v1.ListUserTokens)
+	protectedUserAPI.DELETE("/tokens/:id", v1.DeleteUserToken)
 
 	// Onboarding routes (require authentication)
 	onboardingAPI := engine.Group("/api/v1/onboarding")
-	onboardingAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	onboardingAPI.Use(jwtAPIMiddlewareWithPAT)
 	onboardingAPI.GET("/state", onboarding.GetOnboardingState)
 	onboardingAPI.GET("/households", onboarding.GetAvailableHouseholds)
 	onboardingAPI.POST("/apply-household", onboarding.ApplyForHousehold)
@@ -195,12 +202,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Notification routes
 	notificationAPI := engine.Group("/api/v1/notifications")
-	notificationAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	notificationAPI.Use(jwtAPIMiddlewareWithPAT)
 	notificationAPI.GET("", v1.GetNotifications)
 
 	// Household application routes
 	householdAPI := engine.Group("/api/v1/household")
-	householdAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	householdAPI.Use(jwtAPIMiddlewareWithPAT)
 	householdAPI.POST("/:id/apply", v1.ApplyForHousehold)
 	householdAPI.GET("/applications", v1.GetHouseholdApplications)
 	householdAPI.POST("/applications/:id/approve", v1.ApproveHouseholdApplication)
@@ -216,7 +223,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Admin user management routes
 	adminAPI := engine.Group("/api/v1/admin/users")
-	adminAPI.Use(jwtAPIMiddleware.MiddlewareFunc())
+	adminAPI.Use(jwtAPIMiddlewareWithPAT)
 	adminAPI.GET("", v1.GetHouseholdUsers)
 	adminAPI.PATCH("/:id", v1.UpdateHouseholdUser)
 	adminAPI.DELETE("/:id", v1.DeleteHouseholdUser)
@@ -224,7 +231,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")
-	protectedProductAPI.Use(jwtAPIUserAwareMiddleware.MiddlewareFunc())
+	protectedProductAPI.Use(jwtAPIUserAwareMiddlewareWithPAT)
 	protectedProductAPI.GET("/:id", v1.GetProduct)
 	protectedProductAPI.PATCH("/:id", v1.UpdateProduct)
 	protectedProductAPI.PATCH("/:id/amount", v1.UpdateProductAmount)

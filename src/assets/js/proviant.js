@@ -599,3 +599,38 @@ proviant.getNotifications = async function () {
   const body = await apiCall.json();
   return { code: apiCall.status, message: body };
 };
+
+proviant.createPAT = async function (name, expiresAt) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens`;
+  const payload = { name };
+  if (expiresAt) {
+    payload.expiresAt = expiresAt;
+  }
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.getPATs = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.deletePAT = async function (patID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens/${patID}`;
+  const apiCall = await fetch(url, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
