@@ -92,6 +92,9 @@ import "codeberg.org/isotop7/proviant/controllers"
 
 - [Constants](<#constants>)
 - [func GenerateEmailVerificationToken\(\) \(string, time.Time, error\)](<#GenerateEmailVerificationToken>)
+- [func GeneratePAT\(\) \(string, error\)](<#GeneratePAT>)
+- [func HashToken\(token string\) string](<#HashToken>)
+- [func ValidateAndLookupPAT\(token string, dbHandle \*gorm.DB\) \(\*authentication.PersonalAccessToken, error\)](<#ValidateAndLookupPAT>)
 - [type EmailNotificationProvider](<#EmailNotificationProvider>)
   - [func \(e \*EmailNotificationProvider\) GetProviderType\(\) string](<#EmailNotificationProvider.GetProviderType>)
   - [func \(e \*EmailNotificationProvider\) IsConfigured\(\) bool](<#EmailNotificationProvider.IsConfigured>)
@@ -129,11 +132,50 @@ const EmailVerificationTokenDuration = 24 * time.Hour
 const EmailVerificationTokenLength = 32
 ```
 
+<a name="TokenLength"></a>
+
+```go
+const TokenLength = 40
+```
+
+<a name="TokenPrefix"></a>
+
+```go
+const TokenPrefix = "proviant_pat_" // #nosec G101 -- this is a public token prefix, not a secret
+```
+
 <a name="GenerateEmailVerificationToken"></a>
 ## func GenerateEmailVerificationToken
 
 ```go
 func GenerateEmailVerificationToken() (string, time.Time, error)
+```
+
+
+
+<a name="GeneratePAT"></a>
+## func GeneratePAT
+
+```go
+func GeneratePAT() (string, error)
+```
+
+
+
+<a name="HashToken"></a>
+## func HashToken
+
+```go
+func HashToken(token string) string
+```
+
+
+
+<a name="ValidateAndLookupPAT"></a>
+## func ValidateAndLookupPAT
+
+```go
+func ValidateAndLookupPAT(token string, dbHandle *gorm.DB) (*authentication.PersonalAccessToken, error)
 ```
 
 
@@ -599,6 +641,21 @@ var (
      */
     // ErrEmailNotVerified is thrown when a user attempts to login without verifying their email
     ErrEmailNotVerified = errors.New("email address not verified")
+
+    /*
+     * Personal Access Token related errors
+     */
+    // ErrPATNotFound is thrown when a PAT does not exist
+    ErrPATNotFound = errors.New("personal access token not found")
+
+    // ErrPATExpired is thrown when a PAT has expired
+    ErrPATExpired = errors.New("personal access token expired")
+
+    // ErrPATInvalid is thrown when a PAT is invalid
+    ErrPATInvalid = errors.New("invalid personal access token")
+
+    // ErrPATInsufficientScope is thrown when a PAT lacks required scope
+    ErrPATInsufficientScope = errors.New("insufficient token scope")
 )
 ```
 
@@ -765,6 +822,7 @@ router contains the gin router definitions and maps requests to handlers
 - [func AuthorizatorNotUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorNotUserAware>)
 - [func AuthorizatorUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorUserAware>)
 - [func JWTMiddleware\(proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
+- [func PATMiddleware\(jwtMiddleware \*jwt.GinJWTMiddleware\) gin.HandlerFunc](<#PATMiddleware>)
 - [func SecurityHeadersMiddleware\(proviantConfig \*configuration.ProviantConfiguration\) gin.HandlerFunc](<#SecurityHeadersMiddleware>)
 - [func SetupRouter\(logger \*zerolog.Logger, proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl \*controllers.OpenFoodFactsAPIController, notificationController \*controllers.NotificationController\) \*gin.Engine](<#SetupRouter>)
 - [func UnauthorizedAPIFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedAPIFunc>)
@@ -798,6 +856,15 @@ func JWTMiddleware(proviantConfiguration *configuration.ProviantConfiguration, d
 ```
 
 JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization \(optional\)
+
+<a name="PATMiddleware"></a>
+## func PATMiddleware
+
+```go
+func PATMiddleware(jwtMiddleware *jwt.GinJWTMiddleware) gin.HandlerFunc
+```
+
+
 
 <a name="SecurityHeadersMiddleware"></a>
 ## func SecurityHeadersMiddleware
@@ -1191,6 +1258,7 @@ v1 implements version 1 of the proviant API
 
 ## Index
 
+- [Constants](<#constants>)
 - [func AdminResetUserPassword\(ctx \*gin.Context\)](<#AdminResetUserPassword>)
 - [func ApplyForHousehold\(ctx \*gin.Context\)](<#ApplyForHousehold>)
 - [func ApproveHouseholdApplication\(ctx \*gin.Context\)](<#ApproveHouseholdApplication>)
@@ -1199,16 +1267,22 @@ v1 implements version 1 of the proviant API
 - [func BulkRestoreProducts\(ctx \*gin.Context\)](<#BulkRestoreProducts>)
 - [func CancelHouseholdApplication\(ctx \*gin.Context\)](<#CancelHouseholdApplication>)
 - [func CancelInvitation\(ctx \*gin.Context\)](<#CancelInvitation>)
+- [func CreateCalendarToken\(ctx \*gin.Context\)](<#CreateCalendarToken>)
 - [func CreateHousehold\(ctx \*gin.Context\)](<#CreateHousehold>)
 - [func CreateInvitation\(ctx \*gin.Context\)](<#CreateInvitation>)
 - [func CreateProduct\(ctx \*gin.Context\)](<#CreateProduct>)
+- [func CreateUserToken\(ctx \*gin.Context\)](<#CreateUserToken>)
+- [func DeleteCalendarToken\(ctx \*gin.Context\)](<#DeleteCalendarToken>)
 - [func DeleteHouseholdUser\(ctx \*gin.Context\)](<#DeleteHouseholdUser>)
 - [func DeleteProduct\(ctx \*gin.Context\)](<#DeleteProduct>)
+- [func DeleteUserToken\(ctx \*gin.Context\)](<#DeleteUserToken>)
 - [func ExportArchiveCSV\(ctx \*gin.Context\)](<#ExportArchiveCSV>)
 - [func ExportFullJSON\(ctx \*gin.Context\)](<#ExportFullJSON>)
+- [func ExportICalendar\(ctx \*gin.Context\)](<#ExportICalendar>)
 - [func ExportProductsCSV\(ctx \*gin.Context\)](<#ExportProductsCSV>)
 - [func ExportProductsJSON\(ctx \*gin.Context\)](<#ExportProductsJSON>)
 - [func GetArchivedProducts\(ctx \*gin.Context\)](<#GetArchivedProducts>)
+- [func GetCalendarTokenStatus\(ctx \*gin.Context\)](<#GetCalendarTokenStatus>)
 - [func GetExpired\(ctx \*gin.Context\)](<#GetExpired>)
 - [func GetHouseholdApplications\(ctx \*gin.Context\)](<#GetHouseholdApplications>)
 - [func GetHouseholdUsers\(ctx \*gin.Context\)](<#GetHouseholdUsers>)
@@ -1221,6 +1295,7 @@ v1 implements version 1 of the proviant API
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context\)](<#GetUserNotificationPreferences>)
 - [func LeaveHousehold\(ctx \*gin.Context\)](<#LeaveHousehold>)
+- [func ListUserTokens\(ctx \*gin.Context\)](<#ListUserTokens>)
 - [func RejectHouseholdApplication\(ctx \*gin.Context\)](<#RejectHouseholdApplication>)
 - [func RemoveHouseholdMember\(ctx \*gin.Context\)](<#RemoveHouseholdMember>)
 - [func RestoreProduct\(ctx \*gin.Context\)](<#RestoreProduct>)
@@ -1234,11 +1309,29 @@ v1 implements version 1 of the proviant API
 - [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
 - [func UpdateUserNotificationPreferences\(ctx \*gin.Context\)](<#UpdateUserNotificationPreferences>)
 - [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
+- [type CalendarTokenResponse](<#CalendarTokenResponse>)
 - [type FullExportHousehold](<#FullExportHousehold>)
 - [type FullExportMember](<#FullExportMember>)
 - [type FullExportProducts](<#FullExportProducts>)
 - [type FullExportResponse](<#FullExportResponse>)
 
+
+## Constants
+
+<a name="CalendarExpireDays"></a>
+
+```go
+const (
+    CalendarExpireDays = 30
+    CalendarProdID     = "-//Proviant//ProductExpiry//EN"
+)
+```
+
+<a name="CalendarTokenLength"></a>
+
+```go
+const CalendarTokenLength = 32
+```
 
 <a name="AdminResetUserPassword"></a>
 ## func AdminResetUserPassword
@@ -1312,6 +1405,15 @@ func CancelInvitation(ctx *gin.Context)
 
 CancelInvitation cancels a pending invitation. @Summary Cancel invitation @Description Cancels a pending invitation by ID @Tags Invitation @Produce json @Param id path int true "Invitation ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations/\{id\} \[delete\]
 
+<a name="CreateCalendarToken"></a>
+## func CreateCalendarToken
+
+```go
+func CreateCalendarToken(ctx *gin.Context)
+```
+
+CreateCalendarToken creates a new calendar token for CalDAV/iCal subscription @Summary Create calendar token @Description Creates or regenerates a personal calendar token for iCal/CalDAV subscription. Old token is invalidated. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 201 \{object\} CalendarTokenResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token \[post\]
+
 <a name="CreateHousehold"></a>
 ## func CreateHousehold
 
@@ -1339,6 +1441,24 @@ func CreateProduct(ctx *gin.Context)
 
 CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
 
+<a name="CreateUserToken"></a>
+## func CreateUserToken
+
+```go
+func CreateUserToken(ctx *gin.Context)
+```
+
+
+
+<a name="DeleteCalendarToken"></a>
+## func DeleteCalendarToken
+
+```go
+func DeleteCalendarToken(ctx *gin.Context)
+```
+
+DeleteCalendarToken removes the user's calendar token @Summary Delete calendar token @Description Removes the personal calendar token, invalidating any active iCal/CalDAV subscriptions. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token \[delete\]
+
 <a name="DeleteHouseholdUser"></a>
 ## func DeleteHouseholdUser
 
@@ -1357,6 +1477,15 @@ func DeleteProduct(ctx *gin.Context)
 
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param archiveOnly query bool false "Archive only" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
 
+<a name="DeleteUserToken"></a>
+## func DeleteUserToken
+
+```go
+func DeleteUserToken(ctx *gin.Context)
+```
+
+
+
 <a name="ExportArchiveCSV"></a>
 ## func ExportArchiveCSV
 
@@ -1374,6 +1503,15 @@ func ExportFullJSON(ctx *gin.Context)
 ```
 
 ExportFullJSON exports all household data as JSON. @Summary Export all household data as JSON @Description Returns a comprehensive JSON export including household info, members, products, and statistics @Tags export @Produce application/json @Success 200 \{object\} FullExportResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/full.json \[get\]
+
+<a name="ExportICalendar"></a>
+## func ExportICalendar
+
+```go
+func ExportICalendar(ctx *gin.Context)
+```
+
+ExportICalendar returns an iCalendar feed of products expiring in the next 30 days @Summary Export iCalendar feed @Description Returns an iCalendar \(RFC 5545\) feed with VEVENTs for products expiring in the next 30 days. Use the token query parameter for authentication. @Tags calendar @Produce text/calendar @Param token query string true "Calendar token for authentication" @Success 200 \{string\} string "iCalendar feed" @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/export.ics \[get\]
 
 <a name="ExportProductsCSV"></a>
 ## func ExportProductsCSV
@@ -1401,6 +1539,15 @@ func GetArchivedProducts(ctx *gin.Context)
 ```
 
 GetArchivedProducts returns the archived products of a user @Summary Return a list of archived products @Description Return a list of archived products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/archived \[get\]
+
+<a name="GetCalendarTokenStatus"></a>
+## func GetCalendarTokenStatus
+
+```go
+func GetCalendarTokenStatus(ctx *gin.Context)
+```
+
+GetCalendarTokenStatus returns the user's calendar token status and subscription URL @Summary Get calendar token status @Description Returns whether the user has a calendar token and the subscription URL for iCal/CalDAV. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 200 \{object\} map\[string\]interface\{\} @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token \[get\]
 
 <a name="GetExpired"></a>
 ## func GetExpired
@@ -1511,6 +1658,15 @@ func LeaveHousehold(ctx *gin.Context)
 ```
 
 LeaveHousehold removes the calling user from their current household and assigns them a new personal one. @Summary Leave current household @Description Creates a new personal household for the user. Products are moved if they were the sole member. @Tags household @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/household/leave \[post\]
+
+<a name="ListUserTokens"></a>
+## func ListUserTokens
+
+```go
+func ListUserTokens(ctx *gin.Context)
+```
+
+
 
 <a name="RejectHouseholdApplication"></a>
 ## func RejectHouseholdApplication
@@ -1629,6 +1785,18 @@ func UpdateUserPassword(ctx *gin.Context)
 
 UpdateUserPassword updates a user password @Summary Updates a user password @Description Updates password of a user @Tags user @Accept json @Produce json @Param login body authentication.Login true "Login" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/password \[post\]
 
+<a name="CalendarTokenResponse"></a>
+## type CalendarTokenResponse
+
+
+
+```go
+type CalendarTokenResponse struct {
+    Token string `json:"token"`
+    URL   string `json:"url"`
+}
+```
+
 <a name="FullExportHousehold"></a>
 ## type FullExportHousehold
 
@@ -1691,6 +1859,12 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 - [Constants](<#constants>)
 - [type BulkOperationError](<#BulkOperationError>)
   - [func \(b \*BulkOperationError\) Error\(\) string](<#BulkOperationError.Error>)
+- [type CalendarTokenRepository](<#CalendarTokenRepository>)
+  - [func NewCalendarTokenRepository\(db \*gorm.DB\) \*CalendarTokenRepository](<#NewCalendarTokenRepository>)
+  - [func \(r \*CalendarTokenRepository\) Create\(ct \*authentication.CalendarToken\) error](<#CalendarTokenRepository.Create>)
+  - [func \(r \*CalendarTokenRepository\) DeleteByUserID\(userID uint\) error](<#CalendarTokenRepository.DeleteByUserID>)
+  - [func \(r \*CalendarTokenRepository\) GetByToken\(token string\) \(authentication.CalendarToken, error\)](<#CalendarTokenRepository.GetByToken>)
+  - [func \(r \*CalendarTokenRepository\) GetByUserID\(userID uint\) \(authentication.CalendarToken, error\)](<#CalendarTokenRepository.GetByUserID>)
 - [type HouseholdRepository](<#HouseholdRepository>)
   - [func NewHouseholdRepository\(db \*gorm.DB\) \*HouseholdRepository](<#NewHouseholdRepository>)
   - [func \(r \*HouseholdRepository\) ApplyForHousehold\(applicantID, householdID uint\) error](<#HouseholdRepository.ApplyForHousehold>)
@@ -1741,6 +1915,14 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*NotificationRepository\) MarkOnboardingComplete\(userID uint\) error](<#NotificationRepository.MarkOnboardingComplete>)
   - [func \(r \*NotificationRepository\) SetProductNotifiedAt\(productID uint\) error](<#NotificationRepository.SetProductNotifiedAt>)
 - [type NotificationRepositoryInterface](<#NotificationRepositoryInterface>)
+- [type PATRepository](<#PATRepository>)
+  - [func NewPATRepository\(db \*gorm.DB\) \*PATRepository](<#NewPATRepository>)
+  - [func \(r \*PATRepository\) CreatePAT\(userID uint, name, tokenHash string, expiresAt \*time.Time, scopes string\) \(\*authentication.PersonalAccessToken, error\)](<#PATRepository.CreatePAT>)
+  - [func \(r \*PATRepository\) DeletePAT\(patID uint, userID uint\) error](<#PATRepository.DeletePAT>)
+  - [func \(r \*PATRepository\) GetPATByID\(patID uint\) \(\*authentication.PersonalAccessToken, error\)](<#PATRepository.GetPATByID>)
+  - [func \(r \*PATRepository\) GetPATByTokenHash\(tokenHash string\) \(\*authentication.PersonalAccessToken, error\)](<#PATRepository.GetPATByTokenHash>)
+  - [func \(r \*PATRepository\) GetPATsByUserID\(userID uint\) \(\[\]authentication.PersonalAccessToken, error\)](<#PATRepository.GetPATsByUserID>)
+  - [func \(r \*PATRepository\) UpdateLastUsed\(patID uint\) error](<#PATRepository.UpdateLastUsed>)
 - [type ProductRepository](<#ProductRepository>)
   - [func NewProductRepository\(db \*gorm.DB\) \*ProductRepository](<#NewProductRepository>)
   - [func \(r \*ProductRepository\) BulkArchiveProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkArchiveProducts>)
@@ -1753,6 +1935,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetArchivedProductByID\(productID int, userID uint\) \(database.Product, error\)](<#ProductRepository.GetArchivedProductByID>)
   - [func \(r \*ProductRepository\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetArchivedProductsGroupedByBarcode>)
   - [func \(r \*ProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetExpiredProductsCount>)
+  - [func \(r \*ProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringInDays>)
   - [func \(r \*ProductRepository\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#ProductRepository.GetExpiringSoonProducts>)
   - [func \(r \*ProductRepository\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#ProductRepository.GetExpiryTrend>)
   - [func \(r \*ProductRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#ProductRepository.GetHouseholdByID>)
@@ -1837,6 +2020,62 @@ type BulkOperationError struct {
 
 ```go
 func (b *BulkOperationError) Error() string
+```
+
+
+
+<a name="CalendarTokenRepository"></a>
+## type CalendarTokenRepository
+
+
+
+```go
+type CalendarTokenRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewCalendarTokenRepository"></a>
+### func NewCalendarTokenRepository
+
+```go
+func NewCalendarTokenRepository(db *gorm.DB) *CalendarTokenRepository
+```
+
+
+
+<a name="CalendarTokenRepository.Create"></a>
+### func \(\*CalendarTokenRepository\) Create
+
+```go
+func (r *CalendarTokenRepository) Create(ct *authentication.CalendarToken) error
+```
+
+
+
+<a name="CalendarTokenRepository.DeleteByUserID"></a>
+### func \(\*CalendarTokenRepository\) DeleteByUserID
+
+```go
+func (r *CalendarTokenRepository) DeleteByUserID(userID uint) error
+```
+
+
+
+<a name="CalendarTokenRepository.GetByToken"></a>
+### func \(\*CalendarTokenRepository\) GetByToken
+
+```go
+func (r *CalendarTokenRepository) GetByToken(token string) (authentication.CalendarToken, error)
+```
+
+
+
+<a name="CalendarTokenRepository.GetByUserID"></a>
+### func \(\*CalendarTokenRepository\) GetByUserID
+
+```go
+func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.CalendarToken, error)
 ```
 
 
@@ -2318,6 +2557,80 @@ type NotificationRepositoryInterface interface {
 }
 ```
 
+<a name="PATRepository"></a>
+## type PATRepository
+
+
+
+```go
+type PATRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewPATRepository"></a>
+### func NewPATRepository
+
+```go
+func NewPATRepository(db *gorm.DB) *PATRepository
+```
+
+
+
+<a name="PATRepository.CreatePAT"></a>
+### func \(\*PATRepository\) CreatePAT
+
+```go
+func (r *PATRepository) CreatePAT(userID uint, name, tokenHash string, expiresAt *time.Time, scopes string) (*authentication.PersonalAccessToken, error)
+```
+
+
+
+<a name="PATRepository.DeletePAT"></a>
+### func \(\*PATRepository\) DeletePAT
+
+```go
+func (r *PATRepository) DeletePAT(patID uint, userID uint) error
+```
+
+
+
+<a name="PATRepository.GetPATByID"></a>
+### func \(\*PATRepository\) GetPATByID
+
+```go
+func (r *PATRepository) GetPATByID(patID uint) (*authentication.PersonalAccessToken, error)
+```
+
+
+
+<a name="PATRepository.GetPATByTokenHash"></a>
+### func \(\*PATRepository\) GetPATByTokenHash
+
+```go
+func (r *PATRepository) GetPATByTokenHash(tokenHash string) (*authentication.PersonalAccessToken, error)
+```
+
+
+
+<a name="PATRepository.GetPATsByUserID"></a>
+### func \(\*PATRepository\) GetPATsByUserID
+
+```go
+func (r *PATRepository) GetPATsByUserID(userID uint) ([]authentication.PersonalAccessToken, error)
+```
+
+
+
+<a name="PATRepository.UpdateLastUsed"></a>
+### func \(\*PATRepository\) UpdateLastUsed
+
+```go
+func (r *PATRepository) UpdateLastUsed(patID uint) error
+```
+
+
+
 <a name="ProductRepository"></a>
 ## type ProductRepository
 
@@ -2424,6 +2737,15 @@ func (r *ProductRepository) GetArchivedProductsGroupedByBarcode(userID uint) (ma
 
 ```go
 func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error)
+```
+
+
+
+<a name="ProductRepository.GetExpiringInDays"></a>
+### func \(\*ProductRepository\) GetExpiringInDays
+
+```go
+func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database.Product, error)
 ```
 
 
@@ -2954,6 +3276,8 @@ import "codeberg.org/isotop7/proviant/models/api"
 ## Index
 
 - [type BulkProductsAPIModel](<#BulkProductsAPIModel>)
+- [type CreateTokenRequest](<#CreateTokenRequest>)
+- [type CreateTokenResponse](<#CreateTokenResponse>)
 - [type HouseholdListItem](<#HouseholdListItem>)
 - [type NotificationItem](<#NotificationItem>)
 - [type NotificationsResponse](<#NotificationsResponse>)
@@ -2962,6 +3286,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ProductStatsResponse](<#ProductStatsResponse>)
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
+- [type TokenResponse](<#TokenResponse>)
 
 
 <a name="BulkProductsAPIModel"></a>
@@ -2972,6 +3297,33 @@ BulkProductsAPIModel represents a bulk product operation request
 ```go
 type BulkProductsAPIModel struct {
     ProductIDs []string `json:"productIDs"`
+}
+```
+
+<a name="CreateTokenRequest"></a>
+## type CreateTokenRequest
+
+
+
+```go
+type CreateTokenRequest struct {
+    Name      string  `json:"name" binding:"required"`
+    ExpiresAt *string `json:"expiresAt"`
+    Scopes    string  `json:"scopes"`
+}
+```
+
+<a name="CreateTokenResponse"></a>
+## type CreateTokenResponse
+
+
+
+```go
+type CreateTokenResponse struct {
+    Token     string  `json:"token"`
+    Name      string  `json:"name"`
+    ExpiresAt *string `json:"expiresAt"`
+    Scopes    string  `json:"scopes"`
 }
 ```
 
@@ -3083,6 +3435,22 @@ type StatsMonthlyCount struct {
 }
 ```
 
+<a name="TokenResponse"></a>
+## type TokenResponse
+
+
+
+```go
+type TokenResponse struct {
+    ID         uint    `json:"id"`
+    Name       string  `json:"name"`
+    LastUsedAt *string `json:"lastUsedAt"`
+    ExpiresAt  *string `json:"expiresAt"`
+    Scopes     string  `json:"scopes"`
+    CreatedAt  string  `json:"createdAt"`
+}
+```
+
 # authentication
 
 ```go
@@ -3091,6 +3459,7 @@ import "codeberg.org/isotop7/proviant/models/authentication"
 
 ## Index
 
+- [type CalendarToken](<#CalendarToken>)
 - [type Login](<#Login>)
   - [func \(login \*Login\) IsValid\(\) error](<#Login.IsValid>)
   - [func \(login \*Login\) IsValidWithValidator\(validator \*PasswordValidator\) error](<#Login.IsValidWithValidator>)
@@ -3102,6 +3471,7 @@ import "codeberg.org/isotop7/proviant/models/authentication"
   - [func PasswordValidatorFromConfig\(cfg PasswordConfig\) \*PasswordValidator](<#PasswordValidatorFromConfig>)
   - [func \(pv \*PasswordValidator\) Validate\(password string\) error](<#PasswordValidator.Validate>)
   - [func \(pv \*PasswordValidator\) ValidateAll\(password string\) \[\]error](<#PasswordValidator.ValidateAll>)
+- [type PersonalAccessToken](<#PersonalAccessToken>)
 - [type RevokedToken](<#RevokedToken>)
 - [type Signup](<#Signup>)
   - [func \(signup \*Signup\) IsValid\(\) error](<#Signup.IsValid>)
@@ -3110,6 +3480,19 @@ import "codeberg.org/isotop7/proviant/models/authentication"
   - [func \(user \*User\) IsValid\(skipPassword bool\) error](<#User.IsValid>)
   - [func \(user \*User\) IsValidWithValidator\(skipPassword bool, validator \*PasswordValidator\) error](<#User.IsValidWithValidator>)
 
+
+<a name="CalendarToken"></a>
+## type CalendarToken
+
+
+
+```go
+type CalendarToken struct {
+    gorm.Model
+    UserID uint   `gorm:"index, not null"`
+    Token  string `gorm:"uniqueIndex, not null"`
+}
+```
 
 <a name="Login"></a>
 ## type Login
@@ -3227,6 +3610,23 @@ func (pv *PasswordValidator) ValidateAll(password string) []error
 ```
 
 
+
+<a name="PersonalAccessToken"></a>
+## type PersonalAccessToken
+
+
+
+```go
+type PersonalAccessToken struct {
+    gorm.Model
+    UserID     uint       `gorm:"index;not null"`
+    Name       string     `gorm:"not null"`
+    TokenHash  string     `gorm:"uniqueIndex;not null"`
+    LastUsedAt *time.Time `gorm:"index"`
+    ExpiresAt  *time.Time `gorm:"index"`
+    Scopes     string     `gorm:"default:''"`
+}
+```
 
 <a name="RevokedToken"></a>
 ## type RevokedToken

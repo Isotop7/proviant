@@ -309,6 +309,13 @@ definitions:
         description: Valid is true if Time is not NULL
         type: boolean
     type: object
+  v1.CalendarTokenResponse:
+    properties:
+      token:
+        type: string
+      url:
+        type: string
+    type: object
   v1.FullExportHousehold:
     properties:
       created_at:
@@ -405,6 +412,123 @@ paths:
       summary: Gets health
       tags:
       - common
+  /api/v1/calendar/export.ics:
+    get:
+      description: Returns an iCalendar (RFC 5545) feed with VEVENTs for products
+        expiring in the next 30 days. Use the token query parameter for authentication.
+      parameters:
+      - description: Calendar token for authentication
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - text/calendar
+      responses:
+        "200":
+          description: iCalendar feed
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Export iCalendar feed
+      tags:
+      - calendar
+  /api/v1/calendar/token:
+    delete:
+      consumes:
+      - application/json
+      description: Removes the personal calendar token, invalidating any active iCal/CalDAV
+        subscriptions.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete calendar token
+      tags:
+      - calendar
+    get:
+      consumes:
+      - application/json
+      description: Returns whether the user has a calendar token and the subscription
+        URL for iCal/CalDAV.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get calendar token status
+      tags:
+      - calendar
+    post:
+      consumes:
+      - application/json
+      description: Creates or regenerates a personal calendar token for iCal/CalDAV
+        subscription. Old token is invalidated.
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/v1.CalendarTokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create calendar token
+      tags:
+      - calendar
   /api/v1/household/{id}/apply:
     post:
       description: Creates a pending application for the calling user to join the

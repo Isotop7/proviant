@@ -143,6 +143,60 @@
         </div>
     </div>
 
+    {{/* ── Calendar Sync ─────────────────────────────────────────── */}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+            <h2 class="h5 mb-0 fw-semibold">Calendar Sync</h2>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnCalendarRegenerate">
+                Regenerate Token
+            </button>
+        </div>
+        <div class="card-body px-4 py-4">
+            <p class="text-body-secondary small mb-3">Subscribe to your product expiry dates in Google Calendar, Apple Calendar, or Thunderbird using the iCal feed URL below.</p>
+
+            <div id="calendarNoToken">
+                <i class="bi bi-calendar-x text-muted fs-1 mb-3 d-block"></i>
+                <p class="text-muted mb-3">No calendar token configured.</p>
+                <button type="button" class="btn btn-primary" id="btnCalendarCreate">
+                    <i class="bi bi-plus-lg me-1"></i>Generate Calendar Token
+                </button>
+            </div>
+
+            <div id="calendarHasToken" class="d-none">
+                <div class="mb-3">
+                    <label class="form-label fw-medium">iCal Subscription URL</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control font-monospace small" id="calendarUrl" readonly
+                               value="">
+                        <button type="button" class="btn btn-outline-secondary" id="btnCalendarCopy" title="Copy URL">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="btnCalendarDownload" title="Download .ics">
+                            <i class="bi bi-download"></i>
+                        </button>
+                    </div>
+                    <div id="calendarUrlCopied" class="form-text text-success d-none">
+                        <i class="bi bi-check-circle me-1"></i>URL copied to clipboard!
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Instructions</label>
+                    <ol class="text-body-secondary small mb-0">
+                        <li>Copy the subscription URL above</li>
+                        <li>Open your calendar app (Google Calendar, Apple Calendar, Thunderbird)</li>
+                        <li>Add a new calendar subscription with that URL</li>
+                        <li>Calendar events will appear for products expiring in the next 30 days</li>
+                    </ol>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="btnCalendarRemove">
+                    <i class="bi bi-trash me-1"></i>Remove Calendar Sync
+                </button>
+            </div>
+
+            <div id="calendarAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
+        </div>
+    </div>
+
     {{/* ── API Tokens ──────────────────────────────────────────── */}}
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">

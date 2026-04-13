@@ -243,6 +243,14 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedProductAPI.POST("/:id/restore", v1.RestoreProduct)
 	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)
 
+	// Calendar routes (export uses token query param, token management uses JWT)
+	calendarAPI := engine.Group("/api/v1/calendar")
+	calendarAPI.GET("/export.ics", v1.ExportICalendar)
+	calendarAPI.Use(jwtAPIMiddlewareWithPAT)
+	calendarAPI.POST("/token", v1.CreateCalendarToken)
+	calendarAPI.DELETE("/token", v1.DeleteCalendarToken)
+	calendarAPI.GET("/token", v1.GetCalendarTokenStatus)
+
 	// PWA — serve manifest and service worker at root scope (no auth required)
 	engine.GET("/manifest.json", func(ctx *gin.Context) {
 		content, readErr := assets.AssetFiles.ReadFile("manifest.json")

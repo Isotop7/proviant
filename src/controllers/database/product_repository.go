@@ -611,6 +611,34 @@ func (r *ProductRepository) GetLastNotifiedProduct(householdID uint) (database.P
 	return lastNotifiedProduct, getNotifiedError.Error
 }
 
+func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database.Product, error) {
+	var user authentication.User
+	if err := r.DB.First(&user, userID).Error; err != nil {
+		return []database.Product{}, err
+	}
+
+	if user.HouseholdID == 0 {
+		return []database.Product{}, errors.ErrInvalidUserData
+	}
+
+	now := time.Now()
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
+
+	var products []database.Product
+	err := r.DB.
+		Where("household_id = ?", user.HouseholdID).
+		Where("deleted_at IS NULL").
+		Where("expire_at >= ?", startOfToday).
+		Where("expire_at <= ?", endOfWindow).
+		Order("expire_at ASC").
+		Find(&products).Error
+	if err != nil {
+		return []database.Product{}, err
+	}
+	return products, nil
+}
+
 func (r *ProductRepository) GetLastInsertedProduct(householdID uint) (database.Product, error) {
 	var lastProduct database.Product
 	getError := r.DB.
@@ -729,6 +757,34 @@ func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentic
 	var users []authentication.User
 	err := r.DB.Where("household_id = ?", householdID).Find(&users).Error
 	return users, err
+}
+
+type CalendarTokenRepository struct {
+	DB *gorm.DB
+}
+
+func NewCalendarTokenRepository(db *gorm.DB) *CalendarTokenRepository {
+	return &CalendarTokenRepository{DB: db}
+}
+
+func (r *CalendarTokenRepository) GetByToken(token string) (authentication.CalendarToken, error) {
+	var ct authentication.CalendarToken
+	err := r.DB.Where("token = ?", token).First(&ct).Error
+	return ct, err
+}
+
+func (r *CalendarTokenRepository) DeleteByUserID(userID uint) error {
+	return r.DB.Where("user_id = ?", userID).Delete(&authentication.CalendarToken{}).Error
+}
+
+func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.CalendarToken, error) {
+	var ct authentication.CalendarToken
+	err := r.DB.Where("user_id = ?", userID).First(&ct).Error
+	return ct, err
+}
+
+func (r *CalendarTokenRepository) Create(ct *authentication.CalendarToken) error {
+	return r.DB.Create(ct).Error
 }
 
 var _ = (*ProductRepository)(nil)

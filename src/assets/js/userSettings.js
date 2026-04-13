@@ -815,6 +815,36 @@ document.addEventListener("click", function (event) {
     });
     return;
   }
+
+  if (target.closest("#btnCalendarCreate")) {
+    event.preventDefault();
+    handleCalendarCreate();
+    return;
+  }
+
+  if (target.closest("#btnCalendarRegenerate")) {
+    event.preventDefault();
+    handleCalendarRegenerate();
+    return;
+  }
+
+  if (target.closest("#btnCalendarCopy")) {
+    event.preventDefault();
+    handleCalendarCopy();
+    return;
+  }
+
+  if (target.closest("#btnCalendarDownload")) {
+    event.preventDefault();
+    handleCalendarDownload();
+    return;
+  }
+
+  if (target.closest("#btnCalendarRemove")) {
+    event.preventDefault();
+    handleCalendarRemove();
+    return;
+  }
 });
 
 /* ── Event delegation — inputs ───────────────────────────────────── */
@@ -856,4 +886,145 @@ document.addEventListener("change", function (event) {
 document.addEventListener("DOMContentLoaded", function () {
   loadAdminUsers();
   loadPATs();
+  loadCalendarTokenStatus();
 });
+
+/* ── Calendar Token Management ──────────────────────────────────── */
+function showCalendarAlert(message, isSuccess) {
+  const el = document.getElementById("calendarAlert");
+  if (!el) return;
+  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
+  const span = el.querySelector("span") || el;
+  span.textContent = message;
+  el.classList.remove("d-none");
+  el.classList.add("show");
+  setTimeout(() => {
+    el.classList.remove("show");
+  }, 5000);
+}
+
+function loadCalendarTokenStatus() {
+  proviant.getCalendarTokenStatus().then((response) => {
+    if (response.code === 200) {
+      const hasToken = response.message.hasToken;
+      const url = response.message.url;
+
+      const noTokenEl = document.getElementById("calendarNoToken");
+      const hasTokenEl = document.getElementById("calendarHasToken");
+      const urlInput = document.getElementById("calendarUrl");
+
+      if (hasToken && url) {
+        noTokenEl.classList.add("d-none");
+        hasTokenEl.classList.remove("d-none");
+        urlInput.value = url;
+      } else {
+        noTokenEl.classList.remove("d-none");
+        hasTokenEl.classList.add("d-none");
+      }
+    }
+  });
+}
+
+function handleCalendarCreate() {
+  const btn = document.getElementById("btnCalendarCreate");
+  if (btn) {
+    setButtonLoading(btn, true);
+  }
+
+  proviant.createCalendarToken().then((response) => {
+    if (btn) setButtonLoading(btn, false);
+    if (response.code === 201) {
+      const url = response.message.url;
+      const noTokenEl = document.getElementById("calendarNoToken");
+      const hasTokenEl = document.getElementById("calendarHasToken");
+      const urlInput = document.getElementById("calendarUrl");
+
+      noTokenEl.classList.add("d-none");
+      hasTokenEl.classList.remove("d-none");
+      urlInput.value = url;
+
+      showCalendarAlert("Calendar token created. Subscribe using the URL above.", true);
+    } else {
+      showCalendarAlert(`Error: ${response.message || "Failed to create calendar token"}`, false);
+    }
+  });
+}
+
+function handleCalendarRegenerate() {
+  proviant.showConfirm(
+    "Regenerate Token",
+    "This will invalidate your current calendar URL and create a new one. Update your calendar subscription with the new URL.",
+    function () {
+      const btn = document.getElementById("btnCalendarRegenerate");
+      if (btn) setButtonLoading(btn, true);
+
+      proviant.createCalendarToken().then((response) => {
+        if (btn) setButtonLoading(btn, false);
+        if (response.code === 201) {
+          const url = response.message.url;
+          const urlInput = document.getElementById("calendarUrl");
+          urlInput.value = url;
+          showCalendarAlert("Calendar token regenerated with new URL.", true);
+        } else {
+          showCalendarAlert(`Error: ${response.message || "Failed to regenerate calendar token"}`, false);
+        }
+      });
+    },
+    "Regenerate",
+    "warning"
+  );
+}
+
+function handleCalendarCopy() {
+  const urlInput = document.getElementById("calendarUrl");
+  if (!urlInput || !urlInput.value) return;
+
+  proviant.copyToClipboard(urlInput.value).then((success) => {
+    const copiedEl = document.getElementById("calendarUrlCopied");
+    if (copiedEl) {
+      if (success) {
+        copiedEl.classList.remove("d-none");
+        setTimeout(() => {
+          copiedEl.classList.add("d-none");
+        }, 3000);
+      }
+    }
+  });
+}
+
+function handleCalendarDownload() {
+  const urlInput = document.getElementById("calendarUrl");
+  if (!urlInput || !urlInput.value) return;
+
+  const url = urlInput.value;
+  const tokenMatch = url.match(/token=([^&]+)/);
+  if (tokenMatch && tokenMatch[1]) {
+    proviant.downloadCalendarICS(tokenMatch[1]);
+  }
+}
+
+function handleCalendarRemove() {
+  proviant.showConfirm(
+    "Remove Calendar Sync",
+    "This will delete your calendar token and invalidate the subscription URL. Your calendar app will stop receiving updates.",
+    function () {
+      proviant.deleteCalendarToken().then((response) => {
+        if (response.code === 200) {
+          const noTokenEl = document.getElementById("calendarNoToken");
+          const hasTokenEl = document.getElementById("calendarHasToken");
+          const urlInput = document.getElementById("calendarUrl");
+
+          noTokenEl.classList.remove("d-none");
+          hasTokenEl.classList.add("d-none");
+          urlInput.value = "";
+
+          showCalendarAlert("Calendar token removed.", true);
+        } else {
+          showCalendarAlert(`Error: ${response.message || "Failed to remove calendar token"}`, false);
+        }
+      });
+    },
+    "Remove",
+    "danger"
+  );
+}
