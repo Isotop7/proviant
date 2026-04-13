@@ -935,7 +935,7 @@ type Frontend struct {
 func (frontend *Frontend) AcceptInvite(ctx *gin.Context)
 ```
 
-AcceptInvite renders the invitation acceptance page
+AcceptInvite renders the invitation acceptance page @Summary Accept invitation page @Description Renders the page for accepting a household invitation @Tags web @Produce html @Param token query string false "Invitation token" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 410 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/invite/accept \[get\]
 
 <a name="Frontend.Auth"></a>
 ### func \(\*Frontend\) Auth
@@ -944,7 +944,7 @@ AcceptInvite renders the invitation acceptance page
 func (frontend *Frontend) Auth(ctx *gin.Context)
 ```
 
-
+Auth renders the authentication page @Summary Auth page @Description Renders the authentication page for login/signup @Tags web @Produce html @Success 200 \{string\} html @Router /web/auth \[get\]
 
 <a name="Frontend.Onboarding"></a>
 ### func \(\*Frontend\) Onboarding
@@ -953,7 +953,7 @@ func (frontend *Frontend) Auth(ctx *gin.Context)
 func (frontend *Frontend) Onboarding(ctx *gin.Context)
 ```
 
-Onboarding renders the post\-signup onboarding wizard
+Onboarding renders the post\-signup onboarding wizard @Summary Onboarding page @Description Renders the onboarding wizard for new users @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/onboarding \[get\]
 
 <a name="Frontend.Products"></a>
 ### func \(\*Frontend\) Products
@@ -962,7 +962,7 @@ Onboarding renders the post\-signup onboarding wizard
 func (frontend *Frontend) Products(ctx *gin.Context)
 ```
 
-
+Products renders the products list page @Summary Products page @Description Renders the products list page with optional search @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products \[get\]
 
 <a name="Frontend.ProductsArchived"></a>
 ### func \(\*Frontend\) ProductsArchived
@@ -971,7 +971,7 @@ func (frontend *Frontend) Products(ctx *gin.Context)
 func (frontend *Frontend) ProductsArchived(ctx *gin.Context)
 ```
 
-
+ProductsArchived renders the archived products page @Summary Archived products page @Description Renders the archived products list page @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products/archived \[get\]
 
 <a name="Frontend.ProductsCreate"></a>
 ### func \(\*Frontend\) ProductsCreate
@@ -980,7 +980,7 @@ func (frontend *Frontend) ProductsArchived(ctx *gin.Context)
 func (frontend *Frontend) ProductsCreate(ctx *gin.Context)
 ```
 
-
+ProductsCreate renders the product creation page @Summary Create product page @Description Renders the page for creating a new product @Tags web @Produce html @Success 200 \{string\} html @Router /web/products/create \[get\]
 
 <a name="Frontend.ProductsEdit"></a>
 ### func \(\*Frontend\) ProductsEdit
@@ -989,7 +989,7 @@ func (frontend *Frontend) ProductsCreate(ctx *gin.Context)
 func (frontend *Frontend) ProductsEdit(ctx *gin.Context)
 ```
 
-
+ProductsEdit renders the product edit page @Summary Product edit page @Description Renders the page for editing a product @Tags web @Produce html @Param id path int true "Product ID" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products/\{id\}/edit \[get\]
 
 <a name="Frontend.ProductsScan"></a>
 ### func \(\*Frontend\) ProductsScan
@@ -1007,7 +1007,7 @@ func (frontend *Frontend) ProductsScan(ctx *gin.Context)
 func (frontend *Frontend) ProductsView(ctx *gin.Context)
 ```
 
-
+ProductsView renders the product view page @Summary Product view page @Description Renders the product details page @Tags web @Produce html @Param id path int true "Product ID" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products/\{id\}/view \[get\]
 
 <a name="Frontend.Root"></a>
 ### func \(\*Frontend\) Root
@@ -1016,7 +1016,7 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context)
 func (frontend *Frontend) Root(ctx *gin.Context)
 ```
 
-
+Root renders the home page for authenticated users @Summary Home page @Description Renders the home page showing product dashboard @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web \[get\]
 
 <a name="Frontend.User"></a>
 ### func \(\*Frontend\) User
@@ -1025,7 +1025,7 @@ func (frontend *Frontend) Root(ctx *gin.Context)
 func (frontend *Frontend) User(ctx *gin.Context)
 ```
 
-
+User renders the user page @Summary User page @Description Renders the user page showing user info @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/user \[get\]
 
 <a name="Frontend.UserSettings"></a>
 ### func \(\*Frontend\) UserSettings
@@ -1034,7 +1034,7 @@ func (frontend *Frontend) User(ctx *gin.Context)
 func (frontend *Frontend) UserSettings(ctx *gin.Context)
 ```
 
-
+UserSettings renders the user settings page @Summary User settings page @Description Renders the user settings page with household management @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/user/settings \[get\]
 
 <a name="Frontend.VerifyEmail"></a>
 ### func \(\*Frontend\) VerifyEmail
@@ -1043,7 +1043,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context)
 func (frontend *Frontend) VerifyEmail(ctx *gin.Context)
 ```
 
-VerifyEmail renders the email verification page
+VerifyEmail renders the email verification page @Summary Verify email page @Description Renders the email verification status page @Tags web @Produce html @Param token query string false "Verification token" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Router /web/verify\-email \[get\]
 
 # auth
 
@@ -1095,7 +1095,7 @@ Signup creates a new user object in the database @Summary Creates a new user @De
 func VerifyEmail(ctx *gin.Context)
 ```
 
-
+VerifyEmail verifies a user's email address using a token @Summary Verify email @Description Verifies a user's email address using a token from the verification email @Tags auth @Accept json @Produce json @Param token query string true "Verification token" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/verify\-email \[post\]
 
 # common
 
@@ -1187,6 +1187,8 @@ v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
+v1 implements version 1 of the proviant API
+
 ## Index
 
 - [func AdminResetUserPassword\(ctx \*gin.Context\)](<#AdminResetUserPassword>)
@@ -1202,6 +1204,10 @@ v1 implements version 1 of the proviant API
 - [func CreateProduct\(ctx \*gin.Context\)](<#CreateProduct>)
 - [func DeleteHouseholdUser\(ctx \*gin.Context\)](<#DeleteHouseholdUser>)
 - [func DeleteProduct\(ctx \*gin.Context\)](<#DeleteProduct>)
+- [func ExportArchiveCSV\(ctx \*gin.Context\)](<#ExportArchiveCSV>)
+- [func ExportFullJSON\(ctx \*gin.Context\)](<#ExportFullJSON>)
+- [func ExportProductsCSV\(ctx \*gin.Context\)](<#ExportProductsCSV>)
+- [func ExportProductsJSON\(ctx \*gin.Context\)](<#ExportProductsJSON>)
 - [func GetArchivedProducts\(ctx \*gin.Context\)](<#GetArchivedProducts>)
 - [func GetExpired\(ctx \*gin.Context\)](<#GetExpired>)
 - [func GetHouseholdApplications\(ctx \*gin.Context\)](<#GetHouseholdApplications>)
@@ -1228,6 +1234,10 @@ v1 implements version 1 of the proviant API
 - [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
 - [func UpdateUserNotificationPreferences\(ctx \*gin.Context\)](<#UpdateUserNotificationPreferences>)
 - [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
+- [type FullExportHousehold](<#FullExportHousehold>)
+- [type FullExportMember](<#FullExportMember>)
+- [type FullExportProducts](<#FullExportProducts>)
+- [type FullExportResponse](<#FullExportResponse>)
 
 
 <a name="AdminResetUserPassword"></a>
@@ -1237,7 +1247,7 @@ v1 implements version 1 of the proviant API
 func AdminResetUserPassword(ctx *gin.Context)
 ```
 
-
+AdminResetUserPassword triggers a password reset email for a household member. @Summary Reset user password @Description Sends a password reset email to the specified user. Caller must be admin. @Tags household @Produce json @Param id path int true "User ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users/\{id\}/reset\-password \[post\]
 
 <a name="ApplyForHousehold"></a>
 ## func ApplyForHousehold
@@ -1336,7 +1346,7 @@ CreateProduct creates a new product of a user @Summary Creates a new product @De
 func DeleteHouseholdUser(ctx *gin.Context)
 ```
 
-
+DeleteHouseholdUser deletes a user from the household. @Summary Delete household member @Description Deletes a user from the household. Caller must be admin. @Tags household @Produce json @Param id path int true "User ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users/\{id\} \[delete\]
 
 <a name="DeleteProduct"></a>
 ## func DeleteProduct
@@ -1346,6 +1356,42 @@ func DeleteProduct(ctx *gin.Context)
 ```
 
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param archiveOnly query bool false "Archive only" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
+
+<a name="ExportArchiveCSV"></a>
+## func ExportArchiveCSV
+
+```go
+func ExportArchiveCSV(ctx *gin.Context)
+```
+
+ExportArchiveCSV exports the user's archived products as CSV. @Summary Export archived products as CSV @Description Returns a CSV file with all archived products for the user @Tags export @Produce text/csv @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{file\} binary "CSV file" @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/archive.csv \[get\]
+
+<a name="ExportFullJSON"></a>
+## func ExportFullJSON
+
+```go
+func ExportFullJSON(ctx *gin.Context)
+```
+
+ExportFullJSON exports all household data as JSON. @Summary Export all household data as JSON @Description Returns a comprehensive JSON export including household info, members, products, and statistics @Tags export @Produce application/json @Success 200 \{object\} FullExportResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/full.json \[get\]
+
+<a name="ExportProductsCSV"></a>
+## func ExportProductsCSV
+
+```go
+func ExportProductsCSV(ctx *gin.Context)
+```
+
+ExportProductsCSV exports the user's active products as CSV. @Summary Export products as CSV @Description Returns a CSV file with all active products for the user @Tags export @Produce text/csv @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{file\} binary "CSV file" @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/products.csv \[get\]
+
+<a name="ExportProductsJSON"></a>
+## func ExportProductsJSON
+
+```go
+func ExportProductsJSON(ctx *gin.Context)
+```
+
+ExportProductsJSON exports the user's active products as JSON. @Summary Export products as JSON @Description Returns a JSON file with all active products for the user @Tags export @Produce application/json @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{file\} binary "JSON file" @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/products.json \[get\]
 
 <a name="GetArchivedProducts"></a>
 ## func GetArchivedProducts
@@ -1381,7 +1427,7 @@ GetHouseholdApplications returns all pending applications for the household the 
 func GetHouseholdUsers(ctx *gin.Context)
 ```
 
-
+GetHouseholdUsers returns all users in the household. @Summary List household members @Description Returns all users that belong to the household the caller is admin of @Tags household @Produce json @Success 200 \{array\} authentication.User @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users \[get\]
 
 <a name="GetInvitations"></a>
 ## func GetInvitations
@@ -1509,7 +1555,7 @@ ScanProduct returns a barcode based on an image @Summary Scan product @Descripti
 func SearchProducts(ctx *gin.Context)
 ```
 
-SearchProducts returns a list of products based on an query @Summary Search products @Description Returns a list of products based on a query @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/search \[GET\]
+SearchProducts returns a list of products based on a query @Summary Search products @Description Returns a list of products based on a query @Tags product @Produce json @Param queryParam query string true "Search field \(product\_name, barcode, category, storage\_location\)" @Param queryValue query string true "Search value" @Param sort query string false "Sort field" default\(product\_name\) @Param order query string false "Sort order \(asc, desc\)" default\(asc\) @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/search \[GET\]
 
 <a name="SetExpireAt"></a>
 ## func SetExpireAt
@@ -1536,7 +1582,7 @@ UpdateHouseholdName renames the caller's household. Caller must be the household
 func UpdateHouseholdUser(ctx *gin.Context)
 ```
 
-
+UpdateHouseholdUser updates a user's username or email. @Summary Update household member @Description Updates the username or email of a user in the household. Caller must be admin. @Tags household @Accept json @Produce json @Param id path int true "User ID" @Param user body updateAdminUserRequest true "User data" @Success 200 \{object\} authentication.User @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users/\{id\} \[patch\]
 
 <a name="UpdateProduct"></a>
 ## func UpdateProduct
@@ -1582,6 +1628,57 @@ func UpdateUserPassword(ctx *gin.Context)
 ```
 
 UpdateUserPassword updates a user password @Summary Updates a user password @Description Updates password of a user @Tags user @Accept json @Produce json @Param login body authentication.Login true "Login" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/password \[post\]
+
+<a name="FullExportHousehold"></a>
+## type FullExportHousehold
+
+
+
+```go
+type FullExportHousehold struct {
+    Name      string `json:"name"`
+    CreatedAt string `json:"created_at"`
+}
+```
+
+<a name="FullExportMember"></a>
+## type FullExportMember
+
+
+
+```go
+type FullExportMember struct {
+    Username    string `json:"username"`
+    MailAddress string `json:"email"`
+}
+```
+
+<a name="FullExportProducts"></a>
+## type FullExportProducts
+
+
+
+```go
+type FullExportProducts struct {
+    Active   []dbModel.Product `json:"active"`
+    Archived []dbModel.Product `json:"archived"`
+}
+```
+
+<a name="FullExportResponse"></a>
+## type FullExportResponse
+
+
+
+```go
+type FullExportResponse struct {
+    Household  *FullExportHousehold          `json:"household"`
+    Members    []FullExportMember            `json:"members"`
+    Products   FullExportProducts            `json:"products"`
+    Stats      apiModel.ProductStatsResponse `json:"stats"`
+    ExportedAt string                        `json:"exported_at"`
+}
+```
 
 # database
 
@@ -1666,11 +1763,14 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetProductCategoryBreakdown>)
   - [func \(r \*ProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#ProductRepository.GetProductsExpired>)
   - [func \(r \*ProductRepository\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetTopArchivedProducts>)
+  - [func \(r \*ProductRepository\) GetUserActiveProductsFiltered\(userID uint, from, to \*time.Time\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserActiveProductsFiltered>)
   - [func \(r \*ProductRepository\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserArchivedProductsBulk>)
+  - [func \(r \*ProductRepository\) GetUserArchivedProductsFiltered\(userID uint, from, to \*time.Time\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserArchivedProductsFiltered>)
   - [func \(r \*ProductRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#ProductRepository.GetUserByID>)
   - [func \(r \*ProductRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#ProductRepository.GetUserHouseholdByID>)
   - [func \(r \*ProductRepository\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsBulk>)
   - [func \(r \*ProductRepository\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsBulkByBarcode>)
+  - [func \(r \*ProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#ProductRepository.GetUsersByHouseholdID>)
   - [func \(r \*ProductRepository\) RestoreProduct\(productID int, userID uint\) error](<#ProductRepository.RestoreProduct>)
   - [func \(r \*ProductRepository\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.SearchProducts>)
   - [func \(r \*ProductRepository\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#ProductRepository.SetProductExpireAt>)
@@ -2418,11 +2518,29 @@ func (r *ProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]da
 
 
 
+<a name="ProductRepository.GetUserActiveProductsFiltered"></a>
+### func \(\*ProductRepository\) GetUserActiveProductsFiltered
+
+```go
+func (r *ProductRepository) GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
+```
+
+
+
 <a name="ProductRepository.GetUserArchivedProductsBulk"></a>
 ### func \(\*ProductRepository\) GetUserArchivedProductsBulk
 
 ```go
 func (r *ProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetUserArchivedProductsFiltered"></a>
+### func \(\*ProductRepository\) GetUserArchivedProductsFiltered
+
+```go
+func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
 ```
 
 
@@ -2459,6 +2577,15 @@ func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]datab
 
 ```go
 func (r *ProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetUsersByHouseholdID"></a>
+### func \(\*ProductRepository\) GetUsersByHouseholdID
+
+```go
+func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
 ```
 
 
@@ -3631,18 +3758,20 @@ Product is the database model of a product
 ```go
 type Product struct {
     gorm.Model
-    Barcode     string         `json:"barcode"`
-    ProductName string         `json:"productName"`
-    Categories  string         `json:"categories"`
-    Countries   string         `json:"countries"`
-    ImageURL    string         `json:"imageUrl"`
-    ExpireAt    time.Time      `json:"expireAt"`
-    ScannedAt   time.Time      `json:"scannedAt"`
-    NotifiedAt  time.Time      `json:"notifiedAt"`
-    DeletedAt   gorm.DeletedAt `gorm:"index"`
-    HouseholdID uint           `gorm:"index, not null" json:"-"`
-    Household   Household      `json:"-"`
-    Amount      int            `json:"amount"`
+    Barcode         string         `json:"barcode"`
+    ProductName     string         `json:"productName"`
+    Categories      string         `json:"categories"`
+    Countries       string         `json:"countries"`
+    ImageURL        string         `json:"imageUrl"`
+    ExpireAt        time.Time      `json:"expireAt"`
+    ScannedAt       time.Time      `json:"scannedAt"`
+    NotifiedAt      time.Time      `json:"notifiedAt"`
+    DeletedAt       gorm.DeletedAt `gorm:"index"`
+    HouseholdID     uint           `gorm:"index, not null" json:"-"`
+    Household       Household      `json:"-"`
+    Amount          int            `json:"amount"`
+    Unit            string         `json:"unit"`
+    StorageLocation string         `json:"storageLocation"`
 }
 ```
 
@@ -3677,13 +3806,15 @@ ProductDTOPatch is a simplified DTO only containing the patchable elements
 
 ```go
 type ProductDTOPatch struct {
-    ID          uint      `json:"ID"`
-    ProductName string    `json:"productName"`
-    Categories  string    `json:"categories"`
-    Countries   string    `json:"countries"`
-    ImageURL    string    `json:"imageUrl"`
-    ExpireAt    time.Time `json:"expireAt"`
-    Amount      int       `json:"amount"`
+    ID              uint      `json:"ID"`
+    ProductName     string    `json:"productName"`
+    Categories      string    `json:"categories"`
+    Countries       string    `json:"countries"`
+    ImageURL        string    `json:"imageUrl"`
+    ExpireAt        time.Time `json:"expireAt"`
+    Amount          int       `json:"amount"`
+    Unit            string    `json:"unit"`
+    StorageLocation string    `json:"storageLocation"`
 }
 ```
 

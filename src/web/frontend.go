@@ -23,6 +23,15 @@ type Frontend struct {
 	TemplateCache map[string]*template.Template
 }
 
+// Root renders the home page for authenticated users
+// @Summary      Home page
+// @Description  Renders the home page showing product dashboard
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web [get]
 func (frontend *Frontend) Root(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
@@ -64,6 +73,13 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "home.tmpl", pageData)
 }
 
+// Auth renders the authentication page
+// @Summary      Auth page
+// @Description  Renders the authentication page for login/signup
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Router       /web/auth [get]
 func (frontend *Frontend) Auth(ctx *gin.Context) {
 	pageData := map[string]any{
 		"InviteToken": ctx.Query("invite_token"),
@@ -72,6 +88,15 @@ func (frontend *Frontend) Auth(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "auth.tmpl", pageData)
 }
 
+// User renders the user page
+// @Summary      User page
+// @Description  Renders the user page showing user info
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/user [get]
 func (frontend *Frontend) User(ctx *gin.Context) {
 	pageData := map[string]any{
 		"InviteToken": ctx.Query("invite_token"),
@@ -80,6 +105,15 @@ func (frontend *Frontend) User(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "user.tmpl", pageData)
 }
 
+// UserSettings renders the user settings page
+// @Summary      User settings page
+// @Description  Renders the user settings page with household management
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/user/settings [get]
 func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
@@ -144,6 +178,15 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
 }
 
+// Products renders the products list page
+// @Summary      Products page
+// @Description  Renders the products list page with optional search
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/products [get]
 func (frontend *Frontend) Products(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
@@ -206,6 +249,15 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }
 
+// ProductsArchived renders the archived products page
+// @Summary      Archived products page
+// @Description  Renders the archived products list page
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/products/archived [get]
 func (frontend *Frontend) ProductsArchived(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
@@ -243,6 +295,13 @@ func (frontend *Frontend) ProductsArchived(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsArchived.tmpl", pageData)
 }
 
+// ProductsCreate renders the product creation page
+// @Summary      Create product page
+// @Description  Renders the page for creating a new product
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Router       /web/products/create [get]
 func (frontend *Frontend) ProductsCreate(ctx *gin.Context) {
 	pageData := map[string]any{
 		"InviteToken": ctx.Query("invite_token"),
@@ -259,6 +318,16 @@ func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsScan.tmpl", pageData)
 }
 
+// ProductsView renders the product view page
+// @Summary      Product view page
+// @Description  Renders the product details page
+// @Tags         web
+// @Produce      html
+// @Param        id   path      int  true  "Product ID"
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/products/{id}/view [get]
 func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
@@ -306,6 +375,16 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsView.tmpl", pageData)
 }
 
+// ProductsEdit renders the product edit page
+// @Summary      Product edit page
+// @Description  Renders the page for editing a product
+// @Tags         web
+// @Produce      html
+// @Param        id   path      int  true  "Product ID"
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/products/{id}/edit [get]
 func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
@@ -354,6 +433,17 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 }
 
 // AcceptInvite renders the invitation acceptance page
+// @Summary      Accept invitation page
+// @Description  Renders the page for accepting a household invitation
+// @Tags         web
+// @Produce      html
+// @Param        token  query  string  false  "Invitation token"
+// @Success      200    {string}  html
+// @Failure      400    {object}  api.APIResponse
+// @Failure      404    {object}  api.APIResponse
+// @Failure      410    {object}  api.APIResponse
+// @Failure      500    {object}  api.APIResponse
+// @Router       /web/invite/accept [get]
 func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 	token := ctx.Query("token")
@@ -457,6 +547,14 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 }
 
 // VerifyEmail renders the email verification page
+// @Summary      Verify email page
+// @Description  Renders the email verification status page
+// @Tags         web
+// @Produce      html
+// @Param        token  query  string  false  "Verification token"
+// @Success      200    {string}  html
+// @Failure      400    {object}  api.APIResponse
+// @Router       /web/verify-email [get]
 func (frontend *Frontend) VerifyEmail(ctx *gin.Context) {
 	token := ctx.Query("token")
 
@@ -476,6 +574,14 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context) {
 }
 
 // Onboarding renders the post-signup onboarding wizard
+// @Summary      Onboarding page
+// @Description  Renders the onboarding wizard for new users
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/onboarding [get]
 func (frontend *Frontend) Onboarding(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 

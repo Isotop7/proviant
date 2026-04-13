@@ -12,6 +12,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// VerifyEmail verifies a user's email address using a token
+// @Summary      Verify email
+// @Description  Verifies a user's email address using a token from the verification email
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        token  query  string  true  "Verification token"
+// @Success      200    {object}  api.APIResponse
+// @Failure      400    {object}  api.APIResponse
+// @Failure      500    {object}  api.APIResponse
+// @Router       /auth/verify-email [post]
 func VerifyEmail(ctx *gin.Context) {
 	loggerValue, loggerOk := ctx.Get("logger")
 	if !loggerOk {

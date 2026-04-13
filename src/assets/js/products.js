@@ -170,6 +170,34 @@ document.addEventListener("click", function (event) {
         window.location.href = "/web/products";
         return;
     }
+
+    // Export products CSV
+    if (target.closest("#export-products-csv")) {
+        event.preventDefault();
+        proviant.exportProductsCSV();
+        return;
+    }
+
+    // Export products JSON
+    if (target.closest("#export-products-json")) {
+        event.preventDefault();
+        proviant.exportProductsJSON();
+        return;
+    }
+
+    // Export archive CSV
+    if (target.closest("#export-archive-csv")) {
+        event.preventDefault();
+        proviant.exportArchiveCSV();
+        return;
+    }
+
+    // Export full JSON
+    if (target.closest("#export-full-json")) {
+        event.preventDefault();
+        proviant.exportFullJSON();
+        return;
+    }
 });
 
 /* Event delegation for checkbox changes */

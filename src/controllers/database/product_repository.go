@@ -237,6 +237,8 @@ func (r *ProductRepository) UpdateProduct(productID int, userID uint, product *d
 	dbProduct.ImageURL = product.ImageURL
 	dbProduct.ExpireAt = product.ExpireAt
 	dbProduct.Amount = product.Amount
+	dbProduct.Unit = product.Unit
+	dbProduct.StorageLocation = product.StorageLocation
 
 	saveResult := r.DB.Save(&dbProduct)
 	return saveResult.Error
@@ -667,6 +669,66 @@ func (r *ProductRepository) GetHouseholdByID(householdID uint) (database.Househo
 	var household database.Household
 	selectErr := r.DB.First(&household, householdID)
 	return household, selectErr.Error
+}
+
+func (r *ProductRepository) GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error) {
+	var user authentication.User
+	if err := r.DB.First(&user, userID).Error; err != nil {
+		return []database.Product{}, err
+	}
+
+	if user.HouseholdID == 0 {
+		return []database.Product{}, errors.ErrInvalidUserData
+	}
+
+	var products []database.Product
+	query := r.DB.Where("household_id = ?", user.HouseholdID).Where("deleted_at IS NULL")
+
+	if from != nil {
+		query = query.Where("created_at >= ?", *from)
+	}
+	if to != nil {
+		query = query.Where("created_at <= ?", *to)
+	}
+
+	queryErr := query.Find(&products).Error
+	if queryErr != nil {
+		return []database.Product{}, queryErr
+	}
+	return products, nil
+}
+
+func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error) {
+	var user authentication.User
+	if err := r.DB.First(&user, userID).Error; err != nil {
+		return []database.Product{}, err
+	}
+
+	if user.HouseholdID == 0 {
+		return []database.Product{}, errors.ErrInvalidUserData
+	}
+
+	var products []database.Product
+	query := r.DB.Unscoped().Where("deleted_at IS NOT NULL").Where("household_id = ?", user.HouseholdID)
+
+	if from != nil {
+		query = query.Where("deleted_at >= ?", *from)
+	}
+	if to != nil {
+		query = query.Where("deleted_at <= ?", *to)
+	}
+
+	queryErr := query.Find(&products).Error
+	if queryErr != nil {
+		return []database.Product{}, queryErr
+	}
+	return products, nil
+}
+
+func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error) {
+	var users []authentication.User
+	err := r.DB.Where("household_id = ?", householdID).Find(&users).Error
+	return users, err
 }
 
 var _ = (*ProductRepository)(nil)
