@@ -20,6 +20,16 @@ import (
 	"gorm.io/gorm"
 )
 
+// GetHouseholdUsers returns all users in the household.
+// @Summary      List household members
+// @Description  Returns all users that belong to the household the caller is admin of
+// @Tags         household
+// @Produce      json
+// @Success      200  {array}   authentication.User
+// @Failure      400  {object}  api.APIResponse
+// @Failure      403  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/household/users [get]
 func GetHouseholdUsers(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
@@ -67,6 +77,20 @@ func GetHouseholdUsers(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, users)
 }
 
+// UpdateHouseholdUser updates a user's username or email.
+// @Summary      Update household member
+// @Description  Updates the username or email of a user in the household. Caller must be admin.
+// @Tags         household
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "User ID"
+// @Param        user body      updateAdminUserRequest  true  "User data"
+// @Success      200  {object}  authentication.User
+// @Failure      400  {object}  api.APIResponse
+// @Failure      403  {object}  api.APIResponse
+// @Failure      404  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/household/users/{id} [patch]
 func UpdateHouseholdUser(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
@@ -155,6 +179,18 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, targetUser)
 }
 
+// DeleteHouseholdUser deletes a user from the household.
+// @Summary      Delete household member
+// @Description  Deletes a user from the household. Caller must be admin.
+// @Tags         household
+// @Produce      json
+// @Param        id   path      int  true  "User ID"
+// @Success      200  {object}  api.APIResponse
+// @Failure      400  {object}  api.APIResponse
+// @Failure      403  {object}  api.APIResponse
+// @Failure      404  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/household/users/{id} [delete]
 func DeleteHouseholdUser(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
@@ -229,6 +265,18 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "User deleted"})
 }
 
+// AdminResetUserPassword triggers a password reset email for a household member.
+// @Summary      Reset user password
+// @Description  Sends a password reset email to the specified user. Caller must be admin.
+// @Tags         household
+// @Produce      json
+// @Param        id   path      int  true  "User ID"
+// @Success      200  {object}  api.APIResponse
+// @Failure      400  {object}  api.APIResponse
+// @Failure      403  {object}  api.APIResponse
+// @Failure      404  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/household/users/{id}/reset-password [post]
 func AdminResetUserPassword(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 

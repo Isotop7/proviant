@@ -498,6 +498,216 @@
                 }
             }
         },
+        "/api/v1/household/users": {
+            "get": {
+                "description": "Returns all users that belong to the household the caller is admin of",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "List household members",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/authentication.User"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/users/{id}": {
+            "delete": {
+                "description": "Deletes a user from the household. Caller must be admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Delete household member",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Updates the username or email of a user in the household. Caller must be admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Update household member",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User data",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.updateAdminUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/authentication.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/users/{id}/reset-password": {
+            "post": {
+                "description": "Sends a password reset email to the specified user. Caller must be admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Reset user password",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/household/{id}/apply": {
             "post": {
                 "description": "Creates a pending application for the calling user to join the specified household.",
@@ -1270,6 +1480,176 @@
                 }
             }
         },
+        "/api/v1/products/export/archive.csv": {
+            "get": {
+                "description": "Returns a CSV file with all archived products for the user",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "export"
+                ],
+                "summary": "Export archived products as CSV",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "From date (2006-01-02)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "To date (2006-01-02)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/export/full.json": {
+            "get": {
+                "description": "Returns a comprehensive JSON export including household info, members, products, and statistics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "export"
+                ],
+                "summary": "Export all household data as JSON",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.FullExportResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/export/products.csv": {
+            "get": {
+                "description": "Returns a CSV file with all active products for the user",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "export"
+                ],
+                "summary": "Export products as CSV",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "From date (2006-01-02)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "To date (2006-01-02)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/export/products.json": {
+            "get": {
+                "description": "Returns a JSON file with all active products for the user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "export"
+                ],
+                "summary": "Export products as JSON",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "From date (2006-01-02)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "To date (2006-01-02)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/openfoodfacts/{barcode}": {
             "get": {
                 "description": "Proxies OpenFoodFacts API with optional database caching",
@@ -1364,11 +1744,32 @@
                 "summary": "Search products",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "Product ID",
-                        "name": "id",
-                        "in": "path",
+                        "type": "string",
+                        "description": "Search field (product_name, barcode, category, storage_location)",
+                        "name": "queryParam",
+                        "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search value",
+                        "name": "queryValue",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "product_name",
+                        "description": "Sort field",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "asc",
+                        "description": "Sort order (asc, desc)",
+                        "name": "order",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1906,6 +2307,450 @@
                     }
                 }
             }
+        },
+        "/auth/verify-email": {
+            "post": {
+                "description": "Verifies a user's email address using a token from the verification email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Verify email",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Verification token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web": {
+            "get": {
+                "description": "Renders the home page showing product dashboard",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Home page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/auth": {
+            "get": {
+                "description": "Renders the authentication page for login/signup",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Auth page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/invite/accept": {
+            "get": {
+                "description": "Renders the page for accepting a household invitation",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Accept invitation page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invitation token",
+                        "name": "token",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "410": {
+                        "description": "Gone",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/onboarding": {
+            "get": {
+                "description": "Renders the onboarding wizard for new users",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Onboarding page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/products": {
+            "get": {
+                "description": "Renders the products list page with optional search",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Products page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/products/archived": {
+            "get": {
+                "description": "Renders the archived products list page",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Archived products page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/products/create": {
+            "get": {
+                "description": "Renders the page for creating a new product",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Create product page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/products/{id}/edit": {
+            "get": {
+                "description": "Renders the page for editing a product",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Product edit page",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/products/{id}/view": {
+            "get": {
+                "description": "Renders the product details page",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Product view page",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/user": {
+            "get": {
+                "description": "Renders the user page showing user info",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "User page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/user/settings": {
+            "get": {
+                "description": "Renders the user settings page with household management",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "User settings page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/verify-email": {
+            "get": {
+                "description": "Renders the email verification status page",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Verify email page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Verification token",
+                        "name": "token",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -2325,6 +3170,12 @@
                 "scannedAt": {
                     "type": "string"
                 },
+                "storageLocation": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                },
                 "updatedAt": {
                     "type": "string"
                 }
@@ -2375,6 +3226,68 @@
                 }
             }
         },
+        "v1.FullExportHousehold": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.FullExportMember": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.FullExportProducts": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/database.Product"
+                    }
+                },
+                "archived": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/database.Product"
+                    }
+                }
+            }
+        },
+        "v1.FullExportResponse": {
+            "type": "object",
+            "properties": {
+                "exported_at": {
+                    "type": "string"
+                },
+                "household": {
+                    "$ref": "#/definitions/v1.FullExportHousehold"
+                },
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/v1.FullExportMember"
+                    }
+                },
+                "products": {
+                    "$ref": "#/definitions/v1.FullExportProducts"
+                },
+                "stats": {
+                    "$ref": "#/definitions/api.ProductStatsResponse"
+                }
+            }
+        },
         "v1.createHouseholdRequest": {
             "type": "object",
             "properties": {
@@ -2390,6 +3303,17 @@
             ],
             "properties": {
                 "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.updateAdminUserRequest": {
+            "type": "object",
+            "properties": {
+                "mailAddress": {
+                    "type": "string"
+                },
+                "username": {
                     "type": "string"
                 }
             }

@@ -82,6 +82,17 @@ type FullExportProducts struct {
 	Archived []dbModel.Product `json:"archived"`
 }
 
+// ExportProductsCSV exports the user's active products as CSV.
+// @Summary      Export products as CSV
+// @Description  Returns a CSV file with all active products for the user
+// @Tags         export
+// @Produce      text/csv
+// @Param        from   query  string  false  "From date (2006-01-02)"
+// @Param        to     query  string  false  "To date (2006-01-02)"
+// @Success      200    {file}  binary "CSV file"
+// @Failure      400    {object}  api.APIResponse
+// @Failure      500    {object}  api.APIResponse
+// @Router       /api/v1/products/export/products.csv [get]
 func ExportProductsCSV(ctx *gin.Context) {
 	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
 	if !loggerOk {
@@ -132,6 +143,17 @@ func ExportProductsCSV(ctx *gin.Context) {
 	writer.Flush()
 }
 
+// ExportProductsJSON exports the user's active products as JSON.
+// @Summary      Export products as JSON
+// @Description  Returns a JSON file with all active products for the user
+// @Tags         export
+// @Produce      application/json
+// @Param        from   query  string  false  "From date (2006-01-02)"
+// @Param        to     query  string  false  "To date (2006-01-02)"
+// @Success      200    {file}  binary "JSON file"
+// @Failure      400    {object}  api.APIResponse
+// @Failure      500    {object}  api.APIResponse
+// @Router       /api/v1/products/export/products.json [get]
 func ExportProductsJSON(ctx *gin.Context) {
 	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
 	if !loggerOk {
@@ -169,6 +191,17 @@ func ExportProductsJSON(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, products)
 }
 
+// ExportArchiveCSV exports the user's archived products as CSV.
+// @Summary      Export archived products as CSV
+// @Description  Returns a CSV file with all archived products for the user
+// @Tags         export
+// @Produce      text/csv
+// @Param        from   query  string  false  "From date (2006-01-02)"
+// @Param        to     query  string  false  "To date (2006-01-02)"
+// @Success      200    {file}  binary "CSV file"
+// @Failure      400    {object}  api.APIResponse
+// @Failure      500    {object}  api.APIResponse
+// @Router       /api/v1/products/export/archive.csv [get]
 func ExportArchiveCSV(ctx *gin.Context) {
 	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
 	if !loggerOk {
@@ -226,6 +259,15 @@ func ExportArchiveCSV(ctx *gin.Context) {
 	writer.Flush()
 }
 
+// ExportFullJSON exports all household data as JSON.
+// @Summary      Export all household data as JSON
+// @Description  Returns a comprehensive JSON export including household info, members, products, and statistics
+// @Tags         export
+// @Produce      application/json
+// @Success      200  {object}  FullExportResponse
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/products/export/full.json [get]
 func ExportFullJSON(ctx *gin.Context) {
 	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
 	if !loggerOk {

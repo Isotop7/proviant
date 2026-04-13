@@ -86,12 +86,15 @@ func GetProductsByBarcode(ctx *gin.Context) {
 	}
 }
 
-// SearchProducts returns a list of products based on an query
+// SearchProducts returns a list of products based on a query
 // @Summary      	Search products
 // @Description  	Returns a list of products based on a query
 // @Tags         	product
 // @Produce      	json
-// @Param        	id   	path	int					true  	"Product ID"
+// @Param        	queryParam  query  string  true  	"Search field (product_name, barcode, category, storage_location)"
+// @Param        	queryValue  query  string  true  	"Search value"
+// @Param        	sort        query  string  false  "Sort field"  default(product_name)
+// @Param        	order       query  string  false  "Sort order (asc, desc)"  default(asc)
 // @Success      	200  {object}  []database.Product
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
