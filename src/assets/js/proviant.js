@@ -633,7 +633,7 @@ proviant.deletePAT = async function (patID) {
   });
   const body = await apiCall.json();
   return { code: apiCall.status, message: body };
-}
+};
 
 proviant.exportProductsCSV = function (from, to) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/products.csv`;
