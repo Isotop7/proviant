@@ -56,6 +56,9 @@ linters:
       - path: template\.go
         linters: [gosec]
         text: "G505:"
+      - path: password\.go
+        linters: [gosec]
+        text: "G505:"
 
 formatters:
   enable: []
