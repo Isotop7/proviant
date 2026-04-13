@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"codeberg.org/isotop7/proviant/models/configuration/static"
+	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
@@ -18,9 +20,11 @@ type clientLimiter struct {
 var (
 	loginLimiters  = &sync.Map{}
 	signupLimiters = &sync.Map{}
+	exportLimiters = &sync.Map{}
 
 	loginRate  = rate.Limit(5.0 / 60.0)
 	signupRate = rate.Limit(3.0 / 60.0)
+	exportRate = rate.Limit(1.0 / 60.0)
 )
 
 func getClientIP(ctx *gin.Context) string {
@@ -76,6 +80,31 @@ func signupRateLimitMiddleware(ctx *gin.Context) {
 	ctx.Next()
 }
 
+func exportRateLimitMiddleware(ctx *gin.Context) {
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"code":    "UNAUTHORIZED",
+			"message": "Unauthorized",
+		})
+		return
+	}
+
+	key := strconv.FormatUint(uint64(userID), 10)
+	limiter := getLimiter(exportLimiters, key, exportRate)
+	if !limiter.Allow() {
+		retryAfter := strconv.Itoa(int(time.Until(time.Now().Add(time.Minute)).Seconds()))
+		ctx.Header("Retry-After", retryAfter)
+		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
+			"code":    "RATE_LIMIT_EXCEEDED",
+			"message": "Too many export requests. Please try again later.",
+		})
+		return
+	}
+	ctx.Next()
+}
+
 func cleanupLimiters() {
 	for {
 		time.Sleep(time.Minute)
@@ -91,6 +120,13 @@ func cleanupLimiters() {
 			cl := value.(*clientLimiter)
 			if now.Sub(cl.lastSeen) > 10*time.Minute {
 				signupLimiters.Delete(key)
+			}
+			return true
+		})
+		exportLimiters.Range(func(key, value interface{}) bool {
+			cl := value.(*clientLimiter)
+			if now.Sub(cl.lastSeen) > 10*time.Minute {
+				exportLimiters.Delete(key)
 			}
 			return true
 		})

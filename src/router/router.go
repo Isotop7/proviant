@@ -178,6 +178,10 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.DELETE("/bulkArchive", v1.BulkArchiveProducts)
 	publicProductAPI.POST("/bulkRestore", v1.BulkRestoreProducts)
 	publicProductAPI.GET("/stats", v1.GetProductStats)
+	publicProductAPI.GET("/export/products.csv", exportRateLimitMiddleware, v1.ExportProductsCSV)
+	publicProductAPI.GET("/export/products.json", exportRateLimitMiddleware, v1.ExportProductsJSON)
+	publicProductAPI.GET("/export/archive.csv", exportRateLimitMiddleware, v1.ExportArchiveCSV)
+	publicProductAPI.GET("/export/full.json", exportRateLimitMiddleware, v1.ExportFullJSON)
 
 	// Protected user routes
 	protectedUserAPI := engine.Group("/api/v1/user")

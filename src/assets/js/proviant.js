@@ -633,4 +633,35 @@ proviant.deletePAT = async function (patID) {
   });
   const body = await apiCall.json();
   return { code: apiCall.status, message: body };
+}
+
+proviant.exportProductsCSV = function (from, to) {
+  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/products.csv`;
+  const params = [];
+  if (from) params.push(`from=${from}`);
+  if (to) params.push(`to=${to}`);
+  if (params.length) url += `?${params.join("&")}`;
+  window.location.href = url;
+};
+
+proviant.exportProductsJSON = function (from, to) {
+  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/products.json`;
+  const params = [];
+  if (from) params.push(`from=${from}`);
+  if (to) params.push(`to=${to}`);
+  if (params.length) url += `?${params.join("&")}`;
+  window.location.href = url;
+};
+
+proviant.exportArchiveCSV = function (from, to) {
+  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/archive.csv`;
+  const params = [];
+  if (from) params.push(`from=${from}`);
+  if (to) params.push(`to=${to}`);
+  if (params.length) url += `?${params.join("&")}`;
+  window.location.href = url;
+};
+
+proviant.exportFullJSON = function () {
+  window.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/full.json`;
 };
