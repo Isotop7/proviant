@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
@@ -90,6 +91,16 @@ func AcceptInvitation(ctx *gin.Context) {
 		}
 		return
 	}
+
+	go func() {
+		if ws := controllers.GetWebhookService(); ws != nil {
+			ws.FireEvent("household.member_joined", map[string]any{
+				"userId":      userID,
+				"username":    user.Username,
+				"householdId": user.HouseholdID,
+			})
+		}
+	}()
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Invitation accepted successfully"})
 }

@@ -217,10 +217,23 @@ func CreateProduct(ctx *gin.Context) {
 		logger.Error().Msgf("Error creating product: %s", createResult)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: createResult.Error()})
 		return
-	} else {
-		ctx.JSON(http.StatusCreated, product)
-		return
 	}
+
+	go func() {
+		if ws := controllers.GetWebhookService(); ws != nil {
+			ws.FireEvent("product.created", map[string]any{
+				"id":          product.ID,
+				"productName": product.ProductName,
+				"barcode":     product.Barcode,
+				"expireAt":    product.ExpireAt,
+				"amount":      product.Amount,
+				"unit":        product.Unit,
+				"householdId": product.HouseholdID,
+			})
+		}
+	}()
+
+	ctx.JSON(http.StatusCreated, product)
 }
 
 // UpdateProduct updates a product of a user
@@ -353,6 +366,13 @@ func UpdateProductAmount(ctx *gin.Context) {
 	switch updateErr {
 	case nil:
 		if deleted {
+			go func() {
+				if ws := controllers.GetWebhookService(); ws != nil {
+					ws.FireEvent("product.wasted", map[string]any{
+						"productId": productID,
+					})
+				}
+			}()
 			ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d deleted (amount reached 0)", productID)})
 		} else {
 			ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d amount updated", productID)})

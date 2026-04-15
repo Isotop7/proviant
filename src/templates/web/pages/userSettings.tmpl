@@ -492,6 +492,65 @@
             </div>
             {{ end }}
 
+            {{/* ── Webhooks ──────────────────────────────────────── */}}
+            <div class="mt-4 pt-4 border-top">
+                <h3 class="h6 fw-medium mb-3"><i class="bi bi-webhook me-1"></i>Webhooks</h3>
+                <p class="text-body-secondary small mb-3">Configure webhooks to receive notifications when events occur. Webhooks are triggered asynchronously with up to 3 retries on failure.</p>
+                
+                <div id="webhookList" class="mb-4"></div>
+
+                <div class="card border-primary-subtle">
+                    <div class="card-header bg-primary-subtle">
+                        <h4 class="h6 mb-0 fw-medium">Create New Webhook</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="webhookCreateForm" novalidate>
+                            <div class="mb-3">
+                                <label for="inputWebhookUrl" class="form-label fw-medium">Webhook URL <span class="text-danger">*</span></label>
+                                <input type="url" class="form-control" id="inputWebhookUrl" placeholder="https://example.com/webhook" required>
+                                <div class="invalid-feedback">Please enter a valid URL.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="inputWebhookSecret" class="form-label fw-medium">Secret <span class="text-danger">*</span></label>
+                                <input type="password" class="form-control" id="inputWebhookSecret" placeholder="Minimum 16 characters" minlength="16" required>
+                                <div class="invalid-feedback">Secret must be at least 16 characters.</div>
+                                <div class="form-text">Used to sign payloads with HMAC-SHA256. Keep this secret safe.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-medium">Events <span class="text-danger">*</span></label>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductCreated" data-event="product.created">
+                                            <label class="form-check-label" for="eventProductCreated">product.created</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductExpired" data-event="product.expired">
+                                            <label class="form-check-label" for="eventProductExpired">product.expired</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductExpiringSoon" data-event="product.expiring_soon">
+                                            <label class="form-check-label" for="eventProductExpiringSoon">product.expiring_soon</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductWasted" data-event="product.wasted">
+                                            <label class="form-check-label" for="eventProductWasted">product.wasted</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventHouseholdMemberJoined" data-event="household.member_joined">
+                                            <label class="form-check-label" for="eventHouseholdMemberJoined">household.member_joined</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-primary" id="btnCreateWebhook">Create Webhook</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             {{/* ── Danger Zone ─────────────────────────────────── */}}
             <div class="mt-4 pt-4 border-top border-danger border-opacity-25">
                 <h3 class="h6 fw-medium text-danger mb-3">
@@ -530,6 +589,43 @@
     </div>
 
 
+</div>
+
+{{/* ── Webhook Secret Modal ────────────────────────────────────── */}}
+<div class="modal fade" id="webhookSecretModal" tabindex="-1" aria-labelledby="webhookSecretModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="webhookSecretModalLabel">Webhook Secret</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-body-secondary small mb-2">Copy this secret to verify webhook signatures. You will not be able to see it again.</p>
+                <input type="text" class="form-control" id="webhookSecretCopy" readonly>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCloseWebhookSecret" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnCopySecret">Copy</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{/* ── Webhook Deliveries Modal ───────────────────────────────── */}}
+<div class="modal fade" id="webhookDeliveriesModal" tabindex="-1" aria-labelledby="webhookDeliveriesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="webhookDeliveriesModalLabel">Webhook Delivery History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="deliveriesModalBody">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="/assets/js/userSettings.js"></script>

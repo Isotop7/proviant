@@ -710,3 +710,56 @@ proviant.copyToClipboard = async function (text) {
     return false;
   }
 };
+
+/* Webhook API methods */
+proviant.getWebhooks = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, webhooks: body.webhooks };
+};
+
+proviant.createWebhook = async function (url, secret, events, active) {
+  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks`;
+  const apiCall = await fetch(apiUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, secret, events, active }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.updateWebhook = async function (id, url, secret, events, active) {
+  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}`;
+  const apiCall = await fetch(apiUrl, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, secret, events, active }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.deleteWebhook = async function (id) {
+  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}`;
+  const apiCall = await fetch(apiUrl, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.getWebhookDeliveries = async function (id) {
+  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}/deliveries`;
+  const apiCall = await fetch(apiUrl, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, deliveries: body.deliveries };
+};
