@@ -56,7 +56,9 @@ func AddNotificationPreferencesMigration(db *gorm.DB) error {
 	`).Error
 
 	// If the error is about duplicate columns, we can ignore it
-	if err != nil && (strings.Contains(err.Error(), "duplicate column") || strings.Contains(err.Error(), "already exists")) {
+	if err != nil && (strings.Contains(err.Error(), "duplicate column") ||
+		strings.Contains(err.Error(), "already exists") ||
+		strings.Contains(err.Error(), "already has column")) {
 		return nil
 	}
 
@@ -98,17 +100,11 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 func BackfillEmailVerification(logger *zerolog.Logger, db *gorm.DB) error {
 	logger.Info().Msg("Running database migrations for backfilling email verification")
 
-	var users []*authentication.User
-	if err := db.Where("email_verified_at IS NULL").Find(&users).Error; err != nil {
-		return err
+	result := db.Exec("UPDATE users SET email_verified_at = ? WHERE email_verified_at IS NULL", time.Now())
+	if result.Error != nil {
+		return result.Error
 	}
 
-	for _, user := range users {
-		if err := db.Model(user).Update("email_verified_at", time.Now()).Error; err != nil {
-			return err
-		}
-	}
-
-	logger.Info().Msgf("Backfilled email verification for %d users", len(users))
+	logger.Info().Int64("count", result.RowsAffected).Msg("Backfilled email verification")
 	return nil
 }

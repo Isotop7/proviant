@@ -90,15 +90,15 @@ func (pv *PasswordValidator) ValidateAll(password string) []error {
 }
 
 func (pv *PasswordValidator) requireUppercase() bool {
-	return pv.config.MinLength > 0 && pv.config.RequireUppercase
+	return pv.config.RequireUppercase
 }
 
 func (pv *PasswordValidator) requireDigit() bool {
-	return pv.config.MinLength > 0 && pv.config.RequireDigit
+	return pv.config.RequireDigit
 }
 
 func (pv *PasswordValidator) requireSpecial() bool {
-	return pv.config.MinLength > 0 && pv.config.RequireSpecial
+	return pv.config.RequireSpecial
 }
 
 func (pv *PasswordValidator) checkBreached() bool {
