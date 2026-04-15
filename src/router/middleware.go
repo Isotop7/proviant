@@ -252,10 +252,6 @@ func JWTMiddleware(
 
 			// Check email verification
 			if user.EmailVerifiedAt == nil {
-				ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-					"code":    "EMAIL_NOT_VERIFIED",
-					"message": "Please verify your email address before logging in",
-				})
 				return nil, jwt.ErrFailedAuthentication
 			}
 

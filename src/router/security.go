@@ -9,7 +9,7 @@ import (
 func SecurityHeadersMiddleware(proviantConfig *configuration.ProviantConfiguration) gin.HandlerFunc {
 	csp := proviantConfig.Server.SecurityHeaders.ContentSecurityPolicy
 	if csp == "" {
-		csp = "default-src 'self'"
+		csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;"
 	}
 
 	secureMiddleware := secure.New(secure.Options{

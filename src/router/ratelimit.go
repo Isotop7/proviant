@@ -53,9 +53,10 @@ func getLimiter(store *sync.Map, key string, r rate.Limit) *rate.Limiter {
 func loginRateLimitMiddleware(ctx *gin.Context) {
 	ip := getClientIP(ctx)
 	limiter := getLimiter(loginLimiters, ip, loginRate)
-	if !limiter.Allow() {
-		retryAfter := strconv.Itoa(int(time.Until(time.Now().Add(time.Minute)).Seconds()))
-		ctx.Header("Retry-After", retryAfter)
+	r := limiter.Reserve()
+	if delay := r.Delay(); delay > 0 {
+		r.Cancel()
+		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 			"code":    "RATE_LIMIT_EXCEEDED",
 			"message": "Too many login attempts. Please try again later.",
@@ -68,9 +69,10 @@ func loginRateLimitMiddleware(ctx *gin.Context) {
 func signupRateLimitMiddleware(ctx *gin.Context) {
 	ip := getClientIP(ctx)
 	limiter := getLimiter(signupLimiters, ip, signupRate)
-	if !limiter.Allow() {
-		retryAfter := strconv.Itoa(int(time.Until(time.Now().Add(time.Minute)).Seconds()))
-		ctx.Header("Retry-After", retryAfter)
+	r := limiter.Reserve()
+	if delay := r.Delay(); delay > 0 {
+		r.Cancel()
+		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 			"code":    "RATE_LIMIT_EXCEEDED",
 			"message": "Too many signup attempts. Please try again later.",
@@ -93,9 +95,10 @@ func exportRateLimitMiddleware(ctx *gin.Context) {
 
 	key := strconv.FormatUint(uint64(userID), 10)
 	limiter := getLimiter(exportLimiters, key, exportRate)
-	if !limiter.Allow() {
-		retryAfter := strconv.Itoa(int(time.Until(time.Now().Add(time.Minute)).Seconds()))
-		ctx.Header("Retry-After", retryAfter)
+	r := limiter.Reserve()
+	if delay := r.Delay(); delay > 0 {
+		r.Cancel()
+		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 			"code":    "RATE_LIMIT_EXCEEDED",
 			"message": "Too many export requests. Please try again later.",

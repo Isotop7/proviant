@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"time"
+
 	"codeberg.org/isotop7/proviant/api/auth"
 	"codeberg.org/isotop7/proviant/api/common"
 	"codeberg.org/isotop7/proviant/api/onboarding"
@@ -12,6 +14,7 @@ import (
 	"codeberg.org/isotop7/proviant/assets"
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/templates"
 	"codeberg.org/isotop7/proviant/web"
@@ -22,8 +25,19 @@ import (
 	"gorm.io/gorm"
 )
 
+func cleanupRevokedTokens(db *gorm.DB, logger *zerolog.Logger) {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+	for range ticker.C {
+		result := db.Where("expires_at < ?", time.Now()).Delete(&authentication.RevokedToken{})
+		logger.Info().Int64("deleted", result.RowsAffected).Msg("Cleaned up expired revoked tokens")
+	}
+}
+
 // SetupRouter creates the gin engine and associated middleware
 func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) *gin.Engine {
+	go cleanupRevokedTokens(dbHandle, logger)
+
 	// Generate new gin instance
 	engine := gin.New()
 

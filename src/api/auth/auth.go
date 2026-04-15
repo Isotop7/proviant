@@ -88,7 +88,6 @@ func Signup(ctx *gin.Context) {
 
 	// Create new user object
 	user := authentication.User{
-		ID:          userRepo.GetNextUserID(),
 		Username:    signup.Username,
 		Password:    signup.Password,
 		MailAddress: signup.MailAddress,
