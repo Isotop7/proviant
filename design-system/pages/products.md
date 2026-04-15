@@ -19,14 +19,21 @@ Core screen — users spend most time here. Information density and expiry reada
 
 ## Status Badge — Expiry Countdown
 
-For ≤ 7 days remaining, prefer a human-readable countdown ("3 days left") over a raw date string.
+For ≤ 7 days remaining, show both a colored badge and an urgency text line on the card.
 
-| State | Condition | Classes |
-|-------|-----------|---------|
-| Expired | date passed | `bg-danger text-white` |
-| Expiring soon | 1–7 days | `bg-warning text-dark` |
-| Fresh | 8–30 days | `bg-success text-dark` |
-| Well stocked | > 30 days | `bg-primary text-white` |
+| State | Condition | Badge classes | Urgency text |
+|-------|-----------|---------------|--------------|
+| Expired | date passed | `bg-danger text-white` | "Expired today" / "Expired N day(s) ago" |
+| Critical | ≤ 3 days | `bg-danger text-white` | "Expires tomorrow" / "Expires in N days" |
+| Expiring soon | 4–7 days | `bg-warning text-dark` | "Expires in N days" |
+| Fresh | > 7 days | `bg-success text-dark` | — |
+| No date | — | `bg-secondary` | — |
+
+Urgency text uses `text-danger` for expired/critical, `text-warning` for expiring soon. Rendered below the expiry badge row on the product card.
+
+## Default Sort Order
+
+Products sorted by `expire_at ASC` by default — expired and critical products appear at the top. Products with no expiry date set appear at the end.
 
 ---
 
