@@ -172,6 +172,9 @@ var (
 	// ErrMemberNotInHousehold is thrown when the target user is not a member of the caller's household
 	ErrMemberNotInHousehold = errors.New("user is not a member of this household")
 
+	// ErrUserNotInHousehold is thrown when an admin targets a user not in their household
+	ErrUserNotInHousehold = errors.New("user is not a member of this household")
+
 	/*
 	 * Invitation related errors
 	 */
@@ -201,4 +204,37 @@ var (
 	 */
 	// ErrEmailNotVerified is thrown when a user attempts to login without verifying their email
 	ErrEmailNotVerified = errors.New("email address not verified")
+
+	/*
+	 * Personal Access Token related errors
+	 */
+	// ErrPATNotFound is thrown when a PAT does not exist
+	ErrPATNotFound = errors.New("personal access token not found")
+
+	// ErrPATExpired is thrown when a PAT has expired
+	ErrPATExpired = errors.New("personal access token expired")
+
+	// ErrPATInvalid is thrown when a PAT is invalid
+	ErrPATInvalid = errors.New("invalid personal access token")
+
+	// ErrPATInsufficientScope is thrown when a PAT lacks required scope
+	ErrPATInsufficientScope = errors.New("insufficient token scope")
+
+	/*
+	 * Webhook related errors
+	 */
+	// ErrWebhookNotFound is thrown when a webhook does not exist
+	ErrWebhookNotFound = errors.New("webhook not found")
+
+	// ErrWebhookURLInvalid is thrown when a webhook URL is invalid
+	ErrWebhookURLInvalid = errors.New("webhook URL is invalid")
+
+	// ErrWebhookSecretTooShort is thrown when a webhook secret is too short
+	ErrWebhookSecretTooShort = errors.New("webhook secret must be at least 16 characters")
+
+	// ErrWebhookInvalidEvent is thrown when an invalid webhook event is specified
+	ErrWebhookInvalidEvent = errors.New("invalid webhook event")
+
+	// ErrWebhookNotOwner is thrown when a user tries to access a webhook they do not own
+	ErrWebhookNotOwner = errors.New("webhook does not belong to user")
 )

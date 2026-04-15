@@ -98,7 +98,7 @@
                 <div class="mb-4">
                     <label for="inputNotificationThreshold" class="form-label fw-medium">Expiry Threshold</label>
                     <p class="text-body-secondary small mb-2">Notify this many days <strong>before</strong> a product expires. Set to 0 to only notify on or after the expiry date.</p>
-                    <div class="input-group" style="max-width: 260px;">
+                    <div class="input-group input-width-260">
                         <span class="input-group-text"><i class="bi bi-alarm"></i></span>
                         <input type="number" class="form-control" id="inputNotificationThreshold"
                                min="0" step="1"
@@ -109,7 +109,7 @@
                     <div class="invalid-feedback" id="thresholdFeedback"></div>
                 </div>
 
-                <div id="ntfySettings" {{if not .User.NotificationPreferences.NtfyEnabled}}style="display: none;"{{end}}>
+                <div id="ntfySettings" {{if not .User.NotificationPreferences.NtfyEnabled}}class="d-none"{{end}}>
                     <h3 class="h6 fw-medium mb-3">ntfy.sh Configuration</h3>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
@@ -135,12 +135,120 @@
                         <label for="inputNtfyToken" class="form-label fw-medium">
                             Access Token <span class="text-body-secondary fw-normal">(optional)</span>
                         </label>
-                        <input type="password" class="form-control" id="inputNtfyToken"
-                               placeholder="Optional access token" autocomplete="new-password"
-                               style="max-width: 360px;">
+                        <input type="password" class="form-control input-width-360" id="inputNtfyToken"
+                               placeholder="Optional access token" autocomplete="new-password">
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+
+    {{/* ── Calendar Sync ─────────────────────────────────────────── */}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+            <h2 class="h5 mb-0 fw-semibold">Calendar Sync</h2>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnCalendarRegenerate">
+                Regenerate Token
+            </button>
+        </div>
+        <div class="card-body px-4 py-4">
+            <p class="text-body-secondary small mb-3">Subscribe to your product expiry dates in Google Calendar, Apple Calendar, or Thunderbird using the iCal feed URL below.</p>
+
+            <div id="calendarNoToken">
+                <i class="bi bi-calendar-x text-muted fs-1 mb-3 d-block"></i>
+                <p class="text-muted mb-3">No calendar token configured.</p>
+                <button type="button" class="btn btn-primary" id="btnCalendarCreate">
+                    <i class="bi bi-plus-lg me-1"></i>Generate Calendar Token
+                </button>
+            </div>
+
+            <div id="calendarHasToken" class="d-none">
+                <div class="mb-3">
+                    <label class="form-label fw-medium">iCal Subscription URL</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control font-monospace small" id="calendarUrl" readonly
+                               value="">
+                        <button type="button" class="btn btn-outline-secondary" id="btnCalendarCopy" title="Copy URL">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="btnCalendarDownload" title="Download .ics">
+                            <i class="bi bi-download"></i>
+                        </button>
+                    </div>
+                    <div id="calendarUrlCopied" class="form-text text-success d-none">
+                        <i class="bi bi-check-circle me-1"></i>URL copied to clipboard!
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Instructions</label>
+                    <ol class="text-body-secondary small mb-0">
+                        <li>Copy the subscription URL above</li>
+                        <li>Open your calendar app (Google Calendar, Apple Calendar, Thunderbird)</li>
+                        <li>Add a new calendar subscription with that URL</li>
+                        <li>Calendar events will appear for products expiring in the next 30 days</li>
+                    </ol>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="btnCalendarRemove">
+                    <i class="bi bi-trash me-1"></i>Remove Calendar Sync
+                </button>
+            </div>
+
+            <div id="calendarAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
+        </div>
+    </div>
+
+    {{/* ── API Tokens ──────────────────────────────────────────── */}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+            <h2 class="h5 mb-0 fw-semibold">API Tokens</h2>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnCreatePAT">
+                Create Token
+            </button>
+        </div>
+        <div class="card-body px-4 py-4">
+            <p class="text-body-secondary small mb-3">Personal access tokens let you authenticate with the API without a browser session.</p>
+            <ul class="list-group" id="patList">
+                <li class="list-group-item text-center text-muted py-3" id="patLoading">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
+                </li>
+            </ul>
+            <div id="patAlert" class="alert fade mt-2 d-none" role="alert"><span></span></div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="createPatModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create API Token</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createPatForm">
+                        <div class="mb-3">
+                            <label for="inputPatName" class="form-label fw-medium">
+                                Token Name <span class="text-danger" aria-hidden="true">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="inputPatName" required>
+                            <div class="invalid-feedback">Please enter a token name.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="inputPatExpiry" class="form-label fw-medium">
+                                Expires At <span class="text-body-secondary fw-normal">(optional)</span>
+                            </label>
+                            <input type="datetime-local" class="form-control" id="inputPatExpiry">
+                        </div>
+                    </form>
+                    <div id="newTokenDisplay" class="alert alert-success d-none">
+                        <strong>Token created!</strong> Copy it now. You won't see it again.
+                        <pre class="mt-2 mb-0 font-monospace" id="newTokenValue"></pre>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="btnSavePAT">Create</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -162,7 +270,7 @@
             {{ if .IsAdmin }}
             <div class="mb-4">
                 <h3 class="h6 fw-medium mb-2"><i class="bi bi-pencil me-1"></i>Rename Household</h3>
-                <div class="input-group" style="max-width: 480px;">
+                <div class="input-group input-width-480">
                     <input type="text" class="form-control" id="inputHouseholdName"
                            placeholder="New household name" aria-label="New household name"
                            value="{{ .Household.Name }}">
@@ -207,7 +315,7 @@
                         Apply to Join a Household
                     </label>
                     <p class="text-body-secondary small mb-2">Enter the ID of the household you want to join. The admin will need to approve your request.</p>
-                    <div class="input-group" style="max-width: 360px;">
+                    <div class="input-group input-width-360">
                         <span class="input-group-text"><i class="bi bi-hash"></i></span>
                         <input type="number" class="form-control" id="inputApplyHouseholdID"
                                placeholder="Household ID" aria-required="true" min="1">
@@ -241,7 +349,7 @@
                         <i class="bi bi-envelope-paper me-1"></i>Invite by Email
                     </label>
                     <p class="text-body-secondary small mb-2">Send an invitation to join this household. The recipient will receive an email with a magic link to accept.</p>
-                    <div class="input-group" style="max-width: 480px;">
+                    <div class="input-group input-width-480">
                         <span class="input-group-text"><i class="bi bi-at"></i></span>
                         <input type="email" class="form-control" id="inputInviteEmail"
                                placeholder="user@example.com" aria-label="Email address to invite" autocomplete="email">
@@ -334,6 +442,115 @@
             {{ end }}
             {{ end }}
 
+            {{/* Admin: User Management */}}
+            {{ if .IsAdmin }}
+            <div class="mt-4 pt-4 border-top">
+                <h3 class="h6 fw-medium mb-2"><i class="bi bi-person-gear me-1"></i>User Management</h3>
+                <p class="text-body-secondary small mb-3">Manage household members. Click edit to update username or email, reset password to send a password reset link, or remove to delete the user.</p>
+
+                <div class="mb-3">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnRefreshUsers">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                    </button>
+                </div>
+                <ul class="list-group" id="adminUserList">
+                    <li class="list-group-item text-center text-muted py-3" id="adminUserLoading">
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
+                    </li>
+                </ul>
+                <div id="adminUserAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
+
+                <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="editUserForm" novalidate>
+                                    <input type="hidden" id="editUserID">
+                                    <div class="mb-3">
+                                        <label for="editUsername" class="form-label fw-medium">Username</label>
+                                        <input type="text" class="form-control" id="editUsername" required>
+                                        <div class="invalid-feedback">Username is required.</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="editMailAddress" class="form-label fw-medium">Email Address</label>
+                                        <input type="email" class="form-control" id="editMailAddress" required>
+                                        <div class="invalid-feedback">Valid email is required.</div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" id="btnSaveUserEdit">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{ end }}
+
+            {{/* ── Webhooks ──────────────────────────────────────── */}}
+            <div class="mt-4 pt-4 border-top">
+                <h3 class="h6 fw-medium mb-3"><i class="bi bi-webhook me-1"></i>Webhooks</h3>
+                <p class="text-body-secondary small mb-3">Configure webhooks to receive notifications when events occur. Webhooks are triggered asynchronously with up to 3 retries on failure.</p>
+                
+                <div id="webhookList" class="mb-4"></div>
+
+                <div class="card border-primary-subtle">
+                    <div class="card-header bg-primary-subtle">
+                        <h4 class="h6 mb-0 fw-medium">Create New Webhook</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="webhookCreateForm" novalidate>
+                            <div class="mb-3">
+                                <label for="inputWebhookUrl" class="form-label fw-medium">Webhook URL <span class="text-danger">*</span></label>
+                                <input type="url" class="form-control" id="inputWebhookUrl" placeholder="https://example.com/webhook" required>
+                                <div class="invalid-feedback">Please enter a valid URL.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="inputWebhookSecret" class="form-label fw-medium">Secret <span class="text-danger">*</span></label>
+                                <input type="password" class="form-control" id="inputWebhookSecret" placeholder="Minimum 16 characters" minlength="16" required>
+                                <div class="invalid-feedback">Secret must be at least 16 characters.</div>
+                                <div class="form-text">Used to sign payloads with HMAC-SHA256. Keep this secret safe.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-medium">Events <span class="text-danger">*</span></label>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductCreated" data-event="product.created">
+                                            <label class="form-check-label" for="eventProductCreated">product.created</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductExpired" data-event="product.expired">
+                                            <label class="form-check-label" for="eventProductExpired">product.expired</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductExpiringSoon" data-event="product.expiring_soon">
+                                            <label class="form-check-label" for="eventProductExpiringSoon">product.expiring_soon</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductWasted" data-event="product.wasted">
+                                            <label class="form-check-label" for="eventProductWasted">product.wasted</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventHouseholdMemberJoined" data-event="household.member_joined">
+                                            <label class="form-check-label" for="eventHouseholdMemberJoined">household.member_joined</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-primary" id="btnCreateWebhook">Create Webhook</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             {{/* ── Danger Zone ─────────────────────────────────── */}}
             <div class="mt-4 pt-4 border-top border-danger border-opacity-25">
                 <h3 class="h6 fw-medium text-danger mb-3">
@@ -346,7 +563,7 @@
                         <i class="bi bi-house-add me-1"></i>Create New Household
                     </label>
                     <p class="text-body-secondary small mb-2">Create a new household and switch to it. If you are currently the sole member, your products will be moved.</p>
-                    <div class="input-group" style="max-width: 480px;">
+                    <div class="input-group input-width-480">
                         <span class="input-group-text"><i class="bi bi-house"></i></span>
                         <input type="text" class="form-control" id="inputNewHouseholdName"
                                placeholder="Household name" aria-label="New household name">
@@ -372,6 +589,43 @@
     </div>
 
 
+</div>
+
+{{/* ── Webhook Secret Modal ────────────────────────────────────── */}}
+<div class="modal fade" id="webhookSecretModal" tabindex="-1" aria-labelledby="webhookSecretModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="webhookSecretModalLabel">Webhook Secret</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-body-secondary small mb-2">Copy this secret to verify webhook signatures. You will not be able to see it again.</p>
+                <input type="text" class="form-control" id="webhookSecretCopy" readonly>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCloseWebhookSecret" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnCopySecret">Copy</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{/* ── Webhook Deliveries Modal ───────────────────────────────── */}}
+<div class="modal fade" id="webhookDeliveriesModal" tabindex="-1" aria-labelledby="webhookDeliveriesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="webhookDeliveriesModalLabel">Webhook Delivery History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="deliveriesModalBody">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="/assets/js/userSettings.js"></script>

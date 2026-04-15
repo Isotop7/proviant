@@ -234,16 +234,10 @@ proviant.loginUser = async function (username, password) {
     },
     body: JSON.stringify({ username, password }),
   });
-  if (!apiCall.ok) {
-    return {
-      code: apiCall.status,
-      body: "Error logging in",
-    };
-  }
   const body = await apiCall.json();
   const response = {
     code: apiCall.status,
-    body: body.message,
+    body: body.message || body.code || "",
   };
   return response;
 };
@@ -385,6 +379,38 @@ proviant.approveApplication = async function (applicationID) {
 
 proviant.rejectApplication = async function (applicationID) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/applications/${applicationID}/reject`;
+  const apiCall = await fetch(url, { method: "POST" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.getHouseholdUsers = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users`;
+  const apiCall = await fetch(url, { method: "GET" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.updateHouseholdUser = async function (userID, username, mailAddress) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}`;
+  const apiCall = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, mailAddress }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.deleteHouseholdUser = async function (userID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}`;
+  const apiCall = await fetch(url, { method: "DELETE" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.resetHouseholdUserPassword = async function (userID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}/reset-password`;
   const apiCall = await fetch(url, { method: "POST" });
   const body = await apiCall.json();
   return { code: apiCall.status, message: body.message };
@@ -572,4 +598,168 @@ proviant.getNotifications = async function () {
   });
   const body = await apiCall.json();
   return { code: apiCall.status, message: body };
+};
+
+proviant.createPAT = async function (name, expiresAt) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens`;
+  const payload = { name };
+  if (expiresAt) {
+    payload.expiresAt = expiresAt;
+  }
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.getPATs = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.deletePAT = async function (patID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens/${patID}`;
+  const apiCall = await fetch(url, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.exportProductsCSV = function (from, to) {
+  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/products.csv`;
+  const params = [];
+  if (from) params.push(`from=${from}`);
+  if (to) params.push(`to=${to}`);
+  if (params.length) url += `?${params.join("&")}`;
+  window.location.href = url;
+};
+
+proviant.exportProductsJSON = function (from, to) {
+  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/products.json`;
+  const params = [];
+  if (from) params.push(`from=${from}`);
+  if (to) params.push(`to=${to}`);
+  if (params.length) url += `?${params.join("&")}`;
+  window.location.href = url;
+};
+
+proviant.exportArchiveCSV = function (from, to) {
+  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/archive.csv`;
+  const params = [];
+  if (from) params.push(`from=${from}`);
+  if (to) params.push(`to=${to}`);
+  if (params.length) url += `?${params.join("&")}`;
+  window.location.href = url;
+};
+
+proviant.exportFullJSON = function () {
+  window.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/full.json`;
+};
+
+/* Calendar sync API methods */
+proviant.getCalendarTokenStatus = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.createCalendarToken = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.deleteCalendarToken = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`;
+  const apiCall = await fetch(url, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.downloadCalendarICS = function (token) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/export.ics?token=${encodeURIComponent(token)}`;
+  window.location.href = url;
+};
+
+proviant.copyToClipboard = async function (text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/* Webhook API methods */
+proviant.getWebhooks = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, webhooks: body.webhooks };
+};
+
+proviant.createWebhook = async function (url, secret, events, active) {
+  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks`;
+  const apiCall = await fetch(apiUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, secret, events, active }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.updateWebhook = async function (id, url, secret, events, active) {
+  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}`;
+  const apiCall = await fetch(apiUrl, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, secret, events, active }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.deleteWebhook = async function (id) {
+  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}`;
+  const apiCall = await fetch(apiUrl, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.getWebhookDeliveries = async function (id) {
+  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}/deliveries`;
+  const apiCall = await fetch(apiUrl, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, deliveries: body.deliveries };
 };

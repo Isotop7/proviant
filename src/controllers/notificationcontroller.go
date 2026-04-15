@@ -100,6 +100,37 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 	for idx := range *notificationProducts {
 		product := &(*notificationProducts)[idx]
 
+		// Determine if product is expired or expiring soon
+		now := time.Now()
+		isExpired := product.ExpireAt.Before(now)
+		isExpiringSoon := !isExpired && product.ExpireAt.Before(now.AddDate(0, 0, nc.Configuration.Interval*24))
+
+		// Fire webhooks asynchronously
+		go func(p *dbModel.Product, expired, expiringSoon bool) {
+			ws := GetWebhookService()
+			if ws == nil {
+				return
+			}
+			if expired {
+				daysUntilExpiry := int(time.Since(p.ExpireAt).Hours() / 24)
+				ws.FireEvent("product.expired", map[string]any{
+					"id":              p.ID,
+					"productName":     p.ProductName,
+					"daysUntilExpiry": daysUntilExpiry,
+					"householdId":     p.HouseholdID,
+				})
+			}
+			if expiringSoon {
+				daysUntilExpiry := int(time.Until(p.ExpireAt).Hours() / 24)
+				ws.FireEvent("product.expiring_soon", map[string]any{
+					"id":              p.ID,
+					"productName":     p.ProductName,
+					"daysUntilExpiry": daysUntilExpiry,
+					"householdId":     p.HouseholdID,
+				})
+			}
+		}(product, isExpired, isExpiringSoon)
+
 		// Get notification preferences for household members
 		preferences, getError := nc.NotificationRepo.GetHouseholdMembersNotificationPreferences(product.HouseholdID)
 		if getError != nil {

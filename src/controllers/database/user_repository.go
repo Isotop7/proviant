@@ -55,12 +55,6 @@ func (r *UserRepository) UserExistsByMailAddress(user *authentication.User) bool
 	return selectErr.Error != gorm.ErrRecordNotFound
 }
 
-func (r *UserRepository) GetNextUserID() uint {
-	var maxID uint
-	r.DB.Model(&authentication.User{}).Select("MAX(id)").Scan(&maxID)
-	return (maxID + 1)
-}
-
 func (r *UserRepository) CreateUser(user *authentication.User) error {
 	tx := r.DB.Begin()
 
@@ -183,7 +177,7 @@ func (r *UserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttempts 
 		lockoutUntil := time.Now().Add(time.Duration(lockoutDurationMins) * time.Minute)
 		return r.DB.Model(&user).Updates(map[string]interface{}{
 			"failed_login_attempts": user.FailedLoginAttempts,
-			"deleted_at":            lockoutUntil,
+			"locked_until":          lockoutUntil,
 		}).Error
 	}
 	return r.DB.Model(&user).Update("failed_login_attempts", user.FailedLoginAttempts).Error
@@ -192,7 +186,7 @@ func (r *UserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttempts 
 func (r *UserRepository) ResetFailedLoginAttempts(userID uint) error {
 	return r.DB.Model(&authentication.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
 		"failed_login_attempts": 0,
-		"deleted_at":            nil,
+		"locked_until":          nil,
 	}).Error
 }
 
@@ -244,10 +238,33 @@ func (r *UserRepository) MarkOnboardingComplete(userID uint) error {
 		Update("onboarding_completed", true).Error
 }
 
+func (r *UserRepository) EnsureOnboardingState(userID uint) error {
+	var existing database.OnboardingState
+	findErr := r.DB.Where("user_id = ?", userID).First(&existing).Error
+	if findErr == nil {
+		return nil
+	}
+	if findErr != gorm.ErrRecordNotFound {
+		return findErr
+	}
+	state := database.OnboardingState{UserID: userID}
+	return r.DB.Create(&state).Error
+}
+
 func (r *UserRepository) GetHouseholdByID(householdID uint) (database.Household, error) {
 	var household database.Household
 	selectErr := r.DB.First(&household, householdID)
 	return household, selectErr.Error
+}
+
+func (r *UserRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error) {
+	var users []authentication.User
+	err := r.DB.Where("household_id = ?", householdID).Find(&users).Error
+	return users, err
+}
+
+func (r *UserRepository) DeleteUser(userID uint) error {
+	return r.DB.Delete(&authentication.User{}, userID).Error
 }
 
 var _ = (*UserRepository)(nil)

@@ -58,13 +58,13 @@ tasks:
     desc: Generate package documentation as markdown
     dir: src
     cmds:
-      - go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest --output ../docs/README.md ./...
+      - go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest --output ./docs/README.md ./...
 
   apidoc:
     desc: Generate API documentation (Swagger)
     dir: src
     cmds:
-      - go run github.com/swaggo/swag/cmd/swag@latest init -g api/api.go --parseDependency -o ../docs/
+      - go run github.com/swaggo/swag/cmd/swag@latest init -g api/api.go --parseDependency -o ./docs/
 
   doc:
     desc: Generate all documentation
@@ -132,6 +132,7 @@ tasks:
       - cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js ./src/assets/js/
       - cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js.map ./src/assets/js/
       - cp ./node_modules/chart.js/dist/chart.umd.min.js ./src/assets/js/
+      - cp ./node_modules/chart.js/dist/chart.umd.min.js.map ./src/assets/js/
 
   lint-css:
     desc: Lint SCSS files

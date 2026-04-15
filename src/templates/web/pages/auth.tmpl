@@ -76,4 +76,25 @@
     </div>
 </div>
 
+<!-- Email verification modal -->
+<div class="modal fade" id="emailVerificationModal" tabindex="-1" aria-labelledby="emailVerificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="emailVerificationModalLabel"><i class="bi bi-envelope-check me-2"></i>Verify Your Email</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="bi bi-envelope-open text-info fs-1 mb-3 d-block"></i>
+                <p class="mb-1">A verification email was sent to:</p>
+                <p class="fw-semibold mb-3" id="emailVerificationAddress"></p>
+                <p class="text-body-secondary small mb-0">Click the link in the email to verify your address, then log in.</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{ end }}

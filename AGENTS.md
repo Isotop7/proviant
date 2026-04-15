@@ -210,6 +210,7 @@ document.addEventListener("click", function(event) {
 - Include Swagger annotations for API endpoints
 - Run `task doc` to generate package documentation and API docs before commits to regenerate docs
 - Swagger annotations format: `@Summary`, `@Description`, `@Tags`, `@Router`
+- **All API and web handlers used in router MUST have Swagger annotations** — this ensures API documentation stays current. When adding a new handler to `src/router/router.go`, immediately add the corresponding Swagger comments above the function declaration.
 
 ### Performance Considerations
 - Use `strings.Builder` instead of string concatenation in loops
