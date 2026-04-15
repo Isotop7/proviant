@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v21';
+const CACHE_NAME = 'proviant-v22';
 
 // Static shell to pre-cache on install
 const PRECACHE_URLS = [
@@ -125,19 +125,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for all navigation (HTML pages contain user-specific SSR data)
+  // Network-first for all navigation — cache successful responses for offline fallback
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() =>
-        caches.match(request).then(
-          (cached) =>
-            cached ||
-            new Response(OFFLINE_PAGE, {
-              status: 200,
-              headers: { 'Content-Type': 'text/html; charset=utf-8' },
-            })
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() =>
+          caches.match(request).then(
+            (cached) =>
+              cached ||
+              new Response(OFFLINE_PAGE, {
+                status: 200,
+                headers: { 'Content-Type': 'text/html; charset=utf-8' },
+              })
+          )
         )
-      )
     );
   }
 });
