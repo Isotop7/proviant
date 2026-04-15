@@ -52,10 +52,46 @@ func expiryBadgeClass(t time.Time) string {
 	if t.Before(now) {
 		return "bg-danger"
 	}
+	if t.Before(now.Add(3 * 24 * time.Hour)) {
+		return "bg-danger"
+	}
 	if t.Before(now.Add(7 * 24 * time.Hour)) {
 		return "bg-warning"
 	}
 	return "bg-success"
+}
+
+func expiryTextClass(t time.Time) string {
+	if t.IsZero() {
+		return "text-secondary"
+	}
+	now := time.Now()
+	if t.Before(now.Add(3 * 24 * time.Hour)) {
+		return "text-danger"
+	}
+	return "text-warning"
+}
+
+func expiryUrgencyText(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	now := time.Now()
+	if t.Before(now) {
+		days := int(now.Sub(t).Hours() / 24)
+		if days == 0 {
+			return "Expired today"
+		}
+		return fmt.Sprintf("Expired %d day(s) ago", days)
+	}
+	days := int(t.Sub(now).Hours()/24) + 1
+	if days == 1 {
+		return "Expires tomorrow"
+	}
+	if days <= 7 {
+		return fmt.Sprintf("Expires in %d days", days)
+	}
+	return ""
 }
 
 func badgifyCategories(categories string, limit int) template.HTML {
@@ -160,6 +196,8 @@ var customTemplateFunctions = template.FuncMap{
 	"today":                today,
 	"hasPassed":            hasPassed,
 	"expiryBadgeClass":     expiryBadgeClass,
+	"expiryUrgencyText":    expiryUrgencyText,
+	"expiryTextClass":      expiryTextClass,
 	"badgifyCategories":    badgifyCategories,
 	"splitString":          splitString,
 	"flagReplace":          flagReplace,
