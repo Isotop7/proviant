@@ -202,6 +202,8 @@ func main() {
 		&dbModel.OnboardingState{},
 		&dbModel.OpenFoodFactsCache{},
 		&dbModel.EmailVerification{},
+		&dbModel.Webhook{},
+		&dbModel.WebhookDeliveryLog{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
@@ -217,6 +219,9 @@ func main() {
 	if amountMigrationError := migrations.SetDefaultProductAmounts(logger, dbHandle); amountMigrationError != nil {
 		panic(amountMigrationError)
 	}
+
+	// Initialize webhook service
+	controllers.InitWebhookService(dbHandle, logger)
 
 	// Check API controller config and create instance
 	validateAPIs(proviantConfiguration)

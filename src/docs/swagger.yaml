@@ -5,6 +5,47 @@ definitions:
       message:
         type: string
     type: object
+  api.CreateWebhookRequest:
+    properties:
+      active:
+        type: boolean
+      events:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      secret:
+        minLength: 16
+        type: string
+      url:
+        type: string
+    required:
+    - events
+    - secret
+    - url
+    type: object
+  api.DeliveryLogListResponse:
+    properties:
+      deliveries:
+        items:
+          $ref: '#/definitions/api.DeliveryLogResponse'
+        type: array
+    type: object
+  api.DeliveryLogResponse:
+    properties:
+      attempt:
+        type: integer
+      createdAt:
+        type: string
+      error:
+        type: string
+      id:
+        type: integer
+      responseBody:
+        type: string
+      statusCode:
+        type: integer
+    type: object
   api.HouseholdListItem:
     properties:
       description:
@@ -95,6 +136,45 @@ definitions:
         type: integer
       month:
         description: 'format: "2006-01"'
+        type: string
+    type: object
+  api.UpdateWebhookRequest:
+    properties:
+      active:
+        type: boolean
+      events:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      secret:
+        minLength: 16
+        type: string
+      url:
+        type: string
+    type: object
+  api.WebhookListResponse:
+    properties:
+      webhooks:
+        items:
+          $ref: '#/definitions/api.WebhookResponse'
+        type: array
+    type: object
+  api.WebhookResponse:
+    properties:
+      active:
+        type: boolean
+      createdAt:
+        type: string
+      events:
+        items:
+          type: string
+        type: array
+      id:
+        type: integer
+      updatedAt:
+        type: string
+      url:
         type: string
     type: object
   auth.acceptInvitationRequest:
@@ -1940,6 +2020,182 @@ paths:
       summary: Updates a user password
       tags:
       - user
+  /api/v1/webhooks:
+    get:
+      description: Returns all webhooks for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.WebhookListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: List webhooks
+      tags:
+      - webhook
+    post:
+      consumes:
+      - application/json
+      description: Creates a new webhook for the authenticated user
+      parameters:
+      - description: Webhook
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.WebhookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a webhook
+      tags:
+      - webhook
+  /api/v1/webhooks/{id}:
+    delete:
+      description: Deletes a webhook by ID
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a webhook
+      tags:
+      - webhook
+    get:
+      description: Returns a webhook by ID
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.WebhookResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a webhook
+      tags:
+      - webhook
+    patch:
+      consumes:
+      - application/json
+      description: Updates a webhook by ID
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Webhook update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.WebhookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a webhook
+      tags:
+      - webhook
+  /api/v1/webhooks/{id}/deliveries:
+    get:
+      description: Returns delivery logs for a webhook
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.DeliveryLogListResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get webhook delivery logs
+      tags:
+      - webhook
   /auth/invite/accept:
     post:
       consumes:

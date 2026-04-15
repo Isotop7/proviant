@@ -243,6 +243,16 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedProductAPI.POST("/:id/restore", v1.RestoreProduct)
 	protectedProductAPI.POST("/:id/expire", v1.SetExpireAt)
 
+	// Webhook routes
+	webhookAPI := engine.Group("/api/v1/webhooks")
+	webhookAPI.Use(jwtAPIMiddlewareWithPAT)
+	webhookAPI.POST("", v1.CreateWebhook)
+	webhookAPI.GET("", v1.ListWebhooks)
+	webhookAPI.GET("/:id", v1.GetWebhook)
+	webhookAPI.PATCH("/:id", v1.UpdateWebhook)
+	webhookAPI.DELETE("/:id", v1.DeleteWebhook)
+	webhookAPI.GET("/:id/deliveries", v1.GetWebhookDeliveries)
+
 	// Calendar routes (export uses token query param, token management uses JWT)
 	calendarAPI := engine.Group("/api/v1/calendar")
 	calendarAPI.GET("/export.ics", v1.ExportICalendar)

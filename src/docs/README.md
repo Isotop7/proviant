@@ -94,6 +94,8 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [func GenerateEmailVerificationToken\(\) \(string, time.Time, error\)](<#GenerateEmailVerificationToken>)
 - [func GeneratePAT\(\) \(string, error\)](<#GeneratePAT>)
 - [func HashToken\(token string\) string](<#HashToken>)
+- [func InitWebhookService\(db \*gorm.DB, logger \*zerolog.Logger\)](<#InitWebhookService>)
+- [func ParseWebhookEvents\(eventsJSON string\) \[\]string](<#ParseWebhookEvents>)
 - [func ValidateAndLookupPAT\(token string, dbHandle \*gorm.DB\) \(\*authentication.PersonalAccessToken, error\)](<#ValidateAndLookupPAT>)
 - [type EmailNotificationProvider](<#EmailNotificationProvider>)
   - [func \(e \*EmailNotificationProvider\) GetProviderType\(\) string](<#EmailNotificationProvider.GetProviderType>)
@@ -116,6 +118,9 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
 - [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
+- [type WebhookService](<#WebhookService>)
+  - [func GetWebhookService\(\) \*WebhookService](<#GetWebhookService>)
+  - [func \(s \*WebhookService\) FireEvent\(event string, payload map\[string\]any\)](<#WebhookService.FireEvent>)
 
 
 ## Constants
@@ -167,6 +172,24 @@ func GeneratePAT() (string, error)
 
 ```go
 func HashToken(token string) string
+```
+
+
+
+<a name="InitWebhookService"></a>
+## func InitWebhookService
+
+```go
+func InitWebhookService(db *gorm.DB, logger *zerolog.Logger)
+```
+
+
+
+<a name="ParseWebhookEvents"></a>
+## func ParseWebhookEvents
+
+```go
+func ParseWebhookEvents(eventsJSON string) []string
 ```
 
 
@@ -389,6 +412,38 @@ type OpenFoodFactsAPIControllerInterface interface {
     GetDataset(barcode string) (database.Product, error)
 }
 ```
+
+<a name="WebhookService"></a>
+## type WebhookService
+
+
+
+```go
+type WebhookService struct {
+    DB         *gorm.DB
+    HTTPClient *http.Client
+    Logger     *zerolog.Logger
+    Repo       *database.WebhookRepository
+}
+```
+
+<a name="GetWebhookService"></a>
+### func GetWebhookService
+
+```go
+func GetWebhookService() *WebhookService
+```
+
+
+
+<a name="WebhookService.FireEvent"></a>
+### func \(\*WebhookService\) FireEvent
+
+```go
+func (s *WebhookService) FireEvent(event string, payload map[string]any)
+```
+
+
 
 # docs
 
@@ -656,6 +711,24 @@ var (
 
     // ErrPATInsufficientScope is thrown when a PAT lacks required scope
     ErrPATInsufficientScope = errors.New("insufficient token scope")
+
+    /*
+     * Webhook related errors
+     */
+    // ErrWebhookNotFound is thrown when a webhook does not exist
+    ErrWebhookNotFound = errors.New("webhook not found")
+
+    // ErrWebhookURLInvalid is thrown when a webhook URL is invalid
+    ErrWebhookURLInvalid = errors.New("webhook URL is invalid")
+
+    // ErrWebhookSecretTooShort is thrown when a webhook secret is too short
+    ErrWebhookSecretTooShort = errors.New("webhook secret must be at least 16 characters")
+
+    // ErrWebhookInvalidEvent is thrown when an invalid webhook event is specified
+    ErrWebhookInvalidEvent = errors.New("invalid webhook event")
+
+    // ErrWebhookNotOwner is thrown when a user tries to access a webhook they do not own
+    ErrWebhookNotOwner = errors.New("webhook does not belong to user")
 )
 ```
 
@@ -1272,10 +1345,12 @@ v1 implements version 1 of the proviant API
 - [func CreateInvitation\(ctx \*gin.Context\)](<#CreateInvitation>)
 - [func CreateProduct\(ctx \*gin.Context\)](<#CreateProduct>)
 - [func CreateUserToken\(ctx \*gin.Context\)](<#CreateUserToken>)
+- [func CreateWebhook\(ctx \*gin.Context\)](<#CreateWebhook>)
 - [func DeleteCalendarToken\(ctx \*gin.Context\)](<#DeleteCalendarToken>)
 - [func DeleteHouseholdUser\(ctx \*gin.Context\)](<#DeleteHouseholdUser>)
 - [func DeleteProduct\(ctx \*gin.Context\)](<#DeleteProduct>)
 - [func DeleteUserToken\(ctx \*gin.Context\)](<#DeleteUserToken>)
+- [func DeleteWebhook\(ctx \*gin.Context\)](<#DeleteWebhook>)
 - [func ExportArchiveCSV\(ctx \*gin.Context\)](<#ExportArchiveCSV>)
 - [func ExportFullJSON\(ctx \*gin.Context\)](<#ExportFullJSON>)
 - [func ExportICalendar\(ctx \*gin.Context\)](<#ExportICalendar>)
@@ -1294,8 +1369,11 @@ v1 implements version 1 of the proviant API
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context\)](<#GetUserNotificationPreferences>)
+- [func GetWebhook\(ctx \*gin.Context\)](<#GetWebhook>)
+- [func GetWebhookDeliveries\(ctx \*gin.Context\)](<#GetWebhookDeliveries>)
 - [func LeaveHousehold\(ctx \*gin.Context\)](<#LeaveHousehold>)
 - [func ListUserTokens\(ctx \*gin.Context\)](<#ListUserTokens>)
+- [func ListWebhooks\(ctx \*gin.Context\)](<#ListWebhooks>)
 - [func RejectHouseholdApplication\(ctx \*gin.Context\)](<#RejectHouseholdApplication>)
 - [func RemoveHouseholdMember\(ctx \*gin.Context\)](<#RemoveHouseholdMember>)
 - [func RestoreProduct\(ctx \*gin.Context\)](<#RestoreProduct>)
@@ -1309,6 +1387,7 @@ v1 implements version 1 of the proviant API
 - [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
 - [func UpdateUserNotificationPreferences\(ctx \*gin.Context\)](<#UpdateUserNotificationPreferences>)
 - [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
+- [func UpdateWebhook\(ctx \*gin.Context\)](<#UpdateWebhook>)
 - [type CalendarTokenResponse](<#CalendarTokenResponse>)
 - [type FullExportHousehold](<#FullExportHousehold>)
 - [type FullExportMember](<#FullExportMember>)
@@ -1450,6 +1529,15 @@ func CreateUserToken(ctx *gin.Context)
 
 
 
+<a name="CreateWebhook"></a>
+## func CreateWebhook
+
+```go
+func CreateWebhook(ctx *gin.Context)
+```
+
+CreateWebhook creates a new webhook @Summary Create a webhook @Description Creates a new webhook for the authenticated user @Tags webhook @Accept json @Produce json @Param request body apiModel.CreateWebhookRequest true "Webhook" @Success 201 \{object\} apiModel.WebhookResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks \[post\] @Security BearerAuth
+
 <a name="DeleteCalendarToken"></a>
 ## func DeleteCalendarToken
 
@@ -1485,6 +1573,15 @@ func DeleteUserToken(ctx *gin.Context)
 ```
 
 
+
+<a name="DeleteWebhook"></a>
+## func DeleteWebhook
+
+```go
+func DeleteWebhook(ctx *gin.Context)
+```
+
+DeleteWebhook deletes a webhook @Summary Delete a webhook @Description Deletes a webhook by ID @Tags webhook @Produce json @Param id path int true "Webhook ID" @Success 200 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks/\{id\} \[delete\] @Security BearerAuth
 
 <a name="ExportArchiveCSV"></a>
 ## func ExportArchiveCSV
@@ -1650,6 +1747,24 @@ func GetUserNotificationPreferences(ctx *gin.Context)
 
 GetUserNotificationPreferences gets a user's notification preferences @Summary Gets a user's notification preferences @Description Retrieves notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} authentication.NotificationPreferences @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[get\]
 
+<a name="GetWebhook"></a>
+## func GetWebhook
+
+```go
+func GetWebhook(ctx *gin.Context)
+```
+
+GetWebhook returns a webhook by ID @Summary Get a webhook @Description Returns a webhook by ID @Tags webhook @Produce json @Param id path int true "Webhook ID" @Success 200 \{object\} apiModel.WebhookResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks/\{id\} \[get\] @Security BearerAuth
+
+<a name="GetWebhookDeliveries"></a>
+## func GetWebhookDeliveries
+
+```go
+func GetWebhookDeliveries(ctx *gin.Context)
+```
+
+GetWebhookDeliveries returns delivery logs for a webhook @Summary Get webhook delivery logs @Description Returns delivery logs for a webhook @Tags webhook @Produce json @Param id path int true "Webhook ID" @Success 200 \{object\} apiModel.DeliveryLogListResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks/\{id\}/deliveries \[get\] @Security BearerAuth
+
 <a name="LeaveHousehold"></a>
 ## func LeaveHousehold
 
@@ -1667,6 +1782,15 @@ func ListUserTokens(ctx *gin.Context)
 ```
 
 
+
+<a name="ListWebhooks"></a>
+## func ListWebhooks
+
+```go
+func ListWebhooks(ctx *gin.Context)
+```
+
+ListWebhooks returns all webhooks for the authenticated user @Summary List webhooks @Description Returns all webhooks for the authenticated user @Tags webhook @Produce json @Success 200 \{object\} apiModel.WebhookListResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks \[get\] @Security BearerAuth
 
 <a name="RejectHouseholdApplication"></a>
 ## func RejectHouseholdApplication
@@ -1784,6 +1908,15 @@ func UpdateUserPassword(ctx *gin.Context)
 ```
 
 UpdateUserPassword updates a user password @Summary Updates a user password @Description Updates password of a user @Tags user @Accept json @Produce json @Param login body authentication.Login true "Login" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/password \[post\]
+
+<a name="UpdateWebhook"></a>
+## func UpdateWebhook
+
+```go
+func UpdateWebhook(ctx *gin.Context)
+```
+
+UpdateWebhook updates a webhook @Summary Update a webhook @Description Updates a webhook by ID @Tags webhook @Accept json @Produce json @Param id path int true "Webhook ID" @Param request body apiModel.UpdateWebhookRequest true "Webhook update" @Success 200 \{object\} apiModel.WebhookResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks/\{id\} \[patch\] @Security BearerAuth
 
 <a name="CalendarTokenResponse"></a>
 ## type CalendarTokenResponse
@@ -1991,6 +2124,18 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*UserRepository\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#UserRepository.UpdateUserPassword>)
   - [func \(r \*UserRepository\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#UserRepository.UserExistsByMailAddress>)
   - [func \(r \*UserRepository\) UserExistsByUsername\(user \*authentication.User\) bool](<#UserRepository.UserExistsByUsername>)
+- [type WebhookRepository](<#WebhookRepository>)
+  - [func NewWebhookRepository\(db \*gorm.DB\) \*WebhookRepository](<#NewWebhookRepository>)
+  - [func \(r \*WebhookRepository\) CheckOwnership\(webhookID, userID uint\) error](<#WebhookRepository.CheckOwnership>)
+  - [func \(r \*WebhookRepository\) CreateDeliveryLog\(log \*database.WebhookDeliveryLog\) error](<#WebhookRepository.CreateDeliveryLog>)
+  - [func \(r \*WebhookRepository\) CreateWebhook\(webhook \*database.Webhook\) error](<#WebhookRepository.CreateWebhook>)
+  - [func \(r \*WebhookRepository\) DeleteWebhook\(webhookID uint\) error](<#WebhookRepository.DeleteWebhook>)
+  - [func \(r \*WebhookRepository\) GetActiveWebhooksByEvent\(event string\) \(\[\]database.Webhook, error\)](<#WebhookRepository.GetActiveWebhooksByEvent>)
+  - [func \(r \*WebhookRepository\) GetDeliveryLogs\(webhookID uint, limit int\) \(\[\]database.WebhookDeliveryLog, error\)](<#WebhookRepository.GetDeliveryLogs>)
+  - [func \(r \*WebhookRepository\) GetWebhookByID\(webhookID uint\) \(database.Webhook, error\)](<#WebhookRepository.GetWebhookByID>)
+  - [func \(r \*WebhookRepository\) GetWebhooksByUserID\(userID uint\) \(\[\]database.Webhook, error\)](<#WebhookRepository.GetWebhooksByUserID>)
+  - [func \(r \*WebhookRepository\) TrimDeliveryLogs\(webhookID uint, keep int\) error](<#WebhookRepository.TrimDeliveryLogs>)
+  - [func \(r \*WebhookRepository\) UpdateWebhook\(webhook \*database.Webhook\) error](<#WebhookRepository.UpdateWebhook>)
 
 
 ## Constants
@@ -3267,6 +3412,116 @@ func (r *UserRepository) UserExistsByUsername(user *authentication.User) bool
 
 
 
+<a name="WebhookRepository"></a>
+## type WebhookRepository
+
+
+
+```go
+type WebhookRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewWebhookRepository"></a>
+### func NewWebhookRepository
+
+```go
+func NewWebhookRepository(db *gorm.DB) *WebhookRepository
+```
+
+
+
+<a name="WebhookRepository.CheckOwnership"></a>
+### func \(\*WebhookRepository\) CheckOwnership
+
+```go
+func (r *WebhookRepository) CheckOwnership(webhookID, userID uint) error
+```
+
+
+
+<a name="WebhookRepository.CreateDeliveryLog"></a>
+### func \(\*WebhookRepository\) CreateDeliveryLog
+
+```go
+func (r *WebhookRepository) CreateDeliveryLog(log *database.WebhookDeliveryLog) error
+```
+
+
+
+<a name="WebhookRepository.CreateWebhook"></a>
+### func \(\*WebhookRepository\) CreateWebhook
+
+```go
+func (r *WebhookRepository) CreateWebhook(webhook *database.Webhook) error
+```
+
+
+
+<a name="WebhookRepository.DeleteWebhook"></a>
+### func \(\*WebhookRepository\) DeleteWebhook
+
+```go
+func (r *WebhookRepository) DeleteWebhook(webhookID uint) error
+```
+
+
+
+<a name="WebhookRepository.GetActiveWebhooksByEvent"></a>
+### func \(\*WebhookRepository\) GetActiveWebhooksByEvent
+
+```go
+func (r *WebhookRepository) GetActiveWebhooksByEvent(event string) ([]database.Webhook, error)
+```
+
+
+
+<a name="WebhookRepository.GetDeliveryLogs"></a>
+### func \(\*WebhookRepository\) GetDeliveryLogs
+
+```go
+func (r *WebhookRepository) GetDeliveryLogs(webhookID uint, limit int) ([]database.WebhookDeliveryLog, error)
+```
+
+
+
+<a name="WebhookRepository.GetWebhookByID"></a>
+### func \(\*WebhookRepository\) GetWebhookByID
+
+```go
+func (r *WebhookRepository) GetWebhookByID(webhookID uint) (database.Webhook, error)
+```
+
+
+
+<a name="WebhookRepository.GetWebhooksByUserID"></a>
+### func \(\*WebhookRepository\) GetWebhooksByUserID
+
+```go
+func (r *WebhookRepository) GetWebhooksByUserID(userID uint) ([]database.Webhook, error)
+```
+
+
+
+<a name="WebhookRepository.TrimDeliveryLogs"></a>
+### func \(\*WebhookRepository\) TrimDeliveryLogs
+
+```go
+func (r *WebhookRepository) TrimDeliveryLogs(webhookID uint, keep int) error
+```
+
+
+
+<a name="WebhookRepository.UpdateWebhook"></a>
+### func \(\*WebhookRepository\) UpdateWebhook
+
+```go
+func (r *WebhookRepository) UpdateWebhook(webhook *database.Webhook) error
+```
+
+
+
 # api
 
 ```go
@@ -3275,9 +3530,13 @@ import "codeberg.org/isotop7/proviant/models/api"
 
 ## Index
 
+- [Variables](<#variables>)
 - [type BulkProductsAPIModel](<#BulkProductsAPIModel>)
 - [type CreateTokenRequest](<#CreateTokenRequest>)
 - [type CreateTokenResponse](<#CreateTokenResponse>)
+- [type CreateWebhookRequest](<#CreateWebhookRequest>)
+- [type DeliveryLogListResponse](<#DeliveryLogListResponse>)
+- [type DeliveryLogResponse](<#DeliveryLogResponse>)
 - [type HouseholdListItem](<#HouseholdListItem>)
 - [type NotificationItem](<#NotificationItem>)
 - [type NotificationsResponse](<#NotificationsResponse>)
@@ -3287,7 +3546,24 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
 - [type TokenResponse](<#TokenResponse>)
+- [type UpdateWebhookRequest](<#UpdateWebhookRequest>)
+- [type WebhookListResponse](<#WebhookListResponse>)
+- [type WebhookResponse](<#WebhookResponse>)
 
+
+## Variables
+
+<a name="ValidWebhookEvents"></a>
+
+```go
+var ValidWebhookEvents = []string{
+    "product.expiring_soon",
+    "product.expired",
+    "product.created",
+    "product.wasted",
+    "household.member_joined",
+}
+```
 
 <a name="BulkProductsAPIModel"></a>
 ## type BulkProductsAPIModel
@@ -3324,6 +3600,47 @@ type CreateTokenResponse struct {
     Name      string  `json:"name"`
     ExpiresAt *string `json:"expiresAt"`
     Scopes    string  `json:"scopes"`
+}
+```
+
+<a name="CreateWebhookRequest"></a>
+## type CreateWebhookRequest
+
+
+
+```go
+type CreateWebhookRequest struct {
+    URL    string   `json:"url" binding:"required,url"`
+    Secret string   `json:"secret" binding:"required,min=16"`
+    Events []string `json:"events" binding:"required,min=1"`
+    Active *bool    `json:"active"`
+}
+```
+
+<a name="DeliveryLogListResponse"></a>
+## type DeliveryLogListResponse
+
+
+
+```go
+type DeliveryLogListResponse struct {
+    Deliveries []DeliveryLogResponse `json:"deliveries"`
+}
+```
+
+<a name="DeliveryLogResponse"></a>
+## type DeliveryLogResponse
+
+
+
+```go
+type DeliveryLogResponse struct {
+    ID           uint   `json:"id"`
+    StatusCode   int    `json:"statusCode"`
+    ResponseBody string `json:"responseBody,omitempty"`
+    Error        string `json:"error,omitempty"`
+    Attempt      int    `json:"attempt"`
+    CreatedAt    string `json:"createdAt"`
 }
 ```
 
@@ -3448,6 +3765,47 @@ type TokenResponse struct {
     ExpiresAt  *string `json:"expiresAt"`
     Scopes     string  `json:"scopes"`
     CreatedAt  string  `json:"createdAt"`
+}
+```
+
+<a name="UpdateWebhookRequest"></a>
+## type UpdateWebhookRequest
+
+
+
+```go
+type UpdateWebhookRequest struct {
+    URL    string   `json:"url" binding:"omitempty,url"`
+    Secret string   `json:"secret" binding:"omitempty,min=16"`
+    Events []string `json:"events" binding:"omitempty,min=1"`
+    Active *bool    `json:"active"`
+}
+```
+
+<a name="WebhookListResponse"></a>
+## type WebhookListResponse
+
+
+
+```go
+type WebhookListResponse struct {
+    Webhooks []WebhookResponse `json:"webhooks"`
+}
+```
+
+<a name="WebhookResponse"></a>
+## type WebhookResponse
+
+
+
+```go
+type WebhookResponse struct {
+    ID        uint     `json:"id"`
+    URL       string   `json:"url"`
+    Events    []string `json:"events"`
+    Active    bool     `json:"active"`
+    CreatedAt string   `json:"createdAt"`
+    UpdatedAt string   `json:"updatedAt"`
 }
 ```
 
@@ -3974,6 +4332,8 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type ProductDTOExpire](<#ProductDTOExpire>)
 - [type ProductDTOPatch](<#ProductDTOPatch>)
 - [type Timestamp](<#Timestamp>)
+- [type Webhook](<#Webhook>)
+- [type WebhookDeliveryLog](<#WebhookDeliveryLog>)
 
 
 ## Constants
@@ -4226,6 +4586,39 @@ Timestamp is the model definition for timestamp
 ```go
 type Timestamp struct {
     Timestamp Date `json:"timestamp" binding:"required"`
+}
+```
+
+<a name="Webhook"></a>
+## type Webhook
+
+
+
+```go
+type Webhook struct {
+    gorm.Model
+    UserID uint   `gorm:"index, not null" json:"-"`
+    URL    string `gorm:"not null" json:"url"`
+    Secret string `gorm:"not null" json:"-"`
+    Events string `gorm:"not null" json:"events"`
+    Active bool   `gorm:"default:true" json:"active"`
+}
+```
+
+<a name="WebhookDeliveryLog"></a>
+## type WebhookDeliveryLog
+
+
+
+```go
+type WebhookDeliveryLog struct {
+    gorm.Model
+    WebhookID    uint      `gorm:"index, not null" json:"webhookId"`
+    StatusCode   int       `json:"statusCode"`
+    ResponseBody string    `json:"responseBody,omitempty"`
+    Error        string    `json:"error,omitempty"`
+    Attempt      int       `gorm:"not null" json:"attempt"`
+    CreatedAt    time.Time `json:"createdAt"`
 }
 ```
 

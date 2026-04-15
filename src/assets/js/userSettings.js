@@ -667,6 +667,226 @@ function handleDeletePAT(btn) {
   );
 }
 
+/* ── Webhook helpers ─────────────────────────────────────────────── */
+let currentWebhooks = [];
+
+function LoadWebhooks() {
+  proviant.getWebhooks().then((response) => {
+    if (response.code === 200) {
+      currentWebhooks = response.webhooks || [];
+      RenderWebhookList();
+    } else {
+      proviant.showFeedback('error', 'Error', `Failed to load webhooks: ${response.message}`);
+    }
+  });
+}
+
+function RenderWebhookList() {
+  const container = document.getElementById('webhookList');
+  if (!container) return;
+
+  if (currentWebhooks.length === 0) {
+    container.innerHTML = '<div class="text-center text-muted py-4">No webhooks configured. Create one below.</div>';
+    return;
+  }
+
+  let html = '';
+  for (const wh of currentWebhooks) {
+    const eventsList = wh.events.join(', ');
+    const toggleChecked = wh.active ? 'checked' : '';
+    html += `
+      <div class="card mb-3 webhook-card" data-id="${wh.id}">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h6 class="mb-1">${escapeHtml(wh.url)}</h6>
+              <small class="text-muted">Events: ${escapeHtml(eventsList)}</small>
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input webhook-toggle-active" type="checkbox" ${toggleChecked} data-id="${wh.id}">
+              <label class="form-check-label">Active</label>
+            </div>
+          </div>
+          <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-primary btn-view-deliveries" data-id="${wh.id}">View Deliveries</button>
+            <button type="button" class="btn btn-outline-secondary btn-copy-secret" data-id="${wh.id}">Copy Secret</button>
+            <button type="button" class="btn btn-outline-danger btn-delete-webhook" data-id="${wh.id}">Delete</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+  attachWebhookEventHandlers();
+}
+
+function attachWebhookEventHandlers() {
+  document.querySelectorAll('.webhook-toggle-active').forEach(function(toggle) {
+    toggle.addEventListener('change', function() {
+      const id = parseInt(this.dataset.id);
+      const wh = currentWebhooks.find(w => w.id === id);
+      if (wh) {
+        ToggleWebhookActive(id, !wh.active);
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-view-deliveries').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const id = parseInt(this.dataset.id);
+      ShowWebhookDeliveries(id);
+    });
+  });
+
+  document.querySelectorAll('.btn-copy-secret').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const id = parseInt(this.dataset.id);
+      CopyWebhookSecret(id);
+    });
+  });
+
+  document.querySelectorAll('.btn-delete-webhook').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const id = parseInt(this.dataset.id);
+      DeleteWebhook(id);
+    });
+  });
+}
+
+function ToggleWebhookActive(id, active) {
+  const wh = currentWebhooks.find(w => w.id === id);
+  if (!wh) return;
+
+  proviant.updateWebhook(id, wh.url, null, wh.events, active).then((response) => {
+    if (response.code === 200) {
+      wh.active = active;
+      RenderWebhookList();
+    } else {
+      proviant.showFeedback('error', 'Error', `Failed to update webhook: ${response.message}`);
+      RenderWebhookList();
+    }
+  });
+}
+
+function ShowWebhookDeliveries(id) {
+  proviant.getWebhookDeliveries(id).then((response) => {
+    if (response.code === 200) {
+      ShowDeliveriesModal(response.deliveries || []);
+    } else {
+      proviant.showFeedback('error', 'Error', `Failed to load deliveries: ${response.message}`);
+    }
+  });
+}
+
+function ShowDeliveriesModal(deliveries) {
+  let html = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Time</th><th>Attempt</th><th>Status</th><th>Response</th><th>Error</th></tr></thead><tbody>';
+  
+  if (deliveries.length === 0) {
+    html += '<tr><td colspan="5" class="text-center text-muted">No delivery attempts yet</td></tr>';
+  } else {
+    for (const d of deliveries) {
+      const statusClass = d.statusCode >= 200 && d.statusCode < 300 ? 'text-success' : 'text-danger';
+      html += `<tr>
+        <td>${escapeHtml(d.createdAt)}</td>
+        <td>${d.attempt}</td>
+        <td class="${statusClass}">${d.statusCode || '-'}</td>
+        <td><small>${escapeHtml(d.responseBody || '-')}</small></td>
+        <td><small class="text-danger">${escapeHtml(d.error || '')}</small></td>
+      </tr>`;
+    }
+  }
+  html += '</tbody></table></div>';
+
+  document.getElementById('deliveriesModalBody').innerHTML = html;
+  const modal = new bootstrap.Modal(document.getElementById('webhookDeliveriesModal'));
+  modal.show();
+}
+
+function CopyWebhookSecret(id) {
+  const wh = currentWebhooks.find(w => w.id === id);
+  if (!wh) return;
+  document.getElementById('webhookSecretCopy').value = wh.secret || '';
+  const modal = new bootstrap.Modal(document.getElementById('webhookSecretModal'));
+  modal.show();
+}
+
+function DeleteWebhook(id) {
+  proviant.showConfirm(
+    'Delete Webhook',
+    'Are you sure you want to delete this webhook? This cannot be undone.',
+    function() {
+      proviant.deleteWebhook(id).then((response) => {
+        if (response.code === 200) {
+          ShowSuccessModal('Webhook deleted', function() {
+            LoadWebhooks();
+          });
+        } else {
+          proviant.showFeedback('error', 'Error', `Failed to delete webhook: ${response.message}`);
+        }
+      });
+    },
+    'Delete',
+    'danger'
+  );
+}
+
+function CreateWebhook() {
+  const url = document.getElementById('inputWebhookUrl').value.trim();
+  const secret = document.getElementById('inputWebhookSecret').value;
+  const events = getSelectedWebhookEvents();
+  
+  if (!url) {
+    document.getElementById('inputWebhookUrl').classList.add('is-invalid');
+    return;
+  }
+  if (!secret || secret.length < 16) {
+    document.getElementById('inputWebhookSecret').classList.add('is-invalid');
+    return;
+  }
+  if (events.length === 0) {
+    proviant.showFeedback('error', 'Error', 'Please select at least one event');
+    return;
+  }
+
+  const btn = document.getElementById('btnCreateWebhook');
+  setButtonLoading(btn, true);
+
+  proviant.createWebhook(url, secret, events, true).then((response) => {
+    setButtonLoading(btn, false);
+    if (response.code === 201) {
+      document.getElementById('inputWebhookUrl').value = '';
+      document.getElementById('inputWebhookSecret').value = '';
+      uncheckAllWebhookEvents();
+      ShowSuccessModal('Webhook created', function() {
+        LoadWebhooks();
+      });
+    } else {
+      proviant.showFeedback('error', 'Error', `Failed to create webhook: ${response.message}`);
+    }
+  });
+}
+
+function getSelectedWebhookEvents() {
+  const events = [];
+  document.querySelectorAll('.webhook-event-checkbox:checked').forEach(function(cb) {
+    events.push(cb.dataset.event);
+  });
+  return events;
+}
+
+function uncheckAllWebhookEvents() {
+  document.querySelectorAll('.webhook-event-checkbox').forEach(function(cb) {
+    cb.checked = false;
+  });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 /* ── Event delegation — clicks ───────────────────────────────────── */
 document.addEventListener("click", function (event) {
   const target = event.target;
@@ -845,6 +1065,28 @@ document.addEventListener("click", function (event) {
     handleCalendarRemove();
     return;
   }
+
+  if (target.closest("#btnCreateWebhook")) {
+    event.preventDefault();
+    CreateWebhook();
+    return;
+  }
+
+  if (target.closest("#btnCloseWebhookSecret")) {
+    document.getElementById('webhookSecretCopy').value = '';
+    return;
+  }
+
+  if (target.closest("#btnCopySecret")) {
+    event.preventDefault();
+    const secret = document.getElementById('webhookSecretCopy').value;
+    proviant.copyToClipboard(secret).then(function(success) {
+      if (success) {
+        proviant.showFeedback('success', 'Copied', 'Secret copied to clipboard');
+      }
+    });
+    return;
+  }
 });
 
 /* ── Event delegation — inputs ───────────────────────────────────── */
@@ -868,6 +1110,11 @@ document.addEventListener("input", function (event) {
     case "inputNotificationThreshold":
       clearInvalid(target);
       break;
+    case "inputWebhookUrl":
+    case "inputWebhookSecret":
+      clearInvalid(target);
+      break;
+      break;
     case "editUsername":
     case "editMailAddress":
       clearInvalid(target);
@@ -887,6 +1134,7 @@ document.addEventListener("DOMContentLoaded", function () {
   loadAdminUsers();
   loadPATs();
   loadCalendarTokenStatus();
+  LoadWebhooks();
 });
 
 /* ── Calendar Token Management ──────────────────────────────────── */

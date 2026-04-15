@@ -219,4 +219,22 @@ var (
 
 	// ErrPATInsufficientScope is thrown when a PAT lacks required scope
 	ErrPATInsufficientScope = errors.New("insufficient token scope")
+
+	/*
+	 * Webhook related errors
+	 */
+	// ErrWebhookNotFound is thrown when a webhook does not exist
+	ErrWebhookNotFound = errors.New("webhook not found")
+
+	// ErrWebhookURLInvalid is thrown when a webhook URL is invalid
+	ErrWebhookURLInvalid = errors.New("webhook URL is invalid")
+
+	// ErrWebhookSecretTooShort is thrown when a webhook secret is too short
+	ErrWebhookSecretTooShort = errors.New("webhook secret must be at least 16 characters")
+
+	// ErrWebhookInvalidEvent is thrown when an invalid webhook event is specified
+	ErrWebhookInvalidEvent = errors.New("invalid webhook event")
+
+	// ErrWebhookNotOwner is thrown when a user tries to access a webhook they do not own
+	ErrWebhookNotOwner = errors.New("webhook does not belong to user")
 )
