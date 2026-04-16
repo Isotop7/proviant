@@ -1,5 +1,5 @@
 /* Helper to dynamically query DOM elements — always fresh, never stale */
-function getElements() {
+function getFormElements() {
     return {
         foundBarcodeWrapper: document.getElementById('foundBarcode'),
         productDataWrapper: document.getElementById('productData'),
@@ -19,7 +19,7 @@ const ProductState = Object.freeze({
 
 // UI functions
 function showError(error) {
-    const els = getElements();
+    const els = getFormElements();
     if (els.inputBarcode) {
         els.inputBarcode.value = '';
         els.inputBarcode.style.backgroundColor = 'var(--bs-warning)';
@@ -28,7 +28,7 @@ function showError(error) {
     console.error(error);
 }
 function showBarcode(barcode) {
-    const els = getElements();
+    const els = getFormElements();
     if (els.inputBarcode) {
         els.inputBarcode.value = barcode;
         els.inputBarcode.classList.add('border-success');
@@ -190,7 +190,7 @@ function shiftExpiry(days, months) {
 // Async functions
 async function queryProductInfoRequest(barcode) {
     return proviant.getOpenFoodFactsData(barcode).catch(() => {
-        const els = getElements();
+        const els = getFormElements();
         const bc = els.inputBarcode ? els.inputBarcode.value : 'unknown';
         showError(`Could not find product with barcode ${bc}!`);
     });
@@ -278,7 +278,7 @@ function handleScanButton() {
     }
 };
 function handleBtnAddProduct() {
-    const els = getElements();
+    const els = getFormElements();
     if (!els.inputBarcode || !els.inputExpireAt) return;
     if (!(els.inputBarcode.checkValidity() && els.inputExpireAt.checkValidity())) {
         return;
@@ -367,7 +367,7 @@ function handleBtnShowProducts() {
 
 // Input handlers
 function handleChangedBarcode() {
-    const els = getElements();
+    const els = getFormElements();
     if (!els.inputBarcode) return;
     if (!(els.inputBarcode.checkValidity())) {
         if (els.inputBarcode.classList.contains('border-success')) {

@@ -171,7 +171,7 @@ func CreateProduct(ctx *gin.Context) {
 
 	// Extract JWT claims from context
 	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims["id"].(float64))
+	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
