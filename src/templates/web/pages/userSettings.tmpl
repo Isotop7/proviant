@@ -168,11 +168,11 @@
                     <div class="input-group">
                         <input type="text" class="form-control font-monospace small" id="calendarUrl" readonly
                                value="">
-                        <button type="button" class="btn btn-outline-secondary" id="btnCalendarCopy" title="Copy URL">
-                            <i class="bi bi-clipboard"></i>
+                        <button type="button" class="btn btn-outline-secondary" id="btnCalendarCopy" title="Copy URL" aria-label="Copy URL">
+                            <i class="bi bi-clipboard" aria-hidden="true"></i>
                         </button>
-                        <button type="button" class="btn btn-outline-primary" id="btnCalendarDownload" title="Download .ics">
-                            <i class="bi bi-download"></i>
+                        <button type="button" class="btn btn-outline-primary" id="btnCalendarDownload" title="Download .ics" aria-label="Download .ics file">
+                            <i class="bi bi-download" aria-hidden="true"></i>
                         </button>
                     </div>
                     <div id="calendarUrlCopied" class="form-text text-success d-none">
@@ -216,11 +216,11 @@
         </div>
     </div>
 
-    <div class="modal fade" id="createPatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="createPatModal" tabindex="-1" aria-labelledby="createPatModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Create API Token</h5>
+                    <h5 class="modal-title" id="createPatModalLabel">Create API Token</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
