@@ -157,24 +157,23 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 		return
 	}
 
+	newUsername := targetUser.Username
 	if req.Username != "" {
-		targetUser.Username = req.Username
+		newUsername = req.Username
 	}
+	newMailAddress := targetUser.MailAddress
 	if req.MailAddress != "" {
-		targetUser.MailAddress = req.MailAddress
+		newMailAddress = req.MailAddress
 	}
 
-	if err := targetUser.IsValid(true); err != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
-		return
-	}
-
-	updateErr := userRepo.UpdateUser(targetUser.ID, &targetUser)
+	updateErr := userRepo.UpdateAdminUserFields(targetUser.ID, newUsername, newMailAddress)
 	if updateErr != nil {
 		logger.Error().Msgf("Error updating user: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
 		return
 	}
+	targetUser.Username = newUsername
+	targetUser.MailAddress = newMailAddress
 
 	ctx.JSON(http.StatusOK, targetUser)
 }

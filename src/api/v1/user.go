@@ -16,22 +16,20 @@ import (
 	"gorm.io/gorm"
 )
 
-// UpdateUser updates a user
+// UpdateUser updates a user's display name and email address.
+// The login username is never modified by this endpoint.
 // @Summary			Updates a user object
-// @Description		Updates properties of a user
+// @Description		Updates display name and email of the authenticated user
 // @Tags          	user
 // @Accept        	json
 // @Produce       	json
-// @Param         	user    body    authentication.User  true  "User"
-// @Success       	200  {object}  authentication.User
+// @Success       	200  {object}  api.APIResponse
 // @Failure       	400  {object}  api.APIResponse
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user [patch]
 func UpdateUser(ctx *gin.Context) {
-	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	// Get database instance from context
 	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !dbErr {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
@@ -39,7 +37,6 @@ func UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	// Extract JWT claims from context
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
@@ -48,43 +45,36 @@ func UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	// Get and parse body to user
-	var user authentication.User
-	if bindErr := ctx.ShouldBindJSON(&user); bindErr != nil {
+	var req struct {
+		DisplayName string `json:"displayName"`
+		MailAddress string `json:"mailAddress" binding:"required"`
+	}
+	if bindErr := ctx.ShouldBindJSON(&req); bindErr != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
 		return
 	}
 
-	// Check for valid user data
-	validationErr := user.IsValid(true)
-	if validationErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(validationErr))
+	userRepo := database.NewUserRepository(dbHandle)
+
+	user, fetchErr := userRepo.GetUserByID(userID)
+	if fetchErr != nil {
+		logger.Error().Msgf("User with ID '%d' not found: %s", userID, fetchErr)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("User with id '%d' was not found", userID)})
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-
-	user.ID = userID
+	user.DisplayName = req.DisplayName
+	user.MailAddress = req.MailAddress
 
 	updateErr := userRepo.UpdateUser(user.ID, &user)
-
-	switch updateErr {
-	// No error => user was updated
-	case nil:
-		ctx.JSON(http.StatusOK, user)
-		return
-	// Requested user was not found
-	case gorm.ErrRecordNotFound:
-		logger.Error().Msgf("User with ID '%d' was not found in database", userID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("User with id '%d' was not found", userID)})
-		return
-	// Unspecified error
-	default:
+	if updateErr != nil {
 		logger.Error().Msgf("Error saving user: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
 		return
 	}
+
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: "User updated"})
 }
 
 // UpdateUserPassword updates a user password

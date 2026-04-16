@@ -18,14 +18,10 @@ function ShowSuccessModal(message, btnFunction) {
 /* ── Update personal details ─────────────────────────────────────── */
 function UpdateSettings() {
   let formIsValid = true;
-  const inputUsername = document.getElementById("inputUsername");
+  const inputDisplayName = document.getElementById("inputDisplayName");
   const inputMailAddress = document.getElementById("inputMailAddress");
-  if (!inputUsername || !inputMailAddress) return;
+  if (!inputMailAddress) return;
 
-  if (!inputUsername.value) {
-    inputUsername.classList.add("is-invalid");
-    formIsValid = false;
-  }
   if (!inputMailAddress.value) {
     inputMailAddress.classList.add("is-invalid");
     formIsValid = false;
@@ -35,7 +31,7 @@ function UpdateSettings() {
   const btn = document.getElementById("btnUpdatePersonalDetails");
   setButtonLoading(btn, true);
 
-  proviant.updateUser(inputUsername.value, inputMailAddress.value).then((response) => {
+  proviant.updateUser(inputDisplayName ? inputDisplayName.value : "", inputMailAddress.value).then((response) => {
     setButtonLoading(btn, false);
     switch (response.code) {
       case 200:
@@ -1097,7 +1093,7 @@ document.addEventListener("input", function (event) {
   };
 
   switch (target.id) {
-    case "inputUsername":
+    case "inputDisplayName":
     case "inputMailAddress":
       clearInvalid(target);
       break;

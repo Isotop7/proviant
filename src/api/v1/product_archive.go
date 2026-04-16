@@ -19,6 +19,26 @@ import (
 	"gorm.io/gorm"
 )
 
+func convertStringIDsToInts(ids []string) ([]int, error) {
+	result := make([]int, 0, len(ids))
+	for _, id := range ids {
+		n, err := strconv.Atoi(id)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, n)
+	}
+	return result, nil
+}
+
+func joinErrors(errs []database.BulkOperationError) string {
+	var b strings.Builder
+	for i := range errs {
+		b.WriteString(errs[i].Error())
+	}
+	return b.String()
+}
+
 // GetArchivedProducts returns the archived products of a user
 // @Summary      Return a list of archived products
 // @Description  Return a list of archived products of user
@@ -100,16 +120,11 @@ func BulkDeleteProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Try to get int values
-	var convertedProductIDs []int
-	for _, id := range products.ProductIDs {
-		if productID, convErr := strconv.Atoi(id); convErr != nil {
-			logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
-			return
-		} else {
-			convertedProductIDs = append(convertedProductIDs, productID)
-		}
+	convertedProductIDs, convErr := convertStringIDsToInts(products.ProductIDs)
+	if convErr != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
+		return
 	}
 
 	// Get database instance from context
@@ -131,24 +146,17 @@ func BulkDeleteProducts(ctx *gin.Context) {
 
 	productRepo := database.NewProductRepository(dbHandle)
 	bulkDeleteResultError := productRepo.BulkDeleteProducts(convertedProductIDs, userID)
-	// Check for errors
 	if len(bulkDeleteResultError) > 0 {
-		// If error is not nil, log error and return error response as one string
-		var errorOutput string
-		for _, bulkDeleteResult := range bulkDeleteResultError {
-			errorOutput += bulkDeleteResult.Error()
-		}
-		logger.Error().Msg(errorOutput)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errorOutput})
-		return
-	} else {
-		strProductIDs := make([]string, len(convertedProductIDs))
-		for i, v := range convertedProductIDs {
-			strProductIDs[i] = strconv.Itoa(v)
-		}
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", strings.Join(strProductIDs, ";"))})
+		msg := joinErrors(bulkDeleteResultError)
+		logger.Error().Msg(msg)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: msg})
 		return
 	}
+	strProductIDs := make([]string, len(convertedProductIDs))
+	for i, v := range convertedProductIDs {
+		strProductIDs[i] = strconv.Itoa(v)
+	}
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", strings.Join(strProductIDs, ";"))})
 }
 
 // BulkArchiveProducts archives a list of products of a user
@@ -174,16 +182,11 @@ func BulkArchiveProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Try to get int values
-	var convertedProductIDs []int
-	for _, id := range products.ProductIDs {
-		if productID, convErr := strconv.Atoi(id); convErr != nil {
-			logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
-			return
-		} else {
-			convertedProductIDs = append(convertedProductIDs, productID)
-		}
+	convertedProductIDs, convErr := convertStringIDsToInts(products.ProductIDs)
+	if convErr != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
+		return
 	}
 
 	// Get database instance from context
@@ -205,24 +208,17 @@ func BulkArchiveProducts(ctx *gin.Context) {
 
 	productRepo := database.NewProductRepository(dbHandle)
 	bulkArchiveError := productRepo.BulkArchiveProducts(convertedProductIDs, userID)
-	// Check for errors
 	if len(bulkArchiveError) > 0 {
-		// If error is not nil, log error and return error response as one string
-		var errorOutput string
-		for _, bulkArchiveResult := range bulkArchiveError {
-			errorOutput += bulkArchiveResult.Error()
-		}
-		logger.Error().Msg(errorOutput)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errorOutput})
-		return
-	} else {
-		strProductIDs := make([]string, len(convertedProductIDs))
-		for i, v := range convertedProductIDs {
-			strProductIDs[i] = strconv.Itoa(v)
-		}
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", strings.Join(strProductIDs, ";"))})
+		msg := joinErrors(bulkArchiveError)
+		logger.Error().Msg(msg)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: msg})
 		return
 	}
+	strProductIDs := make([]string, len(convertedProductIDs))
+	for i, v := range convertedProductIDs {
+		strProductIDs[i] = strconv.Itoa(v)
+	}
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were archived", strings.Join(strProductIDs, ";"))})
 }
 
 // RestoreProduct restores an archived product of a user
@@ -302,16 +298,11 @@ func BulkRestoreProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Try to get int values
-	var convertedProductIDs []int
-	for _, id := range products.ProductIDs {
-		if productID, convErr := strconv.Atoi(id); convErr != nil {
-			logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
-			return
-		} else {
-			convertedProductIDs = append(convertedProductIDs, productID)
-		}
+	convertedProductIDs, convErr := convertStringIDsToInts(products.ProductIDs)
+	if convErr != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
+		return
 	}
 
 	// Get database instance from context
@@ -333,22 +324,15 @@ func BulkRestoreProducts(ctx *gin.Context) {
 
 	productRepo := database.NewProductRepository(dbHandle)
 	bulkRestoreError := productRepo.BulkRestoreProducts(convertedProductIDs, userID)
-	// Check for errors
 	if len(bulkRestoreError) > 0 {
-		// If error is not nil, log error and return error response as one string
-		var errorOutput string
-		for _, bulkRestoreResult := range bulkRestoreError {
-			errorOutput += bulkRestoreResult.Error()
-		}
-		logger.Error().Msg(errorOutput)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errorOutput})
-		return
-	} else {
-		strProductIDs := make([]string, len(convertedProductIDs))
-		for i, v := range convertedProductIDs {
-			strProductIDs[i] = strconv.Itoa(v)
-		}
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were restored", strings.Join(strProductIDs, ";"))})
+		msg := joinErrors(bulkRestoreError)
+		logger.Error().Msg(msg)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: msg})
 		return
 	}
+	strProductIDs := make([]string, len(convertedProductIDs))
+	for i, v := range convertedProductIDs {
+		strProductIDs[i] = strconv.Itoa(v)
+	}
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were restored", strings.Join(strProductIDs, ";"))})
 }

@@ -3,7 +3,7 @@
 (function () {
     "use strict";
 
-    const TOTAL_STEPS = 2;
+    const TOTAL_STEPS = 3;
     let currentStep = 1;
     let householdListLoaded = false;
 
@@ -61,14 +61,42 @@
         }
     }
 
+    // --- Step 1: Profile ---
 
-    // --- Step 1: Notifications ---
-
-    function configureNotifications() {
-        window.location.href = "/web/user/settings";
+    async function saveProfile() {
+        const input = document.getElementById("inputDisplayName");
+        if (!input) return;
+        const displayName = input.value.trim();
+        if (!displayName) {
+            proviant.showFeedback("error", "Required", "Please enter a display name.");
+            return;
+        }
+        try {
+            const response = await proviant.updateOnboardingProfile(displayName);
+            if (response.code === 200) {
+                showStep(2);
+            } else {
+                proviant.showFeedback("error", "Could Not Save", response.message || "Unknown error");
+            }
+        } catch (err) {
+            proviant.showFeedback("error", "Network Error", err.message);
+        }
     }
 
-    // --- Step 2: Household selection ---
+    // --- Step 2: Household ---
+
+    function switchHouseholdMode(mode) {
+        ["browse", "create", "invite"].forEach(function (m) {
+            const el = document.getElementById("householdMode" + capitalize(m));
+            if (el) {
+                el.classList.toggle("d-none", m !== mode);
+            }
+        });
+    }
+
+    function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
 
     async function loadHouseholds() {
         const listEl = document.getElementById("householdList");
@@ -136,13 +164,59 @@
         try {
             const response = await proviant.applyOnboardingHousehold(householdId);
             if (response.code === 200) {
-                showComplete();
+                showStep(3);
             } else {
-                proviant.showFeedback('error', 'Could Not Join', response.message || 'Unknown error');
+                proviant.showFeedback("error", "Could Not Join", response.message || "Unknown error");
             }
         } catch (err) {
-            proviant.showFeedback('error', 'Network Error', err.message);
+            proviant.showFeedback("error", "Network Error", err.message);
         }
+    }
+
+    async function createHousehold() {
+        const input = document.getElementById("inputNewHouseholdName");
+        if (!input) return;
+        const name = input.value.trim();
+        if (!name) {
+            proviant.showFeedback("error", "Required", "Please enter a household name.");
+            return;
+        }
+        try {
+            const response = await proviant.createOnboardingHousehold(name);
+            if (response.code === 200) {
+                showStep(3);
+            } else {
+                proviant.showFeedback("error", "Could Not Create", response.message || "Unknown error");
+            }
+        } catch (err) {
+            proviant.showFeedback("error", "Network Error", err.message);
+        }
+    }
+
+    async function joinByInvite() {
+        const input = document.getElementById("inputInviteToken");
+        if (!input) return;
+        const token = input.value.trim();
+        if (!token) {
+            proviant.showFeedback("error", "Required", "Please enter an invite token.");
+            return;
+        }
+        try {
+            const response = await proviant.joinOnboardingByInvite(token);
+            if (response.code === 200) {
+                showStep(3);
+            } else {
+                proviant.showFeedback("error", "Could Not Join", response.message || "Unknown error");
+            }
+        } catch (err) {
+            proviant.showFeedback("error", "Network Error", err.message);
+        }
+    }
+
+    // --- Step 3 (Notifications) redirect ---
+
+    function configureNotifications() {
+        window.location.href = "/web/user/settings";
     }
 
     // --- Complete onboarding ---
@@ -153,12 +227,7 @@
         } catch (_e) {
             // Don't block navigation on error
         }
-        window.location.href = "/web";
-    }
-
-    function skipOnboarding() {
-        proviant.completeOnboarding().catch(function () {});
-        window.location.href = "/web";
+        window.location.href = "/web/products";
     }
 
     // --- Restore state from server ---
@@ -169,17 +238,17 @@
             if (response.code === 200 && response.body) {
                 const state = response.body;
                 if (state.onboardingCompleted) {
-                    window.location.href = "/web";
+                    window.location.href = "/web/products";
                     return;
                 }
-                if (state.notificationsSetup) {
-                    if (state.householdStepDone) {
-                        showComplete();
-                    } else {
-                        showStep(2);
-                    }
-                } else {
+                if (!state.profileStepDone) {
                     showStep(1);
+                } else if (!state.householdStepDone) {
+                    showStep(2);
+                } else if (!state.notificationsSetup) {
+                    showStep(3);
+                } else {
+                    showComplete();
                 }
             } else {
                 showStep(1);
@@ -194,23 +263,37 @@
     document.addEventListener("click", function (event) {
         const target = event.target;
 
-        if (target.closest("#btnConfigureNotifications")) {
+        if (target.closest("#btnSaveProfile")) {
             event.preventDefault();
-            configureNotifications();
+            saveProfile();
             return;
         }
 
-        if (target.closest("#btnSkipNotifications")) {
+        if (target.closest("#btnSkipProfile")) {
             event.preventDefault();
+            proviant.updateOnboardingProfile("").catch(function () {});
             showStep(2);
             return;
         }
 
-        if (target.closest("#btnLoadHouseholds")) {
+        if (target.closest("#btnHouseholdModeBrowse")) {
             event.preventDefault();
+            switchHouseholdMode("browse");
             if (!householdListLoaded) {
                 loadHouseholds();
             }
+            return;
+        }
+
+        if (target.closest("#btnHouseholdModeCreate")) {
+            event.preventDefault();
+            switchHouseholdMode("create");
+            return;
+        }
+
+        if (target.closest("#btnHouseholdModeInvite")) {
+            event.preventDefault();
+            switchHouseholdMode("invite");
             return;
         }
 
@@ -224,7 +307,25 @@
             return;
         }
 
-        if (target.closest("#btnSkipHousehold")) {
+        if (target.closest("#btnCreateHousehold")) {
+            event.preventDefault();
+            createHousehold();
+            return;
+        }
+
+        if (target.closest("#btnJoinByInvite")) {
+            event.preventDefault();
+            joinByInvite();
+            return;
+        }
+
+        if (target.closest("#btnConfigureNotifications")) {
+            event.preventDefault();
+            configureNotifications();
+            return;
+        }
+
+        if (target.closest("#btnSkipNotifications")) {
             event.preventDefault();
             showComplete();
             return;
@@ -233,12 +334,6 @@
         if (target.closest("#btnFinishOnboarding")) {
             event.preventDefault();
             completeOnboarding();
-            return;
-        }
-
-        if (target.closest("#btnSkipOnboarding")) {
-            event.preventDefault();
-            skipOnboarding();
             return;
         }
 

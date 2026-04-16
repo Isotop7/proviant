@@ -10,49 +10,107 @@
         </div>
 
         <!-- Progress Steps -->
-        <div class="d-flex justify-content-center mb-4">
+        <div class="d-flex justify-content-center align-items-start mb-4">
             <div class="step-indicator" id="stepIndicator1">
                 <div class="step-circle">1</div>
-                <small>Notifications</small>
+                <small>Profile</small>
             </div>
             <div class="step-connector"></div>
             <div class="step-indicator" id="stepIndicator2">
                 <div class="step-circle">2</div>
                 <small>Household</small>
             </div>
+            <div class="step-connector"></div>
+            <div class="step-indicator" id="stepIndicator3">
+                <div class="step-circle">3</div>
+                <small>Notifications</small>
+            </div>
         </div>
 
-        <!-- Step 1: Notifications -->
+        <!-- Step 1: Profile -->
         <div class="onboarding-step" id="step1">
             <div class="card shadow-sm">
                 <div class="card-body">
+                    <p class="text-muted small mb-2">Step 1 of 3</p>
+                    <h5 class="card-title"><i class="bi bi-person me-2"></i>Your Profile</h5>
+                    <p class="card-text text-muted">Choose a display name. You can change this later in settings.</p>
+                    <div class="mb-3">
+                        <input type="text" id="inputDisplayName" class="form-control" placeholder="Display name" maxlength="64" value="{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}">
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button id="btnSaveProfile" class="btn btn-primary">
+                            <i class="bi bi-arrow-right me-1"></i>Continue
+                        </button>
+                        <button id="btnSkipProfile" class="btn btn-link btn-sm">Skip for now</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Household -->
+        <div class="onboarding-step d-none" id="step2">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted small mb-2">Step 2 of 3</p>
+                    <h5 class="card-title"><i class="bi bi-people me-2"></i>Your Household</h5>
+                    <p class="card-text text-muted">Households let you share your pantry with family and roommates. Choose one of the options below.</p>
+
+                    <!-- Mode switcher -->
+                    <div class="btn-group w-100 mb-3" role="group" aria-label="Household options">
+                        <button type="button" id="btnHouseholdModeBrowse" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-search me-1"></i>Browse
+                        </button>
+                        <button type="button" id="btnHouseholdModeCreate" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-plus-lg me-1"></i>Create new
+                        </button>
+                        <button type="button" id="btnHouseholdModeInvite" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-envelope me-1"></i>Use invite code
+                        </button>
+                    </div>
+
+                    <!-- Browse sub-mode -->
+                    <div id="householdModeBrowse" class="d-none">
+                        <div id="householdListLoading" class="text-center text-muted d-none">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span class="ms-2">Loading households...</span>
+                        </div>
+                        <div id="householdList" class="list-group mb-2 d-none"></div>
+                    </div>
+
+                    <!-- Create sub-mode -->
+                    <div id="householdModeCreate" class="d-none">
+                        <div class="mb-2">
+                            <input type="text" id="inputNewHouseholdName" class="form-control" placeholder="Household name" maxlength="64">
+                        </div>
+                        <button id="btnCreateHousehold" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-lg me-1"></i>Create Household
+                        </button>
+                    </div>
+
+                    <!-- Invite sub-mode -->
+                    <div id="householdModeInvite" class="d-none">
+                        <div class="mb-2">
+                            <input type="text" id="inputInviteToken" class="form-control" placeholder="Invite token">
+                        </div>
+                        <button id="btnJoinByInvite" class="btn btn-primary btn-sm">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Join Household
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Notifications -->
+        <div class="onboarding-step d-none" id="step3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted small mb-2">Step 3 of 3</p>
                     <h5 class="card-title"><i class="bi bi-bell me-2"></i>Stay Notified</h5>
                     <p class="card-text text-muted">Get notified when products in your household are about to expire. You can configure this later in settings.</p>
                     <button id="btnConfigureNotifications" class="btn btn-primary">
                         <i class="bi bi-gear me-1"></i>Configure Notifications
                     </button>
                     <button id="btnSkipNotifications" class="btn btn-link btn-sm ms-2">Skip for now</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Step 2: Household Selection -->
-        <div class="onboarding-step d-none" id="step2">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-people me-2"></i>Join a Household</h5>
-                    <p class="card-text text-muted">Households let you share your pantry with family and roommates. You already have a personal household, but you can join another one.</p>
-                    <div id="householdList" class="list-group mb-3 d-none"></div>
-                    <div id="householdListLoading" class="text-center text-muted d-none">
-                        <div class="spinner-border spinner-border-sm" role="status"></div>
-                        <span class="ms-2">Loading households...</span>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button id="btnLoadHouseholds" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-search me-1"></i>Browse Households
-                        </button>
-                        <button id="btnSkipHousehold" class="btn btn-link btn-sm">Skip for now</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -85,10 +143,7 @@
         </div>
 
         <!-- Navigation -->
-        <div class="d-flex justify-content-between mt-4">
-            <button id="btnSkipOnboarding" class="btn btn-outline-secondary">
-                <i class="bi bi-x-lg me-1"></i>Skip Onboarding
-            </button>
+        <div class="d-flex justify-content-end mt-4">
             <button id="btnNextStep" class="btn btn-primary d-none">
                 Next <i class="bi bi-arrow-right ms-1"></i>
             </button>

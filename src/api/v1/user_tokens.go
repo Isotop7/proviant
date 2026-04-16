@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	v1api "codeberg.org/isotop7/proviant/api"
@@ -9,6 +10,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/models/configuration/static"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -24,7 +26,7 @@ func CreateUserToken(ctx *gin.Context) {
 	}
 
 	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims["id"].(float64))
+	userID := uint(claims[static.TokenIdentityKey].(float64))
 
 	var req api.CreateTokenRequest
 	if err := ctx.ShouldBind(&req); err != nil {
@@ -80,7 +82,7 @@ func ListUserTokens(ctx *gin.Context) {
 	}
 
 	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims["id"].(float64))
+	userID := uint(claims[static.TokenIdentityKey].(float64))
 
 	patRepo := database.NewPATRepository(dbHandle)
 	pats, err := patRepo.GetPATsByUserID(userID)
@@ -121,14 +123,15 @@ func DeleteUserToken(ctx *gin.Context) {
 	}
 
 	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims["id"].(float64))
+	userID := uint(claims[static.TokenIdentityKey].(float64))
 
 	patIDStr := ctx.Param("id")
-	var patID uint
-	if _, err := parseUint(patIDStr, &patID); err != nil {
+	patIDRaw, parseErr := strconv.ParseUint(patIDStr, 10, 64)
+	if parseErr != nil {
 		ctx.JSON(http.StatusBadRequest, v1api.APIResponse{Message: "invalid token id"})
 		return
 	}
+	patID := uint(patIDRaw)
 
 	patRepo := database.NewPATRepository(dbHandle)
 	err := patRepo.DeletePAT(patID, userID)
@@ -143,16 +146,4 @@ func DeleteUserToken(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, v1api.APIResponse{Message: "token deleted"})
-}
-
-func parseUint(s string, result *uint) (bool, error) {
-	var val uint
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return false, errors.ErrParseBody
-		}
-		val = val*10 + uint(c-'0')
-	}
-	*result = val
-	return true, nil
 }

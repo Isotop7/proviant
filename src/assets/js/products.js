@@ -1,31 +1,7 @@
-async function bulkDeleteProducts(productIDs) {
-  await proviant.bulkDeleteProducts(productIDs).then((response) => {
-      if (response.code == 200) {
-        console.log("Products archived")
-      } else {
-        console.error(response.message)
-      }
-  });
-}
-
-async function bulkRestoreProducts(productIDs) {
-  await proviant.bulkRestoreProducts(productIDs).then((response) => {
-      if (response.code == 200) {
-        console.log("Products restored")
-      } else {
-        console.error(response.message)
-      }
-  });
-}
-
-async function bulkArchiveProducts(productIDs) {
-  await proviant.bulkArchiveProducts(productIDs).then((response) => {
-      if (response.code == 200) {
-        console.log("Products archived")
-      } else {
-        console.error(response.message)
-      }
-  });
+async function bulkAction(action, productIDs) {
+    const fn = { delete: proviant.bulkDeleteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkArchiveProducts }[action];
+    const response = await fn(productIDs);
+    if (response.code !== 200) console.error(response.message);
 }
 
 function handleCardClickEffect(cardId) {
@@ -67,7 +43,7 @@ document.addEventListener("click", function (event) {
             'Delete Products',
             `Delete ${count} selected product${count !== 1 ? 's' : ''}? This cannot be undone.`,
             function () {
-                bulkDeleteProducts(selectedProducts).then(() => location.reload());
+                bulkAction('delete', selectedProducts).then(() => location.reload());
             },
             'Delete',
             'danger'
@@ -79,7 +55,7 @@ document.addEventListener("click", function (event) {
     if (target.closest("#restore-product")) {
         event.preventDefault();
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        bulkRestoreProducts(selectedProducts).then(() => location.reload());
+        bulkAction('restore', selectedProducts).then(() => location.reload());
         return;
     }
 
@@ -92,7 +68,7 @@ document.addEventListener("click", function (event) {
             'Archive Products',
             `Archive ${count} selected product${count !== 1 ? 's' : ''}?`,
             function () {
-                bulkArchiveProducts(selectedProducts).then(() => location.reload());
+                bulkAction('archive', selectedProducts).then(() => location.reload());
             },
             'Archive',
             'warning'
