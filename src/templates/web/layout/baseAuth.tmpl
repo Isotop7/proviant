@@ -23,6 +23,27 @@
 
 <body class="d-flex bg-body-tertiary">
     {{template "content" .}}
+    <!-- Shared feedback modal -->
+    <div id="proviantFeedbackModal" class="modal fade" tabindex="-1"
+         aria-labelledby="proviantFeedbackModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center px-4 pb-2">
+                    <i id="proviantFeedbackIcon" class="bi fs-1 mb-3 d-block" aria-hidden="true"></i>
+                    <h5 id="proviantFeedbackTitle" class="mb-2"></h5>
+                    <p id="proviantFeedbackMessage" class="text-body-secondary mb-0 small"></p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pt-2 pb-4">
+                    <button type="button" class="btn btn-primary px-4"
+                            id="proviantFeedbackBtn" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/assets/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/js/auth.js"></script>
 </body>

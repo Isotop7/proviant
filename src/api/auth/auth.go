@@ -154,7 +154,7 @@ func Signup(ctx *gin.Context) {
 	}
 
 	go func() {
-		if sendErr := notificationController.SendEmailVerification(user.MailAddress, user.Username, token, proviantConfig.Server.BaseURL, expiresAt); sendErr != nil {
+		if sendErr := notificationController.SendEmailVerification(user.MailAddress, user.EffectiveName(), token, proviantConfig.Server.BaseURL, expiresAt); sendErr != nil {
 			logger.Error().Msgf("Failed to send email verification: %s", sendErr.Error())
 		} else {
 			logger.Info().Msgf("Email verification sent to %s", user.MailAddress)

@@ -83,7 +83,7 @@ func GetNotifications(ctx *gin.Context) {
 				for _, app := range applications {
 					applicantName := fmt.Sprintf("User #%d", app.ApplicantID)
 					if applicant, uErr := userRepo.GetUserByID(app.ApplicantID); uErr == nil {
-						applicantName = applicant.Username
+						applicantName = applicant.EffectiveName()
 					}
 					items = append(items, apiModel.NotificationItem{
 						ID:        app.ID,

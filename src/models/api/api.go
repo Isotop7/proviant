@@ -7,6 +7,7 @@ type BulkProductsAPIModel struct {
 
 // OnboardingStateResponse represents the current onboarding progress
 type OnboardingStateResponse struct {
+	ProfileStepDone     bool `json:"profileStepDone"`
 	NotificationsSetup  bool `json:"notificationsSetup"`
 	HouseholdStepDone   bool `json:"householdStepDone"`
 	OnboardingCompleted bool `json:"onboardingCompleted"`

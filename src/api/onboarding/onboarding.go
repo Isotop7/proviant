@@ -3,6 +3,7 @@ package onboarding
 
 import (
 	"net/http"
+	"strings"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
@@ -50,6 +51,7 @@ func GetOnboardingState(ctx *gin.Context) {
 		// No onboarding state exists — this is an existing user, treat as completed
 		logger.Debug().Msgf("No onboarding state for user %d, treating as completed", userID)
 		ctx.JSON(http.StatusOK, modelsAPI.OnboardingStateResponse{
+			ProfileStepDone:     true,
 			NotificationsSetup:  true,
 			HouseholdStepDone:   true,
 			OnboardingCompleted: true,
@@ -58,12 +60,196 @@ func GetOnboardingState(ctx *gin.Context) {
 	}
 
 	response := modelsAPI.OnboardingStateResponse{
+		ProfileStepDone:     onboardingState.ProfileStepDone,
 		NotificationsSetup:  onboardingState.NotificationsSetup,
 		HouseholdStepDone:   onboardingState.HouseholdStepDone,
 		OnboardingCompleted: onboardingState.OnboardingCompleted,
 	}
 
 	ctx.JSON(http.StatusOK, response)
+}
+
+// UpdateOnboardingProfile updates the user's display name during onboarding
+// @Summary      	Update profile
+// @Description  	Updates the user's display name and marks the profile step as done
+// @Tags         	onboarding
+// @Accept			json
+// @Produce      	json
+// @Param			body	body		object	true	"Display name"
+// @Success      	200  {object}  api.APIResponse
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	401  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/onboarding/profile [patch]
+func UpdateOnboardingProfile(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID == 0 {
+		logger.Error().Msg("Failed to extract user ID from JWT claims")
+		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
+		return
+	}
+
+	dbHandle, ok := ctx.Get("dbHandle")
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	var req struct {
+		DisplayName string `json:"displayName"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.Error().Msgf("Error parsing body: %s", err.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		return
+	}
+
+	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
+
+	displayName := strings.TrimSpace(req.DisplayName)
+	if displayName != "" {
+		if err := userRepo.UpdateDisplayName(userID, displayName); err != nil {
+			logger.Error().Msgf("Failed to update display name: %s", err.Error())
+			ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to update display name"})
+			return
+		}
+	}
+
+	if markErr := userRepo.MarkProfileStepDone(userID); markErr != nil {
+		logger.Warn().Msgf("Failed to mark profile step done: %s", markErr.Error())
+	}
+
+	logger.Info().Msgf("User %d updated profile during onboarding", userID)
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Profile updated"})
+}
+
+// CreateOnboardingHousehold creates a new household for the user during onboarding
+// @Summary      	Create household
+// @Description  	Creates a new household and assigns the user to it
+// @Tags         	onboarding
+// @Accept			json
+// @Produce      	json
+// @Param			body	body		object	true	"Household name"
+// @Success      	200  {object}  api.APIResponse
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	401  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/onboarding/create-household [post]
+func CreateOnboardingHousehold(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID == 0 {
+		logger.Error().Msg("Failed to extract user ID from JWT claims")
+		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
+		return
+	}
+
+	dbHandle, ok := ctx.Get("dbHandle")
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	var req struct {
+		Name string `json:"name" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.Error().Msgf("Error parsing body: %s", err.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		return
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Household name cannot be empty"})
+		return
+	}
+
+	householdRepo := database.NewHouseholdRepository(dbHandle.(*gorm.DB))
+	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
+
+	if err := householdRepo.CreateAndSwitchHousehold(userID, name); err != nil {
+		logger.Error().Msgf("Failed to create household: %s", err.Error())
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to create household"})
+		return
+	}
+
+	if markErr := userRepo.MarkHouseholdStepDone(userID); markErr != nil {
+		logger.Warn().Msgf("Failed to mark household step done: %s", markErr.Error())
+	}
+
+	logger.Info().Msgf("User %d created household during onboarding", userID)
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Household created"})
+}
+
+// JoinOnboardingByInvite accepts a household invitation by token during onboarding
+// @Summary      	Join by invite
+// @Description  	Accepts a household invitation using an invite token
+// @Tags         	onboarding
+// @Accept			json
+// @Produce      	json
+// @Param			body	body		object	true	"Invite token"
+// @Success      	200  {object}  api.APIResponse
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	401  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/onboarding/join-invite [post]
+func JoinOnboardingByInvite(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID == 0 {
+		logger.Error().Msg("Failed to extract user ID from JWT claims")
+		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
+		return
+	}
+
+	dbHandle, ok := ctx.Get("dbHandle")
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return
+	}
+
+	var req struct {
+		Token string `json:"token" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.Error().Msgf("Error parsing body: %s", err.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		return
+	}
+
+	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
+	invitationRepo := database.NewInvitationRepository(dbHandle.(*gorm.DB))
+
+	user, err := userRepo.GetUserByID(userID)
+	if err != nil {
+		logger.Error().Msgf("Failed to get user: %s", err.Error())
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get user"})
+		return
+	}
+
+	if err := invitationRepo.AcceptInvitation(req.Token, user.MailAddress, userID); err != nil {
+		logger.Error().Msgf("Failed to accept invitation: %s", err.Error())
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		return
+	}
+
+	if markErr := userRepo.MarkHouseholdStepDone(userID); markErr != nil {
+		logger.Warn().Msgf("Failed to mark household step done: %s", markErr.Error())
+	}
+
+	logger.Info().Msgf("User %d joined household via invite during onboarding", userID)
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Joined household"})
 }
 
 // GetAvailableHouseholds returns a list of households the user can apply to

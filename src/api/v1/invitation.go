@@ -101,7 +101,7 @@ func CreateInvitation(ctx *gin.Context) {
 	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
 	notificationController, _ := ctx.MustGet("notificationController").(*controllers.NotificationController)
 	if notificationController != nil {
-		inviterName := user.Username
+		inviterName := user.EffectiveName()
 		household, householdErr := userRepo.GetHouseholdByID(user.HouseholdID)
 		householdName := fmt.Sprintf("Household #%d", user.HouseholdID)
 		if householdErr == nil {

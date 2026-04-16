@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v22';
+const CACHE_NAME = 'proviant-v24';
 
 // Static shell to pre-cache on install
 const PRECACHE_URLS = [
@@ -19,7 +19,7 @@ const PRECACHE_URLS = [
 
 // Minimal offline fallback page (no asset dependencies)
 const OFFLINE_PAGE = `<!doctype html>
-<html lang="de" data-bs-theme="dark">
+<html lang="de" data-bs-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
