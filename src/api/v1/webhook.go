@@ -11,12 +11,10 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
-	jwt "github.com/appleboy/gin-jwt/v2"
+
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 // CreateWebhook creates a new webhook
@@ -33,17 +31,14 @@ import (
 // @Security     BearerAuth
 func CreateWebhook(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrUserIDFromToken.Error()})
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -95,15 +90,16 @@ func CreateWebhook(ctx *gin.Context) {
 // @Security     BearerAuth
 func ListWebhooks(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return
+	}
 
 	repo := database.NewWebhookRepository(dbHandle)
 	webhooks, err := repo.GetWebhooksByUserID(userID)
@@ -134,15 +130,16 @@ func ListWebhooks(ctx *gin.Context) {
 // @Security     BearerAuth
 func GetWebhook(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return
+	}
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {
@@ -185,15 +182,16 @@ func GetWebhook(ctx *gin.Context) {
 // @Security     BearerAuth
 func UpdateWebhook(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return
+	}
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {
@@ -265,15 +263,16 @@ func UpdateWebhook(ctx *gin.Context) {
 // @Security     BearerAuth
 func DeleteWebhook(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return
+	}
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {
@@ -313,15 +312,16 @@ func DeleteWebhook(ctx *gin.Context) {
 // @Security     BearerAuth
 func GetWebhookDeliveries(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return
+	}
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {

@@ -11,7 +11,6 @@ import (
 	"codeberg.org/isotop7/proviant/models/database"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 const (
@@ -89,10 +88,8 @@ func ExportICalendar(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, dbOk := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbOk {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 
