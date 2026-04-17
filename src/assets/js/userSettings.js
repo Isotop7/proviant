@@ -123,6 +123,22 @@ function toggleNtfySettings() {
   }
 }
 
+function toggleEmailSettings() {
+  const toggle = document.getElementById("toggleEmailNotifications");
+  const settings = document.getElementById("emailSettings");
+  if (toggle && settings) {
+    settings.classList.toggle("d-none", !toggle.checked);
+  }
+}
+
+function toggleMonthlyWasteReportSettings() {
+  const toggle = document.getElementById("toggleMonthlyWasteReport");
+  const settings = document.getElementById("monthlyWasteReportSettings");
+  if (toggle && settings) {
+    settings.classList.toggle("d-none", !toggle.checked);
+  }
+}
+
 function UpdateNotificationSettings() {
   const toggleEmailNotifications = document.getElementById("toggleEmailNotifications");
   const toggleNtfyNotifications = document.getElementById("toggleNtfyNotifications");
@@ -1123,6 +1139,12 @@ document.addEventListener("input", function (event) {
 document.addEventListener("change", function (event) {
   if (event.target.id === "toggleNtfyNotifications") {
     toggleNtfySettings();
+  }
+  if (event.target.id === "toggleEmailNotifications") {
+    toggleEmailSettings();
+  }
+  if (event.target.id === "toggleMonthlyWasteReport") {
+    toggleMonthlyWasteReportSettings();
   }
 });
 
