@@ -52,7 +52,7 @@ func (t *TelegramNotificationProvider) SendNotification(product *dbModel.Product
 }
 
 // SendMonthlyWasteReport sends the monthly waste report to a Telegram chat.
-func (t *TelegramNotificationProvider) SendMonthlyWasteReport(chatID string, stats models.WasteStats) error {
+func (t *TelegramNotificationProvider) SendMonthlyWasteReport(chatID string, stats *models.WasteStats) error {
 	text := fmt.Sprintf(
 		"📊 *Monthly Waste Report — %s*\n\n"+
 			"Household: *%s*\n"+

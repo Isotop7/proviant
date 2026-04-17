@@ -187,8 +187,7 @@
                                     <div class="form-check form-switch mb-0">
                                         <input class="form-check-input" type="checkbox" role="switch"
                                                id="toggleTelegramNotifications"
-                                               {{if .User.NotificationPreferences.TelegramEnabled}}checked{{end}}
-                                               {{if not .TelegramConfigured}}disabled{{end}}>
+                                               {{if .TelegramConfigured}}{{if .User.NotificationPreferences.TelegramEnabled}}checked{{end}}{{else}}disabled{{end}}>
                                         <label class="visually-hidden" for="toggleTelegramNotifications">Telegram Notifications</label>
                                     </div>
                                 </div>
