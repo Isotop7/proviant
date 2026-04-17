@@ -382,6 +382,13 @@ proviant.updateNotificationSettings = async function (preferences) {
   return response;
 };
 
+proviant.generateTelegramLinkToken = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/telegram-link-token`;
+  const apiCall = await fetch(url, { method: "POST" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, token: body.token, botUsername: body.botUsername };
+};
+
 proviant.updateHouseholdName = async function (name) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/name`;
   const apiCall = await fetch(url, {

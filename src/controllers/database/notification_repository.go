@@ -42,6 +42,9 @@ type NotificationRepositoryInterface interface {
 	MarkHouseholdStepDone(userID uint) error
 	MarkOnboardingComplete(userID uint) error
 	GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
+	FindUserByTelegramLinkToken(token string) (authentication.User, error)
+	SetTelegramChatID(userID uint, chatID string) error
+	SetTelegramLinkToken(userID uint, token string) error
 }
 
 func (r *NotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error) {
@@ -103,9 +106,13 @@ func (r *NotificationRepository) GetHouseholdMembersNotificationPreferences(hous
 		user := users[idx]
 		preferences = append(preferences, models.NotificationRecipientInfo{
 			EmailAddress:              user.MailAddress,
+			EmailEnabled:              user.NotificationPreferences.EmailEnabled,
+			NtfyEnabled:               user.NotificationPreferences.NtfyEnabled,
 			NtfyURL:                   user.NotificationPreferences.NtfyURL,
 			NtfyTopic:                 user.NotificationPreferences.NtfyTopic,
 			NtfyToken:                 user.NotificationPreferences.NtfyToken,
+			TelegramEnabled:           user.NotificationPreferences.TelegramEnabled,
+			TelegramChatID:            user.NotificationPreferences.TelegramChatID,
 			NotificationThresholdDays: user.NotificationPreferences.NotificationThresholdDays,
 		})
 	}
@@ -207,7 +214,6 @@ func (r *NotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([
 	var users []authentication.User
 	if err := r.DB.
 		Where("monthly_waste_report_enabled = ?", true).
-		Where("mail_address != ''").
 		Find(&users).Error; err != nil {
 		return nil, err
 	}
@@ -225,7 +231,12 @@ func (r *NotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([
 				HouseholdName: name,
 			}
 		}
-		index[u.HouseholdID].Recipients = append(index[u.HouseholdID].Recipients, u.MailAddress)
+		if u.MailAddress != "" && u.NotificationPreferences.EmailEnabled {
+			index[u.HouseholdID].Recipients = append(index[u.HouseholdID].Recipients, u.MailAddress)
+		}
+		if u.NotificationPreferences.TelegramEnabled && u.NotificationPreferences.TelegramChatID != "" {
+			index[u.HouseholdID].TelegramChatIDs = append(index[u.HouseholdID].TelegramChatIDs, u.NotificationPreferences.TelegramChatID)
+		}
 	}
 
 	targets := make([]models.HouseholdReportTarget, 0, len(index))
@@ -233,6 +244,28 @@ func (r *NotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([
 		targets = append(targets, *t)
 	}
 	return targets, nil
+}
+
+func (r *NotificationRepository) FindUserByTelegramLinkToken(token string) (authentication.User, error) {
+	var user authentication.User
+	err := r.DB.Where("telegram_link_token = ?", token).First(&user).Error
+	return user, err
+}
+
+func (r *NotificationRepository) SetTelegramChatID(userID uint, chatID string) error {
+	return r.DB.Model(&authentication.User{}).
+		Where("id = ?", userID).
+		Updates(map[string]interface{}{
+			"telegram_chat_id":    chatID,
+			"telegram_link_token": "",
+			"telegram_enabled":    true,
+		}).Error
+}
+
+func (r *NotificationRepository) SetTelegramLinkToken(userID uint, token string) error {
+	return r.DB.Model(&authentication.User{}).
+		Where("id = ?", userID).
+		Update("telegram_link_token", token).Error
 }
 
 func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error) {

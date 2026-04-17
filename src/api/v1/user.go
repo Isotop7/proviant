@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 
@@ -185,7 +187,9 @@ func GetUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user.NotificationPreferences)
+	prefs := user.NotificationPreferences
+	prefs.TelegramLinked = prefs.TelegramChatID != ""
+	ctx.JSON(http.StatusOK, prefs)
 }
 
 // UpdateUserNotificationPreferences updates a user's notification preferences
@@ -248,6 +252,16 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
+	// Validate Telegram: can only enable if already linked
+	if preferences.TelegramEnabled && user.NotificationPreferences.TelegramChatID == "" {
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "link your Telegram account first before enabling Telegram notifications"})
+		return
+	}
+
+	// Preserve Telegram linking fields — they are managed by the dedicated link-token endpoint
+	preferences.TelegramChatID = user.NotificationPreferences.TelegramChatID
+	preferences.TelegramLinkToken = user.NotificationPreferences.TelegramLinkToken
+
 	user.NotificationPreferences = preferences
 
 	updateErr := userRepo.UpdateUser(user.ID, &user)
@@ -259,4 +273,61 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 
 	// Return success
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Notification preferences updated successfully"})
+}
+
+// GenerateTelegramLinkToken generates a one-time token for linking a Telegram chat to the user account.
+// @Summary			Generate Telegram link token
+// @Description		Generates a short-lived token the user sends to the Proviant Telegram bot to link their account
+// @Tags          	user
+// @Produce       	json
+// @Success       	200  {object}  map[string]string
+// @Failure       	500  {object}  api.APIResponse
+// @Router        	/api/v1/user/telegram-link-token [post]
+func GenerateTelegramLinkToken(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
+		return
+	}
+
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return
+	}
+
+	tokenBytes := make([]byte, 16)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		logger.Error().Msgf("Failed to generate telegram link token: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		return
+	}
+	token := hex.EncodeToString(tokenBytes)
+
+	notificationRepo := database.NewNotificationRepository(dbHandle)
+	if err := notificationRepo.SetTelegramLinkToken(userID, token); err != nil {
+		logger.Error().Msgf("Failed to save telegram link token: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		return
+	}
+
+	botUsername := ""
+	if ncInterface, ok := ctx.Get("notificationController"); ok {
+		if nc, ok := ncInterface.(interface{ GetTelegramBotUsername() string }); ok {
+			botUsername = nc.GetTelegramBotUsername()
+		}
+	}
+	// Fall back to static config if controller not resolved yet
+	if botUsername == "" {
+		if proviantConfigInterface, ok := ctx.Get("proviantConfig"); ok {
+			if proviantConfig, ok := proviantConfigInterface.(*configuration.ProviantConfiguration); ok {
+				botUsername = proviantConfig.Notification.Telegram.BotUsername
+			}
+		}
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"token":       token,
+		"botUsername": botUsername,
+	})
 }

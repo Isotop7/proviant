@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	stdlog "log"
 	"os"
 	"strings"
 	"time"
@@ -82,6 +83,8 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 	notificationController.DispatchInvitations(proviantConfiguration.Server.BaseURL)
 	// Dispatch monthly waste report goroutine
 	notificationController.DispatchMonthlyWasteReports()
+	// Start Telegram long-polling goroutine (no-op if bot token not configured)
+	notificationController.StartTelegramPoller()
 	return notificationController
 }
 
@@ -178,6 +181,8 @@ func main() {
 	// Setup logging
 	logger := setupLogging(proviantConfiguration)
 	logger.Info().Msg("Logging initialized")
+	stdlog.SetOutput(logger)
+	stdlog.SetFlags(0)
 
 	// Validate database parameters
 	dbValidErr := proviantConfiguration.ValidateDatabaseConfiguration()
@@ -243,9 +248,6 @@ func main() {
 			panic(err)
 		}
 	}
-
-	// Setup NotificationController if notifications are enabled
-	setupNotificationController(logger, proviantConfiguration, dbHandle)
 
 	// Setup template cache
 	templateCache, err := templates.NewTemplateCache()

@@ -25,6 +25,17 @@ import (
 	"gorm.io/gorm"
 )
 
+type zerologWriter struct {
+	logger *zerolog.Logger
+	level  zerolog.Level
+}
+
+func (w zerologWriter) Write(p []byte) (n int, err error) {
+	msg := strings.TrimRight(string(p), "\n")
+	w.logger.WithLevel(w.level).Msg(msg)
+	return len(p), nil
+}
+
 func cleanupRevokedTokens(db *gorm.DB, logger *zerolog.Logger) {
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
@@ -37,6 +48,9 @@ func cleanupRevokedTokens(db *gorm.DB, logger *zerolog.Logger) {
 // SetupRouter creates the gin engine and associated middleware
 func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) *gin.Engine {
 	go cleanupRevokedTokens(dbHandle, logger)
+
+	gin.DefaultWriter = zerologWriter{logger: logger, level: zerolog.DebugLevel}
+	gin.DefaultErrorWriter = zerologWriter{logger: logger, level: zerolog.WarnLevel}
 
 	// Generate new gin instance
 	engine := gin.New()
@@ -204,6 +218,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedUserAPI.POST("/password", v1.UpdateUserPassword)
 	protectedUserAPI.GET("/notification-preferences", v1.GetUserNotificationPreferences)
 	protectedUserAPI.POST("/notification-preferences", v1.UpdateUserNotificationPreferences)
+	protectedUserAPI.POST("/telegram-link-token", v1.GenerateTelegramLinkToken)
 	protectedUserAPI.POST("/household/leave", v1.LeaveHousehold)
 	protectedUserAPI.POST("/household/create", v1.CreateHousehold)
 	protectedUserAPI.POST("/tokens", v1.CreateUserToken)

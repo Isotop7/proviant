@@ -111,6 +111,18 @@ func (m *MockNotificationRepository) GetWasteStatsForHousehold(householdID uint,
 	return models.WasteStats{}, nil
 }
 
+func (m *MockNotificationRepository) FindUserByTelegramLinkToken(token string) (authentication.User, error) {
+	return authentication.User{}, nil
+}
+
+func (m *MockNotificationRepository) SetTelegramChatID(userID uint, chatID string) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) SetTelegramLinkToken(userID uint, token string) error {
+	return nil
+}
+
 var _ dbController.NotificationRepositoryInterface = (*MockNotificationRepository)(nil)
 
 func TestNotificationControllerInitialization(t *testing.T) {
