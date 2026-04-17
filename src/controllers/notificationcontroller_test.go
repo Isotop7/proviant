@@ -103,6 +103,14 @@ func (m *MockNotificationRepository) GetPublicHouseholds(excludeHouseholdID uint
 	return nil, nil
 }
 
+func (m *MockNotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error) {
+	return nil, nil
+}
+
+func (m *MockNotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error) {
+	return models.WasteStats{}, nil
+}
+
 var _ dbController.NotificationRepositoryInterface = (*MockNotificationRepository)(nil)
 
 func TestNotificationControllerInitialization(t *testing.T) {

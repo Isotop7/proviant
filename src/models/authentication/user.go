@@ -17,7 +17,8 @@ type NotificationPreferences struct {
 	NtfyURL                   string `json:"ntfyUrl,omitempty"`
 	NtfyTopic                 string `json:"ntfyTopic,omitempty"`
 	NtfyToken                 string `json:"ntfyToken,omitempty"`
-	NotificationThresholdDays int    `json:"notificationThresholdDays" gorm:"default:0"`
+	NotificationThresholdDays     int  `json:"notificationThresholdDays" gorm:"default:0"`
+	MonthlyWasteReportEnabled     bool `json:"monthlyWasteReportEnabled" gorm:"default:false"`
 }
 
 // User is the struct for the database definition and the JWT claims

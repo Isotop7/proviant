@@ -160,6 +160,7 @@ function UpdateNotificationSettings() {
     ntfyTopic: inputNtfyTopic.value || "",
     ntfyToken: inputNtfyToken.value || "",
     notificationThresholdDays: thresholdDays,
+    monthlyWasteReportEnabled: document.getElementById("toggleMonthlyWasteReport")?.checked ?? false,
   };
 
   proviant

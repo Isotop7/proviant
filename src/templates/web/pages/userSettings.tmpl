@@ -98,6 +98,14 @@
                                {{if .User.NotificationPreferences.NtfyEnabled}}checked{{end}}>
                         <label class="form-check-label" for="toggleNtfyNotifications">ntfy.sh Notifications</label>
                     </div>
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" id="toggleMonthlyWasteReport"
+                               {{if .User.NotificationPreferences.MonthlyWasteReportEnabled}}checked{{end}}>
+                        <label class="form-check-label" for="toggleMonthlyWasteReport">
+                            Monthly Waste Report
+                            <span class="text-body-secondary small">(email, sent to all household members)</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="mb-4">

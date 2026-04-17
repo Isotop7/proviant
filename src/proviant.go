@@ -80,6 +80,8 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 	notificationController.Dispatch()
 	// Dispatch invitation email retry goroutine (uses same Interval config)
 	notificationController.DispatchInvitations(proviantConfiguration.Server.BaseURL)
+	// Dispatch monthly waste report goroutine
+	notificationController.DispatchMonthlyWasteReports()
 	return notificationController
 }
 
@@ -93,6 +95,10 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetEnvPrefix("PROVIANT")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// Set defaults for monthly waste report schedule
+	viper.SetDefault("notification.monthlyWasteReport.day", 1)
+	viper.SetDefault("notification.monthlyWasteReport.hour", 8)
 
 	// Set default password policy
 	viper.SetDefault("server.authentication.passwordMinLength", 12)
