@@ -7,11 +7,9 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	jwt "github.com/appleboy/gin-jwt/v2"
+
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 // LeaveHousehold removes the calling user from their current household and assigns them a new personal one.
@@ -26,18 +24,13 @@ import (
 func LeaveHousehold(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -65,18 +58,13 @@ func LeaveHousehold(ctx *gin.Context) {
 func CreateHousehold(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -116,18 +104,13 @@ func CreateHousehold(ctx *gin.Context) {
 func ApplyForHousehold(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -164,18 +147,13 @@ func ApplyForHousehold(ctx *gin.Context) {
 func GetHouseholdApplications(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -207,18 +185,13 @@ func GetHouseholdApplications(ctx *gin.Context) {
 func ApproveHouseholdApplication(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -257,18 +230,13 @@ func ApproveHouseholdApplication(ctx *gin.Context) {
 func RejectHouseholdApplication(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -307,18 +275,13 @@ func RejectHouseholdApplication(ctx *gin.Context) {
 func UpdateHouseholdName(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -369,18 +332,13 @@ func UpdateHouseholdName(ctx *gin.Context) {
 func CancelHouseholdApplication(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -418,18 +376,13 @@ func CancelHouseholdApplication(ctx *gin.Context) {
 func RemoveHouseholdMember(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 

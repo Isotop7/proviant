@@ -10,8 +10,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	jwt "github.com/appleboy/gin-jwt/v2"
+
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
@@ -19,14 +18,16 @@ import (
 
 func CreateUserToken(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
-		ctx.JSON(http.StatusInternalServerError, v1api.APIResponse{Message: errors.ErrDatabaseContextNotFound.Error()})
+
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return
+	}
 
 	var req api.CreateTokenRequest
 	if err := ctx.ShouldBind(&req); err != nil {
@@ -75,14 +76,17 @@ func CreateUserToken(ctx *gin.Context) {
 }
 
 func ListUserTokens(ctx *gin.Context) {
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
-		ctx.JSON(http.StatusInternalServerError, v1api.APIResponse{Message: errors.ErrDatabaseContextNotFound.Error()})
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return
+	}
 
 	patRepo := database.NewPATRepository(dbHandle)
 	pats, err := patRepo.GetPATsByUserID(userID)
@@ -116,14 +120,16 @@ func ListUserTokens(ctx *gin.Context) {
 
 func DeleteUserToken(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
-		ctx.JSON(http.StatusInternalServerError, v1api.APIResponse{Message: errors.ErrDatabaseContextNotFound.Error()})
+
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return
+	}
 
 	patIDStr := ctx.Param("id")
 	patIDRaw, parseErr := strconv.ParseUint(patIDStr, 10, 64)

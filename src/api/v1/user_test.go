@@ -71,12 +71,11 @@ func TestUpdateUser(t *testing.T) {
 		mockJWTContext(ctx, testUser.ID)
 
 		// Request body
-		userData := authentication.User{
-			ID:          1,
-			Username:    "updateduser",
-			MailAddress: "updated@example.com",
+		reqBody := map[string]string{
+			"displayName": "Updated Name",
+			"mailAddress": "updated@example.com",
 		}
-		body, _ := json.Marshal(userData)
+		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
 			Header:        make(http.Header),
@@ -95,9 +94,6 @@ func TestUpdateUser(t *testing.T) {
 		// Verify user was updated in database
 		var updatedUser authentication.User
 		db.First(&updatedUser, testUser.ID)
-		if updatedUser.Username != "updateduser" {
-			t.Errorf("Username = %v, want updateduser", updatedUser.Username)
-		}
 		if updatedUser.MailAddress != "updated@example.com" {
 			t.Errorf("MailAddress = %v, want updated@example.com", updatedUser.MailAddress)
 		}
