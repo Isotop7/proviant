@@ -91,7 +91,7 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 }
 
 // SendMonthlyWasteReport sends the monthly household waste report to a single recipient.
-func (e *EmailNotificationProvider) SendMonthlyWasteReport(recipient string, stats models.WasteStats) error {
+func (e *EmailNotificationProvider) SendMonthlyWasteReport(recipient string, stats *models.WasteStats) error {
 	templ, err := template.ParseFS(templates.TemplateFiles, "notification/monthly_waste_report.html")
 	if err != nil {
 		return err

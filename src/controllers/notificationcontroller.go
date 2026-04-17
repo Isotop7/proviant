@@ -162,12 +162,12 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 
 		// Send notifications for each recipient
 		for _, pref := range preferences {
-			nc.sendNotificationsForRecipient(product, pref)
+			nc.sendNotificationsForRecipient(product, &pref)
 		}
 	}
 }
 
-func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel.Product, recipientInfo models.NotificationRecipientInfo) {
+func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) {
 	// Skip if the product's expiry date is still beyond this user's threshold window.
 	// A threshold of 0 means notify on/after expiry (current behaviour).
 	cutoff := time.Now().AddDate(0, 0, recipientInfo.NotificationThresholdDays)
@@ -378,7 +378,7 @@ func (nc *NotificationController) processMonthlyWasteReports(ep *EmailNotificati
 
 		if ep.IsConfigured() {
 			for _, recipient := range t.Recipients {
-				if sendErr := ep.SendMonthlyWasteReport(recipient, stats); sendErr != nil {
+				if sendErr := ep.SendMonthlyWasteReport(recipient, &stats); sendErr != nil {
 					nc.Logger.Error().Msgf("Monthly waste report: email send failed to %s: %s", recipient, sendErr)
 				} else {
 					nc.Logger.Info().Msgf("Monthly waste report: email sent to %s (household %d)", recipient, t.HouseholdID)
@@ -388,7 +388,7 @@ func (nc *NotificationController) processMonthlyWasteReports(ep *EmailNotificati
 
 		if tp.IsConfigured() {
 			for _, chatID := range t.TelegramChatIDs {
-				if sendErr := tp.SendMonthlyWasteReport(chatID, stats); sendErr != nil {
+				if sendErr := tp.SendMonthlyWasteReport(chatID, &stats); sendErr != nil {
 					nc.Logger.Error().Msgf("Monthly waste report: telegram send failed to chat %s: %s", chatID, sendErr)
 				} else {
 					nc.Logger.Info().Msgf("Monthly waste report: telegram sent to chat %s (household %d)", chatID, t.HouseholdID)
@@ -433,7 +433,7 @@ func (nc *NotificationController) StartTelegramPoller() {
 						nc.Logger.Info().Msgf("Telegram poller: resolved bot username @%s", nc.TelegramBotUsername)
 					}
 				}
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 		}
 		// Fall back to config value if getMe failed
@@ -453,7 +453,7 @@ func (nc *NotificationController) StartTelegramPoller() {
 			}
 
 			body, readErr := io.ReadAll(resp.Body)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if readErr != nil {
 				nc.Logger.Error().Msgf("Telegram poller: read error: %s", readErr)
 				continue
@@ -538,7 +538,7 @@ func (nc *NotificationController) sendTelegramMessage(client *http.Client, baseU
 		nc.Logger.Error().Msgf("Telegram: sendMessage error: %s", err)
 		return
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 // processPendingInvitations fetches all pending invitations that need to be sent or retried.
