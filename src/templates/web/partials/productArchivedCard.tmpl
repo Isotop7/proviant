@@ -19,12 +19,12 @@
         <div class="row h-100 px-2">
             <div class="col-md-1">
                 <div>
-                    <input class="form-check-input" type="checkbox" id="checkbox-{{ .Model.ID }}" value="" aria-label="...">
+                    <input class="form-check-input" type="checkbox" id="checkbox-{{ .Model.ID }}" value="" aria-label="Select {{ .ProductName }}">
                 </div>
             </div>
             <div class="col-md-2">
                 <div class="product-card-img-container">
-                    <img src="{{ .ImageURL }}" class="img-fluid product-card-img">
+                    <img src="{{ .ImageURL }}" class="img-fluid product-card-img" alt="{{ .ProductName }}">
                 </div>
             </div>
             <div class="col-md-9">
@@ -59,7 +59,7 @@
         <ul class="list-group list-group-flush d-flex justify-content-between">
             <li class="list-group-item d-flex justify-content-evenly align-items-center">
                 <div class="ms-2 me-auto">
-                    <i class="bi bi-calendar-x me-3"></i>
+                    <i class="bi bi-calendar-x me-3" aria-hidden="true"></i>
                 </div>
                 <span class="badge rounded-pill {{ if hasPassed .ExpireAt }} bg-danger {{ else }} bg-primary {{ end }}">
                     {{ .ExpireAt | humanDate }}
@@ -67,7 +67,7 @@
             </li>
             <li class="list-group-item d-flex justify-content-evenly align-items-center">
                 <div class="ms-2 me-auto">
-                    <i class="bi bi-upc-scan me-3"></i>
+                    <i class="bi bi-upc-scan me-3" aria-hidden="true"></i>
                 </div>
                 <span class="badge bg-primary rounded-pill">
                     {{ .ScannedAt | humanDateTime }}
@@ -75,7 +75,7 @@
             </li>
             <li class="list-group-item d-flex justify-content-evenly align-items-center">
                 <div class="ms-2 me-auto">
-                    <i class="bi bi-bell me-3"></i>
+                    <i class="bi bi-bell me-3" aria-hidden="true"></i>
                 </div>
                 <span class="badge bg-primary rounded-pill">
                     {{ .NotifiedAt | humanDateTime }}
@@ -83,7 +83,7 @@
             </li>
             <li class="list-group-item d-flex justify-content-evenly align-items-center">
                 <div class="ms-2 me-auto">
-                    <i class="bi bi-trash3 me-3"></i>
+                    <i class="bi bi-trash3 me-3" aria-hidden="true"></i>
                 </div>
                 <span class="badge bg-primary rounded-pill">
                     {{ .DeletedAt | humanDateTimeFromSQL }}

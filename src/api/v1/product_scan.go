@@ -154,10 +154,8 @@ func GetOpenFoodFactsData(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, dbOk := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbOk {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 

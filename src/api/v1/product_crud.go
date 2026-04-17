@@ -12,10 +12,8 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
-	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
@@ -55,20 +53,13 @@ func GetProducts(ctx *gin.Context) {
 		limit = 0
 	}
 
-	// Get database instance from context
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrDatabaseContextNotFound)
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 
-	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -98,30 +89,18 @@ func GetProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	// Get and parse parameter id
-	idParam := ctx.Param("id")
-	var productID int
-	var convErr error
-	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, idParam)})
+	productID, ok := parseIntParam(ctx, logger, "id")
+	if !ok {
 		return
 	}
 
-	// Get database instance from context
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 
-	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -161,20 +140,13 @@ func CreateProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	// Get database instance from context
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 
-	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims["id"].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -252,30 +224,18 @@ func UpdateProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	// Get and parse parameter id
-	idParam := ctx.Param("id")
-	var productID int
-	var convErr error
-	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, idParam)})
+	productID, ok := parseIntParam(ctx, logger, "id")
+	if !ok {
 		return
 	}
 
-	// Get database instance from context
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 
-	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -325,30 +285,18 @@ func UpdateProductAmount(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	// Get and parse parameter id
-	idParam := ctx.Param("id")
-	var productID int
-	var convErr error
-	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, idParam)})
+	productID, ok := parseIntParam(ctx, logger, "id")
+	if !ok {
 		return
 	}
 
-	// Get database instance from context
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrDatabaseContextNotFound)
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 
-	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -405,13 +353,8 @@ func DeleteProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	// Get and parse parameter id
-	idParam := ctx.Param("id")
-	var productID int
-	var convErr error
-	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, idParam)})
+	productID, ok := parseIntParam(ctx, logger, "id")
+	if !ok {
 		return
 	}
 
@@ -432,20 +375,13 @@ func DeleteProduct(ctx *gin.Context) {
 		}
 	}
 
-	// Get database instance from context
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 
-	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -477,30 +413,18 @@ func SetExpireAt(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	// Get and parse parameter id
-	idParam := ctx.Param("id")
-	var productID int
-	var convErr error
-	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, idParam)})
+	productID, ok := parseIntParam(ctx, logger, "id")
+	if !ok {
 		return
 	}
 
-	// Get database instance from context
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
 		return
 	}
 
-	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 

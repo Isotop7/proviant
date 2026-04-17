@@ -2,20 +2,36 @@
 
 <div class="container row text-center">
     <p class="hero-icon">
-        <i class="bi bi-emoji-dizzy-fill my-5 text-primary"></i>
+        {{ if .QueryValue }}
+        <i class="bi bi-search my-5 text-secondary"></i>
+        {{ else }}
+        <i class="bi bi-upc-scan my-5 text-primary"></i>
+        {{ end }}
     </p>
-    <p class="fs-2 my-2">
-        Oh no!
-    </p>
+    {{ if .QueryValue }}
+    <p class="fs-2 my-2">No results found</p>
     <p class="my-3">
-        You need to add products first to see content on this page.
+        No products matched "<strong>{{ .QueryValue }}</strong>".<br>
+        Try a different search term or browse all products.
+    </p>
+    <div class="my-4">
+        <a class="btn btn-outline-secondary" href="/web/products">
+            <i class="bi bi-arrow-counterclockwise me-2"></i>
+            Show all products
+        </a>
+    </div>
+    {{ else }}
+    <p class="fs-2 my-2">No products yet</p>
+    <p class="my-3">
+        Scan a barcode or add a product manually to get started.
     </p>
     <div class="my-4">
         <a class="btn btn-outline-primary" href="/web/products/create">
-            <i class="bi bi-cart-plus-fill me-2"></i>
-            Create your first product
+            <i class="bi bi-upc-scan me-2"></i>
+            Scan your first item
         </a>
     </div>
+    {{ end }}
 </div>
 
 {{ end }}

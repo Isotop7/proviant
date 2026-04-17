@@ -93,23 +93,21 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, token, baseURL string, expiresAt time.Time) error {
 	magicLink := fmt.Sprintf("%s/web/verify-email?token=%s", baseURL, token)
 
-	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/invitation.html")
+	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/verification.html")
 	if templErr != nil {
 		return templErr
 	}
 	var bodyBuf bytes.Buffer
 	templExecErr := templ.Execute(&bodyBuf, struct {
-		InviterName   string
-		HouseholdName string
-		MagicLink     string
-		ExpiresAt     string
-		Email         string
+		Username  string
+		MagicLink string
+		ExpiresAt string
+		Email     string
 	}{
-		InviterName:   username,
-		HouseholdName: "Proviant",
-		MagicLink:     magicLink,
-		ExpiresAt:     expiresAt.Format("2006-01-02 15:04"),
-		Email:         email,
+		Username:  username,
+		MagicLink: magicLink,
+		ExpiresAt: expiresAt.Format("2006-01-02 15:04"),
+		Email:     email,
 	})
 	if templExecErr != nil {
 		return templExecErr

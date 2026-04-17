@@ -1,18 +1,5 @@
 function showLoginError(message) {
-    const loginAlert = document.getElementById("loginAlert");
-    if (loginAlert) {
-        document.getElementById("loginAlertMessage").textContent = message;
-        loginAlert.classList.remove("d-none");
-        loginAlert.classList.add("show");
-    }
-}
-
-function hideLoginError() {
-    const loginAlert = document.getElementById("loginAlert");
-    if (loginAlert) {
-        loginAlert.classList.remove("show");
-        loginAlert.classList.add("d-none");
-    }
+    proviant.showFeedback("error", "Login Failed", message);
 }
 
 function showPasswordRequirementsModal() {
@@ -34,34 +21,11 @@ function showEmailVerificationModal(email) {
 }
 
 function showSignupError(message) {
-    const signupAlert = document.getElementById("signupAlert");
-    if (signupAlert) {
-        document.getElementById("signupAlertMessage").textContent = message;
-        signupAlert.classList.remove("d-none");
-        signupAlert.classList.add("show");
-    }
+    proviant.showFeedback("error", "Signup Failed", message);
 }
 
-function hideSignupError() {
-    const signupAlert = document.getElementById("signupAlert");
-    if (signupAlert) {
-        signupAlert.classList.remove("show");
-        signupAlert.classList.add("d-none");
-    }
-}
-
-function showSignupSuccess(username) {
-    // Show success message on the auth page — user must log in before accessing onboarding
-    const infoToast = document.getElementById("infoToast");
-    if (infoToast) {
-        let toastBootstrap = bootstrap.Toast.getOrCreateInstance(infoToast);
-        const toastBody = document.getElementById("infoToastBody");
-        if (toastBody) {
-            toastBody.textContent = `Hello ${username}! Your account was created. Please log in to continue.`;
-        }
-        toastBootstrap.show();
-    }
-    // Clear signup fields so the user sees the login form
+function showSignupSuccess(mailAddress) {
+    showEmailVerificationModal(mailAddress);
     clearSignupInputs();
 }
 
@@ -135,19 +99,28 @@ function Login() {
                 });
                 break;
             case 401:
-                showLoginError("Authentication failed!");
+                showLoginError(response.body || "Invalid username or password.");
                 clearLoginInputs();
                 break;
             case 403:
                 if (response.body && response.body.toLowerCase().includes("verify")) {
                     showEmailVerificationModal(username);
                 } else {
-                    showLoginError(response.message || "Access denied.");
+                    showLoginError(response.body || "Access denied.");
                 }
                 clearLoginInputs();
                 break;
+            case 429: {
+                const mins = response.retryAfter ? Math.ceil(parseInt(response.retryAfter, 10) / 60) : null;
+                const lockMsg = mins
+                    ? `Too many failed attempts. Account locked — try again in ${mins} minute${mins !== 1 ? "s" : ""}.`
+                    : (response.body || "Too many failed attempts. Account is temporarily locked.");
+                showLoginError(lockMsg);
+                clearLoginInputs();
+                break;
+            }
             default:
-                showLoginError(`Undefined authentication error: ${response.message}`);
+                showLoginError(response.body || "Login failed. Please try again.");
                 clearLoginInputs();
                 break;
         }
@@ -205,8 +178,7 @@ function Signup() {
     proviant.signupUser(username, mailAddress, password, inviteToken).then((response) => {
         switch (response.code) {
             case 200:
-                showSignupSuccess(username);
-                clearSignupInputs();
+                showSignupSuccess(mailAddress);
                 break;
             case 400:
                 showSignupError(`Invalid user data: ${response.body}`);
@@ -271,14 +243,6 @@ document.addEventListener("input", function (event) {
         if (target.value.length > 0 && target.classList.contains("is-invalid")) {
             target.classList.toggle("is-invalid");
         }
-        const loginAlert = document.getElementById("loginAlert");
-        if (loginAlert && loginAlert.classList.contains("show")) {
-            hideLoginError();
-        }
-        const signupAlert = document.getElementById("signupAlert");
-        if (signupAlert && signupAlert.classList.contains("show")) {
-            hideSignupError();
-        }
         return;
     }
 
@@ -287,14 +251,6 @@ document.addEventListener("input", function (event) {
         if (target.value.length > 0 && target.classList.contains("is-invalid")) {
             target.classList.toggle("is-invalid");
         }
-        const loginAlert = document.getElementById("loginAlert");
-        if (loginAlert && loginAlert.classList.contains("show")) {
-            hideLoginError();
-        }
-        const signupAlert = document.getElementById("signupAlert");
-        if (signupAlert && signupAlert.classList.contains("show")) {
-            hideSignupError();
-        }
         return;
     }
 
@@ -302,10 +258,6 @@ document.addEventListener("input", function (event) {
     if (target.name === "inputMailAddress" || target.id === "inputMailAddress") {
         if (target.value.length > 0 && target.classList.contains("is-invalid")) {
             target.classList.toggle("is-invalid");
-        }
-        const signupAlert = document.getElementById("signupAlert");
-        if (signupAlert && signupAlert.classList.contains("show")) {
-            hideSignupError();
         }
         return;
     }

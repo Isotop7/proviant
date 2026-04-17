@@ -71,6 +71,21 @@ func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]datab
 	if queryErr != nil {
 		return []database.Product{}, queryErr
 	}
+
+	sort.Slice(products, func(i, j int) bool {
+		ti, tj := products[i].ExpireAt, products[j].ExpireAt
+		if ti.IsZero() && tj.IsZero() {
+			return false
+		}
+		if ti.IsZero() {
+			return false
+		}
+		if tj.IsZero() {
+			return true
+		}
+		return ti.Before(tj)
+	})
+
 	return products, nil
 }
 

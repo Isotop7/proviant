@@ -19,12 +19,11 @@
             <form id="userSettings" novalidate>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label for="inputUsername" class="form-label fw-medium">
-                            Username <span class="text-danger" aria-hidden="true">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="inputUsername"
-                               value="{{ .User.Username }}" aria-required="true" autocomplete="username">
-                        <div class="invalid-feedback">Please enter a username.</div>
+                        <label for="inputDisplayName" class="form-label fw-medium">Display Name</label>
+                        <input type="text" class="form-control" id="inputDisplayName"
+                               value="{{ .User.DisplayName }}" autocomplete="nickname"
+                               placeholder="Leave blank to use your username">
+                        <div class="form-text">Shown instead of your username throughout the app.</div>
                     </div>
                     <div class="col-md-6">
                         <label for="inputMailAddress" class="form-label fw-medium">
@@ -33,6 +32,12 @@
                         <input type="email" class="form-control" id="inputMailAddress"
                                value="{{ .User.MailAddress }}" aria-required="true" autocomplete="email">
                         <div class="invalid-feedback">Please enter an email address.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputUsername" class="form-label fw-medium">Username</label>
+                        <input type="text" class="form-control" id="inputUsername"
+                               value="{{ .User.Username }}" readonly autocomplete="username">
+                        <div class="form-text text-muted">Login credential — cannot be changed here.</div>
                     </div>
                 </div>
             </form>
@@ -168,11 +173,11 @@
                     <div class="input-group">
                         <input type="text" class="form-control font-monospace small" id="calendarUrl" readonly
                                value="">
-                        <button type="button" class="btn btn-outline-secondary" id="btnCalendarCopy" title="Copy URL">
-                            <i class="bi bi-clipboard"></i>
+                        <button type="button" class="btn btn-outline-secondary" id="btnCalendarCopy" title="Copy URL" aria-label="Copy URL">
+                            <i class="bi bi-clipboard" aria-hidden="true"></i>
                         </button>
-                        <button type="button" class="btn btn-outline-primary" id="btnCalendarDownload" title="Download .ics">
-                            <i class="bi bi-download"></i>
+                        <button type="button" class="btn btn-outline-primary" id="btnCalendarDownload" title="Download .ics" aria-label="Download .ics file">
+                            <i class="bi bi-download" aria-hidden="true"></i>
                         </button>
                     </div>
                     <div id="calendarUrlCopied" class="form-text text-success d-none">
@@ -216,11 +221,11 @@
         </div>
     </div>
 
-    <div class="modal fade" id="createPatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="createPatModal" tabindex="-1" aria-labelledby="createPatModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Create API Token</h5>
+                    <h5 class="modal-title" id="createPatModalLabel">Create API Token</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -281,20 +286,20 @@
             {{ end }}
 
             {{/* Members list */}}
-            {{ if .Members }}
             <div class="mb-4">
                 <h3 class="h6 fw-medium mb-2"><i class="bi bi-people me-1"></i>Members</h3>
+                {{ if .Members }}
                 <ul class="list-group" id="memberList">
                     {{ range .Members }}
                     <li class="list-group-item d-flex justify-content-between align-items-center" id="member-{{ .ID }}">
                         <span>
-                            <i class="bi bi-person me-2"></i>{{ .Username }}
+                            <i class="bi bi-person me-2"></i>{{ .EffectiveName }}
                             {{ if eq .ID $.User.ID }}<span class="badge bg-secondary ms-1">You</span>{{ end }}
                             {{ if eq .ID $.Household.AdminID }}<span class="badge bg-primary ms-1"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
                         </span>
                         {{ if and $.IsAdmin (ne .ID $.Household.AdminID) }}
                         <button type="button" class="btn btn-sm btn-outline-danger btn-remove-member"
-                                data-id="{{ .ID }}" aria-label="Remove {{ .Username }}">
+                                data-id="{{ .ID }}" aria-label="Remove {{ .EffectiveName }}">
                             <i class="bi bi-person-dash"></i>
                         </button>
                         {{ end }}
@@ -302,8 +307,14 @@
                     {{ end }}
                 </ul>
                 <div id="membersAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
+                {{ else }}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-people fs-1 mb-2 d-block"></i>
+                    <p class="mb-1">You're the only one here.</p>
+                    <p class="small mb-0">Use the invite form below to add members to this household.</p>
+                </div>
+                {{ end }}
             </div>
-            {{ end }}
 
             {{/* ── Join & Invite ───────────────────────────────── */}}
             <div class="mt-4 pt-4 border-top">

@@ -122,7 +122,56 @@ proviant.editProduct = async function (product) {
   return response;
 };
 
-proviant.updateProductAmount = async function (productID, delta) {
+// Offline edit queue — persists amount-delta ops in localStorage for sync on reconnect
+proviant._offlineQueue = JSON.parse(localStorage.getItem('proviant_offline_queue') || '[]');
+
+proviant._saveQueue = function () {
+  localStorage.setItem('proviant_offline_queue', JSON.stringify(proviant._offlineQueue));
+};
+
+proviant._enqueueAmountDelta = function (productID, delta) {
+  const existing = proviant._offlineQueue.find(function (op) { return op.productID === productID; });
+  if (existing) {
+    existing.delta += delta;
+    if (existing.delta === 0) {
+      proviant._offlineQueue = proviant._offlineQueue.filter(function (op) { return op.productID !== productID; });
+    }
+  } else {
+    proviant._offlineQueue.push({ productID: productID, delta: delta, ts: Date.now() });
+  }
+  proviant._saveQueue();
+  proviant._updateOfflineBadge();
+};
+
+proviant._updateOfflineBadge = function () {
+  var countEl = document.getElementById('offlineQueueCount');
+  if (!countEl) return;
+  var n = proviant._offlineQueue.length;
+  if (n > 0) {
+    countEl.textContent = '(' + n + ' pending)';
+    countEl.classList.remove('d-none');
+  } else {
+    countEl.classList.add('d-none');
+  }
+};
+
+proviant._flushQueue = async function () {
+  if (!navigator.onLine || proviant._offlineQueue.length === 0) return;
+  var queue = proviant._offlineQueue.slice();
+  proviant._offlineQueue = [];
+  proviant._saveQueue();
+  proviant._updateOfflineBadge();
+  for (var i = 0; i < queue.length; i++) {
+    var op = queue[i];
+    try {
+      await proviant._sendAmountDelta(op.productID, op.delta);
+    } catch (_e) {
+      proviant._enqueueAmountDelta(op.productID, op.delta);
+    }
+  }
+};
+
+proviant._sendAmountDelta = async function (productID, delta) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/amount`;
   const apiCall = await fetch(url, {
     method: "PATCH",
@@ -137,6 +186,14 @@ proviant.updateProductAmount = async function (productID, delta) {
     message: body.message,
     deleted: apiCall.status === 200 && typeof body.message === "string" && body.message.includes("deleted"),
   };
+};
+
+proviant.updateProductAmount = async function (productID, delta) {
+  if (!navigator.onLine) {
+    proviant._enqueueAmountDelta(productID, delta);
+    return { code: 200, message: 'queued', deleted: false, queued: true };
+  }
+  return proviant._sendAmountDelta(productID, delta);
 };
 
 proviant.deleteProduct = async function (productID, archiveOnly) {
@@ -234,12 +291,17 @@ proviant.loginUser = async function (username, password) {
     },
     body: JSON.stringify({ username, password }),
   });
-  const body = await apiCall.json();
-  const response = {
+  let body = {};
+  try {
+    body = await apiCall.json();
+  } catch (_) {
+    // empty or non-JSON response
+  }
+  return {
     code: apiCall.status,
     body: body.message || body.code || "",
+    retryAfter: apiCall.headers.get("Retry-After"),
   };
-  return response;
 };
 
 proviant.signupUser = async function (username, mailAddress, password, inviteToken) {
@@ -266,14 +328,14 @@ proviant.signupUser = async function (username, mailAddress, password, inviteTok
   return response;
 };
 
-proviant.updateUser = async function (username, mailAddress) {
+proviant.updateUser = async function (displayName, mailAddress) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user`;
   const apiCall = await fetch(url, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ username, mailAddress }),
+    body: JSON.stringify({ displayName, mailAddress }),
   });
 
   const body = await apiCall.json();
@@ -576,6 +638,39 @@ proviant.applyOnboardingHousehold = async function (householdId) {
 proviant.completeOnboarding = async function () {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/complete`;
   const apiCall = await fetch(url, { method: "POST" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.updateOnboardingProfile = async function (displayName) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/profile`;
+  const apiCall = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ displayName }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.createOnboardingHousehold = async function (name) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/create-household`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body.message };
+};
+
+proviant.joinOnboardingByInvite = async function (token) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/join-invite`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
   const body = await apiCall.json();
   return { code: apiCall.status, message: body.message };
 };

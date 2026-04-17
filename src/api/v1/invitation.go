@@ -11,9 +11,7 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
 
-	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
@@ -35,18 +33,13 @@ import (
 func CreateInvitation(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -101,7 +94,7 @@ func CreateInvitation(ctx *gin.Context) {
 	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
 	notificationController, _ := ctx.MustGet("notificationController").(*controllers.NotificationController)
 	if notificationController != nil {
-		inviterName := user.Username
+		inviterName := user.EffectiveName()
 		household, householdErr := userRepo.GetHouseholdByID(user.HouseholdID)
 		householdName := fmt.Sprintf("Household #%d", user.HouseholdID)
 		if householdErr == nil {
@@ -134,18 +127,13 @@ func CreateInvitation(ctx *gin.Context) {
 func GetInvitations(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -194,18 +182,13 @@ func GetInvitations(ctx *gin.Context) {
 func CancelInvitation(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 

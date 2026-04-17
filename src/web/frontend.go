@@ -609,7 +609,8 @@ func (frontend *Frontend) Onboarding(ctx *gin.Context) {
 	}
 
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "onboarding.tmpl", map[string]any{
-		"Title":    "Onboarding",
-		"Username": user.Username,
+		"Title":       "Onboarding",
+		"Username":    user.Username,
+		"DisplayName": user.DisplayName,
 	})
 }

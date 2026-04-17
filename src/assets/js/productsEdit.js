@@ -15,7 +15,10 @@ function getFormElements() {
 }
 
 function checkFormValidity() {
-    // TODO: Implement actual validation logic
+    const els = getFormElements();
+    const productID = Number.parseInt(els.labelProductID?.innerText?.trim());
+    if (!Number.isInteger(productID) || productID <= 0) return false;
+    if (!els.inputProductName?.value?.trim()) return false;
     return true;
 }
 

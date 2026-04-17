@@ -14,6 +14,32 @@ document.addEventListener("click", function (event) {
 document.addEventListener('DOMContentLoaded', function () {
     var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
     tooltipEls.forEach(function (el) { new bootstrap.Tooltip(el); });
+
+    // Show offline banner immediately if page loaded from cache while offline
+    updateOfflineBanner();
+
+    // Flush any queued edits from previous session
+    if (navigator.onLine) {
+        proviant._flushQueue();
+    }
+    proviant._updateOfflineBadge();
+});
+
+// Offline banner toggle
+function updateOfflineBanner() {
+    var banner = document.getElementById('offlineBanner');
+    if (!banner) return;
+    if (!navigator.onLine) {
+        banner.classList.remove('d-none');
+    } else {
+        banner.classList.add('d-none');
+    }
+}
+
+window.addEventListener('offline', updateOfflineBanner);
+window.addEventListener('online', function () {
+    updateOfflineBanner();
+    proviant._flushQueue();
 });
 
 if ('serviceWorker' in navigator) {

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"errors"
 	"html/template"
 	"net/http"
 	"strconv"
@@ -18,6 +19,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+var errEmailNotVerified = errors.New("email not verified")
 
 // ZerologMiddleware implements a gin.HandlerFunc and logs the output from gin
 func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
@@ -40,15 +43,23 @@ func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
 }
 
 func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
+	if message == errEmailNotVerified.Error() {
+		ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"code":    "EMAIL_NOT_VERIFIED",
+			"message": "Please verify your email address before logging in.",
+		})
+		return
+	}
+
 	failedUserID, failedUserIDExists := ctx.Get("failedUserID")
 	if !failedUserIDExists {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
 		return
 	}
 
 	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !ok {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
 		return
 	}
 
@@ -68,7 +79,7 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 
 	locked, remaining := userRepo.IsAccountLocked(failedUserID.(uint), maxLoginAttempts, lockoutDurationMins)
 	if !locked {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
 		return
 	}
 
@@ -252,7 +263,7 @@ func JWTMiddleware(
 
 			// Check email verification
 			if user.EmailVerifiedAt == nil {
-				return nil, jwt.ErrFailedAuthentication
+				return nil, errEmailNotVerified
 			}
 
 			_ = userRepo.ResetFailedLoginAttempts(user.ID)

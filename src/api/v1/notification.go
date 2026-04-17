@@ -7,12 +7,9 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
 
-	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 // GetNotifications returns actionable notification items for the current user:
@@ -29,18 +26,13 @@ import (
 func GetNotifications(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -83,7 +75,7 @@ func GetNotifications(ctx *gin.Context) {
 				for _, app := range applications {
 					applicantName := fmt.Sprintf("User #%d", app.ApplicantID)
 					if applicant, uErr := userRepo.GetUserByID(app.ApplicantID); uErr == nil {
-						applicantName = applicant.Username
+						applicantName = applicant.EffectiveName()
 					}
 					items = append(items, apiModel.NotificationItem{
 						ID:        app.ID,

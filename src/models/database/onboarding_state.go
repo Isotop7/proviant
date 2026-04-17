@@ -6,6 +6,7 @@ import "gorm.io/gorm"
 type OnboardingState struct {
 	gorm.Model
 	UserID              uint `gorm:"uniqueIndex,not null"`
+	ProfileStepDone     bool `gorm:"default:false"`
 	NotificationsSetup  bool `gorm:"default:false"`
 	HouseholdStepDone   bool `gorm:"default:false"`
 	OnboardingCompleted bool `gorm:"default:false"`

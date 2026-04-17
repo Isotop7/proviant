@@ -11,9 +11,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
 
-	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -33,18 +31,13 @@ import (
 func GetHouseholdUsers(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -94,18 +87,13 @@ func GetHouseholdUsers(ctx *gin.Context) {
 func UpdateHouseholdUser(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	adminID := uint(claims[static.TokenIdentityKey].(float64))
-	if adminID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	adminID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -157,24 +145,23 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 		return
 	}
 
+	newUsername := targetUser.Username
 	if req.Username != "" {
-		targetUser.Username = req.Username
+		newUsername = req.Username
 	}
+	newMailAddress := targetUser.MailAddress
 	if req.MailAddress != "" {
-		targetUser.MailAddress = req.MailAddress
+		newMailAddress = req.MailAddress
 	}
 
-	if err := targetUser.IsValid(true); err != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
-		return
-	}
-
-	updateErr := userRepo.UpdateUser(targetUser.ID, &targetUser)
+	updateErr := userRepo.UpdateAdminUserFields(targetUser.ID, newUsername, newMailAddress)
 	if updateErr != nil {
 		logger.Error().Msgf("Error updating user: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
 		return
 	}
+	targetUser.Username = newUsername
+	targetUser.MailAddress = newMailAddress
 
 	ctx.JSON(http.StatusOK, targetUser)
 }
@@ -194,18 +181,13 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 func DeleteHouseholdUser(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	adminID := uint(claims[static.TokenIdentityKey].(float64))
-	if adminID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	adminID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -280,18 +262,13 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 func AdminResetUserPassword(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	adminID := uint(claims[static.TokenIdentityKey].(float64))
-	if adminID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	adminID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 

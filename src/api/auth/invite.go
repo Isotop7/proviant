@@ -96,7 +96,7 @@ func AcceptInvitation(ctx *gin.Context) {
 		if ws := controllers.GetWebhookService(); ws != nil {
 			ws.FireEvent("household.member_joined", map[string]any{
 				"userId":      userID,
-				"username":    user.Username,
+				"username":    user.EffectiveName(),
 				"householdId": user.HouseholdID,
 			})
 		}

@@ -26,6 +26,7 @@ type User struct {
 	gorm.Model
 	ID                      uint       `gorm:"primaryKey,unique"`
 	Username                string     `json:"username"`
+	DisplayName             string     `json:"displayName"`
 	MailAddress             string     `json:"mailAddress"`
 	Password                string     `json:"-"`
 	EmailVerifiedAt         *time.Time `json:"emailVerifiedAt,omitempty"`
@@ -34,6 +35,14 @@ type User struct {
 	NotificationPreferences NotificationPreferences `gorm:"embedded"`
 	FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`
 	LockedUntil             gorm.DeletedAt          `json:"-"`
+}
+
+// EffectiveName returns DisplayName if set, otherwise falls back to Username.
+func (u *User) EffectiveName() string {
+	if u.DisplayName != "" {
+		return u.DisplayName
+	}
+	return u.Username
 }
 
 // IsValid is a simple validator function to check for valid properties

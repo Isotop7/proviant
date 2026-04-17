@@ -24,6 +24,13 @@
   <header>
     {{template "nav" .}}
   </header>
+  <!-- Offline banner — shown by JS when navigator.onLine === false -->
+  <div id="offlineBanner" class="d-none alert alert-warning rounded-0 mb-0 py-2 text-center small" role="status" aria-live="polite">
+    <i class="bi bi-wifi-off me-2" aria-hidden="true"></i>
+    You're offline — showing cached data. Changes will sync when reconnected.
+    <span id="offlineQueueCount" class="ms-1 fw-semibold d-none"></span>
+  </div>
+
   <main class="flex-shrink-0">
     <div id="content-wrapper" class="container">
       {{template "content" .}}

@@ -215,7 +215,10 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	onboardingAPI.Use(jwtAPIMiddlewareWithPAT)
 	onboardingAPI.GET("/state", onboarding.GetOnboardingState)
 	onboardingAPI.GET("/households", onboarding.GetAvailableHouseholds)
+	onboardingAPI.PATCH("/profile", onboarding.UpdateOnboardingProfile)
 	onboardingAPI.POST("/apply-household", onboarding.ApplyForHousehold)
+	onboardingAPI.POST("/create-household", onboarding.CreateOnboardingHousehold)
+	onboardingAPI.POST("/join-invite", onboarding.JoinOnboardingByInvite)
 	onboardingAPI.POST("/complete", onboarding.CompleteOnboarding)
 
 	// Notification routes

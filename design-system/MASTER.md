@@ -56,7 +56,8 @@ Extracted directly from the Proviant icon: basket green outline, leaf greens, ca
 | State | Condition | Badge classes |
 |-------|-----------|---------------|
 | Expired | date passed | `bg-danger text-white` |
-| Expiring soon | ≤ 7 days | `bg-warning text-dark` |
+| Critical | ≤ 3 days | `bg-danger text-white` |
+| Expiring soon | 4–7 days | `bg-warning text-dark` |
 | Fresh | > 7 days | `bg-success text-dark` |
 | No date | — | `bg-secondary` |
 

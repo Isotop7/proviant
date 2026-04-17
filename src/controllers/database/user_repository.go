@@ -112,7 +112,7 @@ func (r *UserRepository) UpdateUser(userID uint, user *authentication.User) erro
 		return errors.ErrMismatcherUserID
 	}
 
-	dbUser.Username = user.Username
+	dbUser.DisplayName = user.DisplayName
 	dbUser.MailAddress = user.MailAddress
 	dbUser.NotificationPreferences = user.NotificationPreferences
 
@@ -121,6 +121,22 @@ func (r *UserRepository) UpdateUser(userID uint, user *authentication.User) erro
 		return saveResult.Error
 	}
 	return nil
+}
+
+// UpdateAdminUserFields allows admins to change login-credential fields (username, email).
+func (r *UserRepository) UpdateAdminUserFields(userID uint, username, mailAddress string) error {
+	return r.DB.Model(&authentication.User{}).
+		Where("id = ?", userID).
+		Updates(map[string]interface{}{
+			"username":     username,
+			"mail_address": mailAddress,
+		}).Error
+}
+
+func (r *UserRepository) UpdateDisplayName(userID uint, displayName string) error {
+	return r.DB.Model(&authentication.User{}).
+		Where("id = ?", userID).
+		Update("display_name", displayName).Error
 }
 
 func (r *UserRepository) UpdateUserPassword(userID uint, login *authentication.Login) error {
@@ -224,6 +240,18 @@ func (r *UserRepository) MarkNotificationsSetup(userID uint) error {
 	return r.DB.Model(&database.OnboardingState{}).
 		Where("user_id = ?", userID).
 		Update("notifications_setup", true).Error
+}
+
+func (r *UserRepository) UpdateUsername(userID uint, username string) error {
+	return r.DB.Model(&authentication.User{}).
+		Where("id = ?", userID).
+		Update("username", username).Error
+}
+
+func (r *UserRepository) MarkProfileStepDone(userID uint) error {
+	return r.DB.Model(&database.OnboardingState{}).
+		Where("user_id = ?", userID).
+		Update("profile_step_done", true).Error
 }
 
 func (r *UserRepository) MarkHouseholdStepDone(userID uint) error {

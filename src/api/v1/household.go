@@ -7,11 +7,9 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	jwt "github.com/appleboy/gin-jwt/v2"
+
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 // LeaveHousehold removes the calling user from their current household and assigns them a new personal one.
@@ -26,18 +24,13 @@ import (
 func LeaveHousehold(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -65,18 +58,13 @@ func LeaveHousehold(ctx *gin.Context) {
 func CreateHousehold(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -116,31 +104,23 @@ func CreateHousehold(ctx *gin.Context) {
 func ApplyForHousehold(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
-	idParam := ctx.Param("id")
-	householdID, convErr := strconv.ParseUint(idParam, 10, 64)
-	if convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid household id"})
+	householdID, ok := parseUintParam(ctx, logger, "id", "invalid household id")
+	if !ok {
 		return
 	}
 
 	householdRepo := database.NewHouseholdRepository(dbHandle)
-	applyErr := householdRepo.ApplyForHousehold(userID, uint(householdID))
+	applyErr := householdRepo.ApplyForHousehold(userID, householdID)
 	switch applyErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application submitted"})
@@ -167,18 +147,13 @@ func ApplyForHousehold(ctx *gin.Context) {
 func GetHouseholdApplications(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -210,31 +185,23 @@ func GetHouseholdApplications(ctx *gin.Context) {
 func ApproveHouseholdApplication(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
-	idParam := ctx.Param("id")
-	applicationID, convErr := strconv.ParseUint(idParam, 10, 64)
-	if convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid application id"})
+	applicationID, ok := parseUintParam(ctx, logger, "id", "invalid application id")
+	if !ok {
 		return
 	}
 
 	householdRepo := database.NewHouseholdRepository(dbHandle)
-	approveErr := householdRepo.ApproveApplication(uint(applicationID), userID)
+	approveErr := householdRepo.ApproveApplication(applicationID, userID)
 	switch approveErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application approved"})
@@ -263,31 +230,23 @@ func ApproveHouseholdApplication(ctx *gin.Context) {
 func RejectHouseholdApplication(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
-	idParam := ctx.Param("id")
-	applicationID, convErr := strconv.ParseUint(idParam, 10, 64)
-	if convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid application id"})
+	applicationID, ok := parseUintParam(ctx, logger, "id", "invalid application id")
+	if !ok {
 		return
 	}
 
 	householdRepo := database.NewHouseholdRepository(dbHandle)
-	rejectErr := householdRepo.RejectApplication(uint(applicationID), userID)
+	rejectErr := householdRepo.RejectApplication(applicationID, userID)
 	switch rejectErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application rejected"})
@@ -316,18 +275,13 @@ func RejectHouseholdApplication(ctx *gin.Context) {
 func UpdateHouseholdName(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -378,31 +332,23 @@ func UpdateHouseholdName(ctx *gin.Context) {
 func CancelHouseholdApplication(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
-	idParam := ctx.Param("id")
-	applicationID, convErr := strconv.ParseUint(idParam, 10, 64)
-	if convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid application id"})
+	applicationID, ok := parseUintParam(ctx, logger, "id", "invalid application id")
+	if !ok {
 		return
 	}
 
 	householdRepo := database.NewHouseholdRepository(dbHandle)
-	cancelErr := householdRepo.CancelApplication(uint(applicationID), userID)
+	cancelErr := householdRepo.CancelApplication(applicationID, userID)
 	switch cancelErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application cancelled"})
@@ -430,31 +376,23 @@ func CancelHouseholdApplication(ctx *gin.Context) {
 func RemoveHouseholdMember(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := mustGetDB(ctx, logger)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
 		return
 	}
 
-	idParam := ctx.Param("userId")
-	memberID, convErr := strconv.ParseUint(idParam, 10, 64)
-	if convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid user id"})
+	memberID, ok := parseUintParam(ctx, logger, "userId", "invalid user id")
+	if !ok {
 		return
 	}
 
 	householdRepo := database.NewHouseholdRepository(dbHandle)
-	removeErr := householdRepo.RemoveMemberFromHousehold(uint(memberID), userID)
+	removeErr := householdRepo.RemoveMemberFromHousehold(memberID, userID)
 	switch removeErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Member removed from household"})
@@ -468,6 +406,17 @@ func RemoveHouseholdMember(ctx *gin.Context) {
 		logger.Error().Msgf("Error removing member: %s", removeErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(removeErr))
 	}
+}
+
+func parseUintParam(ctx *gin.Context, logger *zerolog.Logger, paramName, invalidMsg string) (uint, bool) {
+	param := ctx.Param(paramName)
+	val, err := strconv.ParseUint(param, 10, 64)
+	if err != nil {
+		logger.Warn().Msgf(errors.FormatInvalidRequestId, param)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: invalidMsg})
+		return 0, false
+	}
+	return uint(val), true
 }
 
 type createHouseholdRequest struct {

@@ -322,7 +322,7 @@ func (nc *NotificationController) processPendingInvitations(emailProvider *Email
 		user, userErr := nc.NotificationRepo.GetUserByID(invitation.InviterID)
 		inviterName := "A household member"
 		if userErr == nil {
-			inviterName = user.Username
+			inviterName = user.EffectiveName()
 		}
 
 		household, householdErr := nc.NotificationRepo.GetHouseholdByID(invitation.HouseholdID)
