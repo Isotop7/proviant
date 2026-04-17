@@ -86,12 +86,19 @@ type NtfyConfiguration struct {
 	Timeout int
 }
 
+// MonthlyWasteReportConfiguration controls when the monthly waste report email is sent.
+type MonthlyWasteReportConfiguration struct {
+	Day  int `mapstructure:"day"`  // day-of-month (1–28)
+	Hour int `mapstructure:"hour"` // hour of day, UTC (0–23)
+}
+
 // NotificationConfiguration contains all properties regarding the notification handler
 type NotificationConfiguration struct {
-	Enabled  bool
-	Interval int
-	SMTP     SMTPConfiguration
-	Ntfy     NtfyConfiguration
+	Enabled            bool
+	Interval           int
+	SMTP               SMTPConfiguration
+	Ntfy               NtfyConfiguration
+	MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
 }
 
 // OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
@@ -140,6 +147,16 @@ func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error {
 		if ec.Notification.SMTP.FromAddress == "" {
 			return errors.ErrNotificationEmptyFromAddress
 		}
+	}
+
+	// Validate monthly waste report schedule
+	day := ec.Notification.MonthlyWasteReport.Day
+	if day < 1 || day > 28 {
+		return errors.ErrNotificationInvalidWasteReportDay
+	}
+	hour := ec.Notification.MonthlyWasteReport.Hour
+	if hour < 0 || hour > 23 {
+		return errors.ErrNotificationInvalidWasteReportHour
 	}
 
 	// Validate ntfy configuration if ntfy URL is provided

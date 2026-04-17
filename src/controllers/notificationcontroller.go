@@ -300,6 +300,55 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 	return nil
 }
 
+// DispatchMonthlyWasteReports starts a goroutine that sends household waste report
+// emails on the configured day/hour (UTC) of each month to opted-in members.
+func (nc *NotificationController) DispatchMonthlyWasteReports() {
+	ep := &EmailNotificationProvider{Configuration: nc.Configuration.SMTP, Logger: nc.Logger}
+	if !ep.IsConfigured() {
+		nc.Logger.Info().Msg("Monthly waste report: email provider not configured, skipping")
+		return
+	}
+
+	cfg := nc.Configuration.MonthlyWasteReport
+	go func() {
+		for {
+			now := time.Now().UTC()
+			next := time.Date(now.Year(), now.Month()+1, cfg.Day, cfg.Hour, 0, 0, 0, time.UTC)
+			nc.Logger.Info().Msgf("Monthly waste report: next run at %s", next.Format(time.RFC3339))
+			time.Sleep(time.Until(next))
+			nc.processMonthlyWasteReports(ep)
+		}
+	}()
+}
+
+func (nc *NotificationController) processMonthlyWasteReports(ep *EmailNotificationProvider) {
+	lastMonth := time.Now().UTC().AddDate(0, -1, 0)
+	targets, err := nc.NotificationRepo.GetHouseholdsWithMonthlyWasteReportEnabled()
+	if err != nil {
+		nc.Logger.Error().Msgf("Monthly waste report: failed to fetch households: %s", err)
+		return
+	}
+	nc.Logger.Info().Msgf("Monthly waste report: processing %d household(s)", len(targets))
+
+	for i := range targets {
+		t := &targets[i]
+		stats, statsErr := nc.NotificationRepo.GetWasteStatsForHousehold(t.HouseholdID, lastMonth)
+		if statsErr != nil {
+			nc.Logger.Error().Msgf("Monthly waste report: stats error for household %d: %s", t.HouseholdID, statsErr)
+			continue
+		}
+		stats.HouseholdName = t.HouseholdName
+
+		for _, recipient := range t.Recipients {
+			if sendErr := ep.SendMonthlyWasteReport(recipient, stats); sendErr != nil {
+				nc.Logger.Error().Msgf("Monthly waste report: send failed to %s: %s", recipient, sendErr)
+			} else {
+				nc.Logger.Info().Msgf("Monthly waste report: sent to %s (household %d)", recipient, t.HouseholdID)
+			}
+		}
+	}
+}
+
 // processPendingInvitations fetches all pending invitations that need to be sent or retried.
 func (nc *NotificationController) processPendingInvitations(emailProvider *EmailNotificationProvider, baseURL string) {
 	sleepInterval := time.Hour * time.Duration(nc.Configuration.Interval)

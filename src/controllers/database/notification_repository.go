@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"time"
 
 	"codeberg.org/isotop7/proviant/models"
@@ -34,6 +35,8 @@ type NotificationRepositoryInterface interface {
 	GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
 	MarkInvitationSent(invitationID uint) error
 	MarkInvitationSendFailed(invitationID uint) error
+	GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error)
+	GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error)
 	GetOnboardingState(userID uint) (database.OnboardingState, error)
 	MarkNotificationsSetup(userID uint) error
 	MarkHouseholdStepDone(userID uint) error
@@ -198,6 +201,138 @@ func (r *NotificationRepository) MarkOnboardingComplete(userID uint) error {
 func (r *NotificationRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error) {
 	householdRepo := NewHouseholdRepository(r.DB)
 	return householdRepo.GetPublicHouseholds(excludeHouseholdID)
+}
+
+func (r *NotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error) {
+	var users []authentication.User
+	if err := r.DB.
+		Where("monthly_waste_report_enabled = ?", true).
+		Where("mail_address != ''").
+		Find(&users).Error; err != nil {
+		return nil, err
+	}
+
+	index := map[uint]*models.HouseholdReportTarget{}
+	for i := range users {
+		u := &users[i]
+		if _, ok := index[u.HouseholdID]; !ok {
+			name := fmt.Sprintf("Household #%d", u.HouseholdID)
+			if h, err := r.GetHouseholdByID(u.HouseholdID); err == nil {
+				name = h.Name
+			}
+			index[u.HouseholdID] = &models.HouseholdReportTarget{
+				HouseholdID:   u.HouseholdID,
+				HouseholdName: name,
+			}
+		}
+		index[u.HouseholdID].Recipients = append(index[u.HouseholdID].Recipients, u.MailAddress)
+	}
+
+	targets := make([]models.HouseholdReportTarget, 0, len(index))
+	for _, t := range index {
+		targets = append(targets, *t)
+	}
+	return targets, nil
+}
+
+func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error) {
+	start := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, time.UTC)
+	end := start.AddDate(0, 1, 0)
+	prevStart := start.AddDate(0, -1, 0)
+
+	countDeleted := func(from, to time.Time) (int64, error) {
+		var n int64
+		err := r.DB.Unscoped().Model(&database.Product{}).
+			Where("household_id = ?", householdID).
+			Where("deleted_at >= ? AND deleted_at < ?", from, to).
+			Count(&n).Error
+		return n, err
+	}
+
+	// Products still in pantry whose best-before date fell within the window.
+	countExpired := func(from, to time.Time) (int64, error) {
+		var n int64
+		err := r.DB.Model(&database.Product{}).
+			Where("household_id = ?", householdID).
+			Where("expire_at >= ? AND expire_at < ?", from, to).
+			Count(&n).Error
+		return n, err
+	}
+
+	// Products active at any point in the window (denominator for waste rate).
+	countActive := func(from, to time.Time) (int64, error) {
+		var n int64
+		err := r.DB.Unscoped().Model(&database.Product{}).
+			Where("household_id = ?", householdID).
+			Where("created_at < ?", to).
+			Where("deleted_at IS NULL OR deleted_at >= ?", from).
+			Count(&n).Error
+		return n, err
+	}
+
+	deleted, err := countDeleted(start, end)
+	if err != nil {
+		return models.WasteStats{}, err
+	}
+	expired, err := countExpired(start, end)
+	if err != nil {
+		return models.WasteStats{}, err
+	}
+	active, err := countActive(start, end)
+	if err != nil {
+		return models.WasteStats{}, err
+	}
+	prevDeleted, err := countDeleted(prevStart, start)
+	if err != nil {
+		return models.WasteStats{}, err
+	}
+	prevExpired, err := countExpired(prevStart, start)
+	if err != nil {
+		return models.WasteStats{}, err
+	}
+	prevActive, err := countActive(prevStart, start)
+	if err != nil {
+		return models.WasteStats{}, err
+	}
+
+	wasted := int(deleted + expired)
+	prevWasted := int(prevDeleted + prevExpired)
+
+	rate := func(w int, a int64) float64 {
+		if a == 0 {
+			return 0
+		}
+		return float64(w) / float64(a) * 100
+	}
+
+	wasteRate := rate(wasted, active)
+	prevWasteRate := rate(prevWasted, prevActive)
+	delta := wasteRate - prevWasteRate
+
+	deltaColor := "#6A9580"
+	deltaSymbol := "="
+	if delta > 0 {
+		deltaColor = "#DC2626"
+		deltaSymbol = "&#9650;"
+	} else if delta < 0 {
+		deltaColor = "#2D9B4F"
+		deltaSymbol = "&#9660;"
+	}
+
+	return models.WasteStats{
+		Month:            start,
+		MonthLabel:       start.Format("January 2006"),
+		HouseholdID:      householdID,
+		DeletedCount:     int(deleted),
+		ExpiredCount:     int(expired),
+		WastedCount:      wasted,
+		PrevWastedCount:  prevWasted,
+		WasteRatePct:     wasteRate,
+		PrevWasteRatePct: prevWasteRate,
+		Delta:            delta,
+		DeltaColor:       deltaColor,
+		DeltaSymbol:      deltaSymbol,
+	}, nil
 }
 
 var _ NotificationRepositoryInterface = (*NotificationRepository)(nil)

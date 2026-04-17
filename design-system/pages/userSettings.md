@@ -10,19 +10,22 @@ A settings page is task-oriented: users arrive with a goal (change email, rename
 
 ---
 
-## Page Score (current state as of 2026-04-04): 5 / 10
+## Page Score (current state as of 2026-04-17): 6 / 10
 
 ### What works
 - Feature completeness — all flows (invite, apply, leave, create, notify) are present
 - Bootstrap Icons used consistently — no emoji icons
 - Admin-gated sections use `{{ if .IsAdmin }}` guards correctly
 - Responsive grid usage (col / col-auto rows)
+- Notification Settings: list-group toggle rows with `role="switch"` + `visually-hidden` labels
+- Notification Settings: inline progressive disclosure — each channel expands its config directly below its row
+- Notification Settings: conceptual split into **Delivery Channels** and **Scheduled Reports**
 
 ### Issues found
 
 | # | Severity | Rule violated | Description |
 |---|----------|---------------|-------------|
-| 1 | **Critical** | `form-labels` (MASTER §5 Forms) | `<span class="input-group-text">` is **not** a `<label>`. Screen readers won't announce the label when the input receives focus. Affects Username, Mail Address, ntfy URL/Topic, Password. |
+| 1 | **Critical** | `form-labels` (MASTER §5 Forms) | `<span class="input-group-text">` is **not** a `<label>`. Screen readers won't announce the label when the input receives focus. Affects Username, Mail Address, Password. |
 | 2 | **Critical** | `heading-hierarchy` (UX §1) | Page heading is `h2` (should be `h1`); sections jump to `h4`, then `h5` — the `h3` level is skipped entirely. |
 | 3 | **High** | `card-bg` surface pattern (MASTER §1) | Sections float directly on `#F5FAF5` body background. Card surfaces (`#FFFFFF`) should wrap each logical section to create depth and grouping. |
 | 4 | **High** | Inline Alert misuse (MASTER §5 Popups) | `#updateAlert`, `#passwordAlert`, `#notificationAlert` are used for page-level async results — these must use `proviant.showFeedback()`. Inline alerts are for field-level errors only. |
@@ -54,9 +57,20 @@ A settings page is task-oriented: users arrive with a goal (change email, rename
   └── [btn-sm btn-outline-primary] "Update"  ← in card-header, right-aligned (same pattern as Personal Details)
 
 [card] Notification Settings     ← preference, secondary to identity
-  ├── Notification methods (email toggle, ntfy toggle)
-  ├── Expiry threshold
-  └── [if ntfyEnabled] ntfy.sh config (progressively revealed)
+  ├── [h3] Delivery Channels
+  │   ├── list-group row: Email toggle
+  │   │   └── [if emailEnabled] #emailSettings (bg-light row)
+  │   │       ├── registered address confirmation + link to Personal Details
+  │   │       └── Expiry Threshold number input
+  │   ├── list-group row: ntfy.sh toggle
+  │   │   └── [if ntfyEnabled] #ntfySettings (bg-light row)
+  │   │       ├── ntfy.sh URL (required)
+  │   │       ├── Topic (required)
+  │   │       └── Access Token (optional)
+  └── [h3] Scheduled Reports
+      └── list-group row: Monthly Waste Report toggle
+          └── [if monthlyWasteReportEnabled] #monthlyWasteReportSettings (bg-light row)
+              └── bullet summary of what the report covers
 
 [card] Household                 ← most complex; users scroll here deliberately
   ├── Current household info (elevated bg-light block)
@@ -93,6 +107,44 @@ A settings page is task-oriented: users arrive with a goal (change email, rename
 > Use `h2` for card section headings (visually styled as `.h5`), `h3` for sub-sections within a card.
 
 **Card action button rule:** When a card has a single primary submit action, place it as `btn-sm btn-outline-primary` in the `card-header`, right-aligned. Label it **"Update"** — never "Save", "Submit", or "Update [Section Name]". Cards without a primary action (e.g. Household) omit the button from the header entirely.
+
+### Notification Settings — toggle row pattern (baseline)
+
+Each notification channel or report is a `list-group-item` row with title + description on the left, `form-check form-switch` on the right. When the toggle is enabled, the next sibling `list-group-item.bg-light` expands inline (remove `d-none`); when disabled it collapses.
+
+```html
+<div class="list-group list-group-flush border rounded-3">
+  <!-- Toggle row -->
+  <div class="list-group-item px-3 py-3">
+    <div class="d-flex align-items-center justify-content-between gap-3">
+      <div>
+        <div class="fw-medium small">[Channel Name]</div>
+        <div class="text-body-secondary" style="font-size:13px;">[One-line description]</div>
+      </div>
+      <div class="form-check form-switch mb-0 flex-shrink-0">
+        <input class="form-check-input" type="checkbox" role="switch" id="toggle[Name]" [checked]>
+        <label class="visually-hidden" for="toggle[Name]">[Channel Name]</label>
+      </div>
+    </div>
+  </div>
+  <!-- Expandable config row (hidden by default) -->
+  <div id="[name]Settings" class="list-group-item px-3 py-3 bg-light [d-none if disabled]">
+    <!-- channel-specific fields -->
+  </div>
+</div>
+```
+
+**Rules:**
+- `role="switch"` is required on every `form-check-input` toggle — screen readers announce it correctly
+- `visually-hidden` label on the input; the row title is the visible label
+- Config row uses `bg-light` to visually distinguish it as a sub-level
+- JS: one `toggle[Name]Settings()` function per channel, wired in the `change` event delegation block in `userSettings.js`
+- **Do not** use a standalone section or card for channel-specific config — always inline below its toggle row
+
+**Section split:**
+- `h3.h6.fw-semibold` **Delivery Channels** — real-time alert routing (Email, ntfy.sh)
+- `h3.h6.fw-semibold` **Scheduled Reports** — periodic digests (Monthly Waste Report, future reports)
+- Expiry Threshold lives inside `#emailSettings` (applies to alert channels, not reports)
 
 ### Danger zone block
 
@@ -194,7 +246,11 @@ All color decisions follow `MASTER.md §1`. No page-specific overrides needed.
 - [ ] Inline `invalid-feedback` divs present below each validated field
 - [ ] "Leave Household" and "Create New Household" inside a Danger Zone block
 - [ ] Buttons disable + show spinner during async operations
-- [ ] ntfy.sh config block hidden by default, revealed on toggle (already implemented — keep)
+- [x] Notification toggles use `role="switch"` + `visually-hidden` label
+- [x] Each channel's config expands inline as `list-group-item bg-light` directly below its toggle row
+- [x] Notification Settings split into **Delivery Channels** and **Scheduled Reports** sub-sections
+- [x] Expiry Threshold lives inside `#emailSettings` (not a standalone section)
+- [x] ntfy.sh config block hidden by default, revealed on toggle
 - [ ] `cursor-pointer` on all `<button>` and `<a>` elements that lack it via CSS
 - [ ] `autocomplete` attributes on Username (`username`), Email (`email`), Password (`new-password`)
 - [ ] `aria-required="true"` on required fields

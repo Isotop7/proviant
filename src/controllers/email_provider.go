@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"time"
 
+	"codeberg.org/isotop7/proviant/models"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/templates"
@@ -87,6 +88,32 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 
 	// Send mail and return error
 	return mailDialer.DialAndSend(mail)
+}
+
+// SendMonthlyWasteReport sends the monthly household waste report to a single recipient.
+func (e *EmailNotificationProvider) SendMonthlyWasteReport(recipient string, stats models.WasteStats) error {
+	templ, err := template.ParseFS(templates.TemplateFiles, "notification/monthly_waste_report.html")
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	if err := templ.Execute(&buf, stats); err != nil {
+		return err
+	}
+
+	mail := gomail.NewMessage()
+	mail.SetHeader("From", e.Configuration.FromAddress)
+	mail.SetHeader("To", recipient)
+	mail.SetHeader("Subject", fmt.Sprintf("%s — Monthly Waste Report for %s",
+		stats.HouseholdName, stats.MonthLabel))
+	mail.SetBody("text/html", buf.String())
+
+	d := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
+	if e.Configuration.User != "" && e.Configuration.Password != "" {
+		d.Username = e.Configuration.User
+		d.Password = e.Configuration.Password
+	}
+	return d.DialAndSend(mail)
 }
 
 // SendEmailVerificationEmail sends an email verification email to the recipient

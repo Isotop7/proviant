@@ -86,64 +86,123 @@
         </div>
         <div class="card-body px-4 py-4">
             <form id="notificationSettings" novalidate>
+
+                {{/* ── Delivery Channels ─────────────────────────────── */}}
                 <div class="mb-4">
-                    <h3 class="h6 fw-medium mb-2">Notification Methods</h3>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="toggleEmailNotifications"
-                               {{if .User.NotificationPreferences.EmailEnabled}}checked{{end}}>
-                        <label class="form-check-label" for="toggleEmailNotifications">Email Notifications</label>
-                    </div>
-                    <div class="form-check form-switch mt-2">
-                        <input class="form-check-input" type="checkbox" id="toggleNtfyNotifications"
-                               {{if .User.NotificationPreferences.NtfyEnabled}}checked{{end}}>
-                        <label class="form-check-label" for="toggleNtfyNotifications">ntfy.sh Notifications</label>
+                    <h3 class="h6 fw-semibold mb-1">Delivery Channels</h3>
+                    <p class="text-body-secondary small mb-3">How you receive product expiry alerts.</p>
+
+                    <div class="list-group list-group-flush border rounded-3">
+                        <div class="list-group-item px-3 py-3">
+                            <div class="d-flex align-items-center justify-content-between gap-3">
+                                <div>
+                                    <div class="fw-medium small">Email</div>
+                                    <div class="text-body-secondary" style="font-size:13px;">Expiry alerts sent to your registered email address.</div>
+                                </div>
+                                <div class="form-check form-switch mb-0 flex-shrink-0">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           id="toggleEmailNotifications"
+                                           {{if .User.NotificationPreferences.EmailEnabled}}checked{{end}}>
+                                    <label class="visually-hidden" for="toggleEmailNotifications">Email Notifications</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="emailSettings" class="list-group-item px-3 py-3 bg-light{{if not .User.NotificationPreferences.EmailEnabled}} d-none{{end}}">
+                            <p class="small mb-3 text-body-secondary">
+                                <i class="bi bi-envelope me-1" aria-hidden="true"></i>
+                                Alerts will be sent to <strong class="text-body">{{ .User.MailAddress }}</strong>.
+                                Update your address in <a href="#inputMailAddress" class="text-decoration-none">Personal Details</a>.
+                            </p>
+                            <label for="inputNotificationThreshold" class="form-label fw-medium small">Expiry Threshold</label>
+                            <p class="text-body-secondary mb-2" style="font-size:13px;">Notify this many days <strong>before</strong> a product expires. Set to 0 to only notify on or after the expiry date.</p>
+                            <div class="input-group input-width-260">
+                                <span class="input-group-text"><i class="bi bi-alarm"></i></span>
+                                <input type="number" class="form-control" id="inputNotificationThreshold"
+                                       min="0" step="1"
+                                       value="{{ .User.NotificationPreferences.NotificationThresholdDays }}"
+                                       aria-required="true">
+                                <span class="input-group-text">days</span>
+                            </div>
+                            <div class="invalid-feedback" id="thresholdFeedback"></div>
+                        </div>
+                        <div class="list-group-item px-3 py-3">
+                            <div class="d-flex align-items-center justify-content-between gap-3">
+                                <div>
+                                    <div class="fw-medium small">ntfy.sh</div>
+                                    <div class="text-body-secondary" style="font-size:13px;">Push alerts via ntfy.sh to any subscribed device.</div>
+                                </div>
+                                <div class="form-check form-switch mb-0 flex-shrink-0">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           id="toggleNtfyNotifications"
+                                           {{if .User.NotificationPreferences.NtfyEnabled}}checked{{end}}>
+                                    <label class="visually-hidden" for="toggleNtfyNotifications">ntfy.sh Notifications</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="ntfySettings" class="list-group-item px-3 py-3 bg-light{{if not .User.NotificationPreferences.NtfyEnabled}} d-none{{end}}">
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label for="inputNtfyUrl" class="form-label fw-medium">
+                                        ntfy.sh URL <span class="text-danger" aria-hidden="true">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="inputNtfyUrl"
+                                           placeholder="https://ntfy.sh" value="{{.User.NotificationPreferences.NtfyURL}}"
+                                           autocomplete="off">
+                                    <div class="invalid-feedback">ntfy.sh URL is required when ntfy notifications are enabled.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="inputNtfyTopic" class="form-label fw-medium">
+                                        Topic <span class="text-danger" aria-hidden="true">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="inputNtfyTopic"
+                                           placeholder="your_topic" value="{{.User.NotificationPreferences.NtfyTopic}}"
+                                           autocomplete="off">
+                                    <div class="invalid-feedback">Topic is required when ntfy notifications are enabled.</div>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="inputNtfyToken" class="form-label fw-medium">
+                                    Access Token <span class="text-body-secondary fw-normal">(optional)</span>
+                                </label>
+                                <input type="password" class="form-control input-width-360" id="inputNtfyToken"
+                                       placeholder="Optional access token" autocomplete="new-password">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="mb-4">
-                    <label for="inputNotificationThreshold" class="form-label fw-medium">Expiry Threshold</label>
-                    <p class="text-body-secondary small mb-2">Notify this many days <strong>before</strong> a product expires. Set to 0 to only notify on or after the expiry date.</p>
-                    <div class="input-group input-width-260">
-                        <span class="input-group-text"><i class="bi bi-alarm"></i></span>
-                        <input type="number" class="form-control" id="inputNotificationThreshold"
-                               min="0" step="1"
-                               value="{{ .User.NotificationPreferences.NotificationThresholdDays }}"
-                               aria-required="true">
-                        <span class="input-group-text">days</span>
+                {{/* ── Scheduled Reports ──────────────────────────────── */}}
+                <div>
+                    <h3 class="h6 fw-semibold mb-1">Scheduled Reports</h3>
+                    <p class="text-body-secondary small mb-3">Periodic email summaries sent to all opted-in household members.</p>
+
+                    <div class="list-group list-group-flush border rounded-3">
+                        <div class="list-group-item px-3 py-3">
+                            <div class="d-flex align-items-center justify-content-between gap-3">
+                                <div>
+                                    <div class="fw-medium small">Monthly Waste Report</div>
+                                    <div class="text-body-secondary" style="font-size:13px;">
+                                        <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>Sent on the 1st of each month &middot; items removed and expired per household
+                                    </div>
+                                </div>
+                                <div class="form-check form-switch mb-0 flex-shrink-0">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           id="toggleMonthlyWasteReport"
+                                           {{if .User.NotificationPreferences.MonthlyWasteReportEnabled}}checked{{end}}>
+                                    <label class="visually-hidden" for="toggleMonthlyWasteReport">Monthly Waste Report</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="monthlyWasteReportSettings" class="list-group-item px-3 py-3 bg-light{{if not .User.NotificationPreferences.MonthlyWasteReportEnabled}} d-none{{end}}">
+                            <ul class="small text-body-secondary mb-0 ps-3">
+                                <li>Covers products <strong class="text-body">deleted from pantry</strong> and <strong class="text-body">past best-before date</strong> during the month</li>
+                                <li>Includes waste rate and month-over-month comparison</li>
+                                <li>Sent to every household member with this option enabled</li>
+                            </ul>
+                        </div>
                     </div>
-                    <div class="invalid-feedback" id="thresholdFeedback"></div>
                 </div>
 
-                <div id="ntfySettings" {{if not .User.NotificationPreferences.NtfyEnabled}}class="d-none"{{end}}>
-                    <h3 class="h6 fw-medium mb-3">ntfy.sh Configuration</h3>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label for="inputNtfyUrl" class="form-label fw-medium">
-                                ntfy.sh URL <span class="text-danger" aria-hidden="true">*</span>
-                            </label>
-                            <input type="text" class="form-control" id="inputNtfyUrl"
-                                   placeholder="https://ntfy.sh" value="{{.User.NotificationPreferences.NtfyURL}}"
-                                   autocomplete="off">
-                            <div class="invalid-feedback">ntfy.sh URL is required when ntfy notifications are enabled.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="inputNtfyTopic" class="form-label fw-medium">
-                                Topic <span class="text-danger" aria-hidden="true">*</span>
-                            </label>
-                            <input type="text" class="form-control" id="inputNtfyTopic"
-                                   placeholder="your_topic" value="{{.User.NotificationPreferences.NtfyTopic}}"
-                                   autocomplete="off">
-                            <div class="invalid-feedback">Topic is required when ntfy notifications are enabled.</div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="inputNtfyToken" class="form-label fw-medium">
-                            Access Token <span class="text-body-secondary fw-normal">(optional)</span>
-                        </label>
-                        <input type="password" class="form-control input-width-360" id="inputNtfyToken"
-                               placeholder="Optional access token" autocomplete="new-password">
-                    </div>
-                </div>
             </form>
         </div>
     </div>

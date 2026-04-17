@@ -148,6 +148,12 @@ var (
 	// ErrNotificationEmptyNtfyTopic is thrown if an empty ntfy.sh topic was specified
 	ErrNotificationEmptyNtfyTopic = errors.New("ntfy.sh topic cannot be empty when URL is provided")
 
+	// ErrNotificationInvalidWasteReportDay is thrown if an invalid monthly waste report day is specified
+	ErrNotificationInvalidWasteReportDay = errors.New("monthly waste report day must be between 1 and 28")
+
+	// ErrNotificationInvalidWasteReportHour is thrown if an invalid monthly waste report hour is specified
+	ErrNotificationInvalidWasteReportHour = errors.New("monthly waste report hour must be between 0 and 23")
+
 	/*
 	 * Household related errors
 	 */
