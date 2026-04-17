@@ -168,6 +168,48 @@
                                        placeholder="Optional access token" autocomplete="new-password">
                             </div>
                         </div>
+                        <div class="list-group-item px-3 py-3{{if not .TelegramConfigured}} text-body-secondary{{end}}">
+                            <div class="d-flex align-items-center justify-content-between gap-3">
+                                <div>
+                                    <div class="fw-medium small">Telegram</div>
+                                    {{if .TelegramConfigured}}
+                                    <div class="text-body-secondary" style="font-size:13px;">Push alerts via Telegram bot to any device.</div>
+                                    {{else}}
+                                    <div class="text-warning" style="font-size:13px;"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>Not configured — ask your administrator to set a bot token.</div>
+                                    {{end}}
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnTelegramHelp"
+                                            data-bs-toggle="modal" data-bs-target="#telegramHelpModal"
+                                            aria-label="How to set up Telegram">
+                                        <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               id="toggleTelegramNotifications"
+                                               {{if .User.NotificationPreferences.TelegramEnabled}}checked{{end}}
+                                               {{if not .TelegramConfigured}}disabled{{end}}>
+                                        <label class="visually-hidden" for="toggleTelegramNotifications">Telegram Notifications</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="telegramSettings" class="list-group-item px-3 py-3 bg-light{{if not .User.NotificationPreferences.TelegramEnabled}} d-none{{end}}">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                {{if .User.NotificationPreferences.TelegramLinked}}
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Linked</span>
+                                <span class="text-body-secondary small">Your Telegram account is connected.</span>
+                                {{else}}
+                                <span class="badge bg-secondary">Not linked</span>
+                                <span class="text-body-secondary small">Link your Telegram account to enable notifications.</span>
+                                {{end}}
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnTelegramLink"
+                                    data-bs-toggle="modal" data-bs-target="#telegramLinkModal">
+                                <i class="bi bi-telegram me-1" aria-hidden="true"></i>
+                                {{if .User.NotificationPreferences.TelegramLinked}}Relink Account{{else}}Link Account{{end}}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -693,6 +735,111 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{/* ── Telegram Help Modal ────────────────────────────────────── */}}
+<div class="modal fade" id="telegramHelpModal" tabindex="-1" aria-labelledby="telegramHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="telegramHelpModalLabel">
+                    <i class="bi bi-telegram me-2" aria-hidden="true"></i>Telegram Bot Setup
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-body-secondary small mb-3">
+                    Telegram notifications require a bot to be configured by your administrator. These steps apply to whoever manages the Proviant instance.
+                </p>
+                <ol class="small mb-3">
+                    <li class="mb-3">
+                        <strong>Create a bot</strong> — open Telegram, message
+                        <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a>,
+                        run <code>/newbot</code>, and follow the prompts. Copy the bot token you receive.
+                    </li>
+                    <li class="mb-3">
+                        <strong>Configure Proviant</strong> — set the bot token in <code>config.yaml</code> or via environment variable:
+                        <pre class="bg-light rounded p-2 mt-2 mb-0"><code>notification:
+  telegram:
+    botToken: "1234567890:ABCDefGHIjklMNOpqrSTUvwxYZ"
+    timeout: 10</code></pre>
+                        <div class="text-body-secondary mt-1" style="font-size:12px;">
+                            Or set <code>PROVIANT_NOTIFICATION_TELEGRAM_BOTTOKEN</code> as an environment variable.
+                        </div>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Restart Proviant</strong> — the server will automatically resolve the bot username from Telegram on startup. No webhook or public URL is required.
+                    </li>
+                    <li class="mb-3">
+                        <strong>Link your account</strong> — in these settings, click <strong>Link Account</strong>, then <strong>Generate Token</strong>. Use the <em>Open in Telegram</em> button or copy the command and send it to your bot.
+                    </li>
+                    <li>
+                        <strong>Enable</strong> — toggle Telegram notifications on and save.
+                    </li>
+                </ol>
+                <div class="alert alert-info small mb-0 py-2">
+                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+                    The bot uses long-polling — no public URL or webhook configuration is required.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{/* ── Telegram Link Modal ─────────────────────────────────────── */}}
+<div class="modal fade" id="telegramLinkModal" tabindex="-1" aria-labelledby="telegramLinkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="telegramLinkModalLabel">
+                    <i class="bi bi-telegram me-2" aria-hidden="true"></i>Link Telegram Account
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="telegramLinkSteps">
+                    <p class="text-body-secondary small mb-3">Follow these steps to connect your Telegram account:</p>
+                    <ol class="small mb-3">
+                        <li class="mb-2">Click <strong>Generate Token</strong> below.</li>
+                        <li class="mb-2">Click <strong>Open in Telegram</strong> to open the bot directly — or copy the command and send it manually to your bot.</li>
+                        <li class="mb-2">Press <strong>Start</strong> in the Telegram chat (if using the link) or wait for the bot to confirm the link.</li>
+                    </ol>
+                    <div id="telegramLinkCommand" class="d-none mb-3">
+                        <a id="telegramDeepLink" href="#" target="_blank" rel="noopener noreferrer"
+                           class="btn btn-primary w-100 d-none">
+                            <i class="bi bi-telegram me-2" aria-hidden="true"></i>Open in Telegram
+                        </a>
+                        <div id="telegramManualCommand" class="mt-2">
+                            <small class="text-body-secondary d-block mb-1">
+                                Or copy and send this command directly to your bot:
+                            </small>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control font-monospace" id="telegramLinkCommandText" readonly>
+                                <button type="button" class="btn btn-outline-secondary" id="btnCopyTelegramCommand"
+                                        title="Copy command" aria-label="Copy command">
+                                    <i class="bi bi-clipboard" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div id="telegramCommandCopied" class="form-text text-success d-none">
+                                <i class="bi bi-check-circle me-1"></i>Copied!
+                            </div>
+                        </div>
+                    </div>
+                    <p class="small text-body-secondary mb-0">Token expires when used. Generate a new one if needed.</p>
+                </div>
+                <div id="telegramLinkAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnGenerateTelegramToken">
+                    <i class="bi bi-key me-1" aria-hidden="true"></i>Generate Token
+                </button>
             </div>
         </div>
     </div>

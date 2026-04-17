@@ -92,6 +92,13 @@ type MonthlyWasteReportConfiguration struct {
 	Hour int `mapstructure:"hour"` // hour of day, UTC (0–23)
 }
 
+// TelegramConfiguration contains all properties regarding the Telegram bot notification provider
+type TelegramConfiguration struct {
+	BotToken    string
+	BotUsername string
+	Timeout     int
+}
+
 // NotificationConfiguration contains all properties regarding the notification handler
 type NotificationConfiguration struct {
 	Enabled            bool
@@ -99,6 +106,7 @@ type NotificationConfiguration struct {
 	SMTP               SMTPConfiguration
 	Ntfy               NtfyConfiguration
 	MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
+	Telegram           TelegramConfiguration           `mapstructure:"telegram"`
 }
 
 // OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller

@@ -8,9 +8,9 @@ type WasteStats struct {
 	MonthLabel       string // "January 2006"
 	HouseholdID      uint
 	HouseholdName    string
-	DeletedCount     int     // products removed from pantry during the month
-	ExpiredCount     int     // products still in pantry that passed best-before during the month
-	WastedCount      int     // DeletedCount + ExpiredCount
+	DeletedCount     int // products removed from pantry during the month
+	ExpiredCount     int // products still in pantry that passed best-before during the month
+	WastedCount      int // DeletedCount + ExpiredCount
 	PrevWastedCount  int
 	WasteRatePct     float64 // WastedCount / active products * 100
 	PrevWasteRatePct float64
@@ -19,9 +19,10 @@ type WasteStats struct {
 	DeltaSymbol      string  // "▲", "▼", or "="
 }
 
-// HouseholdReportTarget pairs a household with the email addresses of opted-in members.
+// HouseholdReportTarget pairs a household with the opted-in members for email and Telegram.
 type HouseholdReportTarget struct {
-	HouseholdID   uint
-	HouseholdName string
-	Recipients    []string
+	HouseholdID     uint
+	HouseholdName   string
+	Recipients      []string // email addresses
+	TelegramChatIDs []string // Telegram chat IDs
 }
