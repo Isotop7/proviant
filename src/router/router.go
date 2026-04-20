@@ -331,7 +331,6 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/user/settings", webFrontendHandler.UserSettings)
 	publicWebFrontend.GET("/products", webFrontendHandler.Products)
 	publicWebFrontend.GET("/products/archived", webFrontendHandler.ProductsArchived)
-	publicWebFrontend.GET("/products/create", webFrontendHandler.ProductsCreate)
 	publicWebFrontend.GET("/products/scan", webFrontendHandler.ProductsScan)
 	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
 

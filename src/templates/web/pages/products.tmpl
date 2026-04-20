@@ -1,14 +1,13 @@
 {{ define "content" }}
 
-<div class="row justify-content-between p-3">
-    <div class="text-center mb-2">
-        <h2>My products</h2>
-        <p class="text-muted">
-            Select one or more products to edit or delete.<br>
-            You can also archive products to keep them in your history.<br>
-            Use the search bar to filter your products by name or barcode.
-        </p>
+<div class="d-flex align-items-center justify-content-between px-3 pt-3 mb-3">
+    <div>
+        <h1 style="font-size:18px;font-weight:700;letter-spacing:-0.02em;margin:0;">Products</h1>
+        <p style="font-size:12px;color:var(--fg-3);margin:2px 0 0;">{{ len .Products }} items in your household</p>
     </div>
+    <button class="btn btn-proviant-primary d-none d-md-flex align-items-center gap-2" id="btnOpenAddProductModal">
+        <i class="bi bi-plus-lg"></i> Add product
+    </button>
 </div>
 
 <div class="toolbar-sticky">
@@ -31,12 +30,180 @@
     {{ end }}
 </div>
 
-<script src="/assets/js/products.js"></script>
-
 {{ else }}
 
 {{ template "noproducts" . }}
 
 {{ end }}
+
+<!-- Add product modal (desktop only — hidden on mobile via JS) -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:500px;">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <div class="modal-icon" id="addProductModalIcon" style="background:var(--accent-subtle);color:var(--accent);">
+                    <i class="bi bi-upc-scan"></i>
+                </div>
+                <div style="padding-top:6px;flex:1;">
+                    <h5 class="modal-title mb-0" id="addProductModalLabel">Add product</h5>
+                    <div id="addProductModalSubtitle" style="font-size:12px;color:var(--fg-3);">Scan barcode or enter manually</div>
+                </div>
+                <button type="button" data-bs-dismiss="modal" aria-label="Close"
+                    style="background:none;border:none;cursor:pointer;color:var(--fg-3);font-size:22px;display:flex;padding:4px;line-height:1;flex-shrink:0;">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+
+            <!-- Step 1: Barcode input -->
+            <div id="modalStepScan" class="modal-body">
+                <!-- Mode tabs -->
+                <div style="display:flex;gap:4px;background:var(--bg-subtle);border-radius:8px;padding:3px;margin-bottom:16px;">
+                    <button id="tabManualInput" type="button"
+                        style="flex:1;padding:6px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;background:white;box-shadow:0 1px 3px oklch(0 0 0 / 0.10);color:var(--fg);transition:all 150ms;">
+                        <i class="bi bi-keyboard"></i> Manual Input
+                    </button>
+                    <button id="tabCamera" type="button"
+                        style="flex:1;padding:6px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;background:transparent;box-shadow:none;color:var(--fg-3);transition:all 150ms;">
+                        <i class="bi bi-camera"></i> Camera
+                    </button>
+                </div>
+
+                <!-- Manual input section -->
+                <div id="manualInputSection">
+                    <div style="font-size:12px;font-weight:600;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Barcode</div>
+                    <div class="barcode-input-wrap" onclick="document.getElementById('barcode').focus()">
+                        <i class="bi bi-upc-scan" style="font-size:20px;color:var(--accent);flex-shrink:0;"></i>
+                        <input id="barcode" type="number" placeholder="Scan or type EAN barcode…"
+                            min="1000000000000" max="9999999999999"
+                            autocomplete="off" spellcheck="false">
+                        <span style="font-family:var(--font-mono);font-size:11px;color:var(--fg-3);flex-shrink:0;background:var(--bg-subtle);border-radius:5px;padding:3px 7px;">↵</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--fg-3);margin-top:8px;display:flex;align-items:center;gap:6px;">
+                        <i class="bi bi-keyboard"></i> USB/BT scanner or type and press Enter
+                    </div>
+                </div>
+
+                <!-- Camera section -->
+                <div id="cameraSection" style="display:none;">
+                    <div id="barcode-reader-wrapper" style="display:none;width:100%;height:220px;border-radius:10px;overflow:hidden;background:#000;position:relative;">
+                        <div id="barcode-reader" style="width:100%;height:100%;"></div>
+                    </div>
+                    <div style="font-size:12px;color:var(--fg-3);margin-top:8px;display:flex;align-items:center;gap:6px;">
+                        <i class="bi bi-camera"></i> Aim camera at EAN barcode
+                    </div>
+                </div>
+
+                <!-- Required by productsCreate.js click delegation — triggered programmatically -->
+                <button type="button" id="btnScan" data-action="scan" style="display:none;"></button>
+            </div>
+
+            <!-- Step 2: Product form (revealed when productsCreate.js finds barcode) -->
+            <div id="modalStepForm" class="modal-body" style="display:none;">
+                <!-- Scan result banner -->
+                <div id="scanResultBanner" style="background:var(--accent-subtle);border:1px solid oklch(0.78 0.08 162);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                    <i class="bi bi-check-circle-fill" style="color:var(--accent);font-size:16px;flex-shrink:0;"></i>
+                    <div>
+                        <div id="scanResultName" style="font-size:13px;font-weight:600;color:var(--fg);"></div>
+                        <div id="scanResultCode" style="font-size:11px;color:var(--fg-3);font-family:var(--font-mono);"></div>
+                    </div>
+                </div>
+                <div id="productData" class="d-none">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="flex-shrink-0">
+                            <img id="productInfoImage" src="" alt=""
+                                 class="rounded" style="width:56px;height:56px;object-fit:contain;background:var(--bg-subtle);">
+                        </div>
+                        <div class="flex-grow-1">
+                            <div id="productInfoName" class="fw-semibold"></div>
+                            <div id="productInfoGenericName" class="text-body-secondary small"></div>
+                        </div>
+                    </div>
+
+                    <select class="form-select mb-3 d-none" id="instanceDropdown" aria-label="Select existing instance"></select>
+
+                    <form id="formExpireAt" class="needs-validation" novalidate>
+                        <label class="form-label" style="font-size:12px;font-weight:500;">Amount</label>
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnAmountDec" aria-label="Decrease amount">−</button>
+                            <span id="amountDisplay" class="fs-5 px-2">1</span>
+                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnAmountInc" aria-label="Increase amount">+</button>
+                        </div>
+                        <input type="hidden" id="amount" value="1">
+                        <label for="expireAt" class="form-label" style="font-size:12px;font-weight:500;">
+                            Expiry date <span style="color:var(--status-expired);" aria-hidden="true">*</span>
+                        </label>
+                        <input type="date" class="form-control mb-2" id="expireAt"
+                               value="{{ today }}" required aria-required="true">
+                        <div class="invalid-feedback">
+                            <i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please select an expiry date
+                        </div>
+                    </form>
+
+                    <div class="btn-group w-100 mb-3" role="group" aria-label="Quick expiry shortcuts">
+                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd3">+3 days</button>
+                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd7">+7 days</button>
+                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd1m">+1 month</button>
+                    </div>
+
+                    <div class="d-flex gap-2 mb-2" id="foundBarcode">
+                        <button id="btnShowProduct" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+                            <i class="bi bi-eye me-1" aria-hidden="true"></i>View
+                        </button>
+                        <button id="btnShowProducts" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+                            <i class="bi bi-collection me-1" aria-hidden="true"></i>All instances
+                        </button>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button id="btnArchiveProductModal" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+                            <i class="bi bi-archive me-1" aria-hidden="true"></i>Archive
+                        </button>
+                        <button id="btnDeleteProductModal" type="button" class="btn btn-sm btn-proviant-danger flex-fill" disabled>
+                            <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Success -->
+            <div id="modalStepSuccess" class="modal-body" style="display:none;">
+                <div style="background:var(--accent-subtle);border:1px solid oklch(0.78 0.08 162);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+                    <div style="width:40px;height:40px;border-radius:999px;background:oklch(0.40 0.10 162);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="bi bi-check-lg" style="color:white;font-size:20px;"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div id="modalSuccessName" style="font-size:14px;font-weight:600;color:var(--fg);"></div>
+                        <div style="font-size:12px;color:var(--fg-3);">Successfully added to your pantry</div>
+                    </div>
+                    <button type="button" class="btn btn-proviant-primary btn-sm" id="btnModalScanAnother">
+                        <i class="bi bi-plus-lg me-1"></i>Add another
+                    </button>
+                </div>
+                <button type="button" class="btn btn-proviant-secondary w-100" data-bs-dismiss="modal">Close</button>
+            </div>
+
+            <div class="modal-footer">
+                <div id="modalFooterScan" style="display:flex;gap:8px;width:100%;justify-content:flex-end;">
+                    <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+                <div id="modalFooterForm" style="display:none;gap:8px;width:100%;justify-content:space-between;align-items:center;">
+                    <button type="button" class="btn btn-proviant-secondary" id="btnModalBack">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </button>
+                    <button type="button" class="btn btn-proviant-primary" id="btnAddProduct">
+                        <i class="bi bi-plus-lg me-1"></i>Add to pantry
+                    </button>
+                </div>
+                <div id="modalFooterSuccess" style="display:none;"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="/assets/js/html5-qrcode.min.js"></script>
+<script src="/assets/js/productsCreate.js"></script>
+<script src="/assets/js/products.js"></script>
 
 {{ end }}

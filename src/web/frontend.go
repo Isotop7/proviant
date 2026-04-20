@@ -303,20 +303,6 @@ func (frontend *Frontend) ProductsArchived(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsArchived.tmpl", pageData)
 }
 
-// ProductsCreate renders the product creation page
-// @Summary      Create product page
-// @Description  Renders the page for creating a new product
-// @Tags         web
-// @Produce      html
-// @Success      200  {string}  html
-// @Router       /web/products/create [get]
-func (frontend *Frontend) ProductsCreate(ctx *gin.Context) {
-	pageData := map[string]any{
-		"InviteToken": ctx.Query("invite_token"),
-		"Title":       "Create product",
-	}
-	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsCreate.tmpl", pageData)
-}
 
 func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
 	pageData := map[string]any{
