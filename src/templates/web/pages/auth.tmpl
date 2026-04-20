@@ -2,13 +2,13 @@
 
 <div class="container vh-100 d-flex justify-content-center">
     <main class="form-signin">
-        <div class="toast-container position-fixed top-0 start-50 translate-middle-x pt-3" style="z-index: 1090;">
-            <div id="infoToast" class="toast align-items-center text-bg-success border-0"
+        <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;">
+            <div id="infoToast" class="toast pv-toast toast-success"
                  role="alert" aria-live="polite" aria-atomic="true" data-bs-delay="4000">
-                <div class="d-flex">
-                    <div class="toast-body" id="infoToastBody"></div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto"
-                            data-bs-dismiss="toast" aria-label="Close"></button>
+                <div class="toast-body d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle-fill" style="color:oklch(0.52 0.10 145);font-size:16px;" aria-hidden="true"></i>
+                    <span id="infoToastBody" style="font-size:13px;flex:1;"></span>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
             </div>
         </div>
@@ -35,7 +35,7 @@
                     autocomplete="current-password">
                 <label for="inputPassword">Password</label>
             </div>
-            <button id="btnAuth" form="authData" class="btn btn-info w-100" type="submit">Sign in</button>
+            <button id="btnAuth" form="authData" class="btn btn-proviant-primary w-100" type="submit">Sign in</button>
             <div id="loginAlert" class="alert alert-danger fade mt-3 d-none" role="alert">
                 <span id="loginAlertMessage"></span>
             </div>
@@ -45,7 +45,7 @@
                     autocomplete="mailAddress">
                 <label for="inputMailAddress">Mail Address</label>
             </div>
-            <button id="btnSignup" form="authData" class="btn btn-info w-100" type="submit">Sign up</button>
+            <button id="btnSignup" form="authData" class="btn btn-proviant-primary w-100" type="submit">Sign up</button>
             <div id="signupAlert" class="alert alert-danger fade mt-3 d-none" role="alert">
                 <span id="signupAlertMessage"></span>
             </div>
@@ -70,7 +70,7 @@
                 </ul>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+                <button type="button" class="btn btn-proviant-primary" data-bs-dismiss="modal">Got it</button>
             </div>
         </div>
     </div>
@@ -91,7 +91,7 @@
                 <p class="text-body-secondary small mb-0">Click the link in the email to verify your address, then log in.</p>
             </div>
             <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+                <button type="button" class="btn btn-proviant-primary" data-bs-dismiss="modal">Got it</button>
             </div>
         </div>
     </div>

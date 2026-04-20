@@ -147,6 +147,14 @@ function toggleTelegramSettings() {
   }
 }
 
+function toggleWebhookCreate() {
+  const toggle = document.getElementById("toggleWebhookCreate");
+  const settings = document.getElementById("webhookCreateSettings");
+  if (toggle && settings) {
+    settings.classList.toggle("d-none", !toggle.checked);
+  }
+}
+
 function showTelegramLinkAlert(message, isSuccess) {
   const el = document.getElementById("telegramLinkAlert");
   if (!el) return;
@@ -941,6 +949,8 @@ function CreateWebhook() {
       document.getElementById('inputWebhookUrl').value = '';
       document.getElementById('inputWebhookSecret').value = '';
       uncheckAllWebhookEvents();
+      const toggleWebhook = document.getElementById('toggleWebhookCreate');
+      if (toggleWebhook) { toggleWebhook.checked = false; toggleWebhookCreate(); }
       ShowSuccessModal('Webhook created', function() {
         LoadWebhooks();
       });
@@ -1231,6 +1241,9 @@ document.addEventListener("change", function (event) {
   }
   if (event.target.id === "toggleTelegramNotifications") {
     toggleTelegramSettings();
+  }
+  if (event.target.id === "toggleWebhookCreate") {
+    toggleWebhookCreate();
   }
 });
 

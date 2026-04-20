@@ -1,93 +1,51 @@
 {{ define "productArchivedCard" }}
 
-<style>
-    .card {
-        min-height: 150px;
-    }
-
-    .card-body {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-</style>
-
 {{ with . }}
 
 <div class="col">
-    <div class="card h-100 d-flex flex-column" id="card-{{ .Model.ID }}">
-        <div class="row h-100 px-2">
-            <div class="col-md-1">
-                <div>
-                    <input class="form-check-input" type="checkbox" id="checkbox-{{ .Model.ID }}" value="" aria-label="Select {{ .ProductName }}">
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="product-card-img-container">
-                    <img src="{{ .ImageURL }}" class="img-fluid product-card-img" alt="{{ .ProductName }}">
-                </div>
-            </div>
-            <div class="col-md-9">
-                <div class="card-body d-flex flex-column">
-                    <div class="row align-items-center">
-                        <div class="col-9">
-                            <a href="/web/products/{{ .Model.ID }}/view" class="text-decoration-none">
-                                <h4 class="card-title">
-                                    {{ .ProductName }}
-                                </h4>
-                            </a>
-                        </div>
-                        <div class="col-3 text-end">
-                            <h4>
-                                <a href="/web/products/{{ .Model.ID }}/view">
-                                    <span class="badge bg-primary">#{{- .Model.ID -}}</span>
-                                </a>
-                            </h4>
-                        </div>
-                    </div>
-                    <div class="card-text font-monospace">
-                        {{- .Barcode -}}
-                    </div>
-                    <div class="card-text">
-                        <p>
-                            {{ badgifyCategories .Categories 5 }}
-                        </p>
-                    </div>
-                </div>
+    <div class="card product-card h-100" id="card-{{ .Model.ID }}">
+        <div class="status-bar" style="background: var(--status-{{ expiryStatusClass .ExpireAt }}-bar);"></div>
+        <div class="d-flex align-items-center gap-2 px-3 pt-2 pb-1">
+            <input class="form-check-input flex-shrink-0" type="checkbox" id="checkbox-{{ .Model.ID }}" value="" aria-label="Select {{ .ProductName }}">
+            <a href="/web/products/{{ .Model.ID }}/view" class="badge bg-secondary ms-auto text-decoration-none">#{{- .Model.ID -}}</a>
+        </div>
+        <div class="product-img">
+            {{ if .ImageURL }}
+            <img src="{{ .ImageURL }}" alt="{{ .ProductName }}">
+            {{ end }}
+        </div>
+        <div class="card-body p-3">
+            <a href="/web/products/{{ .Model.ID }}/view" class="text-decoration-none">
+                <div class="product-name">{{ .ProductName }}</div>
+            </a>
+            <div class="product-cat mb-1">{{ badgifyCategories .Categories 3 }}</div>
+            <div class="product-cat font-monospace mb-2">{{- .Barcode -}}</div>
+            <span class="badge-status badge-{{ expiryStatusClass .ExpireAt }}">
+                <i class="bi bi-{{ expiryStatusIcon .ExpireAt }}" aria-hidden="true"></i>
+                {{ expiryStatusLabel .ExpireAt }}
+            </span>
+            <div class="product-meta mt-2">
+                <i class="bi bi-calendar-event" aria-hidden="true"></i> {{ .ExpireAt | humanDate }}
             </div>
         </div>
-        <ul class="list-group list-group-flush d-flex justify-content-between">
-            <li class="list-group-item d-flex justify-content-evenly align-items-center">
-                <div class="ms-2 me-auto">
-                    <i class="bi bi-calendar-x me-3" aria-hidden="true"></i>
-                </div>
-                <span class="badge rounded-pill {{ if hasPassed .ExpireAt }} bg-danger {{ else }} bg-primary {{ end }}">
-                    {{ .ExpireAt | humanDate }}
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small">
+                    <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>Scanned
                 </span>
+                <span class="product-meta">{{ .ScannedAt | humanDateTime }}</span>
             </li>
-            <li class="list-group-item d-flex justify-content-evenly align-items-center">
-                <div class="ms-2 me-auto">
-                    <i class="bi bi-upc-scan me-3" aria-hidden="true"></i>
-                </div>
-                <span class="badge bg-primary rounded-pill">
-                    {{ .ScannedAt | humanDateTime }}
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small">
+                    <i class="bi bi-bell me-2" aria-hidden="true"></i>Notified
                 </span>
+                <span class="product-meta">{{ .NotifiedAt | humanDateTime }}</span>
             </li>
-            <li class="list-group-item d-flex justify-content-evenly align-items-center">
-                <div class="ms-2 me-auto">
-                    <i class="bi bi-bell me-3" aria-hidden="true"></i>
-                </div>
-                <span class="badge bg-primary rounded-pill">
-                    {{ .NotifiedAt | humanDateTime }}
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small">
+                    <i class="bi bi-trash3 me-2" aria-hidden="true"></i>Archived
                 </span>
-            </li>
-            <li class="list-group-item d-flex justify-content-evenly align-items-center">
-                <div class="ms-2 me-auto">
-                    <i class="bi bi-trash3 me-3" aria-hidden="true"></i>
-                </div>
-                <span class="badge bg-primary rounded-pill">
-                    {{ .DeletedAt | humanDateTimeFromSQL }}
-                </span>
+                <span class="product-meta">{{ .DeletedAt | humanDateTimeFromSQL }}</span>
             </li>
         </ul>
     </div>

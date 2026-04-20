@@ -1,0 +1,24 @@
+barcode;product_name;categories;countries;image_url;expire_days;scanned_days;amount;unit;storage_location;archived
+3017620422003;Nutella;Spreads,Breakfast;France;https://images.openfoodfacts.org/images/products/301/762/042/2003/front_en.5.400.jpg;-14;-30;1;jar;Pantry;false
+7622210449283;Oreo Original;Biscuits,Snacks;United States;https://images.openfoodfacts.org/images/products/762/221/044/9283/front_en.3.400.jpg;-7;-21;1;pack;Pantry;false
+4006040071;Whole Milk;Dairy,Beverages;Germany;;-2;-10;1;L;Fridge;false
+20724696;Greek Yogurt;Dairy,Yogurt;Germany;;1;-5;2;cup;Fridge;false
+4005514005506;Sourdough Bread;Bread,Bakery;Germany;;2;-3;1;loaf;Counter;false
+8076808093430;Barilla Spaghetti No. 5;Pasta,Dry goods;Italy;https://images.openfoodfacts.org/images/products/807/680/809/3430/front_en.5.400.jpg;3;-60;2;pack;Pantry;false
+4003932218902;Cheddar Cheese;Dairy,Cheese;United Kingdom;;5;-10;1;block;Fridge;false
+4001724819906;Orange Juice;Beverages,Juice;Germany;;6;-7;1;L;Fridge;false
+8410076490217;Pesto alla Genovese;Sauces,Italian;Italy;;7;-14;1;jar;Fridge;false
+0978101104;Almond Milk Unsweetened;Beverages,Plant-based;United States;;21;-2;2;L;Pantry;false
+4005900279170;Heinz Tomato Ketchup;Condiments,Sauces;United Kingdom;https://images.openfoodfacts.org/images/products/400/590/027/9170/front_en.5.400.jpg;90;0;1;bottle;Fridge;false
+3068320018734;Dijon Mustard;Condiments;France;;180;-1;1;jar;Fridge;false
+8410188062278;Arborio Rice;Grains,Rice;Italy;;365;-7;1;kg;Pantry;false
+5449000000996;Coca-Cola Original;Beverages,Soft drinks;Belgium;https://images.openfoodfacts.org/images/products/544/900/000/0996/front_en.5.400.jpg;120;-3;6;can;Pantry;false
+4000521007706;Extra Virgin Olive Oil;Oils,Cooking;Italy;;500;-14;1;bottle;Pantry;false
+4006001005063;Table Salt;Seasonings,Spices;Germany;;;-30;1;pack;Pantry;false
+4006001012283;Black Pepper Ground;Seasonings,Spices;Germany;;;-45;1;tin;Pantry;false
+4009041610029;Apple Cider Vinegar;Condiments,Vinegar;Germany;;;-10;1;bottle;Pantry;false
+4006001002093;Whole Grain Cornflakes;Breakfast,Cereals;Germany;;-60;-90;1;box;Pantry;true
+7613035892712;Nescafé Gold;Beverages,Coffee;Switzerland;;-120;-150;1;jar;Pantry;true
+4001626018236;Sour Cream;Dairy;Germany;;-30;-45;1;cup;Fridge;true
+4260197840037;Cherry Jam;Spreads,Jams;Germany;;-180;-200;1;jar;Pantry;true
+5000128391153;Heinz Baked Beans;Canned goods,Beans;United Kingdom;;-365;-400;2;can;Pantry;true

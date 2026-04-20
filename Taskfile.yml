@@ -107,7 +107,7 @@ tasks:
     cmds:
       - cp ./node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/
       - cp ./node_modules/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-*.woff2 ./src/assets/fonts/
-      - cp ./node_modules/@fontsource/pacifico/files/pacifico-latin-*.woff2 ./src/assets/fonts/
+      - cp ./node_modules/@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2 ./src/assets/fonts/
 
   icons:
     desc: Copy icon files to assets
@@ -116,8 +116,9 @@ tasks:
       - cp ./res/icons/proviant_logo_512.png ./src/assets/icons/
       - cp ./res/icons/proviant_logo.ico ./src/assets/icons/favicon.ico
       - cp ./res/icons/proviant_logo_256.png ./src/assets/icons/favicon.png
-      - cp ./res/icons/proviant_hero.png ./src/assets/icons/hero.png
+      - cp ./res/icons/header_transparent.png ./src/assets/icons/hero.png
       - magick ./res/icons/proviant_logo_256.png -resize 192x192 ./src/assets/icons/proviant_logo_192.png
+      - cp ./res/icons/header*.png ./src/assets/icons/
 
   css:
     desc: Compile SCSS to CSS
@@ -167,3 +168,78 @@ tasks:
   vuln:
     desc: Scan all dependencies for vulnerabilities
     deps: [vuln-go, vuln-npm]
+
+  seed:
+    desc: "Seed demo products from seed-products.csv into SQLite. Usage: task seed -- <username>"
+    dir: src
+    vars:
+      DB: data/proviant.db
+      SEED_CSV: ../seed-products.csv
+    cmds:
+      - |
+        USERNAME="{{if .CLI_ARGS}}{{.CLI_ARGS}}{{else}}demo{{end}}"
+        if [ ! -f "{{.DB}}" ]; then echo "DB not found at {{.DB}} — start the server once first."; exit 1; fi
+        if [ ! -f "{{.SEED_CSV}}" ]; then echo "CSV not found at {{.SEED_CSV}}"; exit 1; fi
+        python3 - "{{.DB}}" "$USERNAME" "{{.SEED_CSV}}" <<'PYEOF'
+        import csv, sqlite3, sys, datetime
+        db_path, username, csv_path = sys.argv[1], sys.argv[2], sys.argv[3]
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute("SELECT household_id FROM users WHERE username=? AND deleted_at IS NULL LIMIT 1", (username,))
+        row = cur.fetchone()
+        if not row or not row[0]:
+            print(f"Error: user '{username}' not found or has no household.", file=sys.stderr)
+            sys.exit(1)
+        household_id = row[0]
+        print(f"Seeding as user='{username}' (household_id={household_id})")
+        now = datetime.datetime.utcnow()
+        inserted = 0
+        with open(csv_path, newline='') as f:
+            for p in csv.DictReader(f, delimiter=';'):
+                expire_days = p.get('expire_days', '').strip()
+                if expire_days:
+                    expire_at = (now + datetime.timedelta(days=int(expire_days))).isoformat()
+                else:
+                    expire_at = '0001-01-01T00:00:00'
+                scanned_days = int(p.get('scanned_days', '0').strip() or '0')
+                scanned_at = (now + datetime.timedelta(days=scanned_days)).isoformat()
+                archived = p.get('archived', '').strip().lower() == 'true'
+                deleted_at = now.isoformat() if archived else None
+                cur.execute(
+                    "INSERT INTO products (created_at, updated_at, deleted_at, barcode, product_name, categories, countries, image_url, expire_at, scanned_at, notified_at, household_id, amount, unit, storage_location) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?,?,?,?)",
+                    (now.isoformat(), now.isoformat(), deleted_at,
+                     p['barcode'], p['product_name'], p['categories'], p['countries'], p['image_url'],
+                     expire_at, scanned_at, household_id, int(p['amount']), p['unit'], p['storage_location'])
+                )
+                label = ' (archived)' if archived else ''
+                print(f"  + {p['product_name']}{label}")
+                inserted += 1
+        conn.commit()
+        active = cur.execute("SELECT COUNT(*) FROM products WHERE household_id=? AND deleted_at IS NULL", (household_id,)).fetchone()[0]
+        archived_count = cur.execute("SELECT COUNT(*) FROM products WHERE household_id=? AND deleted_at IS NOT NULL", (household_id,)).fetchone()[0]
+        print(f"\nDone. {inserted} inserted. Household totals: {active} active, {archived_count} archived.")
+        PYEOF
+
+  seed-reset:
+    desc: "Remove all products for a user's household. Usage: task seed-reset -- <username>"
+    dir: src
+    vars:
+      DB: data/proviant.db
+    cmds:
+      - |
+        USERNAME="{{if .CLI_ARGS}}{{.CLI_ARGS}}{{else}}demo{{end}}"
+        python3 - "{{.DB}}" "$USERNAME" <<'PYEOF'
+        import sqlite3, sys
+        db_path, username = sys.argv[1], sys.argv[2]
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute("SELECT household_id FROM users WHERE username=? AND deleted_at IS NULL LIMIT 1", (username,))
+        row = cur.fetchone()
+        if not row or not row[0]:
+            print(f"Error: user '{username}' not found.", file=sys.stderr)
+            sys.exit(1)
+        household_id = row[0]
+        cur.execute("DELETE FROM products WHERE household_id=?", (household_id,))
+        conn.commit()
+        print(f"Removed {cur.rowcount} products for household_id={household_id}.")
+        PYEOF

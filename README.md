@@ -1,6 +1,6 @@
-![Proviant](./res/icons/header_1.png){width=100%}
+![Proviant](./res/icons/proviant_hero.png){width=100%}
 
-![Golang version](https://img.shields.io/badge/Go-1.24-green)
+![Golang version](https://img.shields.io/badge/Go-1.25.9-green)
 ![CI status](https://codeberg.org/isotop7/proviant/badges/workflows/ci.yml/badge.svg)
 ![Release state](https://codeberg.org/isotop7/proviant/badges/release.svg)
 ![Open issues](https://codeberg.org/isotop7/proviant/badges/issues/open.svg)
@@ -100,33 +100,15 @@ PROVIANT_NOTIFICATION_SMTP_FROMADDRESS="sender@local.net"                     # 
 PROVIANT_NOTIFICATION_NTFY_URL="https://ntfy.sh"                             # Ntfy server URL
 PROVIANT_NOTIFICATION_NTFY_TOPIC="default_topic"                             # Default Ntfy topic/channel
 PROVIANT_NOTIFICATION_NTFY_TIMEOUT=60                                         # Ntfy message timeout in seconds
-PROVIANT_NOTIFICATION_TELEGRAM_BOTTOKEN="1234567890:ABCDefGHIjklMNOpqrSTUvwxYZ"  # Telegram bot token from BotFather
-PROVIANT_NOTIFICATION_TELEGRAM_BOTUSERNAME="MyProviantBot"                   # Bot username (optional, auto-resolved via getMe)
 PROVIANT_NOTIFICATION_TELEGRAM_TIMEOUT=10                                    # Telegram API request timeout in seconds
+PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_DAY=1                               # Day of month to send monthly waste report (1–28)
+PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_HOUR=8                              # UTC hour to send monthly waste report (0–23)
 
 # OpenFoodFacts configuration
 PROVIANT_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"  # OpenFoodFacts API URL
 PROVIANT_OPENFOODFACTS_TIMEOUT=5                                             # API request timeout in seconds
 PROVIANT_OPENFOODFACTS_CACHEENABLED=true                                     # Cache API responses in database for offline use
 ```
-
-### Telegram Notifications
-
-To receive notifications via Telegram:
-
-1. **Create a bot** — open Telegram, message [@BotFather](https://t.me/BotFather), run `/newbot`, and follow the prompts. Copy the bot token you receive.
-2. **Configure proviant** — set the bot token in `config.yaml` or via the `PROVIANT_NOTIFICATION_TELEGRAM_BOTTOKEN` environment variable:
-   ```yaml
-   notification:
-     telegram:
-       botToken: "1234567890:ABCDefGHIjklMNOpqrSTUvwxYZ"
-       timeout: 10
-   ```
-3. **Start proviant** — the server will automatically resolve the bot username from Telegram on startup.
-4. **Link your account** — go to **User Settings → Notification Settings → Telegram**, click **Link Account**, then **Generate Token**. Click **Open in Telegram** and press **Start** in the bot chat.
-5. **Enable** — toggle Telegram notifications on in User Settings and save.
-
-> **Note:** The bot uses long-polling to receive messages. No public URL or webhook configuration is required.
 
 Additionally `Gin` supports a debug mode, which also can be set with a environment variable:
 
@@ -151,21 +133,54 @@ Documentation is generated with `gomarkdoc` and `swagger`:
 
 ## Screenshots
 
-- Login and Signup page for multi user mode
+**Login**
 
 ![Login](./screenshots/login.png)
 
-- Portal view with activity tiles
+---
 
-![Portal](./screenshots/portal.png)
+**Dashboard** — metric tiles, waste rate, category breakdown and expiry trend charts
 
-- Create product and query data from OpenFoodFactAPI
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/portal.png" alt="Dashboard desktop"></td>
+    <td><img src="./screenshots/portal_mobile.png" alt="Dashboard mobile"></td>
+  </tr>
+</table>
 
-![Create product](./screenshots/create.png)
+---
 
-- Search all products based on parameters
+**Add product** — barcode scan with auto-fill from OpenFoodFacts
 
-![Search products](./screenshots/search.png)
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/create.png" alt="Add product desktop"></td>
+    <td><img src="./screenshots/create_mobile.png" alt="Add product mobile"></td>
+  </tr>
+</table>
+
+---
+
+**Search** — filter products by name, barcode or category
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/search.png" alt="Search desktop"></td>
+    <td><img src="./screenshots/search_mobile.png" alt="Search mobile"></td>
+  </tr>
+</table>
 
 ## Contributing
 

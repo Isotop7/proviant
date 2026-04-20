@@ -217,3 +217,151 @@ function performSearch() {
 
     window.location.href = `/web/products?${new URLSearchParams(params).toString()}`;
 }
+
+/* ── Add-product modal ───────────────────────────────────────────────────────
+   Bootstrap is loaded after content scripts, so init must wait for
+   DOMContentLoaded before calling bootstrap.Modal.
+─────────────────────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function () {
+    const modalEl = document.getElementById('addProductModal');
+    if (!modalEl) return;
+
+    const bsModal         = new bootstrap.Modal(modalEl);
+    const barcodeInput    = document.getElementById('barcode');
+    const productData     = document.getElementById('productData');
+    const inputWrap       = document.querySelector('#modalStepScan .barcode-input-wrap');
+    const subtitle        = document.getElementById('addProductModalSubtitle');
+    const btnScan         = document.getElementById('btnScan');
+    const tabManualInput  = document.getElementById('tabManualInput');
+    const tabCamera       = document.getElementById('tabCamera');
+    const manualSection   = document.getElementById('manualInputSection');
+    const cameraSection   = document.getElementById('cameraSection');
+
+    let modalIsOpen = false;
+
+    function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+    function isCameraRunning() {
+        return btnScan && btnScan.dataset.action === 'stop';
+    }
+
+    function stopCameraIfRunning() {
+        if (isCameraRunning()) btnScan.click();
+    }
+
+    function setActiveTab(mode) {
+        const isCamera = mode === 'camera';
+        if (tabManualInput) {
+            tabManualInput.style.background  = isCamera ? 'transparent' : 'white';
+            tabManualInput.style.boxShadow   = isCamera ? 'none' : '0 1px 3px oklch(0 0 0 / 0.10)';
+            tabManualInput.style.color       = isCamera ? 'var(--fg-3)' : 'var(--fg)';
+        }
+        if (tabCamera) {
+            tabCamera.style.background  = isCamera ? 'white' : 'transparent';
+            tabCamera.style.boxShadow   = isCamera ? '0 1px 3px oklch(0 0 0 / 0.10)' : 'none';
+            tabCamera.style.color       = isCamera ? 'var(--fg)' : 'var(--fg-3)';
+        }
+        if (manualSection) manualSection.style.display = isCamera ? 'none' : 'block';
+        if (cameraSection) cameraSection.style.display = isCamera ? 'block' : 'none';
+
+        if (isCamera) {
+            if (!isCameraRunning() && btnScan) btnScan.click();
+        } else {
+            stopCameraIfRunning();
+            if (barcodeInput) barcodeInput.focus();
+        }
+    }
+
+    if (tabManualInput) tabManualInput.addEventListener('click', function () { setActiveTab('manual'); });
+    if (tabCamera)      tabCamera.addEventListener('click',      function () { setActiveTab('camera'); });
+
+    function showModalStep(step) {
+        const footerEl = document.querySelector('#addProductModal .modal-footer');
+        ['scan', 'form', 'success'].forEach(function (s) {
+            document.getElementById('modalStep' + cap(s)).style.display   = s === step ? 'block' : 'none';
+            document.getElementById('modalFooter' + cap(s)).style.display = s === step ? 'flex'  : 'none';
+        });
+        if (footerEl) footerEl.style.display = step === 'success' ? 'none' : '';
+        if (step === 'scan')  subtitle.textContent = 'Scan barcode or enter manually';
+        if (step === 'form')  subtitle.textContent = 'Confirm details';
+    }
+
+    function resetToScan() {
+        stopCameraIfRunning();
+        setActiveTab('manual');
+        if (barcodeInput) {
+            barcodeInput.value = '';
+            barcodeInput.style.backgroundColor = '';
+            barcodeInput.style.color = '';
+            barcodeInput.classList.remove('border-success');
+        }
+        if (productData) productData.classList.add('d-none');
+        showModalStep('scan');
+        if (barcodeInput) barcodeInput.focus();
+    }
+
+    // Focus ring on barcode input wrapper
+    if (barcodeInput && inputWrap) {
+        barcodeInput.addEventListener('focus', function () { inputWrap.classList.add('focused'); });
+        barcodeInput.addEventListener('blur',  function () { inputWrap.classList.remove('focused'); });
+    }
+
+    function populateScanResult() {
+        const barcode    = barcodeInput ? barcodeInput.value : '';
+        const nameEl     = document.getElementById('productInfoName');
+        const name       = nameEl ? nameEl.innerText.trim() : '';
+        const resultName = document.getElementById('scanResultName');
+        const resultCode = document.getElementById('scanResultCode');
+        if (resultName) resultName.textContent = name || 'Unknown product';
+        if (resultCode) resultCode.textContent = barcode + ' · Open Food Facts';
+    }
+
+    // Open from header button
+    const openBtn = document.getElementById('btnOpenAddProductModal');
+    if (openBtn) {
+        openBtn.addEventListener('click', function () { bsModal.show(); });
+    }
+
+    modalEl.addEventListener('shown.bs.modal', function () {
+        modalIsOpen = true;
+        resetToScan();
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function () {
+        modalIsOpen = false;
+        stopCameraIfRunning();
+    });
+
+    // Advance to form step when productsCreate.js reveals #productData
+    if (productData) {
+        new MutationObserver(function () {
+            if (modalIsOpen && !productData.classList.contains('d-none')) {
+                populateScanResult();
+                showModalStep('form');
+            }
+        }).observe(productData, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    const backBtn = document.getElementById('btnModalBack');
+    if (backBtn) backBtn.addEventListener('click', resetToScan);
+
+    const scanAnotherBtn = document.getElementById('btnModalScanAnother');
+    if (scanAnotherBtn) scanAnotherBtn.addEventListener('click', resetToScan);
+
+    // Intercept success feedback to show inline success step
+    if (typeof proviant !== 'undefined' && typeof proviant.showFeedback === 'function') {
+        const _origFeedback = proviant.showFeedback.bind(proviant);
+        proviant.showFeedback = function (type, title, msg) {
+            if (type === 'success' && modalIsOpen) {
+                const nameEl = document.getElementById('productInfoName');
+                const successNameEl = document.getElementById('modalSuccessName');
+                if (successNameEl) {
+                    successNameEl.textContent = (nameEl ? nameEl.innerText.trim() : '') + ' added';
+                }
+                showModalStep('success');
+                return;
+            }
+            _origFeedback(type, title, msg);
+        };
+    }
+});

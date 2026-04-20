@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<style>
+  body { padding: 24px; background: var(--bg-subtle); display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  h3 { font-family: var(--font-ui); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 12px; }
+  /* Modal */
+  .modal-wrap { position: relative; }
+  .modal { background: white; border-radius: 12px; box-shadow: var(--shadow-xl); width: 340px; overflow: hidden; }
+  .modal-header { padding: 20px 20px 0; display: flex; align-items: flex-start; gap: 12px; }
+  .modal-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+  .modal-body { padding: 16px 20px 20px; }
+  .modal-title { font-family: var(--font-ui); font-size: 15px; font-weight: 600; color: var(--fg); margin-bottom: 4px; }
+  .modal-desc { font-family: var(--font-ui); font-size: 13px; color: var(--fg-2); line-height: 1.5; }
+  .modal-footer { padding: 0 20px 20px; display: flex; gap: 8px; justify-content: flex-end; }
+  .btn { font-family: var(--font-ui); font-size: 13px; font-weight: 500; border-radius: 8px; border: none; cursor: pointer; padding: 8px 16px; }
+  .btn-secondary { background: var(--bg-subtle); color: var(--fg); border: 1px solid var(--border); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-danger { background: var(--status-expired); color: white; }
+  /* Toast */
+  .toast { background: white; border-radius: 8px; box-shadow: var(--shadow-lg); padding: 12px 14px; display: flex; align-items: center; gap: 10px; width: 300px; border-left: 3px solid; }
+  .toast-icon { font-size: 16px; flex-shrink: 0; }
+  .toast-text { font-family: var(--font-ui); font-size: 13px; color: var(--fg); flex: 1; }
+  .toast-close { font-size: 14px; color: var(--fg-3); cursor: pointer; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<!-- Success modal -->
+<div>
+  <h3>Feedback — Success</h3>
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon" style="background: oklch(0.94 0.04 145); color: oklch(0.40 0.10 145);"><i class="bi bi-check-circle-fill"></i></div>
+      <div style="padding-top: 8px;">
+        <div class="modal-title">Product added</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-desc">Whole Milk 1L has been added to your pantry. You'll be notified 3 days before it expires.</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary">Done</button></div>
+  </div>
+</div>
+<!-- Confirm delete modal -->
+<div>
+  <h3>Confirmation — Destructive</h3>
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon" style="background: oklch(0.95 0.05 25); color: oklch(0.45 0.20 25);"><i class="bi bi-trash3-fill"></i></div>
+      <div style="padding-top: 8px;">
+        <div class="modal-title">Delete 3 products?</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-desc">These products will be permanently deleted and cannot be recovered. Archived products can be restored.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary">Cancel</button>
+      <button class="btn btn-danger"><i class="bi bi-trash3"></i> Delete</button>
+    </div>
+  </div>
+</div>
+<!-- Toasts -->
+<div>
+  <h3>Toast Notifications</h3>
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div class="toast" style="border-color: oklch(0.52 0.10 145);">
+      <i class="bi bi-check-circle-fill toast-icon" style="color: oklch(0.52 0.10 145);"></i>
+      <div class="toast-text">Signed in successfully</div>
+      <i class="bi bi-x toast-close"></i>
+    </div>
+    <div class="toast" style="border-color: oklch(0.55 0.20 25);">
+      <i class="bi bi-x-circle-fill toast-icon" style="color: oklch(0.55 0.20 25);"></i>
+      <div class="toast-text">Incorrect email or password</div>
+      <i class="bi bi-x toast-close"></i>
+    </div>
+    <div class="toast" style="border-color: oklch(0.64 0.18 45);">
+      <i class="bi bi-exclamation-triangle-fill toast-icon" style="color: oklch(0.64 0.18 45);"></i>
+      <div class="toast-text">Could not connect to barcode service</div>
+      <i class="bi bi-x toast-close"></i>
+    </div>
+  </div>
+</div>
+</body>
+</html>

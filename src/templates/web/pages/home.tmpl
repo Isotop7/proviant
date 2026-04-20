@@ -3,33 +3,66 @@
 {{ if .HasHousehold }}
 
 <div aria-live="polite" aria-atomic="true" class="visually-hidden" id="dashboard-status"></div>
-<div class="row row-cols-1 row-cols-md-3 g-4 px-3 pt-3 pb-2" id="dashboard">
-    <!-- stat tiles injected here by homeStats.js -->
+
+<!-- Hero scan card — mobile only -->
+<div class="px-3 pt-3 d-md-none">
+    <a href="/web/products/scan" class="hero-scan-card mb-3" aria-label="Scan a product">
+        <div style="position:relative;">
+            <div class="hero-label">Quick action</div>
+            <div class="hero-title">Scan a product</div>
+            <div class="hero-sub">Add to your pantry in seconds</div>
+            <div class="hero-pill"><i class="bi bi-upc-scan" aria-hidden="true"></i> Start scanning</div>
+        </div>
+    </a>
 </div>
-<div class="px-3 py-2">
-    <hr class="mt-0 mb-1">
-    <p class="text-body-secondary small mb-0 px-1 fw-medium">Trends</p>
-</div>
-<div class="row row-cols-1 row-cols-md-3 g-4 px-3 pb-3">
-    <div class="col">
+
+<!-- Row 1: stat tiles -->
+<div class="row row-cols-2 row-cols-md-4 g-3 px-3 pt-3 pb-2" id="dashboard"></div>
+
+<!-- Row 2: expiring soon list + waste donut -->
+<div class="row g-3 px-3 pb-3">
+    <div class="col-md-7" id="dashboard-list"></div>
+    <div class="col-md-5">
         <div class="card h-100">
-            <div class="card-header fw-bold">Waste Rate</div>
-            <div class="card-body"><canvas id="chartWaste" role="img" aria-label="Donut chart: ratio of expired to fresh active products"></canvas></div>
+            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
+                    <i class="bi bi-pie-chart-fill" style="font-size:12px;color:var(--accent);"></i>
+                </div>
+                Waste Rate
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <canvas id="chartWaste" role="img" aria-label="Donut chart: ratio of expired to fresh active products"></canvas>
+            </div>
         </div>
     </div>
-    <div class="col">
+</div>
+
+<!-- Row 3: category breakdown + expiry trend -->
+<div class="row g-3 px-3 pb-3">
+    <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header fw-bold">Category Breakdown</div>
+            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
+                    <i class="bi bi-tags-fill" style="font-size:12px;color:var(--accent);"></i>
+                </div>
+                Category Breakdown
+            </div>
             <div class="card-body"><canvas id="chartCategories" role="img" aria-label="Pie chart: product category breakdown"></canvas></div>
         </div>
     </div>
-    <div class="col">
+    <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header fw-bold">Expiry Trend (next 12 months)</div>
+            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
+                    <i class="bi bi-graph-up-arrow" style="font-size:12px;color:var(--accent);"></i>
+                </div>
+                Expiry Trend (next 12 months)
+            </div>
             <div class="card-body"><canvas id="chartExpiryTrend" role="img" aria-label="Line chart: products expiring over the next 12 months"></canvas></div>
         </div>
     </div>
 </div>
+
 <script src="/assets/js/chart.umd.min.js" defer></script>
 <script src="/assets/js/homeStats.js" defer></script>
 
@@ -47,7 +80,7 @@
         You are not connected to any household. Switch to the user settings to connect to a household or create a new one.
     </p>
     <div class="my-4">
-        <a class="btn btn-outline-primary" href="/web/user/settings">
+        <a class="btn btn-proviant-secondary" href="/web/user/settings">
             <i class="bi bi-house-add me-2"></i>
             Connect to household
         </a>

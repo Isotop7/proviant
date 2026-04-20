@@ -3312,26 +3312,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/web/products/create": {
-            "get": {
-                "description": "Renders the page for creating a new product",
-                "produces": [
-                    "text/html"
-                ],
-                "tags": [
-                    "web"
-                ],
-                "summary": "Create product page",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/web/products/{id}/edit": {
             "get": {
                 "description": "Renders the page for editing a product",
