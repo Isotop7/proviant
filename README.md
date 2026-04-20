@@ -100,9 +100,9 @@ PROVIANT_NOTIFICATION_SMTP_FROMADDRESS="sender@local.net"                     # 
 PROVIANT_NOTIFICATION_NTFY_URL="https://ntfy.sh"                             # Ntfy server URL
 PROVIANT_NOTIFICATION_NTFY_TOPIC="default_topic"                             # Default Ntfy topic/channel
 PROVIANT_NOTIFICATION_NTFY_TIMEOUT=60                                         # Ntfy message timeout in seconds
-PROVIANT_NOTIFICATION_TELEGRAM_BOTTOKEN="1234567890:ABCDefGHIjklMNOpqrSTUvwxYZ"  # Telegram bot token from BotFather
-PROVIANT_NOTIFICATION_TELEGRAM_BOTUSERNAME="MyProviantBot"                   # Bot username (optional, auto-resolved via getMe)
 PROVIANT_NOTIFICATION_TELEGRAM_TIMEOUT=10                                    # Telegram API request timeout in seconds
+PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_DAY=1                               # Day of month to send monthly waste report (1–28)
+PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_HOUR=8                              # UTC hour to send monthly waste report (0–23)
 
 # OpenFoodFacts configuration
 PROVIANT_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"  # OpenFoodFacts API URL
