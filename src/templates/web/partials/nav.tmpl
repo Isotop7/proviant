@@ -12,8 +12,8 @@
 			{{ if eq .Title "Products" }}aria-current="page"{{ end }}>
 			<i class="bi bi-box-seam" aria-hidden="true"></i> Products
 		</a>
-		<a href="/web/products/create" class="pv-nav-item {{ if eq .Title "Create product" }}active{{ end }}"
-			{{ if eq .Title "Create product" }}aria-current="page"{{ end }}>
+		<a href="/web/products/create" class="pv-nav-item {{ if or (eq .Title "Create product") (eq .Title "Scan Product") }}active{{ end }}"
+			{{ if or (eq .Title "Create product") (eq .Title "Scan Product") }}aria-current="page"{{ end }}>
 			<i class="bi bi-plus-circle" aria-hidden="true"></i> Add product
 		</a>
 		<a href="/web/products/archived" class="pv-nav-item {{ if eq .Title "ArchivedProducts" }}active{{ end }}"

@@ -332,6 +332,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products", webFrontendHandler.Products)
 	publicWebFrontend.GET("/products/archived", webFrontendHandler.ProductsArchived)
 	publicWebFrontend.GET("/products/create", webFrontendHandler.ProductsCreate)
+	publicWebFrontend.GET("/products/scan", webFrontendHandler.ProductsScan)
 	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
 
 	// Public invite acceptance page (no auth required)
