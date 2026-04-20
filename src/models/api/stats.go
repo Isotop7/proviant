@@ -12,6 +12,14 @@ type StatsExpiringProduct struct {
 	ExpireAt    string `json:"expireAt"` // format: "2006-01-02"
 }
 
+// ProductSummaryResponse is the response body for GET /api/v1/products/summary
+type ProductSummaryResponse struct {
+	ExpiringSoonCount int `json:"expiringSoonCount"`
+	ExpiredCount      int `json:"expiredCount"`
+	TotalActive       int `json:"totalActive"`
+	WasteThisMonth    int `json:"wasteThisMonth"`
+}
+
 // ProductStatsResponse is the response body for GET /api/v1/products/stats
 type ProductStatsResponse struct {
 	WasteCount          int                    `json:"wasteCount"`

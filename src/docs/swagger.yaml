@@ -85,6 +85,8 @@ definitions:
         type: boolean
       onboardingCompleted:
         type: boolean
+      profileStepDone:
+        type: boolean
     type: object
   api.ProductAmountDTO:
     properties:
@@ -121,6 +123,17 @@ definitions:
         type: integer
       wastePercent:
         type: number
+    type: object
+  api.ProductSummaryResponse:
+    properties:
+      expiredCount:
+        type: integer
+      expiringSoonCount:
+        type: integer
+      totalActive:
+        type: integer
+      wasteThisMonth:
+        type: integer
     type: object
   api.StatsExpiringProduct:
     properties:
@@ -198,6 +211,8 @@ definitions:
     properties:
       emailEnabled:
         type: boolean
+      monthlyWasteReportEnabled:
+        type: boolean
       notificationThresholdDays:
         type: integer
       ntfyEnabled:
@@ -208,6 +223,10 @@ definitions:
         type: string
       ntfyUrl:
         type: string
+      telegramEnabled:
+        type: boolean
+      telegramLinked:
+        type: boolean
     type: object
   authentication.Signup:
     properties:
@@ -230,6 +249,8 @@ definitions:
         type: string
       deletedAt:
         $ref: '#/definitions/gorm.DeletedAt'
+      displayName:
+        type: string
       emailVerifiedAt:
         type: string
       household:
@@ -1168,6 +1189,40 @@ paths:
       summary: Complete onboarding
       tags:
       - onboarding
+  /api/v1/onboarding/create-household:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new household and assigns the user to it
+      parameters:
+      - description: Household name
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Create household
+      tags:
+      - onboarding
   /api/v1/onboarding/households:
     get:
       description: Returns a list of households that the user can apply to join
@@ -1189,6 +1244,74 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Get available households
+      tags:
+      - onboarding
+  /api/v1/onboarding/join-invite:
+    post:
+      consumes:
+      - application/json
+      description: Accepts a household invitation using an invite token
+      parameters:
+      - description: Invite token
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Join by invite
+      tags:
+      - onboarding
+  /api/v1/onboarding/profile:
+    patch:
+      consumes:
+      - application/json
+      description: Updates the user's display name and marks the profile step as done
+      parameters:
+      - description: Display name
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Update profile
       tags:
       - onboarding
   /api/v1/onboarding/state:
@@ -1553,6 +1676,69 @@ paths:
       summary: Update product amount
       tags:
       - product
+  /api/v1/products/{id}/consume:
+    post:
+      description: Soft-deletes (archives) a product without firing a product.wasted
+        webhook event
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Mark product as consumed
+      tags:
+      - product
+  /api/v1/products/{id}/waste:
+    post:
+      description: Hard-deletes a product and fires the product.wasted webhook event
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Mark product as wasted
+      tags:
+      - product
   /api/v1/products/archived:
     get:
       description: Return a list of archived products of user
@@ -1833,6 +2019,28 @@ paths:
       summary: Return product statistics
       tags:
       - product
+  /api/v1/products/summary:
+    get:
+      description: Returns expiring-soon count, expired count, total active count,
+        and waste-this-month count in one request
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ProductSummaryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Return product summary
+      tags:
+      - product
   /api/v1/productsByBarcode:
     get:
       description: Returns a list of products of user matching the given barcode
@@ -1866,21 +2074,14 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Updates properties of a user
-      parameters:
-      - description: User
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/authentication.User'
+      description: Updates display name and email of the authenticated user
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/authentication.User'
+            $ref: '#/definitions/api.APIResponse'
         "400":
           description: Bad Request
           schema:
@@ -2018,6 +2219,26 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Updates a user password
+      tags:
+      - user
+  /api/v1/user/telegram-link-token:
+    post:
+      description: Generates a short-lived token the user sends to the Proviant Telegram
+        bot to link their account
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Generate Telegram link token
       tags:
       - user
   /api/v1/webhooks:

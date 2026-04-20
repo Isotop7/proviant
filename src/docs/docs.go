@@ -1059,6 +1059,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/onboarding/create-household": {
+            "post": {
+                "description": "Creates a new household and assigns the user to it",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "onboarding"
+                ],
+                "summary": "Create household",
+                "parameters": [
+                    {
+                        "description": "Household name",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/onboarding/households": {
             "get": {
                 "description": "Returns a list of households that the user can apply to join",
@@ -1077,6 +1129,110 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/api.HouseholdListItem"
                             }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/onboarding/join-invite": {
+            "post": {
+                "description": "Accepts a household invitation using an invite token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "onboarding"
+                ],
+                "summary": "Join by invite",
+                "parameters": [
+                    {
+                        "description": "Invite token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/onboarding/profile": {
+            "patch": {
+                "description": "Updates the user's display name and marks the profile step as done",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "onboarding"
+                ],
+                "summary": "Update profile",
+                "parameters": [
+                    {
+                        "description": "Display name",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
                         }
                     },
                     "401": {
@@ -2011,6 +2167,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/summary": {
+            "get": {
+                "description": "Returns expiring-soon count, expired count, total active count, and waste-this-month count in one request",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Return product summary",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductSummaryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/{id}/amount": {
             "patch": {
                 "description": "Applies a delta to a product's amount. Hard-deletes the product when amount reaches 0.",
@@ -2051,6 +2239,100 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/{id}/consume": {
+            "post": {
+                "description": "Soft-deletes (archives) a product without firing a product.wasted webhook event",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Mark product as consumed",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/{id}/waste": {
+            "post": {
+                "description": "Hard-deletes a product and fires the product.wasted webhook event",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Mark product as wasted",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -2110,7 +2392,7 @@ const docTemplate = `{
         },
         "/api/v1/user": {
             "patch": {
-                "description": "Updates properties of a user",
+                "description": "Updates display name and email of the authenticated user",
                 "consumes": [
                     "application/json"
                 ],
@@ -2121,22 +2403,11 @@ const docTemplate = `{
                     "user"
                 ],
                 "summary": "Updates a user object",
-                "parameters": [
-                    {
-                        "description": "User",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authentication.User"
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/authentication.User"
+                            "$ref": "#/definitions/api.APIResponse"
                         }
                     },
                     "400": {
@@ -2335,6 +2606,35 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/telegram-link-token": {
+            "post": {
+                "description": "Generates a short-lived token the user sends to the Proviant Telegram bot to link their account",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Generate Telegram link token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "500": {
@@ -3342,6 +3642,9 @@ const docTemplate = `{
                 },
                 "onboardingCompleted": {
                     "type": "boolean"
+                },
+                "profileStepDone": {
+                    "type": "boolean"
                 }
             }
         },
@@ -3397,6 +3700,23 @@ const docTemplate = `{
                 },
                 "wastePercent": {
                     "type": "number"
+                }
+            }
+        },
+        "api.ProductSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "expiredCount": {
+                    "type": "integer"
+                },
+                "expiringSoonCount": {
+                    "type": "integer"
+                },
+                "totalActive": {
+                    "type": "integer"
+                },
+                "wasteThisMonth": {
+                    "type": "integer"
                 }
             }
         },
@@ -3515,6 +3835,9 @@ const docTemplate = `{
                 "emailEnabled": {
                     "type": "boolean"
                 },
+                "monthlyWasteReportEnabled": {
+                    "type": "boolean"
+                },
                 "notificationThresholdDays": {
                     "type": "integer"
                 },
@@ -3529,6 +3852,12 @@ const docTemplate = `{
                 },
                 "ntfyUrl": {
                     "type": "string"
+                },
+                "telegramEnabled": {
+                    "type": "boolean"
+                },
+                "telegramLinked": {
+                    "type": "boolean"
                 }
             }
         },
@@ -3562,6 +3891,9 @@ const docTemplate = `{
                 },
                 "deletedAt": {
                     "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "displayName": {
+                    "type": "string"
                 },
                 "emailVerifiedAt": {
                     "type": "string"

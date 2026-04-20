@@ -18,11 +18,11 @@ import (
 )
 
 type NotificationController struct {
-	Logger               *zerolog.Logger
-	Configuration        *configuration.NotificationConfiguration
-	NotificationRepo     dbController.NotificationRepositoryInterface
-	Providers            []NotificationProvider
-	TelegramBotUsername  string
+	Logger              *zerolog.Logger
+	Configuration       *configuration.NotificationConfiguration
+	NotificationRepo    dbController.NotificationRepositoryInterface
+	Providers           []NotificationProvider
+	TelegramBotUsername string
 }
 
 func NewNotificationController(

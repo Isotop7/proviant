@@ -102,14 +102,18 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(e \*EmailNotificationProvider\) IsConfigured\(\) bool](<#EmailNotificationProvider.IsConfigured>)
   - [func \(e \*EmailNotificationProvider\) SendEmailVerificationEmail\(email, username, token, baseURL string, expiresAt time.Time\) error](<#EmailNotificationProvider.SendEmailVerificationEmail>)
   - [func \(e \*EmailNotificationProvider\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#EmailNotificationProvider.SendInvitationEmail>)
+  - [func \(e \*EmailNotificationProvider\) SendMonthlyWasteReport\(recipient string, stats \*models.WasteStats\) error](<#EmailNotificationProvider.SendMonthlyWasteReport>)
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
 - [type NotificationController](<#NotificationController>)
   - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
   - [func \(nc \*NotificationController\) DispatchInvitations\(baseURL string\)](<#NotificationController.DispatchInvitations>)
+  - [func \(nc \*NotificationController\) DispatchMonthlyWasteReports\(\)](<#NotificationController.DispatchMonthlyWasteReports>)
+  - [func \(nc \*NotificationController\) GetTelegramBotUsername\(\) string](<#NotificationController.GetTelegramBotUsername>)
   - [func \(nc \*NotificationController\) SendEmailVerification\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendEmailVerification>)
   - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#NotificationController.SendInvitationEmail>)
   - [func \(nc \*NotificationController\) SendVerificationEmail\(invitation \*dbModel.HouseholdInvitation, username, baseURL string\) error](<#NotificationController.SendVerificationEmail>)
+  - [func \(nc \*NotificationController\) StartTelegramPoller\(\)](<#NotificationController.StartTelegramPoller>)
 - [type NotificationProvider](<#NotificationProvider>)
 - [type NtfyNotificationProvider](<#NtfyNotificationProvider>)
   - [func \(n \*NtfyNotificationProvider\) GetProviderType\(\) string](<#NtfyNotificationProvider.GetProviderType>)
@@ -118,6 +122,11 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
 - [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
+- [type TelegramNotificationProvider](<#TelegramNotificationProvider>)
+  - [func \(t \*TelegramNotificationProvider\) GetProviderType\(\) string](<#TelegramNotificationProvider.GetProviderType>)
+  - [func \(t \*TelegramNotificationProvider\) IsConfigured\(\) bool](<#TelegramNotificationProvider.IsConfigured>)
+  - [func \(t \*TelegramNotificationProvider\) SendMonthlyWasteReport\(chatID string, stats \*models.WasteStats\) error](<#TelegramNotificationProvider.SendMonthlyWasteReport>)
+  - [func \(t \*TelegramNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#TelegramNotificationProvider.SendNotification>)
 - [type WebhookService](<#WebhookService>)
   - [func GetWebhookService\(\) \*WebhookService](<#GetWebhookService>)
   - [func \(s \*WebhookService\) FireEvent\(event string, payload map\[string\]any\)](<#WebhookService.FireEvent>)
@@ -251,6 +260,15 @@ func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.Hous
 
 SendInvitationEmail sends an invitation email to the recipient
 
+<a name="EmailNotificationProvider.SendMonthlyWasteReport"></a>
+### func \(\*EmailNotificationProvider\) SendMonthlyWasteReport
+
+```go
+func (e *EmailNotificationProvider) SendMonthlyWasteReport(recipient string, stats *models.WasteStats) error
+```
+
+SendMonthlyWasteReport sends the monthly household waste report to a single recipient.
+
 <a name="EmailNotificationProvider.SendNotification"></a>
 ### func \(\*EmailNotificationProvider\) SendNotification
 
@@ -267,10 +285,11 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 
 ```go
 type NotificationController struct {
-    Logger           *zerolog.Logger
-    Configuration    *configuration.NotificationConfiguration
-    NotificationRepo dbController.NotificationRepositoryInterface
-    Providers        []NotificationProvider
+    Logger              *zerolog.Logger
+    Configuration       *configuration.NotificationConfiguration
+    NotificationRepo    dbController.NotificationRepositoryInterface
+    Providers           []NotificationProvider
+    TelegramBotUsername string
 }
 ```
 
@@ -301,6 +320,24 @@ func (nc *NotificationController) DispatchInvitations(baseURL string)
 
 DispatchInvitations starts a background goroutine that periodically retries sending pending invitation emails. It runs once immediately on startup, then every Interval hours \(reusing the same config as product notifications\).
 
+<a name="NotificationController.DispatchMonthlyWasteReports"></a>
+### func \(\*NotificationController\) DispatchMonthlyWasteReports
+
+```go
+func (nc *NotificationController) DispatchMonthlyWasteReports()
+```
+
+DispatchMonthlyWasteReports starts a goroutine that sends household waste reports on the configured day/hour \(UTC\) of each month to opted\-in members via all enabled providers.
+
+<a name="NotificationController.GetTelegramBotUsername"></a>
+### func \(\*NotificationController\) GetTelegramBotUsername
+
+```go
+func (nc *NotificationController) GetTelegramBotUsername() string
+```
+
+GetTelegramBotUsername returns the resolved bot username \(from getMe or config\).
+
 <a name="NotificationController.SendEmailVerification"></a>
 ### func \(\*NotificationController\) SendEmailVerification
 
@@ -327,6 +364,15 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 ```
 
 SendVerificationEmail sends an email verification link using the invitation email system.
+
+<a name="NotificationController.StartTelegramPoller"></a>
+### func \(\*NotificationController\) StartTelegramPoller
+
+```go
+func (nc *NotificationController) StartTelegramPoller()
+```
+
+StartTelegramPoller starts a long\-polling goroutine that listens for Telegram bot updates. It handles /start \<token\> commands to link a Telegram chat to a Proviant user account.
 
 <a name="NotificationProvider"></a>
 ## type NotificationProvider
@@ -412,6 +458,55 @@ type OpenFoodFactsAPIControllerInterface interface {
     GetDataset(barcode string) (database.Product, error)
 }
 ```
+
+<a name="TelegramNotificationProvider"></a>
+## type TelegramNotificationProvider
+
+
+
+```go
+type TelegramNotificationProvider struct {
+    Configuration configuration.TelegramConfiguration
+    Logger        *zerolog.Logger
+    HTTPClient    *http.Client
+}
+```
+
+<a name="TelegramNotificationProvider.GetProviderType"></a>
+### func \(\*TelegramNotificationProvider\) GetProviderType
+
+```go
+func (t *TelegramNotificationProvider) GetProviderType() string
+```
+
+
+
+<a name="TelegramNotificationProvider.IsConfigured"></a>
+### func \(\*TelegramNotificationProvider\) IsConfigured
+
+```go
+func (t *TelegramNotificationProvider) IsConfigured() bool
+```
+
+
+
+<a name="TelegramNotificationProvider.SendMonthlyWasteReport"></a>
+### func \(\*TelegramNotificationProvider\) SendMonthlyWasteReport
+
+```go
+func (t *TelegramNotificationProvider) SendMonthlyWasteReport(chatID string, stats *models.WasteStats) error
+```
+
+SendMonthlyWasteReport sends the monthly waste report to a Telegram chat.
+
+<a name="TelegramNotificationProvider.SendNotification"></a>
+### func \(\*TelegramNotificationProvider\) SendNotification
+
+```go
+func (t *TelegramNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo any) error
+```
+
+
 
 <a name="WebhookService"></a>
 ## type WebhookService
@@ -640,6 +735,12 @@ var (
     // ErrNotificationEmptyNtfyTopic is thrown if an empty ntfy.sh topic was specified
     ErrNotificationEmptyNtfyTopic = errors.New("ntfy.sh topic cannot be empty when URL is provided")
 
+    // ErrNotificationInvalidWasteReportDay is thrown if an invalid monthly waste report day is specified
+    ErrNotificationInvalidWasteReportDay = errors.New("monthly waste report day must be between 1 and 28")
+
+    // ErrNotificationInvalidWasteReportHour is thrown if an invalid monthly waste report hour is specified
+    ErrNotificationInvalidWasteReportHour = errors.New("monthly waste report hour must be between 0 and 23")
+
     /*
      * Household related errors
      */
@@ -864,8 +965,24 @@ import "codeberg.org/isotop7/proviant/models"
 
 ## Index
 
+- [type HouseholdReportTarget](<#HouseholdReportTarget>)
 - [type NotificationRecipientInfo](<#NotificationRecipientInfo>)
+- [type WasteStats](<#WasteStats>)
 
+
+<a name="HouseholdReportTarget"></a>
+## type HouseholdReportTarget
+
+HouseholdReportTarget pairs a household with the opted\-in members for email and Telegram.
+
+```go
+type HouseholdReportTarget struct {
+    HouseholdID     uint
+    HouseholdName   string
+    Recipients      []string // email addresses
+    TelegramChatIDs []string // Telegram chat IDs
+}
+```
 
 <a name="NotificationRecipientInfo"></a>
 ## type NotificationRecipientInfo
@@ -875,10 +992,37 @@ NotificationRecipientInfo contains recipient information for different notificat
 ```go
 type NotificationRecipientInfo struct {
     EmailAddress              string
+    EmailEnabled              bool
+    NtfyEnabled               bool
     NtfyURL                   string
     NtfyTopic                 string
     NtfyToken                 string
+    TelegramEnabled           bool
+    TelegramChatID            string
     NotificationThresholdDays int
+}
+```
+
+<a name="WasteStats"></a>
+## type WasteStats
+
+WasteStats holds aggregated waste data for one household for one calendar month.
+
+```go
+type WasteStats struct {
+    Month            time.Time
+    MonthLabel       string // "January 2006"
+    HouseholdID      uint
+    HouseholdName    string
+    DeletedCount     int // products removed from pantry during the month
+    ExpiredCount     int // products still in pantry that passed best-before during the month
+    WastedCount      int // DeletedCount + ExpiredCount
+    PrevWastedCount  int
+    WasteRatePct     float64 // WastedCount / active products * 100
+    PrevWasteRatePct float64
+    Delta            float64 // WasteRatePct - PrevWasteRatePct (positive = worse)
+    DeltaColor       string  // inline CSS hex color for the trend indicator
+    DeltaSymbol      string  // "▲", "▼", or "="
 }
 ```
 
@@ -1271,8 +1415,11 @@ onboarding contains handlers for the post\-signup onboarding flow
 
 - [func ApplyForHousehold\(ctx \*gin.Context\)](<#ApplyForHousehold>)
 - [func CompleteOnboarding\(ctx \*gin.Context\)](<#CompleteOnboarding>)
+- [func CreateOnboardingHousehold\(ctx \*gin.Context\)](<#CreateOnboardingHousehold>)
 - [func GetAvailableHouseholds\(ctx \*gin.Context\)](<#GetAvailableHouseholds>)
 - [func GetOnboardingState\(ctx \*gin.Context\)](<#GetOnboardingState>)
+- [func JoinOnboardingByInvite\(ctx \*gin.Context\)](<#JoinOnboardingByInvite>)
+- [func UpdateOnboardingProfile\(ctx \*gin.Context\)](<#UpdateOnboardingProfile>)
 
 
 <a name="ApplyForHousehold"></a>
@@ -1293,6 +1440,15 @@ func CompleteOnboarding(ctx *gin.Context)
 
 CompleteOnboarding marks the onboarding as complete @Summary Complete onboarding @Description Marks the onboarding process as complete @Tags onboarding @Produce json @Success 200 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/onboarding/complete \[post\]
 
+<a name="CreateOnboardingHousehold"></a>
+## func CreateOnboardingHousehold
+
+```go
+func CreateOnboardingHousehold(ctx *gin.Context)
+```
+
+CreateOnboardingHousehold creates a new household for the user during onboarding @Summary Create household @Description Creates a new household and assigns the user to it @Tags onboarding @Accept json @Produce json @Param body body object true "Household name" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/onboarding/create\-household \[post\]
+
 <a name="GetAvailableHouseholds"></a>
 ## func GetAvailableHouseholds
 
@@ -1311,11 +1467,31 @@ func GetOnboardingState(ctx *gin.Context)
 
 GetOnboardingState returns the current onboarding progress for the authenticated user @Summary Get onboarding state @Description Returns the current onboarding progress for the user @Tags onboarding @Produce json @Success 200 \{object\} modelsAPI.OnboardingStateResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/onboarding/state \[get\]
 
+<a name="JoinOnboardingByInvite"></a>
+## func JoinOnboardingByInvite
+
+```go
+func JoinOnboardingByInvite(ctx *gin.Context)
+```
+
+JoinOnboardingByInvite accepts a household invitation by token during onboarding @Summary Join by invite @Description Accepts a household invitation using an invite token @Tags onboarding @Accept json @Produce json @Param body body object true "Invite token" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/onboarding/join\-invite \[post\]
+
+<a name="UpdateOnboardingProfile"></a>
+## func UpdateOnboardingProfile
+
+```go
+func UpdateOnboardingProfile(ctx *gin.Context)
+```
+
+UpdateOnboardingProfile updates the user's display name during onboarding @Summary Update profile @Description Updates the user's display name and marks the profile step as done @Tags onboarding @Accept json @Produce json @Param body body object true "Display name" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/onboarding/profile \[patch\]
+
 # v1
 
 ```go
 import "codeberg.org/isotop7/proviant/api/v1"
 ```
+
+v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
@@ -1340,6 +1516,7 @@ v1 implements version 1 of the proviant API
 - [func BulkRestoreProducts\(ctx \*gin.Context\)](<#BulkRestoreProducts>)
 - [func CancelHouseholdApplication\(ctx \*gin.Context\)](<#CancelHouseholdApplication>)
 - [func CancelInvitation\(ctx \*gin.Context\)](<#CancelInvitation>)
+- [func ConsumeProduct\(ctx \*gin.Context\)](<#ConsumeProduct>)
 - [func CreateCalendarToken\(ctx \*gin.Context\)](<#CreateCalendarToken>)
 - [func CreateHousehold\(ctx \*gin.Context\)](<#CreateHousehold>)
 - [func CreateInvitation\(ctx \*gin.Context\)](<#CreateInvitation>)
@@ -1356,6 +1533,7 @@ v1 implements version 1 of the proviant API
 - [func ExportICalendar\(ctx \*gin.Context\)](<#ExportICalendar>)
 - [func ExportProductsCSV\(ctx \*gin.Context\)](<#ExportProductsCSV>)
 - [func ExportProductsJSON\(ctx \*gin.Context\)](<#ExportProductsJSON>)
+- [func GenerateTelegramLinkToken\(ctx \*gin.Context\)](<#GenerateTelegramLinkToken>)
 - [func GetArchivedProducts\(ctx \*gin.Context\)](<#GetArchivedProducts>)
 - [func GetCalendarTokenStatus\(ctx \*gin.Context\)](<#GetCalendarTokenStatus>)
 - [func GetExpired\(ctx \*gin.Context\)](<#GetExpired>)
@@ -1366,6 +1544,7 @@ v1 implements version 1 of the proviant API
 - [func GetOpenFoodFactsData\(ctx \*gin.Context\)](<#GetOpenFoodFactsData>)
 - [func GetProduct\(ctx \*gin.Context\)](<#GetProduct>)
 - [func GetProductStats\(ctx \*gin.Context\)](<#GetProductStats>)
+- [func GetProductSummary\(ctx \*gin.Context\)](<#GetProductSummary>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context\)](<#GetUserNotificationPreferences>)
@@ -1388,6 +1567,7 @@ v1 implements version 1 of the proviant API
 - [func UpdateUserNotificationPreferences\(ctx \*gin.Context\)](<#UpdateUserNotificationPreferences>)
 - [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
 - [func UpdateWebhook\(ctx \*gin.Context\)](<#UpdateWebhook>)
+- [func WasteProduct\(ctx \*gin.Context\)](<#WasteProduct>)
 - [type CalendarTokenResponse](<#CalendarTokenResponse>)
 - [type FullExportHousehold](<#FullExportHousehold>)
 - [type FullExportMember](<#FullExportMember>)
@@ -1483,6 +1663,15 @@ func CancelInvitation(ctx *gin.Context)
 ```
 
 CancelInvitation cancels a pending invitation. @Summary Cancel invitation @Description Cancels a pending invitation by ID @Tags Invitation @Produce json @Param id path int true "Invitation ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations/\{id\} \[delete\]
+
+<a name="ConsumeProduct"></a>
+## func ConsumeProduct
+
+```go
+func ConsumeProduct(ctx *gin.Context)
+```
+
+ConsumeProduct marks a product as consumed \(soft\-delete/archive, no product.wasted event\) @Summary Mark product as consumed @Description Soft\-deletes \(archives\) a product without firing a product.wasted webhook event @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/consume \[post\]
 
 <a name="CreateCalendarToken"></a>
 ## func CreateCalendarToken
@@ -1628,6 +1817,15 @@ func ExportProductsJSON(ctx *gin.Context)
 
 ExportProductsJSON exports the user's active products as JSON. @Summary Export products as JSON @Description Returns a JSON file with all active products for the user @Tags export @Produce application/json @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{file\} binary "JSON file" @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/products.json \[get\]
 
+<a name="GenerateTelegramLinkToken"></a>
+## func GenerateTelegramLinkToken
+
+```go
+func GenerateTelegramLinkToken(ctx *gin.Context)
+```
+
+GenerateTelegramLinkToken generates a one\-time token for linking a Telegram chat to the user account. @Summary Generate Telegram link token @Description Generates a short\-lived token the user sends to the Proviant Telegram bot to link their account @Tags user @Produce json @Success 200 \{object\} map\[string\]string @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/telegram\-link\-token \[post\]
+
 <a name="GetArchivedProducts"></a>
 ## func GetArchivedProducts
 
@@ -1719,6 +1917,15 @@ func GetProductStats(ctx *gin.Context)
 ```
 
 GetProductStats returns aggregated product statistics for the authenticated user @Summary Return product statistics @Description Returns waste rate, top archived products, category breakdown and expiry trend @Tags product @Produce json @Success 200 \{object\} apiModel.ProductStatsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/stats \[get\]
+
+<a name="GetProductSummary"></a>
+## func GetProductSummary
+
+```go
+func GetProductSummary(ctx *gin.Context)
+```
+
+GetProductSummary returns a lightweight count summary for Home Assistant sensor polling @Summary Return product summary @Description Returns expiring\-soon count, expired count, total active count, and waste\-this\-month count in one request @Tags product @Produce json @Success 200 \{object\} apiModel.ProductSummaryResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/summary \[get\]
 
 <a name="GetProducts"></a>
 ## func GetProducts
@@ -1889,7 +2096,7 @@ UpdateProductAmount updates the amount of a product by a given delta. If the res
 func UpdateUser(ctx *gin.Context)
 ```
 
-UpdateUser updates a user @Summary Updates a user object @Description Updates properties of a user @Tags user @Accept json @Produce json @Param user body authentication.User true "User" @Success 200 \{object\} authentication.User @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user \[patch\]
+UpdateUser updates a user's display name and email address. The login username is never modified by this endpoint. @Summary Updates a user object @Description Updates display name and email of the authenticated user @Tags user @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user \[patch\]
 
 <a name="UpdateUserNotificationPreferences"></a>
 ## func UpdateUserNotificationPreferences
@@ -1917,6 +2124,15 @@ func UpdateWebhook(ctx *gin.Context)
 ```
 
 UpdateWebhook updates a webhook @Summary Update a webhook @Description Updates a webhook by ID @Tags webhook @Accept json @Produce json @Param id path int true "Webhook ID" @Param request body apiModel.UpdateWebhookRequest true "Webhook update" @Success 200 \{object\} apiModel.WebhookResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks/\{id\} \[patch\] @Security BearerAuth
+
+<a name="WasteProduct"></a>
+## func WasteProduct
+
+```go
+func WasteProduct(ctx *gin.Context)
+```
+
+WasteProduct marks a product as wasted \(hard\-delete, fires product.wasted webhook event\) @Summary Mark product as wasted @Description Hard\-deletes a product and fires the product.wasted webhook event @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/waste \[post\]
 
 <a name="CalendarTokenResponse"></a>
 ## type CalendarTokenResponse
@@ -2030,9 +2246,11 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*NotificationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#NotificationRepository.AcceptInvitation>)
   - [func \(r \*NotificationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#NotificationRepository.CancelInvitation>)
   - [func \(r \*NotificationRepository\) CreateInvitation\(householdID, inviterID uint, email string\) \(database.HouseholdInvitation, error\)](<#NotificationRepository.CreateInvitation>)
+  - [func \(r \*NotificationRepository\) FindUserByTelegramLinkToken\(token string\) \(authentication.User, error\)](<#NotificationRepository.FindUserByTelegramLinkToken>)
   - [func \(r \*NotificationRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#NotificationRepository.GetHouseholdByID>)
   - [func \(r \*NotificationRepository\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#NotificationRepository.GetHouseholdMembersMailAddressesByID>)
   - [func \(r \*NotificationRepository\) GetHouseholdMembersNotificationPreferences\(householdID uint\) \(\[\]models.NotificationRecipientInfo, error\)](<#NotificationRepository.GetHouseholdMembersNotificationPreferences>)
+  - [func \(r \*NotificationRepository\) GetHouseholdsWithMonthlyWasteReportEnabled\(\) \(\[\]models.HouseholdReportTarget, error\)](<#NotificationRepository.GetHouseholdsWithMonthlyWasteReportEnabled>)
   - [func \(r \*NotificationRepository\) GetInvitationByToken\(token string\) \(database.HouseholdInvitation, error\)](<#NotificationRepository.GetInvitationByToken>)
   - [func \(r \*NotificationRepository\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]database.HouseholdInvitation, error\)](<#NotificationRepository.GetInvitationsForHousehold>)
   - [func \(r \*NotificationRepository\) GetMaxNotificationThresholdDays\(\) int](<#NotificationRepository.GetMaxNotificationThresholdDays>)
@@ -2041,12 +2259,15 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*NotificationRepository\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration, maxLookAheadDays int\) \(\[\]database.Product, error\)](<#NotificationRepository.GetProductsExpiredAndNotificationPending>)
   - [func \(r \*NotificationRepository\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]database.HouseholdWithMemberCount, error\)](<#NotificationRepository.GetPublicHouseholds>)
   - [func \(r \*NotificationRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#NotificationRepository.GetUserByID>)
+  - [func \(r \*NotificationRepository\) GetWasteStatsForHousehold\(householdID uint, month time.Time\) \(models.WasteStats, error\)](<#NotificationRepository.GetWasteStatsForHousehold>)
   - [func \(r \*NotificationRepository\) MarkHouseholdStepDone\(userID uint\) error](<#NotificationRepository.MarkHouseholdStepDone>)
   - [func \(r \*NotificationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#NotificationRepository.MarkInvitationSendFailed>)
   - [func \(r \*NotificationRepository\) MarkInvitationSent\(invitationID uint\) error](<#NotificationRepository.MarkInvitationSent>)
   - [func \(r \*NotificationRepository\) MarkNotificationsSetup\(userID uint\) error](<#NotificationRepository.MarkNotificationsSetup>)
   - [func \(r \*NotificationRepository\) MarkOnboardingComplete\(userID uint\) error](<#NotificationRepository.MarkOnboardingComplete>)
   - [func \(r \*NotificationRepository\) SetProductNotifiedAt\(productID uint\) error](<#NotificationRepository.SetProductNotifiedAt>)
+  - [func \(r \*NotificationRepository\) SetTelegramChatID\(userID uint, chatID string\) error](<#NotificationRepository.SetTelegramChatID>)
+  - [func \(r \*NotificationRepository\) SetTelegramLinkToken\(userID uint, token string\) error](<#NotificationRepository.SetTelegramLinkToken>)
 - [type NotificationRepositoryInterface](<#NotificationRepositoryInterface>)
 - [type PATRepository](<#PATRepository>)
   - [func NewPATRepository\(db \*gorm.DB\) \*PATRepository](<#NewPATRepository>)
@@ -2061,6 +2282,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) BulkArchiveProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkArchiveProducts>)
   - [func \(r \*ProductRepository\) BulkDeleteProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkDeleteProducts>)
   - [func \(r \*ProductRepository\) BulkRestoreProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkRestoreProducts>)
+  - [func \(r \*ProductRepository\) ConsumeProduct\(productID int, userID uint\) error](<#ProductRepository.ConsumeProduct>)
   - [func \(r \*ProductRepository\) CreateOpenFoodFactsCache\(entry \*database.OpenFoodFactsCache\) error](<#ProductRepository.CreateOpenFoodFactsCache>)
   - [func \(r \*ProductRepository\) CreateProduct\(userID uint, product \*database.Product\) error](<#ProductRepository.CreateProduct>)
   - [func \(r \*ProductRepository\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#ProductRepository.DeleteProduct>)
@@ -2069,6 +2291,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetArchivedProductsGroupedByBarcode>)
   - [func \(r \*ProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetExpiredProductsCount>)
   - [func \(r \*ProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringInDays>)
+  - [func \(r \*ProductRepository\) GetExpiringSoonCount\(userID uint, days int\) \(int, error\)](<#ProductRepository.GetExpiringSoonCount>)
   - [func \(r \*ProductRepository\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#ProductRepository.GetExpiringSoonProducts>)
   - [func \(r \*ProductRepository\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#ProductRepository.GetExpiryTrend>)
   - [func \(r \*ProductRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#ProductRepository.GetHouseholdByID>)
@@ -2087,6 +2310,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsBulk>)
   - [func \(r \*ProductRepository\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsBulkByBarcode>)
   - [func \(r \*ProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#ProductRepository.GetUsersByHouseholdID>)
+  - [func \(r \*ProductRepository\) GetWasteThisMonth\(userID uint\) \(int, error\)](<#ProductRepository.GetWasteThisMonth>)
   - [func \(r \*ProductRepository\) RestoreProduct\(productID int, userID uint\) error](<#ProductRepository.RestoreProduct>)
   - [func \(r \*ProductRepository\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.SearchProducts>)
   - [func \(r \*ProductRepository\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#ProductRepository.SetProductExpireAt>)
@@ -2094,6 +2318,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) UpdateProduct\(productID int, userID uint, product \*database.ProductDTOPatch\) error](<#ProductRepository.UpdateProduct>)
   - [func \(r \*ProductRepository\) UpdateProductAmount\(productID int, userID uint, delta int\) \(bool, error\)](<#ProductRepository.UpdateProductAmount>)
   - [func \(r \*ProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#ProductRepository.UserHasProductAccess>)
+  - [func \(r \*ProductRepository\) WasteProduct\(productID int, userID uint\) error](<#ProductRepository.WasteProduct>)
 - [type SearchParameterEnum](<#SearchParameterEnum>)
   - [func SearchParameterEnumFromString\(str string\) SearchParameterEnum](<#SearchParameterEnumFromString>)
 - [type SupportedEngines](<#SupportedEngines>)
@@ -2106,7 +2331,6 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*UserRepository\) EnsureOnboardingState\(userID uint\) error](<#UserRepository.EnsureOnboardingState>)
   - [func \(r \*UserRepository\) GetEmailVerificationByToken\(token string\) \(database.EmailVerification, error\)](<#UserRepository.GetEmailVerificationByToken>)
   - [func \(r \*UserRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#UserRepository.GetHouseholdByID>)
-  - [func \(r \*UserRepository\) GetNextUserID\(\) uint](<#UserRepository.GetNextUserID>)
   - [func \(r \*UserRepository\) GetOnboardingState\(userID uint\) \(database.OnboardingState, error\)](<#UserRepository.GetOnboardingState>)
   - [func \(r \*UserRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#UserRepository.GetUserByID>)
   - [func \(r \*UserRepository\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#UserRepository.GetUserByUsername>)
@@ -2116,12 +2340,16 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*UserRepository\) MarkHouseholdStepDone\(userID uint\) error](<#UserRepository.MarkHouseholdStepDone>)
   - [func \(r \*UserRepository\) MarkNotificationsSetup\(userID uint\) error](<#UserRepository.MarkNotificationsSetup>)
   - [func \(r \*UserRepository\) MarkOnboardingComplete\(userID uint\) error](<#UserRepository.MarkOnboardingComplete>)
+  - [func \(r \*UserRepository\) MarkProfileStepDone\(userID uint\) error](<#UserRepository.MarkProfileStepDone>)
   - [func \(r \*UserRepository\) RecordFailedLoginAttempt\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) error](<#UserRepository.RecordFailedLoginAttempt>)
   - [func \(r \*UserRepository\) ResetFailedLoginAttempts\(userID uint\) error](<#UserRepository.ResetFailedLoginAttempts>)
+  - [func \(r \*UserRepository\) UpdateAdminUserFields\(userID uint, username, mailAddress string\) error](<#UserRepository.UpdateAdminUserFields>)
+  - [func \(r \*UserRepository\) UpdateDisplayName\(userID uint, displayName string\) error](<#UserRepository.UpdateDisplayName>)
   - [func \(r \*UserRepository\) UpdateEmailVerificationStatus\(token string, status string\) error](<#UserRepository.UpdateEmailVerificationStatus>)
   - [func \(r \*UserRepository\) UpdateUser\(userID uint, user \*authentication.User\) error](<#UserRepository.UpdateUser>)
   - [func \(r \*UserRepository\) UpdateUserEmailVerified\(userID uint, verifiedAt time.Time\) error](<#UserRepository.UpdateUserEmailVerified>)
   - [func \(r \*UserRepository\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#UserRepository.UpdateUserPassword>)
+  - [func \(r \*UserRepository\) UpdateUsername\(userID uint, username string\) error](<#UserRepository.UpdateUsername>)
   - [func \(r \*UserRepository\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#UserRepository.UserExistsByMailAddress>)
   - [func \(r \*UserRepository\) UserExistsByUsername\(user \*authentication.User\) bool](<#UserRepository.UserExistsByUsername>)
 - [type WebhookRepository](<#WebhookRepository>)
@@ -2519,6 +2747,15 @@ func (r *NotificationRepository) CreateInvitation(householdID, inviterID uint, e
 
 
 
+<a name="NotificationRepository.FindUserByTelegramLinkToken"></a>
+### func \(\*NotificationRepository\) FindUserByTelegramLinkToken
+
+```go
+func (r *NotificationRepository) FindUserByTelegramLinkToken(token string) (authentication.User, error)
+```
+
+
+
 <a name="NotificationRepository.GetHouseholdByID"></a>
 ### func \(\*NotificationRepository\) GetHouseholdByID
 
@@ -2542,6 +2779,15 @@ func (r *NotificationRepository) GetHouseholdMembersMailAddressesByID(householdI
 
 ```go
 func (r *NotificationRepository) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
+```
+
+
+
+<a name="NotificationRepository.GetHouseholdsWithMonthlyWasteReportEnabled"></a>
+### func \(\*NotificationRepository\) GetHouseholdsWithMonthlyWasteReportEnabled
+
+```go
+func (r *NotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error)
 ```
 
 
@@ -2618,6 +2864,15 @@ func (r *NotificationRepository) GetUserByID(userID uint) (authentication.User, 
 
 
 
+<a name="NotificationRepository.GetWasteStatsForHousehold"></a>
+### func \(\*NotificationRepository\) GetWasteStatsForHousehold
+
+```go
+func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error)
+```
+
+
+
 <a name="NotificationRepository.MarkHouseholdStepDone"></a>
 ### func \(\*NotificationRepository\) MarkHouseholdStepDone
 
@@ -2672,6 +2927,24 @@ func (r *NotificationRepository) SetProductNotifiedAt(productID uint) error
 
 
 
+<a name="NotificationRepository.SetTelegramChatID"></a>
+### func \(\*NotificationRepository\) SetTelegramChatID
+
+```go
+func (r *NotificationRepository) SetTelegramChatID(userID uint, chatID string) error
+```
+
+
+
+<a name="NotificationRepository.SetTelegramLinkToken"></a>
+### func \(\*NotificationRepository\) SetTelegramLinkToken
+
+```go
+func (r *NotificationRepository) SetTelegramLinkToken(userID uint, token string) error
+```
+
+
+
 <a name="NotificationRepositoryInterface"></a>
 ## type NotificationRepositoryInterface
 
@@ -2694,11 +2967,16 @@ type NotificationRepositoryInterface interface {
     GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
     MarkInvitationSent(invitationID uint) error
     MarkInvitationSendFailed(invitationID uint) error
+    GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error)
+    GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error)
     GetOnboardingState(userID uint) (database.OnboardingState, error)
     MarkNotificationsSetup(userID uint) error
     MarkHouseholdStepDone(userID uint) error
     MarkOnboardingComplete(userID uint) error
     GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
+    FindUserByTelegramLinkToken(token string) (authentication.User, error)
+    SetTelegramChatID(userID uint, chatID string) error
+    SetTelegramLinkToken(userID uint, token string) error
 }
 ```
 
@@ -2823,6 +3101,15 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []int, userID uint) [
 
 
 
+<a name="ProductRepository.ConsumeProduct"></a>
+### func \(\*ProductRepository\) ConsumeProduct
+
+```go
+func (r *ProductRepository) ConsumeProduct(productID int, userID uint) error
+```
+
+
+
 <a name="ProductRepository.CreateOpenFoodFactsCache"></a>
 ### func \(\*ProductRepository\) CreateOpenFoodFactsCache
 
@@ -2891,6 +3178,15 @@ func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error)
 
 ```go
 func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetExpiringSoonCount"></a>
+### func \(\*ProductRepository\) GetExpiringSoonCount
+
+```go
+func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error)
 ```
 
 
@@ -3057,6 +3353,15 @@ func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentic
 
 
 
+<a name="ProductRepository.GetWasteThisMonth"></a>
+### func \(\*ProductRepository\) GetWasteThisMonth
+
+```go
+func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error)
+```
+
+
+
 <a name="ProductRepository.RestoreProduct"></a>
 ### func \(\*ProductRepository\) RestoreProduct
 
@@ -3116,6 +3421,15 @@ func (r *ProductRepository) UpdateProductAmount(productID int, userID uint, delt
 
 ```go
 func (r *ProductRepository) UserHasProductAccess(userID uint, productID int) bool
+```
+
+
+
+<a name="ProductRepository.WasteProduct"></a>
+### func \(\*ProductRepository\) WasteProduct
+
+```go
+func (r *ProductRepository) WasteProduct(productID int, userID uint) error
 ```
 
 
@@ -3250,15 +3564,6 @@ func (r *UserRepository) GetHouseholdByID(householdID uint) (database.Household,
 
 
 
-<a name="UserRepository.GetNextUserID"></a>
-### func \(\*UserRepository\) GetNextUserID
-
-```go
-func (r *UserRepository) GetNextUserID() uint
-```
-
-
-
 <a name="UserRepository.GetOnboardingState"></a>
 ### func \(\*UserRepository\) GetOnboardingState
 
@@ -3340,6 +3645,15 @@ func (r *UserRepository) MarkOnboardingComplete(userID uint) error
 
 
 
+<a name="UserRepository.MarkProfileStepDone"></a>
+### func \(\*UserRepository\) MarkProfileStepDone
+
+```go
+func (r *UserRepository) MarkProfileStepDone(userID uint) error
+```
+
+
+
 <a name="UserRepository.RecordFailedLoginAttempt"></a>
 ### func \(\*UserRepository\) RecordFailedLoginAttempt
 
@@ -3354,6 +3668,24 @@ func (r *UserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttempts 
 
 ```go
 func (r *UserRepository) ResetFailedLoginAttempts(userID uint) error
+```
+
+
+
+<a name="UserRepository.UpdateAdminUserFields"></a>
+### func \(\*UserRepository\) UpdateAdminUserFields
+
+```go
+func (r *UserRepository) UpdateAdminUserFields(userID uint, username, mailAddress string) error
+```
+
+UpdateAdminUserFields allows admins to change login\-credential fields \(username, email\).
+
+<a name="UserRepository.UpdateDisplayName"></a>
+### func \(\*UserRepository\) UpdateDisplayName
+
+```go
+func (r *UserRepository) UpdateDisplayName(userID uint, displayName string) error
 ```
 
 
@@ -3390,6 +3722,15 @@ func (r *UserRepository) UpdateUserEmailVerified(userID uint, verifiedAt time.Ti
 
 ```go
 func (r *UserRepository) UpdateUserPassword(userID uint, login *authentication.Login) error
+```
+
+
+
+<a name="UserRepository.UpdateUsername"></a>
+### func \(\*UserRepository\) UpdateUsername
+
+```go
+func (r *UserRepository) UpdateUsername(userID uint, username string) error
 ```
 
 
@@ -3543,6 +3884,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type OnboardingStateResponse](<#OnboardingStateResponse>)
 - [type ProductAmountDTO](<#ProductAmountDTO>)
 - [type ProductStatsResponse](<#ProductStatsResponse>)
+- [type ProductSummaryResponse](<#ProductSummaryResponse>)
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
 - [type TokenResponse](<#TokenResponse>)
@@ -3691,6 +4033,7 @@ OnboardingStateResponse represents the current onboarding progress
 
 ```go
 type OnboardingStateResponse struct {
+    ProfileStepDone     bool `json:"profileStepDone"`
     NotificationsSetup  bool `json:"notificationsSetup"`
     HouseholdStepDone   bool `json:"householdStepDone"`
     OnboardingCompleted bool `json:"onboardingCompleted"`
@@ -3725,6 +4068,20 @@ type ProductStatsResponse struct {
     ExpiringSoonDays    int                    `json:"expiringSoonDays"`
     Categories          map[string]int         `json:"categories"`
     ExpiryTrend         []StatsMonthlyCount    `json:"expiryTrend"`
+}
+```
+
+<a name="ProductSummaryResponse"></a>
+## type ProductSummaryResponse
+
+ProductSummaryResponse is the response body for GET /api/v1/products/summary
+
+```go
+type ProductSummaryResponse struct {
+    ExpiringSoonCount int `json:"expiringSoonCount"`
+    ExpiredCount      int `json:"expiredCount"`
+    TotalActive       int `json:"totalActive"`
+    WasteThisMonth    int `json:"wasteThisMonth"`
 }
 ```
 
@@ -3835,6 +4192,7 @@ import "codeberg.org/isotop7/proviant/models/authentication"
   - [func \(signup \*Signup\) IsValid\(\) error](<#Signup.IsValid>)
   - [func \(signup \*Signup\) IsValidWithValidator\(validator \*PasswordValidator\) error](<#Signup.IsValidWithValidator>)
 - [type User](<#User>)
+  - [func \(u \*User\) EffectiveName\(\) string](<#User.EffectiveName>)
   - [func \(user \*User\) IsValid\(skipPassword bool\) error](<#User.IsValid>)
   - [func \(user \*User\) IsValidWithValidator\(skipPassword bool, validator \*PasswordValidator\) error](<#User.IsValidWithValidator>)
 
@@ -3895,6 +4253,11 @@ type NotificationPreferences struct {
     NtfyTopic                 string `json:"ntfyTopic,omitempty"`
     NtfyToken                 string `json:"ntfyToken,omitempty"`
     NotificationThresholdDays int    `json:"notificationThresholdDays" gorm:"default:0"`
+    MonthlyWasteReportEnabled bool   `json:"monthlyWasteReportEnabled" gorm:"default:false"`
+    TelegramEnabled           bool   `json:"telegramEnabled" gorm:"default:false"`
+    TelegramChatID            string `json:"-"`
+    TelegramLinkToken         string `json:"-"`
+    TelegramLinked            bool   `json:"telegramLinked" gorm:"-"`
 }
 ```
 
@@ -4041,6 +4404,7 @@ type User struct {
     gorm.Model
     ID                      uint       `gorm:"primaryKey,unique"`
     Username                string     `json:"username"`
+    DisplayName             string     `json:"displayName"`
     MailAddress             string     `json:"mailAddress"`
     Password                string     `json:"-"`
     EmailVerifiedAt         *time.Time `json:"emailVerifiedAt,omitempty"`
@@ -4051,6 +4415,15 @@ type User struct {
     LockedUntil             gorm.DeletedAt          `json:"-"`
 }
 ```
+
+<a name="User.EffectiveName"></a>
+### func \(\*User\) EffectiveName
+
+```go
+func (u *User) EffectiveName() string
+```
+
+EffectiveName returns DisplayName if set, otherwise falls back to Username.
 
 <a name="User.IsValid"></a>
 ### func \(\*User\) IsValid
@@ -4086,6 +4459,7 @@ configuration defines structs and methods for proviants configuration and specif
 - [type DatabaseMariaDBConfiguration](<#DatabaseMariaDBConfiguration>)
 - [type DatabaseSQLiteConfiguration](<#DatabaseSQLiteConfiguration>)
 - [type LoggingConfiguration](<#LoggingConfiguration>)
+- [type MonthlyWasteReportConfiguration](<#MonthlyWasteReportConfiguration>)
 - [type NotificationConfiguration](<#NotificationConfiguration>)
 - [type NtfyConfiguration](<#NtfyConfiguration>)
 - [type OpenFoodFactsConfiguration](<#OpenFoodFactsConfiguration>)
@@ -4096,6 +4470,7 @@ configuration defines structs and methods for proviants configuration and specif
 - [type SMTPConfiguration](<#SMTPConfiguration>)
 - [type SecurityHeadersConfiguration](<#SecurityHeadersConfiguration>)
 - [type ServerConfiguration](<#ServerConfiguration>)
+- [type TelegramConfiguration](<#TelegramConfiguration>)
 
 
 <a name="AuthenticationConfiguration"></a>
@@ -4182,6 +4557,18 @@ type LoggingConfiguration struct {
 }
 ```
 
+<a name="MonthlyWasteReportConfiguration"></a>
+## type MonthlyWasteReportConfiguration
+
+MonthlyWasteReportConfiguration controls when the monthly waste report email is sent.
+
+```go
+type MonthlyWasteReportConfiguration struct {
+    Day  int `mapstructure:"day"`  // day-of-month (1–28)
+    Hour int `mapstructure:"hour"` // hour of day, UTC (0–23)
+}
+```
+
 <a name="NotificationConfiguration"></a>
 ## type NotificationConfiguration
 
@@ -4189,10 +4576,12 @@ NotificationConfiguration contains all properties regarding the notification han
 
 ```go
 type NotificationConfiguration struct {
-    Enabled  bool
-    Interval int
-    SMTP     SMTPConfiguration
-    Ntfy     NtfyConfiguration
+    Enabled            bool
+    Interval           int
+    SMTP               SMTPConfiguration
+    Ntfy               NtfyConfiguration
+    MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
+    Telegram           TelegramConfiguration           `mapstructure:"telegram"`
 }
 ```
 
@@ -4304,6 +4693,19 @@ type ServerConfiguration struct {
     CORS            CorsConfiguration
     BaseURL         string
     SecurityHeaders SecurityHeadersConfiguration
+}
+```
+
+<a name="TelegramConfiguration"></a>
+## type TelegramConfiguration
+
+TelegramConfiguration contains all properties regarding the Telegram bot notification provider
+
+```go
+type TelegramConfiguration struct {
+    BotToken    string
+    BotUsername string
+    Timeout     int
 }
 ```
 
@@ -4488,6 +4890,7 @@ OnboardingState tracks which onboarding steps a user has completed
 type OnboardingState struct {
     gorm.Model
     UserID              uint `gorm:"uniqueIndex,not null"`
+    ProfileStepDone     bool `gorm:"default:false"`
     NotificationsSetup  bool `gorm:"default:false"`
     HouseholdStepDone   bool `gorm:"default:false"`
     OnboardingCompleted bool `gorm:"default:false"`
