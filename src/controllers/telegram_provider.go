@@ -8,16 +8,15 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/models"
-	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	"github.com/rs/zerolog"
 )
 
 type TelegramNotificationProvider struct {
-	Configuration configuration.TelegramConfiguration
-	Logger        *zerolog.Logger
-	HTTPClient    *http.Client
+	BotToken   string
+	Logger     *zerolog.Logger
+	HTTPClient *http.Client
 }
 
 func (t *TelegramNotificationProvider) GetProviderType() string {
@@ -25,7 +24,7 @@ func (t *TelegramNotificationProvider) GetProviderType() string {
 }
 
 func (t *TelegramNotificationProvider) IsConfigured() bool {
-	return t.Configuration.BotToken != ""
+	return t.BotToken != ""
 }
 
 func (t *TelegramNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo any) error {
@@ -80,7 +79,7 @@ func (t *TelegramNotificationProvider) sendMessage(chatID, text string) error {
 		return err
 	}
 
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", t.Configuration.BotToken)
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", t.BotToken)
 	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {
 		return err

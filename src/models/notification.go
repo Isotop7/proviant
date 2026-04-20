@@ -10,5 +10,6 @@ type NotificationRecipientInfo struct {
 	NtfyToken                 string
 	TelegramEnabled           bool
 	TelegramChatID            string
+	TelegramBotToken          string
 	NotificationThresholdDays int
 }

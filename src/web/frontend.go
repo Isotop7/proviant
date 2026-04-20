@@ -10,7 +10,6 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/templates"
@@ -151,12 +150,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		user.NotificationPreferences.TelegramEnabled = true
 	}
 
-	telegramConfigured := false
-	if pc, ok := ctx.Get("proviantConfig"); ok {
-		if proviantConfig, ok := pc.(*configuration.ProviantConfiguration); ok {
-			telegramConfigured = proviantConfig.Notification.Telegram.BotToken != ""
-		}
-	}
+	telegramConfigured := user.NotificationPreferences.TelegramBotToken != ""
 
 	household, householdErr := householdRepo.GetHouseholdByID(user.HouseholdID)
 	if householdErr != nil {

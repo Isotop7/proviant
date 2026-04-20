@@ -45,6 +45,8 @@ type NotificationRepositoryInterface interface {
 	FindUserByTelegramLinkToken(token string) (authentication.User, error)
 	SetTelegramChatID(userID uint, chatID string) error
 	SetTelegramLinkToken(userID uint, token string) error
+	SetTelegramBotUsername(userID uint, username string) error
+	GetAllUsersWithTelegramBotToken() ([]authentication.User, error)
 }
 
 func (r *NotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error) {
@@ -113,6 +115,7 @@ func (r *NotificationRepository) GetHouseholdMembersNotificationPreferences(hous
 			NtfyToken:                 user.NotificationPreferences.NtfyToken,
 			TelegramEnabled:           user.NotificationPreferences.TelegramEnabled,
 			TelegramChatID:            user.NotificationPreferences.TelegramChatID,
+			TelegramBotToken:          user.NotificationPreferences.TelegramBotToken,
 			NotificationThresholdDays: user.NotificationPreferences.NotificationThresholdDays,
 		})
 	}
@@ -234,8 +237,11 @@ func (r *NotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([
 		if u.MailAddress != "" && u.NotificationPreferences.EmailEnabled {
 			index[u.HouseholdID].Recipients = append(index[u.HouseholdID].Recipients, u.MailAddress)
 		}
-		if u.NotificationPreferences.TelegramEnabled && u.NotificationPreferences.TelegramChatID != "" {
-			index[u.HouseholdID].TelegramChatIDs = append(index[u.HouseholdID].TelegramChatIDs, u.NotificationPreferences.TelegramChatID)
+		if u.NotificationPreferences.TelegramEnabled && u.NotificationPreferences.TelegramChatID != "" && u.NotificationPreferences.TelegramBotToken != "" {
+			index[u.HouseholdID].TelegramRecipients = append(index[u.HouseholdID].TelegramRecipients, models.TelegramRecipient{
+				ChatID:   u.NotificationPreferences.TelegramChatID,
+				BotToken: u.NotificationPreferences.TelegramBotToken,
+			})
 		}
 	}
 
@@ -266,6 +272,18 @@ func (r *NotificationRepository) SetTelegramLinkToken(userID uint, token string)
 	return r.DB.Model(&authentication.User{}).
 		Where("id = ?", userID).
 		Update("telegram_link_token", token).Error
+}
+
+func (r *NotificationRepository) SetTelegramBotUsername(userID uint, username string) error {
+	return r.DB.Model(&authentication.User{}).
+		Where("id = ?", userID).
+		Update("telegram_bot_username", username).Error
+}
+
+func (r *NotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentication.User, error) {
+	var users []authentication.User
+	err := r.DB.Where("telegram_bot_token != ''").Find(&users).Error
+	return users, err
 }
 
 func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error) {

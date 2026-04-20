@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 
@@ -47,6 +48,11 @@ func mustGetUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
 		return 0, false
 	}
 	return userID, true
+}
+
+func getNotificationController(ctx *gin.Context) (*controllers.NotificationController, bool) {
+	nc, ok := ctx.MustGet("notificationController").(*controllers.NotificationController)
+	return nc, ok
 }
 
 func parseIntParam(ctx *gin.Context, logger *zerolog.Logger, paramName string) (int, bool) {

@@ -92,11 +92,9 @@ type MonthlyWasteReportConfiguration struct {
 	Hour int `mapstructure:"hour"` // hour of day, UTC (0–23)
 }
 
-// TelegramConfiguration contains all properties regarding the Telegram bot notification provider
+// TelegramConfiguration holds per-instance Telegram settings (no global bot token).
 type TelegramConfiguration struct {
-	BotToken    string
-	BotUsername string
-	Timeout     int
+	Timeout int // HTTP client timeout in seconds (default: 15)
 }
 
 // NotificationConfiguration contains all properties regarding the notification handler

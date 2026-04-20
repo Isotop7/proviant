@@ -19,10 +19,16 @@ type WasteStats struct {
 	DeltaSymbol      string  // "▲", "▼", or "="
 }
 
+// TelegramRecipient pairs a Telegram chat ID with the user's own bot token.
+type TelegramRecipient struct {
+	ChatID   string
+	BotToken string
+}
+
 // HouseholdReportTarget pairs a household with the opted-in members for email and Telegram.
 type HouseholdReportTarget struct {
-	HouseholdID     uint
-	HouseholdName   string
-	Recipients      []string // email addresses
-	TelegramChatIDs []string // Telegram chat IDs
+	HouseholdID        uint
+	HouseholdName      string
+	Recipients         []string            // email addresses
+	TelegramRecipients []TelegramRecipient // per-user bot token + chat ID pairs
 }

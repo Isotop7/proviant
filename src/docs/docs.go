@@ -3853,6 +3853,9 @@ const docTemplate = `{
                 "ntfyUrl": {
                     "type": "string"
                 },
+                "telegramBotConfigured": {
+                    "type": "boolean"
+                },
                 "telegramEnabled": {
                     "type": "boolean"
                 },

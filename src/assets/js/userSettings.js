@@ -247,6 +247,7 @@ function UpdateNotificationSettings() {
     notificationThresholdDays: thresholdDays,
     monthlyWasteReportEnabled: document.getElementById("toggleMonthlyWasteReport")?.checked ?? false,
     telegramEnabled: document.getElementById("toggleTelegramNotifications")?.checked ?? false,
+    telegramBotToken: document.getElementById("inputTelegramBotToken")?.value ?? "",
   };
 
   proviant
