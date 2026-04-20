@@ -696,6 +696,10 @@ func (r *ProductRepository) CreateOpenFoodFactsCache(entry *database.OpenFoodFac
 	return r.DB.Create(entry).Error
 }
 
+func (r *ProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error {
+	return r.DB.Model(&database.OpenFoodFactsCache{}).Where("barcode = ?", barcode).Update("image_url", imageURL).Error
+}
+
 func (r *ProductRepository) GetUserByID(userID uint) (authentication.User, error) {
 	var user authentication.User
 	selectErr := r.DB.First(&user, userID)

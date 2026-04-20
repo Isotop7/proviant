@@ -127,6 +127,9 @@ var (
 	// ErrOpenFoodFactsAPIInvalidTimeout is thrown if an invalid API timeout was supplied
 	ErrOpenFoodFactsAPIInvalidTimeout = errors.New("invalid timeout for OpenFoodFacts API specified")
 
+	// ErrOpenFoodFactsAPIInvalidImageCachePath is thrown if image caching is enabled but no path is specified
+	ErrOpenFoodFactsAPIInvalidImageCachePath = errors.New("image cache enabled but no image cache path specified")
+
 	/*
 	 * Notification related errors
 	 */

@@ -109,9 +109,11 @@ type NotificationConfiguration struct {
 
 // OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
 type OpenFoodFactsConfiguration struct {
-	URL          string
-	Timeout      int
-	CacheEnabled bool
+	URL               string
+	Timeout           int
+	CacheEnabled      bool
+	ImageCacheEnabled bool
+	ImageCachePath    string
 }
 
 // ProviantConfiguration is the configuration wrapper struct
@@ -131,6 +133,9 @@ func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error {
 	}
 	if ec.OpenFoodFacts.Timeout <= 0 {
 		return errors.ErrOpenFoodFactsAPIInvalidTimeout
+	}
+	if ec.OpenFoodFacts.ImageCacheEnabled && ec.OpenFoodFacts.ImageCachePath == "" {
+		return errors.ErrOpenFoodFactsAPIInvalidImageCachePath
 	}
 	return nil
 }
