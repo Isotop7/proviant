@@ -117,9 +117,11 @@
 
         <!-- Completion Step -->
         <div class="onboarding-step d-none" id="stepComplete">
-            <div class="card shadow-sm border-success">
+            <div class="card shadow-sm" style="border: 1px solid oklch(0.78 0.08 162);">
                 <div class="card-body text-center">
-                    <i class="bi bi-check-circle-fill text-success fs-1"></i>
+                    <div style="width:64px;height:64px;border-radius:16px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;box-shadow:0 6px 18px oklch(0.50 0.12 162 / 0.35);">
+                        <i class="bi bi-check-lg" style="font-size:28px;color:white;" aria-hidden="true"></i>
+                    </div>
                     <h5 class="card-title mt-3">You're All Set!</h5>
                     <p class="card-text text-muted">Start adding products to your pantry and tracking expiration dates.</p>
                     <button id="btnFinishOnboarding" class="btn btn-proviant-primary">

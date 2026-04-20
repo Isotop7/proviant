@@ -275,11 +275,12 @@ $bootstrap-icons-font-dir: "../fonts";
 
 .btn-proviant-primary {
   background: var(--accent); color: var(--accent-fg); border: none;
-  transition: background var(--duration-base) var(--ease-out);
+  box-shadow: 0 4px 12px oklch(0.50 0.12 162 / 0.35);
+  transition: background var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
 
-  &:hover  { background: var(--accent-hover); color: var(--accent-fg); }
+  &:hover  { background: var(--accent-hover); color: var(--accent-fg); box-shadow: 0 4px 16px oklch(0.50 0.12 162 / 0.50); }
   &:active { background: var(--accent-active); color: var(--accent-fg); }
-  &:disabled { opacity: .45; }
+  &:disabled { opacity: .45; box-shadow: none; }
 }
 
 .btn-proviant-secondary {
@@ -347,6 +348,15 @@ $bootstrap-icons-font-dir: "../fonts";
   background: var(--surface);
 
   &:hover { box-shadow: var(--shadow-md); }
+}
+
+// Settings section card — accent-tinted border + accent hover shadow
+.card-section {
+  border: 1px solid oklch(0.78 0.08 162);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--duration-base) var(--ease-out);
+
+  &:hover { box-shadow: 0 6px 18px oklch(0.50 0.12 162 / 0.12); }
 }
 
 // Product cards
@@ -527,6 +537,18 @@ $bootstrap-icons-font-dir: "../fonts";
   padding: var(--space-6);
 }
 
+// Page-level header bar — white surface, bottom border, bleeds to content-wrapper edges
+.page-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  // Negative margins cancel content-wrapper padding on top + sides
+  margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-6)) var(--space-5);
+}
+
 .toolbar-sticky {
   position: sticky;
   top: 0;
@@ -602,11 +624,14 @@ th a {
   opacity: .5;
   transition: opacity .3s;
 
-  &.active  { opacity: 1; }
+  &.active {
+    opacity: 1;
+    .step-circle { background-color: var(--accent); color: white; box-shadow: 0 2px 8px oklch(0.50 0.12 162 / 0.40); }
+  }
 
-  &.completed .step-circle {
-    color: white;
-    background-color: $success;
+  &.completed {
+    opacity: 1;
+    .step-circle { background-color: var(--accent-hover); color: white; box-shadow: 0 2px 8px oklch(0.50 0.12 162 / 0.30); }
   }
 }
 
@@ -619,9 +644,10 @@ th a {
   margin-bottom: 4px;
   font-size: 14px;
   font-weight: 700;
-  color: white;
-  background-color: $secondary;
+  color: var(--fg-3);
+  background-color: var(--bg-subtle);
   border-radius: 50%;
+  transition: background-color var(--duration-base), box-shadow var(--duration-base);
 }
 
 .step-connector {
@@ -722,7 +748,9 @@ th a {
 .invite-icon-wrapper {
   width: 64px;
   height: 64px;
-  background-color: var(--bs-primary);
+  background: var(--accent);
+  border-radius: 16px;
+  box-shadow: 0 6px 18px oklch(0.50 0.12 162 / 0.35);
 }
 
 //
@@ -924,28 +952,6 @@ th a {
   margin: 0 auto;
 }
 
-.btn-scan-primary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  background: var(--accent);
-  color: var(--accent-fg);
-  border: none;
-  border-radius: var(--radius-md);
-  padding: 16px;
-  font-size: 15px;
-  font-weight: 600;
-  font-family: var(--font-ui);
-  cursor: pointer;
-  transition: background var(--duration-base) var(--ease-out);
-
-  i { font-size: 22px; }
-
-  &:hover { background: var(--accent-hover); color: var(--accent-fg); }
-}
-
 .scan-divider {
   display: flex;
   align-items: center;
@@ -956,26 +962,6 @@ th a {
 
   &::before,
   &::after { content: ""; flex: 1; height: 1px; background: var(--border); }
-}
-
-.btn-scan-manual {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  background: var(--surface);
-  color: var(--fg-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: var(--font-ui);
-  cursor: pointer;
-  transition: background var(--duration-base) var(--ease-out);
-
-  &:hover { background: var(--bg-subtle); color: var(--fg); }
 }
 
 //
