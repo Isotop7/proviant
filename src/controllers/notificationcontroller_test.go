@@ -123,6 +123,14 @@ func (m *MockNotificationRepository) SetTelegramLinkToken(userID uint, token str
 	return nil
 }
 
+func (m *MockNotificationRepository) SetTelegramBotUsername(userID uint, username string) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentication.User, error) {
+	return nil, nil
+}
+
 var _ dbController.NotificationRepositoryInterface = (*MockNotificationRepository)(nil)
 
 func TestNotificationControllerInitialization(t *testing.T) {

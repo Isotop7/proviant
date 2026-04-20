@@ -189,6 +189,8 @@ func GetUserNotificationPreferences(ctx *gin.Context) {
 
 	prefs := user.NotificationPreferences
 	prefs.TelegramLinked = prefs.TelegramChatID != ""
+	prefs.TelegramBotConfigured = prefs.TelegramBotToken != ""
+	prefs.TelegramBotToken = "" // never expose raw token via API
 	ctx.JSON(http.StatusOK, prefs)
 }
 
@@ -216,7 +218,6 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	// Get and parse body to notification preferences
 	var preferences authentication.NotificationPreferences
 	if bindErr := ctx.ShouldBindJSON(&preferences); bindErr != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
@@ -258,9 +259,30 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	// Preserve Telegram linking fields — they are managed by the dedicated link-token endpoint
-	preferences.TelegramChatID = user.NotificationPreferences.TelegramChatID
-	preferences.TelegramLinkToken = user.NotificationPreferences.TelegramLinkToken
+	// Handle bot token lifecycle: start/stop poller when token changes.
+	oldToken := user.NotificationPreferences.TelegramBotToken
+	newToken := preferences.TelegramBotToken
+	if newToken == "" {
+		// Preserve existing token if not provided (allows partial updates)
+		newToken = oldToken
+	}
+
+	tokenChanged := newToken != oldToken
+
+	if tokenChanged && newToken == "" {
+		// Token cleared — disable Telegram and wipe linked state.
+		preferences.TelegramEnabled = false
+		preferences.TelegramChatID = ""
+		preferences.TelegramBotUsername = ""
+	} else {
+		// Preserve linking fields — managed by the dedicated link-token endpoint.
+		preferences.TelegramChatID = user.NotificationPreferences.TelegramChatID
+		preferences.TelegramLinkToken = user.NotificationPreferences.TelegramLinkToken
+		if !tokenChanged {
+			preferences.TelegramBotUsername = user.NotificationPreferences.TelegramBotUsername
+		}
+	}
+	preferences.TelegramBotToken = newToken
 
 	user.NotificationPreferences = preferences
 
@@ -269,6 +291,17 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 		logger.Error().Msgf("Error updating notification preferences: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
 		return
+	}
+
+	// Manage per-user Telegram poller when token changed.
+	if tokenChanged {
+		if nc, ok := getNotificationController(ctx); ok {
+			if newToken == "" {
+				nc.StopUserTelegramPoller(userID)
+			} else {
+				nc.StartUserTelegramPoller(userID, newToken)
+			}
+		}
 	}
 
 	// Return success
@@ -312,18 +345,8 @@ func GenerateTelegramLinkToken(ctx *gin.Context) {
 	}
 
 	botUsername := ""
-	if ncInterface, ok := ctx.Get("notificationController"); ok {
-		if nc, ok := ncInterface.(interface{ GetTelegramBotUsername() string }); ok {
-			botUsername = nc.GetTelegramBotUsername()
-		}
-	}
-	// Fall back to static config if controller not resolved yet
-	if botUsername == "" {
-		if proviantConfigInterface, ok := ctx.Get("proviantConfig"); ok {
-			if proviantConfig, ok := proviantConfigInterface.(*configuration.ProviantConfiguration); ok {
-				botUsername = proviantConfig.Notification.Telegram.BotUsername
-			}
-		}
+	if nc, ok := getNotificationController(ctx); ok {
+		botUsername = nc.GetUserTelegramBotUsername(userID)
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{

@@ -83,8 +83,8 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 	notificationController.DispatchInvitations(proviantConfiguration.Server.BaseURL)
 	// Dispatch monthly waste report goroutine
 	notificationController.DispatchMonthlyWasteReports()
-	// Start Telegram long-polling goroutine (no-op if bot token not configured)
-	notificationController.StartTelegramPoller()
+	// Start per-user Telegram long-polling goroutines for all users with a bot token
+	notificationController.StartAllUserTelegramPollers()
 	return notificationController
 }
 

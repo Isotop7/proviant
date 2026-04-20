@@ -109,11 +109,13 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
   - [func \(nc \*NotificationController\) DispatchInvitations\(baseURL string\)](<#NotificationController.DispatchInvitations>)
   - [func \(nc \*NotificationController\) DispatchMonthlyWasteReports\(\)](<#NotificationController.DispatchMonthlyWasteReports>)
-  - [func \(nc \*NotificationController\) GetTelegramBotUsername\(\) string](<#NotificationController.GetTelegramBotUsername>)
+  - [func \(nc \*NotificationController\) GetUserTelegramBotUsername\(userID uint\) string](<#NotificationController.GetUserTelegramBotUsername>)
   - [func \(nc \*NotificationController\) SendEmailVerification\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendEmailVerification>)
   - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#NotificationController.SendInvitationEmail>)
   - [func \(nc \*NotificationController\) SendVerificationEmail\(invitation \*dbModel.HouseholdInvitation, username, baseURL string\) error](<#NotificationController.SendVerificationEmail>)
-  - [func \(nc \*NotificationController\) StartTelegramPoller\(\)](<#NotificationController.StartTelegramPoller>)
+  - [func \(nc \*NotificationController\) StartAllUserTelegramPollers\(\)](<#NotificationController.StartAllUserTelegramPollers>)
+  - [func \(nc \*NotificationController\) StartUserTelegramPoller\(userID uint, botToken string\)](<#NotificationController.StartUserTelegramPoller>)
+  - [func \(nc \*NotificationController\) StopUserTelegramPoller\(userID uint\)](<#NotificationController.StopUserTelegramPoller>)
 - [type NotificationProvider](<#NotificationProvider>)
 - [type NtfyNotificationProvider](<#NtfyNotificationProvider>)
   - [func \(n \*NtfyNotificationProvider\) GetProviderType\(\) string](<#NtfyNotificationProvider.GetProviderType>)
@@ -285,11 +287,11 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 
 ```go
 type NotificationController struct {
-    Logger              *zerolog.Logger
-    Configuration       *configuration.NotificationConfiguration
-    NotificationRepo    dbController.NotificationRepositoryInterface
-    Providers           []NotificationProvider
-    TelegramBotUsername string
+    Logger           *zerolog.Logger
+    Configuration    *configuration.NotificationConfiguration
+    NotificationRepo dbController.NotificationRepositoryInterface
+    Providers        []NotificationProvider
+    // contains filtered or unexported fields
 }
 ```
 
@@ -329,14 +331,14 @@ func (nc *NotificationController) DispatchMonthlyWasteReports()
 
 DispatchMonthlyWasteReports starts a goroutine that sends household waste reports on the configured day/hour \(UTC\) of each month to opted\-in members via all enabled providers.
 
-<a name="NotificationController.GetTelegramBotUsername"></a>
-### func \(\*NotificationController\) GetTelegramBotUsername
+<a name="NotificationController.GetUserTelegramBotUsername"></a>
+### func \(\*NotificationController\) GetUserTelegramBotUsername
 
 ```go
-func (nc *NotificationController) GetTelegramBotUsername() string
+func (nc *NotificationController) GetUserTelegramBotUsername(userID uint) string
 ```
 
-GetTelegramBotUsername returns the resolved bot username \(from getMe or config\).
+GetUserTelegramBotUsername returns the bot username resolved at poller start for a user.
 
 <a name="NotificationController.SendEmailVerification"></a>
 ### func \(\*NotificationController\) SendEmailVerification
@@ -365,14 +367,32 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 
 SendVerificationEmail sends an email verification link using the invitation email system.
 
-<a name="NotificationController.StartTelegramPoller"></a>
-### func \(\*NotificationController\) StartTelegramPoller
+<a name="NotificationController.StartAllUserTelegramPollers"></a>
+### func \(\*NotificationController\) StartAllUserTelegramPollers
 
 ```go
-func (nc *NotificationController) StartTelegramPoller()
+func (nc *NotificationController) StartAllUserTelegramPollers()
 ```
 
-StartTelegramPoller starts a long\-polling goroutine that listens for Telegram bot updates. It handles /start \<token\> commands to link a Telegram chat to a Proviant user account.
+StartAllUserTelegramPollers queries all users with a configured bot token and starts a long\-poll goroutine for each. Called once at startup.
+
+<a name="NotificationController.StartUserTelegramPoller"></a>
+### func \(\*NotificationController\) StartUserTelegramPoller
+
+```go
+func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken string)
+```
+
+StartUserTelegramPoller cancels any existing poller for userID, then starts a new goroutine that long\-polls the Telegram API using botToken and handles /start \<token\> link commands.
+
+<a name="NotificationController.StopUserTelegramPoller"></a>
+### func \(\*NotificationController\) StopUserTelegramPoller
+
+```go
+func (nc *NotificationController) StopUserTelegramPoller(userID uint)
+```
+
+StopUserTelegramPoller cancels the long\-poll goroutine for the given user, if running.
 
 <a name="NotificationProvider"></a>
 ## type NotificationProvider
@@ -466,9 +486,9 @@ type OpenFoodFactsAPIControllerInterface interface {
 
 ```go
 type TelegramNotificationProvider struct {
-    Configuration configuration.TelegramConfiguration
-    Logger        *zerolog.Logger
-    HTTPClient    *http.Client
+    BotToken   string
+    Logger     *zerolog.Logger
+    HTTPClient *http.Client
 }
 ```
 
@@ -967,6 +987,7 @@ import "codeberg.org/isotop7/proviant/models"
 
 - [type HouseholdReportTarget](<#HouseholdReportTarget>)
 - [type NotificationRecipientInfo](<#NotificationRecipientInfo>)
+- [type TelegramRecipient](<#TelegramRecipient>)
 - [type WasteStats](<#WasteStats>)
 
 
@@ -977,10 +998,10 @@ HouseholdReportTarget pairs a household with the opted\-in members for email and
 
 ```go
 type HouseholdReportTarget struct {
-    HouseholdID     uint
-    HouseholdName   string
-    Recipients      []string // email addresses
-    TelegramChatIDs []string // Telegram chat IDs
+    HouseholdID        uint
+    HouseholdName      string
+    Recipients         []string            // email addresses
+    TelegramRecipients []TelegramRecipient // per-user bot token + chat ID pairs
 }
 ```
 
@@ -999,7 +1020,20 @@ type NotificationRecipientInfo struct {
     NtfyToken                 string
     TelegramEnabled           bool
     TelegramChatID            string
+    TelegramBotToken          string
     NotificationThresholdDays int
+}
+```
+
+<a name="TelegramRecipient"></a>
+## type TelegramRecipient
+
+TelegramRecipient pairs a Telegram chat ID with the user's own bot token.
+
+```go
+type TelegramRecipient struct {
+    ChatID   string
+    BotToken string
 }
 ```
 
@@ -2247,6 +2281,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*NotificationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#NotificationRepository.CancelInvitation>)
   - [func \(r \*NotificationRepository\) CreateInvitation\(householdID, inviterID uint, email string\) \(database.HouseholdInvitation, error\)](<#NotificationRepository.CreateInvitation>)
   - [func \(r \*NotificationRepository\) FindUserByTelegramLinkToken\(token string\) \(authentication.User, error\)](<#NotificationRepository.FindUserByTelegramLinkToken>)
+  - [func \(r \*NotificationRepository\) GetAllUsersWithTelegramBotToken\(\) \(\[\]authentication.User, error\)](<#NotificationRepository.GetAllUsersWithTelegramBotToken>)
   - [func \(r \*NotificationRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#NotificationRepository.GetHouseholdByID>)
   - [func \(r \*NotificationRepository\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#NotificationRepository.GetHouseholdMembersMailAddressesByID>)
   - [func \(r \*NotificationRepository\) GetHouseholdMembersNotificationPreferences\(householdID uint\) \(\[\]models.NotificationRecipientInfo, error\)](<#NotificationRepository.GetHouseholdMembersNotificationPreferences>)
@@ -2266,6 +2301,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*NotificationRepository\) MarkNotificationsSetup\(userID uint\) error](<#NotificationRepository.MarkNotificationsSetup>)
   - [func \(r \*NotificationRepository\) MarkOnboardingComplete\(userID uint\) error](<#NotificationRepository.MarkOnboardingComplete>)
   - [func \(r \*NotificationRepository\) SetProductNotifiedAt\(productID uint\) error](<#NotificationRepository.SetProductNotifiedAt>)
+  - [func \(r \*NotificationRepository\) SetTelegramBotUsername\(userID uint, username string\) error](<#NotificationRepository.SetTelegramBotUsername>)
   - [func \(r \*NotificationRepository\) SetTelegramChatID\(userID uint, chatID string\) error](<#NotificationRepository.SetTelegramChatID>)
   - [func \(r \*NotificationRepository\) SetTelegramLinkToken\(userID uint, token string\) error](<#NotificationRepository.SetTelegramLinkToken>)
 - [type NotificationRepositoryInterface](<#NotificationRepositoryInterface>)
@@ -2756,6 +2792,15 @@ func (r *NotificationRepository) FindUserByTelegramLinkToken(token string) (auth
 
 
 
+<a name="NotificationRepository.GetAllUsersWithTelegramBotToken"></a>
+### func \(\*NotificationRepository\) GetAllUsersWithTelegramBotToken
+
+```go
+func (r *NotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentication.User, error)
+```
+
+
+
 <a name="NotificationRepository.GetHouseholdByID"></a>
 ### func \(\*NotificationRepository\) GetHouseholdByID
 
@@ -2927,6 +2972,15 @@ func (r *NotificationRepository) SetProductNotifiedAt(productID uint) error
 
 
 
+<a name="NotificationRepository.SetTelegramBotUsername"></a>
+### func \(\*NotificationRepository\) SetTelegramBotUsername
+
+```go
+func (r *NotificationRepository) SetTelegramBotUsername(userID uint, username string) error
+```
+
+
+
 <a name="NotificationRepository.SetTelegramChatID"></a>
 ### func \(\*NotificationRepository\) SetTelegramChatID
 
@@ -2977,6 +3031,8 @@ type NotificationRepositoryInterface interface {
     FindUserByTelegramLinkToken(token string) (authentication.User, error)
     SetTelegramChatID(userID uint, chatID string) error
     SetTelegramLinkToken(userID uint, token string) error
+    SetTelegramBotUsername(userID uint, username string) error
+    GetAllUsersWithTelegramBotToken() ([]authentication.User, error)
 }
 ```
 
@@ -4257,7 +4313,10 @@ type NotificationPreferences struct {
     TelegramEnabled           bool   `json:"telegramEnabled" gorm:"default:false"`
     TelegramChatID            string `json:"-"`
     TelegramLinkToken         string `json:"-"`
+    TelegramBotToken          string `json:"-"`
+    TelegramBotUsername       string `json:"-"`
     TelegramLinked            bool   `json:"telegramLinked" gorm:"-"`
+    TelegramBotConfigured     bool   `json:"telegramBotConfigured" gorm:"-"`
 }
 ```
 
@@ -4470,7 +4529,6 @@ configuration defines structs and methods for proviants configuration and specif
 - [type SMTPConfiguration](<#SMTPConfiguration>)
 - [type SecurityHeadersConfiguration](<#SecurityHeadersConfiguration>)
 - [type ServerConfiguration](<#ServerConfiguration>)
-- [type TelegramConfiguration](<#TelegramConfiguration>)
 
 
 <a name="AuthenticationConfiguration"></a>
@@ -4581,7 +4639,6 @@ type NotificationConfiguration struct {
     SMTP               SMTPConfiguration
     Ntfy               NtfyConfiguration
     MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
-    Telegram           TelegramConfiguration           `mapstructure:"telegram"`
 }
 ```
 
@@ -4693,19 +4750,6 @@ type ServerConfiguration struct {
     CORS            CorsConfiguration
     BaseURL         string
     SecurityHeaders SecurityHeadersConfiguration
-}
-```
-
-<a name="TelegramConfiguration"></a>
-## type TelegramConfiguration
-
-TelegramConfiguration contains all properties regarding the Telegram bot notification provider
-
-```go
-type TelegramConfiguration struct {
-    BotToken    string
-    BotUsername string
-    Timeout     int
 }
 ```
 

@@ -168,15 +168,11 @@
                                        placeholder="Optional access token" autocomplete="new-password">
                             </div>
                         </div>
-                        <div class="list-group-item px-3 py-3{{if not .TelegramConfigured}} text-body-secondary{{end}}">
+                        <div class="list-group-item px-3 py-3">
                             <div class="d-flex align-items-center justify-content-between gap-3">
                                 <div>
                                     <div class="fw-medium small">Telegram</div>
-                                    {{if .TelegramConfigured}}
-                                    <div class="text-body-secondary" style="font-size:13px;">Push alerts via Telegram bot to any device.</div>
-                                    {{else}}
-                                    <div class="text-warning" style="font-size:13px;"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>Not configured — ask your administrator to set a bot token.</div>
-                                    {{end}}
+                                    <div class="text-body-secondary" style="font-size:13px;">Push alerts via your own Telegram bot to any device.</div>
                                 </div>
                                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                     <button type="button" class="btn btn-sm btn-outline-secondary" id="btnTelegramHelp"
@@ -187,24 +183,39 @@
                                     <div class="form-check form-switch mb-0">
                                         <input class="form-check-input" type="checkbox" role="switch"
                                                id="toggleTelegramNotifications"
-                                               {{if .TelegramConfigured}}{{if .User.NotificationPreferences.TelegramEnabled}}checked{{end}}{{else}}disabled{{end}}>
+                                               {{if .User.NotificationPreferences.TelegramEnabled}}checked{{end}}>
                                         <label class="visually-hidden" for="toggleTelegramNotifications">Telegram Notifications</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div id="telegramSettings" class="list-group-item px-3 py-3 bg-light{{if not .User.NotificationPreferences.TelegramEnabled}} d-none{{end}}">
+                            <div class="mb-3">
+                                <label class="form-label small fw-medium mb-1" for="inputTelegramBotToken">Bot Token</label>
+                                <input type="text" class="form-control form-control-sm input-width-360" id="inputTelegramBotToken"
+                                       placeholder="123456:ABC-DEF..." autocomplete="off"
+                                       value="{{.User.NotificationPreferences.TelegramBotToken}}">
+                                <div class="form-text">
+                                    {{if .TelegramConfigured}}
+                                    <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Bot configured.</span>
+                                    Enter a new token to replace it.
+                                    {{else}}
+                                    Create a bot via <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a> and paste the token here.
+                                    {{end}}
+                                </div>
+                            </div>
                             <div class="d-flex align-items-center gap-2 mb-2">
                                 {{if .User.NotificationPreferences.TelegramLinked}}
                                 <span class="badge bg-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Linked</span>
                                 <span class="text-body-secondary small">Your Telegram account is connected.</span>
                                 {{else}}
                                 <span class="badge bg-secondary">Not linked</span>
-                                <span class="text-body-secondary small">Link your Telegram account to enable notifications.</span>
+                                <span class="text-body-secondary small">Save your bot token, then link your account.</span>
                                 {{end}}
                             </div>
                             <button type="button" class="btn btn-sm btn-outline-primary" id="btnTelegramLink"
-                                    data-bs-toggle="modal" data-bs-target="#telegramLinkModal">
+                                    data-bs-toggle="modal" data-bs-target="#telegramLinkModal"
+                                    {{if not .TelegramConfigured}}disabled{{end}}>
                                 <i class="bi bi-telegram me-1" aria-hidden="true"></i>
                                 {{if .User.NotificationPreferences.TelegramLinked}}Relink Account{{else}}Link Account{{end}}
                             </button>
@@ -751,7 +762,7 @@
             </div>
             <div class="modal-body">
                 <p class="text-body-secondary small mb-3">
-                    Telegram notifications require a bot to be configured by your administrator. These steps apply to whoever manages the Proviant instance.
+                    Each user creates and manages their own Telegram bot. No administrator involvement is required.
                 </p>
                 <ol class="small mb-3">
                     <li class="mb-3">
@@ -760,20 +771,12 @@
                         run <code>/newbot</code>, and follow the prompts. Copy the bot token you receive.
                     </li>
                     <li class="mb-3">
-                        <strong>Configure Proviant</strong> — set the bot token in <code>config.yaml</code> or via environment variable:
-                        <pre class="bg-light rounded p-2 mt-2 mb-0"><code>notification:
-  telegram:
-    botToken: "1234567890:ABCDefGHIjklMNOpqrSTUvwxYZ"
-    timeout: 10</code></pre>
-                        <div class="text-body-secondary mt-1" style="font-size:12px;">
-                            Or set <code>PROVIANT_NOTIFICATION_TELEGRAM_BOTTOKEN</code> as an environment variable.
-                        </div>
+                        <strong>Paste the token</strong> — enter your bot token in the <em>Bot Token</em> field in these settings and click <strong>Save</strong>.
+                        Proviant will start listening for messages on your bot immediately.
                     </li>
                     <li class="mb-3">
-                        <strong>Restart Proviant</strong> — the server will automatically resolve the bot username from Telegram on startup. No webhook or public URL is required.
-                    </li>
-                    <li class="mb-3">
-                        <strong>Link your account</strong> — in these settings, click <strong>Link Account</strong>, then <strong>Generate Token</strong>. Use the <em>Open in Telegram</em> button or copy the command and send it to your bot.
+                        <strong>Link your account</strong> — click <strong>Link Account</strong>, then <strong>Generate Token</strong>.
+                        Use the <em>Open in Telegram</em> button or copy the command and send it to your bot.
                     </li>
                     <li>
                         <strong>Enable</strong> — toggle Telegram notifications on and save.
@@ -781,7 +784,7 @@
                 </ol>
                 <div class="alert alert-info small mb-0 py-2">
                     <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
-                    The bot uses long-polling — no public URL or webhook configuration is required.
+                    Your bot uses long-polling — no public URL or webhook configuration is required.
                 </div>
             </div>
             <div class="modal-footer">

@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	dbController "codeberg.org/isotop7/proviant/controllers/database"
@@ -18,11 +20,13 @@ import (
 )
 
 type NotificationController struct {
-	Logger              *zerolog.Logger
-	Configuration       *configuration.NotificationConfiguration
-	NotificationRepo    dbController.NotificationRepositoryInterface
-	Providers           []NotificationProvider
-	TelegramBotUsername string
+	Logger           *zerolog.Logger
+	Configuration    *configuration.NotificationConfiguration
+	NotificationRepo dbController.NotificationRepositoryInterface
+	Providers        []NotificationProvider
+	telegramClient   *http.Client
+	pollerCancels    sync.Map // userID(uint) → context.CancelFunc
+	botUsernames     sync.Map // userID(uint) → resolved bot username(string)
 }
 
 func NewNotificationController(
@@ -34,6 +38,7 @@ func NewNotificationController(
 		Logger:           logger,
 		Configuration:    config,
 		NotificationRepo: notificationRepo,
+		telegramClient:   &http.Client{Timeout: time.Duration(telegramTimeout(config)) * time.Second},
 	}
 
 	// Initialize providers
@@ -42,9 +47,21 @@ func NewNotificationController(
 	return nc
 }
 
-// GetTelegramBotUsername returns the resolved bot username (from getMe or config).
-func (nc *NotificationController) GetTelegramBotUsername() string {
-	return nc.TelegramBotUsername
+func telegramTimeout(config *configuration.NotificationConfiguration) int {
+	if config.Telegram.Timeout > 0 {
+		return config.Telegram.Timeout
+	}
+	return 15
+}
+
+// GetUserTelegramBotUsername returns the bot username resolved at poller start for a user.
+func (nc *NotificationController) GetUserTelegramBotUsername(userID uint) string {
+	if v, ok := nc.botUsernames.Load(userID); ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 func (nc *NotificationController) initializeProviders() {
@@ -68,19 +85,7 @@ func (nc *NotificationController) initializeProviders() {
 		nc.Providers = append(nc.Providers, ntfyProvider)
 	}
 
-	// Add Telegram provider if configured
-	telegramTimeout := nc.Configuration.Telegram.Timeout
-	if telegramTimeout <= 0 {
-		telegramTimeout = 10
-	}
-	telegramProvider := &TelegramNotificationProvider{
-		Configuration: nc.Configuration.Telegram,
-		Logger:        nc.Logger,
-		HTTPClient:    &http.Client{Timeout: time.Duration(telegramTimeout) * time.Second},
-	}
-	if telegramProvider.IsConfigured() {
-		nc.Providers = append(nc.Providers, telegramProvider)
-	}
+	// Telegram is per-user; no global provider is initialized here.
 
 	nc.Logger.Info().Msgf("Initialized %d notification providers", len(nc.Providers))
 }
@@ -194,11 +199,6 @@ func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel
 				nc.Logger.Info().Msgf("Attempting ntfy notification for product '%s' (ID: %d)", product.ProductName, product.ID)
 				sendError = provider.SendNotification(product, recipientInfo)
 			}
-		case "telegram":
-			if recipientInfo.TelegramEnabled && recipientInfo.TelegramChatID != "" {
-				nc.Logger.Info().Msgf("Attempting telegram notification for product '%s' (ID: %d)", product.ProductName, product.ID)
-				sendError = provider.SendNotification(product, recipientInfo.TelegramChatID)
-			}
 		}
 
 		if sendError != nil {
@@ -215,6 +215,25 @@ func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel
 			} else {
 				nc.Logger.Info().Msg("Property NotifiedAt was updated")
 				notifiedAtUpdated = true
+			}
+		}
+	}
+
+	// Telegram is per-user; use recipient's own bot token.
+	if recipientInfo.TelegramEnabled && recipientInfo.TelegramChatID != "" && recipientInfo.TelegramBotToken != "" {
+		nc.Logger.Info().Msgf("Attempting telegram notification for product '%s' (ID: %d)", product.ProductName, product.ID)
+		tp := &TelegramNotificationProvider{BotToken: recipientInfo.TelegramBotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
+		if err := tp.SendNotification(product, recipientInfo.TelegramChatID); err != nil {
+			nc.Logger.Error().Msgf("Failed to send telegram notification: %s", err)
+		} else {
+			nc.Logger.Info().Msg("Successfully sent telegram notification")
+			if !notifiedAtUpdated {
+				if updateErr := nc.NotificationRepo.SetProductNotifiedAt(product.ID); updateErr != nil {
+					nc.Logger.Error().Msg(updateErr.Error())
+				} else {
+					nc.Logger.Info().Msg("Property NotifiedAt was updated")
+					notifiedAtUpdated = true
+				}
 			}
 		}
 	}
@@ -331,20 +350,6 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 // on the configured day/hour (UTC) of each month to opted-in members via all enabled providers.
 func (nc *NotificationController) DispatchMonthlyWasteReports() {
 	ep := &EmailNotificationProvider{Configuration: nc.Configuration.SMTP, Logger: nc.Logger}
-	telegramTimeout := nc.Configuration.Telegram.Timeout
-	if telegramTimeout <= 0 {
-		telegramTimeout = 10
-	}
-	tp := &TelegramNotificationProvider{
-		Configuration: nc.Configuration.Telegram,
-		Logger:        nc.Logger,
-		HTTPClient:    &http.Client{Timeout: time.Duration(telegramTimeout) * time.Second},
-	}
-
-	if !ep.IsConfigured() && !tp.IsConfigured() {
-		nc.Logger.Info().Msg("Monthly waste report: no providers configured, skipping")
-		return
-	}
 
 	cfg := nc.Configuration.MonthlyWasteReport
 	go func() {
@@ -353,12 +358,12 @@ func (nc *NotificationController) DispatchMonthlyWasteReports() {
 			next := time.Date(now.Year(), now.Month()+1, cfg.Day, cfg.Hour, 0, 0, 0, time.UTC)
 			nc.Logger.Info().Msgf("Monthly waste report: next run at %s", next.Format(time.RFC3339))
 			time.Sleep(time.Until(next))
-			nc.processMonthlyWasteReports(ep, tp)
+			nc.processMonthlyWasteReports(ep)
 		}
 	}()
 }
 
-func (nc *NotificationController) processMonthlyWasteReports(ep *EmailNotificationProvider, tp *TelegramNotificationProvider) {
+func (nc *NotificationController) processMonthlyWasteReports(ep *EmailNotificationProvider) {
 	lastMonth := time.Now().UTC().AddDate(0, -1, 0)
 	targets, err := nc.NotificationRepo.GetHouseholdsWithMonthlyWasteReportEnabled()
 	if err != nil {
@@ -386,76 +391,95 @@ func (nc *NotificationController) processMonthlyWasteReports(ep *EmailNotificati
 			}
 		}
 
-		if tp.IsConfigured() {
-			for _, chatID := range t.TelegramChatIDs {
-				if sendErr := tp.SendMonthlyWasteReport(chatID, &stats); sendErr != nil {
-					nc.Logger.Error().Msgf("Monthly waste report: telegram send failed to chat %s: %s", chatID, sendErr)
-				} else {
-					nc.Logger.Info().Msgf("Monthly waste report: telegram sent to chat %s (household %d)", chatID, t.HouseholdID)
-				}
+		for _, tr := range t.TelegramRecipients {
+			tp := &TelegramNotificationProvider{BotToken: tr.BotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
+			if sendErr := tp.SendMonthlyWasteReport(tr.ChatID, &stats); sendErr != nil {
+				nc.Logger.Error().Msgf("Monthly waste report: telegram send failed to chat %s: %s", tr.ChatID, sendErr)
+			} else {
+				nc.Logger.Info().Msgf("Monthly waste report: telegram sent to chat %s (household %d)", tr.ChatID, t.HouseholdID)
 			}
 		}
 	}
 }
 
-// StartTelegramPoller starts a long-polling goroutine that listens for Telegram bot updates.
-// It handles /start <token> commands to link a Telegram chat to a Proviant user account.
-func (nc *NotificationController) StartTelegramPoller() {
-	if nc.Configuration.Telegram.BotToken == "" {
-		nc.Logger.Info().Msg("Telegram poller: bot token not configured, skipping")
+// StartAllUserTelegramPollers queries all users with a configured bot token and starts
+// a long-poll goroutine for each. Called once at startup.
+func (nc *NotificationController) StartAllUserTelegramPollers() {
+	users, err := nc.NotificationRepo.GetAllUsersWithTelegramBotToken()
+	if err != nil {
+		nc.Logger.Error().Msgf("Telegram: failed to load users with bot tokens: %s", err)
 		return
 	}
-
-	pollTimeout := nc.Configuration.Telegram.Timeout
-	if pollTimeout <= 0 {
-		pollTimeout = 10
+	nc.Logger.Info().Msgf("Telegram: starting pollers for %d user(s)", len(users))
+	for i := range users {
+		u := &users[i]
+		nc.StartUserTelegramPoller(u.ID, u.NotificationPreferences.TelegramBotToken)
 	}
+}
 
-	client := &http.Client{Timeout: time.Duration(pollTimeout+5) * time.Second}
-	baseURL := fmt.Sprintf("https://api.telegram.org/bot%s", nc.Configuration.Telegram.BotToken)
+// StartUserTelegramPoller cancels any existing poller for userID, then starts a new goroutine
+// that long-polls the Telegram API using botToken and handles /start <token> link commands.
+func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken string) {
+	nc.StopUserTelegramPoller(userID)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	nc.pollerCancels.Store(userID, cancel)
+
+	pollClient := &http.Client{Timeout: 15 * time.Second}
+	baseURL := fmt.Sprintf("https://api.telegram.org/bot%s", botToken)
 
 	go func() {
+		defer nc.pollerCancels.Delete(userID)
+
 		var offset int64
 
-		// Resolve bot username via getMe so the UI can build deep links
-		if nc.TelegramBotUsername == "" {
-			getMeURL := fmt.Sprintf("%s/getMe", baseURL)
-			if resp, err := client.Get(getMeURL); err == nil {
-				var result struct {
-					OK     bool `json:"ok"`
-					Result struct {
-						Username string `json:"username"`
-					} `json:"result"`
-				}
-				if body, readErr := io.ReadAll(resp.Body); readErr == nil {
-					if jsonErr := json.Unmarshal(body, &result); jsonErr == nil && result.OK {
-						nc.TelegramBotUsername = result.Result.Username
-						nc.Logger.Info().Msgf("Telegram poller: resolved bot username @%s", nc.TelegramBotUsername)
-					}
-				}
-				_ = resp.Body.Close()
+		// Resolve bot username via getMe and persist it.
+		getMeURL := fmt.Sprintf("%s/getMe", baseURL)
+		if resp, err := pollClient.Get(getMeURL); err == nil {
+			var result struct {
+				OK     bool `json:"ok"`
+				Result struct {
+					Username string `json:"username"`
+				} `json:"result"`
 			}
-		}
-		// Fall back to config value if getMe failed
-		if nc.TelegramBotUsername == "" {
-			nc.TelegramBotUsername = nc.Configuration.Telegram.BotUsername
+			if body, readErr := io.ReadAll(resp.Body); readErr == nil {
+				if jsonErr := json.Unmarshal(body, &result); jsonErr == nil && result.OK && result.Result.Username != "" {
+					nc.botUsernames.Store(userID, result.Result.Username)
+					if dbErr := nc.NotificationRepo.SetTelegramBotUsername(userID, result.Result.Username); dbErr != nil {
+						nc.Logger.Warn().Msgf("Telegram poller (user %d): failed to persist bot username: %s", userID, dbErr)
+					}
+					nc.Logger.Info().Msgf("Telegram poller (user %d): resolved bot username @%s", userID, result.Result.Username)
+				}
+			}
+			_ = resp.Body.Close()
 		}
 
-		nc.Logger.Info().Msg("Telegram poller: started")
+		nc.Logger.Info().Msgf("Telegram poller (user %d): started", userID)
 
 		for {
-			url := fmt.Sprintf("%s/getUpdates?timeout=%d&offset=%d", baseURL, pollTimeout, offset)
-			resp, err := client.Get(url)
+			select {
+			case <-ctx.Done():
+				nc.Logger.Info().Msgf("Telegram poller (user %d): stopped", userID)
+				return
+			default:
+			}
+
+			url := fmt.Sprintf("%s/getUpdates?timeout=10&offset=%d", baseURL, offset)
+			resp, err := pollClient.Get(url)
 			if err != nil {
-				nc.Logger.Error().Msgf("Telegram poller: getUpdates error: %s", err)
-				time.Sleep(5 * time.Second)
+				nc.Logger.Error().Msgf("Telegram poller (user %d): getUpdates error: %s", userID, err)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(5 * time.Second):
+				}
 				continue
 			}
 
 			body, readErr := io.ReadAll(resp.Body)
 			_ = resp.Body.Close()
 			if readErr != nil {
-				nc.Logger.Error().Msgf("Telegram poller: read error: %s", readErr)
+				nc.Logger.Error().Msgf("Telegram poller (user %d): read error: %s", userID, readErr)
 				continue
 			}
 
@@ -473,7 +497,7 @@ func (nc *NotificationController) StartTelegramPoller() {
 			}
 
 			if jsonErr := json.Unmarshal(body, &result); jsonErr != nil {
-				nc.Logger.Error().Msgf("Telegram poller: parse error: %s", jsonErr)
+				nc.Logger.Error().Msgf("Telegram poller (user %d): parse error: %s", userID, jsonErr)
 				continue
 			}
 
@@ -493,36 +517,47 @@ func (nc *NotificationController) StartTelegramPoller() {
 
 				parts := strings.Fields(text)
 				if len(parts) < 2 {
-					nc.sendTelegramMessage(client, baseURL, chatID,
+					nc.sendTelegramText(pollClient, baseURL, chatID,
 						"Send `/start <token>` with the token from your Proviant notification settings to link this chat.")
 					continue
 				}
 
 				token := parts[1]
 				user, findErr := nc.NotificationRepo.FindUserByTelegramLinkToken(token)
-				if findErr != nil {
-					nc.Logger.Warn().Msgf("Telegram poller: unknown link token from chat %s", chatID)
-					nc.sendTelegramMessage(client, baseURL, chatID,
+				if findErr != nil || user.ID != userID {
+					nc.Logger.Warn().Msgf("Telegram poller (user %d): invalid link token from chat %s", userID, chatID)
+					nc.sendTelegramText(pollClient, baseURL, chatID,
 						"Invalid or expired token. Please generate a new one in Proviant settings.")
 					continue
 				}
 
-				if setErr := nc.NotificationRepo.SetTelegramChatID(user.ID, chatID); setErr != nil {
-					nc.Logger.Error().Msgf("Telegram poller: failed to save chat ID for user %d: %s", user.ID, setErr)
-					nc.sendTelegramMessage(client, baseURL, chatID,
+				if setErr := nc.NotificationRepo.SetTelegramChatID(userID, chatID); setErr != nil {
+					nc.Logger.Error().Msgf("Telegram poller (user %d): failed to save chat ID: %s", userID, setErr)
+					nc.sendTelegramText(pollClient, baseURL, chatID,
 						"Something went wrong. Please try again.")
 					continue
 				}
 
-				nc.Logger.Info().Msgf("Telegram poller: linked chat %s to user %d", chatID, user.ID)
-				nc.sendTelegramMessage(client, baseURL, chatID,
+				nc.Logger.Info().Msgf("Telegram poller (user %d): linked chat %s", userID, chatID)
+				nc.sendTelegramText(pollClient, baseURL, chatID,
 					"✅ Linked! You will now receive Proviant notifications here.")
 			}
 		}
 	}()
 }
 
-func (nc *NotificationController) sendTelegramMessage(client *http.Client, baseURL, chatID, text string) {
+// StopUserTelegramPoller cancels the long-poll goroutine for the given user, if running.
+func (nc *NotificationController) StopUserTelegramPoller(userID uint) {
+	if v, ok := nc.pollerCancels.Load(userID); ok {
+		if cancel, ok := v.(context.CancelFunc); ok {
+			cancel()
+		}
+		nc.pollerCancels.Delete(userID)
+	}
+	nc.botUsernames.Delete(userID)
+}
+
+func (nc *NotificationController) sendTelegramText(client *http.Client, baseURL, chatID, text string) {
 	payload := map[string]any{
 		"chat_id":    chatID,
 		"text":       text,
