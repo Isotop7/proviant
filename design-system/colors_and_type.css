@@ -1,0 +1,225 @@
+/* ============================================================
+   PROVIANT DESIGN SYSTEM — COLOR & TYPE TOKENS
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Vend+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+/* ============================================================
+   COLOR TOKENS
+   ============================================================ */
+
+:root {
+  /* --- Base palette --- */
+  --bg:            oklch(0.98 0.012 75);    /* parchment white */
+  --bg-subtle:     oklch(0.96 0.008 75);    /* slightly darker surface */
+  --surface:       oklch(1.00 0.000 0);     /* card / panel surface */
+  --surface-raised: oklch(1.00 0.000 0);   /* elevated surface (modal) */
+
+  --fg:            oklch(0.18 0.022 70);    /* primary text */
+  --fg-2:          oklch(0.48 0.018 70);    /* secondary text */
+  --fg-3:          oklch(0.65 0.012 70);    /* tertiary / placeholder */
+  --fg-inverse:    oklch(0.98 0.006 75);    /* text on dark bg */
+
+  --border:        oklch(0.88 0.010 75);    /* default border */
+  --border-strong: oklch(0.75 0.015 70);    /* focused / strong border */
+  --border-subtle: oklch(0.93 0.006 75);    /* dividers */
+
+  /* --- Accent (brand teal-green — from logo basket outline) --- */
+  --accent:        oklch(0.50 0.12 162);    /* primary action */
+  --accent-hover:  oklch(0.44 0.12 162);    /* hover */
+  --accent-active: oklch(0.40 0.12 162);    /* pressed */
+  --accent-subtle: oklch(0.93 0.04 162);    /* tinted bg */
+  --accent-fg:     oklch(0.98 0.006 75);    /* text on accent */
+
+  /* --- Brand secondary (slate-blue — from logo wordmark) --- */
+  --brand-slate:        oklch(0.52 0.08 245);
+  --brand-slate-subtle: oklch(0.94 0.03 245);
+
+  /* --- Status: Expired --- */
+  --status-expired:        oklch(0.55 0.20 25);
+  --status-expired-hover:  oklch(0.49 0.20 25);
+  --status-expired-subtle: oklch(0.95 0.05 25);
+  --status-expired-border: oklch(0.80 0.12 25);
+  --status-expired-fg:     oklch(0.98 0.006 75);
+
+  /* --- Status: Critical (1–3 days) --- */
+  --status-critical:        oklch(0.64 0.18 45);
+  --status-critical-hover:  oklch(0.58 0.18 45);
+  --status-critical-subtle: oklch(0.96 0.05 45);
+  --status-critical-border: oklch(0.82 0.12 45);
+  --status-critical-fg:     oklch(0.98 0.006 75);
+
+  /* --- Status: Expiring Soon (4–7 days) --- */
+  --status-soon:        oklch(0.72 0.16 80);
+  --status-soon-hover:  oklch(0.66 0.16 80);
+  --status-soon-subtle: oklch(0.97 0.05 80);
+  --status-soon-border: oklch(0.85 0.10 80);
+  --status-soon-fg:     oklch(0.18 0.022 70);
+
+  /* --- Status: Fresh (>7 days) --- */
+  --status-fresh:        oklch(0.52 0.10 150);
+  --status-fresh-hover:  oklch(0.46 0.10 145);
+  --status-fresh-subtle: oklch(0.94 0.04 145);
+  --status-fresh-border: oklch(0.78 0.08 145);
+  --status-fresh-fg:     oklch(0.98 0.006 75);
+
+  /* --- Status: No date --- */
+  --status-nodate:        oklch(0.60 0.010 70);
+  --status-nodate-hover:  oklch(0.54 0.010 70);
+  --status-nodate-subtle: oklch(0.94 0.006 70);
+  --status-nodate-border: oklch(0.80 0.008 70);
+  --status-nodate-fg:     oklch(0.98 0.006 75);
+
+  /* --- Semantic feedback --- */
+  --color-success:        var(--status-fresh);
+  --color-success-subtle: var(--status-fresh-subtle);
+  --color-warning:        var(--status-soon);
+  --color-warning-subtle: var(--status-soon-subtle);
+  --color-danger:         var(--status-expired);
+  --color-danger-subtle:  var(--status-expired-subtle);
+  --color-info:           oklch(0.55 0.14 240);
+  --color-info-subtle:    oklch(0.94 0.04 240);
+
+  /* ============================================================
+     TYPOGRAPHY TOKENS
+     ============================================================ */
+
+  --font-ui:    'Vend Sans', system-ui, sans-serif;
+  --font-mono:  'DM Mono', 'Courier New', monospace;
+
+  /* Type scale (px reference → rem) */
+  --text-xs:   0.75rem;    /* 12px */
+  --text-sm:   0.8125rem;  /* 13px */
+  --text-base: 0.875rem;   /* 14px */
+  --text-md:   1rem;       /* 16px */
+  --text-lg:   1.125rem;   /* 18px */
+  --text-xl:   1.25rem;    /* 20px */
+  --text-2xl:  1.5rem;     /* 24px */
+  --text-3xl:  1.875rem;   /* 30px */
+  --text-4xl:  2.25rem;    /* 36px */
+
+  /* Weights */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* Line heights */
+  --leading-tight:  1.25;
+  --leading-snug:   1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed:1.625;
+
+  /* Letter spacing */
+  --tracking-tight:  -0.02em;
+  --tracking-normal:  0em;
+  --tracking-wide:    0.04em;
+  --tracking-widest:  0.10em;
+
+  /* ============================================================
+     SPACING TOKENS
+     ============================================================ */
+
+  --space-1:  0.25rem;   /* 4px */
+  --space-2:  0.5rem;    /* 8px */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-5:  1.25rem;   /* 20px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+  --space-20: 5rem;      /* 80px */
+  --space-24: 6rem;      /* 96px */
+
+  /* ============================================================
+     BORDER RADIUS TOKENS
+     ============================================================ */
+
+  --radius-sm:   4px;
+  --radius-md:   8px;    /* cards, inputs, buttons */
+  --radius-lg:   12px;   /* modals, drawers */
+  --radius-pill: 999px;  /* badges, pills */
+
+  /* ============================================================
+     SHADOW / ELEVATION TOKENS
+     ============================================================ */
+
+  --shadow-xs:  0 1px 2px oklch(0.18 0.02 70 / 0.05);
+  --shadow-sm:  0 1px 3px oklch(0.18 0.02 70 / 0.07),
+                0 1px 2px oklch(0.18 0.02 70 / 0.04);
+  --shadow-md:  0 4px 12px oklch(0.18 0.02 70 / 0.10),
+                0 2px 4px oklch(0.18 0.02 70 / 0.06);
+  --shadow-lg:  0 10px 30px oklch(0.18 0.02 70 / 0.14),
+                0 4px 8px oklch(0.18 0.02 70 / 0.06);
+  --shadow-xl:  0 20px 60px oklch(0.18 0.02 70 / 0.20);
+
+  /* ============================================================
+     LAYOUT TOKENS
+     ============================================================ */
+
+  --sidebar-width: 220px;
+  --topbar-height: 56px;
+  --content-max:   1200px;
+  --card-min:      260px;
+
+  /* ============================================================
+     TRANSITION TOKENS
+     ============================================================ */
+
+  --duration-fast:   100ms;
+  --duration-base:   150ms;
+  --duration-slow:   200ms;
+  --duration-modal:  300ms;
+  --ease-out:        cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:         cubic-bezier(0.7, 0, 0.84, 0);
+}
+
+/* ============================================================
+   SEMANTIC / COMPONENT ALIASES
+   ============================================================ */
+
+:root {
+  /* Buttons */
+  --btn-primary-bg:       var(--accent);
+  --btn-primary-bg-hover: var(--accent-hover);
+  --btn-primary-fg:       var(--accent-fg);
+  --btn-secondary-bg:     var(--surface);
+  --btn-secondary-border: var(--border);
+  --btn-secondary-fg:     var(--fg);
+  --btn-danger-bg:        var(--status-expired);
+  --btn-danger-fg:        var(--status-expired-fg);
+
+  /* Inputs */
+  --input-bg:          var(--surface);
+  --input-border:      var(--border);
+  --input-border-focus:var(--accent);
+  --input-fg:          var(--fg);
+  --input-placeholder: var(--fg-3);
+  --input-radius:      var(--radius-md);
+
+  /* Nav */
+  --nav-bg:            var(--surface);
+  --nav-border:        var(--border);
+  --nav-item-active-bg:var(--accent-subtle);
+  --nav-item-active-fg:var(--accent);
+  --nav-item-fg:       var(--fg-2);
+  --nav-item-fg-hover: var(--fg);
+}
+
+/* ============================================================
+   BASE RESETS (include in prototypes)
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family:      var(--font-ui);
+  font-size:        var(--text-base);
+  font-weight:      var(--weight-regular);
+  line-height:      var(--leading-normal);
+  color:            var(--fg);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}

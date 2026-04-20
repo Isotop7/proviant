@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vend+Sans:wght@300;400;500;600;700&display=swap">
+<style>
+  body { background: var(--bg); font-family: var(--font-ui); padding: 36px; }
+  h2 { font-size: 10px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 22px; display: flex; align-items: center; gap: 10px; }
+  h2::after { content: ''; flex: 1; height: 1px; background: var(--border-subtle); }
+  .label { font-size: 10px; font-weight: 500; color: var(--fg-3); margin-top: 8px; text-align: center; font-family: var(--font-mono); }
+  .divider { border: none; border-top: 1px solid var(--border-subtle); margin: 32px 0; }
+
+  /* Icon SVG inline — single source of truth */
+  .pv-icon { display: inline-block; flex-shrink: 0; }
+
+  /* Swatch backgrounds */
+  .bg-white  { background: white; border: 1px solid var(--border); }
+  .bg-subtle { background: var(--bg-subtle); }
+  .bg-teal   { background: oklch(0.50 0.12 162); }
+  .bg-dark   { background: oklch(0.18 0.022 70); }
+  .swatch-pad { border-radius: 10px; padding: 20px; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+
+<div style="margin-bottom:28px;">
+  <div style="font-size:20px;font-weight:700;color:var(--fg);letter-spacing:-0.02em;margin-bottom:4px;">Proviant icon — Approved</div>
+  <div style="font-size:13px;color:var(--fg-2);">Negative space P · Rounded md · Teal / White · Horizontal Vend Sans bold lockup</div>
+</div>
+
+<!-- Spec callout -->
+<div style="display:inline-flex;gap:24px;background:white;border:1px solid var(--border);border-radius:8px;padding:14px 20px;margin-bottom:32px;font-size:12px;color:var(--fg-2);">
+  <div><span style="color:var(--fg-3);font-size:10px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:2px;">Background</span>oklch(0.50 0.12 162) · rx 22</div>
+  <div><span style="color:var(--fg-3);font-size:10px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:2px;">Treatment</span>Negative space P</div>
+  <div><span style="color:var(--fg-3);font-size:10px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:2px;">Lockup</span>Horizontal · Vend Sans 700</div>
+  <div><span style="color:var(--fg-3);font-size:10px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:2px;">File</span>assets/icon.svg</div>
+</div>
+
+<!-- ── MASTER ICON ── -->
+<h2>Master icon</h2>
+<div style="display:flex;gap:20px;align-items:flex-end;flex-wrap:wrap;margin-bottom:32px;">
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <svg width="128" height="128" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+      <rect width="96" height="96" rx="22" fill="oklch(0.50 0.12 162)"/>
+      <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+      <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+    </svg>
+    <div class="label">128 · app icon</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <svg width="64" height="64" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+      <rect width="96" height="96" rx="22" fill="oklch(0.50 0.12 162)"/>
+      <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+      <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+    </svg>
+    <div class="label">64</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <svg width="48" height="48" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+      <rect width="96" height="96" rx="22" fill="oklch(0.50 0.12 162)"/>
+      <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+      <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+    </svg>
+    <div class="label">48 · nav</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <svg width="32" height="32" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+      <rect width="96" height="96" rx="22" fill="oklch(0.50 0.12 162)"/>
+      <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+      <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+    </svg>
+    <div class="label">32</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <svg width="24" height="24" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+      <rect width="96" height="96" rx="22" fill="oklch(0.50 0.12 162)"/>
+      <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+      <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+    </svg>
+    <div class="label">24</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <svg width="16" height="16" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+      <rect width="96" height="96" rx="22" fill="oklch(0.50 0.12 162)"/>
+      <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+      <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+    </svg>
+    <div class="label">16 · favicon</div>
+  </div>
+</div>
+
+<!-- ── APPROVED LOCKUP ── -->
+<h2>Approved horizontal lockup</h2>
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:32px;">
+
+  <!-- On white -->
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <div class="swatch-pad bg-white" style="gap:12px;justify-content:flex-start;padding:18px 24px;">
+      <svg width="36" height="36" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+        <rect width="96" height="96" rx="22" fill="oklch(0.50 0.12 162)"/>
+        <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+        <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+      </svg>
+      <span style="font-family:var(--font-ui);font-size:19px;font-weight:700;color:var(--fg);letter-spacing:-0.02em;">Proviant</span>
+    </div>
+    <div class="label">On white</div>
+  </div>
+
+  <!-- On bg -->
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <div class="swatch-pad bg-subtle" style="gap:12px;justify-content:flex-start;padding:18px 24px;">
+      <svg width="36" height="36" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+        <rect width="96" height="96" rx="22" fill="oklch(0.50 0.12 162)"/>
+        <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+        <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+      </svg>
+      <span style="font-family:var(--font-ui);font-size:19px;font-weight:700;color:var(--fg);letter-spacing:-0.02em;">Proviant</span>
+    </div>
+    <div class="label">On parchment</div>
+  </div>
+
+  <!-- On teal -->
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <div class="swatch-pad bg-teal" style="gap:12px;justify-content:flex-start;padding:18px 24px;">
+      <svg width="36" height="36" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+        <rect width="96" height="96" rx="22" fill="white" opacity="0.2"/>
+        <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+        <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+      </svg>
+      <span style="font-family:var(--font-ui);font-size:19px;font-weight:700;color:white;letter-spacing:-0.02em;">Proviant</span>
+    </div>
+    <div class="label">On teal</div>
+  </div>
+
+  <!-- On dark -->
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <div class="swatch-pad bg-dark" style="gap:12px;justify-content:flex-start;padding:18px 24px;">
+      <svg width="36" height="36" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+        <rect width="96" height="96" rx="22" fill="oklch(0.50 0.12 162)"/>
+        <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+        <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+      </svg>
+      <span style="font-family:var(--font-ui);font-size:19px;font-weight:700;color:white;letter-spacing:-0.02em;">Proviant</span>
+    </div>
+    <div class="label">On dark</div>
+  </div>
+
+</div>
+
+<!-- ── WITH EXISTING SCRIPT WORDMARK ── -->
+<h2>Paired with existing script wordmark</h2>
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:32px;">
+  <div class="swatch-pad bg-white" style="gap:12px;justify-content:flex-start;padding:18px 24px;">
+    <svg width="36" height="36" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+      <rect width="96" height="96" rx="22" fill="oklch(0.50 0.12 162)"/>
+      <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+      <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+      <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+    </svg>
+    <img src="../assets/header.png" alt="Proviant" style="height:32px;object-fit:contain;">
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <div class="swatch-pad bg-white" style="flex-direction:column;gap:8px;padding:16px 28px;">
+      <svg width="44" height="44" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+        <rect width="96" height="96" rx="22" fill="oklch(0.50 0.12 162)"/>
+        <rect x="18" y="15" width="60" height="66" rx="6" fill="white"/>
+        <rect x="27" y="23" width="9" height="50" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="27" y="23" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="27" y="44" width="28" height="9" rx="2" fill="oklch(0.50 0.12 162)"/>
+        <rect x="47" y="23" width="9" height="30" rx="4.5" fill="oklch(0.50 0.12 162)"/>
+      </svg>
+      <img src="../assets/header.png" alt="Proviant" style="height:28px;object-fit:contain;">
+    </div>
+    <div class="label" style="margin-top:8px;">Stacked</div>
+  </div>
+</div>
+
+<!-- ── USAGE NOTES ── -->
+<h2>Usage</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:600px;">
+  <div style="background:white;border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
+    <div style="font-size:11px;font-weight:600;color:oklch(0.38 0.10 162);margin-bottom:6px;">✓ Use icon for</div>
+    <div style="font-size:12px;color:var(--fg-2);line-height:1.7;">Browser favicon · Browser tab · Nav sidebar squished · Mobile home screen · Avatar placeholder</div>
+  </div>
+  <div style="background:white;border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
+    <div style="font-size:11px;font-weight:600;color:oklch(0.45 0.20 25);margin-bottom:6px;">✗ Do not</div>
+    <div style="font-size:12px;color:var(--fg-2);line-height:1.7;">Resize non-uniformly · Use on similar-teal backgrounds · Apply opacity · Alter the P geometry</div>
+  </div>
+</div>
+
+</body>
+</html>
