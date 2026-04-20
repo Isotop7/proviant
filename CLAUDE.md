@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Proviant is a food expiration tracking web app built with Go (Gin, GORM) on the backend and Bootstrap 5 on the frontend. It supports SQLite and MariaDB, JWT authentication, and notifications via SMTP and Ntfy.sh.
 
+## Agent handling
+
+Before editing any file, read it first. Before modifying a function, grep for all callers. Research before you edit. 
+
 ## Commands
 
 ```bash

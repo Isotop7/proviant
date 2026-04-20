@@ -25,8 +25,22 @@ func mustGetDB(ctx *gin.Context, logger *zerolog.Logger) (*gorm.DB, bool) {
 }
 
 func mustGetUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
+	// PAT path: PAT middleware injects userID directly into context
+	if id, exists := ctx.Get("userID"); exists {
+		if userID, ok := id.(uint); ok && userID > 0 {
+			return userID, true
+		}
+	}
+
+	// JWT path: extract from token claims
 	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
+	idClaim, ok := claims[static.TokenIdentityKey]
+	if !ok {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		return 0, false
+	}
+	userID := uint(idClaim.(float64))
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)

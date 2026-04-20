@@ -774,6 +774,74 @@ func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentic
 	return users, err
 }
 
+func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error) {
+	var user authentication.User
+	if err := r.DB.First(&user, userID).Error; err != nil {
+		return 0, err
+	}
+
+	if user.HouseholdID == 0 {
+		return 0, errors.ErrInvalidUserData
+	}
+
+	now := time.Now()
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
+
+	var count int64
+	err := r.DB.Model(&database.Product{}).
+		Where("household_id = ?", user.HouseholdID).
+		Where("deleted_at IS NULL").
+		Where("expire_at >= ?", startOfToday).
+		Where("expire_at <= ?", endOfWindow).
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
+	var user authentication.User
+	if err := r.DB.First(&user, userID).Error; err != nil {
+		return 0, err
+	}
+
+	if user.HouseholdID == 0 {
+		return 0, errors.ErrInvalidUserData
+	}
+
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
+
+	var count int64
+	err := r.DB.Unscoped().Model(&database.Product{}).
+		Where("household_id = ?", user.HouseholdID).
+		Where("deleted_at IS NOT NULL").
+		Where("deleted_at >= ?", monthStart).
+		Where("deleted_at <= ?", monthEnd).
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func (r *ProductRepository) ConsumeProduct(productID int, userID uint) error {
+	if _, err := r.GetProductByID(productID, userID); err != nil {
+		return err
+	}
+	return r.DB.Delete(&database.Product{}, productID).Error
+}
+
+func (r *ProductRepository) WasteProduct(productID int, userID uint) error {
+	if _, err := r.GetProductByID(productID, userID); err != nil {
+		return err
+	}
+	return r.DB.Unscoped().Delete(&database.Product{}, productID).Error
+}
+
 type CalendarTokenRepository struct {
 	DB *gorm.DB
 }
