@@ -6,47 +6,17 @@ Proviant design system. Do not change any backend logic, routing, Go template da
 or functionality — only update HTML structure, CSS classes, and static assets.
 
 ## Design system location
-All design system files are in `design-system/` (or wherever you placed the downloaded folder).
+All design system files are in `design-system/`
 Start by reading these files in order:
 1. `design-system/README.md` — brand context, visual rules, do/don't guidance
 2. `design-system/colors_and_type.css` — every CSS token (color, type, spacing, shadow, radius)
-3. `design-system/ui_kits/proviant/bootstrap-snippets.html` — reference HTML for every component
+3. `design-system/bootstrap-snippets.html` — reference HTML for every component
 
 ## Step 1 — Add the CSS foundation
 
-Add to your base template `<head>` (after Bootstrap CSS):
+Read `design-system/colors_and_type.css`and update colors in `src/templates/scss/main.scss` in your repo.
 
-```html
-<link rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Vend+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="/static/css/proviant.css">
-```
-
-Copy `design-system/colors_and_type.css` → `static/css/proviant.css` in your repo.
-
-Also copy:
-- `design-system/assets/icon.svg`     → `static/img/icon.svg`
-- `design-system/assets/header.png`   → `static/img/header.png`
-
----
-
-## Step 2 — Global base styles
-
-In `proviant.css` or your main stylesheet, add/update:
-
-```css
-body {
-  font-family: var(--font-ui);
-  font-size: var(--text-base);
-  color: var(--fg);
-  background: var(--bg);
-  -webkit-font-smoothing: antialiased;
-}
-```
-
----
-
-## Step 3 — Replace buttons
+## Step 2 — Replace buttons
 
 Find all `<button>` and `<a class="btn ...">` elements and remap classes:
 
@@ -60,7 +30,7 @@ Add button CSS from `bootstrap-snippets.html` `<style>` block (`.btn-proviant-*`
 
 ---
 
-## Step 4 — Replace status badges
+## Step 3 — Replace status badges
 
 Proviant has exactly 5 expiry states. Update your Go templates to output the correct badge class:
 
@@ -89,7 +59,7 @@ color alone (accessibility requirement).
 
 ---
 
-## Step 5 — Update product cards
+## Step 4 — Update product cards
 
 Each product card should follow this structure (see `bootstrap-snippets.html` for full HTML):
 
@@ -128,7 +98,7 @@ Status bar colors to add as CSS vars or inline:
 
 ---
 
-## Step 6 — Update forms
+## Step 5 — Update forms
 
 Replace form control styles. The `proviant.css` tokens already override Bootstrap's
 `:focus` ring. Additionally update labels:
@@ -146,7 +116,7 @@ Replace form control styles. The `proviant.css` tokens already override Bootstra
 
 ---
 
-## Step 7 — Update sidebar / nav
+## Step 6 — Update sidebar / nav
 
 Replace existing nav with the `.pv-sidebar` / `.pv-nav-item` pattern:
 
@@ -174,7 +144,7 @@ Replace existing nav with the `.pv-sidebar` / `.pv-nav-item` pattern:
 
 ---
 
-## Step 8 — Update Bootstrap modals
+## Step 7 — Update Bootstrap modals
 
 Modals already use Bootstrap 5 JS — only the styling needs updating.
 Add to your stylesheet (from `bootstrap-snippets.html`):
@@ -190,7 +160,7 @@ Use `.btn-proviant-*` classes on modal action buttons (Step 3).
 
 ---
 
-## Step 9 — Update toasts
+## Step 8 — Update toasts
 
 Add the `.pv-toast` classes and update toast HTML:
 
@@ -208,7 +178,7 @@ Classes: `toast-success` | `toast-error` | `toast-warning`
 
 ---
 
-## Step 10 — Update dashboard metric tiles
+## Step 9 — Update dashboard metric tiles
 
 ```html
 <div class="metric-tile">
@@ -221,7 +191,7 @@ Classes: `toast-success` | `toast-error` | `toast-warning`
 
 ---
 
-## Step 11 — Empty states
+## Step 10 — Empty states
 
 Any list/grid with no results should render:
 

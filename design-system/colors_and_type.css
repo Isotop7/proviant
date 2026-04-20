@@ -2,8 +2,6 @@
    PROVIANT DESIGN SYSTEM — COLOR & TYPE TOKENS
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Vend+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-
 /* ============================================================
    COLOR TOKENS
    ============================================================ */
@@ -85,7 +83,7 @@
      ============================================================ */
 
   --font-ui:    'Vend Sans', system-ui, sans-serif;
-  --font-mono:  'DM Mono', 'Courier New', monospace;
+  --font-mono:  monospace;
 
   /* Type scale (px reference → rem) */
   --text-xs:   0.75rem;    /* 12px */
