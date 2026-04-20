@@ -110,24 +110,6 @@ PROVIANT_OPENFOODFACTS_TIMEOUT=5                                             # A
 PROVIANT_OPENFOODFACTS_CACHEENABLED=true                                     # Cache API responses in database for offline use
 ```
 
-### Telegram Notifications
-
-To receive notifications via Telegram:
-
-1. **Create a bot** — open Telegram, message [@BotFather](https://t.me/BotFather), run `/newbot`, and follow the prompts. Copy the bot token you receive.
-2. **Configure proviant** — set the bot token in `config.yaml` or via the `PROVIANT_NOTIFICATION_TELEGRAM_BOTTOKEN` environment variable:
-   ```yaml
-   notification:
-     telegram:
-       botToken: "1234567890:ABCDefGHIjklMNOpqrSTUvwxYZ"
-       timeout: 10
-   ```
-3. **Start proviant** — the server will automatically resolve the bot username from Telegram on startup.
-4. **Link your account** — go to **User Settings → Notification Settings → Telegram**, click **Link Account**, then **Generate Token**. Click **Open in Telegram** and press **Start** in the bot chat.
-5. **Enable** — toggle Telegram notifications on in User Settings and save.
-
-> **Note:** The bot uses long-polling to receive messages. No public URL or webhook configuration is required.
-
 Additionally `Gin` supports a debug mode, which also can be set with a environment variable:
 
 ```bash
@@ -151,21 +133,54 @@ Documentation is generated with `gomarkdoc` and `swagger`:
 
 ## Screenshots
 
-- Login and Signup page for multi user mode
+**Login**
 
 ![Login](./screenshots/login.png)
 
-- Portal view with activity tiles
+---
 
-![Portal](./screenshots/portal.png)
+**Dashboard** — metric tiles, waste rate, category breakdown and expiry trend charts
 
-- Create product and query data from OpenFoodFactAPI
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/portal.png" alt="Dashboard desktop"></td>
+    <td><img src="./screenshots/portal_mobile.png" alt="Dashboard mobile"></td>
+  </tr>
+</table>
 
-![Create product](./screenshots/create.png)
+---
 
-- Search all products based on parameters
+**Add product** — barcode scan with auto-fill from OpenFoodFacts
 
-![Search products](./screenshots/search.png)
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/create.png" alt="Add product desktop"></td>
+    <td><img src="./screenshots/create_mobile.png" alt="Add product mobile"></td>
+  </tr>
+</table>
+
+---
+
+**Search** — filter products by name, barcode or category
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/search.png" alt="Search desktop"></td>
+    <td><img src="./screenshots/search_mobile.png" alt="Search mobile"></td>
+  </tr>
+</table>
 
 ## Contributing
 
