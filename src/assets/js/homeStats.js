@@ -5,10 +5,9 @@ function renderSkeletons(count) {
   for (let i = 0; i < count; i++) {
     const col = document.createElement('div');
     col.className = 'col skeleton-tile';
-    col.innerHTML = `<div class="card h-100 p-3">
-      <div class="skeleton-block mb-2" style="height:1rem;width:60%"></div>
-      <div class="skeleton-block mb-3" style="height:3rem;width:40%"></div>
-      <div class="skeleton-block" style="height:.75rem;width:80%"></div>
+    col.innerHTML = `<div class="metric-tile h-100">
+      <div class="skeleton-block mb-2" style="height:.75rem;width:60%"></div>
+      <div class="skeleton-block" style="height:2rem;width:40%"></div>
     </div>`;
     dashboard.appendChild(col);
   }
@@ -28,24 +27,24 @@ function showEmptyChart(canvasId, message) {
   );
 }
 
-function renderTile(title, hero, body, variant, heroClass) {
+function renderTile(title, hero, variant, heroClass) {
   const col = document.createElement('div');
   col.className = 'col';
-  const cls = heroClass || `display-5 fw-bold ${variant ? 'text-' + variant : 'text-primary'} my-2`;
+  const variantColorMap = { danger: 'var(--status-expired)', warning: 'var(--status-soon)', success: 'var(--status-fresh)' };
+  const heroColor = (variant && variantColorMap[variant]) ? variantColorMap[variant] : 'var(--fg)';
+  const heroStyle = heroClass ? '' : `style="color:${heroColor}"`;
+  const heroInnerClass = heroClass || 'metric-value';
   col.innerHTML = `
-    <div class="card h-100">
-      <div class="card-header fw-bold">${title}</div>
-      <div class="card-body">
-        <p class="${cls} my-2" title="${hero}">${hero}</p>
-        <p class="text-body-secondary mb-0">${body}</p>
-      </div>
+    <div class="metric-tile h-100">
+      <div class="metric-label">${title}</div>
+      <div class="${heroInnerClass}" ${heroStyle} title="${hero}">${hero}</div>
     </div>`;
   return col;
 }
 
 function renderListTile(title, items, days) {
   const col = document.createElement('div');
-  col.className = 'col';
+  col.className = 'h-100';
 
   let listHtml;
   if (items.length === 0) {
@@ -62,12 +61,12 @@ function renderListTile(title, items, days) {
   }
 
   col.innerHTML = `
-    <div class="card h-100">
-      <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+    <div class="metric-tile h-100" style="padding:0;overflow:hidden;">
+      <div class="metric-label d-flex justify-content-between align-items-center" style="padding:16px 18px 8px;">
         <span>${title}</span>
-        <i class="bi bi-info-circle text-body-secondary fw-normal tile-threshold-info"></i>
+        <i class="bi bi-info-circle tile-threshold-info" style="font-size:14px;cursor:default;"></i>
       </div>
-      <div class="card-body p-0 tile-scroll-body">
+      <div class="tile-scroll-body">
         <ul class="list-group list-group-flush">${listHtml}</ul>
       </div>
     </div>`;
@@ -76,7 +75,7 @@ function renderListTile(title, items, days) {
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
-  renderSkeletons(6);
+  renderSkeletons(4);
 
   const response = await proviant.getProductStats();
   clearSkeletons();
@@ -90,42 +89,34 @@ document.addEventListener('DOMContentLoaded', async function () {
       {
         title: 'Active Products',
         hero: s.totalActive,
-        body: `${s.totalActive} product${s.totalActive !== 1 ? 's' : ''} currently tracked`,
       },
       {
         title: 'Expired (not archived)',
         hero: `${s.wastePercent.toFixed(1)}%`,
-        body: `${s.wasteCount} of ${s.totalActive} active products are past their expiry date`,
         variant: s.wasteCount > 0 ? 'danger' : null,
       },
       {
         title: 'Total Archived',
         hero: s.totalArchived,
-        body: `${s.totalArchived} product${s.totalArchived !== 1 ? 's' : ''} archived in total`,
-      },
-      {
-        title: 'Unique Archived',
-        hero: s.uniqueArchived,
-        body: `${s.uniqueArchived} distinct product${s.uniqueArchived !== 1 ? 's' : ''} have been archived`,
       },
       {
         title: 'Last Added Product',
         hero: s.lastInsertedProduct || '—',
-        body: s.lastInsertedProduct ? 'Most recently added to your household' : 'No products added yet',
-        heroClass: 'fs-4 fw-bold text-primary text-truncate my-2',
+        heroClass: 'metric-value text-truncate',
       },
     ];
 
-    tiles.forEach(({ title, hero, body, variant, heroClass }) => {
-      dashboard.appendChild(renderTile(title, hero, body, variant, heroClass));
+    tiles.forEach(({ title, hero, variant, heroClass }) => {
+      dashboard.appendChild(renderTile(title, hero, variant, heroClass));
     });
+  }
 
+  const dashboardList = document.getElementById('dashboard-list');
+  if (dashboardList) {
     const days = s.expiringSoonDays ?? 7;
     const listTile = renderListTile(`Expiring within next ${days} Day${days !== 1 ? 's' : ''}`, s.expiringSoon ?? [], days);
-    dashboard.appendChild(listTile);
+    dashboardList.appendChild(listTile);
 
-    // Initialise Bootstrap tooltip on the info icon — must happen after the
-    // element is in the DOM; we pass the text via JS so no native title tooltip shows.
     const infoIcon = listTile.querySelector('.tile-threshold-info');
     if (infoIcon) {
       const tooltip = new bootstrap.Tooltip(infoIcon, {
@@ -136,10 +127,10 @@ document.addEventListener('DOMContentLoaded', async function () {
       infoIcon.addEventListener('mouseenter', () => tooltip.show());
       document.addEventListener('click', () => tooltip.hide(), { once: false, capture: true });
     }
-
-    const status = document.getElementById('dashboard-status');
-    if (status) status.textContent = 'Dashboard loaded';
   }
+
+  const status = document.getElementById('dashboard-status');
+  if (status) status.textContent = 'Dashboard loaded';
 
   // Chart 1 — Waste donut (expired vs fresh)
   if (!s.totalActive) {

@@ -1,37 +1,31 @@
 {{ define "noproducts" }}
 
-<div class="container row text-center">
-    <p class="hero-icon">
+<div class="d-flex justify-content-center py-5">
+    <div class="empty">
+        <div class="empty-icon">
+            {{ if .QueryValue }}
+            <i class="bi bi-search" aria-hidden="true"></i>
+            {{ else }}
+            <i class="bi bi-box-seam" aria-hidden="true"></i>
+            {{ end }}
+        </div>
         {{ if .QueryValue }}
-        <i class="bi bi-search my-5 text-secondary"></i>
+        <div class="empty-title">No results found</div>
+        <div class="empty-desc">
+            No products matched "<strong>{{ .QueryValue }}</strong>".<br>
+            Try a different search term or browse all products.
+        </div>
+        <a class="btn btn-proviant-secondary btn-sm" href="/web/products">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Show all products
+        </a>
         {{ else }}
-        <i class="bi bi-upc-scan my-5 text-primary"></i>
+        <div class="empty-title">No products yet</div>
+        <div class="empty-desc">Add your first product to start tracking expiry dates.</div>
+        <a class="btn btn-proviant-primary btn-sm" href="/web/products/create">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> Add product
+        </a>
         {{ end }}
-    </p>
-    {{ if .QueryValue }}
-    <p class="fs-2 my-2">No results found</p>
-    <p class="my-3">
-        No products matched "<strong>{{ .QueryValue }}</strong>".<br>
-        Try a different search term or browse all products.
-    </p>
-    <div class="my-4">
-        <a class="btn btn-outline-secondary" href="/web/products">
-            <i class="bi bi-arrow-counterclockwise me-2"></i>
-            Show all products
-        </a>
     </div>
-    {{ else }}
-    <p class="fs-2 my-2">No products yet</p>
-    <p class="my-3">
-        Scan a barcode or add a product manually to get started.
-    </p>
-    <div class="my-4">
-        <a class="btn btn-outline-primary" href="/web/products/create">
-            <i class="bi bi-upc-scan me-2"></i>
-            Scan your first item
-        </a>
-    </div>
-    {{ end }}
 </div>
 
 {{ end }}

@@ -107,7 +107,7 @@ tasks:
     cmds:
       - cp ./node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/
       - cp ./node_modules/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-*.woff2 ./src/assets/fonts/
-      - cp ./node_modules/@fontsource/pacifico/files/pacifico-latin-*.woff2 ./src/assets/fonts/
+      - cp ./node_modules/@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2 ./src/assets/fonts/
 
   icons:
     desc: Copy icon files to assets

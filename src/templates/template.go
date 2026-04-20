@@ -61,6 +61,53 @@ func expiryBadgeClass(t time.Time) string {
 	return "bg-success"
 }
 
+func expiryStatusClass(t time.Time) string {
+	if t.IsZero() {
+		return "nodate"
+	}
+	now := time.Now()
+	if t.Before(now) {
+		return "expired"
+	}
+	if t.Before(now.Add(3 * 24 * time.Hour)) {
+		return "critical"
+	}
+	if t.Before(now.Add(7 * 24 * time.Hour)) {
+		return "soon"
+	}
+	return "fresh"
+}
+
+func expiryStatusIcon(t time.Time) string {
+	switch expiryStatusClass(t) {
+	case "expired":
+		return "x-circle-fill"
+	case "critical":
+		return "exclamation-circle-fill"
+	case "soon":
+		return "clock-fill"
+	case "fresh":
+		return "check-circle-fill"
+	default:
+		return "dash-circle-fill"
+	}
+}
+
+func expiryStatusLabel(t time.Time) string {
+	switch expiryStatusClass(t) {
+	case "expired":
+		return "Expired"
+	case "critical":
+		return "Critical"
+	case "soon":
+		return "Expiring soon"
+	case "fresh":
+		return "Fresh"
+	default:
+		return "No date"
+	}
+}
+
 func expiryTextClass(t time.Time) string {
 	if t.IsZero() {
 		return "text-secondary"
@@ -196,6 +243,9 @@ var customTemplateFunctions = template.FuncMap{
 	"today":                today,
 	"hasPassed":            hasPassed,
 	"expiryBadgeClass":     expiryBadgeClass,
+	"expiryStatusClass":    expiryStatusClass,
+	"expiryStatusIcon":     expiryStatusIcon,
+	"expiryStatusLabel":    expiryStatusLabel,
 	"expiryUrgencyText":    expiryUrgencyText,
 	"expiryTextClass":      expiryTextClass,
 	"badgifyCategories":    badgifyCategories,
