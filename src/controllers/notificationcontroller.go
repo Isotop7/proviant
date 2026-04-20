@@ -1,15 +1,20 @@
 package controllers
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"sync"
 	"time"
 
 	dbController "codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
-
-	"net/http"
 
 	"github.com/rs/zerolog"
 )
@@ -19,6 +24,9 @@ type NotificationController struct {
 	Configuration    *configuration.NotificationConfiguration
 	NotificationRepo dbController.NotificationRepositoryInterface
 	Providers        []NotificationProvider
+	telegramClient   *http.Client
+	pollerCancels    sync.Map // userID(uint) → context.CancelFunc
+	botUsernames     sync.Map // userID(uint) → resolved bot username(string)
 }
 
 func NewNotificationController(
@@ -30,12 +38,30 @@ func NewNotificationController(
 		Logger:           logger,
 		Configuration:    config,
 		NotificationRepo: notificationRepo,
+		telegramClient:   &http.Client{Timeout: time.Duration(telegramTimeout(config)) * time.Second},
 	}
 
 	// Initialize providers
 	nc.initializeProviders()
 
 	return nc
+}
+
+func telegramTimeout(config *configuration.NotificationConfiguration) int {
+	if config.Telegram.Timeout > 0 {
+		return config.Telegram.Timeout
+	}
+	return 15
+}
+
+// GetUserTelegramBotUsername returns the bot username resolved at poller start for a user.
+func (nc *NotificationController) GetUserTelegramBotUsername(userID uint) string {
+	if v, ok := nc.botUsernames.Load(userID); ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 func (nc *NotificationController) initializeProviders() {
@@ -55,10 +81,11 @@ func (nc *NotificationController) initializeProviders() {
 		Logger:        nc.Logger,
 		HTTPClient:    &http.Client{Timeout: time.Duration(nc.Configuration.Ntfy.Timeout) * time.Second},
 	}
-
 	if ntfyProvider.IsConfigured() {
 		nc.Providers = append(nc.Providers, ntfyProvider)
 	}
+
+	// Telegram is per-user; no global provider is initialized here.
 
 	nc.Logger.Info().Msgf("Initialized %d notification providers", len(nc.Providers))
 }
@@ -140,12 +167,12 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 
 		// Send notifications for each recipient
 		for _, pref := range preferences {
-			nc.sendNotificationsForRecipient(product, pref)
+			nc.sendNotificationsForRecipient(product, &pref)
 		}
 	}
 }
 
-func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel.Product, recipientInfo models.NotificationRecipientInfo) {
+func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) {
 	// Skip if the product's expiry date is still beyond this user's threshold window.
 	// A threshold of 0 means notify on/after expiry (current behaviour).
 	cutoff := time.Now().AddDate(0, 0, recipientInfo.NotificationThresholdDays)
@@ -155,22 +182,23 @@ func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel
 		return
 	}
 
-	success := false
+	notifiedAtUpdated := false
 
-	// Try each provider in order
 	for _, provider := range nc.Providers {
 		providerType := provider.GetProviderType()
-		nc.Logger.Info().Msgf("Attempting to send %s notification for product '%s' (ID: %d)",
-			providerType, product.ProductName, product.ID)
 
 		var sendError error
 		switch providerType {
 		case "email":
-			if recipientInfo.EmailAddress != "" {
+			if recipientInfo.EmailEnabled && recipientInfo.EmailAddress != "" {
+				nc.Logger.Info().Msgf("Attempting email notification for product '%s' (ID: %d)", product.ProductName, product.ID)
 				sendError = provider.SendNotification(product, recipientInfo.EmailAddress)
 			}
 		case "ntfy":
-			sendError = provider.SendNotification(product, recipientInfo)
+			if recipientInfo.NtfyEnabled {
+				nc.Logger.Info().Msgf("Attempting ntfy notification for product '%s' (ID: %d)", product.ProductName, product.ID)
+				sendError = provider.SendNotification(product, recipientInfo)
+			}
 		}
 
 		if sendError != nil {
@@ -179,20 +207,38 @@ func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel
 		}
 
 		nc.Logger.Info().Msgf("Successfully sent %s notification", providerType)
-		success = true
 
-		// Only update NotifiedAt on first successful notification
-		if success {
+		if !notifiedAtUpdated {
 			updateErr := nc.NotificationRepo.SetProductNotifiedAt(product.ID)
 			if updateErr != nil {
 				nc.Logger.Error().Msg(updateErr.Error())
 			} else {
 				nc.Logger.Info().Msg("Property NotifiedAt was updated")
+				notifiedAtUpdated = true
 			}
 		}
 	}
 
-	if !success {
+	// Telegram is per-user; use recipient's own bot token.
+	if recipientInfo.TelegramEnabled && recipientInfo.TelegramChatID != "" && recipientInfo.TelegramBotToken != "" {
+		nc.Logger.Info().Msgf("Attempting telegram notification for product '%s' (ID: %d)", product.ProductName, product.ID)
+		tp := &TelegramNotificationProvider{BotToken: recipientInfo.TelegramBotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
+		if err := tp.SendNotification(product, recipientInfo.TelegramChatID); err != nil {
+			nc.Logger.Error().Msgf("Failed to send telegram notification: %s", err)
+		} else {
+			nc.Logger.Info().Msg("Successfully sent telegram notification")
+			if !notifiedAtUpdated {
+				if updateErr := nc.NotificationRepo.SetProductNotifiedAt(product.ID); updateErr != nil {
+					nc.Logger.Error().Msg(updateErr.Error())
+				} else {
+					nc.Logger.Info().Msg("Property NotifiedAt was updated")
+					notifiedAtUpdated = true
+				}
+			}
+		}
+	}
+
+	if !notifiedAtUpdated {
 		nc.Logger.Warn().Msgf("Failed to send any notifications for product '%s' (ID: %d)",
 			product.ProductName, product.ID)
 	}
@@ -298,6 +344,236 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 
 	nc.Logger.Info().Msgf("Email verification sent successfully to %s", email)
 	return nil
+}
+
+// DispatchMonthlyWasteReports starts a goroutine that sends household waste reports
+// on the configured day/hour (UTC) of each month to opted-in members via all enabled providers.
+func (nc *NotificationController) DispatchMonthlyWasteReports() {
+	ep := &EmailNotificationProvider{Configuration: nc.Configuration.SMTP, Logger: nc.Logger}
+
+	cfg := nc.Configuration.MonthlyWasteReport
+	go func() {
+		for {
+			now := time.Now().UTC()
+			next := time.Date(now.Year(), now.Month()+1, cfg.Day, cfg.Hour, 0, 0, 0, time.UTC)
+			nc.Logger.Info().Msgf("Monthly waste report: next run at %s", next.Format(time.RFC3339))
+			time.Sleep(time.Until(next))
+			nc.processMonthlyWasteReports(ep)
+		}
+	}()
+}
+
+func (nc *NotificationController) processMonthlyWasteReports(ep *EmailNotificationProvider) {
+	lastMonth := time.Now().UTC().AddDate(0, -1, 0)
+	targets, err := nc.NotificationRepo.GetHouseholdsWithMonthlyWasteReportEnabled()
+	if err != nil {
+		nc.Logger.Error().Msgf("Monthly waste report: failed to fetch households: %s", err)
+		return
+	}
+	nc.Logger.Info().Msgf("Monthly waste report: processing %d household(s)", len(targets))
+
+	for i := range targets {
+		t := &targets[i]
+		stats, statsErr := nc.NotificationRepo.GetWasteStatsForHousehold(t.HouseholdID, lastMonth)
+		if statsErr != nil {
+			nc.Logger.Error().Msgf("Monthly waste report: stats error for household %d: %s", t.HouseholdID, statsErr)
+			continue
+		}
+		stats.HouseholdName = t.HouseholdName
+
+		if ep.IsConfigured() {
+			for _, recipient := range t.Recipients {
+				if sendErr := ep.SendMonthlyWasteReport(recipient, &stats); sendErr != nil {
+					nc.Logger.Error().Msgf("Monthly waste report: email send failed to %s: %s", recipient, sendErr)
+				} else {
+					nc.Logger.Info().Msgf("Monthly waste report: email sent to %s (household %d)", recipient, t.HouseholdID)
+				}
+			}
+		}
+
+		for _, tr := range t.TelegramRecipients {
+			tp := &TelegramNotificationProvider{BotToken: tr.BotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
+			if sendErr := tp.SendMonthlyWasteReport(tr.ChatID, &stats); sendErr != nil {
+				nc.Logger.Error().Msgf("Monthly waste report: telegram send failed to chat %s: %s", tr.ChatID, sendErr)
+			} else {
+				nc.Logger.Info().Msgf("Monthly waste report: telegram sent to chat %s (household %d)", tr.ChatID, t.HouseholdID)
+			}
+		}
+	}
+}
+
+// StartAllUserTelegramPollers queries all users with a configured bot token and starts
+// a long-poll goroutine for each. Called once at startup.
+func (nc *NotificationController) StartAllUserTelegramPollers() {
+	users, err := nc.NotificationRepo.GetAllUsersWithTelegramBotToken()
+	if err != nil {
+		nc.Logger.Error().Msgf("Telegram: failed to load users with bot tokens: %s", err)
+		return
+	}
+	nc.Logger.Info().Msgf("Telegram: starting pollers for %d user(s)", len(users))
+	for i := range users {
+		u := &users[i]
+		nc.StartUserTelegramPoller(u.ID, u.NotificationPreferences.TelegramBotToken)
+	}
+}
+
+// StartUserTelegramPoller cancels any existing poller for userID, then starts a new goroutine
+// that long-polls the Telegram API using botToken and handles /start <token> link commands.
+func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken string) {
+	nc.StopUserTelegramPoller(userID)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	nc.pollerCancels.Store(userID, cancel)
+
+	pollClient := &http.Client{Timeout: 15 * time.Second}
+	baseURL := fmt.Sprintf("https://api.telegram.org/bot%s", botToken)
+
+	go func() {
+		defer nc.pollerCancels.Delete(userID)
+
+		var offset int64
+
+		// Resolve bot username via getMe and persist it.
+		getMeURL := fmt.Sprintf("%s/getMe", baseURL)
+		if resp, err := pollClient.Get(getMeURL); err == nil {
+			var result struct {
+				OK     bool `json:"ok"`
+				Result struct {
+					Username string `json:"username"`
+				} `json:"result"`
+			}
+			if body, readErr := io.ReadAll(resp.Body); readErr == nil {
+				if jsonErr := json.Unmarshal(body, &result); jsonErr == nil && result.OK && result.Result.Username != "" {
+					nc.botUsernames.Store(userID, result.Result.Username)
+					if dbErr := nc.NotificationRepo.SetTelegramBotUsername(userID, result.Result.Username); dbErr != nil {
+						nc.Logger.Warn().Msgf("Telegram poller (user %d): failed to persist bot username: %s", userID, dbErr)
+					}
+					nc.Logger.Info().Msgf("Telegram poller (user %d): resolved bot username @%s", userID, result.Result.Username)
+				}
+			}
+			_ = resp.Body.Close()
+		}
+
+		nc.Logger.Info().Msgf("Telegram poller (user %d): started", userID)
+
+		for {
+			select {
+			case <-ctx.Done():
+				nc.Logger.Info().Msgf("Telegram poller (user %d): stopped", userID)
+				return
+			default:
+			}
+
+			url := fmt.Sprintf("%s/getUpdates?timeout=10&offset=%d", baseURL, offset)
+			resp, err := pollClient.Get(url)
+			if err != nil {
+				nc.Logger.Error().Msgf("Telegram poller (user %d): getUpdates error: %s", userID, err)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(5 * time.Second):
+				}
+				continue
+			}
+
+			body, readErr := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			if readErr != nil {
+				nc.Logger.Error().Msgf("Telegram poller (user %d): read error: %s", userID, readErr)
+				continue
+			}
+
+			var result struct {
+				OK     bool `json:"ok"`
+				Result []struct {
+					UpdateID int64 `json:"update_id"`
+					Message  *struct {
+						Chat struct {
+							ID int64 `json:"id"`
+						} `json:"chat"`
+						Text string `json:"text"`
+					} `json:"message"`
+				} `json:"result"`
+			}
+
+			if jsonErr := json.Unmarshal(body, &result); jsonErr != nil {
+				nc.Logger.Error().Msgf("Telegram poller (user %d): parse error: %s", userID, jsonErr)
+				continue
+			}
+
+			for _, update := range result.Result {
+				offset = update.UpdateID + 1
+
+				if update.Message == nil {
+					continue
+				}
+
+				text := strings.TrimSpace(update.Message.Text)
+				chatID := fmt.Sprintf("%d", update.Message.Chat.ID)
+
+				if !strings.HasPrefix(text, "/start") {
+					continue
+				}
+
+				parts := strings.Fields(text)
+				if len(parts) < 2 {
+					nc.sendTelegramText(pollClient, baseURL, chatID,
+						"Send `/start <token>` with the token from your Proviant notification settings to link this chat.")
+					continue
+				}
+
+				token := parts[1]
+				user, findErr := nc.NotificationRepo.FindUserByTelegramLinkToken(token)
+				if findErr != nil || user.ID != userID {
+					nc.Logger.Warn().Msgf("Telegram poller (user %d): invalid link token from chat %s", userID, chatID)
+					nc.sendTelegramText(pollClient, baseURL, chatID,
+						"Invalid or expired token. Please generate a new one in Proviant settings.")
+					continue
+				}
+
+				if setErr := nc.NotificationRepo.SetTelegramChatID(userID, chatID); setErr != nil {
+					nc.Logger.Error().Msgf("Telegram poller (user %d): failed to save chat ID: %s", userID, setErr)
+					nc.sendTelegramText(pollClient, baseURL, chatID,
+						"Something went wrong. Please try again.")
+					continue
+				}
+
+				nc.Logger.Info().Msgf("Telegram poller (user %d): linked chat %s", userID, chatID)
+				nc.sendTelegramText(pollClient, baseURL, chatID,
+					"✅ Linked! You will now receive Proviant notifications here.")
+			}
+		}
+	}()
+}
+
+// StopUserTelegramPoller cancels the long-poll goroutine for the given user, if running.
+func (nc *NotificationController) StopUserTelegramPoller(userID uint) {
+	if v, ok := nc.pollerCancels.Load(userID); ok {
+		if cancel, ok := v.(context.CancelFunc); ok {
+			cancel()
+		}
+		nc.pollerCancels.Delete(userID)
+	}
+	nc.botUsernames.Delete(userID)
+}
+
+func (nc *NotificationController) sendTelegramText(client *http.Client, baseURL, chatID, text string) {
+	payload := map[string]any{
+		"chat_id":    chatID,
+		"text":       text,
+		"parse_mode": "Markdown",
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		nc.Logger.Error().Msgf("Telegram: marshal error: %s", err)
+		return
+	}
+	resp, err := client.Post(baseURL+"/sendMessage", "application/json", bytes.NewReader(body))
+	if err != nil {
+		nc.Logger.Error().Msgf("Telegram: sendMessage error: %s", err)
+		return
+	}
+	_ = resp.Body.Close()
 }
 
 // processPendingInvitations fetches all pending invitations that need to be sent or retried.

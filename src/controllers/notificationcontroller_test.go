@@ -103,6 +103,34 @@ func (m *MockNotificationRepository) GetPublicHouseholds(excludeHouseholdID uint
 	return nil, nil
 }
 
+func (m *MockNotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error) {
+	return nil, nil
+}
+
+func (m *MockNotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error) {
+	return models.WasteStats{}, nil
+}
+
+func (m *MockNotificationRepository) FindUserByTelegramLinkToken(token string) (authentication.User, error) {
+	return authentication.User{}, nil
+}
+
+func (m *MockNotificationRepository) SetTelegramChatID(userID uint, chatID string) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) SetTelegramLinkToken(userID uint, token string) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) SetTelegramBotUsername(userID uint, username string) error {
+	return nil
+}
+
+func (m *MockNotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentication.User, error) {
+	return nil, nil
+}
+
 var _ dbController.NotificationRepositoryInterface = (*MockNotificationRepository)(nil)
 
 func TestNotificationControllerInitialization(t *testing.T) {

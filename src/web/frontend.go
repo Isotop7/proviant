@@ -145,6 +145,13 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
 		return
 	}
+	user.NotificationPreferences.TelegramLinked = user.NotificationPreferences.TelegramChatID != ""
+	if user.NotificationPreferences.TelegramLinked && !user.NotificationPreferences.TelegramEnabled {
+		user.NotificationPreferences.TelegramEnabled = true
+	}
+
+	telegramConfigured := user.NotificationPreferences.TelegramBotToken != ""
+
 	household, householdErr := householdRepo.GetHouseholdByID(user.HouseholdID)
 	if householdErr != nil {
 		logger.Error().Msg(api.ResponseErrInvalidUserData.Message)
@@ -169,6 +176,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"Members":             members,
 		"PendingApplications": pendingApplications,
 		"MyApplications":      myApplications,
+		"TelegramConfigured":  telegramConfigured,
 	}
 
 	if isAdmin {

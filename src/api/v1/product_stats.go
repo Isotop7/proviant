@@ -50,6 +50,70 @@ func GetExpired(ctx *gin.Context) {
 	}
 }
 
+// GetProductSummary returns a lightweight count summary for Home Assistant sensor polling
+// @Summary      Return product summary
+// @Description  Returns expiring-soon count, expired count, total active count, and waste-this-month count in one request
+// @Tags         product
+// @Produce      json
+// @Success      200  {object}  apiModel.ProductSummaryResponse
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/products/summary [get]
+func GetProductSummary(ctx *gin.Context) {
+	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	if !loggerOk {
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
+		return
+	}
+
+	dbHandle, ok := mustGetDB(ctx, logger)
+	if !ok {
+		return
+	}
+
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return
+	}
+
+	productRepo := database.NewProductRepository(dbHandle)
+
+	expiringSoonCount, err := productRepo.GetExpiringSoonCount(userID, 7)
+	if err != nil {
+		logger.Error().Msgf("GetExpiringSoonCount: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon count"})
+		return
+	}
+
+	expiredCount, err := productRepo.GetExpiredProductsCount(userID)
+	if err != nil {
+		logger.Error().Msgf("GetExpiredProductsCount: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expired count"})
+		return
+	}
+
+	totalActive, err := productRepo.GetActiveProductsCount(userID)
+	if err != nil {
+		logger.Error().Msgf("GetActiveProductsCount: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing active product count"})
+		return
+	}
+
+	wasteThisMonth, err := productRepo.GetWasteThisMonth(userID)
+	if err != nil {
+		logger.Error().Msgf("GetWasteThisMonth: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing monthly waste count"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, apiModel.ProductSummaryResponse{
+		ExpiringSoonCount: expiringSoonCount,
+		ExpiredCount:      expiredCount,
+		TotalActive:       totalActive,
+		WasteThisMonth:    wasteThisMonth,
+	})
+}
+
 // GetProductStats returns aggregated product statistics for the authenticated user
 // @Summary      Return product statistics
 // @Description  Returns waste rate, top archived products, category breakdown and expiry trend

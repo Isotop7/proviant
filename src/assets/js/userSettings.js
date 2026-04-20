@@ -123,6 +123,91 @@ function toggleNtfySettings() {
   }
 }
 
+function toggleEmailSettings() {
+  const toggle = document.getElementById("toggleEmailNotifications");
+  const settings = document.getElementById("emailSettings");
+  if (toggle && settings) {
+    settings.classList.toggle("d-none", !toggle.checked);
+  }
+}
+
+function toggleMonthlyWasteReportSettings() {
+  const toggle = document.getElementById("toggleMonthlyWasteReport");
+  const settings = document.getElementById("monthlyWasteReportSettings");
+  if (toggle && settings) {
+    settings.classList.toggle("d-none", !toggle.checked);
+  }
+}
+
+function toggleTelegramSettings() {
+  const toggle = document.getElementById("toggleTelegramNotifications");
+  const settings = document.getElementById("telegramSettings");
+  if (toggle && settings) {
+    settings.classList.toggle("d-none", !toggle.checked);
+  }
+}
+
+function showTelegramLinkAlert(message, isSuccess) {
+  const el = document.getElementById("telegramLinkAlert");
+  if (!el) return;
+  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
+  const span = el.querySelector("span") || el;
+  span.textContent = message;
+  el.classList.remove("d-none");
+  el.classList.add("show");
+}
+
+function handleGenerateTelegramToken() {
+  const btn = document.getElementById("btnGenerateTelegramToken");
+  setButtonLoading(btn, true);
+
+  proviant.generateTelegramLinkToken().then((response) => {
+    setButtonLoading(btn, false);
+    if (response.code !== 200) {
+      showTelegramLinkAlert("Failed to generate token. Please try again.", false);
+      return;
+    }
+
+    const cmdEl = document.getElementById("telegramLinkCommand");
+    const deepLinkEl = document.getElementById("telegramDeepLink");
+    const cmdTextEl = document.getElementById("telegramLinkCommandText");
+    const manualEl = document.getElementById("telegramManualCommand");
+    const copiedEl = document.getElementById("telegramCommandCopied");
+
+    const token = response.token;
+    const botUsername = response.botUsername;
+
+    cmdEl.classList.remove("d-none");
+    if (copiedEl) copiedEl.classList.add("d-none");
+
+    if (cmdTextEl) cmdTextEl.value = `/start ${token}`;
+    if (manualEl) manualEl.classList.remove("d-none");
+
+    if (botUsername) {
+      const deepLinkUrl = `https://t.me/${botUsername}?start=${token}`;
+      deepLinkEl.href = deepLinkUrl;
+      deepLinkEl.classList.remove("d-none");
+    } else {
+      deepLinkEl.classList.add("d-none");
+    }
+  }).catch(() => {
+    setButtonLoading(btn, false);
+    showTelegramLinkAlert("Network error. Please try again.", false);
+  });
+}
+
+function handleCopyTelegramCommand() {
+  const cmdTextEl = document.getElementById("telegramLinkCommandText");
+  const copiedEl = document.getElementById("telegramCommandCopied");
+  if (!cmdTextEl || !cmdTextEl.value) return;
+  proviant.copyToClipboard(cmdTextEl.value).then((success) => {
+    if (success && copiedEl) {
+      copiedEl.classList.remove("d-none");
+      setTimeout(() => copiedEl.classList.add("d-none"), 2000);
+    }
+  });
+}
+
 function UpdateNotificationSettings() {
   const toggleEmailNotifications = document.getElementById("toggleEmailNotifications");
   const toggleNtfyNotifications = document.getElementById("toggleNtfyNotifications");
@@ -160,6 +245,9 @@ function UpdateNotificationSettings() {
     ntfyTopic: inputNtfyTopic.value || "",
     ntfyToken: inputNtfyToken.value || "",
     notificationThresholdDays: thresholdDays,
+    monthlyWasteReportEnabled: document.getElementById("toggleMonthlyWasteReport")?.checked ?? false,
+    telegramEnabled: document.getElementById("toggleTelegramNotifications")?.checked ?? false,
+    telegramBotToken: document.getElementById("inputTelegramBotToken")?.value ?? "",
   };
 
   proviant
@@ -1068,6 +1156,18 @@ document.addEventListener("click", function (event) {
     return;
   }
 
+  if (target.closest("#btnGenerateTelegramToken")) {
+    event.preventDefault();
+    handleGenerateTelegramToken();
+    return;
+  }
+
+  if (target.closest("#btnCopyTelegramCommand")) {
+    event.preventDefault();
+    handleCopyTelegramCommand();
+    return;
+  }
+
   if (target.closest("#btnCloseWebhookSecret")) {
     document.getElementById('webhookSecretCopy').value = '';
     return;
@@ -1122,6 +1222,15 @@ document.addEventListener("input", function (event) {
 document.addEventListener("change", function (event) {
   if (event.target.id === "toggleNtfyNotifications") {
     toggleNtfySettings();
+  }
+  if (event.target.id === "toggleEmailNotifications") {
+    toggleEmailSettings();
+  }
+  if (event.target.id === "toggleMonthlyWasteReport") {
+    toggleMonthlyWasteReportSettings();
+  }
+  if (event.target.id === "toggleTelegramNotifications") {
+    toggleTelegramSettings();
   }
 });
 

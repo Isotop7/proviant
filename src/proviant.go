@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	stdlog "log"
 	"os"
 	"strings"
 	"time"
@@ -80,6 +81,10 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 	notificationController.Dispatch()
 	// Dispatch invitation email retry goroutine (uses same Interval config)
 	notificationController.DispatchInvitations(proviantConfiguration.Server.BaseURL)
+	// Dispatch monthly waste report goroutine
+	notificationController.DispatchMonthlyWasteReports()
+	// Start per-user Telegram long-polling goroutines for all users with a bot token
+	notificationController.StartAllUserTelegramPollers()
 	return notificationController
 }
 
@@ -93,6 +98,10 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetEnvPrefix("PROVIANT")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// Set defaults for monthly waste report schedule
+	viper.SetDefault("notification.monthlyWasteReport.day", 1)
+	viper.SetDefault("notification.monthlyWasteReport.hour", 8)
 
 	// Set default password policy
 	viper.SetDefault("server.authentication.passwordMinLength", 12)
@@ -172,6 +181,8 @@ func main() {
 	// Setup logging
 	logger := setupLogging(proviantConfiguration)
 	logger.Info().Msg("Logging initialized")
+	stdlog.SetOutput(logger)
+	stdlog.SetFlags(0)
 
 	// Validate database parameters
 	dbValidErr := proviantConfiguration.ValidateDatabaseConfiguration()
@@ -237,9 +248,6 @@ func main() {
 			panic(err)
 		}
 	}
-
-	// Setup NotificationController if notifications are enabled
-	setupNotificationController(logger, proviantConfiguration, dbHandle)
 
 	// Setup template cache
 	templateCache, err := templates.NewTemplateCache()

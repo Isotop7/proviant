@@ -20,7 +20,7 @@
 - 📷 Scan product barcodes via camera to auto-fill data from [OpenFoodFacts](https://world.openfoodfacts.org/), with optional local caching for offline use.
 - 🗄️ Archive and restore products; bulk delete, archive, and restore.
 - 🔍 Search and filter products by multiple parameters.
-- ⏰ Receive expiration reminders via email (SMTP) or push notifications ([Ntfy](https://ntfy.sh/)).
+- ⏰ Receive expiration reminders via email (SMTP), push notifications ([Ntfy](https://ntfy.sh/)), or [Telegram](https://telegram.org/) bot.
 - 🔔 Per-user notification preferences.
 - 👥 Multi-user support with household scoping.
 - 🌙 Dark theme.
@@ -31,7 +31,7 @@
 - **Web:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html), [Bootstrap](https://getbootstrap.com/)
 - **Charts:** [Chart.js](https://www.chartjs.org/)
 - **Database:** MariaDB or SQLite
-- **Notifications:** SMTP, [Ntfy](https://ntfy.sh/)
+- **Notifications:** SMTP, [Ntfy](https://ntfy.sh/), [Telegram](https://telegram.org/)
 
 ## Installation and Usage
 
@@ -100,12 +100,33 @@ PROVIANT_NOTIFICATION_SMTP_FROMADDRESS="sender@local.net"                     # 
 PROVIANT_NOTIFICATION_NTFY_URL="https://ntfy.sh"                             # Ntfy server URL
 PROVIANT_NOTIFICATION_NTFY_TOPIC="default_topic"                             # Default Ntfy topic/channel
 PROVIANT_NOTIFICATION_NTFY_TIMEOUT=60                                         # Ntfy message timeout in seconds
+PROVIANT_NOTIFICATION_TELEGRAM_BOTTOKEN="1234567890:ABCDefGHIjklMNOpqrSTUvwxYZ"  # Telegram bot token from BotFather
+PROVIANT_NOTIFICATION_TELEGRAM_BOTUSERNAME="MyProviantBot"                   # Bot username (optional, auto-resolved via getMe)
+PROVIANT_NOTIFICATION_TELEGRAM_TIMEOUT=10                                    # Telegram API request timeout in seconds
 
 # OpenFoodFacts configuration
 PROVIANT_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"  # OpenFoodFacts API URL
 PROVIANT_OPENFOODFACTS_TIMEOUT=5                                             # API request timeout in seconds
 PROVIANT_OPENFOODFACTS_CACHEENABLED=true                                     # Cache API responses in database for offline use
 ```
+
+### Telegram Notifications
+
+To receive notifications via Telegram:
+
+1. **Create a bot** — open Telegram, message [@BotFather](https://t.me/BotFather), run `/newbot`, and follow the prompts. Copy the bot token you receive.
+2. **Configure proviant** — set the bot token in `config.yaml` or via the `PROVIANT_NOTIFICATION_TELEGRAM_BOTTOKEN` environment variable:
+   ```yaml
+   notification:
+     telegram:
+       botToken: "1234567890:ABCDefGHIjklMNOpqrSTUvwxYZ"
+       timeout: 10
+   ```
+3. **Start proviant** — the server will automatically resolve the bot username from Telegram on startup.
+4. **Link your account** — go to **User Settings → Notification Settings → Telegram**, click **Link Account**, then **Generate Token**. Click **Open in Telegram** and press **Start** in the bot chat.
+5. **Enable** — toggle Telegram notifications on in User Settings and save.
+
+> **Note:** The bot uses long-polling to receive messages. No public URL or webhook configuration is required.
 
 Additionally `Gin` supports a debug mode, which also can be set with a environment variable:
 

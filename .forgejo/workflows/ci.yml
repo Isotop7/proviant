@@ -1,7 +1,7 @@
 name: CI
 
 env:
-  GO_VERSION: 1.25.8
+  GO_VERSION: 1.25.9
   GOLANGCI_LINT_VERSION: v2.11.4
   CODEBERG_REGISTRY: codeberg.org
   PRIVATE_REGISTRY: registry.hr94.de
