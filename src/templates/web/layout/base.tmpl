@@ -46,8 +46,7 @@
     </a>
   </nav>
   <!-- Offline banner — shown by JS when navigator.onLine === false -->
-  <div id="offlineBanner" class="d-none" role="status" aria-live="polite"
-       style="position:fixed;top:0;left:var(--offline-banner-left,var(--sidebar-width));right:0;z-index:99;background:var(--status-soon-subtle);border-bottom:1px solid var(--status-soon-border);padding:8px 16px;font-size:13px;text-align:center;">
+  <div id="offlineBanner" class="offline-banner d-none" role="status" aria-live="polite">
     <i class="bi bi-wifi-off me-2" aria-hidden="true"></i>
     You're offline — showing cached data. Changes will sync when reconnected.
     <span id="offlineQueueCount" class="ms-1 fw-semibold d-none"></span>
@@ -64,11 +63,10 @@
     <div class="modal-dialog modal-dialog-centered modal-sm">
       <div class="modal-content">
         <div class="modal-header">
-          <div class="modal-icon" id="proviantConfirmIconBox"
-               style="background:oklch(0.95 0.05 25);color:oklch(0.45 0.20 25);" aria-hidden="true">
+          <div class="modal-icon modal-icon-danger" id="proviantConfirmIconBox" aria-hidden="true">
             <i id="proviantConfirmIcon" class="bi bi-exclamation-triangle-fill"></i>
           </div>
-          <div style="padding-top:6px;flex:1;">
+          <div class="modal-header-body">
             <h5 id="proviantConfirmTitle" class="modal-title mb-0"></h5>
           </div>
           <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -93,7 +91,7 @@
           <div class="modal-icon" id="proviantFeedbackIconBox" aria-hidden="true">
             <i id="proviantFeedbackIcon" class="bi"></i>
           </div>
-          <div style="padding-top:6px;flex:1;">
+          <div class="modal-header-body">
             <h5 id="proviantFeedbackTitle" class="modal-title mb-0"></h5>
           </div>
           <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>

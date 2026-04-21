@@ -13,8 +13,8 @@
         <div class="viewfinder-corner bl" aria-hidden="true"></div>
         <div class="viewfinder-corner br" aria-hidden="true"></div>
         <div class="scan-line" id="scanLine" aria-hidden="true"></div>
-        <div id="barcode-reader-wrapper" class="d-none" style="position:absolute;inset:0;">
-            <div id="barcode-reader" style="height:100%;"></div>
+        <div id="barcode-reader-wrapper" class="barcode-reader-inset d-none">
+            <div id="barcode-reader"></div>
         </div>
     </div>
 </div>
@@ -22,7 +22,7 @@
 <!-- Scan actions -->
 <div class="scan-actions">
     <button class="btn btn-proviant-primary w-100 d-flex align-items-center justify-content-center gap-2 py-3" type="button" id="btnScan" data-action="scan">
-        <i class="bi bi-upc-scan" style="font-size:20px;" aria-hidden="true"></i>
+        <i class="bi bi-upc-scan barcode-scan-icon" aria-hidden="true"></i>
         <span>Scan barcode</span>
     </button>
 
@@ -36,13 +36,13 @@
 </div>
 
 <!-- Product data — revealed by JS after barcode lookup -->
-<div id="productData" class="d-none px-3 py-3" style="max-width:480px;margin:0 auto;">
+<div id="productData" class="product-data-panel d-none px-3 py-3">
     <div class="card mb-3">
         <div class="card-body">
             <div class="d-flex align-items-center gap-3 mb-3">
                 <div class="flex-shrink-0">
                     <img id="productInfoImage" src="" alt=""
-                         class="rounded" style="width:64px;height:64px;object-fit:contain;background:var(--bg-subtle);">
+                         class="rounded product-thumb">
                 </div>
                 <div class="flex-grow-1">
                     <div id="productInfoName" class="fw-semibold"></div>
@@ -108,10 +108,10 @@
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-icon" style="background:var(--bg-subtle);color:var(--fg-2);" aria-hidden="true">
+                <div class="modal-icon modal-icon-subtle" aria-hidden="true">
                     <i class="bi bi-upc"></i>
                 </div>
-                <div style="padding-top:6px;flex:1;">
+                <div class="modal-header-body">
                     <h5 class="modal-title mb-0" id="manualBarcodeModalLabel">Enter barcode</h5>
                 </div>
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
