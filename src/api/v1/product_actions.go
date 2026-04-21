@@ -105,6 +105,15 @@ func WasteProduct(ctx *gin.Context) {
 		return
 	}
 
+	// Record waste event for household streak tracking
+	userRepo := database.NewUserRepository(dbHandle)
+	if householdID, err := userRepo.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
+		streakRepo := database.NewStreakRepository(dbHandle)
+		if err := streakRepo.RecordWasteEvent(householdID); err != nil {
+			logger.Error().Msgf("WasteProduct: failed to record waste event for streak: %s", err)
+		}
+	}
+
 	go func() {
 		if ws := controllers.GetWebhookService(); ws != nil {
 			ws.FireEvent("product.wasted", map[string]any{

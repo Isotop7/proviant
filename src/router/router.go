@@ -237,6 +237,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	onboardingAPI.POST("/join-invite", onboarding.JoinOnboardingByInvite)
 	onboardingAPI.POST("/complete", onboarding.CompleteOnboarding)
 
+	// Streak routes
+	streakAPI := engine.Group("/api/v1/streak")
+	streakAPI.Use(jwtAPIMiddlewareWithPAT)
+	streakAPI.GET("", v1.GetStreak)
+
 	// Notification routes
 	notificationAPI := engine.Group("/api/v1/notifications")
 	notificationAPI.Use(jwtAPIMiddlewareWithPAT)

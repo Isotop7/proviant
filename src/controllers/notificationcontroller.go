@@ -23,6 +23,7 @@ type NotificationController struct {
 	Logger           *zerolog.Logger
 	Configuration    *configuration.NotificationConfiguration
 	NotificationRepo dbController.NotificationRepositoryInterface
+	StreakRepo       dbController.StreakRepositoryInterface
 	Providers        []NotificationProvider
 	telegramClient   *http.Client
 	pollerCancels    sync.Map // userID(uint) → context.CancelFunc
@@ -397,6 +398,101 @@ func (nc *NotificationController) processMonthlyWasteReports(ep *EmailNotificati
 				nc.Logger.Error().Msgf("Monthly waste report: telegram send failed to chat %s: %s", tr.ChatID, sendErr)
 			} else {
 				nc.Logger.Info().Msgf("Monthly waste report: telegram sent to chat %s (household %d)", tr.ChatID, t.HouseholdID)
+			}
+		}
+	}
+}
+
+// DispatchStreakUpdates starts a goroutine that runs daily at midnight UTC to increment
+// or reset each household's waste-free streak and send milestone notifications.
+func (nc *NotificationController) DispatchStreakUpdates() {
+	if nc.StreakRepo == nil {
+		nc.Logger.Warn().Msg("StreakRepo not set, skipping streak updates")
+		return
+	}
+	go func() {
+		for {
+			now := time.Now().UTC()
+			nextMidnight := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
+			nc.Logger.Info().Msgf("Streak updater: next run at %s", nextMidnight.Format(time.RFC3339))
+			time.Sleep(time.Until(nextMidnight))
+			nc.processStreakUpdates()
+		}
+	}()
+}
+
+func (nc *NotificationController) processStreakUpdates() {
+	streaks, err := nc.StreakRepo.GetAllStreaks()
+	if err != nil {
+		nc.Logger.Error().Msgf("Streak updater: failed to fetch streaks: %s", err)
+		return
+	}
+	nc.Logger.Info().Msgf("Streak updater: processing %d household(s)", len(streaks))
+
+	milestones := []int{7, 30, 100}
+	now := time.Now().UTC()
+
+	for i := range streaks {
+		s := &streaks[i]
+
+		// Waste happened since last check → reset streak
+		if s.LastWastedDate != nil && !s.LastWastedDate.Before(s.LastCheckedDate) {
+			s.CurrentStreak = 0
+			s.LastWastedDate = nil
+		} else {
+			s.CurrentStreak++
+			if s.CurrentStreak > s.LongestStreak {
+				s.LongestStreak = s.CurrentStreak
+			}
+			for _, m := range milestones {
+				if s.CurrentStreak == m {
+					nc.sendStreakMilestoneNotifications(s.HouseholdID, m)
+				}
+			}
+		}
+		s.LastCheckedDate = now
+
+		if updateErr := nc.StreakRepo.UpdateStreak(s); updateErr != nil {
+			nc.Logger.Error().Msgf("Streak updater: failed to save streak for household %d: %s", s.HouseholdID, updateErr)
+		} else {
+			nc.Logger.Info().Msgf("Streak updater: household %d streak = %d", s.HouseholdID, s.CurrentStreak)
+		}
+	}
+}
+
+func (nc *NotificationController) sendStreakMilestoneNotifications(householdID uint, milestone int) {
+	preferences, err := nc.NotificationRepo.GetHouseholdMembersNotificationPreferences(householdID)
+	if err != nil {
+		nc.Logger.Error().Msgf("Streak milestone: failed to get preferences for household %d: %s", householdID, err)
+		return
+	}
+
+	ep := &EmailNotificationProvider{Configuration: nc.Configuration.SMTP, Logger: nc.Logger}
+	ntfyTimeout := time.Duration(nc.Configuration.Ntfy.Timeout) * time.Second
+	if ntfyTimeout <= 0 {
+		ntfyTimeout = 15 * time.Second
+	}
+	np := &NtfyNotificationProvider{
+		Configuration: nc.Configuration.Ntfy,
+		Logger:        nc.Logger,
+		HTTPClient:    &http.Client{Timeout: ntfyTimeout},
+	}
+
+	for _, pref := range preferences {
+		if pref.EmailEnabled && pref.EmailAddress != "" && ep.IsConfigured() {
+			if sendErr := ep.SendStreakMilestone(milestone, pref.EmailAddress); sendErr != nil {
+				nc.Logger.Error().Msgf("Streak milestone: email failed: %s", sendErr)
+			}
+		}
+		if pref.NtfyEnabled && np.IsConfigured() {
+			if sendErr := np.SendStreakMilestone(milestone, pref); sendErr != nil {
+				nc.Logger.Error().Msgf("Streak milestone: ntfy failed: %s", sendErr)
+			}
+		}
+		if pref.TelegramEnabled && pref.TelegramChatID != "" && pref.TelegramBotToken != "" {
+			tp := &TelegramNotificationProvider{BotToken: pref.TelegramBotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
+			if sendErr := tp.SendStreakMilestone(milestone, pref.TelegramChatID); sendErr != nil {
+				nc.Logger.Error().Msgf("Streak milestone: telegram failed: %s", sendErr)
 			}
 		}
 	}

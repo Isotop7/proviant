@@ -151,6 +151,13 @@ definitions:
         description: 'format: "2006-01"'
         type: string
     type: object
+  api.StreakResponse:
+    properties:
+      currentStreak:
+        type: integer
+      longestStreak:
+        type: integer
+    type: object
   api.UpdateWebhookRequest:
     properties:
       active:
@@ -225,6 +232,8 @@ definitions:
         type: string
       telegramBotConfigured:
         type: boolean
+      telegramBotToken:
+        type: string
       telegramEnabled:
         type: boolean
       telegramLinked:
@@ -2072,6 +2081,24 @@ paths:
       summary: Returns a list of products
       tags:
       - product
+  /api/v1/streak:
+    get:
+      description: Returns the current and longest waste-free streak for the caller's
+        household
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.StreakResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get waste-free streak
+      tags:
+      - streak
   /api/v1/user:
     patch:
       consumes:
@@ -2725,19 +2752,6 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Archived products page
-      tags:
-      - web
-  /web/products/create:
-    get:
-      description: Renders the page for creating a new product
-      produces:
-      - text/html
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-      summary: Create product page
       tags:
       - web
   /web/user:
