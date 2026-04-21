@@ -67,6 +67,12 @@ func (t *TelegramNotificationProvider) SendMonthlyWasteReport(chatID string, sta
 	return t.sendMessage(chatID, text)
 }
 
+// SendStreakMilestone sends a streak milestone notification to a Telegram chat.
+func (t *TelegramNotificationProvider) SendStreakMilestone(milestone int, chatID string) error {
+	text := fmt.Sprintf("*%d-day waste-free streak!*\n\nYour household has gone %d consecutive days without wasting food.", milestone, milestone)
+	return t.sendMessage(chatID, text)
+}
+
 func (t *TelegramNotificationProvider) sendMessage(chatID, text string) error {
 	payload := map[string]any{
 		"chat_id":    chatID,

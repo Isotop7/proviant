@@ -303,7 +303,6 @@ func (frontend *Frontend) ProductsArchived(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsArchived.tmpl", pageData)
 }
 
-
 func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
 	pageData := map[string]any{
 		"InviteToken": ctx.Query("invite_token"),

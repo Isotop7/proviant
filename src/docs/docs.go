@@ -2390,6 +2390,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/streak": {
+            "get": {
+                "description": "Returns the current and longest waste-free streak for the caller's household",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "streak"
+                ],
+                "summary": "Get waste-free streak",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.StreakResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/user": {
             "patch": {
                 "description": "Updates display name and email of the authenticated user",
@@ -3724,6 +3750,17 @@ const docTemplate = `{
                 }
             }
         },
+        "api.StreakResponse": {
+            "type": "object",
+            "properties": {
+                "currentStreak": {
+                    "type": "integer"
+                },
+                "longestStreak": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.UpdateWebhookRequest": {
             "type": "object",
             "properties": {
@@ -3835,6 +3872,9 @@ const docTemplate = `{
                 },
                 "telegramBotConfigured": {
                     "type": "boolean"
+                },
+                "telegramBotToken": {
+                    "type": "string"
                 },
                 "telegramEnabled": {
                     "type": "boolean"

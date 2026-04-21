@@ -694,6 +694,16 @@ proviant.getProductStats = async function () {
   return { code: apiCall.status, message: body };
 };
 
+proviant.getStreak = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/streak`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
 proviant.getNotifications = async function () {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/notifications`;
   const apiCall = await fetch(url, {

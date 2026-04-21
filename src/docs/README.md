@@ -104,11 +104,13 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(e \*EmailNotificationProvider\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#EmailNotificationProvider.SendInvitationEmail>)
   - [func \(e \*EmailNotificationProvider\) SendMonthlyWasteReport\(recipient string, stats \*models.WasteStats\) error](<#EmailNotificationProvider.SendMonthlyWasteReport>)
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
+  - [func \(e \*EmailNotificationProvider\) SendStreakMilestone\(milestone int, recipient string\) error](<#EmailNotificationProvider.SendStreakMilestone>)
 - [type NotificationController](<#NotificationController>)
   - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
   - [func \(nc \*NotificationController\) DispatchInvitations\(baseURL string\)](<#NotificationController.DispatchInvitations>)
   - [func \(nc \*NotificationController\) DispatchMonthlyWasteReports\(\)](<#NotificationController.DispatchMonthlyWasteReports>)
+  - [func \(nc \*NotificationController\) DispatchStreakUpdates\(\)](<#NotificationController.DispatchStreakUpdates>)
   - [func \(nc \*NotificationController\) GetUserTelegramBotUsername\(userID uint\) string](<#NotificationController.GetUserTelegramBotUsername>)
   - [func \(nc \*NotificationController\) SendEmailVerification\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendEmailVerification>)
   - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#NotificationController.SendInvitationEmail>)
@@ -121,7 +123,9 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(n \*NtfyNotificationProvider\) GetProviderType\(\) string](<#NtfyNotificationProvider.GetProviderType>)
   - [func \(n \*NtfyNotificationProvider\) IsConfigured\(\) bool](<#NtfyNotificationProvider.IsConfigured>)
   - [func \(n \*NtfyNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#NtfyNotificationProvider.SendNotification>)
+  - [func \(n \*NtfyNotificationProvider\) SendStreakMilestone\(milestone int, recipient models.NotificationRecipientInfo\) error](<#NtfyNotificationProvider.SendStreakMilestone>)
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
+  - [func \(offacntrl OpenFoodFactsAPIController\) DownloadImage\(imageURL, barcode string\) \(string, error\)](<#OpenFoodFactsAPIController.DownloadImage>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
 - [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
 - [type TelegramNotificationProvider](<#TelegramNotificationProvider>)
@@ -129,6 +133,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(t \*TelegramNotificationProvider\) IsConfigured\(\) bool](<#TelegramNotificationProvider.IsConfigured>)
   - [func \(t \*TelegramNotificationProvider\) SendMonthlyWasteReport\(chatID string, stats \*models.WasteStats\) error](<#TelegramNotificationProvider.SendMonthlyWasteReport>)
   - [func \(t \*TelegramNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#TelegramNotificationProvider.SendNotification>)
+  - [func \(t \*TelegramNotificationProvider\) SendStreakMilestone\(milestone int, chatID string\) error](<#TelegramNotificationProvider.SendStreakMilestone>)
 - [type WebhookService](<#WebhookService>)
   - [func GetWebhookService\(\) \*WebhookService](<#GetWebhookService>)
   - [func \(s \*WebhookService\) FireEvent\(event string, payload map\[string\]any\)](<#WebhookService.FireEvent>)
@@ -280,6 +285,15 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 
 
 
+<a name="EmailNotificationProvider.SendStreakMilestone"></a>
+### func \(\*EmailNotificationProvider\) SendStreakMilestone
+
+```go
+func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient string) error
+```
+
+SendStreakMilestone sends a streak milestone notification email.
+
 <a name="NotificationController"></a>
 ## type NotificationController
 
@@ -290,6 +304,7 @@ type NotificationController struct {
     Logger           *zerolog.Logger
     Configuration    *configuration.NotificationConfiguration
     NotificationRepo dbController.NotificationRepositoryInterface
+    StreakRepo       dbController.StreakRepositoryInterface
     Providers        []NotificationProvider
     // contains filtered or unexported fields
 }
@@ -330,6 +345,15 @@ func (nc *NotificationController) DispatchMonthlyWasteReports()
 ```
 
 DispatchMonthlyWasteReports starts a goroutine that sends household waste reports on the configured day/hour \(UTC\) of each month to opted\-in members via all enabled providers.
+
+<a name="NotificationController.DispatchStreakUpdates"></a>
+### func \(\*NotificationController\) DispatchStreakUpdates
+
+```go
+func (nc *NotificationController) DispatchStreakUpdates()
+```
+
+DispatchStreakUpdates starts a goroutine that runs daily at midnight UTC to increment or reset each household's waste\-free streak and send milestone notifications.
 
 <a name="NotificationController.GetUserTelegramBotUsername"></a>
 ### func \(\*NotificationController\) GetUserTelegramBotUsername
@@ -447,6 +471,15 @@ func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, re
 
 
 
+<a name="NtfyNotificationProvider.SendStreakMilestone"></a>
+### func \(\*NtfyNotificationProvider\) SendStreakMilestone
+
+```go
+func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient models.NotificationRecipientInfo) error
+```
+
+SendStreakMilestone sends a streak milestone push notification via ntfy.
+
 <a name="OpenFoodFactsAPIController"></a>
 ## type OpenFoodFactsAPIController
 
@@ -458,6 +491,15 @@ type OpenFoodFactsAPIController struct {
     Configuration configuration.OpenFoodFactsConfiguration
 }
 ```
+
+<a name="OpenFoodFactsAPIController.DownloadImage"></a>
+### func \(OpenFoodFactsAPIController\) DownloadImage
+
+```go
+func (offacntrl OpenFoodFactsAPIController) DownloadImage(imageURL, barcode string) (string, error)
+```
+
+DownloadImage fetches an image from imageURL and saves it to \{cachePath\}/\{barcode\}.jpg. Returns the local serve path /product\-images/\{barcode\}.jpg on success.
 
 <a name="OpenFoodFactsAPIController.GetDataset"></a>
 ### func \(OpenFoodFactsAPIController\) GetDataset
@@ -527,6 +569,15 @@ func (t *TelegramNotificationProvider) SendNotification(product *dbModel.Product
 ```
 
 
+
+<a name="TelegramNotificationProvider.SendStreakMilestone"></a>
+### func \(\*TelegramNotificationProvider\) SendStreakMilestone
+
+```go
+func (t *TelegramNotificationProvider) SendStreakMilestone(milestone int, chatID string) error
+```
+
+SendStreakMilestone sends a streak milestone notification to a Telegram chat.
 
 <a name="WebhookService"></a>
 ## type WebhookService
@@ -733,6 +784,9 @@ var (
 
     // ErrOpenFoodFactsAPIInvalidTimeout is thrown if an invalid API timeout was supplied
     ErrOpenFoodFactsAPIInvalidTimeout = errors.New("invalid timeout for OpenFoodFacts API specified")
+
+    // ErrOpenFoodFactsAPIInvalidImageCachePath is thrown if image caching is enabled but no path is specified
+    ErrOpenFoodFactsAPIInvalidImageCachePath = errors.New("image cache enabled but no image cache path specified")
 
     /*
      * Notification related errors
@@ -1225,7 +1279,6 @@ import "codeberg.org/isotop7/proviant/web"
   - [func \(frontend \*Frontend\) Onboarding\(ctx \*gin.Context\)](<#Frontend.Onboarding>)
   - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
   - [func \(frontend \*Frontend\) ProductsArchived\(ctx \*gin.Context\)](<#Frontend.ProductsArchived>)
-  - [func \(frontend \*Frontend\) ProductsCreate\(ctx \*gin.Context\)](<#Frontend.ProductsCreate>)
   - [func \(frontend \*Frontend\) ProductsEdit\(ctx \*gin.Context\)](<#Frontend.ProductsEdit>)
   - [func \(frontend \*Frontend\) ProductsScan\(ctx \*gin.Context\)](<#Frontend.ProductsScan>)
   - [func \(frontend \*Frontend\) ProductsView\(ctx \*gin.Context\)](<#Frontend.ProductsView>)
@@ -1290,15 +1343,6 @@ func (frontend *Frontend) ProductsArchived(ctx *gin.Context)
 ```
 
 ProductsArchived renders the archived products page @Summary Archived products page @Description Renders the archived products list page @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products/archived \[get\]
-
-<a name="Frontend.ProductsCreate"></a>
-### func \(\*Frontend\) ProductsCreate
-
-```go
-func (frontend *Frontend) ProductsCreate(ctx *gin.Context)
-```
-
-ProductsCreate renders the product creation page @Summary Create product page @Description Renders the page for creating a new product @Tags web @Produce html @Success 200 \{string\} html @Router /web/products/create \[get\]
 
 <a name="Frontend.ProductsEdit"></a>
 ### func \(\*Frontend\) ProductsEdit
@@ -1539,6 +1583,8 @@ v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
+v1 implements version 1 of the proviant API
+
 ## Index
 
 - [Constants](<#constants>)
@@ -1581,6 +1627,7 @@ v1 implements version 1 of the proviant API
 - [func GetProductSummary\(ctx \*gin.Context\)](<#GetProductSummary>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
+- [func GetStreak\(ctx \*gin.Context\)](<#GetStreak>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context\)](<#GetUserNotificationPreferences>)
 - [func GetWebhook\(ctx \*gin.Context\)](<#GetWebhook>)
 - [func GetWebhookDeliveries\(ctx \*gin.Context\)](<#GetWebhookDeliveries>)
@@ -1979,6 +2026,15 @@ func GetProductsByBarcode(ctx *gin.Context)
 
 GetProductsByBarcode returns a list of products of a user matching a barcode @Summary Returns a list of products @Description Returns a list of products of user matching the given barcode @Tags product @Produce json @Param barcode path int true "Barcode" @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/productsByBarcode \[get\]
 
+<a name="GetStreak"></a>
+## func GetStreak
+
+```go
+func GetStreak(ctx *gin.Context)
+```
+
+GetStreak returns the current waste\-free streak for the user's household @Summary Get waste\-free streak @Description Returns the current and longest waste\-free streak for the caller's household @Tags streak @Produce json @Success 200 \{object\} apiModel.StreakResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/streak \[get\]
+
 <a name="GetUserNotificationPreferences"></a>
 ## func GetUserNotificationPreferences
 
@@ -2351,12 +2407,20 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.SearchProducts>)
   - [func \(r \*ProductRepository\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#ProductRepository.SetProductExpireAt>)
   - [func \(r \*ProductRepository\) SetProductNotifiedAt\(productID uint\) error](<#ProductRepository.SetProductNotifiedAt>)
+  - [func \(r \*ProductRepository\) UpdateOpenFoodFactsCacheImageURL\(barcode, imageURL string\) error](<#ProductRepository.UpdateOpenFoodFactsCacheImageURL>)
   - [func \(r \*ProductRepository\) UpdateProduct\(productID int, userID uint, product \*database.ProductDTOPatch\) error](<#ProductRepository.UpdateProduct>)
   - [func \(r \*ProductRepository\) UpdateProductAmount\(productID int, userID uint, delta int\) \(bool, error\)](<#ProductRepository.UpdateProductAmount>)
   - [func \(r \*ProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#ProductRepository.UserHasProductAccess>)
   - [func \(r \*ProductRepository\) WasteProduct\(productID int, userID uint\) error](<#ProductRepository.WasteProduct>)
 - [type SearchParameterEnum](<#SearchParameterEnum>)
   - [func SearchParameterEnumFromString\(str string\) SearchParameterEnum](<#SearchParameterEnumFromString>)
+- [type StreakRepository](<#StreakRepository>)
+  - [func NewStreakRepository\(db \*gorm.DB\) \*StreakRepository](<#NewStreakRepository>)
+  - [func \(r \*StreakRepository\) GetAllStreaks\(\) \(\[\]dbModel.WasteStreak, error\)](<#StreakRepository.GetAllStreaks>)
+  - [func \(r \*StreakRepository\) GetOrCreateStreakForHousehold\(householdID uint\) \(\*dbModel.WasteStreak, error\)](<#StreakRepository.GetOrCreateStreakForHousehold>)
+  - [func \(r \*StreakRepository\) RecordWasteEvent\(householdID uint\) error](<#StreakRepository.RecordWasteEvent>)
+  - [func \(r \*StreakRepository\) UpdateStreak\(streak \*dbModel.WasteStreak\) error](<#StreakRepository.UpdateStreak>)
+- [type StreakRepositoryInterface](<#StreakRepositoryInterface>)
 - [type SupportedEngines](<#SupportedEngines>)
   - [func SupportedEnginesFromString\(str string\) SupportedEngines](<#SupportedEnginesFromString>)
 - [type UserRepository](<#UserRepository>)
@@ -3454,6 +3518,15 @@ func (r *ProductRepository) SetProductNotifiedAt(productID uint) error
 
 
 
+<a name="ProductRepository.UpdateOpenFoodFactsCacheImageURL"></a>
+### func \(\*ProductRepository\) UpdateOpenFoodFactsCacheImageURL
+
+```go
+func (r *ProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error
+```
+
+
+
 <a name="ProductRepository.UpdateProduct"></a>
 ### func \(\*ProductRepository\) UpdateProduct
 
@@ -3517,6 +3590,76 @@ func SearchParameterEnumFromString(str string) SearchParameterEnum
 ```
 
 
+
+<a name="StreakRepository"></a>
+## type StreakRepository
+
+StreakRepository implements StreakRepositoryInterface.
+
+```go
+type StreakRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewStreakRepository"></a>
+### func NewStreakRepository
+
+```go
+func NewStreakRepository(db *gorm.DB) *StreakRepository
+```
+
+
+
+<a name="StreakRepository.GetAllStreaks"></a>
+### func \(\*StreakRepository\) GetAllStreaks
+
+```go
+func (r *StreakRepository) GetAllStreaks() ([]dbModel.WasteStreak, error)
+```
+
+
+
+<a name="StreakRepository.GetOrCreateStreakForHousehold"></a>
+### func \(\*StreakRepository\) GetOrCreateStreakForHousehold
+
+```go
+func (r *StreakRepository) GetOrCreateStreakForHousehold(householdID uint) (*dbModel.WasteStreak, error)
+```
+
+
+
+<a name="StreakRepository.RecordWasteEvent"></a>
+### func \(\*StreakRepository\) RecordWasteEvent
+
+```go
+func (r *StreakRepository) RecordWasteEvent(householdID uint) error
+```
+
+
+
+<a name="StreakRepository.UpdateStreak"></a>
+### func \(\*StreakRepository\) UpdateStreak
+
+```go
+func (r *StreakRepository) UpdateStreak(streak *dbModel.WasteStreak) error
+```
+
+
+
+<a name="StreakRepositoryInterface"></a>
+## type StreakRepositoryInterface
+
+StreakRepositoryInterface defines operations for household waste streaks.
+
+```go
+type StreakRepositoryInterface interface {
+    GetOrCreateStreakForHousehold(householdID uint) (*dbModel.WasteStreak, error)
+    RecordWasteEvent(householdID uint) error
+    UpdateStreak(streak *dbModel.WasteStreak) error
+    GetAllStreaks() ([]dbModel.WasteStreak, error)
+}
+```
 
 <a name="SupportedEngines"></a>
 ## type SupportedEngines
@@ -3943,6 +4086,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ProductSummaryResponse](<#ProductSummaryResponse>)
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
+- [type StreakResponse](<#StreakResponse>)
 - [type TokenResponse](<#TokenResponse>)
 - [type UpdateWebhookRequest](<#UpdateWebhookRequest>)
 - [type WebhookListResponse](<#WebhookListResponse>)
@@ -4165,6 +4309,18 @@ type StatsMonthlyCount struct {
 }
 ```
 
+<a name="StreakResponse"></a>
+## type StreakResponse
+
+StreakResponse is the response body for GET /api/v1/streak
+
+```go
+type StreakResponse struct {
+    CurrentStreak int `json:"currentStreak"`
+    LongestStreak int `json:"longestStreak"`
+}
+```
+
 <a name="TokenResponse"></a>
 ## type TokenResponse
 
@@ -4313,7 +4469,7 @@ type NotificationPreferences struct {
     TelegramEnabled           bool   `json:"telegramEnabled" gorm:"default:false"`
     TelegramChatID            string `json:"-"`
     TelegramLinkToken         string `json:"-"`
-    TelegramBotToken          string `json:"-"`
+    TelegramBotToken          string `json:"telegramBotToken"`
     TelegramBotUsername       string `json:"-"`
     TelegramLinked            bool   `json:"telegramLinked" gorm:"-"`
     TelegramBotConfigured     bool   `json:"telegramBotConfigured" gorm:"-"`
@@ -4529,6 +4685,7 @@ configuration defines structs and methods for proviants configuration and specif
 - [type SMTPConfiguration](<#SMTPConfiguration>)
 - [type SecurityHeadersConfiguration](<#SecurityHeadersConfiguration>)
 - [type ServerConfiguration](<#ServerConfiguration>)
+- [type TelegramConfiguration](<#TelegramConfiguration>)
 
 
 <a name="AuthenticationConfiguration"></a>
@@ -4639,6 +4796,7 @@ type NotificationConfiguration struct {
     SMTP               SMTPConfiguration
     Ntfy               NtfyConfiguration
     MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
+    Telegram           TelegramConfiguration           `mapstructure:"telegram"`
 }
 ```
 
@@ -4662,9 +4820,11 @@ OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts A
 
 ```go
 type OpenFoodFactsConfiguration struct {
-    URL          string
-    Timeout      int
-    CacheEnabled bool
+    URL               string
+    Timeout           int
+    CacheEnabled      bool
+    ImageCacheEnabled bool
+    ImageCachePath    string
 }
 ```
 
@@ -4753,6 +4913,17 @@ type ServerConfiguration struct {
 }
 ```
 
+<a name="TelegramConfiguration"></a>
+## type TelegramConfiguration
+
+TelegramConfiguration holds per\-instance Telegram settings \(no global bot token\).
+
+```go
+type TelegramConfiguration struct {
+    Timeout int // HTTP client timeout in seconds (default: 15)
+}
+```
+
 # database
 
 ```go
@@ -4778,6 +4949,7 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type ProductDTOExpire](<#ProductDTOExpire>)
 - [type ProductDTOPatch](<#ProductDTOPatch>)
 - [type Timestamp](<#Timestamp>)
+- [type WasteStreak](<#WasteStreak>)
 - [type Webhook](<#Webhook>)
 - [type WebhookDeliveryLog](<#WebhookDeliveryLog>)
 
@@ -5033,6 +5205,22 @@ Timestamp is the model definition for timestamp
 ```go
 type Timestamp struct {
     Timestamp Date `json:"timestamp" binding:"required"`
+}
+```
+
+<a name="WasteStreak"></a>
+## type WasteStreak
+
+
+
+```go
+type WasteStreak struct {
+    gorm.Model
+    HouseholdID     uint `gorm:"uniqueIndex;not null"`
+    CurrentStreak   int  `gorm:"default:0"`
+    LongestStreak   int  `gorm:"default:0"`
+    LastCheckedDate time.Time
+    LastWastedDate  *time.Time
 }
 ```
 

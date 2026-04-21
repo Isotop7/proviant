@@ -78,10 +78,13 @@ function renderListTile(title, items, days) {
   }
 
   col.innerHTML = `
-    <div class="metric-tile h-100" style="padding:0;overflow:hidden;">
-      <div class="metric-label d-flex justify-content-between align-items-center" style="padding:16px 18px 8px;">
-        <span>${title}</span>
-        <i class="bi bi-info-circle tile-threshold-info" style="font-size:14px;cursor:default;"></i>
+    <div class="card h-100" style="overflow:hidden;">
+      <div class="card-header d-flex align-items-center gap-2 fw-bold">
+        <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
+          <i class="bi bi-clock-history" style="font-size:12px;color:var(--accent);"></i>
+        </div>
+        <span class="flex-grow-1">${title}</span>
+        <i class="bi bi-info-circle tile-threshold-info" style="font-size:14px;cursor:default;color:var(--fg-3);font-weight:normal;"></i>
       </div>
       <div class="tile-scroll-body">
         <ul class="list-group list-group-flush">${listHtml}</ul>
@@ -92,9 +95,12 @@ function renderListTile(title, items, days) {
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
-  renderSkeletons(4);
+  renderSkeletons(5);
 
-  const response = await proviant.getProductStats();
+  const [response, streakResponse] = await Promise.all([
+    proviant.getProductStats(),
+    proviant.getStreak(),
+  ]);
   clearSkeletons();
 
   if (response.code !== 200) return;
@@ -126,6 +132,25 @@ document.addEventListener('DOMContentLoaded', async function () {
     tiles.forEach(({ title, hero, variant, heroClass }) => {
       dashboard.appendChild(renderTile(title, hero, variant, heroClass));
     });
+
+    // Streak tile
+    const streak = (streakResponse.code === 200 && streakResponse.message) ? streakResponse.message : null;
+    const currentStreak = streak ? streak.currentStreak : 0;
+    const longestStreak = streak ? streak.longestStreak : 0;
+    const streakHero = `${currentStreak} day${currentStreak !== 1 ? 's' : ''}`;
+    const streakHeroClass = currentStreak > 0 ? 'metric-value' : 'metric-value text-body-secondary';
+    const streakSub = longestStreak > 0 ? `Best: ${longestStreak} day${longestStreak !== 1 ? 's' : ''}` : null;
+    const streakCol = renderTile('<i class="bi bi-fire"></i> Waste-free streak', streakHero, null, streakHeroClass);
+    if (streakSub) {
+      const tile = streakCol.querySelector('.metric-tile');
+      if (tile) {
+        const sub = document.createElement('div');
+        sub.style.cssText = 'font-size:var(--text-xs);color:var(--fg-3);margin-top:var(--space-1)';
+        sub.textContent = streakSub;
+        tile.appendChild(sub);
+      }
+    }
+    dashboard.appendChild(streakCol);
   }
 
   const dashboardList = document.getElementById('dashboard-list');

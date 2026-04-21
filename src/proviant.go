@@ -77,12 +77,15 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 		&proviantConfiguration.Notification,
 		notificationRepo,
 	)
+	notificationController.StreakRepo = dbController.NewStreakRepository(dbHandle)
 	// Dispatch notification handler goroutine
 	notificationController.Dispatch()
 	// Dispatch invitation email retry goroutine (uses same Interval config)
 	notificationController.DispatchInvitations(proviantConfiguration.Server.BaseURL)
 	// Dispatch monthly waste report goroutine
 	notificationController.DispatchMonthlyWasteReports()
+	// Dispatch daily streak update goroutine
+	notificationController.DispatchStreakUpdates()
 	// Start per-user Telegram long-polling goroutines for all users with a bot token
 	notificationController.StartAllUserTelegramPollers()
 	return notificationController
@@ -215,6 +218,7 @@ func main() {
 		&dbModel.EmailVerification{},
 		&dbModel.Webhook{},
 		&dbModel.WebhookDeliveryLog{},
+		&dbModel.WasteStreak{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
