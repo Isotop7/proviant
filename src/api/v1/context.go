@@ -51,8 +51,8 @@ func mustGetUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
 }
 
 func getNotificationController(ctx *gin.Context) (*controllers.NotificationController, bool) {
-	nc, ok := ctx.MustGet("notificationController").(*controllers.NotificationController)
-	return nc, ok
+	notificationController, ok := ctx.MustGet("notificationController").(*controllers.NotificationController)
+	return notificationController, ok
 }
 
 func parseIntParam(ctx *gin.Context, logger *zerolog.Logger, paramName string) (int, bool) {

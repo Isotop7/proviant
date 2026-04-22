@@ -206,10 +206,10 @@ func JWTMiddleware(
 		SendCookie:    true,
 		// Generate claims and return it to payload
 		PayloadFunc: func(data any) jwt.MapClaims {
-			if v, ok := data.(authentication.User); ok {
+			if userData, ok := data.(authentication.User); ok {
 				return jwt.MapClaims{
-					static.TokenIdentityKey: v.ID,
-					static.TokenUsernameKey: v.Username,
+					static.TokenIdentityKey: userData.ID,
+					static.TokenUsernameKey: userData.Username,
 					static.TokenJTIKey:      uuid.New().String(),
 				}
 			}

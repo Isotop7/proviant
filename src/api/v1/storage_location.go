@@ -38,8 +38,8 @@ func ListStorageLocations(ctx *gin.Context) {
 		return
 	}
 
-	slRepo := database.NewStorageLocationRepository(dbHandle)
-	locs, err := slRepo.GetByHousehold(userID)
+	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
+	locs, err := storageLocationRepo.GetByHousehold(userID)
 	if err != nil {
 		logger.Error().Msgf("Error listing storage locations: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
@@ -85,8 +85,8 @@ func CreateStorageLocation(ctx *gin.Context) {
 		icon = "📦"
 	}
 
-	slRepo := database.NewStorageLocationRepository(dbHandle)
-	loc, err := slRepo.Create(userID, req.Name, icon, req.SortOrder)
+	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
+	loc, err := storageLocationRepo.Create(userID, req.Name, icon, req.SortOrder)
 	if err != nil {
 		logger.Error().Msgf("Error creating storage location: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
@@ -139,8 +139,8 @@ func UpdateStorageLocation(ctx *gin.Context) {
 		icon = "📦"
 	}
 
-	slRepo := database.NewStorageLocationRepository(dbHandle)
-	loc, err := slRepo.Update(locationID, userID, req.Name, icon, req.SortOrder)
+	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
+	loc, err := storageLocationRepo.Update(locationID, userID, req.Name, icon, req.SortOrder)
 	if err != nil {
 		if err == errors.ErrStorageLocationNotFound {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
@@ -186,8 +186,8 @@ func DeleteStorageLocation(ctx *gin.Context) {
 		return
 	}
 
-	slRepo := database.NewStorageLocationRepository(dbHandle)
-	if err := slRepo.Delete(locationID, userID); err != nil {
+	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
+	if err := storageLocationRepo.Delete(locationID, userID); err != nil {
 		if err == errors.ErrStorageLocationNotFound {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
 			return

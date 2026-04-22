@@ -193,6 +193,7 @@ func GetOpenFoodFactsData(ctx *gin.Context) {
 		Categories:  product.Categories,
 		Countries:   product.Countries,
 		ImageURL:    product.ImageURL,
+		CO2KgPerKg:  product.CO2KgPerKg,
 	}
 
 	if offacntrl.Configuration.CacheEnabled {

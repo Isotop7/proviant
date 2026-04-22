@@ -69,17 +69,17 @@ func (s *WebhookService) deliverWebhook(webhook *dbModel.Webhook, event string, 
 	for attempt := 1; attempt <= 3; attempt++ {
 		statusCode, responseBody, deliveryErr := s.doDelivery(webhook.URL, payloadBytes, signature)
 
-		log := dbModel.WebhookDeliveryLog{
+		deliveryLog := dbModel.WebhookDeliveryLog{
 			WebhookID:    webhook.ID,
 			StatusCode:   statusCode,
 			ResponseBody: truncateString(responseBody, 1024),
 			Attempt:      attempt,
 		}
 		if deliveryErr != nil {
-			log.Error = deliveryErr.Error()
+			deliveryLog.Error = deliveryErr.Error()
 		}
 
-		if err := s.Repo.CreateDeliveryLog(&log); err != nil {
+		if err := s.Repo.CreateDeliveryLog(&deliveryLog); err != nil {
 			s.Logger.Error().Msgf("Error creating delivery log: %v", err)
 		}
 
@@ -122,9 +122,9 @@ func (s *WebhookService) doDelivery(url string, payload []byte, signature string
 }
 
 func (s *WebhookService) computeSignature(secret string, payload []byte) string {
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(payload)
-	return hex.EncodeToString(mac.Sum(nil))
+	hmacHash := hmac.New(sha256.New, []byte(secret))
+	hmacHash.Write(payload)
+	return hex.EncodeToString(hmacHash.Sum(nil))
 }
 
 func truncateString(s string, maxLen int) string {

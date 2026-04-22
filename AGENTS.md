@@ -80,6 +80,7 @@ import (
 - **Package names**: lowercase, single words (e.g., `database`, `router`)
 - **Interfaces**: PascalCase, often ending in functional description (e.g., `Authorizator`)
 - **Error variables**: PascalCase with `Err` prefix (e.g., `ErrInvalidUserID`, `ErrDatabaseInvalidEngine`)
+- **Variables**: Use full descriptive camelCase names — never abbreviate (e.g., `storageLocationRepo` not `slRepo`, `productController` not `pc`, `householdID` not `hID`)
 
 ### Types and Structs
 - Use GORM struct tags for database models: `gorm:"index, not null"`

@@ -19,11 +19,11 @@ import (
 func convertStringIDsToInts(ids []string) ([]int, error) {
 	result := make([]int, 0, len(ids))
 	for _, id := range ids {
-		n, err := strconv.Atoi(id)
+		parsedID, err := strconv.Atoi(id)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, n)
+		result = append(result, parsedID)
 	}
 	return result, nil
 }
@@ -136,8 +136,8 @@ func BulkDeleteProducts(ctx *gin.Context) {
 		return
 	}
 	strProductIDs := make([]string, len(convertedProductIDs))
-	for i, v := range convertedProductIDs {
-		strProductIDs[i] = strconv.Itoa(v)
+	for i, productID := range convertedProductIDs {
+		strProductIDs[i] = strconv.Itoa(productID)
 	}
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", strings.Join(strProductIDs, ";"))})
 }
@@ -191,8 +191,8 @@ func BulkArchiveProducts(ctx *gin.Context) {
 		return
 	}
 	strProductIDs := make([]string, len(convertedProductIDs))
-	for i, v := range convertedProductIDs {
-		strProductIDs[i] = strconv.Itoa(v)
+	for i, productID := range convertedProductIDs {
+		strProductIDs[i] = strconv.Itoa(productID)
 	}
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were archived", strings.Join(strProductIDs, ";"))})
 }
@@ -288,8 +288,8 @@ func BulkRestoreProducts(ctx *gin.Context) {
 		return
 	}
 	strProductIDs := make([]string, len(convertedProductIDs))
-	for i, v := range convertedProductIDs {
-		strProductIDs[i] = strconv.Itoa(v)
+	for i, productID := range convertedProductIDs {
+		strProductIDs[i] = strconv.Itoa(productID)
 	}
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were restored", strings.Join(strProductIDs, ";"))})
 }

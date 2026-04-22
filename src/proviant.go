@@ -220,6 +220,8 @@ func main() {
 		&dbModel.Webhook{},
 		&dbModel.WebhookDeliveryLog{},
 		&dbModel.WasteStreak{},
+		&dbModel.ProductCategoryPrice{},
+		&dbModel.SavingsRecord{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
@@ -234,6 +236,11 @@ func main() {
 	// Backfill default amount for existing products
 	if amountMigrationError := migrations.SetDefaultProductAmounts(logger, dbHandle); amountMigrationError != nil {
 		panic(amountMigrationError)
+	}
+
+	// Seed ProductCategoryPrice reference data for savings calculator
+	if seedErr := migrations.SeedProductCategoryPrices(logger, dbHandle); seedErr != nil {
+		panic(seedErr)
 	}
 
 	// Initialize webhook service

@@ -910,6 +910,15 @@ var (
 
     // ErrWebhookNotOwner is thrown when a user tries to access a webhook they do not own
     ErrWebhookNotOwner = errors.New("webhook does not belong to user")
+
+    /*
+     * Savings related errors
+     */
+    // ErrSavingsRecordFailed is thrown when a savings record cannot be written
+    ErrSavingsRecordFailed = errors.New("failed to record savings event")
+
+    // ErrSavingsStatsUnavailable is thrown when savings statistics cannot be computed
+    ErrSavingsStatsUnavailable = errors.New("savings statistics unavailable")
 )
 ```
 
@@ -1000,6 +1009,7 @@ import "codeberg.org/isotop7/proviant/migrations"
 - [func DropLegacyStorageLocationColumn\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#DropLegacyStorageLocationColumn>)
 - [func RunBreakingDatabaseMigrations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RunBreakingDatabaseMigrations>)
 - [func SeedDefaultStorageLocations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SeedDefaultStorageLocations>)
+- [func SeedProductCategoryPrices\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SeedProductCategoryPrices>)
 - [func SetDefaultProductAmounts\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SetDefaultProductAmounts>)
 
 
@@ -1047,6 +1057,15 @@ func SeedDefaultStorageLocations(logger *zerolog.Logger, db *gorm.DB) error
 ```
 
 SeedDefaultStorageLocations creates Fridge, Freezer and Pantry for every existing household that has no storage locations yet.
+
+<a name="SeedProductCategoryPrices"></a>
+## func SeedProductCategoryPrices
+
+```go
+func SeedProductCategoryPrices(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+SeedProductCategoryPrices inserts default category price/CO2 reference rows if the table is empty. CO2 values \(kg CO2e per kg food\) are derived from the Agribalyse LCA database, the same source used by Open Food Facts for ecoscore\_data. EUR prices are EU retail averages \(Eurostat, 2023\). Idempotent: skipped entirely if any row already exists.
 
 <a name="SetDefaultProductAmounts"></a>
 ## func SetDefaultProductAmounts
@@ -1611,6 +1630,8 @@ v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
+v1 implements version 1 of the proviant API
+
 ## Index
 
 - [Constants](<#constants>)
@@ -1655,6 +1676,7 @@ v1 implements version 1 of the proviant API
 - [func GetProductSummary\(ctx \*gin.Context\)](<#GetProductSummary>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
+- [func GetSavingsStats\(ctx \*gin.Context\)](<#GetSavingsStats>)
 - [func GetStreak\(ctx \*gin.Context\)](<#GetStreak>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context\)](<#GetUserNotificationPreferences>)
 - [func GetWebhook\(ctx \*gin.Context\)](<#GetWebhook>)
@@ -2074,6 +2096,15 @@ func GetProductsByBarcode(ctx *gin.Context)
 
 GetProductsByBarcode returns a list of products of a user matching a barcode @Summary Returns a list of products @Description Returns a list of products of user matching the given barcode @Tags product @Produce json @Param barcode path int true "Barcode" @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/productsByBarcode \[get\]
 
+<a name="GetSavingsStats"></a>
+## func GetSavingsStats
+
+```go
+func GetSavingsStats(ctx *gin.Context)
+```
+
+GetSavingsStats returns money and CO2 savings for the authenticated user's household @Summary Get savings statistics @Description Returns EUR saved/wasted and kg CO2 avoided/emitted for the current month and lifetime. @Description CO2 coefficients sourced from Agribalyse LCA database via Open Food Facts ecoscore\_data. @Tags savings @Produce json @Success 200 \{object\} apiModel.SavingsStatsResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/savings/stats \[get\]
+
 <a name="GetStreak"></a>
 ## func GetStreak
 
@@ -2479,6 +2510,11 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) UpdateProductAmount\(productID int, userID uint, delta int\) \(bool, error\)](<#ProductRepository.UpdateProductAmount>)
   - [func \(r \*ProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#ProductRepository.UserHasProductAccess>)
   - [func \(r \*ProductRepository\) WasteProduct\(productID int, userID uint\) error](<#ProductRepository.WasteProduct>)
+- [type SavingsRepository](<#SavingsRepository>)
+  - [func NewSavingsRepository\(db \*gorm.DB\) \*SavingsRepository](<#NewSavingsRepository>)
+  - [func \(r \*SavingsRepository\) GetSavingsStats\(householdID uint\) \(apiModel.SavingsStatsResponse, error\)](<#SavingsRepository.GetSavingsStats>)
+  - [func \(r \*SavingsRepository\) MatchCategory\(categories string\) \(\*dbModel.ProductCategoryPrice, error\)](<#SavingsRepository.MatchCategory>)
+  - [func \(r \*SavingsRepository\) RecordSavingsEvent\(householdID uint, product \*dbModel.Product, eventType string\) error](<#SavingsRepository.RecordSavingsEvent>)
 - [type SearchParameterEnum](<#SearchParameterEnum>)
   - [func SearchParameterEnumFromString\(str string\) SearchParameterEnum](<#SearchParameterEnumFromString>)
 - [type StorageLocationRepository](<#StorageLocationRepository>)
@@ -3646,6 +3682,53 @@ func (r *ProductRepository) WasteProduct(productID int, userID uint) error
 
 
 
+<a name="SavingsRepository"></a>
+## type SavingsRepository
+
+SavingsRepository handles savings event recording and statistics queries.
+
+```go
+type SavingsRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewSavingsRepository"></a>
+### func NewSavingsRepository
+
+```go
+func NewSavingsRepository(db *gorm.DB) *SavingsRepository
+```
+
+NewSavingsRepository creates a new SavingsRepository.
+
+<a name="SavingsRepository.GetSavingsStats"></a>
+### func \(\*SavingsRepository\) GetSavingsStats
+
+```go
+func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error)
+```
+
+GetSavingsStats returns savings and waste totals for the current calendar month and all time.
+
+<a name="SavingsRepository.MatchCategory"></a>
+### func \(\*SavingsRepository\) MatchCategory
+
+```go
+func (r *SavingsRepository) MatchCategory(categories string) (*dbModel.ProductCategoryPrice, error)
+```
+
+MatchCategory resolves a Product.Categories string to a ProductCategoryPrice row. Returns nil if no match is found; caller should use zero\-value pricing.
+
+<a name="SavingsRepository.RecordSavingsEvent"></a>
+### func \(\*SavingsRepository\) RecordSavingsEvent
+
+```go
+func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string) error
+```
+
+RecordSavingsEvent writes a SavingsRecord for a consume or waste action. eventType must be "consumed" or "wasted". CO2 priority: per\-product Agribalyse rate \(product.CO2KgPerKg\) \> seeded category fallback. Price priority: product.PriceOverride \> seeded category average.
+
 <a name="SearchParameterEnum"></a>
 ## type SearchParameterEnum
 
@@ -4232,6 +4315,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ProductAmountDTO](<#ProductAmountDTO>)
 - [type ProductStatsResponse](<#ProductStatsResponse>)
 - [type ProductSummaryResponse](<#ProductSummaryResponse>)
+- [type SavingsStatsResponse](<#SavingsStatsResponse>)
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
 - [type StreakResponse](<#StreakResponse>)
@@ -4430,6 +4514,25 @@ type ProductSummaryResponse struct {
     ExpiredCount      int `json:"expiredCount"`
     TotalActive       int `json:"totalActive"`
     WasteThisMonth    int `json:"wasteThisMonth"`
+}
+```
+
+<a name="SavingsStatsResponse"></a>
+## type SavingsStatsResponse
+
+SavingsStatsResponse is the response body for GET /api/v1/savings/stats.
+
+```go
+type SavingsStatsResponse struct {
+    SavedEURThisMonth    float64 `json:"savedEurThisMonth"`
+    SavedCO2KgThisMonth  float64 `json:"savedCo2KgThisMonth"`
+    WastedEURThisMonth   float64 `json:"wastedEurThisMonth"`
+    WastedCO2KgThisMonth float64 `json:"wastedCo2KgThisMonth"`
+    SavedEURLifetime     float64 `json:"savedEurLifetime"`
+    SavedCO2KgLifetime   float64 `json:"savedCo2KgLifetime"`
+    WastedEURLifetime    float64 `json:"wastedEurLifetime"`
+    WastedCO2KgLifetime  float64 `json:"wastedCo2KgLifetime"`
+    CO2Source            string  `json:"co2Source"`
 }
 ```
 
@@ -5093,9 +5196,11 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type OnboardingState](<#OnboardingState>)
 - [type OpenFoodFactsCache](<#OpenFoodFactsCache>)
 - [type Product](<#Product>)
+- [type ProductCategoryPrice](<#ProductCategoryPrice>)
 - [type ProductDTOBarcode](<#ProductDTOBarcode>)
 - [type ProductDTOExpire](<#ProductDTOExpire>)
 - [type ProductDTOPatch](<#ProductDTOPatch>)
+- [type SavingsRecord](<#SavingsRecord>)
 - [type StorageLocation](<#StorageLocation>)
 - [type Timestamp](<#Timestamp>)
 - [type WasteStreak](<#WasteStreak>)
@@ -5270,11 +5375,12 @@ OpenFoodFactsCache stores cached responses from the OpenFoodFacts API keyed by b
 ```go
 type OpenFoodFactsCache struct {
     gorm.Model
-    Barcode     string `gorm:"uniqueIndex;not null" json:"barcode"`
-    ProductName string `json:"productName"`
-    Categories  string `json:"categories"`
-    Countries   string `json:"countries"`
-    ImageURL    string `json:"imageUrl"`
+    Barcode     string   `gorm:"uniqueIndex;not null" json:"barcode"`
+    ProductName string   `json:"productName"`
+    Categories  string   `json:"categories"`
+    Countries   string   `json:"countries"`
+    ImageURL    string   `json:"imageUrl"`
+    CO2KgPerKg  *float64 `gorm:"default:null" json:"co2KgPerKg,omitempty"`
 }
 ```
 
@@ -5301,6 +5407,24 @@ type Product struct {
     Unit              string           `json:"unit"`
     StorageLocationID *uint            `gorm:"index"                        json:"storageLocationId"`
     StorageLocation   *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
+    PriceOverride     *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
+    CO2KgPerKg        *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`
+}
+```
+
+<a name="ProductCategoryPrice"></a>
+## type ProductCategoryPrice
+
+ProductCategoryPrice maps canonical food category keys to average EUR prices and CO2e coefficients \(kg CO2e per kg food\) sourced from Agribalyse LCA database via Open Food Facts. Used as fallback when per\-product Agribalyse data is unavailable.
+
+```go
+type ProductCategoryPrice struct {
+    gorm.Model
+    CategoryKey string  `gorm:"uniqueIndex;not null" json:"categoryKey"`
+    DisplayName string  `gorm:"not null"             json:"displayName"`
+    AvgPriceEUR float64 `gorm:"not null"             json:"avgPriceEur"`
+    CO2KgPerKg  float64 `gorm:"not null"             json:"co2KgPerKg"`
+    WeightGrams float64 `gorm:"not null;default:500" json:"weightGrams"`
 }
 ```
 
@@ -5344,6 +5468,24 @@ type ProductDTOPatch struct {
     Amount            int       `json:"amount"`
     Unit              string    `json:"unit"`
     StorageLocationID *uint     `json:"storageLocationId"`
+}
+```
+
+<a name="SavingsRecord"></a>
+## type SavingsRecord
+
+SavingsRecord is written once per consume or waste action. It captures the monetary value and CO2 equivalent at the time of the event so that later changes to ProductCategoryPrice do not retroactively alter history.
+
+```go
+type SavingsRecord struct {
+    gorm.Model
+    HouseholdID uint    `gorm:"index;not null" json:"-"`
+    ProductID   uint    `gorm:"index"          json:"productId"`
+    ProductName string  `gorm:"not null"       json:"productName"`
+    EventType   string  `gorm:"not null;index" json:"eventType"` // "consumed" or "wasted"
+    PriceEUR    float64 `gorm:"not null"       json:"priceEur"`
+    CO2Kg       float64 `gorm:"not null"       json:"co2Kg"`
+    Amount      int     `gorm:"not null;default:1" json:"amount"`
 }
 ```
 
@@ -5445,7 +5587,7 @@ external provides model definitions from external parties
 var (
     // Query parameters for OpenFoodFacts API
     // This drastically minimizes the response from API calls and should match the properties from external.OpenFoodFactsAPIDataset
-    OpenFoodFactsAPIDatasetDefinition = "product_name,categories,countries,generic_name,image_url"
+    OpenFoodFactsAPIDatasetDefinition = "product_name,categories,countries,generic_name,image_url,ecoscore_data"
 )
 ```
 
@@ -5459,12 +5601,17 @@ type OpenFoodFactsAPIDataset struct {
     gorm.Model
     Barcode string `json:"code"`
     Product struct {
-        ID          string `json:"_id"`
-        ProductName string `json:"product_name"`
-        Categories  string `json:"categories"`
-        Countries   string `json:"countries"`
-        GenericName string `json:"generic_name"`
-        ImageURL    string `json:"image_url"`
+        ID           string `json:"_id"`
+        ProductName  string `json:"product_name"`
+        Categories   string `json:"categories"`
+        Countries    string `json:"countries"`
+        GenericName  string `json:"generic_name"`
+        ImageURL     string `json:"image_url"`
+        EcoscoreData struct {
+            Agribalyse struct {
+                CO2Total float64 `json:"co2_total"`
+            } `json:"agribalyse"`
+        }   `json:"ecoscore_data"`
     }   `json:"product"`
 }
 ```

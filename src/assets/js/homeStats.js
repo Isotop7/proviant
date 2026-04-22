@@ -95,11 +95,12 @@ function renderListTile(title, items, days) {
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
-  renderSkeletons(5);
+  renderSkeletons(7);
 
-  const [response, streakResponse] = await Promise.all([
+  const [response, streakResponse, savingsResponse] = await Promise.all([
     proviant.getProductStats(),
     proviant.getStreak(),
+    proviant.getSavingsStats(),
   ]);
   clearSkeletons();
 
@@ -151,6 +152,23 @@ document.addEventListener('DOMContentLoaded', async function () {
       }
     }
     dashboard.appendChild(streakCol);
+
+    // Savings tiles
+    const savings = (savingsResponse.code === 200 && savingsResponse.message) ? savingsResponse.message : null;
+    if (savings) {
+      dashboard.appendChild(renderTile(
+        'Saved This Month',
+        `€${(savings.savedEurThisMonth ?? 0).toFixed(2)}`,
+        savings.savedEurThisMonth > 0 ? 'success' : null,
+        null,
+      ));
+      dashboard.appendChild(renderTile(
+        'CO₂ Avoided This Month',
+        `${(savings.savedCo2KgThisMonth ?? 0).toFixed(2)} kg`,
+        savings.savedCo2KgThisMonth > 0 ? 'success' : null,
+        null,
+      ));
+    }
   }
 
   const dashboardList = document.getElementById('dashboard-list');
