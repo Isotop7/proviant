@@ -16,6 +16,11 @@ func TestOpenFoodFactsAPIDatasetStruct(t *testing.T) {
 				Countries   string `json:"countries"`
 				GenericName string `json:"generic_name"`
 				ImageURL    string `json:"image_url"`
+				EcoscoreData struct {
+					Agribalyse struct {
+						CO2Total float64 `json:"co2_total"`
+					} `json:"agribalyse"`
+				} `json:"ecoscore_data"`
 			}{
 				ID:          "product123",
 				ProductName: "Test Product",
@@ -103,6 +108,11 @@ func TestOpenFoodFactsAPIDatasetWithPartialData(t *testing.T) {
 				Countries   string `json:"countries"`
 				GenericName string `json:"generic_name"`
 				ImageURL    string `json:"image_url"`
+				EcoscoreData struct {
+					Agribalyse struct {
+						CO2Total float64 `json:"co2_total"`
+					} `json:"agribalyse"`
+				} `json:"ecoscore_data"`
 			}{
 				ProductName: "Only Name",
 			},

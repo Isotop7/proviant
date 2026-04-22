@@ -252,4 +252,13 @@ var (
 
 	// ErrWebhookNotOwner is thrown when a user tries to access a webhook they do not own
 	ErrWebhookNotOwner = errors.New("webhook does not belong to user")
+
+	/*
+	 * Savings related errors
+	 */
+	// ErrSavingsRecordFailed is thrown when a savings record cannot be written
+	ErrSavingsRecordFailed = errors.New("failed to record savings event")
+
+	// ErrSavingsStatsUnavailable is thrown when savings statistics cannot be computed
+	ErrSavingsStatsUnavailable = errors.New("savings statistics unavailable")
 )

@@ -2561,6 +2561,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/savings/stats": {
+            "get": {
+                "description": "Returns EUR saved/wasted and kg CO2 avoided/emitted for the current month and lifetime.\nCO2 coefficients sourced from Agribalyse LCA database via Open Food Facts ecoscore_data.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "savings"
+                ],
+                "summary": "Get savings statistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.SavingsStatsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/streak": {
             "get": {
                 "description": "Returns the current and longest waste-free streak for the caller's household",
@@ -3897,6 +3923,38 @@ const docTemplate = `{
                 }
             }
         },
+        "api.SavingsStatsResponse": {
+            "type": "object",
+            "properties": {
+                "co2Source": {
+                    "type": "string"
+                },
+                "savedCo2KgLifetime": {
+                    "type": "number"
+                },
+                "savedCo2KgThisMonth": {
+                    "type": "number"
+                },
+                "savedEurLifetime": {
+                    "type": "number"
+                },
+                "savedEurThisMonth": {
+                    "type": "number"
+                },
+                "wastedCo2KgLifetime": {
+                    "type": "number"
+                },
+                "wastedCo2KgThisMonth": {
+                    "type": "number"
+                },
+                "wastedEurLifetime": {
+                    "type": "number"
+                },
+                "wastedEurThisMonth": {
+                    "type": "number"
+                }
+            }
+        },
         "api.StatsExpiringProduct": {
             "type": "object",
             "properties": {
@@ -4214,6 +4272,9 @@ const docTemplate = `{
                 "categories": {
                     "type": "string"
                 },
+                "co2KgPerKg": {
+                    "type": "number"
+                },
                 "countries": {
                     "type": "string"
                 },
@@ -4249,6 +4310,9 @@ const docTemplate = `{
                 "categories": {
                     "type": "string"
                 },
+                "co2KgPerKg": {
+                    "type": "number"
+                },
                 "countries": {
                     "type": "string"
                 },
@@ -4269,6 +4333,9 @@ const docTemplate = `{
                 },
                 "notifiedAt": {
                     "type": "string"
+                },
+                "priceOverride": {
+                    "type": "number"
                 },
                 "productName": {
                     "type": "string"

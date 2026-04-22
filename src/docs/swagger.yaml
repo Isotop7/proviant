@@ -135,6 +135,27 @@ definitions:
       wasteThisMonth:
         type: integer
     type: object
+  api.SavingsStatsResponse:
+    properties:
+      co2Source:
+        type: string
+      savedCo2KgLifetime:
+        type: number
+      savedCo2KgThisMonth:
+        type: number
+      savedEurLifetime:
+        type: number
+      savedEurThisMonth:
+        type: number
+      wastedCo2KgLifetime:
+        type: number
+      wastedCo2KgThisMonth:
+        type: number
+      wastedEurLifetime:
+        type: number
+      wastedEurThisMonth:
+        type: number
+    type: object
   api.StatsExpiringProduct:
     properties:
       expireAt:
@@ -344,6 +365,8 @@ definitions:
         type: string
       categories:
         type: string
+      co2KgPerKg:
+        type: number
       countries:
         type: string
       createdAt:
@@ -367,6 +390,8 @@ definitions:
         type: string
       categories:
         type: string
+      co2KgPerKg:
+        type: number
       countries:
         type: string
       createdAt:
@@ -381,6 +406,8 @@ definitions:
         type: string
       notifiedAt:
         type: string
+      priceOverride:
+        type: number
       productName:
         type: string
       scannedAt:
@@ -2227,6 +2254,25 @@ paths:
       summary: Returns a list of products
       tags:
       - product
+  /api/v1/savings/stats:
+    get:
+      description: |-
+        Returns EUR saved/wasted and kg CO2 avoided/emitted for the current month and lifetime.
+        CO2 coefficients sourced from Agribalyse LCA database via Open Food Facts ecoscore_data.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.SavingsStatsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get savings statistics
+      tags:
+      - savings
   /api/v1/streak:
     get:
       description: Returns the current and longest waste-free streak for the caller's

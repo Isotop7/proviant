@@ -242,6 +242,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	streakAPI.Use(jwtAPIMiddlewareWithPAT)
 	streakAPI.GET("", v1.GetStreak)
 
+	// Savings routes
+	savingsAPI := engine.Group("/api/v1/savings")
+	savingsAPI.Use(jwtAPIMiddlewareWithPAT)
+	savingsAPI.GET("/stats", v1.GetSavingsStats)
+
 	// Notification routes
 	notificationAPI := engine.Group("/api/v1/notifications")
 	notificationAPI.Use(jwtAPIMiddlewareWithPAT)

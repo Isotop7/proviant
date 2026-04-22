@@ -83,12 +83,18 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 	case success := <-queryChannel:
 		if success {
 			// Request was successful, returning subset of populated dataset
+			var co2 *float64
+			if dataset.Product.EcoscoreData.Agribalyse.CO2Total > 0 {
+				v := dataset.Product.EcoscoreData.Agribalyse.CO2Total
+				co2 = &v
+			}
 			return database.Product{
 				Barcode:     dataset.Barcode,
 				ProductName: dataset.Product.ProductName,
 				Categories:  dataset.Product.Categories,
 				Countries:   dataset.Product.Countries,
 				ImageURL:    dataset.Product.ImageURL,
+				CO2KgPerKg:  co2,
 			}, nil
 		}
 	}

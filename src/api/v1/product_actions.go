@@ -8,6 +8,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -48,6 +49,8 @@ func ConsumeProduct(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
+	product, fetchErr := productRepo.GetProductByID(productID, userID)
+
 	if err := productRepo.ConsumeProduct(productID, userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "Product not found"})
@@ -56,6 +59,18 @@ func ConsumeProduct(ctx *gin.Context) {
 		logger.Error().Msgf("ConsumeProduct: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: err.Error()})
 		return
+	}
+
+	if fetchErr == nil {
+		go func(p dbModel.Product) {
+			userRepo := database.NewUserRepository(dbHandle)
+			if householdID, hhErr := userRepo.GetUserHouseholdByID(userID); hhErr == nil && householdID > 0 {
+				savingsRepo := database.NewSavingsRepository(dbHandle)
+				if recErr := savingsRepo.RecordSavingsEvent(householdID, &p, "consumed"); recErr != nil {
+					logger.Error().Msgf("ConsumeProduct: savings record failed: %s", recErr)
+				}
+			}
+		}(product)
 	}
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d marked as consumed", productID)})
@@ -95,6 +110,8 @@ func WasteProduct(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
+	product, fetchErr := productRepo.GetProductByID(productID, userID)
+
 	if err := productRepo.WasteProduct(productID, userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "Product not found"})
@@ -121,6 +138,18 @@ func WasteProduct(ctx *gin.Context) {
 			})
 		}
 	}()
+
+	if fetchErr == nil {
+		go func(p dbModel.Product) {
+			userRepo := database.NewUserRepository(dbHandle)
+			if householdID, hhErr := userRepo.GetUserHouseholdByID(userID); hhErr == nil && householdID > 0 {
+				savingsRepo := database.NewSavingsRepository(dbHandle)
+				if recErr := savingsRepo.RecordSavingsEvent(householdID, &p, "wasted"); recErr != nil {
+					logger.Error().Msgf("WasteProduct: savings record failed: %s", recErr)
+				}
+			}
+		}(product)
+	}
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d marked as wasted", productID)})
 }

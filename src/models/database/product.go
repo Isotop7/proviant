@@ -24,6 +24,8 @@ type Product struct {
 	Unit              string           `json:"unit"`
 	StorageLocationID *uint            `gorm:"index"                        json:"storageLocationId"`
 	StorageLocation   *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
+	PriceOverride     *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
+	CO2KgPerKg        *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`
 }
 
 // ProductDTOExpire is a simplified DTO for product expiration
