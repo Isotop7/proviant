@@ -138,7 +138,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	userRepo := database.NewUserRepository(dbHandle)
 	householdRepo := database.NewHouseholdRepository(dbHandle)
 	invitationRepo := database.NewInvitationRepository(dbHandle)
-	slRepo := database.NewStorageLocationRepository(dbHandle)
+	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
 
 	user, userErr := userRepo.GetUserByID(userID)
 	if userErr != nil {
@@ -168,7 +168,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 
 	myApplications, _ := householdRepo.GetPendingApplicationsForApplicant(userID)
 
-	locations, _ := slRepo.GetByHousehold(userID)
+	locations, _ := storageLocationRepo.GetByHousehold(userID)
 
 	pageData := map[string]any{
 		"InviteToken":         ctx.Query("invite_token"),
@@ -222,7 +222,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 
 	// Get query parameters
 	productRepo := database.NewProductRepository(dbHandle)
-	slRepo := database.NewStorageLocationRepository(dbHandle)
+	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
 
 	queryParam := ctx.Query("queryParam")
 	queryValue := ctx.Query("queryValue")
@@ -230,7 +230,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	order := ctx.DefaultQuery("order", "asc")
 	locationFilter := ctx.Query("locationId")
 
-	locations, _ := slRepo.GetByHousehold(userID)
+	locations, _ := storageLocationRepo.GetByHousehold(userID)
 
 	var products []dbModel.Product
 	var productErr error
@@ -431,8 +431,8 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 		return
 	}
 
-	slRepo := database.NewStorageLocationRepository(dbHandle)
-	locations, _ := slRepo.GetByHousehold(userID)
+	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
+	locations, _ := storageLocationRepo.GetByHousehold(userID)
 
 	pageData := map[string]any{
 		"InviteToken": ctx.Query("invite_token"),
