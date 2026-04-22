@@ -41,6 +41,20 @@
                     <option value="desc" {{ if eq .Order "desc" }}selected{{ end }}>↓ Descending</option>
                 </select>
             </div>
+            {{ if .Locations }}
+            <div class="input-group my-2">
+                <label for="location-filter" class="input-group-text">Location</label>
+                <select id="location-filter" class="form-select">
+                    <option value="">All locations</option>
+                    {{ range .Locations }}
+                    <option value="{{ .ID }}"
+                        {{ if eq $.LocationFilter (printf "%d" .ID) }}selected{{ end }}>
+                        {{ .Icon }} {{ .Name }}
+                    </option>
+                    {{ end }}
+                </select>
+            </div>
+            {{ end }}
         </div>
     </div>
 </div>

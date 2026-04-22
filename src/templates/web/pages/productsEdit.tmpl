@@ -99,6 +99,24 @@
                         <input type="number" class="form-control" id="inputAmount" value="{{- .Product.Amount -}}" min="0">
                     </div>
                 </div>
+                {{ if .Locations }}
+                <div class="row my-3">
+                    <div class="col col-3 fw-bold">
+                        <label for="selectStorageLocation" class="form-label col-form-label">Storage Location</label>
+                    </div>
+                    <div class="col col-9">
+                        <select class="form-select" id="selectStorageLocation">
+                            <option value="">— None —</option>
+                            {{ range .Locations }}
+                            <option value="{{ .ID }}"
+                                {{ if and $.Product.StorageLocationID (eq (derefUint $.Product.StorageLocationID) .ID) }}selected{{ end }}>
+                                {{ .Icon }} {{ .Name }}
+                            </option>
+                            {{ end }}
+                        </select>
+                    </div>
+                </div>
+                {{ end }}
                 <div class="row my-3">
                     <div class="col col-3">
                         <button id="btnUpdateProduct" class="btn btn-proviant-secondary w-100 my-3" type="submit">

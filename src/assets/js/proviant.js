@@ -56,9 +56,9 @@ proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confir
   bootstrap.Modal.getOrCreateInstance(modal).show();
 };
 
-proviant.createProduct = async function (barcode, expireAt, amount) {
+proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  let data = JSON.stringify({ barcode, expireAt, amount: amount || 1 });
+  let data = JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null });
   const apiCall = await fetch(url, {
     method: "POST",
     headers: {

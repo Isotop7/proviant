@@ -208,12 +208,16 @@ function performSearch() {
     const sortParam = document.getElementById("sort-param");
     const sortOrder = document.getElementById("sort-order");
     // Build query string and redirect to products page
+    const locationFilter = document.getElementById("location-filter");
     const params = {
         queryParam: queryParam ? queryParam.value || "product_name" : "product_name",
         queryValue: queryValue ? queryValue.value || "" : "",
         sort: sortParam ? sortParam.value || "created_at" : "created_at",
         order: sortOrder ? sortOrder.value || "asc" : "asc",
     };
+    if (locationFilter && locationFilter.value) {
+        params.locationId = locationFilter.value;
+    }
 
     window.location.href = `/web/products?${new URLSearchParams(params).toString()}`;
 }

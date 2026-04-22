@@ -13,6 +13,20 @@
 <div class="toolbar-sticky">
     {{ template "searchBar" . }}
 
+    {{ if .Locations }}
+    <div class="d-flex flex-wrap gap-2 mt-2">
+        <a href="/web/products" class="btn btn-sm {{ if not .LocationFilter }}btn-proviant-primary{{ else }}btn-proviant-secondary{{ end }}">
+            All
+        </a>
+        {{ range .Locations }}
+        <a href="/web/products?locationId={{ .ID }}"
+           class="btn btn-sm {{ if eq $.LocationFilter (printf "%d" .ID) }}btn-proviant-primary{{ else }}btn-proviant-secondary{{ end }}">
+            {{ .Icon }} {{ .Name }}
+        </a>
+        {{ end }}
+    </div>
+    {{ end }}
+
     {{ if .Products }}
     <div class="mt-3 d-flex justify-content-end">
         {{ template "productOptionBar" . }}
@@ -135,6 +149,15 @@
                         <div class="invalid-feedback">
                             <i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please select an expiry date
                         </div>
+                        {{ if .Locations }}
+                        <label for="modalStorageLocation" class="form-label mt-2">Storage Location</label>
+                        <select class="form-select mb-2" id="modalStorageLocation">
+                            <option value="">— None —</option>
+                            {{ range .Locations }}
+                            <option value="{{ .ID }}">{{ .Icon }} {{ .Name }}</option>
+                            {{ end }}
+                        </select>
+                        {{ end }}
                     </form>
 
                     <div class="btn-group w-100 mb-3" role="group" aria-label="Quick expiry shortcuts">

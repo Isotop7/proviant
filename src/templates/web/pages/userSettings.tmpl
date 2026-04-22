@@ -393,6 +393,82 @@
         </div>
     </div>
 
+    {{/* ── Storage Locations ──────────────────────────────────── */}}
+    <div class="card card-section mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+            <div class="d-flex align-items-center gap-2">
+                <div class="icon-chip" aria-hidden="true">
+                    <i class="bi bi-geo-alt"></i>
+                </div>
+                <h2 class="h5 mb-0 fw-semibold">Storage Locations</h2>
+            </div>
+            {{ if .IsAdmin }}
+            <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnAddStorageLocation">
+                <i class="bi bi-plus-lg me-1"></i>Add Location
+            </button>
+            {{ end }}
+        </div>
+        <div class="card-body px-4 py-4">
+            <p class="text-body-secondary small mb-3">Locations are shared across all household members.</p>
+            {{ if .Locations }}
+            <ul class="list-group mb-3" id="storageLocationList">
+                {{ range .Locations }}
+                <li class="list-group-item d-flex justify-content-between align-items-center" id="sl-{{ .ID }}">
+                    <span>{{ .Icon }} <strong>{{ .Name }}</strong></span>
+                    {{ if $.IsAdmin }}
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-proviant-secondary btn-edit-sl"
+                                data-id="{{ .ID }}" data-name="{{ .Name }}" data-icon="{{ .Icon }}"
+                                data-sortorder="{{ .SortOrder }}" aria-label="Edit {{ .Name }}">
+                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" class="btn btn-proviant-danger btn-delete-sl"
+                                data-id="{{ .ID }}" data-name="{{ .Name }}" aria-label="Delete {{ .Name }}">
+                            <i class="bi bi-trash" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    {{ end }}
+                </li>
+                {{ end }}
+            </ul>
+            {{ else }}
+            <p class="text-body-secondary small">No storage locations configured yet.</p>
+            {{ end }}
+            <div id="slAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
+        </div>
+    </div>
+
+    <!-- Storage Location Add/Edit Modal -->
+    <div class="modal fade" id="storageLocationModal" tabindex="-1" aria-labelledby="storageLocationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="storageLocationModalLabel">Storage Location</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="slModalID">
+                    <div class="mb-3">
+                        <label for="slModalName" class="form-label fw-medium">Name <span class="text-danger" aria-hidden="true">*</span></label>
+                        <input type="text" class="form-control" id="slModalName" required placeholder="e.g. Wine Cellar">
+                    </div>
+                    <div class="mb-3">
+                        <label for="slModalIcon" class="form-label fw-medium">Icon (emoji)</label>
+                        <input type="text" class="form-control" id="slModalIcon" placeholder="📦" maxlength="8">
+                    </div>
+                    <div class="mb-3">
+                        <label for="slModalSortOrder" class="form-label fw-medium">Sort Order</label>
+                        <input type="number" class="form-control" id="slModalSortOrder" value="0" min="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-proviant-primary" id="btnSaveStorageLocation">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{/* ── Household ────────────────────────────────────────────── */}}
     <div class="card card-section mb-4">
         <div class="card-header bg-white d-flex align-items-center gap-2 py-3 px-4">

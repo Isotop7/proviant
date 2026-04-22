@@ -43,7 +43,7 @@ func TestSignupWithoutLogger(t *testing.T) {
 	}
 
 	// Migrate schema
-	if err := db.AutoMigrate(&authentication.User{}, &dbModel.Household{}, &dbModel.OnboardingState{}); err != nil {
+	if err := db.AutoMigrate(&dbModel.Household{}, &dbModel.StorageLocation{}, &authentication.User{}, &dbModel.OnboardingState{}); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -117,7 +117,7 @@ func TestSignupGenericCreateError(t *testing.T) {
 	}
 
 	// Migrate schema
-	if err := db.AutoMigrate(&dbModel.Household{}, &authentication.User{}, &dbModel.OnboardingState{}); err != nil {
+	if err := db.AutoMigrate(&dbModel.Household{}, &dbModel.StorageLocation{}, &authentication.User{}, &dbModel.OnboardingState{}); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -155,7 +155,7 @@ func TestSignupSuccess(t *testing.T) {
 	}
 
 	// Migrate schema
-	if err := db.AutoMigrate(&authentication.User{}, &dbModel.Household{}, &dbModel.OnboardingState{}); err != nil {
+	if err := db.AutoMigrate(&dbModel.Household{}, &dbModel.StorageLocation{}, &authentication.User{}, &dbModel.OnboardingState{}); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -317,7 +317,7 @@ func TestSignupDuplicateUsername(t *testing.T) {
 	}
 
 	// Migrate schema
-	if err := db.AutoMigrate(&authentication.User{}, &dbModel.Household{}, &dbModel.OnboardingState{}); err != nil {
+	if err := db.AutoMigrate(&dbModel.Household{}, &dbModel.StorageLocation{}, &authentication.User{}, &dbModel.OnboardingState{}); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -365,7 +365,7 @@ func TestSignupDuplicateEmail(t *testing.T) {
 	}
 
 	// Migrate schema
-	if err := db.AutoMigrate(&authentication.User{}, &dbModel.Household{}, &dbModel.OnboardingState{}); err != nil {
+	if err := db.AutoMigrate(&dbModel.Household{}, &dbModel.StorageLocation{}, &authentication.User{}, &dbModel.OnboardingState{}); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
