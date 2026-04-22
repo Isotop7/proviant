@@ -61,7 +61,7 @@ func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]datab
 	}
 
 	var products []database.Product
-	query := r.DB.Where("household_id = ?", user.HouseholdID)
+	query := r.DB.Preload("StorageLocation").Where("household_id = ?", user.HouseholdID)
 
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -100,7 +100,7 @@ func (r *ProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) 
 	}
 
 	var products []database.Product
-	query := r.DB.Unscoped().Where("deleted_at IS NOT NULL").Where("household_id = ?", user.HouseholdID)
+	query := r.DB.Preload("StorageLocation").Unscoped().Where("deleted_at IS NOT NULL").Where("household_id = ?", user.HouseholdID)
 
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -137,7 +137,7 @@ func (r *ProductRepository) GetProductByID(productID int, userID uint) (database
 	}
 
 	var product database.Product
-	getError := r.DB.First(&product, productID)
+	getError := r.DB.Preload("StorageLocation").First(&product, productID)
 	if getError.Error != nil {
 		return database.Product{}, getError.Error
 	}
@@ -160,7 +160,7 @@ func (r *ProductRepository) GetArchivedProductByID(productID int, userID uint) (
 	}
 
 	var product database.Product
-	getError := r.DB.Unscoped().First(&product, productID)
+	getError := r.DB.Preload("StorageLocation").Unscoped().First(&product, productID)
 	if getError.Error != nil {
 		return database.Product{}, getError.Error
 	}
@@ -184,7 +184,7 @@ func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, query
 	}
 
 	var foundProducts []database.Product
-	preloadedDataset := r.DB.
+	preloadedDataset := r.DB.Preload("StorageLocation").
 		Where("household_id = ?", user.HouseholdID).
 		Where("deleted_at IS NULL")
 
@@ -212,6 +212,37 @@ func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, query
 		return []database.Product{}, findErr.Error
 	}
 	return foundProducts, nil
+}
+
+func (r *ProductRepository) GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error) {
+	var user authentication.User
+	if err := r.DB.First(&user, userID).Error; err != nil {
+		return []database.Product{}, err
+	}
+	if user.HouseholdID == 0 {
+		return []database.Product{}, errors.ErrInvalidUserData
+	}
+	var products []database.Product
+	err := r.DB.Preload("StorageLocation").
+		Where("household_id = ? AND storage_location_id = ?", user.HouseholdID, locationID).
+		Find(&products).Error
+	if err != nil {
+		return []database.Product{}, err
+	}
+	sort.Slice(products, func(i, j int) bool {
+		ti, tj := products[i].ExpireAt, products[j].ExpireAt
+		if ti.IsZero() && tj.IsZero() {
+			return false
+		}
+		if ti.IsZero() {
+			return false
+		}
+		if tj.IsZero() {
+			return true
+		}
+		return ti.Before(tj)
+	})
+	return products, nil
 }
 
 func (r *ProductRepository) CreateProduct(userID uint, product *database.Product) error {
@@ -253,7 +284,7 @@ func (r *ProductRepository) UpdateProduct(productID int, userID uint, product *d
 	dbProduct.ExpireAt = product.ExpireAt
 	dbProduct.Amount = product.Amount
 	dbProduct.Unit = product.Unit
-	dbProduct.StorageLocation = product.StorageLocation
+	dbProduct.StorageLocationID = product.StorageLocationID
 
 	saveResult := r.DB.Save(&dbProduct)
 	return saveResult.Error

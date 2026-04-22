@@ -138,6 +138,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	userRepo := database.NewUserRepository(dbHandle)
 	householdRepo := database.NewHouseholdRepository(dbHandle)
 	invitationRepo := database.NewInvitationRepository(dbHandle)
+	slRepo := database.NewStorageLocationRepository(dbHandle)
 
 	user, userErr := userRepo.GetUserByID(userID)
 	if userErr != nil {
@@ -167,6 +168,8 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 
 	myApplications, _ := householdRepo.GetPendingApplicationsForApplicant(userID)
 
+	locations, _ := slRepo.GetByHousehold(userID)
+
 	pageData := map[string]any{
 		"InviteToken":         ctx.Query("invite_token"),
 		"Title":               "User Settings",
@@ -177,6 +180,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"PendingApplications": pendingApplications,
 		"MyApplications":      myApplications,
 		"TelegramConfigured":  telegramConfigured,
+		"Locations":           locations,
 	}
 
 	if isAdmin {
@@ -218,16 +222,24 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 
 	// Get query parameters
 	productRepo := database.NewProductRepository(dbHandle)
+	slRepo := database.NewStorageLocationRepository(dbHandle)
 
 	queryParam := ctx.Query("queryParam")
 	queryValue := ctx.Query("queryValue")
 	sort := ctx.DefaultQuery("sort", "created_at")
 	order := ctx.DefaultQuery("order", "asc")
+	locationFilter := ctx.Query("locationId")
+
+	locations, _ := slRepo.GetByHousehold(userID)
 
 	var products []dbModel.Product
 	var productErr error
 
-	if queryParam != "" && queryValue != "" {
+	if locationFilter != "" {
+		if locationID, parseErr := strconv.ParseUint(locationFilter, 10, 64); parseErr == nil {
+			products, productErr = productRepo.GetUserProductsByLocation(userID, uint(locationID))
+		}
+	} else if queryParam != "" && queryValue != "" {
 		enumParam := database.SearchParameterEnumFromString(queryParam)
 		if enumParam == database.InvalidParameter {
 			logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
@@ -246,13 +258,15 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	}
 
 	pageData := map[string]any{
-		"InviteToken": ctx.Query("invite_token"),
-		"Title":       "Products",
-		"Products":    products,
-		"QueryParam":  queryParam,
-		"QueryValue":  queryValue,
-		"Sort":        sort,
-		"Order":       order,
+		"InviteToken":    ctx.Query("invite_token"),
+		"Title":          "Products",
+		"Products":       products,
+		"QueryParam":     queryParam,
+		"QueryValue":     queryValue,
+		"Sort":           sort,
+		"Order":          order,
+		"Locations":      locations,
+		"LocationFilter": locationFilter,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }
@@ -417,10 +431,14 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 		return
 	}
 
+	slRepo := database.NewStorageLocationRepository(dbHandle)
+	locations, _ := slRepo.GetByHousehold(userID)
+
 	pageData := map[string]any{
 		"InviteToken": ctx.Query("invite_token"),
 		"Title":       "Products",
 		"Product":     product,
+		"Locations":   locations,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
 }

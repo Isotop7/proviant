@@ -50,7 +50,12 @@ func productToExportRow(p *dbModel.Product) []string {
 		fmt.Sprintf("%d", p.Amount),
 		p.Unit,
 		p.Categories,
-		p.StorageLocation,
+		func() string {
+			if p.StorageLocation != nil {
+				return p.StorageLocation.Name
+			}
+			return ""
+		}(),
 		expireAt,
 		addedAt,
 	}

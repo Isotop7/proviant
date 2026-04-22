@@ -160,6 +160,12 @@ var (
 	/*
 	 * Household related errors
 	 */
+	// ErrStorageLocationNotFound is thrown when a requested storage location does not exist
+	ErrStorageLocationNotFound = errors.New("storage location not found")
+
+	// ErrStorageLocationNotOwned is thrown when a storage location does not belong to the user's household
+	ErrStorageLocationNotOwned = errors.New("storage location does not belong to this household")
+
 	// ErrHouseholdNotFound is thrown when a requested household does not exist
 	ErrHouseholdNotFound = errors.New("household not found")
 

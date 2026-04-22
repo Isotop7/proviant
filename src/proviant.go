@@ -206,6 +206,7 @@ func main() {
 	// Run migrations for database and check for errors
 	migrationError := dbHandle.AutoMigrate(
 		&dbModel.Household{},
+		&dbModel.StorageLocation{},
 		&authentication.User{},
 		&authentication.RevokedToken{},
 		&authentication.PersonalAccessToken{},

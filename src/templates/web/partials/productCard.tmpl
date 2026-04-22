@@ -34,6 +34,14 @@
             {{ end }}
         </div>
         <ul class="list-group list-group-flush">
+            {{ if .StorageLocation }}
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small">
+                    <i class="bi bi-geo-alt me-2" aria-hidden="true"></i>Location
+                </span>
+                <span class="badge bg-light text-dark border">{{ .StorageLocation.Icon }} {{ .StorageLocation.Name }}</span>
+            </li>
+            {{ end }}
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
                 <span class="text-muted small">
                     <i class="bi bi-stack me-2" aria-hidden="true"></i>Amount

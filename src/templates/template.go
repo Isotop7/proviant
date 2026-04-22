@@ -227,6 +227,13 @@ func emojifyFlag(source string) string {
 	return output.String()
 }
 
+func derefUint(p *uint) uint {
+	if p == nil {
+		return 0
+	}
+	return *p
+}
+
 func flagReplace(source string) template.HTML {
 	var output strings.Builder
 	for elements := range strings.SplitSeq(source, ",") {
@@ -251,6 +258,7 @@ var customTemplateFunctions = template.FuncMap{
 	"badgifyCategories":    badgifyCategories,
 	"splitString":          splitString,
 	"flagReplace":          flagReplace,
+	"derefUint":            derefUint,
 }
 
 func NewTemplateCache() (map[string]*template.Template, error) {

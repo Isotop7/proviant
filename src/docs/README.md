@@ -818,6 +818,12 @@ var (
     /*
      * Household related errors
      */
+    // ErrStorageLocationNotFound is thrown when a requested storage location does not exist
+    ErrStorageLocationNotFound = errors.New("storage location not found")
+
+    // ErrStorageLocationNotOwned is thrown when a storage location does not belong to the user's household
+    ErrStorageLocationNotOwned = errors.New("storage location does not belong to this household")
+
     // ErrHouseholdNotFound is thrown when a requested household does not exist
     ErrHouseholdNotFound = errors.New("household not found")
 
@@ -991,7 +997,9 @@ import "codeberg.org/isotop7/proviant/migrations"
 
 - [func AddNotificationPreferencesMigration\(db \*gorm.DB\) error](<#AddNotificationPreferencesMigration>)
 - [func BackfillEmailVerification\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillEmailVerification>)
+- [func DropLegacyStorageLocationColumn\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#DropLegacyStorageLocationColumn>)
 - [func RunBreakingDatabaseMigrations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RunBreakingDatabaseMigrations>)
+- [func SeedDefaultStorageLocations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SeedDefaultStorageLocations>)
 - [func SetDefaultProductAmounts\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SetDefaultProductAmounts>)
 
 
@@ -1013,6 +1021,15 @@ func BackfillEmailVerification(logger *zerolog.Logger, db *gorm.DB) error
 
 BackfillEmailVerification sets EmailVerifiedAt for all existing users that don't have it set. This is a one\-time migration to ensure existing users aren't locked out after email verification is introduced.
 
+<a name="DropLegacyStorageLocationColumn"></a>
+## func DropLegacyStorageLocationColumn
+
+```go
+func DropLegacyStorageLocationColumn(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+DropLegacyStorageLocationColumn removes the old free\-text storage\_location column from products. GORM AutoMigrate never drops columns, so this must be done explicitly. SQLite does not support IF EXISTS on DROP COLUMN, so we attempt the drop and swallow any error that indicates the column is already absent.
+
 <a name="RunBreakingDatabaseMigrations"></a>
 ## func RunBreakingDatabaseMigrations
 
@@ -1021,6 +1038,15 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error
 ```
 
 
+
+<a name="SeedDefaultStorageLocations"></a>
+## func SeedDefaultStorageLocations
+
+```go
+func SeedDefaultStorageLocations(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+SeedDefaultStorageLocations creates Fridge, Freezer and Pantry for every existing household that has no storage locations yet.
 
 <a name="SetDefaultProductAmounts"></a>
 ## func SetDefaultProductAmounts
@@ -1601,11 +1627,13 @@ v1 implements version 1 of the proviant API
 - [func CreateHousehold\(ctx \*gin.Context\)](<#CreateHousehold>)
 - [func CreateInvitation\(ctx \*gin.Context\)](<#CreateInvitation>)
 - [func CreateProduct\(ctx \*gin.Context\)](<#CreateProduct>)
+- [func CreateStorageLocation\(ctx \*gin.Context\)](<#CreateStorageLocation>)
 - [func CreateUserToken\(ctx \*gin.Context\)](<#CreateUserToken>)
 - [func CreateWebhook\(ctx \*gin.Context\)](<#CreateWebhook>)
 - [func DeleteCalendarToken\(ctx \*gin.Context\)](<#DeleteCalendarToken>)
 - [func DeleteHouseholdUser\(ctx \*gin.Context\)](<#DeleteHouseholdUser>)
 - [func DeleteProduct\(ctx \*gin.Context\)](<#DeleteProduct>)
+- [func DeleteStorageLocation\(ctx \*gin.Context\)](<#DeleteStorageLocation>)
 - [func DeleteUserToken\(ctx \*gin.Context\)](<#DeleteUserToken>)
 - [func DeleteWebhook\(ctx \*gin.Context\)](<#DeleteWebhook>)
 - [func ExportArchiveCSV\(ctx \*gin.Context\)](<#ExportArchiveCSV>)
@@ -1632,6 +1660,7 @@ v1 implements version 1 of the proviant API
 - [func GetWebhook\(ctx \*gin.Context\)](<#GetWebhook>)
 - [func GetWebhookDeliveries\(ctx \*gin.Context\)](<#GetWebhookDeliveries>)
 - [func LeaveHousehold\(ctx \*gin.Context\)](<#LeaveHousehold>)
+- [func ListStorageLocations\(ctx \*gin.Context\)](<#ListStorageLocations>)
 - [func ListUserTokens\(ctx \*gin.Context\)](<#ListUserTokens>)
 - [func ListWebhooks\(ctx \*gin.Context\)](<#ListWebhooks>)
 - [func RejectHouseholdApplication\(ctx \*gin.Context\)](<#RejectHouseholdApplication>)
@@ -1644,6 +1673,7 @@ v1 implements version 1 of the proviant API
 - [func UpdateHouseholdUser\(ctx \*gin.Context\)](<#UpdateHouseholdUser>)
 - [func UpdateProduct\(ctx \*gin.Context\)](<#UpdateProduct>)
 - [func UpdateProductAmount\(ctx \*gin.Context\)](<#UpdateProductAmount>)
+- [func UpdateStorageLocation\(ctx \*gin.Context\)](<#UpdateStorageLocation>)
 - [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
 - [func UpdateUserNotificationPreferences\(ctx \*gin.Context\)](<#UpdateUserNotificationPreferences>)
 - [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
@@ -1790,6 +1820,15 @@ func CreateProduct(ctx *gin.Context)
 
 CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
 
+<a name="CreateStorageLocation"></a>
+## func CreateStorageLocation
+
+```go
+func CreateStorageLocation(ctx *gin.Context)
+```
+
+CreateStorageLocation adds a new storage location to the calling user's household. @Summary Create a storage location @Description Creates a named storage location for the household. @Tags household @Accept json @Produce json @Param body body storageLocationRequest true "Location data" @Success 201 \{object\} database.StorageLocation @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations \[post\]
+
 <a name="CreateUserToken"></a>
 ## func CreateUserToken
 
@@ -1834,6 +1873,15 @@ func DeleteProduct(ctx *gin.Context)
 ```
 
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param archiveOnly query bool false "Archive only" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
+
+<a name="DeleteStorageLocation"></a>
+## func DeleteStorageLocation
+
+```go
+func DeleteStorageLocation(ctx *gin.Context)
+```
+
+DeleteStorageLocation removes a storage location. Assigned products become unassigned. @Summary Delete a storage location @Description Deletes a storage location and unassigns all products from it. @Tags household @Produce json @Param id path int true "Location ID" @Success 200 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations/:id \[delete\]
 
 <a name="DeleteUserToken"></a>
 ## func DeleteUserToken
@@ -2071,6 +2119,15 @@ func LeaveHousehold(ctx *gin.Context)
 
 LeaveHousehold removes the calling user from their current household and assigns them a new personal one. @Summary Leave current household @Description Creates a new personal household for the user. Products are moved if they were the sole member. @Tags household @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/household/leave \[post\]
 
+<a name="ListStorageLocations"></a>
+## func ListStorageLocations
+
+```go
+func ListStorageLocations(ctx *gin.Context)
+```
+
+ListStorageLocations returns all storage locations for the calling user's household. @Summary List storage locations @Description Returns all storage locations belonging to the user's household, ordered by sort\_order. @Tags household @Produce json @Success 200 \{array\} database.StorageLocation @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations \[get\]
+
 <a name="ListUserTokens"></a>
 ## func ListUserTokens
 
@@ -2178,6 +2235,15 @@ func UpdateProductAmount(ctx *gin.Context)
 ```
 
 UpdateProductAmount updates the amount of a product by a given delta. If the resulting amount is \<= 0, the product is hard\-deleted. @Summary Update product amount @Description Applies a delta to a product's amount. Hard\-deletes the product when amount reaches 0. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param delta body api.ProductAmountDTO true "Amount delta" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/amount \[patch\]
+
+<a name="UpdateStorageLocation"></a>
+## func UpdateStorageLocation
+
+```go
+func UpdateStorageLocation(ctx *gin.Context)
+```
+
+UpdateStorageLocation renames or re\-icons a storage location. @Summary Update a storage location @Description Updates the name, icon, and sort order of an existing storage location. @Tags household @Accept json @Produce json @Param id path int true "Location ID" @Param body body storageLocationRequest true "Location data" @Success 200 \{object\} database.StorageLocation @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations/:id \[patch\]
 
 <a name="UpdateUser"></a>
 ## func UpdateUser
@@ -2401,6 +2467,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#ProductRepository.GetUserHouseholdByID>)
   - [func \(r \*ProductRepository\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsBulk>)
   - [func \(r \*ProductRepository\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsBulkByBarcode>)
+  - [func \(r \*ProductRepository\) GetUserProductsByLocation\(userID, locationID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsByLocation>)
   - [func \(r \*ProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#ProductRepository.GetUsersByHouseholdID>)
   - [func \(r \*ProductRepository\) GetWasteThisMonth\(userID uint\) \(int, error\)](<#ProductRepository.GetWasteThisMonth>)
   - [func \(r \*ProductRepository\) RestoreProduct\(productID int, userID uint\) error](<#ProductRepository.RestoreProduct>)
@@ -2414,6 +2481,13 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) WasteProduct\(productID int, userID uint\) error](<#ProductRepository.WasteProduct>)
 - [type SearchParameterEnum](<#SearchParameterEnum>)
   - [func SearchParameterEnumFromString\(str string\) SearchParameterEnum](<#SearchParameterEnumFromString>)
+- [type StorageLocationRepository](<#StorageLocationRepository>)
+  - [func NewStorageLocationRepository\(db \*gorm.DB\) \*StorageLocationRepository](<#NewStorageLocationRepository>)
+  - [func \(r \*StorageLocationRepository\) Create\(userID uint, name, icon string, sortOrder int\) \(database.StorageLocation, error\)](<#StorageLocationRepository.Create>)
+  - [func \(r \*StorageLocationRepository\) Delete\(locationID, userID uint\) error](<#StorageLocationRepository.Delete>)
+  - [func \(r \*StorageLocationRepository\) GetByHousehold\(userID uint\) \(\[\]database.StorageLocation, error\)](<#StorageLocationRepository.GetByHousehold>)
+  - [func \(r \*StorageLocationRepository\) GetByID\(locationID, userID uint\) \(database.StorageLocation, error\)](<#StorageLocationRepository.GetByID>)
+  - [func \(r \*StorageLocationRepository\) Update\(locationID, userID uint, name, icon string, sortOrder int\) \(database.StorageLocation, error\)](<#StorageLocationRepository.Update>)
 - [type StreakRepository](<#StreakRepository>)
   - [func NewStreakRepository\(db \*gorm.DB\) \*StreakRepository](<#NewStreakRepository>)
   - [func \(r \*StreakRepository\) GetAllStreaks\(\) \(\[\]dbModel.WasteStreak, error\)](<#StreakRepository.GetAllStreaks>)
@@ -3464,6 +3538,15 @@ func (r *ProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode in
 
 
 
+<a name="ProductRepository.GetUserProductsByLocation"></a>
+### func \(\*ProductRepository\) GetUserProductsByLocation
+
+```go
+func (r *ProductRepository) GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
+```
+
+
+
 <a name="ProductRepository.GetUsersByHouseholdID"></a>
 ### func \(\*ProductRepository\) GetUsersByHouseholdID
 
@@ -3587,6 +3670,71 @@ const (
 
 ```go
 func SearchParameterEnumFromString(str string) SearchParameterEnum
+```
+
+
+
+<a name="StorageLocationRepository"></a>
+## type StorageLocationRepository
+
+
+
+```go
+type StorageLocationRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewStorageLocationRepository"></a>
+### func NewStorageLocationRepository
+
+```go
+func NewStorageLocationRepository(db *gorm.DB) *StorageLocationRepository
+```
+
+
+
+<a name="StorageLocationRepository.Create"></a>
+### func \(\*StorageLocationRepository\) Create
+
+```go
+func (r *StorageLocationRepository) Create(userID uint, name, icon string, sortOrder int) (database.StorageLocation, error)
+```
+
+
+
+<a name="StorageLocationRepository.Delete"></a>
+### func \(\*StorageLocationRepository\) Delete
+
+```go
+func (r *StorageLocationRepository) Delete(locationID, userID uint) error
+```
+
+
+
+<a name="StorageLocationRepository.GetByHousehold"></a>
+### func \(\*StorageLocationRepository\) GetByHousehold
+
+```go
+func (r *StorageLocationRepository) GetByHousehold(userID uint) ([]database.StorageLocation, error)
+```
+
+
+
+<a name="StorageLocationRepository.GetByID"></a>
+### func \(\*StorageLocationRepository\) GetByID
+
+```go
+func (r *StorageLocationRepository) GetByID(locationID, userID uint) (database.StorageLocation, error)
+```
+
+
+
+<a name="StorageLocationRepository.Update"></a>
+### func \(\*StorageLocationRepository\) Update
+
+```go
+func (r *StorageLocationRepository) Update(locationID, userID uint, name, icon string, sortOrder int) (database.StorageLocation, error)
 ```
 
 
@@ -4948,6 +5096,7 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type ProductDTOBarcode](<#ProductDTOBarcode>)
 - [type ProductDTOExpire](<#ProductDTOExpire>)
 - [type ProductDTOPatch](<#ProductDTOPatch>)
+- [type StorageLocation](<#StorageLocation>)
 - [type Timestamp](<#Timestamp>)
 - [type WasteStreak](<#WasteStreak>)
 - [type Webhook](<#Webhook>)
@@ -5137,20 +5286,21 @@ Product is the database model of a product
 ```go
 type Product struct {
     gorm.Model
-    Barcode         string         `json:"barcode"`
-    ProductName     string         `json:"productName"`
-    Categories      string         `json:"categories"`
-    Countries       string         `json:"countries"`
-    ImageURL        string         `json:"imageUrl"`
-    ExpireAt        time.Time      `json:"expireAt"`
-    ScannedAt       time.Time      `json:"scannedAt"`
-    NotifiedAt      time.Time      `json:"notifiedAt"`
-    DeletedAt       gorm.DeletedAt `gorm:"index"`
-    HouseholdID     uint           `gorm:"index, not null" json:"-"`
-    Household       Household      `json:"-"`
-    Amount          int            `json:"amount"`
-    Unit            string         `json:"unit"`
-    StorageLocation string         `json:"storageLocation"`
+    Barcode           string           `json:"barcode"`
+    ProductName       string           `json:"productName"`
+    Categories        string           `json:"categories"`
+    Countries         string           `json:"countries"`
+    ImageURL          string           `json:"imageUrl"`
+    ExpireAt          time.Time        `json:"expireAt"`
+    ScannedAt         time.Time        `json:"scannedAt"`
+    NotifiedAt        time.Time        `json:"notifiedAt"`
+    DeletedAt         gorm.DeletedAt   `gorm:"index"`
+    HouseholdID       uint             `gorm:"index, not null" json:"-"`
+    Household         Household        `json:"-"`
+    Amount            int              `json:"amount"`
+    Unit              string           `json:"unit"`
+    StorageLocationID *uint            `gorm:"index"                        json:"storageLocationId"`
+    StorageLocation   *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
 }
 ```
 
@@ -5185,15 +5335,31 @@ ProductDTOPatch is a simplified DTO only containing the patchable elements
 
 ```go
 type ProductDTOPatch struct {
-    ID              uint      `json:"ID"`
-    ProductName     string    `json:"productName"`
-    Categories      string    `json:"categories"`
-    Countries       string    `json:"countries"`
-    ImageURL        string    `json:"imageUrl"`
-    ExpireAt        time.Time `json:"expireAt"`
-    Amount          int       `json:"amount"`
-    Unit            string    `json:"unit"`
-    StorageLocation string    `json:"storageLocation"`
+    ID                uint      `json:"ID"`
+    ProductName       string    `json:"productName"`
+    Categories        string    `json:"categories"`
+    Countries         string    `json:"countries"`
+    ImageURL          string    `json:"imageUrl"`
+    ExpireAt          time.Time `json:"expireAt"`
+    Amount            int       `json:"amount"`
+    Unit              string    `json:"unit"`
+    StorageLocationID *uint     `json:"storageLocationId"`
+}
+```
+
+<a name="StorageLocation"></a>
+## type StorageLocation
+
+StorageLocation represents a named location within a household \(e.g. Fridge, Freezer, Pantry\)
+
+```go
+type StorageLocation struct {
+    gorm.Model
+    HouseholdID uint      `gorm:"index;not null" json:"householdId"`
+    Household   Household `json:"-"`
+    Name        string    `gorm:"not null"       json:"name"`
+    Icon        string    `gorm:"default:'📦'"  json:"icon"`
+    SortOrder   int       `gorm:"default:0"      json:"sortOrder"`
 }
 ```
 

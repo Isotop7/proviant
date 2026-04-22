@@ -21,7 +21,7 @@ func TestRunBreakingDatabaseMigrations(t *testing.T) {
 	}
 
 	// Migrate schemas
-	if err := db.AutoMigrate(&authentication.User{}, &database.Household{}); err != nil {
+	if err := db.AutoMigrate(&database.Household{}, &database.StorageLocation{}, &authentication.User{}); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -70,7 +70,7 @@ func TestRunBreakingDatabaseMigrations_EmptyDatabase(t *testing.T) {
 	}
 
 	// Migrate schemas
-	if err := db.AutoMigrate(&authentication.User{}, &database.Household{}); err != nil {
+	if err := db.AutoMigrate(&database.Household{}, &database.StorageLocation{}, &authentication.User{}); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -96,7 +96,7 @@ func TestRunBreakingDatabaseMigrations_UsersWithHouseholds(t *testing.T) {
 	}
 
 	// Migrate schemas
-	if err := db.AutoMigrate(&authentication.User{}, &database.Household{}); err != nil {
+	if err := db.AutoMigrate(&database.Household{}, &database.StorageLocation{}, &authentication.User{}); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 

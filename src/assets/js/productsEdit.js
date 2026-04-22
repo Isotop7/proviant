@@ -38,6 +38,10 @@ function editProduct() {
     const productID = Number.parseInt(els.labelProductID.innerText.trim());
     const expireDate = els.inputExpireAt.valueAsDate;
 
+    const selectStorageLocation = document.getElementById('selectStorageLocation');
+    const storageLocationId = selectStorageLocation && selectStorageLocation.value
+        ? Number.parseInt(selectStorageLocation.value) : null;
+
     const product = {
         "ID": productID,
         "productName": els.inputProductName.value.trim(),
@@ -46,6 +50,7 @@ function editProduct() {
         "imageUrl": els.inputImageURL.value.trim(),
         "expireAt": expireDate ? expireDate.toISOString() : null,
         "amount": els.inputAmount ? Number.parseInt(els.inputAmount.value) || 0 : 0,
+        "storageLocationId": storageLocationId,
     };
 
     // Edit product

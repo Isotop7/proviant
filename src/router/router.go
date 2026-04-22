@@ -263,6 +263,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAPI.GET("/invitations", v1.GetInvitations)
 	householdAPI.DELETE("/invitations/:id", v1.CancelInvitation)
 
+	// Storage location routes
+	householdAPI.GET("/storage-locations", v1.ListStorageLocations)
+	householdAPI.POST("/storage-locations", v1.CreateStorageLocation)
+	householdAPI.PATCH("/storage-locations/:id", v1.UpdateStorageLocation)
+	householdAPI.DELETE("/storage-locations/:id", v1.DeleteStorageLocation)
+
 	// Admin user management routes
 	adminAPI := engine.Group("/api/v1/admin/users")
 	adminAPI.Use(jwtAPIMiddlewareWithPAT)

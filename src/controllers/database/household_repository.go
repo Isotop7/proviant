@@ -111,6 +111,18 @@ func (r *HouseholdRepository) CreateAndSwitchHousehold(userID uint, name string)
 		return err
 	}
 
+	defaultLocations := []database.StorageLocation{
+		{HouseholdID: newHousehold.ID, Name: "Fridge", Icon: "🧊", SortOrder: 0},
+		{HouseholdID: newHousehold.ID, Name: "Freezer", Icon: "❄️", SortOrder: 1},
+		{HouseholdID: newHousehold.ID, Name: "Pantry", Icon: "🗄️", SortOrder: 2},
+	}
+	for i := range defaultLocations {
+		if err := tx.Create(&defaultLocations[i]).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
 	return tx.Commit().Error
 }
 
