@@ -631,11 +631,11 @@ func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]ap
 
 	var result []apiModel.StatsExpiringProduct
 	for i := range products {
-		e := products[i].ExpireAt
-		if !e.Before(startOfToday) && !e.After(endOfWindow) {
+		expirationTime := products[i].ExpireAt
+		if !expirationTime.Before(startOfToday) && !expirationTime.After(endOfWindow) {
 			result = append(result, apiModel.StatsExpiringProduct{
 				ProductName: products[i].ProductName,
-				ExpireAt:    e.Format("2006-01-02"),
+				ExpireAt:    expirationTime.Format("2006-01-02"),
 			})
 		}
 	}

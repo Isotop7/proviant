@@ -32,14 +32,14 @@ func (r *StorageLocationRepository) GetByID(locationID, userID uint) (database.S
 	if err := r.DB.First(&user, userID).Error; err != nil {
 		return database.StorageLocation{}, err
 	}
-	var loc database.StorageLocation
-	if err := r.DB.First(&loc, locationID).Error; err != nil {
+	var storageLocation database.StorageLocation
+	if err := r.DB.First(&storageLocation, locationID).Error; err != nil {
 		return database.StorageLocation{}, errors.ErrStorageLocationNotFound
 	}
-	if loc.HouseholdID != user.HouseholdID {
+	if storageLocation.HouseholdID != user.HouseholdID {
 		return database.StorageLocation{}, errors.ErrStorageLocationNotOwned
 	}
-	return loc, nil
+	return storageLocation, nil
 }
 
 func (r *StorageLocationRepository) Create(userID uint, name, icon string, sortOrder int) (database.StorageLocation, error) {
@@ -47,16 +47,16 @@ func (r *StorageLocationRepository) Create(userID uint, name, icon string, sortO
 	if err := r.DB.First(&user, userID).Error; err != nil {
 		return database.StorageLocation{}, err
 	}
-	loc := database.StorageLocation{
+	storageLocation := database.StorageLocation{
 		HouseholdID: user.HouseholdID,
 		Name:        name,
 		Icon:        icon,
 		SortOrder:   sortOrder,
 	}
-	if err := r.DB.Create(&loc).Error; err != nil {
+	if err := r.DB.Create(&storageLocation).Error; err != nil {
 		return database.StorageLocation{}, err
 	}
-	return loc, nil
+	return storageLocation, nil
 }
 
 func (r *StorageLocationRepository) Update(locationID, userID uint, name, icon string, sortOrder int) (database.StorageLocation, error) {

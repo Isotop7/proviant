@@ -28,34 +28,34 @@ var (
 )
 
 func getClientIP(ctx *gin.Context) string {
-	ip := ctx.GetHeader("X-Forwarded-For")
-	if ip == "" {
-		ip = ctx.GetHeader("X-Real-IP")
+	clientIP := ctx.GetHeader("X-Forwarded-For")
+	if clientIP == "" {
+		clientIP = ctx.GetHeader("X-Real-IP")
 	}
-	if ip == "" {
-		ip = ctx.ClientIP()
+	if clientIP == "" {
+		clientIP = ctx.ClientIP()
 	}
-	return ip
+	return clientIP
 }
 
-func getLimiter(store *sync.Map, key string, r rate.Limit) *rate.Limiter {
+func getLimiter(store *sync.Map, key string, limit rate.Limit) *rate.Limiter {
 	now := time.Now()
-	if v, ok := store.Load(key); ok {
-		cl := v.(*clientLimiter)
-		cl.lastSeen = now
-		return cl.limiter
+	if storedValue, ok := store.Load(key); ok {
+		storedLimiter := storedValue.(*clientLimiter)
+		storedLimiter.lastSeen = now
+		return storedLimiter.limiter
 	}
-	limiter := rate.NewLimiter(r, int(r*60)+1)
+	limiter := rate.NewLimiter(limit, int(limit*60)+1)
 	store.Store(key, &clientLimiter{limiter: limiter, lastSeen: now})
 	return limiter
 }
 
 func loginRateLimitMiddleware(ctx *gin.Context) {
-	ip := getClientIP(ctx)
-	limiter := getLimiter(loginLimiters, ip, loginRate)
-	r := limiter.Reserve()
-	if delay := r.Delay(); delay > 0 {
-		r.Cancel()
+	clientIP := getClientIP(ctx)
+	limiter := getLimiter(loginLimiters, clientIP, loginRate)
+	reservation := limiter.Reserve()
+	if delay := reservation.Delay(); delay > 0 {
+		reservation.Cancel()
 		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 			"code":    "RATE_LIMIT_EXCEEDED",
@@ -67,11 +67,11 @@ func loginRateLimitMiddleware(ctx *gin.Context) {
 }
 
 func signupRateLimitMiddleware(ctx *gin.Context) {
-	ip := getClientIP(ctx)
-	limiter := getLimiter(signupLimiters, ip, signupRate)
-	r := limiter.Reserve()
-	if delay := r.Delay(); delay > 0 {
-		r.Cancel()
+	clientIP := getClientIP(ctx)
+	limiter := getLimiter(signupLimiters, clientIP, signupRate)
+	reservation := limiter.Reserve()
+	if delay := reservation.Delay(); delay > 0 {
+		reservation.Cancel()
 		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 			"code":    "RATE_LIMIT_EXCEEDED",
@@ -95,9 +95,9 @@ func exportRateLimitMiddleware(ctx *gin.Context) {
 
 	key := strconv.FormatUint(uint64(userID), 10)
 	limiter := getLimiter(exportLimiters, key, exportRate)
-	r := limiter.Reserve()
-	if delay := r.Delay(); delay > 0 {
-		r.Cancel()
+	reservation := limiter.Reserve()
+	if delay := reservation.Delay(); delay > 0 {
+		reservation.Cancel()
 		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 			"code":    "RATE_LIMIT_EXCEEDED",
@@ -113,22 +113,22 @@ func cleanupLimiters() {
 		time.Sleep(time.Minute)
 		now := time.Now()
 		loginLimiters.Range(func(key, value interface{}) bool {
-			cl := value.(*clientLimiter)
-			if now.Sub(cl.lastSeen) > 10*time.Minute {
+			storedLimiter := value.(*clientLimiter)
+			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
 				loginLimiters.Delete(key)
 			}
 			return true
 		})
 		signupLimiters.Range(func(key, value interface{}) bool {
-			cl := value.(*clientLimiter)
-			if now.Sub(cl.lastSeen) > 10*time.Minute {
+			storedLimiter := value.(*clientLimiter)
+			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
 				signupLimiters.Delete(key)
 			}
 			return true
 		})
 		exportLimiters.Range(func(key, value interface{}) bool {
-			cl := value.(*clientLimiter)
-			if now.Sub(cl.lastSeen) > 10*time.Minute {
+			storedLimiter := value.(*clientLimiter)
+			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
 				exportLimiters.Delete(key)
 			}
 			return true

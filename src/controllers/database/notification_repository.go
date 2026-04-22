@@ -223,24 +223,24 @@ func (r *NotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([
 
 	index := map[uint]*models.HouseholdReportTarget{}
 	for i := range users {
-		u := &users[i]
-		if _, ok := index[u.HouseholdID]; !ok {
-			name := fmt.Sprintf("Household #%d", u.HouseholdID)
-			if h, err := r.GetHouseholdByID(u.HouseholdID); err == nil {
+		user := &users[i]
+		if _, ok := index[user.HouseholdID]; !ok {
+			name := fmt.Sprintf("Household #%d", user.HouseholdID)
+			if h, err := r.GetHouseholdByID(user.HouseholdID); err == nil {
 				name = h.Name
 			}
-			index[u.HouseholdID] = &models.HouseholdReportTarget{
-				HouseholdID:   u.HouseholdID,
+			index[user.HouseholdID] = &models.HouseholdReportTarget{
+				HouseholdID:   user.HouseholdID,
 				HouseholdName: name,
 			}
 		}
-		if u.MailAddress != "" && u.NotificationPreferences.EmailEnabled {
-			index[u.HouseholdID].Recipients = append(index[u.HouseholdID].Recipients, u.MailAddress)
+		if user.MailAddress != "" && user.NotificationPreferences.EmailEnabled {
+			index[user.HouseholdID].Recipients = append(index[user.HouseholdID].Recipients, user.MailAddress)
 		}
-		if u.NotificationPreferences.TelegramEnabled && u.NotificationPreferences.TelegramChatID != "" && u.NotificationPreferences.TelegramBotToken != "" {
-			index[u.HouseholdID].TelegramRecipients = append(index[u.HouseholdID].TelegramRecipients, models.TelegramRecipient{
-				ChatID:   u.NotificationPreferences.TelegramChatID,
-				BotToken: u.NotificationPreferences.TelegramBotToken,
+		if user.NotificationPreferences.TelegramEnabled && user.NotificationPreferences.TelegramChatID != "" && user.NotificationPreferences.TelegramBotToken != "" {
+			index[user.HouseholdID].TelegramRecipients = append(index[user.HouseholdID].TelegramRecipients, models.TelegramRecipient{
+				ChatID:   user.NotificationPreferences.TelegramChatID,
+				BotToken: user.NotificationPreferences.TelegramBotToken,
 			})
 		}
 	}
