@@ -160,9 +160,9 @@ func validateAPIs(config *configuration.ProviantConfiguration) {
 }
 
 // startProviantServer starts the Proviant server.
-func startProviantServer(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) {
+func startProviantServer(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) {
 	// Call function to setup router and pass references
-	proviantEngine := router.SetupRouter(logger, proviantConfiguration, dbHandle, offacntrl, notificationController)
+	proviantEngine := router.SetupRouter(logger, proviantConfiguration, dbHandle, offacntrl, notificationController, ocrController)
 
 	// Get server port or instead set default value
 	serverPort := proviantConfiguration.Server.Port
@@ -222,6 +222,7 @@ func main() {
 		&dbModel.WasteStreak{},
 		&dbModel.ProductCategoryPrice{},
 		&dbModel.SavingsRecord{},
+		&dbModel.ExpiryScan{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
@@ -271,10 +272,13 @@ func main() {
 
 	notificationController := setupNotificationController(logger, proviantConfiguration, dbHandle)
 
+	// Initialize OCR controller
+	ocrController := controllers.NewOCRController(logger, proviantConfiguration.OCR)
+
 	// Start background cleanup of expired revoked tokens
 	go startRevokedTokenCleanup(logger, dbHandle)
 
-	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl, notificationController)
+	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl, notificationController, ocrController)
 }
 
 // startRevokedTokenCleanup runs a goroutine that periodically cleans up expired revoked tokens

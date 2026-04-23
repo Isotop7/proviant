@@ -8,14 +8,18 @@ COPY ./ ./
 RUN npm install && \
     npm run css && \
     cp node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/ && \
-	cp node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2 ./src/assets/fonts/ && \
-    cp node_modules/@fontsource/pacifico/files/pacifico-latin-*.woff2 ./src/assets/fonts/ && \
+	cp node_modules/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-*.woff2 ./src/assets/fonts/ && \
+    cp node_modules/@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2 ./src/assets/fonts/ && \
     cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* ./src/assets/js/ && \
     cp node_modules/html5-qrcode/html5-qrcode.min.js ./src/assets/js/ && \
+    cp node_modules/chart.js/dist/chart.umd.min.js ./src/assets/js/ && \
+    cp node_modules/chart.js/dist/chart.umd.min.js.map ./src/assets/js/ && \
     cp res/icons/proviant_logo_256.png ./src/assets/icons/ && \
+    cp res/icons/proviant_logo_512.png ./src/assets/icons/ && \
 	cp res/icons/proviant_logo.ico ./src/assets/icons/favicon.ico && \
 	cp res/icons/proviant_logo_256.png ./src/assets/icons/favicon.png && \
 	cp res/icons/proviant_hero.png ./src/assets/icons/hero.png && \
+	cp res/icons/header*.png ./src/assets/icons/ && \
     cd src && \
     CGO_ENABLED=1 GOOS=linux CGO_CFLAGS="-D_LARGEFILE64_SOURCE" go build -v -o ../proviant
 
@@ -24,6 +28,8 @@ WORKDIR /app
 
 COPY --from=buildenv /app/proviant /app/proviant
 RUN mkdir /app/data
+# Install Tesseract OCR with German and English language packs
+RUN apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng
 COPY ./src/config.yaml.sqlite.tmpl /app/config.yaml
 ENV GIN_MODE=release
 EXPOSE 5050

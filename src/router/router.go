@@ -46,7 +46,7 @@ func cleanupRevokedTokens(db *gorm.DB, logger *zerolog.Logger) {
 }
 
 // SetupRouter creates the gin engine and associated middleware
-func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) *gin.Engine {
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) *gin.Engine {
 	go cleanupRevokedTokens(dbHandle, logger)
 
 	gin.DefaultWriter = zerologWriter{logger: logger, level: zerolog.DebugLevel}
@@ -103,6 +103,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Notification controller for invitation emails
 	engine.Use(func(ctx *gin.Context) {
 		ctx.Set("notificationController", notificationController)
+		ctx.Next()
+	})
+
+	// OCR controller for expiry date detection
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("ocrController", ocrController)
 		ctx.Next()
 	})
 
@@ -199,6 +205,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.GET("/expired", v1.GetExpired)
 	publicProductAPI.POST("", v1.CreateProduct)
 	publicProductAPI.POST("/scan", v1.ScanProduct)
+	publicProductAPI.POST("/scan-date", v1.ScanExpiryDate)
 	publicProductAPI.GET("/byBarcode/:barcode", v1.GetProductsByBarcode)
 	publicProductAPI.GET("/openfoodfacts/:barcode", v1.GetOpenFoodFactsData)
 	publicProductAPI.GET("/search", v1.SearchProducts)
