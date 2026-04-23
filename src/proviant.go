@@ -273,7 +273,7 @@ func main() {
 	notificationController := setupNotificationController(logger, proviantConfiguration, dbHandle)
 
 	// Initialize OCR controller
-	ocrController := controllers.NewOCRController(logger, proviantConfiguration.OCR)
+	ocrController := controllers.NewOCRController(logger, &proviantConfiguration.OCR)
 
 	// Start background cleanup of expired revoked tokens
 	go startRevokedTokenCleanup(logger, dbHandle)

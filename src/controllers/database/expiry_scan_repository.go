@@ -15,13 +15,13 @@ func NewExpiryScanRepository(db *gorm.DB) *ExpiryScanRepository {
 }
 
 type ExpiryScanRepositoryInterface interface {
-	Create(scan database.ExpiryScan) error
+	Create(scan *database.ExpiryScan) error
 	GetByUser(userID uint, limit int) ([]database.ExpiryScan, error)
 }
 
 // Create inserts a new expiry scan record
-func (r *ExpiryScanRepository) Create(scan database.ExpiryScan) error {
-	return r.DB.Create(&scan).Error
+func (r *ExpiryScanRepository) Create(scan *database.ExpiryScan) error {
+	return r.DB.Create(scan).Error
 }
 
 // GetByUser returns recent scans for a user

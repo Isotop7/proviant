@@ -57,7 +57,11 @@ func ScanExpiryDate(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrInternalServer))
 		return
 	}
-	defer src.Close()
+	defer func() {
+		if closeErr := src.Close(); closeErr != nil {
+			logger.Warn().Msgf("Error closing file: %s", closeErr.Error())
+		}
+	}()
 
 	imgBytes, readErr := io.ReadAll(src)
 	if readErr != nil {
@@ -107,13 +111,13 @@ func ScanExpiryDate(ctx *gin.Context) {
 					logger.Warn().Msg("dbHandle not available for expiry scan logging")
 					return
 				}
-				scan := dbModel.ExpiryScan{
+				scan := &dbModel.ExpiryScan{
 					UserID:       userID,
 					ScannedAt:    time.Now(),
 					DetectedDate: mustParseDate(resp.DetectedDate),
 					Confidence:   resp.Confidence,
 					RawText:      resp.RawText,
-					ImageHash:    hashImage(imgBytes), // reuse hash computation (can be optimized)
+					ImageHash:    hashImage(imgBytes),
 				}
 				repo := database.NewExpiryScanRepository(dbHandle)
 				if dbErr := repo.Create(scan); dbErr != nil {

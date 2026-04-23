@@ -1471,20 +1471,20 @@ th a {
 // OCR camera wrapper (expiry date scanning)
 .camera-preview-wrapper {
   position: relative;
+  box-sizing: border-box;
   width: 100%;
   max-width: 100%;
   height: 220px;
   overflow: hidden;
   background: #000;
   border-radius: 10px;
-  box-sizing: border-box;
 }
 
 .camera-preview {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
 }
 
 #barcode-reader {

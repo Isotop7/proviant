@@ -31,10 +31,10 @@ type OCRControllerImpl struct {
 }
 
 // NewOCRController creates a new OCR controller instance
-func NewOCRController(logger *zerolog.Logger, config configuration.OCRConfiguration) *OCRControllerImpl {
+func NewOCRController(logger *zerolog.Logger, config *configuration.OCRConfiguration) *OCRControllerImpl {
 	return &OCRControllerImpl{
 		Logger: logger,
-		Config: config,
+		Config: *config,
 	}
 }
 
@@ -124,6 +124,7 @@ func (c *OCRControllerImpl) encodeImage(img image.Image) ([]byte, error) {
 
 // runTesseract with basic parameters
 func runTesseract(ctx context.Context, img []byte, langs string) (stdout, stderr string, err error) {
+	// #nosec G204 — command is hardcoded, not user-controlled
 	cmd := exec.CommandContext(ctx, "tesseract", "stdin", "stdout",
 		"-l", langs,
 		"--dpi", "300",
