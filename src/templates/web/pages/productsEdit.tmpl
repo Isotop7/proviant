@@ -60,8 +60,13 @@
                         <label for="inputExpireAt" class="form-label col-form-label">Expire At</label>
                     </div>
                     <div class="col col-9">
-                        <input type="date" class="form-control" id="inputExpireAt"
-                            value="{{- .Product.ExpireAt | inputDate }}">
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="date" class="form-control flex-grow-1" id="inputExpireAt"
+                                value="{{- .Product.ExpireAt | inputDate }}">
+                            <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="Scan expiry date from photo">
+                                <i class="bi bi-camera"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="row my-3">
@@ -134,7 +139,82 @@
     </div>
 </div>
 
+<!-- OCR Camera Modal -->
+<div class="modal fade" id="ocrCameraModal" tabindex="-1" aria-labelledby="ocrCameraModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon" style="background:var(--accent-subtle);color:var(--accent);">
+                    <i class="bi bi-camera"></i>
+                </div>
+                <div class="modal-header-body">
+                    <h5 class="modal-title mb-0" id="ocrCameraModalLabel">Scan Expiry Date</h5>
+                    <div class="modal-subtitle">Position expiry date in frame</div>
+                </div>
+                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="camera-preview-wrapper">
+                    <video id="ocrVideoPreview" autoplay playsinline class="camera-preview"></video>
+                </div>
+                <p class="text-body-secondary small mt-2">Hold steady and tap Capture</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-proviant-primary" id="btnCaptureExpiry">
+                    <i class="bi bi-camera"></i> Capture
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- OCR Result Modal -->
+<div class="modal fade" id="ocrResultModal" tabindex="-1" aria-labelledby="ocrResultModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon" style="background:var(--accent-subtle);color:var(--accent);">
+                    <i class="bi bi-camera"></i>
+                </div>
+                <div class="modal-header-body">
+                    <h5 class="modal-title mb-0" id="ocrResultModalLabel">Expiry Date Scan</h5>
+                    <div class="modal-subtitle">Check the detected date</div>
+                </div>
+                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="ocrPreviewImage" class="mb-3 text-center"></div>
+                <div class="mb-3" id="ocrDetectedDate"></div>
+                <div class="progress mb-2" style="height: 8px;">
+                    <div id="ocrConfidenceBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <small class="text-body-secondary" id="ocrConfidenceLabel">Confidence: 0%</small>
+                <div id="ocrRawTextWrapper" class="mt-3 d-none">
+                    <label class="form-label">Raw OCR text</label>
+                    <textarea id="ocrRawText" class="form-control" rows="3" readonly></textarea>
+                    <div class="form-text">Date not detected confidently. Please check the text above and adjust the date manually.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-proviant-secondary" id="btnRecaptureExpiry">
+                    <i class="bi bi-camera"></i> Retake
+                </button>
+                <button type="button" class="btn btn-proviant-primary" id="btnConfirmExpiry">
+                    <i class="bi bi-check"></i> Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/assets/js/html5-qrcode.min.js"></script>
 <script src="/assets/js/productsEdit.js"></script>
+<script src="/assets/js/productsExpiryOCR.js"></script>
 {{ end }}
 
 
