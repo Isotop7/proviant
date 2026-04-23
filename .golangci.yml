@@ -59,6 +59,10 @@ linters:
       - path: password\.go
         linters: [gosec]
         text: "G505:"
+      # G301: Expect directory permissions to be 0750 or less
+      - path: openfoodfactsapicontroller\.go
+        linters: [gosec]
+        text: "G301:"
 
 formatters:
   enable: []

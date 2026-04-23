@@ -485,7 +485,7 @@ func (nc *NotificationController) sendStreakMilestoneNotifications(householdID u
 			}
 		}
 		if pref.NtfyEnabled && ntfyProvider.IsConfigured() {
-			if sendErr := ntfyProvider.SendStreakMilestone(milestone, pref); sendErr != nil {
+			if sendErr := ntfyProvider.SendStreakMilestone(milestone, &pref); sendErr != nil {
 				nc.Logger.Error().Msgf("Streak milestone: ntfy failed: %s", sendErr)
 			}
 		}

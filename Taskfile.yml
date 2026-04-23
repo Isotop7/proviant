@@ -52,7 +52,14 @@ tasks:
         msg: "No container runtime found. Please install podman or docker."
     dir: src
     cmds:
-      - '{{.CONTAINER_RUNTIME}} run -t --rm -v ./:/app:Z -v ../.golangci.yml:/tmp/.golangci.yml:Z -w /app golangci/golangci-lint:{{.GOLANGCI_VERSION}} golangci-lint run -v -c /tmp/.golangci.yml'
+      - |
+        {{.CONTAINER_RUNTIME}} run -t --rm \
+        -v ./:/app:Z -v ../.golangci.yml:/tmp/.golangci.yml:Z \
+        -v ../.cache/golangci-lint:/root/.cache/golangci-lint:Z \
+        -e GOLANGCI_LINT_CACHE=/root/.cache/golangci-lint \
+        -w /app golangci/golangci-lint:{{.GOLANGCI_VERSION}} \
+        golangci-lint run \
+        -v -c /tmp/.golangci.yml
 
   packagedoc:
     desc: Generate package documentation as markdown

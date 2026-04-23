@@ -235,11 +235,12 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	var products []dbModel.Product
 	var productErr error
 
-	if locationFilter != "" {
+	switch {
+	case locationFilter != "":
 		if locationID, parseErr := strconv.ParseUint(locationFilter, 10, 64); parseErr == nil {
 			products, productErr = productRepo.GetUserProductsByLocation(userID, uint(locationID))
 		}
-	} else if queryParam != "" && queryValue != "" {
+	case queryParam != "" && queryValue != "":
 		enumParam := database.SearchParameterEnumFromString(queryParam)
 		if enumParam == database.InvalidParameter {
 			logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
@@ -247,7 +248,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 			return
 		}
 		products, productErr = productRepo.SearchProducts(enumParam, queryValue, sort, order, userID)
-	} else {
+	default:
 		products, productErr = productRepo.GetUserProductsBulk(userID, -1)
 	}
 

@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"codeberg.org/isotop7/proviant/models/configuration"
@@ -131,8 +133,20 @@ func (offacntrl OpenFoodFactsAPIController) DownloadImage(imageURL, barcode stri
 		return "", fmt.Errorf("unexpected status %d fetching image", resp.StatusCode)
 	}
 
-	destPath := filepath.Join(offacntrl.Configuration.ImageCachePath, barcode+".jpg")
-	f, err := os.Create(destPath)
+	// Sanitize barcode to prevent path traversal — allow only alphanumeric and hyphen/underscore.
+	// Barcodes are typically numeric EAN-13; this prevents "..", "/" etc.
+	safeBarcode := regexp.MustCompile(`[^a-zA-Z0-9_-]`).ReplaceAllString(barcode, "")
+	if safeBarcode != barcode {
+		return "", fmt.Errorf("invalid barcode characters")
+	}
+
+	cleanCachePath := filepath.Clean(offacntrl.Configuration.ImageCachePath)
+	destPath := filepath.Join(cleanCachePath, safeBarcode+".jpg")
+	// Ensure the final path is still within the cache directory (defense in depth)
+	if !strings.HasPrefix(filepath.Clean(destPath), cleanCachePath) {
+		return "", fmt.Errorf("invalid image path")
+	}
+	f, err := os.Create(destPath) // #nosec G304 — barcode validated via regex and path prefix check
 	if err != nil {
 		return "", fmt.Errorf("creating image file: %w", err)
 	}

@@ -105,24 +105,24 @@ func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsS
 	}
 
 	var resp apiModel.SavingsStatsResponse
-	for _, rec := range monthRecords {
-		switch rec.EventType {
+	for idx := range monthRecords {
+		switch monthRecords[idx].EventType {
 		case "consumed":
-			resp.SavedEURThisMonth += rec.PriceEUR
-			resp.SavedCO2KgThisMonth += rec.CO2Kg
+			resp.SavedEURThisMonth += monthRecords[idx].PriceEUR
+			resp.SavedCO2KgThisMonth += monthRecords[idx].CO2Kg
 		case "wasted":
-			resp.WastedEURThisMonth += rec.PriceEUR
-			resp.WastedCO2KgThisMonth += rec.CO2Kg
+			resp.WastedEURThisMonth += monthRecords[idx].PriceEUR
+			resp.WastedCO2KgThisMonth += monthRecords[idx].CO2Kg
 		}
 	}
-	for _, rec := range allRecords {
-		switch rec.EventType {
+	for idx := range allRecords {
+		switch allRecords[idx].EventType {
 		case "consumed":
-			resp.SavedEURLifetime += rec.PriceEUR
-			resp.SavedCO2KgLifetime += rec.CO2Kg
+			resp.SavedEURLifetime += allRecords[idx].PriceEUR
+			resp.SavedCO2KgLifetime += allRecords[idx].CO2Kg
 		case "wasted":
-			resp.WastedEURLifetime += rec.PriceEUR
-			resp.WastedCO2KgLifetime += rec.CO2Kg
+			resp.WastedEURLifetime += allRecords[idx].PriceEUR
+			resp.WastedCO2KgLifetime += allRecords[idx].CO2Kg
 		}
 	}
 

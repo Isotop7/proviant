@@ -116,7 +116,7 @@ func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, re
 }
 
 // SendStreakMilestone sends a streak milestone push notification via ntfy.
-func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient models.NotificationRecipientInfo) error {
+func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient *models.NotificationRecipientInfo) error {
 	ntfyURL := n.Configuration.URL
 	ntfyTopic := n.Configuration.Topic
 	if recipient.NtfyURL != "" {
