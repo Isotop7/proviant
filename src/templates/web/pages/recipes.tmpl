@@ -1,0 +1,30 @@
+{{ define "content" }}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Recipe Suggestions</h1>
+        <button class="btn btn-outline-secondary btn-sm" id="refreshRecipesBtn" type="button">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+
+    <div id="recipe-suggestions-container">
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading recipe suggestions...</p>
+        </div>
+    </div>
+
+    <div id="recipe-error-container" class="d-none">
+        <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading">Unable to load recipes</h4>
+            <p>We couldn't fetch recipe suggestions at this time. Please try again later.</p>
+            <hr>
+            <p class="mb-0">Error: <span id="error-message"></span></p>
+        </div>
+    </div>
+</div>
+
+<script src="/assets/js/recipes.js" defer></script>
+{{ end }}

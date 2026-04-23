@@ -118,6 +118,17 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		ctx.Next()
 	})
 
+	// Recipe controller for recipe suggestions
+	engine.Use(func(ctx *gin.Context) {
+		recipeCtrl := controllers.NewRecipeController(
+			proviantConfiguration.RecipeAPI,
+			logger,
+			dbHandle,
+		)
+		ctx.Set("recipeController", recipeCtrl)
+		ctx.Next()
+	})
+
 	// Setup JWT authentication middleware for API
 	jwtAPIMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedAPIFunc)
 	if jwtAPIAuthSetupErr != nil {
@@ -254,6 +265,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	savingsAPI.Use(jwtAPIMiddlewareWithPAT)
 	savingsAPI.GET("/stats", v1.GetSavingsStats)
 
+	// Recipe suggestion routes
+	recipeAPI := engine.Group("/api/v1/recipes")
+	recipeAPI.Use(jwtAPIMiddlewareWithPAT)
+	recipeAPI.GET("/suggestions", v1.GetRecipeSuggestions)
+
 	// Notification routes
 	notificationAPI := engine.Group("/api/v1/notifications")
 	notificationAPI.Use(jwtAPIMiddlewareWithPAT)
@@ -359,6 +375,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products/archived", webFrontendHandler.ProductsArchived)
 	publicWebFrontend.GET("/products/scan", webFrontendHandler.ProductsScan)
 	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
+	publicWebFrontend.GET("/recipes", webFrontendHandler.Recipes)
 
 	// Public invite acceptance page (no auth required)
 	engine.GET("/web/invite/accept", webFrontendHandler.AcceptInvite)

@@ -863,6 +863,23 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 	return int(count), nil
 }
 
+// GetExpiringProductsByHousehold returns products for a household that expire within daysAhead.
+func (r *ProductRepository) GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error) {
+	cutoff := time.Now().AddDate(0, 0, daysAhead)
+	var products []database.Product
+	result := r.DB.Where("household_id = ? AND expire_at <= ? AND deleted_at IS NULL", householdID, cutoff).
+		Order("expire_at ASC").
+		Find(&products)
+	return products, result.Error
+}
+
+// GetProductsByHousehold returns all non-deleted products for a household.
+func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database.Product, error) {
+	var products []database.Product
+	result := r.DB.Where("household_id = ? AND deleted_at IS NULL", householdID).Find(&products)
+	return products, result.Error
+}
+
 func (r *ProductRepository) ConsumeProduct(productID int, userID uint) error {
 	if _, err := r.GetProductByID(productID, userID); err != nil {
 		return err
