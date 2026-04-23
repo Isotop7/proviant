@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proviant — Edit Product Preview</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vend+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: oklch(0.12 0.01 70); font-family: var(--font-ui); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="../../browser-window.jsx"></script>
+<script type="text/babel" src="../../ios-frame.jsx"></script>
+<script type="text/babel">
+
+const A  = 'oklch(0.50 0.12 162)';
+const AS = 'oklch(0.93 0.04 162)';
+const FG = 'oklch(0.18 0.022 70)';
+const F2 = 'oklch(0.48 0.018 70)';
+const F3 = 'oklch(0.65 0.012 70)';
+const BG = 'oklch(0.98 0.012 75)';
+const BS = 'oklch(0.96 0.008 75)';
+const BD = 'oklch(0.88 0.010 75)';
+const WH = '#ffffff';
+const SOON_BG  = 'oklch(0.97 0.05 80)';
+const SOON_FG  = 'oklch(0.50 0.16 80)';
+const SOON_BD  = 'oklch(0.85 0.10 80)';
+
+/* ── Shared micro-components ── */
+
+function Card({ title, icon, children, action }) {
+  return (
+    <div style={{ background:WH, border:`1px solid ${BD}`, borderRadius:10, boxShadow:'0 1px 3px oklch(0.18 0.02 70 / 0.07)', marginBottom:14, overflow:'hidden' }}>
+      <div style={{ padding:'12px 16px 10px', borderBottom:`1px solid oklch(0.93 0.006 75)`, display:'flex', alignItems:'center', gap:8 }}>
+        <div style={{ width:26, height:26, borderRadius:6, background:AS, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, color:A }}>
+          <i className={`bi ${icon}`} />
+        </div>
+        <div style={{ fontSize:12, fontWeight:600, color:FG, flex:1 }}>{title}</div>
+        {action && <span style={{ fontSize:10, color:F3 }}>{action}</span>}
+      </div>
+      <div style={{ padding:'14px 16px' }}>{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, children, mono, value, type='text', readonly, placeholder }) {
+  return (
+    <div style={{ marginBottom:12 }}>
+      <div style={{ fontSize:11, fontWeight:500, color:FG, marginBottom:4 }}>{label}</div>
+      {children || (
+        <div style={{
+          fontFamily: mono ? 'var(--font-mono)' : 'var(--font-ui)',
+          fontSize: mono ? 12 : 13, color: readonly ? F2 : FG,
+          background: readonly ? BS : WH,
+          border:`1px solid ${readonly ? 'oklch(0.93 0.006 75)' : BD}`,
+          borderRadius:7, padding:'8px 10px',
+          letterSpacing: mono ? '0.03em' : 0,
+        }}>{value || <span style={{ color:F3 }}>{placeholder}</span>}</div>
+      )}
+    </div>
+  );
+}
+
+function Tag({ label, neutral }) {
+  return (
+    <span style={{
+      display:'inline-flex', alignItems:'center', gap:4,
+      background: neutral ? BS : AS,
+      color: neutral ? F2 : A,
+      border:`1px solid ${neutral ? BD : 'oklch(0.78 0.08 162)'}`,
+      borderRadius:999, padding:'2px 8px', fontSize:10, fontWeight:500,
+    }}>
+      {label} <i className="bi bi-x" style={{ fontSize:9, cursor:'pointer' }} />
+    </span>
+  );
+}
+
+function Stepper({ value=2 }) {
+  const [v, setV] = React.useState(value);
+  return (
+    <div style={{ display:'flex', alignItems:'center', background:WH, border:`1px solid ${BD}`, borderRadius:7, overflow:'hidden', width:'fit-content' }}>
+      <button onClick={() => setV(Math.max(0,v-1))} style={{ background:BS, border:'none', cursor:'pointer', width:32, height:34, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, color:F2 }}>−</button>
+      <div style={{ width:48, textAlign:'center', fontFamily:'var(--font-mono)', fontSize:15, fontWeight:700, color:FG }}>{v}</div>
+      <button onClick={() => setV(v+1)} style={{ background:BS, border:'none', cursor:'pointer', width:32, height:34, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, color:F2 }}>+</button>
+    </div>
+  );
+}
+
+function StatusBadge({ size='sm' }) {
+  const pad = size==='sm' ? '2px 9px' : '4px 12px';
+  const fs  = size==='sm' ? 10 : 12;
+  return (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:5, background:SOON_BG, color:SOON_FG, border:`1px solid ${SOON_BD}`, borderRadius:999, padding:pad, fontSize:fs, fontWeight:600 }}>
+      <i className="bi bi-clock-fill" style={{ fontSize:fs }} /> Expiring soon
+    </span>
+  );
+}
+
+/* ── DESKTOP LAYOUT ── */
+function DesktopLayout() {
+  return (
+    <div style={{ display:'flex', height:'100%', background:BG, fontFamily:'var(--font-ui)' }}>
+      {/* Sidebar */}
+      <div style={{ width:180, background:WH, borderRight:`1px solid ${BD}`, display:'flex', flexDirection:'column', flexShrink:0 }}>
+        <div style={{ padding:'12px 14px', borderBottom:`1px solid oklch(0.93 0.006 75)` }}>
+          <img src="../../assets/header.png" alt="Proviant" style={{ height:26, objectFit:'contain' }} />
+        </div>
+        <div style={{ padding:'6px' }}>
+          {[['bi-speedometer2','Dashboard'],['bi-box-seam','Products'],['bi-archive','Archive'],['bi-person-circle','Settings']].map(([ic,lb]) => (
+            <div key={lb} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 9px', borderRadius:6, marginBottom:2, background: lb==='Products' ? AS : 'transparent', color: lb==='Products' ? A : F2, fontWeight: lb==='Products' ? 600 : 400, fontSize:12, cursor:'pointer' }}>
+              <i className={`bi ${ic}`} style={{ fontSize:15 }} />{lb}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex:1, overflowY:'auto', padding:'24px 24px 48px' }}>
+        {/* Breadcrumb */}
+        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:16, fontSize:12, color:F3 }}>
+          <i className="bi bi-box-seam" /><span>Products</span>
+          <i className="bi bi-chevron-right" style={{ fontSize:9 }} />
+          <span style={{ color:F2 }}>Edit product</span>
+        </div>
+        {/* Header */}
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:20 }}>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
+              <div style={{ fontSize:20, fontWeight:700, color:FG, letterSpacing:'-0.02em' }}>Edit product</div>
+              <span style={{ fontFamily:'var(--font-mono)', fontSize:10, fontWeight:700, background:AS, color:A, border:`1px solid oklch(0.78 0.08 162)`, borderRadius:5, padding:'2px 7px' }}>#3</span>
+            </div>
+            <div style={{ fontSize:12, color:F3 }}>Changes are saved after clicking Update product</div>
+          </div>
+          <StatusBadge size="md" />
+        </div>
+
+        {/* Two-col grid */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 220px', gap:16, alignItems:'start' }}>
+          {/* LEFT */}
+          <div>
+            {/* Identity */}
+            <Card title="Identity" icon="bi-tag">
+              <Field label="Product name *" value="Cristalline 1.5L Spring Water" />
+              <Field label="Barcode" value="3274080005003" mono />
+            </Card>
+
+            {/* Categories */}
+            <Card title="Categories" icon="bi-grid">
+              <div style={{ marginBottom:10 }}>
+                <div style={{ fontSize:11, fontWeight:500, color:FG, marginBottom:5 }}>Product categories</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:5, background:WH, border:`1px solid ${BD}`, borderRadius:7, padding:'8px 10px', minHeight:38 }}>
+                  {['Beverages','Waters','Spring waters','Unsweetened beverages'].map(t => <Tag key={t} label={t} />)}
+                  <span style={{ fontSize:11, color:F3 }}>Add category…</span>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize:11, fontWeight:500, color:FG, marginBottom:5 }}>Countries</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:5, background:WH, border:`1px solid ${BD}`, borderRadius:7, padding:'8px 10px', minHeight:38 }}>
+                  {['Belgium','France','Germany','Italy','Luxembourg','Switzerland','UK','USA'].map(t => <Tag key={t} label={t} neutral />)}
+                  <span style={{ fontSize:11, color:F3 }}>Add…</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Expiry & inventory */}
+            <Card title="Expiry & inventory" icon="bi-calendar-event">
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <Field label="Expiry date *" value="2026-04-27" mono />
+                <div>
+                  <div style={{ fontSize:11, fontWeight:500, color:FG, marginBottom:5 }}>Amount</div>
+                  <Stepper value={2} />
+                </div>
+              </div>
+              <Field label="Storage location">
+                <div style={{ fontFamily:'var(--font-ui)', fontSize:13, color:F2, background:WH, border:`1px solid ${BD}`, borderRadius:7, padding:'8px 10px', display:'flex', justifyContent:'space-between' }}>
+                  <span>— None —</span><i className="bi bi-chevron-down" style={{ fontSize:11, color:F3 }} />
+                </div>
+              </Field>
+            </Card>
+
+            {/* Timestamps */}
+            <Card title="Timestamps" icon="bi-clock-history" action="Read-only">
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                {[['Scanned at','20.04.2026, 12:53'],['Updated at','20.04.2026, 12:53'],['Notified at','01.01.0001, 00:00']].map(([l,v]) => (
+                  <div key={l}>
+                    <div style={{ fontSize:9, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.06em', color:F3, marginBottom:3 }}>{l}</div>
+                    <div style={{ fontFamily:'var(--font-mono)', fontSize:11, color:F2, background:BS, border:`1px solid oklch(0.93 0.006 75)`, borderRadius:5, padding:'5px 8px' }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Actions */}
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <button style={{ background:A, color:WH, border:'none', borderRadius:8, padding:'9px 18px', fontFamily:'var(--font-ui)', fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:7, boxShadow:`0 4px 12px ${A}44` }}>
+                <i className="bi bi-check2" /> Update product
+              </button>
+              <button style={{ background:WH, color:FG, border:`1px solid ${BD}`, borderRadius:8, padding:'9px 14px', fontFamily:'var(--font-ui)', fontSize:13, cursor:'pointer' }}>
+                Cancel
+              </button>
+              <div style={{ flex:1 }} />
+              <button style={{ background:'transparent', color:'oklch(0.55 0.20 25)', border:'none', borderRadius:8, padding:'9px 14px', fontFamily:'var(--font-ui)', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                <i className="bi bi-trash3" /> Delete
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT panel */}
+          <div style={{ position:'sticky', top:0 }}>
+            {/* Image card */}
+            <div style={{ background:WH, border:`1px solid ${BD}`, borderRadius:10, boxShadow:'0 1px 3px oklch(0.18 0.02 70 / 0.07)', marginBottom:14, overflow:'hidden' }}>
+              <div style={{ aspectRatio:'1', background:BS, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:24, position:'relative' }}>
+                <svg width="60" height="80" viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="60" height="80" rx="5" fill="oklch(0.93 0.04 162)"/>
+                  <rect x="8" y="8" width="44" height="64" rx="3" fill="white" opacity="0.6"/>
+                  <rect x="14" y="16" width="30" height="4" rx="2" fill={A} opacity="0.4"/>
+                  <rect x="14" y="24" width="20" height="2.5" rx="1.5" fill={A} opacity="0.3"/>
+                  <ellipse cx="30" cy="48" rx="11" ry="14" fill={A} opacity="0.12"/>
+                  <ellipse cx="30" cy="48" rx="6" ry="9" fill={A} opacity="0.18"/>
+                  <rect x="18" y="64" width="24" height="2.5" rx="1.5" fill={A} opacity="0.3"/>
+                </svg>
+                <div style={{ position:'absolute', inset:0, background:'oklch(0.18 0.022 70 / 0)', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 200ms' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'oklch(0.18 0.022 70 / 0.45)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'oklch(0.18 0.022 70 / 0)'}>
+                  <button style={{ background:WH, border:'none', borderRadius:7, padding:'7px 12px', fontFamily:'var(--font-ui)', fontSize:11, fontWeight:600, cursor:'pointer', color:FG, display:'flex', alignItems:'center', gap:5, opacity:0 }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '0'}>
+                    <i className="bi bi-image" /> Change
+                  </button>
+                </div>
+              </div>
+              <div style={{ padding:'12px 14px' }}>
+                <div style={{ fontSize:13, fontWeight:700, color:FG, marginBottom:3 }}>Cristalline 1.5L</div>
+                <div style={{ fontFamily:'var(--font-mono)', fontSize:10, color:F3, marginBottom:8 }}>3274080005003</div>
+                <StatusBadge size="sm" />
+              </div>
+            </div>
+
+            {/* Image URL */}
+            <Card title="Image URL" icon="bi-image">
+              <div style={{ fontFamily:'var(--font-mono)', fontSize:10, color:F2, background:WH, border:`1px solid ${BD}`, borderRadius:6, padding:'7px 9px', wordBreak:'break-all', lineHeight:1.5 }}>
+                https://images.openfood…/front_en.jpg
+              </div>
+              <div style={{ fontSize:10, color:F3, marginTop:4 }}>Paste URL or leave blank</div>
+            </Card>
+
+            {/* Quick info */}
+            <Card title="Product info" icon="bi-info-circle">
+              {[['Status', <StatusBadge size="sm" />],['Amount','2'],['Expires','Apr 27, 2026']].map(([l,v],i) => (
+                <div key={l} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12, paddingBottom: i<2 ? 8 : 0, marginBottom: i<2 ? 8 : 0, borderBottom: i<2 ? `1px solid oklch(0.93 0.006 75)` : 'none' }}>
+                  <span style={{ color:F3 }}>{l}</span>
+                  {typeof v === 'string' ? <span style={{ fontWeight:600, color: l==='Expires' ? SOON_FG : FG, fontFamily:'var(--font-mono)', fontSize:11 }}>{v}</span> : v}
+                </div>
+              ))}
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── MOBILE LAYOUT ── */
+function MobileLayout() {
+  const [tab, setTab] = React.useState('details');
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', background:BG, fontFamily:'var(--font-ui)', fontSize:13 }}>
+      {/* Mobile topbar */}
+      <div style={{ background:WH, borderBottom:`1px solid ${BD}`, padding:'10px 14px', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+        <button style={{ background:'none', border:'none', cursor:'pointer', color:F2, fontSize:18, display:'flex', padding:'2px 4px' }}>
+          <i className="bi bi-arrow-left" />
+        </button>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:15, fontWeight:700, color:FG, letterSpacing:'-0.01em' }}>Edit product</div>
+          <div style={{ fontSize:10, color:F3 }}>#3 · Cristalline 1.5L</div>
+        </div>
+        <StatusBadge size="sm" />
+      </div>
+
+      {/* Product image strip */}
+      <div style={{ background:WH, borderBottom:`1px solid ${BD}`, padding:'12px 14px', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
+        <div style={{ width:52, height:52, borderRadius:8, background:BS, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+          <svg width="32" height="42" viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg">
+            <rect width="60" height="80" rx="5" fill="oklch(0.93 0.04 162)"/>
+            <rect x="8" y="8" width="44" height="64" rx="3" fill="white" opacity="0.6"/>
+            <ellipse cx="30" cy="48" rx="11" ry="14" fill={A} opacity="0.15"/>
+          </svg>
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:13, fontWeight:600, color:FG, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>Cristalline 1.5L Spring Water</div>
+          <div style={{ fontFamily:'var(--font-mono)', fontSize:10, color:F3, marginTop:1 }}>3274080005003</div>
+        </div>
+        <button style={{ background:AS, border:`1px solid oklch(0.78 0.08 162)`, borderRadius:7, padding:'6px 10px', fontFamily:'var(--font-ui)', fontSize:11, color:A, fontWeight:600, cursor:'pointer', flexShrink:0 }}>
+          <i className="bi bi-image" /> Photo
+        </button>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{ background:WH, borderBottom:`1px solid ${BD}`, display:'flex', flexShrink:0 }}>
+        {[['details','Details'],['dates','Dates'],['meta','Info']].map(([id,lb]) => (
+          <button key={id} onClick={() => setTab(id)} style={{
+            flex:1, padding:'10px 0', background:'none', border:'none', cursor:'pointer',
+            fontSize:12, fontWeight: tab===id ? 600 : 400,
+            color: tab===id ? A : F3,
+            borderBottom: `2px solid ${tab===id ? A : 'transparent'}`,
+            fontFamily:'var(--font-ui)', transition:'all 150ms',
+          }}>{lb}</button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div style={{ flex:1, overflowY:'auto', padding:'14px 14px 80px' }}>
+        {tab === 'details' && <>
+          <Card title="Identity" icon="bi-tag">
+            <Field label="Product name *" value="Cristalline 1.5L Spring Water" />
+            <Field label="Barcode" value="3274080005003" mono />
+          </Card>
+          <Card title="Categories" icon="bi-grid">
+            <div style={{ marginBottom:10 }}>
+              <div style={{ fontSize:11, fontWeight:500, color:FG, marginBottom:5 }}>Categories</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:5, background:WH, border:`1px solid ${BD}`, borderRadius:7, padding:'8px 10px' }}>
+                {['Beverages','Waters','Spring waters'].map(t => <Tag key={t} label={t} />)}
+                <span style={{ fontSize:10, color:F3 }}>Add…</span>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:500, color:FG, marginBottom:5 }}>Countries</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:5, background:WH, border:`1px solid ${BD}`, borderRadius:7, padding:'8px 10px' }}>
+                {['Belgium','France','Germany','Italy'].map(t => <Tag key={t} label={t} neutral />)}
+                <span style={{ fontSize:10, color:F3 }}>+5 more</span>
+              </div>
+            </div>
+          </Card>
+        </>}
+
+        {tab === 'dates' && <>
+          <Card title="Expiry & inventory" icon="bi-calendar-event">
+            <Field label="Expiry date *" value="2026-04-27" mono />
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:11, fontWeight:500, color:FG, marginBottom:5 }}>Amount</div>
+              <Stepper value={2} />
+            </div>
+            <Field label="Storage location">
+              <div style={{ fontFamily:'var(--font-ui)', fontSize:13, color:F2, background:WH, border:`1px solid ${BD}`, borderRadius:7, padding:'8px 10px', display:'flex', justifyContent:'space-between' }}>
+                <span>— None —</span><i className="bi bi-chevron-down" style={{ fontSize:11, color:F3 }} />
+              </div>
+            </Field>
+          </Card>
+        </>}
+
+        {tab === 'meta' && <>
+          <Card title="Timestamps" icon="bi-clock-history" action="Read-only">
+            {[['Scanned at','20.04.2026, 12:53'],['Updated at','20.04.2026, 12:53'],['Notified at','01.01.0001, 00:00']].map(([l,v]) => (
+              <div key={l} style={{ marginBottom:10 }}>
+                <div style={{ fontSize:9, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.06em', color:F3, marginBottom:3 }}>{l}</div>
+                <div style={{ fontFamily:'var(--font-mono)', fontSize:11, color:F2, background:BS, border:`1px solid oklch(0.93 0.006 75)`, borderRadius:5, padding:'6px 9px' }}>{v}</div>
+              </div>
+            ))}
+          </Card>
+          <Card title="Product info" icon="bi-info-circle">
+            {[['Status', <StatusBadge size="sm" />],['Amount','2'],['Expires','Apr 27, 2026']].map(([l,v],i) => (
+              <div key={l} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12, paddingBottom:i<2?8:0, marginBottom:i<2?8:0, borderBottom:i<2?`1px solid oklch(0.93 0.006 75)`:'none' }}>
+                <span style={{ color:F3 }}>{l}</span>
+                {typeof v === 'string' ? <span style={{ fontWeight:600, color:l==='Expires'?SOON_FG:FG, fontFamily:'var(--font-mono)', fontSize:11 }}>{v}</span> : v}
+              </div>
+            ))}
+          </Card>
+        </>}
+      </div>
+
+      {/* Sticky footer actions */}
+      <div style={{ position:'absolute', bottom:0, left:0, right:0, background:WH, borderTop:`1px solid ${BD}`, padding:'10px 14px', display:'flex', gap:8, paddingBottom:'calc(10px + env(safe-area-inset-bottom, 0px))', zIndex:20, boxShadow:'0 -4px 16px oklch(0.18 0.022 70 / 0.08)' }}>
+        <button style={{ flex:1, background:A, color:WH, border:'none', borderRadius:9, padding:'12px', fontFamily:'var(--font-ui)', fontSize:14, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:7 }}>
+          <i className="bi bi-check2" /> Update product
+        </button>
+        <button style={{ background:WH, color:F2, border:`1px solid ${BD}`, borderRadius:9, padding:'12px 14px', fontFamily:'var(--font-ui)', fontSize:13, cursor:'pointer' }}>
+          Cancel
+        </button>
+        <button style={{ background:WH, color:'oklch(0.55 0.20 25)', border:'none', borderRadius:9, padding:'12px', fontFamily:'var(--font-ui)', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <i className="bi bi-trash3" style={{ fontSize:16 }} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── MAIN ── */
+function App() {
+  const DW = 960, DH = 620;
+  const SCALE_D = 0.72;
+  const SCALE_M = 0.52;
+  const MW = 393, MH = 852;
+
+  return (
+    <div style={{ minHeight:'100vh', background:'oklch(0.12 0.01 70)', padding:'36px 32px 56px', display:'flex', flexDirection:'column', alignItems:'center', gap:32 }}>
+      {/* Header */}
+      <div style={{ textAlign:'center' }}>
+        <div style={{ fontSize:11, fontWeight:600, letterSpacing:'0.10em', textTransform:'uppercase', color:'oklch(0.50 0.02 70)', marginBottom:6 }}>Proviant · Edit Product</div>
+        <div style={{ fontSize:26, fontWeight:700, color:'white', letterSpacing:'-0.02em', marginBottom:4 }}>Desktop & Mobile preview</div>
+        <div style={{ fontSize:13, color:'oklch(0.55 0.02 70)' }}>Both layouts are interactive · mobile uses a tabbed interface</div>
+      </div>
+
+      {/* Side-by-side frames */}
+      <div style={{ display:'flex', gap:48, alignItems:'flex-start', flexWrap:'wrap', justifyContent:'center' }}>
+
+        {/* Desktop */}
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
+          <div style={{ fontSize:11, fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', color:'oklch(0.55 0.02 70)' }}>Desktop</div>
+          <div style={{ transform:`scale(${SCALE_D})`, transformOrigin:'top center', width:DW, height:DH }}>
+            <ChromeWindow width={DW} height={DH} tabs={[{ title:'Edit product #3 — Proviant' }]} url="app.proviant.local/products/3/edit">
+              <DesktopLayout />
+            </ChromeWindow>
+          </div>
+          <div style={{ marginTop: DH*SCALE_D - DH - 8 }} />
+        </div>
+
+        {/* Mobile */}
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
+          <div style={{ fontSize:11, fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', color:'oklch(0.55 0.02 70)' }}>Mobile</div>
+          <div style={{ transform:`scale(${SCALE_M})`, transformOrigin:'top center', width:MW, height:MH }}>
+            <IOSDevice width={MW} height={MH}>
+              <MobileLayout />
+            </IOSDevice>
+          </div>
+          <div style={{ marginTop: MH*SCALE_M - MH - 8 }} />
+        </div>
+
+      </div>
+
+      {/* Mobile design notes */}
+      <div style={{ background:'oklch(0.18 0.01 70)', border:'1px solid oklch(0.26 0.01 70)', borderRadius:12, padding:'18px 22px', maxWidth:760, width:'100%' }}>
+        <div style={{ fontSize:11, fontWeight:700, color:'oklch(0.55 0.02 70)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:10 }}>Mobile design decisions</div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+          {[
+            ['Product image strip','Compact image thumbnail + name in a horizontal strip at the top — always visible regardless of active tab'],
+            ['Tabbed sections','Details / Dates / Info tabs avoid an endless scroll form — each tab is focused and short'],
+            ['Sticky footer','Save + Cancel + Delete always reachable at the bottom — no scrolling to find actions'],
+            ['Delete icon only','On mobile the delete is an icon-only ghost button in the footer — saves space, still accessible'],
+          ].map(([t,d]) => (
+            <div key={t}>
+              <div style={{ fontSize:12, fontWeight:600, color:'white', marginBottom:4 }}>{t}</div>
+              <div style={{ fontSize:12, color:'oklch(0.65 0.01 70)', lineHeight:1.6 }}>{d}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,223 +1,378 @@
 {{ define "content" }}
-<div class="row justify-content-between p-3">
-    <div class="col">
-        <h2>Edit product
-            <span class="badge bg-primary ms-3">#<span id="labelProductID">{{- .Product.ID -}}</span>
-            </span>
-        </h2>
+<div class="pv-edit-page-wrap">
+
+  <!-- ── Mobile: topbar (hidden on desktop) ── -->
+  <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-white d-md-none">
+    <a href="/products/{{ .Product.ID }}" style="color:var(--fg-2);font-size:20px;">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <div class="flex-grow-1">
+      <div style="font-size:15px;font-weight:700;color:var(--fg);letter-spacing:-0.01em;">Edit product</div>
+      <div style="font-size:10px;color:var(--fg-3);">#{{ .Product.ID }} · {{ .Product.ProductName }}</div>
     </div>
-    
-    <div class="row my-3 w-100">
-        <div class="col col-9 g-3">
-            <form id="editProductForm" class="needs-validation" novalidate>
-                <div class="row my-3">
-                    <div class="col col-3 fw-bold">
-                        <label for="inputBarcode" class="form-label col-form-label">Barcode</label>
-                    </div>
-                    <div class="col col-9 font-monospace">
-                        <input type="number" class="form-control" id="inputBarcode" value="{{- .Product.Barcode -}}"
-                            disabled readonly>
-                    </div>
+    <span class="badge-status badge-{{ expiryStatusClass .Product.ExpireAt }}" style="font-size:10px;padding:2px 9px;">
+      <i class="bi bi-{{ expiryStatusIcon .Product.ExpireAt }}"></i> {{ expiryStatusLabel .Product.ExpireAt }}
+    </span>
+  </div>
+
+  <!-- ── Mobile: image strip (hidden on desktop) ── -->
+  <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-white d-md-none">
+    <div style="width:52px;height:52px;border-radius:8px;background:var(--bg-subtle);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+      {{ if .Product.ImageURL }}
+      <img src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}" class="pv-img-product" style="width:100%;height:100%;object-fit:contain;padding:4px;">
+      {{ else }}
+      <i class="bi bi-image" style="font-size:22px;color:var(--fg-3);"></i>
+      {{ end }}
+    </div>
+    <div class="flex-grow-1" style="min-width:0;">
+      <div style="font-size:13px;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ .Product.ProductName }}</div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-3);margin-top:2px;">{{ .Product.Barcode }}</div>
+    </div>
+    <button type="button" class="btn" style="background:var(--accent-subtle);border:1px solid oklch(0.78 0.08 162);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--accent);font-weight:600;"
+      onclick="document.getElementById('inputImageURL').focus();">
+      <i class="bi bi-image"></i> Photo
+    </button>
+  </div>
+
+  <!-- ── Desktop: breadcrumb + page header (hidden on mobile) ── -->
+  <div class="pv-breadcrumb-row d-none d-md-flex">
+    <a href="/products"><i class="bi bi-box-seam"></i> Products</a>
+    <i class="bi bi-chevron-right"></i>
+    <span>Edit product</span>
+  </div>
+  <div class="pv-page-header d-none d-md-flex">
+    <div>
+      <div class="pv-page-title-row">
+        <h1 class="pv-page-title">Edit product</h1>
+        <span class="pv-id-chip">#<span id="labelProductID">{{ .Product.ID }}</span></span>
+      </div>
+      <div class="pv-page-sub">Changes are saved after clicking Update product</div>
+    </div>
+    <div>
+      <span class="badge-status badge-{{ expiryStatusClass .Product.ExpireAt }}">
+        <i class="bi bi-{{ expiryStatusIcon .Product.ExpireAt }}"></i>
+        {{ expiryStatusLabel .Product.ExpireAt }}
+      </span>
+    </div>
+  </div>
+  <form id="editProductForm">
+    <div class="pv-edit-grid">
+
+      <!-- ── LEFT: form cards ── -->
+      <div class="pv-form-left">
+
+        <!-- Identity card -->
+        <div class="pv-card">
+          <div class="pv-card-header">
+            <div class="pv-card-header-icon"><i class="bi bi-tag"></i></div>
+            <div class="pv-card-header-title">Identity</div>
+          </div>
+          <div class="pv-card-body">
+            <div class="pv-field">
+              <label class="pv-field-label">Product name <span class="req">*</span></label>
+              <input type="text" class="pv-field-input" id="inputProductName" value="{{ .Product.ProductName }}" required>
+            </div>
+            <div class="pv-field">
+              <label class="pv-field-label">Barcode</label>
+              <div style="position:relative;">
+                <i class="bi bi-upc-scan" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--fg-3);font-size:15px;pointer-events:none;"></i>
+                <input type="text" class="pv-field-input mono" value="{{ .Product.Barcode }}" style="padding-left:34px;" readonly>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categories card -->
+        <div class="pv-card">
+          <div class="pv-card-header">
+            <div class="pv-card-header-icon"><i class="bi bi-grid"></i></div>
+            <div class="pv-card-header-title">Categories</div>
+          </div>
+          <div class="pv-card-body">
+            <div class="pv-field">
+              <label class="pv-field-label">Product categories</label>
+              <input type="hidden" id="categoriesHidden" value="{{ .Product.Categories }}">
+              <div class="pv-tag-wrap" data-target="categoriesHidden" data-color="accent" data-readonly="true"></div>
+            </div>
+            <div class="pv-field">
+              <label class="pv-field-label">Countries sold in</label>
+              <input type="hidden" id="countriesHidden" value="{{ .Product.Countries }}">
+              <div class="pv-tag-wrap" data-target="countriesHidden" data-color="neutral" data-readonly="true"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expiry & inventory card -->
+        <div class="pv-card">
+          <div class="pv-card-header">
+            <div class="pv-card-header-icon"><i class="bi bi-calendar-event"></i></div>
+            <div class="pv-card-header-title">Expiry &amp; inventory</div>
+          </div>
+          <div class="pv-card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+              <div class="pv-field">
+                <label class="pv-field-label">Expiry date <span class="req">*</span></label>
+                <div class="d-flex align-items-center gap-2">
+                  <input type="date" class="pv-field-input mono" id="inputExpireAt"
+                    value="{{ .Product.ExpireAt | inputDate }}" required style="flex:1;">
+                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="Scan expiry date">
+                    <i class="bi bi-camera"></i>
+                  </button>
                 </div>
-                <div class="row my-3">
-                    <div class="col col-3 fw-bold">
-                        <label for="inputProductName" class="form-label col-form-label">Product Name</label>
-                    </div>
-                    <div class="col col-9">
-                        <input type="text" class="form-control" id="inputProductName" value="{{- .Product.ProductName -}}">
-                    </div>
+              </div>
+              <div class="pv-field">
+                <label class="pv-field-label">Amount</label>
+                <div class="pv-stepper">
+                  <button type="button" onclick="let i=this.nextElementSibling;i.value=Math.max(0,+i.value-1)">−</button>
+                  <input type="number" id="inputAmount" value="{{ .Product.Amount }}" min="0">
+                  <button type="button" onclick="let i=this.previousElementSibling;i.value=+i.value+1">+</button>
                 </div>
-                <div class="row my-3">
-                    <div class="col col-3 fw-bold">
-                        <label for="inputImageURL" class="form-label col-form-label">Image URL</label>
-                    </div>
-                    <div class="col col-9">
-                        <input type="url" class="form-control" id="inputImageURL" value="{{- .Product.ImageURL -}}">
-                    </div>
-                </div>
-                <div class="row my-3">
-                    <div class="col col-3 fw-bold">
-                        <label for="inputCategories" class="form-label col-form-label">Categories</label>
-                    </div>
-                    <div class="col col-9">
-                        <textarea type="text" class="form-control" id="inputCategories">
-                            {{- .Product.Categories -}}
-                        </textarea>
-                    </div>
-                </div>
-                <div class="row my-3">
-                    <div class="col col-3 fw-bold">
-                        <label for="inputCountries" class="form-label col-form-label">Countries</label>
-                    </div>
-                    <div class="col col-9">
-                        <textarea type="text" class="form-control" id="inputCountries">
-                            {{- .Product.Countries -}}
-                        </textarea>
-                    </div>
-                </div>
-                <div class="row my-3">
-                    <div class="col col-3 fw-bold">
-                        <label for="inputExpireAt" class="form-label col-form-label">Expire At</label>
-                    </div>
-                    <div class="col col-9">
-                        <div class="d-flex align-items-center gap-2">
-                            <input type="date" class="form-control flex-grow-1" id="inputExpireAt"
-                                value="{{- .Product.ExpireAt | inputDate }}">
-                            <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="Scan expiry date from photo">
-                                <i class="bi bi-camera"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="row my-3">
-                    <div class="col col-3 fw-bold">
-                        <label for="inputScannedAt" class="form-label col-form-label">Scanned At</label>
-                    </div>
-                    <div class="col col-9">
-                        <input type="datetime" class="form-control" id="inputScannedAt"
-                            value="{{- .Product.ScannedAt | humanDateTime -}}" disabled readonly>
-                    </div>
-                </div>
-                <div class="row my-3">
-                    <div class="col col-3 fw-bold">
-                        <label for="inputNotifiedAt" class="form-label col-form-label">Notified At</label>
-                    </div>
-                    <div class="col col-9">
-                        <input type="datetime" class="form-control" id="inputNotifiedAt"
-                            value="{{- .Product.NotifiedAt | humanDateTime -}}" disabled readonly>
-                    </div>
-                </div>
-                <div class="row my-3">
-                    <div class="col col-3 fw-bold">
-                        <label for="inputUpdatedAt" class="form-label col-form-label">Updated At</label>
-                    </div>
-                    <div class="col col-9">
-                        <input type="datetime" class="form-control" id="inputUpdatedAt"
-                            value="{{- .Product.UpdatedAt | humanDateTime -}}" disabled readonly>
-                    </div>
-                </div>
-                <div class="row my-3">
-                    <div class="col col-3 fw-bold">
-                        <label for="inputAmount" class="form-label col-form-label">Amount</label>
-                    </div>
-                    <div class="col col-9">
-                        <input type="number" class="form-control" id="inputAmount" value="{{- .Product.Amount -}}" min="0">
-                    </div>
-                </div>
-                {{ if .Locations }}
-                <div class="row my-3">
-                    <div class="col col-3 fw-bold">
-                        <label for="selectStorageLocation" class="form-label col-form-label">Storage Location</label>
-                    </div>
-                    <div class="col col-9">
-                        <select class="form-select" id="selectStorageLocation">
-                            <option value="">— None —</option>
-                            {{ range .Locations }}
-                            <option value="{{ .ID }}"
-                                {{ if and $.Product.StorageLocationID (eq (derefUint $.Product.StorageLocationID) .ID) }}selected{{ end }}>
-                                {{ .Icon }} {{ .Name }}
-                            </option>
-                            {{ end }}
-                        </select>
-                    </div>
-                </div>
+              </div>
+            </div>
+            <div class="pv-field">
+              <label class="pv-field-label">Storage location</label>
+              <select class="pv-field-input" id="selectStorageLocation">
+                <option value="">— None —</option>
+                {{ range .Locations }}
+                <option value="{{ .ID }}" {{ if and $.Product.StorageLocationID (eq (derefUint $.Product.StorageLocationID) .ID) }}selected{{ end }}>
+                  {{ .Icon }} {{ .Name }}
+                </option>
                 {{ end }}
-                <div class="row my-3">
-                    <div class="col col-3">
-                        <button id="btnUpdateProduct" class="btn btn-proviant-secondary w-100 my-3" type="submit">
-                            <i class="bi bi-floppy me-2"></i>
-                            Update Product
-                        </button>
-                    </div>
-                    <div class="col col-9"></div>
-                </div>
-            </form>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="col col-3 m-auto p-5">
-            <img id="imgProduct" src="{{- .Product.ImageURL -}}" class="img-fluid" alt="Image URL">
+
+        <!-- Timestamps card -->
+        <div class="pv-card">
+          <div class="pv-card-header">
+            <div class="pv-card-header-icon"><i class="bi bi-clock-history"></i></div>
+            <div class="pv-card-header-title">Timestamps</div>
+            <span style="font-size:11px;color:var(--fg-3);margin-left:auto;">Read-only</span>
+          </div>
+          <div class="pv-card-body">
+            <div class="pv-meta-grid">
+              <div>
+                <div class="pv-meta-label">Scanned at</div>
+                <div class="pv-meta-value">{{ .Product.ScannedAt | humanDateTime }}</div>
+              </div>
+              <div>
+                <div class="pv-meta-label">Updated at</div>
+                <div class="pv-meta-value">{{ .Product.UpdatedAt | humanDateTime }}</div>
+              </div>
+              <div>
+                <div class="pv-meta-label">Notified at</div>
+                <div class="pv-meta-value">{{ .Product.NotifiedAt | humanDateTime }}</div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- Desktop form actions (hidden on mobile) -->
+        <div class="pv-form-actions d-none d-md-flex">
+          <button class="pv-btn-primary" type="submit">
+            <i class="bi bi-check2"></i> Update product
+          </button>
+          <a href="/products/{{ .Product.ID }}" class="pv-btn-secondary">Cancel</a>
+          <div class="spacer"></div>
+          <button class="pv-btn-danger-ghost" type="button" data-bs-toggle="modal" data-bs-target="#deleteModal">
+            <i class="bi bi-trash3"></i> Delete
+          </button>
+        </div>
+
+      </div><!-- /left -->
+
+      <!-- ── RIGHT: product panel (hidden on mobile via CSS) ── -->
+      <div class="pv-product-panel">
+
+        <!-- Product image card -->
+        <div class="pv-product-image-card">
+          <div class="pv-product-image-area">
+            {{ if .Product.ImageURL }}
+            <img id="imgProduct" src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}" class="pv-img-product">
+            {{ else }}
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;height:100%;padding:24px;">
+              <i class="bi bi-image" style="font-size:40px;color:var(--fg-3);"></i>
+              <span style="font-size:11px;color:var(--fg-3);">No image</span>
+            </div>
+            {{ end }}
+            <div class="pv-product-image-overlay">
+              <button type="button" onclick="document.getElementById('inputImageURL').focus()">
+                <i class="bi bi-image"></i> Change image
+              </button>
+            </div>
+          </div>
+          <div class="pv-product-info">
+            <div class="pv-product-name-disp">{{ .Product.ProductName }}</div>
+            <div class="pv-product-barcode-disp"><i class="bi bi-upc-scan"></i> {{ .Product.Barcode }}</div>
+            <span class="badge-status badge-{{ expiryStatusClass .Product.ExpireAt }}">
+              <i class="bi bi-{{ expiryStatusIcon .Product.ExpireAt }}"></i>
+              {{ expiryStatusLabel .Product.ExpireAt }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Image URL card -->
+        <div class="pv-card">
+          <div class="pv-card-header">
+            <div class="pv-card-header-icon"><i class="bi bi-image"></i></div>
+            <div class="pv-card-header-title">Image URL</div>
+          </div>
+          <div class="pv-card-body" style="padding:14px 16px;">
+            <div class="pv-field" style="margin-bottom:0;">
+              <input type="url" id="inputImageURL" class="pv-field-input"
+                value="{{ .Product.ImageURL }}" placeholder="https://…"
+                style="font-size:12px;font-family:var(--font-mono);">
+              <div class="pv-field-hint">Paste a URL or leave blank to remove the image</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick info card -->
+        <div class="pv-card">
+          <div class="pv-card-header">
+            <div class="pv-card-header-icon"><i class="bi bi-info-circle"></i></div>
+            <div class="pv-card-header-title">Product info</div>
+          </div>
+          <div class="pv-card-body" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+              <span style="color:var(--fg-3);">Status</span>
+              <span class="badge-status badge-{{ expiryStatusClass .Product.ExpireAt }}" style="font-size:11px;padding:2px 9px;">
+                {{ expiryStatusLabel .Product.ExpireAt }}
+              </span>
+            </div>
+            <div style="border-top:1px solid var(--border-subtle);padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+              <span style="color:var(--fg-3);">Amount</span>
+              <span style="font-weight:600;color:var(--fg);font-family:var(--font-mono);">{{ .Product.Amount }}</span>
+            </div>
+            <div style="border-top:1px solid var(--border-subtle);padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+              <span style="color:var(--fg-3);">Expires</span>
+              <span style="font-weight:600;font-family:var(--font-mono);">{{ .Product.ExpireAt | humanDate }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /right panel -->
+
+    </div><!-- /edit-grid -->
+  </form>
+
+  <!-- ── Mobile: sticky footer (hidden on desktop) ── -->
+  <div class="d-flex gap-2 d-md-none" style="position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);padding:10px 14px calc(10px + env(safe-area-inset-bottom, 0px));box-shadow:0 -4px 16px oklch(0.18 0.022 70 / 0.08);z-index:100;">
+    <button type="submit" form="editProductForm" class="pv-btn-primary flex-grow-1">
+      <i class="bi bi-check2"></i> Update product
+    </button>
+    <a href="/products/{{ .Product.ID }}" class="pv-btn-secondary">Cancel</a>
+    <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#deleteModal"
+      style="background:white;border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--status-expired);">
+      <i class="bi bi-trash3" style="font-size:16px;"></i>
+    </button>
+  </div>
+
+</div><!-- /pv-edit-page-wrap -->
+
+<!-- ── Delete confirmation modal ── -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-content" style="border-radius:14px;">
+      <div class="modal-header d-flex gap-3 align-items-start" style="border-bottom:1px solid var(--border-subtle);padding:18px 20px 14px;">
+        <div style="width:38px;height:38px;border-radius:9px;background:oklch(0.95 0.05 25);display:flex;align-items:center;justify-content:center;font-size:18px;color:oklch(0.45 0.20 25);flex-shrink:0;">
+          <i class="bi bi-trash3-fill"></i>
+        </div>
+        <div class="flex-grow-1">
+          <h5 class="modal-title" style="font-size:15px;font-weight:700;">Delete {{ .Product.ProductName }}?</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="font-size:13px;color:var(--fg-2);line-height:1.6;padding:16px 20px;">
+        This product will be permanently deleted. Consider archiving instead if you want to keep the record.
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--border-subtle);padding:12px 20px;">
+        <button class="pv-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="btnConfirmDelete" class="pv-btn-danger-ghost" type="button"
+          style="background:oklch(0.55 0.20 25);color:white;border:none;border-radius:8px;padding:10px 18px;">
+          <i class="bi bi-trash3"></i> Delete permanently
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- OCR Camera Modal -->
+<!-- ── OCR Camera Modal ── -->
 <div class="modal fade" id="ocrCameraModal" tabindex="-1" aria-labelledby="ocrCameraModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon" style="background:var(--accent-subtle);color:var(--accent);">
-                    <i class="bi bi-camera"></i>
-                </div>
-                <div class="modal-header-body">
-                    <h5 class="modal-title mb-0" id="ocrCameraModalLabel">Scan Expiry Date</h5>
-                    <div class="modal-subtitle">Position expiry date in frame</div>
-                </div>
-                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="modal-body text-center">
-                <div class="camera-preview-wrapper">
-                    <video id="ocrVideoPreview" autoplay playsinline class="camera-preview"></video>
-                </div>
-                <p class="text-body-secondary small mt-2">Hold steady and tap Capture</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-proviant-primary" id="btnCaptureExpiry">
-                    <i class="bi bi-camera"></i> Capture
-                </button>
-            </div>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-icon" style="background:var(--accent-subtle);color:var(--accent);">
+          <i class="bi bi-camera"></i>
         </div>
+        <div class="modal-header-body">
+          <h5 class="modal-title mb-0" id="ocrCameraModalLabel">Scan Expiry Date</h5>
+          <div class="modal-subtitle">Position expiry date in frame</div>
+        </div>
+        <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+      <div class="modal-body text-center">
+        <div class="camera-preview-wrapper">
+          <video id="ocrVideoPreview" autoplay playsinline class="camera-preview"></video>
+        </div>
+        <p class="text-body-secondary small mt-2">Hold steady and tap Capture</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-proviant-primary" id="btnCaptureExpiry">
+          <i class="bi bi-camera"></i> Capture
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- OCR Result Modal -->
+<!-- ── OCR Result Modal ── -->
 <div class="modal fade" id="ocrResultModal" tabindex="-1" aria-labelledby="ocrResultModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon" style="background:var(--accent-subtle);color:var(--accent);">
-                    <i class="bi bi-camera"></i>
-                </div>
-                <div class="modal-header-body">
-                    <h5 class="modal-title mb-0" id="ocrResultModalLabel">Expiry Date Scan</h5>
-                    <div class="modal-subtitle">Check the detected date</div>
-                </div>
-                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="ocrPreviewImage" class="mb-3 text-center"></div>
-                <div class="mb-3" id="ocrDetectedDate"></div>
-                <div class="progress mb-2" style="height: 8px;">
-                    <div id="ocrConfidenceBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
-                </div>
-                <small class="text-body-secondary" id="ocrConfidenceLabel">Confidence: 0%</small>
-                <div id="ocrRawTextWrapper" class="mt-3 d-none">
-                    <label class="form-label">Raw OCR text</label>
-                    <textarea id="ocrRawText" class="form-control" rows="3" readonly></textarea>
-                    <div class="form-text">Date not detected confidently. Please check the text above and adjust the date manually.</div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-proviant-secondary" id="btnRecaptureExpiry">
-                    <i class="bi bi-camera"></i> Retake
-                </button>
-                <button type="button" class="btn btn-proviant-primary" id="btnConfirmExpiry">
-                    <i class="bi bi-check"></i> Confirm
-                </button>
-            </div>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-icon" style="background:var(--accent-subtle);color:var(--accent);">
+          <i class="bi bi-camera"></i>
         </div>
+        <div class="modal-header-body">
+          <h5 class="modal-title mb-0" id="ocrResultModalLabel">Expiry Date Scan</h5>
+          <div class="modal-subtitle">Check the detected date</div>
+        </div>
+        <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="ocrPreviewImage" class="mb-3 text-center"></div>
+        <div class="mb-3" id="ocrDetectedDate"></div>
+        <div class="progress mb-2" style="height:8px;">
+          <div id="ocrConfidenceBar" class="progress-bar" role="progressbar" style="width:0%"></div>
+        </div>
+        <small class="text-body-secondary" id="ocrConfidenceLabel">Confidence: 0%</small>
+        <div id="ocrRawTextWrapper" class="mt-3 d-none">
+          <label class="form-label">Raw OCR text</label>
+          <textarea id="ocrRawText" class="form-control" rows="3" readonly></textarea>
+          <div class="form-text">Date not detected confidently. Please check the text above and adjust the date manually.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-proviant-secondary" id="btnRecaptureExpiry">
+          <i class="bi bi-camera"></i> Retake
+        </button>
+        <button type="button" class="btn btn-proviant-primary" id="btnConfirmExpiry">
+          <i class="bi bi-check"></i> Confirm
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
 <script src="/assets/js/html5-qrcode.min.js"></script>
+<script src="/assets/js/tag-input.js"></script>
 <script src="/assets/js/productsEdit.js"></script>
 <script src="/assets/js/productsExpiryOCR.js"></script>
 {{ end }}
-
-
-<!--
-    ImageURL readonly; js handler set img src
--->

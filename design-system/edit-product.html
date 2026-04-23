@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proviant — Edit Product</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vend+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<style>
+  :root { --bs-font-sans-serif: 'Vend Sans', system-ui, sans-serif; }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: var(--font-ui); background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; min-height: 100vh; }
+
+  /* ── App shell ── */
+  .app-shell { display: flex; min-height: 100vh; }
+  .sidebar { width: var(--sidebar-width); flex-shrink: 0; background: white; border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+  .sidebar-brand { padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); }
+  .sidebar-brand img { height: 30px; object-fit: contain; }
+  .sidebar-nav { padding: 8px; flex: 1; }
+  .nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 7px; color: var(--fg-2); font-size: 13px; text-decoration: none; margin-bottom: 2px; transition: background 120ms, color 120ms; }
+  .nav-item:hover { background: var(--bg-subtle); color: var(--fg); }
+  .nav-item.active { background: var(--accent-subtle); color: var(--accent); font-weight: 600; }
+  .nav-item i { font-size: 16px; }
+  .main { flex: 1; overflow-y: auto; }
+
+  /* ── Page ── */
+  .page-wrap { max-width: 900px; margin: 0 auto; padding: 32px 32px 64px; }
+
+  /* ── Breadcrumb ── */
+  .breadcrumb-row { display: flex; align-items: center; gap: 6px; margin-bottom: 20px; }
+  .breadcrumb-row a { font-size: 13px; color: var(--fg-3); text-decoration: none; }
+  .breadcrumb-row a:hover { color: var(--accent); }
+  .breadcrumb-row i { font-size: 10px; color: var(--fg-3); }
+  .breadcrumb-row span { font-size: 13px; color: var(--fg-2); }
+
+  /* ── Page header ── */
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; gap: 16px; }
+  .page-title { font-size: 22px; font-weight: 700; color: var(--fg); letter-spacing: -0.02em; line-height: 1.2; }
+  .page-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .id-chip { font-family: var(--font-mono); font-size: 11px; font-weight: 700; background: var(--accent-subtle); color: var(--accent); border: 1px solid oklch(0.78 0.08 162); border-radius: 6px; padding: 3px 8px; letter-spacing: 0.02em; }
+  .page-sub { font-size: 13px; color: var(--fg-3); }
+
+  /* ── Layout grid ── */
+  .edit-grid { display: grid; grid-template-columns: 1fr 280px; gap: 20px; align-items: start; }
+
+  /* ── Cards ── */
+  .card { background: white; border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-sm); margin-bottom: 16px; overflow: hidden; }
+  .card-header { padding: 14px 18px 12px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 8px; }
+  .card-header-icon { width: 28px; height: 28px; border-radius: 7px; background: var(--accent-subtle); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--accent); flex-shrink: 0; }
+  .card-header-title { font-size: 13px; font-weight: 600; color: var(--fg); }
+  .card-body { padding: 18px; }
+
+  /* ── Form elements ── */
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-label { font-size: 12px; font-weight: 500; color: var(--fg); margin-bottom: 5px; display: block; }
+  .field-label .req { color: var(--status-expired); margin-left: 2px; }
+  .field-input { font-family: var(--font-ui); font-size: 14px; color: var(--fg); background: white; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; width: 100%; outline: none; transition: border-color 150ms, box-shadow 150ms; }
+  .field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px oklch(0.50 0.12 162 / 0.15); }
+  .field-input.mono { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; }
+  .field-input-readonly { font-family: var(--font-mono); font-size: 13px; color: var(--fg-2); background: var(--bg-subtle); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 9px 12px; width: 100%; letter-spacing: 0.02em; }
+  .field-hint { font-size: 11px; color: var(--fg-3); margin-top: 4px; }
+  textarea.field-input { resize: vertical; min-height: 72px; }
+  select.field-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; cursor: pointer; }
+
+  /* ── Category tags ── */
+  .tag-wrap { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; background: white; border: 1px solid var(--border); border-radius: 8px; min-height: 44px; cursor: text; }
+  .tag { display: inline-flex; align-items: center; gap: 5px; background: var(--accent-subtle); color: var(--accent); border: 1px solid oklch(0.78 0.08 162); border-radius: 999px; padding: 2px 10px; font-size: 11px; font-weight: 500; }
+  .tag button { background: none; border: none; cursor: pointer; color: oklch(0.60 0.10 162); font-size: 12px; padding: 0; display: flex; line-height: 1; }
+  .tag button:hover { color: var(--accent-active); }
+  .tag-input { border: none; outline: none; font-family: var(--font-ui); font-size: 13px; color: var(--fg); background: transparent; flex: 1; min-width: 100px; }
+
+  /* ── Country tags (smaller, neutral) ── */
+  .ctag { display: inline-flex; align-items: center; gap: 4px; background: var(--bg-subtle); color: var(--fg-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; font-size: 11px; }
+  .ctag button { background: none; border: none; cursor: pointer; color: var(--fg-3); font-size: 11px; padding: 0; display: flex; }
+
+  /* ── Right panel ── */
+  .product-panel { position: sticky; top: 24px; }
+  .product-image-card { background: white; border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 16px; }
+  .product-image-area { aspect-ratio: 1; background: var(--bg-subtle); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .product-image-area img { width: 100%; height: 100%; object-fit: contain; padding: 12px; }
+  .product-image-overlay { position: absolute; inset: 0; background: oklch(0.18 0.022 70 / 0); display: flex; align-items: center; justify-content: center; transition: background 200ms; opacity: 0; }
+  .product-image-area:hover .product-image-overlay { background: oklch(0.18 0.022 70 / 0.45); opacity: 1; }
+  .product-image-overlay button { background: white; border: none; border-radius: 8px; padding: 8px 14px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer; color: var(--fg); display: flex; align-items: center; gap: 6px; }
+  .product-info { padding: 14px 16px; border-top: 1px solid var(--border-subtle); }
+  .product-name-display { font-size: 15px; font-weight: 700; color: var(--fg); margin-bottom: 4px; letter-spacing: -0.01em; }
+  .product-barcode-display { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); margin-bottom: 10px; }
+
+  /* Status badge */
+  .badge-status { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; border-radius: 999px; padding: 4px 12px; font-size: 12px; border: 1px solid; }
+  .badge-soon { background: oklch(0.97 0.05 80); color: oklch(0.50 0.16 80); border-color: oklch(0.85 0.10 80); }
+
+  /* ── Metadata block ── */
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .meta-item { }
+  .meta-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-3); margin-bottom: 4px; }
+  .meta-value { font-family: var(--font-mono); font-size: 12px; color: var(--fg-2); background: var(--bg-subtle); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 6px 10px; }
+
+  /* ── Buttons ── */
+  .btn-primary { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 10px 20px; font-family: var(--font-ui); font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background 150ms; box-shadow: 0 4px 12px oklch(0.50 0.12 162 / 0.3); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-secondary { background: white; color: var(--fg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 18px; font-family: var(--font-ui); font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: background 150ms; }
+  .btn-secondary:hover { background: var(--bg-subtle); }
+  .btn-danger-ghost { background: transparent; color: var(--status-expired); border: none; border-radius: 8px; padding: 10px 16px; font-family: var(--font-ui); font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: background 150ms; }
+  .btn-danger-ghost:hover { background: oklch(0.95 0.05 25); }
+  .form-actions { display: flex; align-items: center; gap: 10px; padding-top: 4px; }
+  .form-actions .spacer { flex: 1; }
+
+  /* ── Amount stepper ── */
+  .stepper { display: flex; align-items: center; gap: 0; background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; width: fit-content; }
+  .stepper button { background: var(--bg-subtle); border: none; cursor: pointer; width: 36px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--fg-2); transition: background 120ms, color 120ms; }
+  .stepper button:hover { background: var(--border); color: var(--fg); }
+  .stepper input { border: none; outline: none; width: 56px; text-align: center; font-family: var(--font-mono); font-size: 16px; font-weight: 600; color: var(--fg); background: white; padding: 0; height: 38px; }
+
+  /* Divider */
+  .divider { border: none; border-top: 1px solid var(--border-subtle); margin: 4px 0 16px; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .edit-grid { grid-template-columns: 1fr; }
+    .product-panel { position: static; }
+    .meta-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <img src="../../assets/header.png" alt="Proviant">
+    </div>
+    <div class="sidebar-nav">
+      <a href="#" class="nav-item"><i class="bi bi-speedometer2"></i> Dashboard</a>
+      <a href="#" class="nav-item active"><i class="bi bi-box-seam"></i> Products</a>
+      <a href="#" class="nav-item"><i class="bi bi-archive"></i> Archive</a>
+      <a href="#" class="nav-item"><i class="bi bi-person-circle"></i> Settings</a>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main">
+    <div class="page-wrap">
+
+      <!-- Breadcrumb -->
+      <div class="breadcrumb-row">
+        <a href="#"><i class="bi bi-box-seam"></i> Products</a>
+        <i class="bi bi-chevron-right"></i>
+        <span>Edit product</span>
+      </div>
+
+      <!-- Page header -->
+      <div class="page-header">
+        <div>
+          <div class="page-title-row">
+            <h1 class="page-title">Edit product</h1>
+            <span class="id-chip">#3</span>
+          </div>
+          <div class="page-sub">Changes are saved immediately after clicking Update product</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+          <span class="badge-status badge-soon"><i class="bi bi-clock-fill"></i> Expires Apr 27</span>
+        </div>
+      </div>
+
+      <!-- Two-column grid -->
+      <div class="edit-grid">
+
+        <!-- LEFT: Form -->
+        <div>
+
+          <!-- Identity -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-icon"><i class="bi bi-tag"></i></div>
+              <div class="card-header-title">Identity</div>
+            </div>
+            <div class="card-body">
+              <div class="field">
+                <label class="field-label">Product name <span class="req">*</span></label>
+                <input type="text" class="field-input" value="Cristalline 1.5L Spring Water">
+              </div>
+              <div class="field">
+                <label class="field-label">Barcode</label>
+                <div style="position:relative;">
+                  <i class="bi bi-upc-scan" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--fg-3);font-size:15px;pointer-events:none;"></i>
+                  <input type="text" class="field-input mono" value="3274080005003" style="padding-left:34px;">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Categories -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-icon"><i class="bi bi-grid"></i></div>
+              <div class="card-header-title">Categories</div>
+            </div>
+            <div class="card-body">
+              <div class="field">
+                <label class="field-label">Product categories</label>
+                <div class="tag-wrap" onclick="this.querySelector('.tag-input').focus()">
+                  <span class="tag">Beverages <button type="button"><i class="bi bi-x"></i></button></span>
+                  <span class="tag">Waters <button type="button"><i class="bi bi-x"></i></button></span>
+                  <span class="tag">Spring waters <button type="button"><i class="bi bi-x"></i></button></span>
+                  <span class="tag">Unsweetened beverages <button type="button"><i class="bi bi-x"></i></button></span>
+                  <input class="tag-input" placeholder="Add category…">
+                </div>
+                <div class="field-hint">Press Enter to add a category, × to remove</div>
+              </div>
+              <div class="field">
+                <label class="field-label">Countries sold in</label>
+                <div class="tag-wrap" onclick="this.querySelector('.tag-input').focus()">
+                  <span class="ctag">Belgium <button type="button"><i class="bi bi-x"></i></button></span>
+                  <span class="ctag">France <button type="button"><i class="bi bi-x"></i></button></span>
+                  <span class="ctag">Germany <button type="button"><i class="bi bi-x"></i></button></span>
+                  <span class="ctag">Italy <button type="button"><i class="bi bi-x"></i></button></span>
+                  <span class="ctag">Luxembourg <button type="button"><i class="bi bi-x"></i></button></span>
+                  <span class="ctag">Netherlands <button type="button"><i class="bi bi-x"></i></button></span>
+                  <span class="ctag">Switzerland <button type="button"><i class="bi bi-x"></i></button></span>
+                  <span class="ctag">United Kingdom <button type="button"><i class="bi bi-x"></i></button></span>
+                  <span class="ctag">United States <button type="button"><i class="bi bi-x"></i></button></span>
+                  <input class="tag-input" placeholder="Add country…">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Expiry & inventory -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-icon"><i class="bi bi-calendar-event"></i></div>
+              <div class="card-header-title">Expiry & inventory</div>
+            </div>
+            <div class="card-body">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                <div class="field">
+                  <label class="field-label">Expiry date <span class="req">*</span></label>
+                  <input type="date" class="field-input mono" value="2026-04-27">
+                </div>
+                <div class="field">
+                  <label class="field-label">Amount</label>
+                  <div class="stepper">
+                    <button type="button" onclick="let i=this.nextElementSibling;i.value=Math.max(0,+i.value-1)">−</button>
+                    <input type="number" value="2" min="0">
+                    <button type="button" onclick="let i=this.previousElementSibling;i.value=+i.value+1">+</button>
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label">Storage location</label>
+                <select class="field-input">
+                  <option value="">— None —</option>
+                  <option>Fridge</option>
+                  <option>Freezer</option>
+                  <option>Pantry</option>
+                  <option>Cellar</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Metadata (read-only) -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-icon"><i class="bi bi-clock-history"></i></div>
+              <div class="card-header-title">Timestamps</div>
+              <span style="font-size:11px;color:var(--fg-3);margin-left:auto;">Read-only</span>
+            </div>
+            <div class="card-body">
+              <div class="meta-grid">
+                <div class="meta-item">
+                  <div class="meta-label">Scanned at</div>
+                  <div class="meta-value">20.04.2026, 12:53</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Updated at</div>
+                  <div class="meta-value">20.04.2026, 12:53</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Notified at</div>
+                  <div class="meta-value">01.01.0001, 00:00</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="form-actions">
+            <button class="btn-primary" type="submit">
+              <i class="bi bi-check2"></i> Update product
+            </button>
+            <button class="btn-secondary" type="button">
+              Cancel
+            </button>
+            <div class="spacer"></div>
+            <button class="btn-danger-ghost" type="button">
+              <i class="bi bi-trash3"></i> Delete
+            </button>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: Product panel -->
+        <div class="product-panel">
+
+          <!-- Product image card -->
+          <div class="product-image-card">
+            <div class="product-image-area">
+              <!-- In production: <img src="{{ .Product.ImageURL }}" alt="{{ .Product.Name }}"> -->
+              <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:100%;height:100%;padding:24px;">
+                <svg width="72" height="96" viewBox="0 0 72 96" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="72" height="96" rx="6" fill="oklch(0.93 0.04 162)"/>
+                  <rect x="10" y="10" width="52" height="76" rx="4" fill="white" opacity="0.6"/>
+                  <rect x="18" y="22" width="36" height="4" rx="2" fill="oklch(0.50 0.12 162)" opacity="0.4"/>
+                  <rect x="18" y="30" width="24" height="3" rx="1.5" fill="oklch(0.50 0.12 162)" opacity="0.3"/>
+                  <ellipse cx="36" cy="56" rx="14" ry="18" fill="oklch(0.50 0.12 162)" opacity="0.15"/>
+                  <ellipse cx="36" cy="56" rx="8" ry="12" fill="oklch(0.50 0.12 162)" opacity="0.2"/>
+                  <rect x="22" y="76" width="28" height="3" rx="1.5" fill="oklch(0.50 0.12 162)" opacity="0.3"/>
+                </svg>
+                <span style="font-size:11px;color:var(--fg-3);">Cristalline 1.5L</span>
+              </div>
+              <div class="product-image-overlay">
+                <button type="button"><i class="bi bi-image"></i> Change image</button>
+              </div>
+            </div>
+            <div class="product-info">
+              <div class="product-name-display">Cristalline 1.5L</div>
+              <div class="product-barcode-display"><i class="bi bi-upc-scan"></i> 3274080005003</div>
+              <span class="badge-status badge-soon"><i class="bi bi-clock-fill"></i> Expiring soon</span>
+            </div>
+          </div>
+
+          <!-- Image URL -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-icon"><i class="bi bi-image"></i></div>
+              <div class="card-header-title">Image URL</div>
+            </div>
+            <div class="card-body" style="padding:14px 16px;">
+              <div class="field" style="margin-bottom:0;">
+                <input type="url" class="field-input" style="font-size:12px; font-family:var(--font-mono);"
+                  value="https://images.openfoodfacts.org/images/products/327/408/000/5003/front_en.797400.jpg" placeholder="https://…">
+                <div class="field-hint">Paste a URL or leave blank to remove the image</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick info -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-icon"><i class="bi bi-info-circle"></i></div>
+              <div class="card-header-title">Product info</div>
+            </div>
+            <div class="card-body" style="padding:14px 16px; display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px;">
+                <span style="color:var(--fg-3);">Status</span>
+                <span class="badge-status badge-soon" style="font-size:11px; padding:2px 9px;"><i class="bi bi-clock-fill"></i> Expiring soon</span>
+              </div>
+              <div style="border-top:1px solid var(--border-subtle); padding-top:10px; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
+                <span style="color:var(--fg-3);">Amount</span>
+                <span style="font-weight:600; color:var(--fg); font-family:var(--font-mono);">2</span>
+              </div>
+              <div style="border-top:1px solid var(--border-subtle); padding-top:10px; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
+                <span style="color:var(--fg-3);">Expires</span>
+                <span style="font-weight:600; color:oklch(0.50 0.16 80); font-family:var(--font-mono);">Apr 27, 2026</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

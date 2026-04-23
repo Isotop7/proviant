@@ -1,16 +1,15 @@
-/* Helper to dynamically query form elements */
 function getFormElements() {
     return {
-        form: document.getElementById('editProductForm'),
-        inputProductName: document.getElementById('inputProductName'),
-        inputImageURL: document.getElementById('inputImageURL'),
-        inputCategories: document.getElementById('inputCategories'),
-        inputCountries: document.getElementById('inputCountries'),
-        inputExpireAt: document.getElementById('inputExpireAt'),
-        inputAmount: document.getElementById('inputAmount'),
-        labelProductID: document.getElementById('labelProductID'),
-        imgProduct: document.getElementById('imgProduct'),
-        alertEditProduct: document.getElementById('alertEditProduct'),
+        form:              document.getElementById('editProductForm'),
+        inputProductName:  document.getElementById('inputProductName'),
+        inputImageURL:     document.getElementById('inputImageURL'),
+        inputCategories:   document.getElementById('categoriesHidden'),
+        inputCountries:    document.getElementById('countriesHidden'),
+        inputExpireAt:     document.getElementById('inputExpireAt'),
+        inputAmount:       document.getElementById('inputAmount'),
+        labelProductID:    document.getElementById('labelProductID'),
+        imgProduct:        document.getElementById('imgProduct'),
+        alertEditProduct:  document.getElementById('alertEditProduct'),
     };
 }
 
@@ -29,12 +28,8 @@ function editProduct() {
         return;
     }
 
-    // Return if form is invalid
-    if (!checkFormValidity()) {
-        return;
-    }
+    if (!checkFormValidity()) return;
 
-    // Get form values
     const productID = Number.parseInt(els.labelProductID.innerText.trim());
     const expireDate = els.inputExpireAt.valueAsDate;
 
@@ -53,7 +48,6 @@ function editProduct() {
         "storageLocationId": storageLocationId,
     };
 
-    // Edit product
     proviant.editProduct(product).then((response) => {
         switch (response.code) {
             case 200:
@@ -72,10 +66,23 @@ function editProduct() {
     });
 }
 
-/* Event delegation for form submission */
+function deleteProduct() {
+    const labelProductID = document.getElementById('labelProductID');
+    const productID = Number.parseInt(labelProductID?.innerText?.trim());
+    if (!Number.isInteger(productID) || productID <= 0) return;
+
+    proviant.deleteProduct(productID, false).then((response) => {
+        if (response.code === 200) {
+            window.location.href = '/products';
+        } else {
+            proviant.showFeedback('error', 'Delete Failed', `Could not delete product: ${response.message}`);
+        }
+    });
+}
+
+/* Form submission */
 document.addEventListener("submit", function (event) {
     const target = event.target;
-    // Handle editProductForm or any form with needs-validation class
     if (target.id === "editProductForm" || target.classList.contains("needs-validation")) {
         if (target.checkValidity() === false) {
             event.preventDefault();
@@ -88,13 +95,19 @@ document.addEventListener("submit", function (event) {
     }
 });
 
-/* Event delegation for keyup on image URL input */
+/* Update all product image elements when URL field changes */
 document.addEventListener("keyup", function (event) {
     const target = event.target;
     if (target.id === "inputImageURL") {
-        const imgProduct = document.getElementById("imgProduct");
-        if (imgProduct) {
-            imgProduct.src = target.value;
-        }
+        document.querySelectorAll('.pv-img-product').forEach(el => {
+            el.src = target.value;
+        });
+    }
+});
+
+/* Delete confirmation button in modal */
+document.addEventListener("click", function (event) {
+    if (event.target.closest('#btnConfirmDelete')) {
+        deleteProduct();
     }
 });
