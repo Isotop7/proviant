@@ -116,6 +116,16 @@ type OpenFoodFactsConfiguration struct {
 	ImageCachePath    string
 }
 
+// OCRConfiguration contains settings for OCR expiry date detection
+type OCRConfiguration struct {
+	Enabled   bool   `json:"enabled"`   // master switch
+	Provider  string `json:"provider"`  // "tesseract" (local), "google", "openai"
+	APIKey    string `json:"apiKey"`    // for cloud providers
+	Endpoint  string `json:"endpoint"`  // custom endpoint (e.g., Tesseract HTTP server)
+	Timeout   int    `json:"timeout"`   // seconds per request
+	Languages string `json:"languages"` // Tesseract language codes, e.g. "deu+eng"
+}
+
 // ProviantConfiguration is the configuration wrapper struct
 type ProviantConfiguration struct {
 	Database      DatabaseConfiguration
@@ -123,6 +133,7 @@ type ProviantConfiguration struct {
 	Logging       LoggingConfiguration
 	Notification  NotificationConfiguration
 	OpenFoodFacts OpenFoodFactsConfiguration
+	OCR           OCRConfiguration `mapstructure:"ocr"`
 	TemplateCache map[string]*template.Template
 }
 

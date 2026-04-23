@@ -261,4 +261,22 @@ var (
 
 	// ErrSavingsStatsUnavailable is thrown when savings statistics cannot be computed
 	ErrSavingsStatsUnavailable = errors.New("savings statistics unavailable")
+
+	/*
+	 * OCR related errors
+	 */
+	// ErrOCRTimeout is thrown when OCR processing exceeds the configured timeout
+	ErrOCRTimeout = errors.New("OCR processing timeout exceeded")
+
+	// ErrOCRProcessing is thrown when OCR processing fails (generic)
+	ErrOCRProcessing = errors.New("OCR processing failed")
+
+	// ErrFileTooLarge is thrown when the uploaded image exceeds the size limit
+	ErrFileTooLarge = errors.New("uploaded file too large")
+
+	// ErrInvalidRequest is thrown when the request is malformed or missing required parameters
+	ErrInvalidRequest = errors.New("invalid request")
+
+	// ErrInternalServer is thrown when an internal server error occurs
+	ErrInternalServer = errors.New("internal server error")
 )
