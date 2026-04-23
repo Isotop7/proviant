@@ -279,4 +279,34 @@ var (
 
 	// ErrInternalServer is thrown when an internal server error occurs
 	ErrInternalServer = errors.New("internal server error")
+
+	/*
+	 * Recipe related errors
+	 */
+	// ErrRecipeAPIUnavailable is thrown when the recipe API is unreachable or returns an error
+	ErrRecipeAPIUnavailable = errors.New("recipe service unavailable")
+
+	// ErrRecipeCacheMiss is thrown when a cache lookup fails to find an entry
+	ErrRecipeCacheMiss = errors.New("recipe cache miss")
+
+	// ErrRecipeInvalidProvider is thrown when the configured recipe API provider is not supported
+	ErrRecipeInvalidProvider = errors.New("invalid recipe API provider")
+
+	// ErrRecipeAPIEmptyURL is thrown when the recipe API URL is empty
+	ErrRecipeAPIEmptyURL = errors.New("empty recipe API URL")
+
+	// ErrRecipeAPIInvalidTimeout is thrown when the recipe API timeout is invalid
+	ErrRecipeAPIInvalidTimeout = errors.New("invalid timeout for recipe API")
+
+	// ErrRecipeNoMatchesFound is thrown when no recipes match the given products
+	ErrRecipeNoMatchesFound = errors.New("no matching recipes found")
+
+	// ErrUserHasNoHousehold is thrown when a user does not belong to a household
+	ErrUserHasNoHousehold = errors.New("user has no household")
+
+	// ErrInvalidQueryParameter is thrown when a query parameter is invalid
+	ErrInvalidQueryParameter = errors.New("invalid query parameter")
+
+	// ErrDatabaseOperationFailed is thrown when a database operation fails
+	ErrDatabaseOperationFailed = errors.New("database operation failed")
 )

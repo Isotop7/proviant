@@ -106,6 +106,13 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetDefault("notification.monthlyWasteReport.day", 1)
 	viper.SetDefault("notification.monthlyWasteReport.hour", 8)
 
+	// Set defaults for recipe API
+	viper.SetDefault("recipe_api.provider", "themealdb")
+	viper.SetDefault("recipe_api.url", "https://www.themealdb.com/api/json/v1/1")
+	viper.SetDefault("recipe_api.timeout", 10)
+	viper.SetDefault("recipe_api.cache_enabled", true)
+	viper.SetDefault("recipe_api.cache_ttl", 24)
+
 	// Set default password policy
 	viper.SetDefault("server.authentication.passwordMinLength", 12)
 	viper.SetDefault("server.authentication.passwordRequireUppercase", false)
@@ -156,6 +163,9 @@ func setupLogging(config *configuration.ProviantConfiguration) *zerolog.Logger {
 func validateAPIs(config *configuration.ProviantConfiguration) {
 	if err := config.ValidateOpenFoodFactsConfiguration(); err != nil {
 		panic("URL for OpenFoodFactsAPI not set")
+	}
+	if err := config.ValidateRecipeAPIConfiguration(); err != nil {
+		panic("Invalid recipe API configuration: " + err.Error())
 	}
 }
 
@@ -216,6 +226,7 @@ func main() {
 		&dbModel.HouseholdInvitation{},
 		&dbModel.OnboardingState{},
 		&dbModel.OpenFoodFactsCache{},
+		&dbModel.RecipeCache{},
 		&dbModel.EmailVerification{},
 		&dbModel.Webhook{},
 		&dbModel.WebhookDeliveryLog{},
@@ -278,6 +289,9 @@ func main() {
 	// Start background cleanup of expired revoked tokens
 	go startRevokedTokenCleanup(logger, dbHandle)
 
+	// Start background cleanup of expired recipe caches
+	go startRecipeCacheCleanup(logger, dbHandle)
+
 	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl, notificationController, ocrController)
 }
 
@@ -300,5 +314,27 @@ func cleanupExpiredRevokedTokens(logger *zerolog.Logger, dbHandle *gorm.DB) {
 	}
 	if result.RowsAffected > 0 {
 		logger.Info().Msgf("Cleaned up %d expired revoked tokens", result.RowsAffected)
+	}
+}
+
+// startRecipeCacheCleanup runs a goroutine that periodically cleans up expired recipe caches
+func startRecipeCacheCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	ticker := time.NewTicker(24 * time.Hour) // Clean up once per day
+	defer ticker.Stop()
+
+	for range ticker.C {
+		cleanupExpiredRecipeCaches(logger, dbHandle)
+	}
+}
+
+// cleanupExpiredRecipeCaches deletes recipe cache entries that have expired
+func cleanupExpiredRecipeCaches(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	result := dbHandle.Where("expires_at < ?", time.Now()).Delete(&dbModel.RecipeCache{})
+	if result.Error != nil {
+		logger.Error().Msgf("Failed to cleanup expired recipe caches: %s", result.Error.Error())
+		return
+	}
+	if result.RowsAffected > 0 {
+		logger.Info().Msgf("Cleaned up %d expired recipe caches", result.RowsAffected)
 	}
 }

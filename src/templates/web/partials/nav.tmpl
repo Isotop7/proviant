@@ -12,9 +12,13 @@
 			{{ if eq .Title "Products" }}aria-current="page"{{ end }}>
 			<i class="bi bi-box-seam" aria-hidden="true"></i> Products
 		</a>
-<a href="/web/products/archived" class="pv-nav-item {{ if eq .Title "ArchivedProducts" }}active{{ end }}"
+		<a href="/web/products/archived" class="pv-nav-item {{ if eq .Title "ArchivedProducts" }}active{{ end }}"
 			{{ if eq .Title "ArchivedProducts" }}aria-current="page"{{ end }}>
 			<i class="bi bi-archive" aria-hidden="true"></i> Archive
+		</a>
+		<a href="/web/recipes" class="pv-nav-item {{ if eq .Title "Recipes" }}active{{ end }}"
+			{{ if eq .Title "Recipes" }}aria-current="page"{{ end }}>
+			<i class="bi bi-journal-richtext" aria-hidden="true"></i> Recipes
 		</a>
 		<a href="/web/user/settings" class="pv-nav-item {{ if eq .Title "User Settings" }}active{{ end }}"
 			{{ if eq .Title "User Settings" }}aria-current="page"{{ end }}>

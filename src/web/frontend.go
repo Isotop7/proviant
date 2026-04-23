@@ -626,3 +626,48 @@ func (frontend *Frontend) Onboarding(ctx *gin.Context) {
 		"DisplayName": user.DisplayName,
 	})
 }
+
+// Recipes renders the recipe suggestions page
+// @Summary      Recipes page
+// @Description  Shows recipe suggestions for expiring products
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/recipes [get]
+func (frontend *Frontend) Recipes(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	claims := jwt.ExtractClaims(ctx)
+	userID64, ok := claims[static.TokenIdentityKey].(float64)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		return
+	}
+	userID := uint(userID64)
+
+	// Verify user has household (optional, page can show empty state if none)
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
+		return
+	}
+
+	userRepo := database.NewUserRepository(dbHandle)
+	householdID, err := userRepo.GetUserHouseholdByID(userID)
+	if err != nil || householdID == 0 {
+		// No household, still render page with empty state (frontend will handle)
+		householdID = 0
+	}
+
+	pageData := map[string]any{
+		"Title":        "Recipes",
+		"HasHousehold": householdID > 0,
+		"HouseholdID":  householdID,
+	}
+
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "recipes.tmpl", pageData)
+}

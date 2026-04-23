@@ -61,3 +61,11 @@ ocr:
   provider: "tesseract"
   languages: "deu+eng"
   timeout: 10
+
+recipe_api:
+  provider: "themealdb"
+  url: "https://www.themealdb.com/api/json/v1/1"
+  timeout: 10
+  cache_enabled: true
+  cache_ttl: 24
+

@@ -126,6 +126,16 @@ type OCRConfiguration struct {
 	Languages string `json:"languages"` // Tesseract language codes, e.g. "deu+eng"
 }
 
+// RecipeAPIConfiguration contains settings for the recipe suggestions feature
+type RecipeAPIConfiguration struct {
+	Provider     string `mapstructure:"provider"` // "themealdb" or "spoonacular"
+	URL          string `mapstructure:"url"`
+	APIKey       string `mapstructure:"api_key"` // optional, for Spoonacular
+	Timeout      int    `mapstructure:"timeout"` // seconds
+	CacheEnabled bool   `mapstructure:"cache_enabled"`
+	CacheTTL     int    `mapstructure:"cache_ttl"` // hours, default 24
+}
+
 // ProviantConfiguration is the configuration wrapper struct
 type ProviantConfiguration struct {
 	Database      DatabaseConfiguration
@@ -133,7 +143,8 @@ type ProviantConfiguration struct {
 	Logging       LoggingConfiguration
 	Notification  NotificationConfiguration
 	OpenFoodFacts OpenFoodFactsConfiguration
-	OCR           OCRConfiguration `mapstructure:"ocr"`
+	OCR           OCRConfiguration       `mapstructure:"ocr"`
+	RecipeAPI     RecipeAPIConfiguration `mapstructure:"recipe_api"`
 	TemplateCache map[string]*template.Template
 }
 
@@ -224,6 +235,23 @@ func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error {
 		if ec.Database.SQLite.Filepath == "" {
 			return errors.ErrDatabaseSQLiteInvalidPath
 		}
+	}
+	return nil
+}
+
+// ValidateRecipeAPIConfiguration validates the recipe API configuration
+func (ec *ProviantConfiguration) ValidateRecipeAPIConfiguration() error {
+	if ec.RecipeAPI.Provider == "" {
+		return errors.ErrRecipeInvalidProvider
+	}
+	if ec.RecipeAPI.URL == "" {
+		return errors.ErrRecipeAPIEmptyURL
+	}
+	if ec.RecipeAPI.Timeout <= 0 {
+		return errors.ErrRecipeAPIInvalidTimeout
+	}
+	if ec.RecipeAPI.CacheTTL <= 0 {
+		ec.RecipeAPI.CacheTTL = 24 // default to 24 hours
 	}
 	return nil
 }
