@@ -127,6 +127,9 @@ var (
 	// ErrOpenFoodFactsAPIInvalidTimeout is thrown if an invalid API timeout was supplied
 	ErrOpenFoodFactsAPIInvalidTimeout = errors.New("invalid timeout for OpenFoodFacts API specified")
 
+	// ErrOpenFoodFactsAPIInvalidImageCachePath is thrown if image caching is enabled but no path is specified
+	ErrOpenFoodFactsAPIInvalidImageCachePath = errors.New("image cache enabled but no image cache path specified")
+
 	/*
 	 * Notification related errors
 	 */
@@ -157,6 +160,12 @@ var (
 	/*
 	 * Household related errors
 	 */
+	// ErrStorageLocationNotFound is thrown when a requested storage location does not exist
+	ErrStorageLocationNotFound = errors.New("storage location not found")
+
+	// ErrStorageLocationNotOwned is thrown when a storage location does not belong to the user's household
+	ErrStorageLocationNotOwned = errors.New("storage location does not belong to this household")
+
 	// ErrHouseholdNotFound is thrown when a requested household does not exist
 	ErrHouseholdNotFound = errors.New("household not found")
 
@@ -243,4 +252,61 @@ var (
 
 	// ErrWebhookNotOwner is thrown when a user tries to access a webhook they do not own
 	ErrWebhookNotOwner = errors.New("webhook does not belong to user")
+
+	/*
+	 * Savings related errors
+	 */
+	// ErrSavingsRecordFailed is thrown when a savings record cannot be written
+	ErrSavingsRecordFailed = errors.New("failed to record savings event")
+
+	// ErrSavingsStatsUnavailable is thrown when savings statistics cannot be computed
+	ErrSavingsStatsUnavailable = errors.New("savings statistics unavailable")
+
+	/*
+	 * OCR related errors
+	 */
+	// ErrOCRTimeout is thrown when OCR processing exceeds the configured timeout
+	ErrOCRTimeout = errors.New("OCR processing timeout exceeded")
+
+	// ErrOCRProcessing is thrown when OCR processing fails (generic)
+	ErrOCRProcessing = errors.New("OCR processing failed")
+
+	// ErrFileTooLarge is thrown when the uploaded image exceeds the size limit
+	ErrFileTooLarge = errors.New("uploaded file too large")
+
+	// ErrInvalidRequest is thrown when the request is malformed or missing required parameters
+	ErrInvalidRequest = errors.New("invalid request")
+
+	// ErrInternalServer is thrown when an internal server error occurs
+	ErrInternalServer = errors.New("internal server error")
+
+	/*
+	 * Recipe related errors
+	 */
+	// ErrRecipeAPIUnavailable is thrown when the recipe API is unreachable or returns an error
+	ErrRecipeAPIUnavailable = errors.New("recipe service unavailable")
+
+	// ErrRecipeCacheMiss is thrown when a cache lookup fails to find an entry
+	ErrRecipeCacheMiss = errors.New("recipe cache miss")
+
+	// ErrRecipeInvalidProvider is thrown when the configured recipe API provider is not supported
+	ErrRecipeInvalidProvider = errors.New("invalid recipe API provider")
+
+	// ErrRecipeAPIEmptyURL is thrown when the recipe API URL is empty
+	ErrRecipeAPIEmptyURL = errors.New("empty recipe API URL")
+
+	// ErrRecipeAPIInvalidTimeout is thrown when the recipe API timeout is invalid
+	ErrRecipeAPIInvalidTimeout = errors.New("invalid timeout for recipe API")
+
+	// ErrRecipeNoMatchesFound is thrown when no recipes match the given products
+	ErrRecipeNoMatchesFound = errors.New("no matching recipes found")
+
+	// ErrUserHasNoHousehold is thrown when a user does not belong to a household
+	ErrUserHasNoHousehold = errors.New("user has no household")
+
+	// ErrInvalidQueryParameter is thrown when a query parameter is invalid
+	ErrInvalidQueryParameter = errors.New("invalid query parameter")
+
+	// ErrDatabaseOperationFailed is thrown when a database operation fails
+	ErrDatabaseOperationFailed = errors.New("database operation failed")
 )

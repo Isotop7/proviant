@@ -1,0 +1,171 @@
+package v1
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"io"
+	"net/http"
+	"time"
+
+	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers"
+	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/models/configuration/static"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
+
+	jwt "github.com/appleboy/gin-jwt/v2"
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
+	"gorm.io/gorm"
+)
+
+// ScanExpiryDate scans an uploaded image for expiry date
+// @Summary       Scan expiry date from product photo
+// @Description   Upload an image of product packaging; returns detected expiry date with confidence score
+// @Tags          product
+// @Accept        multipart/form-data
+// @Produce       json
+// @Param          image  formData  file  true  "Product packaging image"
+// @Success       200  {object}  apiModel.ExpiryScanResponse
+// @Failure       400  {object}  api.APIResponse
+// @Failure       500  {object}  api.APIResponse
+// @Router        /api/v1/products/scan-date [post]
+func ScanExpiryDate(ctx *gin.Context) {
+	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+
+	// Get uploaded image file
+	file, err := ctx.FormFile("image")
+	if err != nil {
+		logger.Error().Msgf("Form file error: %s", err.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidRequest))
+		return
+	}
+
+	// Validate size (max 5MB)
+	if file.Size > 5*1024*1024 {
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrFileTooLarge))
+		return
+	}
+
+	// Open and read file
+	src, openErr := file.Open()
+	if openErr != nil {
+		logger.Error().Msgf("File open error: %s", openErr.Error())
+		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrInternalServer))
+		return
+	}
+	defer func() {
+		if closeErr := src.Close(); closeErr != nil {
+			logger.Warn().Msgf("Error closing file: %s", closeErr.Error())
+		}
+	}()
+
+	imgBytes, readErr := io.ReadAll(src)
+	if readErr != nil {
+		logger.Error().Msgf("File read error: %s", readErr.Error())
+		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrInternalServer))
+		return
+	}
+
+	// Get OCR controller from context
+	ocrController, ok := ctx.MustGet("ocrController").(*controllers.OCRControllerImpl)
+	if !ok {
+		logger.Error().Msg("OCR controller not found in context")
+		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrInternalServer))
+		return
+	}
+
+	// Call OCR with timeout (goroutine pattern like barcode scanner)
+	ctxTimeout, cancel := context.WithTimeout(ctx.Request.Context(), time.Duration(ocrController.Config.Timeout)*time.Second)
+	defer cancel()
+
+	resultChan := make(chan *apiModel.ExpiryScanResponse, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		resp, err := ocrController.ScanExpiryDate(imgBytes)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		resultChan <- resp
+	}()
+
+	select {
+	case <-ctxTimeout.Done():
+		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrOCRTimeout))
+		return
+	case err := <-errChan:
+		logger.Error().Msgf("OCR error: %s", err.Error())
+		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrOCRProcessing))
+		return
+	case resp := <-resultChan:
+		// Optionally log the scan to database
+		if userID, ok := getCurrentUserID(ctx, logger); ok {
+			storeScan := func() {
+				dbHandle, dbOk := ctx.MustGet("dbHandle").(*gorm.DB)
+				if !dbOk {
+					logger.Warn().Msg("dbHandle not available for expiry scan logging")
+					return
+				}
+				scan := &dbModel.ExpiryScan{
+					UserID:       userID,
+					ScannedAt:    time.Now(),
+					DetectedDate: mustParseDate(resp.DetectedDate),
+					Confidence:   resp.Confidence,
+					RawText:      resp.RawText,
+					ImageHash:    hashImage(imgBytes),
+				}
+				repo := database.NewExpiryScanRepository(dbHandle)
+				if dbErr := repo.Create(scan); dbErr != nil {
+					logger.Warn().Msgf("Failed to store expiry scan: %s", dbErr.Error())
+				}
+			}
+			// Fire-and-forget in background to avoid slowing response
+			go storeScan()
+		}
+		ctx.JSON(http.StatusOK, resp)
+		return
+	}
+}
+
+// getCurrentUserID extracts user ID from JWT claims or PAT context
+func getCurrentUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
+	// PAT path: PAT middleware injects userID directly into context
+	if id, exists := ctx.Get("userID"); exists {
+		if userID, ok := id.(uint); ok && userID > 0 {
+			return userID, true
+		}
+	}
+
+	// JWT path: extract from token claims
+	claims := jwt.ExtractClaims(ctx)
+	idClaim, ok := claims[static.TokenIdentityKey]
+	if !ok {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		return 0, false
+	}
+	userID := uint(idClaim.(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		return 0, false
+	}
+	return userID, true
+}
+
+// hashImage computes SHA256 of image bytes
+func hashImage(img []byte) string {
+	sum := sha256.Sum256(img)
+	return hex.EncodeToString(sum[:])
+}
+
+// mustParseDate converts ISO string to time.Time; returns zero time on failure
+func mustParseDate(s string) time.Time {
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		return t
+	}
+	return time.Time{}
+}

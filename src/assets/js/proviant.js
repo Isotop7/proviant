@@ -16,14 +16,16 @@ proviant.showFeedback = function (type, title, message, onClose) {
   const btnEl = document.getElementById("proviantFeedbackBtn");
 
   const configs = {
-    success: { icon: "bi-check-circle-fill", color: "text-success" },
-    error:   { icon: "bi-x-circle-fill",     color: "text-danger"  },
-    warning: { icon: "bi-exclamation-circle-fill", color: "text-warning" },
-    info:    { icon: "bi-info-circle-fill",   color: "text-secondary" },
+    success: { icon: "bi-check-circle-fill",       boxBg: "oklch(0.94 0.04 145)", boxColor: "oklch(0.40 0.10 145)" },
+    error:   { icon: "bi-x-circle-fill",           boxBg: "oklch(0.95 0.05 25)",  boxColor: "oklch(0.45 0.20 25)"  },
+    warning: { icon: "bi-exclamation-triangle-fill", boxBg: "oklch(0.96 0.06 80)", boxColor: "oklch(0.55 0.18 75)"  },
+    info:    { icon: "bi-info-circle-fill",         boxBg: "oklch(0.94 0.03 230)", boxColor: "oklch(0.45 0.12 230)" },
   };
   const cfg = configs[type] || configs.info;
+  const boxEl = document.getElementById("proviantFeedbackIconBox");
 
-  if (iconEl) iconEl.className = "bi " + cfg.icon + " " + cfg.color + " fs-1 mb-3 d-block";
+  if (iconEl) { iconEl.className = "bi " + cfg.icon; }
+  if (boxEl) { boxEl.style.background = cfg.boxBg; boxEl.style.color = cfg.boxColor; }
   if (titleEl) titleEl.textContent = title || "";
   if (msgEl) msgEl.textContent = message || "";
   if (btnEl) btnEl.onclick = onClose || null;
@@ -54,9 +56,9 @@ proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confir
   bootstrap.Modal.getOrCreateInstance(modal).show();
 };
 
-proviant.createProduct = async function (barcode, expireAt, amount) {
+proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  let data = JSON.stringify({ barcode, expireAt, amount: amount || 1 });
+  let data = JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null });
   const apiCall = await fetch(url, {
     method: "POST",
     headers: {
@@ -684,6 +686,26 @@ proviant.joinOnboardingByInvite = async function (token) {
 
 proviant.getProductStats = async function () {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/stats`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.getStreak = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/streak`;
+  const apiCall = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};
+
+proviant.getSavingsStats = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/savings/stats`;
   const apiCall = await fetch(url, {
     method: "GET",
     headers: { "Content-Type": "application/json" },

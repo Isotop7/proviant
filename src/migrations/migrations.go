@@ -73,6 +73,70 @@ func SetDefaultProductAmounts(logger *zerolog.Logger, db *gorm.DB) error {
 	return db.Exec("UPDATE products SET amount = 1 WHERE amount IS NULL OR amount = 0").Error
 }
 
+// DropLegacyStorageLocationColumn removes the old free-text storage_location column from products.
+// GORM AutoMigrate never drops columns, so this must be done explicitly.
+// SQLite does not support IF EXISTS on DROP COLUMN, so we attempt the drop and swallow
+// any error that indicates the column is already absent.
+func DropLegacyStorageLocationColumn(logger *zerolog.Logger, db *gorm.DB) error {
+	logger.Info().Msg("Dropping legacy storage_location string column from products")
+	err := db.Exec(`ALTER TABLE products DROP COLUMN storage_location`).Error
+	if err != nil {
+		errStr := err.Error()
+		if strings.Contains(errStr, "no such column") ||
+			strings.Contains(errStr, "no such table") ||
+			strings.Contains(errStr, "Unknown column") ||
+			strings.Contains(errStr, "Can't DROP") ||
+			strings.Contains(errStr, "syntax error") {
+			logger.Warn().Msg("storage_location column not present or not droppable, skipping")
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+// SeedDefaultStorageLocations creates Fridge, Freezer and Pantry for every
+// existing household that has no storage locations yet.
+func SeedDefaultStorageLocations(logger *zerolog.Logger, db *gorm.DB) error {
+	logger.Info().Msg("Seeding default storage locations for existing households")
+
+	type defaultLocation struct {
+		Name      string
+		Icon      string
+		SortOrder int
+	}
+	defaults := []defaultLocation{
+		{"Fridge", "🧊", 0},
+		{"Freezer", "❄️", 1},
+		{"Pantry", "🗄️", 2},
+	}
+
+	var householdIDs []uint
+	if err := db.Model(&database.Household{}).Pluck("id", &householdIDs).Error; err != nil {
+		return fmt.Errorf("fetching household IDs: %w", err)
+	}
+
+	for _, hhID := range householdIDs {
+		var count int64
+		db.Model(&database.StorageLocation{}).Where("household_id = ?", hhID).Count(&count)
+		if count > 0 {
+			continue
+		}
+		for _, d := range defaults {
+			loc := database.StorageLocation{
+				HouseholdID: hhID,
+				Name:        d.Name,
+				Icon:        d.Icon,
+				SortOrder:   d.SortOrder,
+			}
+			if err := db.Create(&loc).Error; err != nil {
+				return fmt.Errorf("seeding location '%s' for household %d: %w", d.Name, hhID, err)
+			}
+		}
+	}
+	return nil
+}
+
 func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 	// Migrations version 0.2.0
 	logger.Info().Msg("Running database migrations for version 0.2.0")
@@ -89,6 +153,16 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 	// Backfill email verification for existing users
 	logger.Info().Msg("Running database migrations for email verification backfill")
 	if err := BackfillEmailVerification(logger, db); err != nil {
+		return err
+	}
+
+	// Drop legacy free-text storage_location column from products
+	if err := DropLegacyStorageLocationColumn(logger, db); err != nil {
+		return err
+	}
+
+	// Seed default storage locations for existing households
+	if err := SeedDefaultStorageLocations(logger, db); err != nil {
 		return err
 	}
 

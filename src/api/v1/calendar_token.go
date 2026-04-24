@@ -75,11 +75,11 @@ func CreateCalendarToken(ctx *gin.Context) {
 		return
 	}
 
-	ct := &authentication.CalendarToken{
+	calendarToken := &authentication.CalendarToken{
 		UserID: userID,
 		Token:  rawToken,
 	}
-	createErr := calendarTokenRepo.Create(ct)
+	createErr := calendarTokenRepo.Create(calendarToken)
 	if createErr != nil {
 		logger.Error().Msgf("Create: %s", createErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to create calendar token"})
@@ -176,7 +176,7 @@ func GetCalendarTokenStatus(ctx *gin.Context) {
 	}
 
 	calendarTokenRepo := database.NewCalendarTokenRepository(dbHandle)
-	ct, err := calendarTokenRepo.GetByUserID(userID)
+	calendarToken, err := calendarTokenRepo.GetByUserID(userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusOK, gin.H{"hasToken": false})
@@ -198,6 +198,6 @@ func GetCalendarTokenStatus(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"hasToken": true,
-		"url":      baseURL + "api/v1/calendar/export.ics?token=" + ct.Token,
+		"url":      baseURL + "api/v1/calendar/export.ics?token=" + calendarToken.Token,
 	})
 }

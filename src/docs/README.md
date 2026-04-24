@@ -104,11 +104,13 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(e \*EmailNotificationProvider\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#EmailNotificationProvider.SendInvitationEmail>)
   - [func \(e \*EmailNotificationProvider\) SendMonthlyWasteReport\(recipient string, stats \*models.WasteStats\) error](<#EmailNotificationProvider.SendMonthlyWasteReport>)
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
+  - [func \(e \*EmailNotificationProvider\) SendStreakMilestone\(milestone int, recipient string\) error](<#EmailNotificationProvider.SendStreakMilestone>)
 - [type NotificationController](<#NotificationController>)
   - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
   - [func \(nc \*NotificationController\) DispatchInvitations\(baseURL string\)](<#NotificationController.DispatchInvitations>)
   - [func \(nc \*NotificationController\) DispatchMonthlyWasteReports\(\)](<#NotificationController.DispatchMonthlyWasteReports>)
+  - [func \(nc \*NotificationController\) DispatchStreakUpdates\(\)](<#NotificationController.DispatchStreakUpdates>)
   - [func \(nc \*NotificationController\) GetUserTelegramBotUsername\(userID uint\) string](<#NotificationController.GetUserTelegramBotUsername>)
   - [func \(nc \*NotificationController\) SendEmailVerification\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendEmailVerification>)
   - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#NotificationController.SendInvitationEmail>)
@@ -121,7 +123,9 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(n \*NtfyNotificationProvider\) GetProviderType\(\) string](<#NtfyNotificationProvider.GetProviderType>)
   - [func \(n \*NtfyNotificationProvider\) IsConfigured\(\) bool](<#NtfyNotificationProvider.IsConfigured>)
   - [func \(n \*NtfyNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#NtfyNotificationProvider.SendNotification>)
+  - [func \(n \*NtfyNotificationProvider\) SendStreakMilestone\(milestone int, recipient models.NotificationRecipientInfo\) error](<#NtfyNotificationProvider.SendStreakMilestone>)
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
+  - [func \(offacntrl OpenFoodFactsAPIController\) DownloadImage\(imageURL, barcode string\) \(string, error\)](<#OpenFoodFactsAPIController.DownloadImage>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
 - [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
 - [type TelegramNotificationProvider](<#TelegramNotificationProvider>)
@@ -129,6 +133,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(t \*TelegramNotificationProvider\) IsConfigured\(\) bool](<#TelegramNotificationProvider.IsConfigured>)
   - [func \(t \*TelegramNotificationProvider\) SendMonthlyWasteReport\(chatID string, stats \*models.WasteStats\) error](<#TelegramNotificationProvider.SendMonthlyWasteReport>)
   - [func \(t \*TelegramNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#TelegramNotificationProvider.SendNotification>)
+  - [func \(t \*TelegramNotificationProvider\) SendStreakMilestone\(milestone int, chatID string\) error](<#TelegramNotificationProvider.SendStreakMilestone>)
 - [type WebhookService](<#WebhookService>)
   - [func GetWebhookService\(\) \*WebhookService](<#GetWebhookService>)
   - [func \(s \*WebhookService\) FireEvent\(event string, payload map\[string\]any\)](<#WebhookService.FireEvent>)
@@ -280,6 +285,15 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 
 
 
+<a name="EmailNotificationProvider.SendStreakMilestone"></a>
+### func \(\*EmailNotificationProvider\) SendStreakMilestone
+
+```go
+func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient string) error
+```
+
+SendStreakMilestone sends a streak milestone notification email.
+
 <a name="NotificationController"></a>
 ## type NotificationController
 
@@ -290,6 +304,7 @@ type NotificationController struct {
     Logger           *zerolog.Logger
     Configuration    *configuration.NotificationConfiguration
     NotificationRepo dbController.NotificationRepositoryInterface
+    StreakRepo       dbController.StreakRepositoryInterface
     Providers        []NotificationProvider
     // contains filtered or unexported fields
 }
@@ -330,6 +345,15 @@ func (nc *NotificationController) DispatchMonthlyWasteReports()
 ```
 
 DispatchMonthlyWasteReports starts a goroutine that sends household waste reports on the configured day/hour \(UTC\) of each month to opted\-in members via all enabled providers.
+
+<a name="NotificationController.DispatchStreakUpdates"></a>
+### func \(\*NotificationController\) DispatchStreakUpdates
+
+```go
+func (nc *NotificationController) DispatchStreakUpdates()
+```
+
+DispatchStreakUpdates starts a goroutine that runs daily at midnight UTC to increment or reset each household's waste\-free streak and send milestone notifications.
 
 <a name="NotificationController.GetUserTelegramBotUsername"></a>
 ### func \(\*NotificationController\) GetUserTelegramBotUsername
@@ -447,6 +471,15 @@ func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, re
 
 
 
+<a name="NtfyNotificationProvider.SendStreakMilestone"></a>
+### func \(\*NtfyNotificationProvider\) SendStreakMilestone
+
+```go
+func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient models.NotificationRecipientInfo) error
+```
+
+SendStreakMilestone sends a streak milestone push notification via ntfy.
+
 <a name="OpenFoodFactsAPIController"></a>
 ## type OpenFoodFactsAPIController
 
@@ -458,6 +491,15 @@ type OpenFoodFactsAPIController struct {
     Configuration configuration.OpenFoodFactsConfiguration
 }
 ```
+
+<a name="OpenFoodFactsAPIController.DownloadImage"></a>
+### func \(OpenFoodFactsAPIController\) DownloadImage
+
+```go
+func (offacntrl OpenFoodFactsAPIController) DownloadImage(imageURL, barcode string) (string, error)
+```
+
+DownloadImage fetches an image from imageURL and saves it to \{cachePath\}/\{barcode\}.jpg. Returns the local serve path /product\-images/\{barcode\}.jpg on success.
 
 <a name="OpenFoodFactsAPIController.GetDataset"></a>
 ### func \(OpenFoodFactsAPIController\) GetDataset
@@ -527,6 +569,15 @@ func (t *TelegramNotificationProvider) SendNotification(product *dbModel.Product
 ```
 
 
+
+<a name="TelegramNotificationProvider.SendStreakMilestone"></a>
+### func \(\*TelegramNotificationProvider\) SendStreakMilestone
+
+```go
+func (t *TelegramNotificationProvider) SendStreakMilestone(milestone int, chatID string) error
+```
+
+SendStreakMilestone sends a streak milestone notification to a Telegram chat.
 
 <a name="WebhookService"></a>
 ## type WebhookService
@@ -734,6 +785,9 @@ var (
     // ErrOpenFoodFactsAPIInvalidTimeout is thrown if an invalid API timeout was supplied
     ErrOpenFoodFactsAPIInvalidTimeout = errors.New("invalid timeout for OpenFoodFacts API specified")
 
+    // ErrOpenFoodFactsAPIInvalidImageCachePath is thrown if image caching is enabled but no path is specified
+    ErrOpenFoodFactsAPIInvalidImageCachePath = errors.New("image cache enabled but no image cache path specified")
+
     /*
      * Notification related errors
      */
@@ -764,6 +818,12 @@ var (
     /*
      * Household related errors
      */
+    // ErrStorageLocationNotFound is thrown when a requested storage location does not exist
+    ErrStorageLocationNotFound = errors.New("storage location not found")
+
+    // ErrStorageLocationNotOwned is thrown when a storage location does not belong to the user's household
+    ErrStorageLocationNotOwned = errors.New("storage location does not belong to this household")
+
     // ErrHouseholdNotFound is thrown when a requested household does not exist
     ErrHouseholdNotFound = errors.New("household not found")
 
@@ -850,6 +910,15 @@ var (
 
     // ErrWebhookNotOwner is thrown when a user tries to access a webhook they do not own
     ErrWebhookNotOwner = errors.New("webhook does not belong to user")
+
+    /*
+     * Savings related errors
+     */
+    // ErrSavingsRecordFailed is thrown when a savings record cannot be written
+    ErrSavingsRecordFailed = errors.New("failed to record savings event")
+
+    // ErrSavingsStatsUnavailable is thrown when savings statistics cannot be computed
+    ErrSavingsStatsUnavailable = errors.New("savings statistics unavailable")
 )
 ```
 
@@ -937,7 +1006,10 @@ import "codeberg.org/isotop7/proviant/migrations"
 
 - [func AddNotificationPreferencesMigration\(db \*gorm.DB\) error](<#AddNotificationPreferencesMigration>)
 - [func BackfillEmailVerification\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillEmailVerification>)
+- [func DropLegacyStorageLocationColumn\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#DropLegacyStorageLocationColumn>)
 - [func RunBreakingDatabaseMigrations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RunBreakingDatabaseMigrations>)
+- [func SeedDefaultStorageLocations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SeedDefaultStorageLocations>)
+- [func SeedProductCategoryPrices\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SeedProductCategoryPrices>)
 - [func SetDefaultProductAmounts\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SetDefaultProductAmounts>)
 
 
@@ -959,6 +1031,15 @@ func BackfillEmailVerification(logger *zerolog.Logger, db *gorm.DB) error
 
 BackfillEmailVerification sets EmailVerifiedAt for all existing users that don't have it set. This is a one\-time migration to ensure existing users aren't locked out after email verification is introduced.
 
+<a name="DropLegacyStorageLocationColumn"></a>
+## func DropLegacyStorageLocationColumn
+
+```go
+func DropLegacyStorageLocationColumn(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+DropLegacyStorageLocationColumn removes the old free\-text storage\_location column from products. GORM AutoMigrate never drops columns, so this must be done explicitly. SQLite does not support IF EXISTS on DROP COLUMN, so we attempt the drop and swallow any error that indicates the column is already absent.
+
 <a name="RunBreakingDatabaseMigrations"></a>
 ## func RunBreakingDatabaseMigrations
 
@@ -967,6 +1048,24 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error
 ```
 
 
+
+<a name="SeedDefaultStorageLocations"></a>
+## func SeedDefaultStorageLocations
+
+```go
+func SeedDefaultStorageLocations(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+SeedDefaultStorageLocations creates Fridge, Freezer and Pantry for every existing household that has no storage locations yet.
+
+<a name="SeedProductCategoryPrices"></a>
+## func SeedProductCategoryPrices
+
+```go
+func SeedProductCategoryPrices(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+SeedProductCategoryPrices inserts default category price/CO2 reference rows if the table is empty. CO2 values \(kg CO2e per kg food\) are derived from the Agribalyse LCA database, the same source used by Open Food Facts for ecoscore\_data. EUR prices are EU retail averages \(Eurostat, 2023\). Idempotent: skipped entirely if any row already exists.
 
 <a name="SetDefaultProductAmounts"></a>
 ## func SetDefaultProductAmounts
@@ -1225,7 +1324,6 @@ import "codeberg.org/isotop7/proviant/web"
   - [func \(frontend \*Frontend\) Onboarding\(ctx \*gin.Context\)](<#Frontend.Onboarding>)
   - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
   - [func \(frontend \*Frontend\) ProductsArchived\(ctx \*gin.Context\)](<#Frontend.ProductsArchived>)
-  - [func \(frontend \*Frontend\) ProductsCreate\(ctx \*gin.Context\)](<#Frontend.ProductsCreate>)
   - [func \(frontend \*Frontend\) ProductsEdit\(ctx \*gin.Context\)](<#Frontend.ProductsEdit>)
   - [func \(frontend \*Frontend\) ProductsScan\(ctx \*gin.Context\)](<#Frontend.ProductsScan>)
   - [func \(frontend \*Frontend\) ProductsView\(ctx \*gin.Context\)](<#Frontend.ProductsView>)
@@ -1290,15 +1388,6 @@ func (frontend *Frontend) ProductsArchived(ctx *gin.Context)
 ```
 
 ProductsArchived renders the archived products page @Summary Archived products page @Description Renders the archived products list page @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products/archived \[get\]
-
-<a name="Frontend.ProductsCreate"></a>
-### func \(\*Frontend\) ProductsCreate
-
-```go
-func (frontend *Frontend) ProductsCreate(ctx *gin.Context)
-```
-
-ProductsCreate renders the product creation page @Summary Create product page @Description Renders the page for creating a new product @Tags web @Produce html @Success 200 \{string\} html @Router /web/products/create \[get\]
 
 <a name="Frontend.ProductsEdit"></a>
 ### func \(\*Frontend\) ProductsEdit
@@ -1539,6 +1628,10 @@ v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
+v1 implements version 1 of the proviant API
+
+v1 implements version 1 of the proviant API
+
 ## Index
 
 - [Constants](<#constants>)
@@ -1555,11 +1648,13 @@ v1 implements version 1 of the proviant API
 - [func CreateHousehold\(ctx \*gin.Context\)](<#CreateHousehold>)
 - [func CreateInvitation\(ctx \*gin.Context\)](<#CreateInvitation>)
 - [func CreateProduct\(ctx \*gin.Context\)](<#CreateProduct>)
+- [func CreateStorageLocation\(ctx \*gin.Context\)](<#CreateStorageLocation>)
 - [func CreateUserToken\(ctx \*gin.Context\)](<#CreateUserToken>)
 - [func CreateWebhook\(ctx \*gin.Context\)](<#CreateWebhook>)
 - [func DeleteCalendarToken\(ctx \*gin.Context\)](<#DeleteCalendarToken>)
 - [func DeleteHouseholdUser\(ctx \*gin.Context\)](<#DeleteHouseholdUser>)
 - [func DeleteProduct\(ctx \*gin.Context\)](<#DeleteProduct>)
+- [func DeleteStorageLocation\(ctx \*gin.Context\)](<#DeleteStorageLocation>)
 - [func DeleteUserToken\(ctx \*gin.Context\)](<#DeleteUserToken>)
 - [func DeleteWebhook\(ctx \*gin.Context\)](<#DeleteWebhook>)
 - [func ExportArchiveCSV\(ctx \*gin.Context\)](<#ExportArchiveCSV>)
@@ -1581,10 +1676,13 @@ v1 implements version 1 of the proviant API
 - [func GetProductSummary\(ctx \*gin.Context\)](<#GetProductSummary>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
+- [func GetSavingsStats\(ctx \*gin.Context\)](<#GetSavingsStats>)
+- [func GetStreak\(ctx \*gin.Context\)](<#GetStreak>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context\)](<#GetUserNotificationPreferences>)
 - [func GetWebhook\(ctx \*gin.Context\)](<#GetWebhook>)
 - [func GetWebhookDeliveries\(ctx \*gin.Context\)](<#GetWebhookDeliveries>)
 - [func LeaveHousehold\(ctx \*gin.Context\)](<#LeaveHousehold>)
+- [func ListStorageLocations\(ctx \*gin.Context\)](<#ListStorageLocations>)
 - [func ListUserTokens\(ctx \*gin.Context\)](<#ListUserTokens>)
 - [func ListWebhooks\(ctx \*gin.Context\)](<#ListWebhooks>)
 - [func RejectHouseholdApplication\(ctx \*gin.Context\)](<#RejectHouseholdApplication>)
@@ -1597,6 +1695,7 @@ v1 implements version 1 of the proviant API
 - [func UpdateHouseholdUser\(ctx \*gin.Context\)](<#UpdateHouseholdUser>)
 - [func UpdateProduct\(ctx \*gin.Context\)](<#UpdateProduct>)
 - [func UpdateProductAmount\(ctx \*gin.Context\)](<#UpdateProductAmount>)
+- [func UpdateStorageLocation\(ctx \*gin.Context\)](<#UpdateStorageLocation>)
 - [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
 - [func UpdateUserNotificationPreferences\(ctx \*gin.Context\)](<#UpdateUserNotificationPreferences>)
 - [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
@@ -1743,6 +1842,15 @@ func CreateProduct(ctx *gin.Context)
 
 CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
 
+<a name="CreateStorageLocation"></a>
+## func CreateStorageLocation
+
+```go
+func CreateStorageLocation(ctx *gin.Context)
+```
+
+CreateStorageLocation adds a new storage location to the calling user's household. @Summary Create a storage location @Description Creates a named storage location for the household. @Tags household @Accept json @Produce json @Param body body storageLocationRequest true "Location data" @Success 201 \{object\} database.StorageLocation @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations \[post\]
+
 <a name="CreateUserToken"></a>
 ## func CreateUserToken
 
@@ -1787,6 +1895,15 @@ func DeleteProduct(ctx *gin.Context)
 ```
 
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param archiveOnly query bool false "Archive only" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
+
+<a name="DeleteStorageLocation"></a>
+## func DeleteStorageLocation
+
+```go
+func DeleteStorageLocation(ctx *gin.Context)
+```
+
+DeleteStorageLocation removes a storage location. Assigned products become unassigned. @Summary Delete a storage location @Description Deletes a storage location and unassigns all products from it. @Tags household @Produce json @Param id path int true "Location ID" @Success 200 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations/:id \[delete\]
 
 <a name="DeleteUserToken"></a>
 ## func DeleteUserToken
@@ -1979,6 +2096,24 @@ func GetProductsByBarcode(ctx *gin.Context)
 
 GetProductsByBarcode returns a list of products of a user matching a barcode @Summary Returns a list of products @Description Returns a list of products of user matching the given barcode @Tags product @Produce json @Param barcode path int true "Barcode" @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/productsByBarcode \[get\]
 
+<a name="GetSavingsStats"></a>
+## func GetSavingsStats
+
+```go
+func GetSavingsStats(ctx *gin.Context)
+```
+
+GetSavingsStats returns money and CO2 savings for the authenticated user's household @Summary Get savings statistics @Description Returns EUR saved/wasted and kg CO2 avoided/emitted for the current month and lifetime. @Description CO2 coefficients sourced from Agribalyse LCA database via Open Food Facts ecoscore\_data. @Tags savings @Produce json @Success 200 \{object\} apiModel.SavingsStatsResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/savings/stats \[get\]
+
+<a name="GetStreak"></a>
+## func GetStreak
+
+```go
+func GetStreak(ctx *gin.Context)
+```
+
+GetStreak returns the current waste\-free streak for the user's household @Summary Get waste\-free streak @Description Returns the current and longest waste\-free streak for the caller's household @Tags streak @Produce json @Success 200 \{object\} apiModel.StreakResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/streak \[get\]
+
 <a name="GetUserNotificationPreferences"></a>
 ## func GetUserNotificationPreferences
 
@@ -2014,6 +2149,15 @@ func LeaveHousehold(ctx *gin.Context)
 ```
 
 LeaveHousehold removes the calling user from their current household and assigns them a new personal one. @Summary Leave current household @Description Creates a new personal household for the user. Products are moved if they were the sole member. @Tags household @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/household/leave \[post\]
+
+<a name="ListStorageLocations"></a>
+## func ListStorageLocations
+
+```go
+func ListStorageLocations(ctx *gin.Context)
+```
+
+ListStorageLocations returns all storage locations for the calling user's household. @Summary List storage locations @Description Returns all storage locations belonging to the user's household, ordered by sort\_order. @Tags household @Produce json @Success 200 \{array\} database.StorageLocation @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations \[get\]
 
 <a name="ListUserTokens"></a>
 ## func ListUserTokens
@@ -2122,6 +2266,15 @@ func UpdateProductAmount(ctx *gin.Context)
 ```
 
 UpdateProductAmount updates the amount of a product by a given delta. If the resulting amount is \<= 0, the product is hard\-deleted. @Summary Update product amount @Description Applies a delta to a product's amount. Hard\-deletes the product when amount reaches 0. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param delta body api.ProductAmountDTO true "Amount delta" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/amount \[patch\]
+
+<a name="UpdateStorageLocation"></a>
+## func UpdateStorageLocation
+
+```go
+func UpdateStorageLocation(ctx *gin.Context)
+```
+
+UpdateStorageLocation renames or re\-icons a storage location. @Summary Update a storage location @Description Updates the name, icon, and sort order of an existing storage location. @Tags household @Accept json @Produce json @Param id path int true "Location ID" @Param body body storageLocationRequest true "Location data" @Success 200 \{object\} database.StorageLocation @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations/:id \[patch\]
 
 <a name="UpdateUser"></a>
 ## func UpdateUser
@@ -2345,18 +2498,39 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#ProductRepository.GetUserHouseholdByID>)
   - [func \(r \*ProductRepository\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsBulk>)
   - [func \(r \*ProductRepository\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsBulkByBarcode>)
+  - [func \(r \*ProductRepository\) GetUserProductsByLocation\(userID, locationID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsByLocation>)
   - [func \(r \*ProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#ProductRepository.GetUsersByHouseholdID>)
   - [func \(r \*ProductRepository\) GetWasteThisMonth\(userID uint\) \(int, error\)](<#ProductRepository.GetWasteThisMonth>)
   - [func \(r \*ProductRepository\) RestoreProduct\(productID int, userID uint\) error](<#ProductRepository.RestoreProduct>)
   - [func \(r \*ProductRepository\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.SearchProducts>)
   - [func \(r \*ProductRepository\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#ProductRepository.SetProductExpireAt>)
   - [func \(r \*ProductRepository\) SetProductNotifiedAt\(productID uint\) error](<#ProductRepository.SetProductNotifiedAt>)
+  - [func \(r \*ProductRepository\) UpdateOpenFoodFactsCacheImageURL\(barcode, imageURL string\) error](<#ProductRepository.UpdateOpenFoodFactsCacheImageURL>)
   - [func \(r \*ProductRepository\) UpdateProduct\(productID int, userID uint, product \*database.ProductDTOPatch\) error](<#ProductRepository.UpdateProduct>)
   - [func \(r \*ProductRepository\) UpdateProductAmount\(productID int, userID uint, delta int\) \(bool, error\)](<#ProductRepository.UpdateProductAmount>)
   - [func \(r \*ProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#ProductRepository.UserHasProductAccess>)
   - [func \(r \*ProductRepository\) WasteProduct\(productID int, userID uint\) error](<#ProductRepository.WasteProduct>)
+- [type SavingsRepository](<#SavingsRepository>)
+  - [func NewSavingsRepository\(db \*gorm.DB\) \*SavingsRepository](<#NewSavingsRepository>)
+  - [func \(r \*SavingsRepository\) GetSavingsStats\(householdID uint\) \(apiModel.SavingsStatsResponse, error\)](<#SavingsRepository.GetSavingsStats>)
+  - [func \(r \*SavingsRepository\) MatchCategory\(categories string\) \(\*dbModel.ProductCategoryPrice, error\)](<#SavingsRepository.MatchCategory>)
+  - [func \(r \*SavingsRepository\) RecordSavingsEvent\(householdID uint, product \*dbModel.Product, eventType string\) error](<#SavingsRepository.RecordSavingsEvent>)
 - [type SearchParameterEnum](<#SearchParameterEnum>)
   - [func SearchParameterEnumFromString\(str string\) SearchParameterEnum](<#SearchParameterEnumFromString>)
+- [type StorageLocationRepository](<#StorageLocationRepository>)
+  - [func NewStorageLocationRepository\(db \*gorm.DB\) \*StorageLocationRepository](<#NewStorageLocationRepository>)
+  - [func \(r \*StorageLocationRepository\) Create\(userID uint, name, icon string, sortOrder int\) \(database.StorageLocation, error\)](<#StorageLocationRepository.Create>)
+  - [func \(r \*StorageLocationRepository\) Delete\(locationID, userID uint\) error](<#StorageLocationRepository.Delete>)
+  - [func \(r \*StorageLocationRepository\) GetByHousehold\(userID uint\) \(\[\]database.StorageLocation, error\)](<#StorageLocationRepository.GetByHousehold>)
+  - [func \(r \*StorageLocationRepository\) GetByID\(locationID, userID uint\) \(database.StorageLocation, error\)](<#StorageLocationRepository.GetByID>)
+  - [func \(r \*StorageLocationRepository\) Update\(locationID, userID uint, name, icon string, sortOrder int\) \(database.StorageLocation, error\)](<#StorageLocationRepository.Update>)
+- [type StreakRepository](<#StreakRepository>)
+  - [func NewStreakRepository\(db \*gorm.DB\) \*StreakRepository](<#NewStreakRepository>)
+  - [func \(r \*StreakRepository\) GetAllStreaks\(\) \(\[\]dbModel.WasteStreak, error\)](<#StreakRepository.GetAllStreaks>)
+  - [func \(r \*StreakRepository\) GetOrCreateStreakForHousehold\(householdID uint\) \(\*dbModel.WasteStreak, error\)](<#StreakRepository.GetOrCreateStreakForHousehold>)
+  - [func \(r \*StreakRepository\) RecordWasteEvent\(householdID uint\) error](<#StreakRepository.RecordWasteEvent>)
+  - [func \(r \*StreakRepository\) UpdateStreak\(streak \*dbModel.WasteStreak\) error](<#StreakRepository.UpdateStreak>)
+- [type StreakRepositoryInterface](<#StreakRepositoryInterface>)
 - [type SupportedEngines](<#SupportedEngines>)
   - [func SupportedEnginesFromString\(str string\) SupportedEngines](<#SupportedEnginesFromString>)
 - [type UserRepository](<#UserRepository>)
@@ -3400,6 +3574,15 @@ func (r *ProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode in
 
 
 
+<a name="ProductRepository.GetUserProductsByLocation"></a>
+### func \(\*ProductRepository\) GetUserProductsByLocation
+
+```go
+func (r *ProductRepository) GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
+```
+
+
+
 <a name="ProductRepository.GetUsersByHouseholdID"></a>
 ### func \(\*ProductRepository\) GetUsersByHouseholdID
 
@@ -3454,6 +3637,15 @@ func (r *ProductRepository) SetProductNotifiedAt(productID uint) error
 
 
 
+<a name="ProductRepository.UpdateOpenFoodFactsCacheImageURL"></a>
+### func \(\*ProductRepository\) UpdateOpenFoodFactsCacheImageURL
+
+```go
+func (r *ProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error
+```
+
+
+
 <a name="ProductRepository.UpdateProduct"></a>
 ### func \(\*ProductRepository\) UpdateProduct
 
@@ -3490,6 +3682,53 @@ func (r *ProductRepository) WasteProduct(productID int, userID uint) error
 
 
 
+<a name="SavingsRepository"></a>
+## type SavingsRepository
+
+SavingsRepository handles savings event recording and statistics queries.
+
+```go
+type SavingsRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewSavingsRepository"></a>
+### func NewSavingsRepository
+
+```go
+func NewSavingsRepository(db *gorm.DB) *SavingsRepository
+```
+
+NewSavingsRepository creates a new SavingsRepository.
+
+<a name="SavingsRepository.GetSavingsStats"></a>
+### func \(\*SavingsRepository\) GetSavingsStats
+
+```go
+func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error)
+```
+
+GetSavingsStats returns savings and waste totals for the current calendar month and all time.
+
+<a name="SavingsRepository.MatchCategory"></a>
+### func \(\*SavingsRepository\) MatchCategory
+
+```go
+func (r *SavingsRepository) MatchCategory(categories string) (*dbModel.ProductCategoryPrice, error)
+```
+
+MatchCategory resolves a Product.Categories string to a ProductCategoryPrice row. Returns nil if no match is found; caller should use zero\-value pricing.
+
+<a name="SavingsRepository.RecordSavingsEvent"></a>
+### func \(\*SavingsRepository\) RecordSavingsEvent
+
+```go
+func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string) error
+```
+
+RecordSavingsEvent writes a SavingsRecord for a consume or waste action. eventType must be "consumed" or "wasted". CO2 priority: per\-product Agribalyse rate \(product.CO2KgPerKg\) \> seeded category fallback. Price priority: product.PriceOverride \> seeded category average.
+
 <a name="SearchParameterEnum"></a>
 ## type SearchParameterEnum
 
@@ -3517,6 +3756,141 @@ func SearchParameterEnumFromString(str string) SearchParameterEnum
 ```
 
 
+
+<a name="StorageLocationRepository"></a>
+## type StorageLocationRepository
+
+
+
+```go
+type StorageLocationRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewStorageLocationRepository"></a>
+### func NewStorageLocationRepository
+
+```go
+func NewStorageLocationRepository(db *gorm.DB) *StorageLocationRepository
+```
+
+
+
+<a name="StorageLocationRepository.Create"></a>
+### func \(\*StorageLocationRepository\) Create
+
+```go
+func (r *StorageLocationRepository) Create(userID uint, name, icon string, sortOrder int) (database.StorageLocation, error)
+```
+
+
+
+<a name="StorageLocationRepository.Delete"></a>
+### func \(\*StorageLocationRepository\) Delete
+
+```go
+func (r *StorageLocationRepository) Delete(locationID, userID uint) error
+```
+
+
+
+<a name="StorageLocationRepository.GetByHousehold"></a>
+### func \(\*StorageLocationRepository\) GetByHousehold
+
+```go
+func (r *StorageLocationRepository) GetByHousehold(userID uint) ([]database.StorageLocation, error)
+```
+
+
+
+<a name="StorageLocationRepository.GetByID"></a>
+### func \(\*StorageLocationRepository\) GetByID
+
+```go
+func (r *StorageLocationRepository) GetByID(locationID, userID uint) (database.StorageLocation, error)
+```
+
+
+
+<a name="StorageLocationRepository.Update"></a>
+### func \(\*StorageLocationRepository\) Update
+
+```go
+func (r *StorageLocationRepository) Update(locationID, userID uint, name, icon string, sortOrder int) (database.StorageLocation, error)
+```
+
+
+
+<a name="StreakRepository"></a>
+## type StreakRepository
+
+StreakRepository implements StreakRepositoryInterface.
+
+```go
+type StreakRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewStreakRepository"></a>
+### func NewStreakRepository
+
+```go
+func NewStreakRepository(db *gorm.DB) *StreakRepository
+```
+
+
+
+<a name="StreakRepository.GetAllStreaks"></a>
+### func \(\*StreakRepository\) GetAllStreaks
+
+```go
+func (r *StreakRepository) GetAllStreaks() ([]dbModel.WasteStreak, error)
+```
+
+
+
+<a name="StreakRepository.GetOrCreateStreakForHousehold"></a>
+### func \(\*StreakRepository\) GetOrCreateStreakForHousehold
+
+```go
+func (r *StreakRepository) GetOrCreateStreakForHousehold(householdID uint) (*dbModel.WasteStreak, error)
+```
+
+
+
+<a name="StreakRepository.RecordWasteEvent"></a>
+### func \(\*StreakRepository\) RecordWasteEvent
+
+```go
+func (r *StreakRepository) RecordWasteEvent(householdID uint) error
+```
+
+
+
+<a name="StreakRepository.UpdateStreak"></a>
+### func \(\*StreakRepository\) UpdateStreak
+
+```go
+func (r *StreakRepository) UpdateStreak(streak *dbModel.WasteStreak) error
+```
+
+
+
+<a name="StreakRepositoryInterface"></a>
+## type StreakRepositoryInterface
+
+StreakRepositoryInterface defines operations for household waste streaks.
+
+```go
+type StreakRepositoryInterface interface {
+    GetOrCreateStreakForHousehold(householdID uint) (*dbModel.WasteStreak, error)
+    RecordWasteEvent(householdID uint) error
+    UpdateStreak(streak *dbModel.WasteStreak) error
+    GetAllStreaks() ([]dbModel.WasteStreak, error)
+}
+```
 
 <a name="SupportedEngines"></a>
 ## type SupportedEngines
@@ -3941,8 +4315,10 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ProductAmountDTO](<#ProductAmountDTO>)
 - [type ProductStatsResponse](<#ProductStatsResponse>)
 - [type ProductSummaryResponse](<#ProductSummaryResponse>)
+- [type SavingsStatsResponse](<#SavingsStatsResponse>)
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
+- [type StreakResponse](<#StreakResponse>)
 - [type TokenResponse](<#TokenResponse>)
 - [type UpdateWebhookRequest](<#UpdateWebhookRequest>)
 - [type WebhookListResponse](<#WebhookListResponse>)
@@ -4141,6 +4517,25 @@ type ProductSummaryResponse struct {
 }
 ```
 
+<a name="SavingsStatsResponse"></a>
+## type SavingsStatsResponse
+
+SavingsStatsResponse is the response body for GET /api/v1/savings/stats.
+
+```go
+type SavingsStatsResponse struct {
+    SavedEURThisMonth    float64 `json:"savedEurThisMonth"`
+    SavedCO2KgThisMonth  float64 `json:"savedCo2KgThisMonth"`
+    WastedEURThisMonth   float64 `json:"wastedEurThisMonth"`
+    WastedCO2KgThisMonth float64 `json:"wastedCo2KgThisMonth"`
+    SavedEURLifetime     float64 `json:"savedEurLifetime"`
+    SavedCO2KgLifetime   float64 `json:"savedCo2KgLifetime"`
+    WastedEURLifetime    float64 `json:"wastedEurLifetime"`
+    WastedCO2KgLifetime  float64 `json:"wastedCo2KgLifetime"`
+    CO2Source            string  `json:"co2Source"`
+}
+```
+
 <a name="StatsExpiringProduct"></a>
 ## type StatsExpiringProduct
 
@@ -4162,6 +4557,18 @@ StatsMonthlyCount represents the number of products for a given month
 type StatsMonthlyCount struct {
     Month string `json:"month"` // format: "2006-01"
     Count int    `json:"count"`
+}
+```
+
+<a name="StreakResponse"></a>
+## type StreakResponse
+
+StreakResponse is the response body for GET /api/v1/streak
+
+```go
+type StreakResponse struct {
+    CurrentStreak int `json:"currentStreak"`
+    LongestStreak int `json:"longestStreak"`
 }
 ```
 
@@ -4313,7 +4720,7 @@ type NotificationPreferences struct {
     TelegramEnabled           bool   `json:"telegramEnabled" gorm:"default:false"`
     TelegramChatID            string `json:"-"`
     TelegramLinkToken         string `json:"-"`
-    TelegramBotToken          string `json:"-"`
+    TelegramBotToken          string `json:"telegramBotToken"`
     TelegramBotUsername       string `json:"-"`
     TelegramLinked            bool   `json:"telegramLinked" gorm:"-"`
     TelegramBotConfigured     bool   `json:"telegramBotConfigured" gorm:"-"`
@@ -4529,6 +4936,7 @@ configuration defines structs and methods for proviants configuration and specif
 - [type SMTPConfiguration](<#SMTPConfiguration>)
 - [type SecurityHeadersConfiguration](<#SecurityHeadersConfiguration>)
 - [type ServerConfiguration](<#ServerConfiguration>)
+- [type TelegramConfiguration](<#TelegramConfiguration>)
 
 
 <a name="AuthenticationConfiguration"></a>
@@ -4639,6 +5047,7 @@ type NotificationConfiguration struct {
     SMTP               SMTPConfiguration
     Ntfy               NtfyConfiguration
     MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
+    Telegram           TelegramConfiguration           `mapstructure:"telegram"`
 }
 ```
 
@@ -4662,9 +5071,11 @@ OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts A
 
 ```go
 type OpenFoodFactsConfiguration struct {
-    URL          string
-    Timeout      int
-    CacheEnabled bool
+    URL               string
+    Timeout           int
+    CacheEnabled      bool
+    ImageCacheEnabled bool
+    ImageCachePath    string
 }
 ```
 
@@ -4753,6 +5164,17 @@ type ServerConfiguration struct {
 }
 ```
 
+<a name="TelegramConfiguration"></a>
+## type TelegramConfiguration
+
+TelegramConfiguration holds per\-instance Telegram settings \(no global bot token\).
+
+```go
+type TelegramConfiguration struct {
+    Timeout int // HTTP client timeout in seconds (default: 15)
+}
+```
+
 # database
 
 ```go
@@ -4774,10 +5196,14 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type OnboardingState](<#OnboardingState>)
 - [type OpenFoodFactsCache](<#OpenFoodFactsCache>)
 - [type Product](<#Product>)
+- [type ProductCategoryPrice](<#ProductCategoryPrice>)
 - [type ProductDTOBarcode](<#ProductDTOBarcode>)
 - [type ProductDTOExpire](<#ProductDTOExpire>)
 - [type ProductDTOPatch](<#ProductDTOPatch>)
+- [type SavingsRecord](<#SavingsRecord>)
+- [type StorageLocation](<#StorageLocation>)
 - [type Timestamp](<#Timestamp>)
+- [type WasteStreak](<#WasteStreak>)
 - [type Webhook](<#Webhook>)
 - [type WebhookDeliveryLog](<#WebhookDeliveryLog>)
 
@@ -4949,11 +5375,12 @@ OpenFoodFactsCache stores cached responses from the OpenFoodFacts API keyed by b
 ```go
 type OpenFoodFactsCache struct {
     gorm.Model
-    Barcode     string `gorm:"uniqueIndex;not null" json:"barcode"`
-    ProductName string `json:"productName"`
-    Categories  string `json:"categories"`
-    Countries   string `json:"countries"`
-    ImageURL    string `json:"imageUrl"`
+    Barcode     string   `gorm:"uniqueIndex;not null" json:"barcode"`
+    ProductName string   `json:"productName"`
+    Categories  string   `json:"categories"`
+    Countries   string   `json:"countries"`
+    ImageURL    string   `json:"imageUrl"`
+    CO2KgPerKg  *float64 `gorm:"default:null" json:"co2KgPerKg,omitempty"`
 }
 ```
 
@@ -4965,20 +5392,39 @@ Product is the database model of a product
 ```go
 type Product struct {
     gorm.Model
-    Barcode         string         `json:"barcode"`
-    ProductName     string         `json:"productName"`
-    Categories      string         `json:"categories"`
-    Countries       string         `json:"countries"`
-    ImageURL        string         `json:"imageUrl"`
-    ExpireAt        time.Time      `json:"expireAt"`
-    ScannedAt       time.Time      `json:"scannedAt"`
-    NotifiedAt      time.Time      `json:"notifiedAt"`
-    DeletedAt       gorm.DeletedAt `gorm:"index"`
-    HouseholdID     uint           `gorm:"index, not null" json:"-"`
-    Household       Household      `json:"-"`
-    Amount          int            `json:"amount"`
-    Unit            string         `json:"unit"`
-    StorageLocation string         `json:"storageLocation"`
+    Barcode           string           `json:"barcode"`
+    ProductName       string           `json:"productName"`
+    Categories        string           `json:"categories"`
+    Countries         string           `json:"countries"`
+    ImageURL          string           `json:"imageUrl"`
+    ExpireAt          time.Time        `json:"expireAt"`
+    ScannedAt         time.Time        `json:"scannedAt"`
+    NotifiedAt        time.Time        `json:"notifiedAt"`
+    DeletedAt         gorm.DeletedAt   `gorm:"index"`
+    HouseholdID       uint             `gorm:"index, not null" json:"-"`
+    Household         Household        `json:"-"`
+    Amount            int              `json:"amount"`
+    Unit              string           `json:"unit"`
+    StorageLocationID *uint            `gorm:"index"                        json:"storageLocationId"`
+    StorageLocation   *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
+    PriceOverride     *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
+    CO2KgPerKg        *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`
+}
+```
+
+<a name="ProductCategoryPrice"></a>
+## type ProductCategoryPrice
+
+ProductCategoryPrice maps canonical food category keys to average EUR prices and CO2e coefficients \(kg CO2e per kg food\) sourced from Agribalyse LCA database via Open Food Facts. Used as fallback when per\-product Agribalyse data is unavailable.
+
+```go
+type ProductCategoryPrice struct {
+    gorm.Model
+    CategoryKey string  `gorm:"uniqueIndex;not null" json:"categoryKey"`
+    DisplayName string  `gorm:"not null"             json:"displayName"`
+    AvgPriceEUR float64 `gorm:"not null"             json:"avgPriceEur"`
+    CO2KgPerKg  float64 `gorm:"not null"             json:"co2KgPerKg"`
+    WeightGrams float64 `gorm:"not null;default:500" json:"weightGrams"`
 }
 ```
 
@@ -5013,15 +5459,49 @@ ProductDTOPatch is a simplified DTO only containing the patchable elements
 
 ```go
 type ProductDTOPatch struct {
-    ID              uint      `json:"ID"`
-    ProductName     string    `json:"productName"`
-    Categories      string    `json:"categories"`
-    Countries       string    `json:"countries"`
-    ImageURL        string    `json:"imageUrl"`
-    ExpireAt        time.Time `json:"expireAt"`
-    Amount          int       `json:"amount"`
-    Unit            string    `json:"unit"`
-    StorageLocation string    `json:"storageLocation"`
+    ID                uint      `json:"ID"`
+    ProductName       string    `json:"productName"`
+    Categories        string    `json:"categories"`
+    Countries         string    `json:"countries"`
+    ImageURL          string    `json:"imageUrl"`
+    ExpireAt          time.Time `json:"expireAt"`
+    Amount            int       `json:"amount"`
+    Unit              string    `json:"unit"`
+    StorageLocationID *uint     `json:"storageLocationId"`
+}
+```
+
+<a name="SavingsRecord"></a>
+## type SavingsRecord
+
+SavingsRecord is written once per consume or waste action. It captures the monetary value and CO2 equivalent at the time of the event so that later changes to ProductCategoryPrice do not retroactively alter history.
+
+```go
+type SavingsRecord struct {
+    gorm.Model
+    HouseholdID uint    `gorm:"index;not null" json:"-"`
+    ProductID   uint    `gorm:"index"          json:"productId"`
+    ProductName string  `gorm:"not null"       json:"productName"`
+    EventType   string  `gorm:"not null;index" json:"eventType"` // "consumed" or "wasted"
+    PriceEUR    float64 `gorm:"not null"       json:"priceEur"`
+    CO2Kg       float64 `gorm:"not null"       json:"co2Kg"`
+    Amount      int     `gorm:"not null;default:1" json:"amount"`
+}
+```
+
+<a name="StorageLocation"></a>
+## type StorageLocation
+
+StorageLocation represents a named location within a household \(e.g. Fridge, Freezer, Pantry\)
+
+```go
+type StorageLocation struct {
+    gorm.Model
+    HouseholdID uint      `gorm:"index;not null" json:"householdId"`
+    Household   Household `json:"-"`
+    Name        string    `gorm:"not null"       json:"name"`
+    Icon        string    `gorm:"default:'📦'"  json:"icon"`
+    SortOrder   int       `gorm:"default:0"      json:"sortOrder"`
 }
 ```
 
@@ -5033,6 +5513,22 @@ Timestamp is the model definition for timestamp
 ```go
 type Timestamp struct {
     Timestamp Date `json:"timestamp" binding:"required"`
+}
+```
+
+<a name="WasteStreak"></a>
+## type WasteStreak
+
+
+
+```go
+type WasteStreak struct {
+    gorm.Model
+    HouseholdID     uint `gorm:"uniqueIndex;not null"`
+    CurrentStreak   int  `gorm:"default:0"`
+    LongestStreak   int  `gorm:"default:0"`
+    LastCheckedDate time.Time
+    LastWastedDate  *time.Time
 }
 ```
 
@@ -5091,7 +5587,7 @@ external provides model definitions from external parties
 var (
     // Query parameters for OpenFoodFacts API
     // This drastically minimizes the response from API calls and should match the properties from external.OpenFoodFactsAPIDataset
-    OpenFoodFactsAPIDatasetDefinition = "product_name,categories,countries,generic_name,image_url"
+    OpenFoodFactsAPIDatasetDefinition = "product_name,categories,countries,generic_name,image_url,ecoscore_data"
 )
 ```
 
@@ -5105,12 +5601,17 @@ type OpenFoodFactsAPIDataset struct {
     gorm.Model
     Barcode string `json:"code"`
     Product struct {
-        ID          string `json:"_id"`
-        ProductName string `json:"product_name"`
-        Categories  string `json:"categories"`
-        Countries   string `json:"countries"`
-        GenericName string `json:"generic_name"`
-        ImageURL    string `json:"image_url"`
+        ID           string `json:"_id"`
+        ProductName  string `json:"product_name"`
+        Categories   string `json:"categories"`
+        Countries    string `json:"countries"`
+        GenericName  string `json:"generic_name"`
+        ImageURL     string `json:"image_url"`
+        EcoscoreData struct {
+            Agribalyse struct {
+                CO2Total float64 `json:"co2_total"`
+            } `json:"agribalyse"`
+        }   `json:"ecoscore_data"`
     }   `json:"product"`
 }
 ```

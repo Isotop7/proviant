@@ -295,11 +295,11 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 
 	// Manage per-user Telegram poller when token changed.
 	if tokenChanged {
-		if nc, ok := getNotificationController(ctx); ok {
+		if notificationController, ok := getNotificationController(ctx); ok {
 			if newToken == "" {
-				nc.StopUserTelegramPoller(userID)
+				notificationController.StopUserTelegramPoller(userID)
 			} else {
-				nc.StartUserTelegramPoller(userID, newToken)
+				notificationController.StartUserTelegramPoller(userID, newToken)
 			}
 		}
 	}
@@ -345,8 +345,8 @@ func GenerateTelegramLinkToken(ctx *gin.Context) {
 	}
 
 	botUsername := ""
-	if nc, ok := getNotificationController(ctx); ok {
-		botUsername = nc.GetUserTelegramBotUsername(userID)
+	if notificationController, ok := getNotificationController(ctx); ok {
+		botUsername = notificationController.GetUserTelegramBotUsername(userID)
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{

@@ -50,7 +50,12 @@ func productToExportRow(p *dbModel.Product) []string {
 		fmt.Sprintf("%d", p.Amount),
 		p.Unit,
 		p.Categories,
-		p.StorageLocation,
+		func() string {
+			if p.StorageLocation != nil {
+				return p.StorageLocation.Name
+			}
+			return ""
+		}(),
 		expireAt,
 		addedAt,
 	}
@@ -226,12 +231,12 @@ func ExportArchiveCSV(ctx *gin.Context) {
 	}
 
 	for i := range products {
-		p := &products[i]
-		row := productToExportRow(p)
-		if !p.DeletedAt.Valid {
+		product := &products[i]
+		row := productToExportRow(product)
+		if !product.DeletedAt.Valid {
 			row = append(row, "")
 		} else {
-			row = append(row, p.DeletedAt.Time.Format("2006-01-02"))
+			row = append(row, product.DeletedAt.Time.Format("2006-01-02"))
 		}
 		if err := writer.Write(row); err != nil {
 			logger.Error().Msgf("CSV write error: %s", err)

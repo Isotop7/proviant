@@ -293,7 +293,9 @@ function handleBtnAddProduct() {
         const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
         const amountEl = document.getElementById('amount');
         const amount = amountEl ? parseInt(amountEl.value, 10) || 1 : 1;
-        proviant.createProduct(barcode, expireAt, amount).then((response) => {
+        const locationEl = document.getElementById('modalStorageLocation');
+        const storageLocationId = locationEl && locationEl.value ? parseInt(locationEl.value, 10) : null;
+        proviant.createProduct(barcode, expireAt, amount, storageLocationId).then((response) => {
             switch (response.code) {
                 case 201:
                     showAlert(true, `Product with barcode '${barcode}' was created successfully`);

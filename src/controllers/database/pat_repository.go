@@ -16,25 +16,25 @@ func NewPATRepository(db *gorm.DB) *PATRepository {
 }
 
 func (r *PATRepository) CreatePAT(userID uint, name, tokenHash string, expiresAt *time.Time, scopes string) (*authentication.PersonalAccessToken, error) {
-	pat := &authentication.PersonalAccessToken{
+	personalAccessToken := &authentication.PersonalAccessToken{
 		UserID:    userID,
 		Name:      name,
 		TokenHash: tokenHash,
 		ExpiresAt: expiresAt,
 		Scopes:    scopes,
 	}
-	if err := r.DB.Create(pat).Error; err != nil {
+	if err := r.DB.Create(personalAccessToken).Error; err != nil {
 		return nil, err
 	}
-	return pat, nil
+	return personalAccessToken, nil
 }
 
 func (r *PATRepository) GetPATByTokenHash(tokenHash string) (*authentication.PersonalAccessToken, error) {
-	var pat authentication.PersonalAccessToken
-	if err := r.DB.Where("token_hash = ?", tokenHash).First(&pat).Error; err != nil {
+	var personalAccessToken authentication.PersonalAccessToken
+	if err := r.DB.Where("token_hash = ?", tokenHash).First(&personalAccessToken).Error; err != nil {
 		return nil, err
 	}
-	return &pat, nil
+	return &personalAccessToken, nil
 }
 
 func (r *PATRepository) GetPATsByUserID(userID uint) ([]authentication.PersonalAccessToken, error) {

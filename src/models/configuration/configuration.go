@@ -109,9 +109,37 @@ type NotificationConfiguration struct {
 
 // OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
 type OpenFoodFactsConfiguration struct {
-	URL          string
-	Timeout      int
-	CacheEnabled bool
+	URL               string
+	Timeout           int
+	CacheEnabled      bool
+	ImageCacheEnabled bool
+	ImageCachePath    string
+}
+
+// OCRConfiguration contains settings for OCR expiry date detection
+type OCRConfiguration struct {
+	Enabled   bool   `json:"enabled"`   // master switch
+	Provider  string `json:"provider"`  // "tesseract" (local), "google", "openai"
+	APIKey    string `json:"apiKey"`    // for cloud providers
+	Endpoint  string `json:"endpoint"`  // custom endpoint (e.g., Tesseract HTTP server)
+	Timeout   int    `json:"timeout"`   // seconds per request
+	Languages string `json:"languages"` // Tesseract language codes, e.g. "deu+eng"
+}
+
+// RecipeAPIConfiguration contains settings for the recipe suggestions feature
+type RecipeAPIConfiguration struct {
+	Provider     string `mapstructure:"provider"` // "themealdb" or "spoonacular"
+	URL          string `mapstructure:"url"`
+	APIKey       string `mapstructure:"api_key"` // optional, for Spoonacular
+	Timeout      int    `mapstructure:"timeout"` // seconds
+	CacheEnabled bool   `mapstructure:"cache_enabled"`
+	CacheTTL     int    `mapstructure:"cache_ttl"` // hours, default 24
+}
+
+// ExpiryConfiguration controls the visual expiry-status thresholds.
+type ExpiryConfiguration struct {
+	CriticalThresholdDays int `mapstructure:"critical_threshold_days"` // days before expiry to mark as critical (default: 3)
+	SoonThresholdDays     int `mapstructure:"soon_threshold_days"`     // days before expiry to mark as expiring soon (default: 7)
 }
 
 // ProviantConfiguration is the configuration wrapper struct
@@ -121,6 +149,9 @@ type ProviantConfiguration struct {
 	Logging       LoggingConfiguration
 	Notification  NotificationConfiguration
 	OpenFoodFacts OpenFoodFactsConfiguration
+	OCR           OCRConfiguration       `mapstructure:"ocr"`
+	RecipeAPI     RecipeAPIConfiguration `mapstructure:"recipe_api"`
+	Expiry        ExpiryConfiguration    `mapstructure:"expiry"`
 	TemplateCache map[string]*template.Template
 }
 
@@ -131,6 +162,9 @@ func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error {
 	}
 	if ec.OpenFoodFacts.Timeout <= 0 {
 		return errors.ErrOpenFoodFactsAPIInvalidTimeout
+	}
+	if ec.OpenFoodFacts.ImageCacheEnabled && ec.OpenFoodFacts.ImageCachePath == "" {
+		return errors.ErrOpenFoodFactsAPIInvalidImageCachePath
 	}
 	return nil
 }
@@ -208,6 +242,23 @@ func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error {
 		if ec.Database.SQLite.Filepath == "" {
 			return errors.ErrDatabaseSQLiteInvalidPath
 		}
+	}
+	return nil
+}
+
+// ValidateRecipeAPIConfiguration validates the recipe API configuration
+func (ec *ProviantConfiguration) ValidateRecipeAPIConfiguration() error {
+	if ec.RecipeAPI.Provider == "" {
+		return errors.ErrRecipeInvalidProvider
+	}
+	if ec.RecipeAPI.URL == "" {
+		return errors.ErrRecipeAPIEmptyURL
+	}
+	if ec.RecipeAPI.Timeout <= 0 {
+		return errors.ErrRecipeAPIInvalidTimeout
+	}
+	if ec.RecipeAPI.CacheTTL <= 0 {
+		ec.RecipeAPI.CacheTTL = 24 // default to 24 hours
 	}
 	return nil
 }

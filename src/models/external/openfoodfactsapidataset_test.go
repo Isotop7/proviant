@@ -10,12 +10,17 @@ func TestOpenFoodFactsAPIDatasetStruct(t *testing.T) {
 		dataset := OpenFoodFactsAPIDataset{
 			Barcode: "1234567890123",
 			Product: struct {
-				ID          string `json:"_id"`
-				ProductName string `json:"product_name"`
-				Categories  string `json:"categories"`
-				Countries   string `json:"countries"`
-				GenericName string `json:"generic_name"`
-				ImageURL    string `json:"image_url"`
+				ID           string `json:"_id"`
+				ProductName  string `json:"product_name"`
+				Categories   string `json:"categories"`
+				Countries    string `json:"countries"`
+				GenericName  string `json:"generic_name"`
+				ImageURL     string `json:"image_url"`
+				EcoscoreData struct {
+					Agribalyse struct {
+						CO2Total float64 `json:"co2_total"`
+					} `json:"agribalyse"`
+				} `json:"ecoscore_data"`
 			}{
 				ID:          "product123",
 				ProductName: "Test Product",
@@ -97,12 +102,17 @@ func TestOpenFoodFactsAPIDatasetWithPartialData(t *testing.T) {
 		dataset := OpenFoodFactsAPIDataset{
 			Barcode: "1234567890123",
 			Product: struct {
-				ID          string `json:"_id"`
-				ProductName string `json:"product_name"`
-				Categories  string `json:"categories"`
-				Countries   string `json:"countries"`
-				GenericName string `json:"generic_name"`
-				ImageURL    string `json:"image_url"`
+				ID           string `json:"_id"`
+				ProductName  string `json:"product_name"`
+				Categories   string `json:"categories"`
+				Countries    string `json:"countries"`
+				GenericName  string `json:"generic_name"`
+				ImageURL     string `json:"image_url"`
+				EcoscoreData struct {
+					Agribalyse struct {
+						CO2Total float64 `json:"co2_total"`
+					} `json:"agribalyse"`
+				} `json:"ecoscore_data"`
 			}{
 				ProductName: "Only Name",
 			},

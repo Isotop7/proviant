@@ -53,3 +53,22 @@ openfoodfacts:
   url: https://world.openfoodfacts.org/api/v2/product
   timeout: 5
   cacheEnabled: true
+  imageCacheEnabled: false
+  imageCachePath: "data/images"
+
+ocr:
+  enabled: true
+  provider: "tesseract"
+  languages: "deu+eng"
+  timeout: 10
+
+expiry:
+  critical_threshold_days: 3
+  soon_threshold_days: 7
+
+recipe_api:
+  provider: "themealdb"
+  url: "https://www.themealdb.com/api/json/v1/1"
+  timeout: 10
+  cache_enabled: true
+  cache_ttl: 24

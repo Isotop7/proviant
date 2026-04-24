@@ -108,12 +108,37 @@ func (e *EmailNotificationProvider) SendMonthlyWasteReport(recipient string, sta
 		stats.HouseholdName, stats.MonthLabel))
 	mail.SetBody("text/html", buf.String())
 
-	d := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
+	dialer := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
 	if e.Configuration.User != "" && e.Configuration.Password != "" {
-		d.Username = e.Configuration.User
-		d.Password = e.Configuration.Password
+		dialer.Username = e.Configuration.User
+		dialer.Password = e.Configuration.Password
 	}
-	return d.DialAndSend(mail)
+	return dialer.DialAndSend(mail)
+}
+
+// SendStreakMilestone sends a streak milestone notification email.
+func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient string) error {
+	templ, err := template.ParseFS(templates.TemplateFiles, "notification/streak_milestone.html")
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	if err := templ.Execute(&buf, struct{ Milestone int }{Milestone: milestone}); err != nil {
+		return err
+	}
+
+	mail := gomail.NewMessage()
+	mail.SetHeader("From", e.Configuration.FromAddress)
+	mail.SetHeader("To", recipient)
+	mail.SetHeader("Subject", fmt.Sprintf("proviant - %d-day waste-free streak", milestone))
+	mail.SetBody("text/html", buf.String())
+
+	dialer := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
+	if e.Configuration.User != "" && e.Configuration.Password != "" {
+		dialer.Username = e.Configuration.User
+		dialer.Password = e.Configuration.Password
+	}
+	return dialer.DialAndSend(mail)
 }
 
 // SendEmailVerificationEmail sends an email verification email to the recipient

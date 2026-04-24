@@ -7,6 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"codeberg.org/isotop7/proviant/models/configuration"
@@ -81,15 +85,80 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 	case success := <-queryChannel:
 		if success {
 			// Request was successful, returning subset of populated dataset
+			var co2 *float64
+			if dataset.Product.EcoscoreData.Agribalyse.CO2Total > 0 {
+				v := dataset.Product.EcoscoreData.Agribalyse.CO2Total
+				co2 = &v
+			}
 			return database.Product{
 				Barcode:     dataset.Barcode,
 				ProductName: dataset.Product.ProductName,
 				Categories:  dataset.Product.Categories,
 				Countries:   dataset.Product.Countries,
 				ImageURL:    dataset.Product.ImageURL,
+				CO2KgPerKg:  co2,
 			}, nil
 		}
 	}
 
 	return database.Product{}, nil
+}
+
+// DownloadImage fetches an image from imageURL and saves it to {cachePath}/{barcode}.jpg.
+// Returns the local serve path /product-images/{barcode}.jpg on success.
+func (offacntrl OpenFoodFactsAPIController) DownloadImage(imageURL, barcode string) (string, error) {
+	if err := os.MkdirAll(offacntrl.Configuration.ImageCachePath, 0755); err != nil {
+		return "", fmt.Errorf("creating image cache dir: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(offacntrl.Configuration.Timeout))
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating image request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("fetching image: %w", err)
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			offacntrl.Logger.Error().Msgf("Error closing image response body: %s", err)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status %d fetching image", resp.StatusCode)
+	}
+
+	// Sanitize barcode to prevent path traversal — allow only alphanumeric and hyphen/underscore.
+	// Barcodes are typically numeric EAN-13; this prevents "..", "/" etc.
+	safeBarcode := regexp.MustCompile(`[^a-zA-Z0-9_-]`).ReplaceAllString(barcode, "")
+	if safeBarcode != barcode {
+		return "", fmt.Errorf("invalid barcode characters")
+	}
+
+	cleanCachePath := filepath.Clean(offacntrl.Configuration.ImageCachePath)
+	destPath := filepath.Join(cleanCachePath, safeBarcode+".jpg")
+	// Ensure the final path is still within the cache directory (defense in depth)
+	if !strings.HasPrefix(filepath.Clean(destPath), cleanCachePath) {
+		return "", fmt.Errorf("invalid image path")
+	}
+	f, err := os.Create(destPath) // #nosec G304 — barcode validated via regex and path prefix check
+	if err != nil {
+		return "", fmt.Errorf("creating image file: %w", err)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			offacntrl.Logger.Error().Msgf("Error closing image file: %s", err)
+		}
+	}()
+
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		return "", fmt.Errorf("writing image file: %w", err)
+	}
+
+	return "/product-images/" + barcode + ".jpg", nil
 }

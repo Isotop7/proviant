@@ -1,20 +1,14 @@
 {{ define "emptyArchive" }}
 
-<div class="container row text-center">
-    <p class="hero-icon">
-        <i class="bi bi-archive my-5 text-primary"></i>
-    </p>
-    <p class="fs-2 my-2">
-        Your archive is empty!
-    </p>
-    <p class="my-4">
-        There are no products in your archive yet.</br>
-        You can archive products by clicking the "Archive" button on the product details page instead of deleting them.
-    </p>
-    <div class="my-4">
-        <a class="btn btn-outline-primary" href="/web/products">
-            <i class="bi bi-arrow-return-left me-2"></i>
-            Go back to products
+<div class="d-flex justify-content-center py-5">
+    <div class="empty">
+        <div class="empty-icon empty-icon-accent">
+            <i class="bi bi-archive" aria-hidden="true"></i>
+        </div>
+        <div class="empty-title">Archive is empty</div>
+        <div class="empty-desc">Products you archive instead of delete will appear here.</div>
+        <a class="btn btn-proviant-secondary btn-sm" href="/web/products">
+            <i class="bi bi-arrow-return-left" aria-hidden="true"></i> Back to products
         </a>
     </div>
 </div>

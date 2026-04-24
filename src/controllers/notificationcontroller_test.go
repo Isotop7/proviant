@@ -138,13 +138,13 @@ func TestNotificationControllerInitialization(t *testing.T) {
 
 	mockRepo := &MockNotificationRepository{}
 
-	nc := &NotificationController{
+	notificationController := &NotificationController{
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{},
 		NotificationRepo: mockRepo,
 	}
 
-	if nc.NotificationRepo == nil {
+	if notificationController.NotificationRepo == nil {
 		t.Error("Expected notification repository to be set, got nil")
 	}
 }
@@ -154,17 +154,17 @@ func TestNotificationControllerWithMockDB(t *testing.T) {
 
 	mockRepo := &MockNotificationRepository{}
 
-	nc := &NotificationController{
+	notificationController := &NotificationController{
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{},
 		NotificationRepo: mockRepo,
 	}
 
-	if nc.NotificationRepo == nil {
+	if notificationController.NotificationRepo == nil {
 		t.Error("Expected notification repository to be set, got nil")
 	}
 
-	var _ = nc.NotificationRepo
+	var _ = notificationController.NotificationRepo
 }
 
 func TestProductExpirationDetection(t *testing.T) {

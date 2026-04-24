@@ -680,6 +680,177 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/household/storage-locations": {
+            "get": {
+                "description": "Returns all storage locations belonging to the user's household, ordered by sort_order.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "List storage locations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/database.StorageLocation"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a named storage location for the household.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Create a storage location",
+                "parameters": [
+                    {
+                        "description": "Location data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.storageLocationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/database.StorageLocation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/storage-locations/:id": {
+            "delete": {
+                "description": "Deletes a storage location and unassigns all products from it.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Delete a storage location",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Location ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Updates the name, icon, and sort order of an existing storage location.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Update a storage location",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Location ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Location data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.storageLocationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.StorageLocation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/household/users": {
             "get": {
                 "description": "Returns all users that belong to the household the caller is admin of",
@@ -2390,6 +2561,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/savings/stats": {
+            "get": {
+                "description": "Returns EUR saved/wasted and kg CO2 avoided/emitted for the current month and lifetime.\nCO2 coefficients sourced from Agribalyse LCA database via Open Food Facts ecoscore_data.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "savings"
+                ],
+                "summary": "Get savings statistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.SavingsStatsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/streak": {
+            "get": {
+                "description": "Returns the current and longest waste-free streak for the caller's household",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "streak"
+                ],
+                "summary": "Get waste-free streak",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.StreakResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/user": {
             "patch": {
                 "description": "Updates display name and email of the authenticated user",
@@ -3312,26 +3535,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/web/products/create": {
-            "get": {
-                "description": "Renders the page for creating a new product",
-                "produces": [
-                    "text/html"
-                ],
-                "tags": [
-                    "web"
-                ],
-                "summary": "Create product page",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/web/products/{id}/edit": {
             "get": {
                 "description": "Renders the page for editing a product",
@@ -3720,6 +3923,38 @@ const docTemplate = `{
                 }
             }
         },
+        "api.SavingsStatsResponse": {
+            "type": "object",
+            "properties": {
+                "co2Source": {
+                    "type": "string"
+                },
+                "savedCo2KgLifetime": {
+                    "type": "number"
+                },
+                "savedCo2KgThisMonth": {
+                    "type": "number"
+                },
+                "savedEurLifetime": {
+                    "type": "number"
+                },
+                "savedEurThisMonth": {
+                    "type": "number"
+                },
+                "wastedCo2KgLifetime": {
+                    "type": "number"
+                },
+                "wastedCo2KgThisMonth": {
+                    "type": "number"
+                },
+                "wastedEurLifetime": {
+                    "type": "number"
+                },
+                "wastedEurThisMonth": {
+                    "type": "number"
+                }
+            }
+        },
         "api.StatsExpiringProduct": {
             "type": "object",
             "properties": {
@@ -3741,6 +3976,17 @@ const docTemplate = `{
                 "month": {
                     "description": "format: \"2006-01\"",
                     "type": "string"
+                }
+            }
+        },
+        "api.StreakResponse": {
+            "type": "object",
+            "properties": {
+                "currentStreak": {
+                    "type": "integer"
+                },
+                "longestStreak": {
+                    "type": "integer"
                 }
             }
         },
@@ -3855,6 +4101,9 @@ const docTemplate = `{
                 },
                 "telegramBotConfigured": {
                     "type": "boolean"
+                },
+                "telegramBotToken": {
+                    "type": "string"
                 },
                 "telegramEnabled": {
                     "type": "boolean"
@@ -4023,6 +4272,9 @@ const docTemplate = `{
                 "categories": {
                     "type": "string"
                 },
+                "co2KgPerKg": {
+                    "type": "number"
+                },
                 "countries": {
                     "type": "string"
                 },
@@ -4058,6 +4310,9 @@ const docTemplate = `{
                 "categories": {
                     "type": "string"
                 },
+                "co2KgPerKg": {
+                    "type": "number"
+                },
                 "countries": {
                     "type": "string"
                 },
@@ -4079,6 +4334,9 @@ const docTemplate = `{
                 "notifiedAt": {
                     "type": "string"
                 },
+                "priceOverride": {
+                    "type": "number"
+                },
                 "productName": {
                     "type": "string"
                 },
@@ -4086,7 +4344,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "storageLocation": {
-                    "type": "string"
+                    "$ref": "#/definitions/database.StorageLocation"
+                },
+                "storageLocationId": {
+                    "type": "integer"
                 },
                 "unit": {
                     "type": "string"
@@ -4115,6 +4376,35 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                }
+            }
+        },
+        "database.StorageLocation": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "householdId": {
+                    "type": "integer"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sortOrder": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
                 }
             }
         },
@@ -4230,6 +4520,23 @@ const docTemplate = `{
             "properties": {
                 "email": {
                     "type": "string"
+                }
+            }
+        },
+        "v1.storageLocationRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "icon": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sortOrder": {
+                    "type": "integer"
                 }
             }
         },

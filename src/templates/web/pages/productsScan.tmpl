@@ -1,0 +1,169 @@
+{{ define "content" }}
+
+<div class="scan-page-header">
+    <div class="scan-page-title">Add a product</div>
+    <div class="scan-page-sub">Scan any EAN barcode to get started</div>
+</div>
+
+<!-- Viewfinder -->
+<div class="viewfinder-wrap">
+    <div class="viewfinder" id="viewfinder" aria-label="Camera viewfinder">
+        <div class="viewfinder-corner tl" aria-hidden="true"></div>
+        <div class="viewfinder-corner tr" aria-hidden="true"></div>
+        <div class="viewfinder-corner bl" aria-hidden="true"></div>
+        <div class="viewfinder-corner br" aria-hidden="true"></div>
+        <div class="scan-line" id="scanLine" aria-hidden="true"></div>
+        <div id="barcode-reader-wrapper" class="barcode-reader-inset d-none">
+            <div id="barcode-reader"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Scan actions -->
+<div class="scan-actions">
+    <button class="btn btn-proviant-primary w-100 d-flex align-items-center justify-content-center gap-2 py-3" type="button" id="btnScan" data-action="scan">
+        <i class="bi bi-upc-scan barcode-scan-icon" aria-hidden="true"></i>
+        <span>Scan barcode</span>
+    </button>
+
+    <div class="scan-divider">or</div>
+
+    <button class="btn btn-proviant-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2" type="button"
+            data-bs-toggle="modal" data-bs-target="#manualBarcodeModal">
+        <i class="bi bi-keyboard" aria-hidden="true"></i>
+        Enter barcode manually
+    </button>
+</div>
+
+<!-- Product data — revealed by JS after barcode lookup -->
+<div id="productData" class="product-data-panel d-none px-3 py-3">
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="flex-shrink-0">
+                    <img id="productInfoImage" src="" alt=""
+                         class="rounded product-thumb">
+                </div>
+                <div class="flex-grow-1">
+                    <div id="productInfoName" class="fw-semibold"></div>
+                    <div id="productInfoGenericName" class="text-body-secondary small"></div>
+                </div>
+            </div>
+
+            <select class="form-select mb-3 d-none" id="instanceDropdown" aria-label="Select existing instance"></select>
+
+            <form id="formExpireAt" class="needs-validation" novalidate>
+                <label class="form-label fw-medium small">Amount</label>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <button type="button" class="btn btn-proviant-secondary" id="btnAmountDec" aria-label="Decrease amount">−</button>
+                    <span id="amountDisplay" class="fs-5 px-2">1</span>
+                    <button type="button" class="btn btn-proviant-secondary" id="btnAmountInc" aria-label="Increase amount">+</button>
+                </div>
+                <input type="hidden" id="amount" value="1">
+
+                <label for="expireAt" class="form-label fw-medium small">
+                    Expiry date <span class="text-danger" aria-hidden="true">*</span>
+                </label>
+                <input type="date" class="form-control mb-2" id="expireAt"
+                       value="{{ today }}" required aria-required="true">
+                <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please select an expiry date</div>
+            </form>
+
+            <div class="btn-group w-100 mb-3" role="group" aria-label="Quick expiry shortcuts">
+                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd3">+3 days</button>
+                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd7">+7 days</button>
+                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd1m">+1 month</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-grid mb-2">
+        <button id="btnAddProduct" type="submit" class="btn btn-proviant-primary">
+            <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>Save product
+        </button>
+    </div>
+
+    <div class="d-flex gap-2 mb-2" id="foundBarcode">
+        <button id="btnShowProduct" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+            <i class="bi bi-eye me-1" aria-hidden="true"></i>View
+        </button>
+        <button id="btnShowProducts" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+            <i class="bi bi-collection me-1" aria-hidden="true"></i>All instances
+        </button>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button id="btnArchiveProductModal" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+            <i class="bi bi-archive me-1" aria-hidden="true"></i>Archive
+        </button>
+        <button id="btnDeleteProductModal" type="button" class="btn btn-sm btn-proviant-danger flex-fill" disabled>
+            <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+        </button>
+    </div>
+</div>
+
+<!-- Manual barcode entry modal -->
+<div class="modal fade" id="manualBarcodeModal" tabindex="-1"
+     aria-labelledby="manualBarcodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon modal-icon-subtle" aria-hidden="true">
+                    <i class="bi bi-upc"></i>
+                </div>
+                <div class="modal-header-body">
+                    <h5 class="modal-title mb-0" id="manualBarcodeModalLabel">Enter barcode</h5>
+                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formBarcodeInput" class="needs-validation" novalidate>
+                    <label for="barcode" class="form-label fw-medium small">EAN barcode</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-upc" aria-hidden="true"></i></span>
+                        <input type="number" class="form-control font-monospace" id="barcode"
+                               placeholder="13-digit EAN" aria-label="Barcode" data-barcode=""
+                               min="1000000000000" max="9999999999999">
+                        <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Must be a 13-digit number</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer justify-content-end gap-2">
+                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-proviant-primary" id="btnManualLookup" data-bs-dismiss="modal">
+                    Look up
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/assets/js/html5-qrcode.min.js"></script>
+<script>
+// On successful camera scan, activate the scan line animation
+document.addEventListener('DOMContentLoaded', function () {
+    const scanLine = document.getElementById('scanLine');
+    const btnScan  = document.getElementById('btnScan');
+    if (btnScan && scanLine) {
+        btnScan.addEventListener('click', function () {
+            if (this.dataset.action === 'scan') {
+                scanLine.classList.add('active');
+            } else {
+                scanLine.classList.remove('active');
+            }
+        });
+    }
+    // Manual lookup: trigger barcode lookup when user confirms in modal
+    const btnManual = document.getElementById('btnManualLookup');
+    if (btnManual) {
+        btnManual.addEventListener('click', function () {
+            const barcodeInput = document.getElementById('barcode');
+            if (barcodeInput && barcodeInput.value) {
+                barcodeInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+    }
+});
+</script>
+<script src="/assets/js/productsCreate.js"></script>
+{{ end }}

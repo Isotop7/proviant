@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { padding: 24px; background: var(--bg); }
+  .group { margin-bottom: 20px; }
+  .label { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .divider { border: none; border-top: 1px solid var(--border-subtle); margin: 16px 0; }
+  .mono-demo { font-family: var(--font-mono); font-size: 13px; color: var(--fg); background: var(--bg-subtle); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border); }
+  .mono-demo span { color: var(--fg-3); }
+</style>
+</head>
+<body>
+<div class="group">
+  <div class="label">Figtree — Display</div>
+  <div style="font-family: var(--font-ui); font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; color: var(--fg); line-height: 1.1;">3 items expiring<br>this week</div>
+</div>
+<hr class="divider">
+<div class="group">
+  <div class="label">Figtree — UI weights</div>
+  <div style="display: flex; flex-direction: column; gap: 4px;">
+    <div style="font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--fg);">Bold 700 — page titles, metric values</div>
+    <div style="font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--fg);">Semibold 600 — headings, card names</div>
+    <div style="font-family: var(--font-ui); font-size: 14px; font-weight: 500; color: var(--fg);">Medium 500 — labels, buttons, emphasis</div>
+    <div style="font-family: var(--font-ui); font-size: 14px; font-weight: 400; color: var(--fg);">Regular 400 — body, descriptions, helper text</div>
+    <div style="font-family: var(--font-ui); font-size: 13px; font-weight: 400; color: var(--fg-2);">Secondary 400 — metadata, scan date, secondary info</div>
+  </div>
+</div>
+<hr class="divider">
+<div class="group">
+  <div class="label">DM Mono — Dates, barcodes, codes</div>
+  <div class="mono-demo">
+    <span>Expires:</span> Apr 22, 2026 <span>·</span> in 2 days<br>
+    <span>Barcode:</span> 4006381333931<br>
+    <span>Added:</span> 2026-04-10
+  </div>
+</div>
+</body>
+</html>

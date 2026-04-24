@@ -1,6 +1,6 @@
-![Proviant](./res/icons/header_1.png){width=100%}
+![Proviant](./res/icons/proviant_hero.png)
 
-![Golang version](https://img.shields.io/badge/Go-1.24-green)
+![Golang version](https://img.shields.io/badge/Go-1.25.9-green)
 ![CI status](https://codeberg.org/isotop7/proviant/badges/workflows/ci.yml/badge.svg)
 ![Release state](https://codeberg.org/isotop7/proviant/badges/release.svg)
 ![Open issues](https://codeberg.org/isotop7/proviant/badges/issues/open.svg)
@@ -14,17 +14,39 @@
 
 📚 **proviant** is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food 🥗
 
+## Preview
+
+**Dashboard** — metric tiles, waste rate donut, category breakdown and expiry trend charts
+
+![Dashboard](./screenshots/portal.png)
+
+**Products** — search, filter and manage your products
+
+![Products](./screenshots/search.png)
+
 ## Features
 
 - 📝 Track and log products with expiration dates.
 - 📷 Scan product barcodes via camera to auto-fill data from [OpenFoodFacts](https://world.openfoodfacts.org/), with optional local caching for offline use.
-- 🗄️ Archive and restore products; bulk delete, archive, and restore.
-- 🔍 Search and filter products by multiple parameters.
-- ⏰ Receive expiration reminders via email (SMTP), push notifications ([Ntfy](https://ntfy.sh/)), or [Telegram](https://telegram.org/) bot.
+- 📸 **OCR expiry date scanning** — use your camera to capture and extract expiry dates (Tesseract/Google/OpenAI).
+- 🗄️ **Archive and restore products** — view archived products separately; bulk archive, restore, or delete.
+- 🔍 **Advanced filtering** — filter by status (All, Expired, Critical, Expiring soon, Fresh, No date, Archived), storage location, or search by product name/barcode.
+- 📊 **Dashboard** — live metric tiles (active products, waste rate, archived counts, last added product, products expiring within 7 days) and charts (waste rate donut, category breakdown pie, 12-month expiry trend line).
+- ⏰ Expiration reminders via email (SMTP), push notifications ([Ntfy](https://ntfy.sh/)), or [Telegram](https://telegram.org/) bot.
 - 🔔 Per-user notification preferences.
 - 👥 Multi-user support with household scoping.
 - 🌙 Dark theme.
-- 📊 Dashboard portal with live metric tiles (active products, waste rate, archived counts, last added product, products expiring within 7 days) and charts (waste rate donut, category breakdown pie, 12-month expiry trend line).
+- 📥 **Export** — download products and archive data as CSV or JSON.
+- 🍽️ **Recipe suggestions** — get recipe ideas based on your products (TheMealDB / Spoonacular).
+
+## Quick Start
+
+```bash
+curl -o docker-compose.yml https://codeberg.org/isotop7/proviant/raw/branch/main/docker-compose.sqlite.yaml
+docker compose up -d
+```
+
+Then open http://localhost:5114
 
 ## Technologies and Tools
 
@@ -53,90 +75,142 @@
 - [External MariaDB database](./docker-compose.mariadb.yaml)
 - [Internal SQLite database](./docker-compose.sqlite.yaml)
 
-The app can be configured with environment variables:
+### Configuration
+
+Configuration is set via environment variables. The complete list of available options and their default values is below. Template configuration files are available in `src/config.yaml.sqlite.tmpl` and `src/config.yaml.mariadb.tmpl`.
+
+#### Server
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `PROVIANT_SERVER_PORT` | `5114` | Listening port |
+| `PROVIANT_SERVER_BASEURL` | `https://proviant.local.de` | URL of Proviant with protocol (used in emails, notifications) |
+| `PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD` | `secret key` | Secret used for JSON Web Tokens |
+| `PROVIANT_SERVER_AUTHENTICATION_TOKENLIFETIME` | `8` | Lifetime of JSON Web Tokens in hours |
+| `PROVIANT_SERVER_AUTHENTICATION_MAXLOGINATTEMPTS` | `3` | Maximum failed login attempts before lockout |
+| `PROVIANT_SERVER_AUTHENTICATION_LOCKOUTDURATIONMINS` | `10` | Lockout duration in minutes after max failed attempts |
+| `PROVIANT_SERVER_AUTHENTICATION_PASSWORDMINLENGTH` | `12` | Minimum password length |
+| `PROVIANT_SERVER_AUTHENTICATION_PASSWORDREQUIREUPPERCASE` | `false` | Require at least one uppercase letter |
+| `PROVIANT_SERVER_AUTHENTICATION_PASSWORDREQUIREDIGIT` | `false` | Require at least one digit |
+| `PROVIANT_SERVER_AUTHENTICATION_PASSWORDREQUIRESPECIAL` | `false` | Require at least one special character |
+| `PROVIANT_SERVER_AUTHENTICATION_PASSWORDCHECKBREACHED` | `true` | Check passwords against HaveIBeenPwned API |
+| `PROVIANT_SERVER_CORS_ALLOWALLORIGINS` | `false` | Allow all origins (`true`) or use `allowedOrigins` list (`false`) |
+| `PROVIANT_SERVER_CORS_ALLOWEDORIGINS` | `http://localhost,http://myproviant.instance` | Comma-separated list of allowed origins when `allowAllOrigins` is `false` |
+| `PROVIANT_SERVER_SECURITYHEADERS_CONTENT_SECURITY_POLICY` | `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;` | Content Security Policy header |
+
+#### Database
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `PROVIANT_DATABASE_ENGINE` | `sqlite` | Database engine (`sqlite` or `mariadb`) |
+| **SQLite** |||
+| `PROVIANT_DATABASE_SQLITE_FILEPATH` | `data/proviant.db` | Path to SQLite database file (folder must exist) |
+| **MariaDB** |||
+| `PROVIANT_DATABASE_MARIADB_HOST` | `127.0.0.1` | MariaDB server IP or hostname |
+| `PROVIANT_DATABASE_MARIADB_PORT` | `3306` | MariaDB server port |
+| `PROVIANT_DATABASE_MARIADB_NAME` | `proviant` | Database name |
+| `PROVIANT_DATABASE_MARIADB_USER` | `root` (SQLite: `proviant`) | Database user |
+| `PROVIANT_DATABASE_MARIADB_PASSWORD` | `password` | Database user password |
+
+#### Logging
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `PROVIANT_LOGGING_ENABLED` | `true` | Enable file logging |
+| `PROVIANT_LOGGING_FILE` | `proviant.log` | Path to log file |
+
+#### Notifications
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `PROVIANT_NOTIFICATION_ENABLED` | `true` | Enable notifications |
+| `PROVIANT_NOTIFICATION_INTERVAL` | `12` | Interval in hours when notifications should be sent |
+| `PROVIANT_NOTIFICATION_SMTP_HOST` | `127.0.0.1` | SMTP server host or IP address |
+| `PROVIANT_NOTIFICATION_SMTP_PORT` | `25` | SMTP server port |
+| `PROVIANT_NOTIFICATION_SMTP_SSL` | `false` | Enable/disable SSL for SMTP |
+| `PROVIANT_NOTIFICATION_SMTP_USER` | `user` | SMTP username |
+| `PROVIANT_NOTIFICATION_SMTP_PASSWORD` | `password` | SMTP password |
+| `PROVIANT_NOTIFICATION_SMTP_FROMADDRESS` | `sender@local.net` | Sender email address for notifications |
+| `PROVIANT_NOTIFICATION_NTFY_URL` | `https://ntfy.sh` | Ntfy server URL |
+| `PROVIANT_NOTIFICATION_NTFY_TOPIC` | `default_topic` | Default Ntfy topic/channel |
+| `PROVIANT_NOTIFICATION_NTFY_TIMEOUT` | `60` | Ntfy message timeout in seconds |
+| `PROVIANT_NOTIFICATION_TELEGRAM_TIMEOUT` | `10` | Telegram API request timeout in seconds |
+| `PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_DAY` | `1` | Day of month to send monthly waste report (1–28) |
+| `PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_HOUR` | `8` | UTC hour to send monthly waste report (0–23) |
+
+#### OpenFoodFacts
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `PROVIANT_OPENFOODFACTS_URL` | `https://world.openfoodfacts.org/api/v2/product` | OpenFoodFacts API URL |
+| `PROVIANT_OPENFOODFACTS_TIMEOUT` | `5` | API request timeout in seconds |
+| `PROVIANT_OPENFOODFACTS_CACHEENABLED` | `true` | Cache API responses in database for offline use |
+| `PROVIANT_OPENFOODFACTS_IMAGECACHEENABLED` | `false` | Cache product images locally |
+| `PROVIANT_OPENFOODFACTS_IMAGECACHEPATH` | `data/images` | Path to image cache directory |
+
+#### OCR (expiry date scanning)
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `PROVIANT_OCR_ENABLED` | `true` | Enable OCR expiry date scanning |
+| `PROVIANT_OCR_PROVIDER` | `tesseract` | OCR provider: `tesseract` (local), `google`, `openai` |
+| `PROVIANT_OCR_API_KEY` | *(empty)* | API key for cloud providers (Google/OpenAI) |
+| `PROVIANT_OCR_ENDPOINT` | *(empty)* | Custom OCR server endpoint (for local Tesseract HTTP) |
+| `PROVIANT_OCR_TIMEOUT` | `10` | OCR request timeout in seconds |
+| `PROVIANT_OCR_LANGUAGES` | `deu+eng` | Tesseract language codes (e.g., `deu+eng`) |
+
+#### Recipe suggestions
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `PROVIANT_RECIPE_API_PROVIDER` | `themealdb` | Recipe provider: `themealdb` or `spoonacular` |
+| `PROVIANT_RECIPE_API_URL` | `https://www.themealdb.com/api/json/v1/1` | Recipe API endpoint (base URL, `/search.php` is appended automatically) |
+| `PROVIANT_RECIPE_API_API_KEY` | *(empty)* | API key (required for Spoonacular) |
+| `PROVIANT_RECIPE_API_TIMEOUT` | `10` | Recipe API request timeout in seconds |
+| `PROVIANT_RECIPE_API_CACHEENABLED` | `true` | Cache recipe responses |
+| `PROVIANT_RECIPE_API_CACHETTL` | `24` | Cache TTL in hours |
+
+#### Expiry thresholds
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `PROVIANT_EXPIRY_CRITICAL_THRESHOLD_DAYS` | `3` | Days before expiry to mark as critical |
+| `PROVIANT_EXPIRY_SOON_THRESHOLD_DAYS` | `7` | Days before expiry to mark as expiring soon |
+
+Additionally, `GIN_MODE` can be set to `debug` to enable Gin's debug mode.
+
+## Upgrade / Migration
+
+### Docker
+
+Pull the latest image and restart:
 
 ```bash
-# Server configuration
-PROVIANT_SERVER_PORT=5050                                                      # Listening port of server
-PROVIANT_SERVER_BASEURL="https://proviant.local.de"                           # URL of Proviant with protocol
-PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD="secret key"                       # Secret used for JSON Web Tokens
-PROVIANT_SERVER_AUTHENTICATION_TOKENLIFETIME=8                                # Lifetime of JSON Web Tokens in hours
-PROVIANT_SERVER_AUTHENTICATION_MAXLOGINATTEMPTS=3                             # Maximum failed login attempts before lockout
-PROVIANT_SERVER_AUTHENTICATION_LOCKOUTDURATIONMINS=10                        # Lockout duration in minutes after max failed attempts
-PROVIANT_SERVER_AUTHENTICATION_PASSWORDMINLENGTH=12                           # Minimum password length
-PROVIANT_SERVER_AUTHENTICATION_PASSWORDREQUIREUPPERCASE=false                 # Require at least one uppercase letter
-PROVIANT_SERVER_AUTHENTICATION_PASSWORDREQUIREDIGIT=false                     # Require at least one digit
-PROVIANT_SERVER_AUTHENTICATION_PASSWORDREQUIRESPECIAL=false                   # Require at least one special character
-PROVIANT_SERVER_AUTHENTICATION_PASSWORDCHECKBREACHED=true                      # Check passwords against HaveIBeenPwned API
-PROVIANT_SERVER_CORS_ALLOWALLORIGINS=true                                     # Allow all origins (true) or use allowedOrigins list (false)
-PROVIANT_SERVER_CORS_ALLOWEDORIGINS="http://localhost https://myapi.com"      # List of allowed origins when allowAllOrigins is false
-PROVIANT_SERVER_SECURITYHEADERS_CONTENT_SECURITY_POLICY="default-src 'self'"   # Content Security Policy header
-
-# Database configuration
-## SQLite
-PROVIANT_DATABASE_ENGINE="sqlite"                                            # Database engine (sqlite or mariadb)
-PROVIANT_DATABASE_SQLITE_FILEPATH="data/proviant.db"                         # Path to SQLite database file (folder must exist)
-## MariaDB
-PROVIANT_DATABASE_ENGINE="mariadb"                                          # Database engine (sqlite or mariadb)
-PROVIANT_DATABASE_MARIADB_HOST="127.0.0.1"                                  # MariaDB server IP or hostname
-PROVIANT_DATABASE_MARIADB_PORT=3306                                          # MariaDB server port
-PROVIANT_DATABASE_MARIADB_NAME="proviant"                                    # Database name
-PROVIANT_DATABASE_MARIADB_USER="proviant"                                    # Database user
-PROVIANT_DATABASE_MARIADB_PASSWORD="password"                                # Database user password
-
-# Logging configuration
-PROVIANT_LOGGING_ENABLED=true                                                # Enable file logging
-PROVIANT_LOGGING_FILE="proviant.log"                                         # Path to log file
-
-# Notification configuration
-PROVIANT_NOTIFICATION_ENABLED=true                                            # Enable notifications
-PROVIANT_NOTIFICATION_INTERVAL=12                                            # Interval in hours when notifications should be sent
-PROVIANT_NOTIFICATION_SMTP_HOST="127.0.0.1"                                  # SMTP server host or IP address
-PROVIANT_NOTIFICATION_SMTP_PORT=25                                           # SMTP server port
-PROVIANT_NOTIFICATION_SMTP_SSL=false                                         # Enable/disable SSL for SMTP
-PROVIANT_NOTIFICATION_SMTP_USER="user"                                       # SMTP username
-PROVIANT_NOTIFICATION_SMTP_PASSWORD="password"                                # SMTP password
-PROVIANT_NOTIFICATION_SMTP_FROMADDRESS="sender@local.net"                     # Sender email address for notifications
-PROVIANT_NOTIFICATION_NTFY_URL="https://ntfy.sh"                             # Ntfy server URL
-PROVIANT_NOTIFICATION_NTFY_TOPIC="default_topic"                             # Default Ntfy topic/channel
-PROVIANT_NOTIFICATION_NTFY_TIMEOUT=60                                         # Ntfy message timeout in seconds
-PROVIANT_NOTIFICATION_TELEGRAM_BOTTOKEN="1234567890:ABCDefGHIjklMNOpqrSTUvwxYZ"  # Telegram bot token from BotFather
-PROVIANT_NOTIFICATION_TELEGRAM_BOTUSERNAME="MyProviantBot"                   # Bot username (optional, auto-resolved via getMe)
-PROVIANT_NOTIFICATION_TELEGRAM_TIMEOUT=10                                    # Telegram API request timeout in seconds
-
-# OpenFoodFacts configuration
-PROVIANT_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"  # OpenFoodFacts API URL
-PROVIANT_OPENFOODFACTS_TIMEOUT=5                                             # API request timeout in seconds
-PROVIANT_OPENFOODFACTS_CACHEENABLED=true                                     # Cache API responses in database for offline use
+docker compose pull
+docker compose up -d
 ```
 
-### Telegram Notifications
+Database migrations run automatically on startup. See the [CHANGELOG](./CHANGELOG.md) for breaking changes that may require manual intervention.
 
-To receive notifications via Telegram:
+### Manual / binary
 
-1. **Create a bot** — open Telegram, message [@BotFather](https://t.me/BotFather), run `/newbot`, and follow the prompts. Copy the bot token you receive.
-2. **Configure proviant** — set the bot token in `config.yaml` or via the `PROVIANT_NOTIFICATION_TELEGRAM_BOTTOKEN` environment variable:
-   ```yaml
-   notification:
-     telegram:
-       botToken: "1234567890:ABCDefGHIjklMNOpqrSTUvwxYZ"
-       timeout: 10
-   ```
-3. **Start proviant** — the server will automatically resolve the bot username from Telegram on startup.
-4. **Link your account** — go to **User Settings → Notification Settings → Telegram**, click **Link Account**, then **Generate Token**. Click **Open in Telegram** and press **Start** in the bot chat.
-5. **Enable** — toggle Telegram notifications on in User Settings and save.
+Replace the `proviant` binary with the new version and restart the service. Migrations are applied automatically on startup. Check the [CHANGELOG](./CHANGELOG.md) for any breaking changes or additional steps.
 
-> **Note:** The bot uses long-polling to receive messages. No public URL or webhook configuration is required.
+## Commit Conventions
 
-Additionally `Gin` supports a debug mode, which also can be set with a environment variable:
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) for commit messages. The changelog is auto-generated from commits using [git-cliff](https://git-cliff.org/).
 
-```bash
-GIN_MODE=debug
-```
+Key prefixes:
+- `feat:` — new feature (maps to **Added**)
+- `fix:` — bug fix (maps to **Fixed**)
+- `refactor:` — code change without feature/fix (maps to **Changed**)
+- `docs:` — documentation changes (maps to **Documentation**)
+- `chore:` — maintenance tasks (maps to **Miscellaneous**)
+- `!` or `BREAKING CHANGE` — breaking change (highlighted in changelog)
 
 ## Changelog
 
-User-facing important changes are documented in the [CHANGELOG.md](./CHANGELOG.md) file.
+User-facing important changes are documented in the [CHANGELOG.md](./CHANGELOG.md) file. Since v0.4.0, the changelog is auto-generated by `git-cliff` when a new release tag is pushed.
 
 ## What's missing?
 
@@ -151,21 +225,69 @@ Documentation is generated with `gomarkdoc` and `swagger`:
 
 ## Screenshots
 
-- Login and Signup page for multi user mode
+**Login**
 
 ![Login](./screenshots/login.png)
 
-- Portal view with activity tiles
+---
 
-![Portal](./screenshots/portal.png)
+**Dashboard** — metric tiles, waste rate, category breakdown and expiry trend charts
 
-- Create product and query data from OpenFoodFactAPI
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/portal.png" alt="Dashboard desktop"></td>
+    <td><img src="./screenshots/portal_mobile.png" alt="Dashboard mobile"></td>
+  </tr>
+</table>
 
-![Create product](./screenshots/create.png)
+---
 
-- Search all products based on parameters
+**Add product** — barcode scan with auto-fill from OpenFoodFacts
 
-![Search products](./screenshots/search.png)
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/create.png" alt="Add product desktop"></td>
+    <td><img src="./screenshots/create_mobile.png" alt="Add product mobile"></td>
+  </tr>
+</table>
+
+---
+
+**Search** — filter products by name, barcode or category
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/search.png" alt="Search desktop"></td>
+    <td><img src="./screenshots/search_mobile.png" alt="Search mobile"></td>
+  </tr>
+</table>
+
+---
+
+**Recipe** — Get recipes for expiring products
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/recipe.png" alt="Search desktop"></td>
+    <td><img src="./screenshots/recipe_mobile.png" alt="Search mobile"></td>
+  </tr>
+</table>
 
 ## Contributing
 

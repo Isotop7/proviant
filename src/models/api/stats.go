@@ -20,6 +20,12 @@ type ProductSummaryResponse struct {
 	WasteThisMonth    int `json:"wasteThisMonth"`
 }
 
+// StreakResponse is the response body for GET /api/v1/streak
+type StreakResponse struct {
+	CurrentStreak int `json:"currentStreak"`
+	LongestStreak int `json:"longestStreak"`
+}
+
 // ProductStatsResponse is the response body for GET /api/v1/products/stats
 type ProductStatsResponse struct {
 	WasteCount          int                    `json:"wasteCount"`

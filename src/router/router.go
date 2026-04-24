@@ -46,7 +46,7 @@ func cleanupRevokedTokens(db *gorm.DB, logger *zerolog.Logger) {
 }
 
 // SetupRouter creates the gin engine and associated middleware
-func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) *gin.Engine {
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) *gin.Engine {
 	go cleanupRevokedTokens(dbHandle, logger)
 
 	gin.DefaultWriter = zerologWriter{logger: logger, level: zerolog.DebugLevel}
@@ -106,9 +106,26 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		ctx.Next()
 	})
 
+	// OCR controller for expiry date detection
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("ocrController", ocrController)
+		ctx.Next()
+	})
+
 	// Proviant configuration for access in handlers
 	engine.Use(func(ctx *gin.Context) {
 		ctx.Set("proviantConfig", proviantConfiguration)
+		ctx.Next()
+	})
+
+	// Recipe controller for recipe suggestions
+	engine.Use(func(ctx *gin.Context) {
+		recipeCtrl := controllers.NewRecipeController(
+			proviantConfiguration.RecipeAPI,
+			logger,
+			dbHandle,
+		)
+		ctx.Set("recipeController", recipeCtrl)
 		ctx.Next()
 	})
 
@@ -199,6 +216,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.GET("/expired", v1.GetExpired)
 	publicProductAPI.POST("", v1.CreateProduct)
 	publicProductAPI.POST("/scan", v1.ScanProduct)
+	publicProductAPI.POST("/scan-date", v1.ScanExpiryDate)
 	publicProductAPI.GET("/byBarcode/:barcode", v1.GetProductsByBarcode)
 	publicProductAPI.GET("/openfoodfacts/:barcode", v1.GetOpenFoodFactsData)
 	publicProductAPI.GET("/search", v1.SearchProducts)
@@ -237,6 +255,21 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	onboardingAPI.POST("/join-invite", onboarding.JoinOnboardingByInvite)
 	onboardingAPI.POST("/complete", onboarding.CompleteOnboarding)
 
+	// Streak routes
+	streakAPI := engine.Group("/api/v1/streak")
+	streakAPI.Use(jwtAPIMiddlewareWithPAT)
+	streakAPI.GET("", v1.GetStreak)
+
+	// Savings routes
+	savingsAPI := engine.Group("/api/v1/savings")
+	savingsAPI.Use(jwtAPIMiddlewareWithPAT)
+	savingsAPI.GET("/stats", v1.GetSavingsStats)
+
+	// Recipe suggestion routes
+	recipeAPI := engine.Group("/api/v1/recipes")
+	recipeAPI.Use(jwtAPIMiddlewareWithPAT)
+	recipeAPI.GET("/suggestions", v1.GetRecipeSuggestions)
+
 	// Notification routes
 	notificationAPI := engine.Group("/api/v1/notifications")
 	notificationAPI.Use(jwtAPIMiddlewareWithPAT)
@@ -257,6 +290,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAPI.POST("/invitations", v1.CreateInvitation)
 	householdAPI.GET("/invitations", v1.GetInvitations)
 	householdAPI.DELETE("/invitations/:id", v1.CancelInvitation)
+
+	// Storage location routes
+	householdAPI.GET("/storage-locations", v1.ListStorageLocations)
+	householdAPI.POST("/storage-locations", v1.CreateStorageLocation)
+	householdAPI.PATCH("/storage-locations/:id", v1.UpdateStorageLocation)
+	householdAPI.DELETE("/storage-locations/:id", v1.DeleteStorageLocation)
 
 	// Admin user management routes
 	adminAPI := engine.Group("/api/v1/admin/users")
@@ -318,6 +357,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Web frontend routes
 	// Serve asset files
 	engine.StaticFS("/assets", http.FS(assets.AssetFiles))
+	if proviantConfiguration.OpenFoodFacts.ImageCacheEnabled {
+		engine.Static("/product-images", proviantConfiguration.OpenFoodFacts.ImageCachePath)
+	}
 	// Create frontend handler with template cache
 	webFrontendHandler := web.Frontend{TemplateCache: proviantConfiguration.TemplateCache}
 	webFrontend := engine.Group("/web")
@@ -330,9 +372,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/user", webFrontendHandler.User)
 	publicWebFrontend.GET("/user/settings", webFrontendHandler.UserSettings)
 	publicWebFrontend.GET("/products", webFrontendHandler.Products)
-	publicWebFrontend.GET("/products/archived", webFrontendHandler.ProductsArchived)
-	publicWebFrontend.GET("/products/create", webFrontendHandler.ProductsCreate)
+	publicWebFrontend.GET("/products/scan", webFrontendHandler.ProductsScan)
 	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
+	publicWebFrontend.GET("/recipes", webFrontendHandler.Recipes)
 
 	// Public invite acceptance page (no auth required)
 	engine.GET("/web/invite/accept", webFrontendHandler.AcceptInvite)

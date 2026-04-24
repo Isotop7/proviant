@@ -77,12 +77,15 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 		&proviantConfiguration.Notification,
 		notificationRepo,
 	)
+	notificationController.StreakRepo = dbController.NewStreakRepository(dbHandle)
 	// Dispatch notification handler goroutine
 	notificationController.Dispatch()
 	// Dispatch invitation email retry goroutine (uses same Interval config)
 	notificationController.DispatchInvitations(proviantConfiguration.Server.BaseURL)
 	// Dispatch monthly waste report goroutine
 	notificationController.DispatchMonthlyWasteReports()
+	// Dispatch daily streak update goroutine
+	notificationController.DispatchStreakUpdates()
 	// Start per-user Telegram long-polling goroutines for all users with a bot token
 	notificationController.StartAllUserTelegramPollers()
 	return notificationController
@@ -102,6 +105,13 @@ func setupConfig() *configuration.ProviantConfiguration {
 	// Set defaults for monthly waste report schedule
 	viper.SetDefault("notification.monthlyWasteReport.day", 1)
 	viper.SetDefault("notification.monthlyWasteReport.hour", 8)
+
+	// Set defaults for recipe API
+	viper.SetDefault("recipe_api.provider", "themealdb")
+	viper.SetDefault("recipe_api.url", "https://www.themealdb.com/api/json/v1/1")
+	viper.SetDefault("recipe_api.timeout", 10)
+	viper.SetDefault("recipe_api.cache_enabled", true)
+	viper.SetDefault("recipe_api.cache_ttl", 24)
 
 	// Set default password policy
 	viper.SetDefault("server.authentication.passwordMinLength", 12)
@@ -154,12 +164,15 @@ func validateAPIs(config *configuration.ProviantConfiguration) {
 	if err := config.ValidateOpenFoodFactsConfiguration(); err != nil {
 		panic("URL for OpenFoodFactsAPI not set")
 	}
+	if err := config.ValidateRecipeAPIConfiguration(); err != nil {
+		panic("Invalid recipe API configuration: " + err.Error())
+	}
 }
 
 // startProviantServer starts the Proviant server.
-func startProviantServer(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) {
+func startProviantServer(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) {
 	// Call function to setup router and pass references
-	proviantEngine := router.SetupRouter(logger, proviantConfiguration, dbHandle, offacntrl, notificationController)
+	proviantEngine := router.SetupRouter(logger, proviantConfiguration, dbHandle, offacntrl, notificationController, ocrController)
 
 	// Get server port or instead set default value
 	serverPort := proviantConfiguration.Server.Port
@@ -203,6 +216,7 @@ func main() {
 	// Run migrations for database and check for errors
 	migrationError := dbHandle.AutoMigrate(
 		&dbModel.Household{},
+		&dbModel.StorageLocation{},
 		&authentication.User{},
 		&authentication.RevokedToken{},
 		&authentication.PersonalAccessToken{},
@@ -212,9 +226,14 @@ func main() {
 		&dbModel.HouseholdInvitation{},
 		&dbModel.OnboardingState{},
 		&dbModel.OpenFoodFactsCache{},
+		&dbModel.RecipeCache{},
 		&dbModel.EmailVerification{},
 		&dbModel.Webhook{},
 		&dbModel.WebhookDeliveryLog{},
+		&dbModel.WasteStreak{},
+		&dbModel.ProductCategoryPrice{},
+		&dbModel.SavingsRecord{},
+		&dbModel.ExpiryScan{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
@@ -229,6 +248,11 @@ func main() {
 	// Backfill default amount for existing products
 	if amountMigrationError := migrations.SetDefaultProductAmounts(logger, dbHandle); amountMigrationError != nil {
 		panic(amountMigrationError)
+	}
+
+	// Seed ProductCategoryPrice reference data for savings calculator
+	if seedErr := migrations.SeedProductCategoryPrices(logger, dbHandle); seedErr != nil {
+		panic(seedErr)
 	}
 
 	// Initialize webhook service
@@ -250,6 +274,7 @@ func main() {
 	}
 
 	// Setup template cache
+	templates.SetExpiryThresholds(proviantConfiguration.Expiry.CriticalThresholdDays, proviantConfiguration.Expiry.SoonThresholdDays)
 	templateCache, err := templates.NewTemplateCache()
 	if err != nil {
 		logger.Error().Msg(err.Error())
@@ -259,10 +284,16 @@ func main() {
 
 	notificationController := setupNotificationController(logger, proviantConfiguration, dbHandle)
 
+	// Initialize OCR controller
+	ocrController := controllers.NewOCRController(logger, &proviantConfiguration.OCR)
+
 	// Start background cleanup of expired revoked tokens
 	go startRevokedTokenCleanup(logger, dbHandle)
 
-	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl, notificationController)
+	// Start background cleanup of expired recipe caches
+	go startRecipeCacheCleanup(logger, dbHandle)
+
+	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl, notificationController, ocrController)
 }
 
 // startRevokedTokenCleanup runs a goroutine that periodically cleans up expired revoked tokens
@@ -284,5 +315,27 @@ func cleanupExpiredRevokedTokens(logger *zerolog.Logger, dbHandle *gorm.DB) {
 	}
 	if result.RowsAffected > 0 {
 		logger.Info().Msgf("Cleaned up %d expired revoked tokens", result.RowsAffected)
+	}
+}
+
+// startRecipeCacheCleanup runs a goroutine that periodically cleans up expired recipe caches
+func startRecipeCacheCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	ticker := time.NewTicker(24 * time.Hour) // Clean up once per day
+	defer ticker.Stop()
+
+	for range ticker.C {
+		cleanupExpiredRecipeCaches(logger, dbHandle)
+	}
+}
+
+// cleanupExpiredRecipeCaches deletes recipe cache entries that have expired
+func cleanupExpiredRecipeCaches(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	result := dbHandle.Where("expires_at < ?", time.Now()).Delete(&dbModel.RecipeCache{})
+	if result.Error != nil {
+		logger.Error().Msgf("Failed to cleanup expired recipe caches: %s", result.Error.Error())
+		return
+	}
+	if result.RowsAffected > 0 {
+		logger.Info().Msgf("Cleaned up %d expired recipe caches", result.RowsAffected)
 	}
 }

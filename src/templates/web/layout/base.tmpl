@@ -20,39 +20,69 @@
   <script src="/assets/js/proviant.js"></script>
 </head>
 
-<body class="d-flex flex-column h-100">
-  <header>
-    {{template "nav" .}}
-  </header>
+<body>
+  {{template "nav" .}}
+  <!-- Mobile bottom navigation -->
+  <nav class="bottom-nav" aria-label="Mobile navigation">
+    <div class="bottom-nav-left">
+      <a href="/web" class="bottom-nav-item {{ if eq .Title "Home" }}active{{ end }}"
+         {{ if eq .Title "Home" }}aria-current="page"{{ end }}>
+        <i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard</span>
+      </a>
+      <a href="/web/products" class="bottom-nav-item {{ if eq .Title "Products" }}active{{ end }}"
+         {{ if eq .Title "Products" }}aria-current="page"{{ end }}>
+        <i class="bi bi-box-seam" aria-hidden="true"></i><span>Products</span>
+      </a>
+    </div>
+    <div class="bottom-nav-center">
+      <a href="/web/products/scan" class="bottom-nav-scan {{ if eq .Title "Scan Product" }}active{{ end }}"
+         {{ if eq .Title "Scan Product" }}aria-current="page"{{ end }}>
+        <i class="bi bi-upc-scan" aria-hidden="true"></i>
+      </a>
+    </div>
+    <div class="bottom-nav-right">
+      <a href="/web/recipes" class="bottom-nav-item {{ if eq .Title "Recipes" }}active{{ end }}"
+         {{ if eq .Title "Recipes" }}aria-current="page"{{ end }}>
+        <i class="bi bi-book" aria-hidden="true"></i><span>Recipes</span>
+      </a>
+      <a href="/web/user/settings" class="bottom-nav-item {{ if eq .Title "User Settings" }}active{{ end }}"
+         {{ if eq .Title "User Settings" }}aria-current="page"{{ end }}>
+        <i class="bi bi-person-circle" aria-hidden="true"></i><span>Settings</span>
+      </a>
+    </div>
+  </nav>
   <!-- Offline banner — shown by JS when navigator.onLine === false -->
-  <div id="offlineBanner" class="d-none alert alert-warning rounded-0 mb-0 py-2 text-center small" role="status" aria-live="polite">
+  <div id="offlineBanner" class="offline-banner d-none" role="status" aria-live="polite">
     <i class="bi bi-wifi-off me-2" aria-hidden="true"></i>
     You're offline — showing cached data. Changes will sync when reconnected.
     <span id="offlineQueueCount" class="ms-1 fw-semibold d-none"></span>
   </div>
 
-  <main class="flex-shrink-0">
-    <div id="content-wrapper" class="container">
+  <main>
+    <div id="content-wrapper">
       {{template "content" .}}
     </div>
   </main>
-  {{template "footer" .}}
   <!-- Shared confirm modal — destructive actions requiring user decision -->
   <div id="proviantConfirmModal" class="modal fade" tabindex="-1"
        aria-labelledby="proviantConfirmModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
       <div class="modal-content">
-        <div class="modal-header border-0 pb-0">
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-header">
+          <div class="modal-icon modal-icon-danger" id="proviantConfirmIconBox" aria-hidden="true">
+            <i id="proviantConfirmIcon" class="bi bi-exclamation-triangle-fill"></i>
+          </div>
+          <div class="modal-header-body">
+            <h5 id="proviantConfirmTitle" class="modal-title mb-0"></h5>
+          </div>
+          <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body text-center px-4 pb-2">
-          <i id="proviantConfirmIcon" class="bi bi-question-circle-fill text-warning fs-1 mb-3 d-block" aria-hidden="true"></i>
-          <h5 id="proviantConfirmTitle" class="mb-2"></h5>
-          <p id="proviantConfirmMessage" class="text-body-secondary mb-0 small"></p>
+        <div class="modal-body">
+          <p id="proviantConfirmMessage" class="text-body-secondary small mb-0"></p>
         </div>
-        <div class="modal-footer border-0 justify-content-center gap-2 pt-2 pb-4">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-danger px-4" id="proviantConfirmBtn">Confirm</button>
+        <div class="modal-footer justify-content-end gap-2">
+          <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-proviant-danger" id="proviantConfirmBtn">Confirm</button>
         </div>
       </div>
     </div>
@@ -63,16 +93,20 @@
        aria-labelledby="proviantFeedbackModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
       <div class="modal-content">
-        <div class="modal-header border-0 pb-0">
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-header">
+          <div class="modal-icon" id="proviantFeedbackIconBox" aria-hidden="true">
+            <i id="proviantFeedbackIcon" class="bi"></i>
+          </div>
+          <div class="modal-header-body">
+            <h5 id="proviantFeedbackTitle" class="modal-title mb-0"></h5>
+          </div>
+          <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body text-center px-4 pb-2">
-          <i id="proviantFeedbackIcon" class="bi fs-1 mb-3 d-block" aria-hidden="true"></i>
-          <h5 id="proviantFeedbackTitle" class="mb-2"></h5>
-          <p id="proviantFeedbackMessage" class="text-body-secondary mb-0 small"></p>
+        <div class="modal-body">
+          <p id="proviantFeedbackMessage" class="text-body-secondary small mb-0"></p>
         </div>
-        <div class="modal-footer border-0 justify-content-center pt-2 pb-4">
-          <button type="button" class="btn btn-primary px-4"
+        <div class="modal-footer justify-content-end">
+          <button type="button" class="btn btn-proviant-primary"
                   id="proviantFeedbackBtn" data-bs-dismiss="modal">OK</button>
         </div>
       </div>

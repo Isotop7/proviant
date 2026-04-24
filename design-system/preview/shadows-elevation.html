@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { padding: 32px 24px; background: var(--bg); }
+  .row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .card { background: white; border-radius: 8px; padding: 16px; width: 130px; }
+  .name { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); margin-top: 8px; }
+  .use { font-family: var(--font-ui); font-size: 11px; color: var(--fg-2); margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="row">
+  <div>
+    <div class="card" style="box-shadow: var(--shadow-xs);">Xs</div>
+    <div class="name">--shadow-xs</div>
+    <div class="use">Focus rings</div>
+  </div>
+  <div>
+    <div class="card" style="box-shadow: var(--shadow-sm);">Sm</div>
+    <div class="name">--shadow-sm</div>
+    <div class="use">Cards (resting)</div>
+  </div>
+  <div>
+    <div class="card" style="box-shadow: var(--shadow-md);">Md</div>
+    <div class="name">--shadow-md</div>
+    <div class="use">Cards (hover)</div>
+  </div>
+  <div>
+    <div class="card" style="box-shadow: var(--shadow-lg);">Lg</div>
+    <div class="name">--shadow-lg</div>
+    <div class="use">Dropdowns</div>
+  </div>
+  <div>
+    <div class="card" style="box-shadow: var(--shadow-xl);">Xl</div>
+    <div class="name">--shadow-xl</div>
+    <div class="use">Modals</div>
+  </div>
+</div>
+</body>
+</html>

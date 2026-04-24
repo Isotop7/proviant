@@ -65,8 +65,8 @@ func formatProductDescription(product *database.Product) string {
 			desc = desc + " " + product.Unit
 		}
 	}
-	if product.StorageLocation != "" {
-		desc = desc + " @ " + product.StorageLocation
+	if product.StorageLocation != nil {
+		desc = desc + " @ " + product.StorageLocation.Name
 	}
 	return desc
 }

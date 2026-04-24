@@ -147,6 +147,14 @@ function toggleTelegramSettings() {
   }
 }
 
+function toggleWebhookCreate() {
+  const toggle = document.getElementById("toggleWebhookCreate");
+  const settings = document.getElementById("webhookCreateSettings");
+  if (toggle && settings) {
+    settings.classList.toggle("d-none", !toggle.checked);
+  }
+}
+
 function showTelegramLinkAlert(message, isSuccess) {
   const el = document.getElementById("telegramLinkAlert");
   if (!el) return;
@@ -941,6 +949,8 @@ function CreateWebhook() {
       document.getElementById('inputWebhookUrl').value = '';
       document.getElementById('inputWebhookSecret').value = '';
       uncheckAllWebhookEvents();
+      const toggleWebhook = document.getElementById('toggleWebhookCreate');
+      if (toggleWebhook) { toggleWebhook.checked = false; toggleWebhookCreate(); }
       ShowSuccessModal('Webhook created', function() {
         LoadWebhooks();
       });
@@ -1183,6 +1193,49 @@ document.addEventListener("click", function (event) {
     });
     return;
   }
+
+  // Storage location — add
+  if (target.closest("#btnAddStorageLocation")) {
+    event.preventDefault();
+    openStorageLocationModal(null);
+    return;
+  }
+
+  // Storage location — edit
+  if (target.closest(".btn-edit-sl")) {
+    event.preventDefault();
+    const btn = target.closest(".btn-edit-sl");
+    openStorageLocationModal({
+      id: btn.dataset.id,
+      name: btn.dataset.name,
+      icon: btn.dataset.icon,
+      sortOrder: btn.dataset.sortorder,
+    });
+    return;
+  }
+
+  // Storage location — delete
+  if (target.closest(".btn-delete-sl")) {
+    event.preventDefault();
+    const btn = target.closest(".btn-delete-sl");
+    proviant.showConfirm(
+      "Delete Location",
+      `Delete "${btn.dataset.name}"? Products in this location will become unassigned.`,
+      function () {
+        deleteStorageLocation(btn.dataset.id);
+      },
+      "Delete",
+      "danger"
+    );
+    return;
+  }
+
+  // Storage location — save modal
+  if (target.closest("#btnSaveStorageLocation")) {
+    event.preventDefault();
+    saveStorageLocation();
+    return;
+  }
 });
 
 /* ── Event delegation — inputs ───────────────────────────────────── */
@@ -1231,6 +1284,9 @@ document.addEventListener("change", function (event) {
   }
   if (event.target.id === "toggleTelegramNotifications") {
     toggleTelegramSettings();
+  }
+  if (event.target.id === "toggleWebhookCreate") {
+    toggleWebhookCreate();
   }
 });
 
@@ -1380,4 +1436,132 @@ function handleCalendarRemove() {
     "Remove",
     "danger"
   );
+}
+
+/* ── Storage Location CRUD ───────────────────────────────────────── */
+function openStorageLocationModal(data) {
+  const modalEl = document.getElementById("storageLocationModal");
+  if (!modalEl) return;
+  const idInput       = document.getElementById("slModalID");
+  const nameInput     = document.getElementById("slModalName");
+  const iconInput     = document.getElementById("slModalIcon");
+  const sortInput     = document.getElementById("slModalSortOrder");
+  const titleEl       = document.getElementById("storageLocationModalLabel");
+
+  if (data) {
+    if (idInput)    idInput.value    = data.id        || "";
+    if (nameInput)  nameInput.value  = data.name      || "";
+    if (iconInput)  iconInput.value  = data.icon      || "";
+    if (sortInput)  sortInput.value  = data.sortOrder != null ? data.sortOrder : 0;
+    if (titleEl)    titleEl.textContent = "Edit Storage Location";
+  } else {
+    if (idInput)    idInput.value    = "";
+    if (nameInput)  nameInput.value  = "";
+    if (iconInput)  iconInput.value  = "";
+    if (sortInput)  sortInput.value  = "0";
+    if (titleEl)    titleEl.textContent = "Add Storage Location";
+  }
+
+  const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  bsModal.show();
+}
+
+function saveStorageLocation() {
+  const idInput   = document.getElementById("slModalID");
+  const nameInput = document.getElementById("slModalName");
+  const iconInput = document.getElementById("slModalIcon");
+  const sortInput = document.getElementById("slModalSortOrder");
+  const saveBtn   = document.getElementById("btnSaveStorageLocation");
+
+  if (!nameInput || !nameInput.value.trim()) {
+    if (nameInput) nameInput.classList.add("is-invalid");
+    return;
+  }
+  if (nameInput) nameInput.classList.remove("is-invalid");
+
+  const id        = idInput ? idInput.value.trim() : "";
+  const name      = nameInput.value.trim();
+  const icon      = iconInput ? iconInput.value.trim() : "";
+  const sortOrder = sortInput ? parseInt(sortInput.value, 10) || 0 : 0;
+
+  setButtonLoading(saveBtn, true);
+
+  const isEdit = id !== "";
+  const url    = isEdit ? `/api/v1/household/storage-locations/${id}` : "/api/v1/household/storage-locations";
+  const method = isEdit ? "PATCH" : "POST";
+
+  fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, icon, sortOrder }),
+  })
+    .then((r) => r.json())
+    .then((response) => {
+      setButtonLoading(saveBtn, false);
+      const code = response.code || response.Code;
+      if (code === 200 || code === 201) {
+        const loc = response.message || response.Message || {};
+        const locId   = loc.id   || loc.ID   || id;
+        const locName = loc.name || loc.Name || name;
+        const locIcon = loc.icon || loc.Icon || icon;
+        const locSort = loc.sortOrder != null ? loc.sortOrder : (loc.SortOrder != null ? loc.SortOrder : sortOrder);
+
+        const modalEl = document.getElementById("storageLocationModal");
+        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+
+        const list = document.getElementById("storageLocationList");
+        if (!list) { location.reload(); return; }
+
+        const existing = document.getElementById(`sl-${locId}`);
+        const li = existing || document.createElement("li");
+        li.id = `sl-${locId}`;
+        li.className = "list-group-item d-flex justify-content-between align-items-center";
+        li.innerHTML = `
+          <span>${locIcon} <strong>${locName}</strong></span>
+          <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-proviant-secondary btn-edit-sl"
+                    data-id="${locId}" data-name="${locName}" data-icon="${locIcon}"
+                    data-sortorder="${locSort}" aria-label="Edit ${locName}">
+              <i class="bi bi-pencil" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="btn btn-proviant-danger btn-delete-sl"
+                    data-id="${locId}" data-name="${locName}" aria-label="Delete ${locName}">
+              <i class="bi bi-trash" aria-hidden="true"></i>
+            </button>
+          </div>`;
+
+        if (!existing) list.appendChild(li);
+
+        proviant.showFeedback("success", isEdit ? "Location Updated" : "Location Added",
+          `"${locName}" ${isEdit ? "updated" : "added"} successfully.`);
+      } else {
+        const msg = response.message || response.Message || "Unknown error";
+        proviant.showFeedback("error", "Error", `Failed to save location: ${msg}`);
+      }
+    })
+    .catch((err) => {
+      setButtonLoading(saveBtn, false);
+      proviant.showFeedback("error", "Error", `Request failed: ${err}`);
+    });
+}
+
+function deleteStorageLocation(id) {
+  fetch(`/api/v1/household/storage-locations/${id}`, {
+    method: "DELETE",
+  })
+    .then((r) => r.json())
+    .then((response) => {
+      const code = response.code || response.Code;
+      if (code === 200) {
+        const li = document.getElementById(`sl-${id}`);
+        if (li) li.remove();
+        proviant.showFeedback("success", "Location Deleted", "Storage location removed.");
+      } else {
+        const msg = response.message || response.Message || "Unknown error";
+        proviant.showFeedback("error", "Error", `Failed to delete location: ${msg}`);
+      }
+    })
+    .catch((err) => {
+      proviant.showFeedback("error", "Error", `Request failed: ${err}`);
+    });
 }

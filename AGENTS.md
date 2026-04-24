@@ -80,6 +80,7 @@ import (
 - **Package names**: lowercase, single words (e.g., `database`, `router`)
 - **Interfaces**: PascalCase, often ending in functional description (e.g., `Authorizator`)
 - **Error variables**: PascalCase with `Err` prefix (e.g., `ErrInvalidUserID`, `ErrDatabaseInvalidEngine`)
+- **Variables**: Use full descriptive camelCase names — never abbreviate (e.g., `storageLocationRepo` not `slRepo`, `productController` not `pc`, `householdID` not `hID`)
 
 ### Types and Structs
 - Use GORM struct tags for database models: `gorm:"index, not null"`
@@ -177,6 +178,7 @@ logger.Info().Msg("Logging initialized")
 - **Always run `task css` after any change to `.scss` files** — the compiled CSS is what gets served; editing SCSS without recompiling has no visible effect
 - JavaScript files served from `src/assets/js/`
 - Use Bootstrap for styling, Bootstrap Icons for icons
+- **Avoid inline `style="..."` attributes in templates** — define CSS classes in `src/templates/scss/main.scss` instead. Inline styles are only acceptable for truly dynamic values (e.g., a `width` set from a template variable). When in doubt, use a class.
 
 #### Service Worker Caching
 - The project uses a service worker (`src/assets/js/sw.js`)
@@ -248,6 +250,23 @@ The home page (`/web/`) is a fully client-side rendered dashboard. The Go handle
 **Chart.js:** bundled as `src/assets/js/chart.umd.min.js` (copied from `node_modules` via `task js`). Loaded via a `<script>` tag in `home.tmpl` before `homeStats.js`.
 
 **Removed:** `GetUserHomeTiles` DB method and the `webparts` import from `databasecontroller.go` are gone — tile data now comes entirely from the stats API.
+
+## Conventional Commits
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated changelog generation via git-cliff.
+
+- **Commit types**: feat, fix, docs, chore, refactor, test, ci, build, style, perf, deprecat, remove, delete, security, implement, add, hotfix, bug
+- **Format**: `<type>[(<scope>)]!: <description>` — e.g., `feat: add barcode scanner` or `fix(api): resolve timeout`
+- **Breaking changes**: add `!` after type/scope — e.g., `feat!: drop support for SQLite`
+- **Body**: optional, separate from subject with blank line
+
+## Release Automation
+
+- **CHANGELOG generation**: When a `v*` tag is pushed, `.forgejo/workflows/release.yml` triggers. It uses `git-cliff` (via `orhun/git-cliff-action@v3`) with `cliff.toml` to generate the CHANGELOG from conventional commits, then commits it back to the repository and attaches it as a release asset.
+- **RELEASE_TOKEN secret**: The `RELEASE_TOKEN` secret must exist in the Forgejo repository settings with `api` and `write` scopes. It is used to:
+  1. Push the updated `CHANGELOG.md` back to the repository
+  2. Upload `CHANGELOG.md` as a release asset via `gitea.com/actions/release-action`
+- **Tag format**: Use `vX.Y.Z` tags (e.g., `v0.4.0`). The `cliff.toml` tag pattern `v?[0-9].*` supports both new `v`-prefixed and legacy unprefixed tags.
 
 ## Important Notes
 - Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask

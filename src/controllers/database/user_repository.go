@@ -90,6 +90,18 @@ func (r *UserRepository) CreateUser(user *authentication.User) error {
 		return err
 	}
 
+	defaultLocations := []database.StorageLocation{
+		{HouseholdID: household.ID, Name: "Fridge", Icon: "🧊", SortOrder: 0},
+		{HouseholdID: household.ID, Name: "Freezer", Icon: "❄️", SortOrder: 1},
+		{HouseholdID: household.ID, Name: "Pantry", Icon: "🗄️", SortOrder: 2},
+	}
+	for i := range defaultLocations {
+		if err := tx.Create(&defaultLocations[i]).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		return err
 	}

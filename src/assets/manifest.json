@@ -27,7 +27,7 @@
     {
       "name": "Add Product",
       "short_name": "Add",
-      "url": "/web/products/create",
+      "url": "/web/products/scan",
       "icons": [{ "src": "/assets/icons/proviant_logo_192.png", "sizes": "192x192" }]
     },
     {

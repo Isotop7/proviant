@@ -33,7 +33,7 @@ func (r *InvitationRepository) CreateInvitation(householdID, inviterID uint, ema
 	if err == nil {
 		return database.HouseholdInvitation{}, errors.ErrDuplicateInvitation
 	}
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != gorm.ErrRecordNotFound {
 		return database.HouseholdInvitation{}, err
 	}
 

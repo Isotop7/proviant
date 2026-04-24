@@ -16,7 +16,7 @@
                         <i class="bi bi-exclamation-triangle me-2"></i>{{ .Error }}
                     </div>
                     <div class="text-center mt-3">
-                        <a href="/web" class="btn btn-outline-primary">Go to Dashboard</a>
+                        <a href="/web" class="btn btn-proviant-secondary">Go to Dashboard</a>
                     </div>
 
                     {{ else if .Success }}
@@ -24,7 +24,7 @@
                         <i class="bi bi-check-circle me-2"></i>{{ .Success }}
                     </div>
                     <div class="text-center mt-3">
-                        <a href="/web" class="btn btn-primary">Go to Dashboard</a>
+                        <a href="/web" class="btn btn-proviant-primary">Go to Dashboard</a>
                     </div>
 
                     {{ else if .NeedsAuth }}
@@ -33,7 +33,7 @@
                         <i class="bi bi-info-circle me-2"></i>You must use the email address <strong>{{ .InvitationEmail }}</strong> to accept this invitation. If you already have an account, log in with that email. If you are new, sign up with this exact email address.
                     </div>
                     <div class="d-grid gap-2 mt-4">
-                        <a href="/web/auth?invite_token={{ .Token }}" class="btn btn-primary btn-lg">
+                        <a href="/web/auth?invite_token={{ .Token }}" class="btn btn-proviant-primary btn-lg">
                             <i class="bi bi-box-arrow-in-right me-2"></i>Log In / Sign Up
                         </a>
                     </div>
@@ -47,10 +47,10 @@
                     <form id="acceptInviteForm" class="mt-4">
                         <input type="hidden" id="inviteToken" value="{{ .Token }}">
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success btn-lg" id="btnAcceptInvite">
+                            <button type="submit" class="btn btn-proviant-primary btn-lg" id="btnAcceptInvite">
                                 <i class="bi bi-check-lg me-2"></i>Accept &amp; Join
                             </button>
-                            <a href="/web" class="btn btn-outline-secondary">Cancel</a>
+                            <a href="/web" class="btn btn-proviant-secondary">Cancel</a>
                         </div>
                     </form>
                     {{ end }}

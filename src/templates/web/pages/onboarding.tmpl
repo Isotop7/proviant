@@ -38,7 +38,7 @@
                         <input type="text" id="inputDisplayName" class="form-control" placeholder="Display name" maxlength="64" value="{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}">
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <button id="btnSaveProfile" class="btn btn-primary">
+                        <button id="btnSaveProfile" class="btn btn-proviant-primary">
                             <i class="bi bi-arrow-right me-1"></i>Continue
                         </button>
                         <button id="btnSkipProfile" class="btn btn-link btn-sm">Skip for now</button>
@@ -57,13 +57,13 @@
 
                     <!-- Mode switcher -->
                     <div class="btn-group w-100 mb-3" role="group" aria-label="Household options">
-                        <button type="button" id="btnHouseholdModeBrowse" class="btn btn-outline-secondary btn-sm">
+                        <button type="button" id="btnHouseholdModeBrowse" class="btn btn-proviant-secondary btn-sm">
                             <i class="bi bi-search me-1"></i>Browse
                         </button>
-                        <button type="button" id="btnHouseholdModeCreate" class="btn btn-outline-secondary btn-sm">
+                        <button type="button" id="btnHouseholdModeCreate" class="btn btn-proviant-secondary btn-sm">
                             <i class="bi bi-plus-lg me-1"></i>Create new
                         </button>
-                        <button type="button" id="btnHouseholdModeInvite" class="btn btn-outline-secondary btn-sm">
+                        <button type="button" id="btnHouseholdModeInvite" class="btn btn-proviant-secondary btn-sm">
                             <i class="bi bi-envelope me-1"></i>Use invite code
                         </button>
                     </div>
@@ -82,7 +82,7 @@
                         <div class="mb-2">
                             <input type="text" id="inputNewHouseholdName" class="form-control" placeholder="Household name" maxlength="64">
                         </div>
-                        <button id="btnCreateHousehold" class="btn btn-primary btn-sm">
+                        <button id="btnCreateHousehold" class="btn btn-proviant-primary btn-sm">
                             <i class="bi bi-plus-lg me-1"></i>Create Household
                         </button>
                     </div>
@@ -92,7 +92,7 @@
                         <div class="mb-2">
                             <input type="text" id="inputInviteToken" class="form-control" placeholder="Invite token">
                         </div>
-                        <button id="btnJoinByInvite" class="btn btn-primary btn-sm">
+                        <button id="btnJoinByInvite" class="btn btn-proviant-primary btn-sm">
                             <i class="bi bi-box-arrow-in-right me-1"></i>Join Household
                         </button>
                     </div>
@@ -107,7 +107,7 @@
                     <p class="text-muted small mb-2">Step 3 of 3</p>
                     <h5 class="card-title"><i class="bi bi-bell me-2"></i>Stay Notified</h5>
                     <p class="card-text text-muted">Get notified when products in your household are about to expire. You can configure this later in settings.</p>
-                    <button id="btnConfigureNotifications" class="btn btn-primary">
+                    <button id="btnConfigureNotifications" class="btn btn-proviant-primary">
                         <i class="bi bi-gear me-1"></i>Configure Notifications
                     </button>
                     <button id="btnSkipNotifications" class="btn btn-link btn-sm ms-2">Skip for now</button>
@@ -117,12 +117,14 @@
 
         <!-- Completion Step -->
         <div class="onboarding-step d-none" id="stepComplete">
-            <div class="card shadow-sm border-success">
+            <div class="card shadow-sm card-section-accent">
                 <div class="card-body text-center">
-                    <i class="bi bi-check-circle-fill text-success fs-1"></i>
+                    <div class="icon-chip-lg">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                    </div>
                     <h5 class="card-title mt-3">You're All Set!</h5>
                     <p class="card-text text-muted">Start adding products to your pantry and tracking expiration dates.</p>
-                    <button id="btnFinishOnboarding" class="btn btn-success">
+                    <button id="btnFinishOnboarding" class="btn btn-proviant-primary">
                         <i class="bi bi-arrow-right me-1"></i>Go to Proviant
                     </button>
                 </div>
@@ -144,7 +146,7 @@
 
         <!-- Navigation -->
         <div class="d-flex justify-content-end mt-4">
-            <button id="btnNextStep" class="btn btn-primary d-none">
+            <button id="btnNextStep" class="btn btn-proviant-primary d-none">
                 Next <i class="bi bi-arrow-right ms-1"></i>
             </button>
         </div>

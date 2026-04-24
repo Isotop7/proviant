@@ -5,10 +5,9 @@ function renderSkeletons(count) {
   for (let i = 0; i < count; i++) {
     const col = document.createElement('div');
     col.className = 'col skeleton-tile';
-    col.innerHTML = `<div class="card h-100 p-3">
-      <div class="skeleton-block mb-2" style="height:1rem;width:60%"></div>
-      <div class="skeleton-block mb-3" style="height:3rem;width:40%"></div>
-      <div class="skeleton-block" style="height:.75rem;width:80%"></div>
+    col.innerHTML = `<div class="metric-tile h-100">
+      <div class="skeleton-block mb-2" style="height:.75rem;width:60%"></div>
+      <div class="skeleton-block" style="height:2rem;width:40%"></div>
     </div>`;
     dashboard.appendChild(col);
   }
@@ -28,24 +27,41 @@ function showEmptyChart(canvasId, message) {
   );
 }
 
-function renderTile(title, hero, body, variant, heroClass) {
+function renderTile(title, hero, variant, heroClass) {
   const col = document.createElement('div');
   col.className = 'col';
-  const cls = heroClass || `display-5 fw-bold ${variant ? 'text-' + variant : 'text-primary'} my-2`;
+  const variantColorMap  = { danger: 'var(--status-expired)', warning: 'var(--status-soon)', success: 'var(--status-fresh)' };
+  const variantShadowMap = { danger: 'oklch(0.55 0.20 25)', warning: 'oklch(0.72 0.16 80)', success: 'oklch(0.50 0.12 162)' };
+
+  // Accent-fill tile for non-zero urgent/warning values
+  if (variant && variantColorMap[variant] && !heroClass && parseFloat(hero) > 0) {
+    const fill   = variantColorMap[variant];
+    const shadow = variantShadowMap[variant];
+    col.innerHTML = `
+      <div class="metric-tile h-100" style="background:${fill};box-shadow:0 6px 18px ${shadow}55;border-color:transparent;position:relative;overflow:hidden;">
+        <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;border-radius:999px;background:rgba(255,255,255,0.08);pointer-events:none;"></div>
+        <div style="position:relative;">
+          <div class="metric-label" style="color:rgba(255,255,255,0.70);">${title}</div>
+          <div class="metric-value" style="color:white;" title="${hero}">${hero}</div>
+        </div>
+      </div>`;
+    return col;
+  }
+
+  const heroColor = (variant && variantColorMap[variant]) ? variantColorMap[variant] : 'var(--fg)';
+  const heroStyle = heroClass ? '' : `style="color:${heroColor}"`;
+  const heroInnerClass = heroClass || 'metric-value';
   col.innerHTML = `
-    <div class="card h-100">
-      <div class="card-header fw-bold">${title}</div>
-      <div class="card-body">
-        <p class="${cls} my-2" title="${hero}">${hero}</p>
-        <p class="text-body-secondary mb-0">${body}</p>
-      </div>
+    <div class="metric-tile h-100">
+      <div class="metric-label">${title}</div>
+      <div class="${heroInnerClass}" ${heroStyle} title="${hero}">${hero}</div>
     </div>`;
   return col;
 }
 
 function renderListTile(title, items, days) {
   const col = document.createElement('div');
-  col.className = 'col';
+  col.className = 'h-100';
 
   let listHtml;
   if (items.length === 0) {
@@ -62,12 +78,15 @@ function renderListTile(title, items, days) {
   }
 
   col.innerHTML = `
-    <div class="card h-100">
-      <div class="card-header fw-bold d-flex justify-content-between align-items-center">
-        <span>${title}</span>
-        <i class="bi bi-info-circle text-body-secondary fw-normal tile-threshold-info"></i>
+    <div class="card h-100" style="overflow:hidden;">
+      <div class="card-header d-flex align-items-center gap-2 fw-bold">
+        <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
+          <i class="bi bi-clock-history" style="font-size:12px;color:var(--accent);"></i>
+        </div>
+        <span class="flex-grow-1">${title}</span>
+        <i class="bi bi-info-circle tile-threshold-info" style="font-size:14px;cursor:default;color:var(--fg-3);font-weight:normal;"></i>
       </div>
-      <div class="card-body p-0 tile-scroll-body">
+      <div class="tile-scroll-body">
         <ul class="list-group list-group-flush">${listHtml}</ul>
       </div>
     </div>`;
@@ -76,9 +95,13 @@ function renderListTile(title, items, days) {
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
-  renderSkeletons(6);
+  renderSkeletons(7);
 
-  const response = await proviant.getProductStats();
+  const [response, streakResponse, savingsResponse] = await Promise.all([
+    proviant.getProductStats(),
+    proviant.getStreak(),
+    proviant.getSavingsStats(),
+  ]);
   clearSkeletons();
 
   if (response.code !== 200) return;
@@ -90,42 +113,70 @@ document.addEventListener('DOMContentLoaded', async function () {
       {
         title: 'Active Products',
         hero: s.totalActive,
-        body: `${s.totalActive} product${s.totalActive !== 1 ? 's' : ''} currently tracked`,
       },
       {
         title: 'Expired (not archived)',
         hero: `${s.wastePercent.toFixed(1)}%`,
-        body: `${s.wasteCount} of ${s.totalActive} active products are past their expiry date`,
         variant: s.wasteCount > 0 ? 'danger' : null,
       },
       {
         title: 'Total Archived',
         hero: s.totalArchived,
-        body: `${s.totalArchived} product${s.totalArchived !== 1 ? 's' : ''} archived in total`,
-      },
-      {
-        title: 'Unique Archived',
-        hero: s.uniqueArchived,
-        body: `${s.uniqueArchived} distinct product${s.uniqueArchived !== 1 ? 's' : ''} have been archived`,
       },
       {
         title: 'Last Added Product',
         hero: s.lastInsertedProduct || '—',
-        body: s.lastInsertedProduct ? 'Most recently added to your household' : 'No products added yet',
-        heroClass: 'fs-4 fw-bold text-primary text-truncate my-2',
+        heroClass: 'metric-value text-truncate',
       },
     ];
 
-    tiles.forEach(({ title, hero, body, variant, heroClass }) => {
-      dashboard.appendChild(renderTile(title, hero, body, variant, heroClass));
+    tiles.forEach(({ title, hero, variant, heroClass }) => {
+      dashboard.appendChild(renderTile(title, hero, variant, heroClass));
     });
 
+    // Streak tile
+    const streak = (streakResponse.code === 200 && streakResponse.message) ? streakResponse.message : null;
+    const currentStreak = streak ? streak.currentStreak : 0;
+    const longestStreak = streak ? streak.longestStreak : 0;
+    const streakHero = `${currentStreak} day${currentStreak !== 1 ? 's' : ''}`;
+    const streakHeroClass = currentStreak > 0 ? 'metric-value' : 'metric-value text-body-secondary';
+    const streakSub = longestStreak > 0 ? `Best: ${longestStreak} day${longestStreak !== 1 ? 's' : ''}` : null;
+    const streakCol = renderTile('<i class="bi bi-fire"></i> Waste-free streak', streakHero, null, streakHeroClass);
+    if (streakSub) {
+      const tile = streakCol.querySelector('.metric-tile');
+      if (tile) {
+        const sub = document.createElement('div');
+        sub.style.cssText = 'font-size:var(--text-xs);color:var(--fg-3);margin-top:var(--space-1)';
+        sub.textContent = streakSub;
+        tile.appendChild(sub);
+      }
+    }
+    dashboard.appendChild(streakCol);
+
+    // Savings tiles
+    const savings = (savingsResponse.code === 200 && savingsResponse.message) ? savingsResponse.message : null;
+    if (savings) {
+      dashboard.appendChild(renderTile(
+        'Saved This Month',
+        `€${(savings.savedEurThisMonth ?? 0).toFixed(2)}`,
+        savings.savedEurThisMonth > 0 ? 'success' : null,
+        null,
+      ));
+      dashboard.appendChild(renderTile(
+        'CO₂ Avoided This Month',
+        `${(savings.savedCo2KgThisMonth ?? 0).toFixed(2)} kg`,
+        savings.savedCo2KgThisMonth > 0 ? 'success' : null,
+        null,
+      ));
+    }
+  }
+
+  const dashboardList = document.getElementById('dashboard-list');
+  if (dashboardList) {
     const days = s.expiringSoonDays ?? 7;
     const listTile = renderListTile(`Expiring within next ${days} Day${days !== 1 ? 's' : ''}`, s.expiringSoon ?? [], days);
-    dashboard.appendChild(listTile);
+    dashboardList.appendChild(listTile);
 
-    // Initialise Bootstrap tooltip on the info icon — must happen after the
-    // element is in the DOM; we pass the text via JS so no native title tooltip shows.
     const infoIcon = listTile.querySelector('.tile-threshold-info');
     if (infoIcon) {
       const tooltip = new bootstrap.Tooltip(infoIcon, {
@@ -136,10 +187,10 @@ document.addEventListener('DOMContentLoaded', async function () {
       infoIcon.addEventListener('mouseenter', () => tooltip.show());
       document.addEventListener('click', () => tooltip.hide(), { once: false, capture: true });
     }
-
-    const status = document.getElementById('dashboard-status');
-    if (status) status.textContent = 'Dashboard loaded';
   }
+
+  const status = document.getElementById('dashboard-status');
+  if (status) status.textContent = 'Dashboard loaded';
 
   // Chart 1 — Waste donut (expired vs fresh)
   if (!s.totalActive) {
