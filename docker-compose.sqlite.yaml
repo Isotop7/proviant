@@ -11,13 +11,13 @@ services:
     build: ./
     restart: always
     ports:
-      - "80:5050"
+      - "5114:5114"
     environment:
       - GIN_MODE=debug
       - PROVIANT_LOGGING_ENABLED=true
       - PROVIANT_LOGGING_FILE=logs/proviant.log
-      - PROVIANT_ENGINE=sqlite
-      - PROVIANT_SQLITE_FILEPATH=data/proviant.db
+      - PROVIANT_DATABASE_ENGINE=sqlite
+      - PROVIANT_DATABASE_SQLITE_FILEPATH=data/proviant.db
       - PROVIANT_NOTIFICATION_SMTP_HOST=smtp
       - PROVIANT_NOTIFICATION_SMTP_FROMADDRESS=proviant@yourdomain.com
     volumes:
