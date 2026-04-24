@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        uses: https://github.com/orhun/git-cliff-action@v3
+        with:
+          config: cliff.toml
+          args: --verbose
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Configure git
+        run: |
+          git config user.name "proviant-release-bot"
+          git config user.email "release-bot@isotop7.codeberg.org"
+
+      - name: Commit CHANGELOG.md
+        run: |
+          git add CHANGELOG.md
+          git commit -m "chore: update CHANGELOG.md for ${{ github.ref_name }}"
+          git push "https://${{ secrets.RELEASE_TOKEN }}@codeberg.org/${{ forgejo.repository }}.git" HEAD:main
+
+      - name: Upload release asset
+        uses: https://gitea.com/actions/release-action@main
+        with:
+          files: CHANGELOG.md
+          api_key: ${{ secrets.RELEASE_TOKEN }}
