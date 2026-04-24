@@ -91,8 +91,8 @@ $bootstrap-icons-font-dir: "../fonts";
   /* Base palette */
   --bg: oklch(.98 .012 75deg);
   --bg-subtle: oklch(.96 .008 75deg);
-  --surface: oklch(1 0);
-  --surface-raised: oklch(1 0);
+  --surface: oklch(1 0 0deg);
+  --surface-raised: oklch(1 0 0deg);
 
   --fg: oklch(.18 .022 70deg);
   --fg-2: oklch(.48 .018 70deg);
@@ -265,6 +265,14 @@ $bootstrap-icons-font-dir: "../fonts";
   --nav-item-active-fg: var(--accent);
   --nav-item-fg: var(--fg-2);
   --nav-item-fg-hover: var(--fg);
+}
+
+// Ensure full page height on mobile
+@media (max-width: 767.98px) {
+  html, body {
+    min-height: 100vh;
+    height: 100%;
+  }
 }
 
 // Buttons — unified size regardless of btn-sm / btn-lg modifier
@@ -742,7 +750,7 @@ $bootstrap-icons-font-dir: "../fonts";
 
 // Main content area — offset for fixed sidebar
 #content-wrapper {
-  padding: var(--space-6);
+  padding: var(--space-6) var(--space-3);
   margin-left: var(--sidebar-width);
 }
 
@@ -762,20 +770,19 @@ $bootstrap-icons-font-dir: "../fonts";
   position: sticky;
   top: 0;
   z-index: 90; // below sidebar (100), above page content
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+  padding: 1rem 0;
   background-color: var(--bs-body-bg);
 
   #advanced-filters {
     .form-select,
     .form-control {
-      font-size: 11px;
-      padding: 0.25rem 0.5rem;
       height: auto;
+      padding: .25rem .5rem;
+      font-size: 11px;
     }
     .input-group-text {
+      padding: .25rem .5rem;
       font-size: 11px;
-      padding: 0.25rem 0.5rem;
       color: var(--fg-3);
     }
   }
@@ -820,11 +827,189 @@ th a {
   font-size: 6rem;
 }
 
-// Search bar — vertically center the input group
+// Search bar — design-token based standalone (not input-group)
+// Follows PRODUCT_LIST_HANDOFF.md design tokens
 .search-bar {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color var(--duration-base), box-shadow var(--duration-base);
+
+  &:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px oklch(.5 .12 162deg / .15);
+  }
+}
+
+.search-icon {
+  flex-shrink: 0;
+  padding: 0 10px;
+  font-size: 14px;
+  color: var(--fg-3);
+  pointer-events: none;
+}
+
+.search-select {
+  flex-shrink: 0;
+  width: auto;
+  min-width: 100px;
+  padding: 8px 28px 8px 10px;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+
+  &:focus {
+    box-shadow: none;
+  }
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: transparent;
+  border: none;
+  outline: none;
+
+  &::placeholder {
+    font-family: var(--font-ui);
+    font-size: var(--text-sm);
+    color: var(--fg-3);
+  }
+}
+
+.btn.btn-search,
+.btn.btn-show-all,
+.btn.btn-filters {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--border);
+  transition: background var(--duration-fast), color var(--duration-fast);
+
+  &:hover {
+    color: var(--fg);
+    background: var(--bg-subtle);
+  }
+}
+
+.btn.btn-show-all,
+.btn.btn-filters {
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.filter-row {
   display: flex;
   flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.filter-label {
+  display: inline;
+  margin-right: 4px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.filter-select {
+  padding: 6px 28px 6px 10px;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: border-color var(--duration-base);
+
+  &:focus {
+    border-color: var(--accent);
+  }
+}
+
+.select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
+  .select-indicator {
+    position: absolute;
+    right: 8px;
+    font-size: 10px;
+    color: var(--fg-3);
+    pointer-events: none;
+  }
+}
+
+// Mobile: horizontal scroll if needed
+@media (max-width: 767.98px) {
+  .search-row {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .search-input {
+    min-width: 140px;
+  }
+}
+
+// Mobile expiry: show compact numeric badge
+@media (max-width: 767.98px) {
+  .product-meta .urgency-days,
+  .expiry-text .urgency-days {
+    padding: 0 4px;
+    margin-left: 2px;
+    font-family: var(--font-mono);
+    font-size: .85em;
+    font-weight: 700;
+    background: rgba(0, 0, 0, .06);
+    border-radius: 4px;
+  }
+  .expiry-text .urgency-days {
+    font-weight: 600;
+  }
 }
 
 //
@@ -1041,21 +1226,68 @@ th a {
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 100;
+  z-index: 9999;
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 60px;
+  padding: 0 8px;
   padding-bottom: env(safe-area-inset-bottom, 0);
   background: var(--surface);
   border-top: 1px solid var(--border);
   box-shadow: 0 -4px 20px oklch(.18 .022 70deg / .08);
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+.bottom-nav-left,
+.bottom-nav-right {
+  display: flex;
+  flex: 1;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.bottom-nav-center {
+  position: relative;
+  top: -8px;
+  flex-shrink: 0;
+}
+
+.bottom-nav-scan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  color: var(--accent-fg);
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px oklch(.5 .12 162deg / .4);
+  text-decoration: none;
+  transition: transform var(--duration-base), box-shadow var(--duration-base);
+
+  i {
+    font-size: 24px;
+  }
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px oklch(.5 .12 162deg / .5);
+  }
+
+  &.active {
+    background: var(--accent-hover);
+  }
 }
 
 .bottom-nav-item {
   display: flex;
-  flex: 1;
   flex-direction: column;
   gap: 3px;
   align-items: center;
-  padding: 10px 0;
+  justify-content: center;
+  padding: 8px 12px;
   font-size: 10px;
   font-weight: 400;
   color: var(--fg-3);
@@ -1064,7 +1296,7 @@ th a {
 
   i {
     display: block;
-    font-size: 22px;
+    font-size: 20px;
   }
   span {
     font-family: var(--font-ui);
@@ -1073,9 +1305,6 @@ th a {
   &.active {
     font-weight: 700;
     color: var(--accent);
-  }
-  &.nav-scan i {
-    font-size: 26px;
   }
 }
 
@@ -1086,12 +1315,20 @@ th a {
 }
 
 @media (max-width: 767.98px) {
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    height: 100%;
+    overflow-x: hidden;
+  }
   .pv-sidebar {
     display: none;
   }
   #content-wrapper {
-    padding-bottom: 80px;
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0));
     margin-left: 0;
+    min-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0));
   }
   body {
     --offline-banner-left: 0px;
@@ -2199,11 +2436,11 @@ select.pv-field-input {
   font-size: 14px;
   font-weight: 600;
   color: var(--accent);
-  background: white;
-  border: 1px solid oklch(0.78 0.08 162);
-  border-radius: 8px;
-  cursor: pointer;
   text-decoration: none;
+  cursor: pointer;
+  background: white;
+  border: 1px solid oklch(.78 .08 162deg);
+  border-radius: 8px;
   transition: background 150ms;
 
   &:hover {
@@ -2240,9 +2477,9 @@ select.pv-field-input {
 .list-thumb-img {
   width: 32px;
   height: 32px;
+  object-fit: contain;
   background: var(--bg-subtle);
   border-radius: 6px;
-  object-fit: contain;
 }
 
 .list-thumb-fallback {
@@ -2375,7 +2612,7 @@ select.pv-field-input {
     }
   }
 
-   span {
+  span {
     width: 24px;
     font-family: var(--font-mono);
     font-size: 12px;
@@ -2389,11 +2626,11 @@ select.pv-field-input {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100%;
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
   color: var(--fg);
-  height: 100%;
 }
 
 .filter-pill {
@@ -2477,19 +2714,19 @@ select.pv-field-input {
 .dot-fresh { background: var(--status-fresh-dot); }
 .dot-nodate { background: var(--status-nodate-dot); }
 
-  .filter-separator {
-    width: 1px;
-    height: 16px;
-    background: var(--border);
-    margin: 0 6px;
-  }
+.filter-separator {
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--border);
+}
 
-  .toolbar-divider {
-    width: 1px;
-    height: 24px;
-    background: var(--border);
-    margin: 0 8px;
-  }
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 8px;
+  background: var(--border);
+}
 
 .btn-view {
   display: inline-flex;
@@ -2571,11 +2808,100 @@ select.pv-field-input {
 @media (max-width: 767.98px) {
   .list-header,
   .list-row {
-    grid-template-columns: 32px 1fr 100px 80px;
+    grid-template-columns: 18px 1fr 40px 64px;
   }
 
   .col-status,
   .col-location {
     display: none;
+  }
+
+  // Hide desktop-only bulk actions and export divider; mobile dropdown remains visible
+  #bulkActions,
+  .toolbar-divider {
+    display: none !important;
+  }
+
+  // Prevent toolbar row 2 from wrapping — keep filters + right-side buttons on one line
+  #toolbarRow2 {
+    flex-wrap: nowrap;
+  }
+
+  // Hide filter pills on mobile; use offcanvas filters instead
+  #toolbarFilters {
+    display: none !important;
+  }
+
+  // Keep mobile dropdown fixed on the right, don't let it shrink
+  #toolbarRight {
+    flex-shrink: 0;
+  }
+
+  // Add bottom padding to content so it doesn't get covered by mobile bulk bar + bottom nav
+  #content-wrapper {
+    padding-bottom: calc(130px + env(safe-area-inset-bottom, 0));
+  }
+
+  // Search bar: prevent input group from collapsing; ensure search button and filters button visible
+  .search-bar {
+    .form-select,
+    .form-control {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .btn {
+      flex-shrink: 0;
+    }
+  }
+
+  // Mobile bulk actions bar (fixed above bottom nav)
+  .mobile-bulk-actions {
+    position: fixed;
+    right: 0;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0) + 6px);
+    left: 0;
+    z-index: 10000; // above bottom nav (9999)
+    display: none;
+    padding: 10px 12px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 16px oklch(.18 .022 70deg / .12);
+
+    .bulk-actions-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .btn-bulk {
+      padding: 8px 14px; // larger touch target
+      font-size: 12px;
+    }
+  }
+}
+
+/* Amount update feedback — green background flash (pill shape) */
+[id^="amount-"],
+[id^="qty-"] {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  transition: background .4s ease;
+}
+.amount-updated {
+  color: var(--status-fresh) !important;
+  background: var(--status-fresh-subtle) !important;
+}
+
+.mobile-bulk-actions {
+  display: none;
+}
+
+// Desktop: always hide mobile bulk bar (even if JS sets inline display)
+@media (min-width: 768px) {
+  .mobile-bulk-actions {
+    display: none !important;
   }
 }

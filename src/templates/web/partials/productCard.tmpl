@@ -29,7 +29,9 @@
             {{ $urgency := expiryUrgencyText .ExpireAt }}
             {{ if $urgency }}
             <div class="product-meta mt-1 fw-semibold" style="color: var(--status-{{ expiryStatusClass .ExpireAt }});">
-                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {{ $urgency }}
+                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                <span class="urgency-text d-none d-sm-inline">{{ $urgency }}</span>
+                <span class="urgency-days d-inline d-sm-none">{{ expiryDays .ExpireAt }}</span>
             </div>
             {{ end }}
         </div>

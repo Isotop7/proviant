@@ -186,6 +186,18 @@ func expiryUrgencyText(t time.Time) string {
 	return ""
 }
 
+// expiryDays returns the signed number of days until expiry (negative = expired).
+func expiryDays(t time.Time) int {
+	if t.IsZero() {
+		return 0
+	}
+	now := time.Now()
+	if t.Before(now) {
+		return -int(now.Sub(t).Hours()/24) - 1 // -1 means "as of yesterday"
+	}
+	return int(t.Sub(now).Hours()/24) + 1
+}
+
 func badgifyCategories(categories string, limit int) template.HTML {
 	var output strings.Builder
 	elements := strings.Split(categories, ",")
@@ -299,6 +311,7 @@ var customTemplateFunctions = template.FuncMap{
 	"expiryStatusIcon":     expiryStatusIcon,
 	"expiryStatusLabel":    expiryStatusLabel,
 	"expiryUrgencyText":    expiryUrgencyText,
+	"expiryDays":           expiryDays,
 	"expiryTextClass":      expiryTextClass,
 	"expiryColor":          expiryColor,
 	"queryWith":            queryWith,

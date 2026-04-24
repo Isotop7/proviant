@@ -1,3 +1,5 @@
+/* exported changeQty */
+
 async function bulkAction(action, productIDs) {
     const fn = { delete: proviant.bulkDeleteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkArchiveProducts }[action];
     const response = await fn(productIDs);
@@ -18,6 +20,8 @@ async function handleSelect() {
     if (editBtn) {
         editBtn.disabled = selectedProducts.length !== 1;
     }
+    // Also update bulk selection state (for mobile bulk bar, etc.)
+    updateBulkSelection();
 }
 
 /* Event delegation for clicks */
@@ -85,7 +89,11 @@ document.addEventListener("click", function (event) {
         proviant.updateProductAmount(productID, 1).then((response) => {
             if (response.code === 200) {
                 const amountEl = document.getElementById(`amount-${productID}`);
-                if (amountEl) amountEl.textContent = parseInt(amountEl.textContent, 10) + 1;
+                if (amountEl) {
+                    amountEl.textContent = parseInt(amountEl.textContent, 10) + 1;
+                    amountEl.classList.add('amount-updated');
+                    setTimeout(() => amountEl.classList.remove('amount-updated'), 800);
+                }
             } else {
                 console.error(response.message);
             }
@@ -109,6 +117,8 @@ document.addEventListener("click", function (event) {
                     if (amountEl) {
                         const newVal = Math.max(0, parseInt(amountEl.textContent, 10) - 1);
                         amountEl.textContent = newVal;
+                        amountEl.classList.add('amount-updated');
+                        setTimeout(() => amountEl.classList.remove('amount-updated'), 800);
                     }
                 }
             } else {
@@ -170,6 +180,28 @@ document.addEventListener("click", function (event) {
 
     // Export full JSON
     if (target.closest("#export-full-json")) {
+        event.preventDefault();
+        proviant.exportFullJSON();
+        return;
+    }
+
+    // Mobile export actions
+    if (target.closest("#mobile-export-csv")) {
+        event.preventDefault();
+        proviant.exportProductsCSV();
+        return;
+    }
+    if (target.closest("#mobile-export-json")) {
+        event.preventDefault();
+        proviant.exportProductsJSON();
+        return;
+    }
+    if (target.closest("#mobile-archive-csv")) {
+        event.preventDefault();
+        proviant.exportArchiveCSV();
+        return;
+    }
+    if (target.closest("#mobile-export-full")) {
         event.preventDefault();
         proviant.exportFullJSON();
         return;
@@ -376,6 +408,9 @@ function updateBulkSelection() {
     const bulk = document.getElementById('bulkActions');
     const count = document.getElementById('bulkCount');
     const rows = document.querySelectorAll('.list-row');
+    const mobileBulk = document.getElementById('mobileBulkActions');
+    const mobileCount = document.getElementById('mobileBulkCount');
+    const isMobile = window.innerWidth <= 767;
 
     rows.forEach(function (row) {
         const cb = row.querySelector('.row-checkbox');
@@ -385,8 +420,13 @@ function updateBulkSelection() {
     if (checked.length > 0) {
         if (bulk) bulk.style.display = 'flex';
         if (count) count.textContent = checked.length + ' selected';
+        if (isMobile && mobileBulk) {
+            mobileBulk.style.display = 'block';
+            if (mobileCount) mobileCount.textContent = checked.length + ' selected';
+        }
     } else {
         if (bulk) bulk.style.display = 'none';
+        if (mobileBulk) mobileBulk.style.display = 'none';
     }
 
     const all = document.getElementById('selectAll');
@@ -395,13 +435,6 @@ function updateBulkSelection() {
         all.indeterminate = checked.length > 0 && checked.length < total;
         all.checked = checked.length === total && total > 0;
     }
-}
-
-function toggleSelectAll(cb) {
-    document.querySelectorAll('.row-checkbox').forEach(function (c) {
-        c.checked = cb.checked;
-    });
-    updateBulkSelection();
 }
 
 function bulkAction(action) {
@@ -426,10 +459,23 @@ function bulkAction(action) {
 }
 
 // ── List view: qty stepper ──────────────────────────────────────
+// Inline onclick handlers in list view call this function
 function changeQty(id, delta) {
-    const span = document.getElementById('qty-' + id);
-    if (!span) return;
-    const newVal = Math.max(0, parseInt(span.textContent, 10) + delta);
-    span.textContent = newVal;
-    proviant.updateProductAmount(id, delta);
+    proviant.updateProductAmount(id, delta).then((response) => {
+        if (response.code === 200) {
+            if (response.deleted) {
+                const row = document.querySelector(`.list-row[data-id="${id}"]`);
+                if (row) row.remove();
+            } else {
+                const span = document.getElementById('qty-' + id);
+                if (span) {
+                    span.textContent = Math.max(0, parseInt(span.textContent, 10) + delta);
+                    span.classList.add('amount-updated');
+                    setTimeout(() => span.classList.remove('amount-updated'), 800);
+                }
+            }
+        } else {
+            console.error(response.message);
+        }
+    });
 }

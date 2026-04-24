@@ -11,12 +11,13 @@
 </div>
 
 <div class="toolbar-sticky">
-    <!-- Row 1: search + view toggle + add button -->
-    <div class="d-flex gap-2 align-items-start mb-2">
-        <div class="flex-grow-1">
+    <!-- Row 1: search (full width on mobile, with view toggle on desktop) -->
+    <div class="d-flex gap-2 align-items-center mb-2">
+        <div class="flex-grow-1" style="min-width: 0;">
             {{ template "searchBar" . }}
         </div>
-        <div class="d-flex gap-2 align-items-center flex-shrink-0">
+        <!-- View toggle buttons on desktop -->
+        <div class="d-none d-md-flex gap-1 align-items-center flex-shrink-0">
             <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}">
                 <i class="bi bi-list-ul"></i>
             </a>
@@ -26,34 +27,46 @@
         </div>
     </div>
 
-    <!-- Row 2: status filters + location filters | option bar + bulk actions (right) -->
-    <div class="d-flex gap-1 align-items-center flex-wrap">
-        <!-- Left side: filters -->
-        <div class="d-flex gap-1 align-items-center flex-wrap">
-            {{ range $s := stringSlice "all" "expired" "critical" "soon" "fresh" "nodate" "archived" }}
-            <a href="?{{ queryWith $.Params "status" $s }}"
-               class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
-                {{ if and (ne $s "all") (ne $s "archived") }}<span class="filter-dot dot-{{ $s }}"></span>{{ end }}
-                {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Archived{{ else }}No date{{ end }}
-            </a>
-            {{ end }}
+    <!-- Row 2: view toggle (mobile left) | filters (desktop left) | bulk actions + options (right) -->
+    <div id="toolbarRow2" class="d-flex gap-1 align-items-center flex-wrap">
+        <!-- Left side: view toggle on mobile, filters on desktop -->
+        <div class="d-flex gap-1 align-items-center flex-shrink-0">
+            <!-- View toggle: visible on mobile, hidden on desktop (already in Row 1 on desktop) -->
+            <div class="d-flex d-md-none gap-1">
+                <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}" title="List view">
+                    <i class="bi bi-list-ul"></i>
+                </a>
+                <a href="?{{ queryWith .Params "view" "grid" }}" class="btn-view {{ if eq .View "grid" }}active{{ end }}" title="Grid view">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </a>
+            </div>
+            <!-- Desktop filters (hidden on mobile) -->
+            <div id="toolbarFilters" class="d-none d-md-flex gap-1 align-items-center">
+                {{ range $s := stringSlice "all" "expired" "critical" "soon" "fresh" "nodate" "archived" }}
+                <a href="?{{ queryWith $.Params "status" $s }}"
+                   class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
+                    {{ if and (ne $s "all") (ne $s "archived") }}<span class="filter-dot dot-{{ $s }}"></span>{{ end }}
+                    {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Archived{{ else }}No date{{ end }}
+                </a>
+                {{ end }}
 
-            <div class="filter-separator"></div>
+                <div class="filter-separator"></div>
 
-            {{ range $l := .StorageLocations }}
-            <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
-               class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
-                {{ $l.Name }}
-            </a>
-            {{ end }}
-            {{ if .StorageLocations }}
-            <a href="?{{ queryWith .Params "locationId" "" }}"
-               class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">All</a>
-            {{ end }}
+                {{ range $l := .StorageLocations }}
+                <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
+                   class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
+                    {{ $l.Name }}
+                </a>
+                {{ end }}
+                {{ if .StorageLocations }}
+                <a href="?{{ queryWith .Params "locationId" "" }}"
+                   class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">All</a>
+                {{ end }}
+            </div>
         </div>
 
-        <!-- Right side: bulk actions + divider + export -->
-        <div class="ms-auto d-flex gap-1 align-items-center flex-wrap">
+        <!-- Right side: bulk actions + mobile filter dropdown -->
+        <div id="toolbarRight" class="ms-auto d-flex gap-1 align-items-center flex-wrap">
             <div id="bulkActions" class="bulk-actions-bar">
                 <span id="bulkCount" class="bulk-count"></span>
                 {{ if eq $.StatusFilter "archived" }}
@@ -70,9 +83,28 @@
                 </button>
             </div>
 
+            <!-- Mobile filter/export button -->
+            <div class="d-block d-md-none">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn-bulk dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="mobileExportMenu">
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="offcanvas" data-bs-target="#mobileFiltersOffcanvas"><i class="bi bi-funnel me-2"></i>Filters</a></li>
+                        {{ if .Products }}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-export-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Products CSV</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-export-json"><i class="bi bi-filetype-json me-2"></i>Products JSON</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-archive-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Archive CSV</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-export-full"><i class="bi bi-files me-2"></i>Full JSON</a></li>
+                        {{ end }}
+                    </ul>
+                </div>
+            </div>
+
             {{ if .Products }}
-            <div class="toolbar-divider"></div>
-            <div>
+            <div class="toolbar-divider d-none d-md-flex"></div>
+            <div class="d-none d-md-flex">
                 {{ template "productOptionBar" . }}
             </div>
             {{ end }}
@@ -125,9 +157,15 @@
                 {{ expiryStatusLabel .ExpireAt }}
             </span>
         </div>
+        {{ $urgency := expiryUrgencyText .ExpireAt }}
+        {{ if $urgency }}
         <div class="col-expiry expiry-text status-{{ expiryStatusClass .ExpireAt }}">
-            {{ with expiryUrgencyText .ExpireAt }}{{ . }}{{ else }}—{{ end }}
+            <span class="urgency-full d-none d-sm-inline">{{ $urgency }}</span>
+            <span class="urgency-days d-inline d-sm-none">{{ expiryDays .ExpireAt }}</span>
         </div>
+        {{ else }}
+        <div class="col-expiry expiry-text status-{{ expiryStatusClass .ExpireAt }}">—</div>
+        {{ end }}
         <div class="col-location">
             {{ if .StorageLocation }}{{ .StorageLocation.Name }}{{ else }}—{{ end }}
         </div>
@@ -155,6 +193,63 @@
 {{ else }}
 {{ template "noproducts" . }}
 {{ end }}
+
+<!-- Mobile filter offcanvas (hidden by default) -->
+<div class="offcanvas offcanvas-bottom" id="mobileFiltersOffcanvas" tabindex="-1" aria-labelledby="mobileFiltersOffcanvasLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="mobileFiltersOffcanvasLabel">Filter products</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div class="mb-3">
+      <label class="form-label fw-semibold small">Status</label>
+      <div class="d-flex flex-wrap gap-2">
+        {{ range $s := stringSlice "all" "expired" "critical" "soon" "fresh" "nodate" "archived" }}
+        <a href="?{{ queryWith $.Params "status" $s }}"
+           class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
+          {{ if and (ne $s "all") (ne $s "archived") }}<span class="filter-dot dot-{{ $s }}"></span>{{ end }}
+          {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Archived{{ else }}No date{{ end }}
+        </a>
+        {{ end }}
+      </div>
+    </div>
+    {{ if $.StorageLocations }}
+    <div class="mb-3">
+      <label class="form-label fw-semibold small">Storage location</label>
+      <div class="d-flex flex-wrap gap-2">
+        {{ range $l := .StorageLocations }}
+        <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
+           class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
+          {{ $l.Name }}
+        </a>
+        {{ end }}
+        <a href="?{{ queryWith .Params "locationId" "" }}" class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">All</a>
+      </div>
+    </div>
+    {{ end }}
+  </div>
+</div>
+
+<!-- Mobile bulk actions bar (fixed, shown only when items selected) -->
+<div id="mobileBulkActions" class="mobile-bulk-actions">
+  <div class="bulk-actions-inner">
+    <span id="mobileBulkCount" class="bulk-count"></span>
+    <div class="d-flex gap-2">
+      {{ if eq $.StatusFilter "archived" }}
+      <button onclick="bulkAction('restore')" class="btn-bulk">
+        <i class="bi bi-arrow-counterclockwise"></i> Restore
+      </button>
+      {{ else }}
+      <button onclick="bulkAction('archive')" class="btn-bulk">
+        <i class="bi bi-archive"></i> Archive
+      </button>
+      {{ end }}
+      <button onclick="bulkAction('delete')" class="btn-bulk danger">
+        <i class="bi bi-trash3"></i> Delete
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- Add product modal (desktop only — hidden on mobile via JS) -->
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">

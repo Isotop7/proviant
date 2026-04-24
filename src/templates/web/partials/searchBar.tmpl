@@ -1,50 +1,70 @@
 {{ define "searchBar" }}
+{{/* Search bar — design-token controlled, no input-group */}}
+<div role="search" class="search-bar mb-2 mb-md-0">
+    <div class="search-row">
+        {{/* Search icon (hidden on mobile to save space) */}}
+        <i class="bi bi-search search-icon d-none d-md-block" aria-hidden="true"></i>
 
-<div role="search" class="row mb-0">
-    <div class="search-bar input-group mb-2 mb-md-0 w-100">
-        <label for="search-query" class="visually-hidden">Search products</label>
-        <span class="input-group-text" id="addon-wrapping" aria-hidden="true">
-            <i class="bi bi-search"></i>
-        </span>
-        <select id="search-param" class="form-select" aria-label="Search by field">
-            <option value="product_name" {{ if eq .QueryParam "product_name" }}selected{{ end }}>Product Name</option>
-            <option value="barcode" {{ if eq .QueryParam "barcode" }}selected{{ end }}>Barcode</option>
-        </select>
-        <input type="search" id="search-query" class="form-control" placeholder="Search..."
-            value="{{ .QueryValue }}" aria-describedby="addon-wrapping" />
-        <button class="btn btn-proviant-secondary" type="button"
+        {{/* Field selector */}}
+        <div class="select-wrapper">
+            <select id="search-param" class="search-select" aria-label="Search by field">
+                <option value="product_name" {{ if eq .QueryParam "product_name" }}selected{{ end }}>Product Name</option>
+                <option value="barcode" {{ if eq .QueryParam "barcode" }}selected{{ end }}>Barcode</option>
+            </select>
+            <i class="bi bi-chevron-down select-indicator" aria-hidden="true"></i>
+        </div>
+
+        {{/* Search input */}}
+        <input type="search" id="search-query" class="search-input" placeholder="Search products..."
+            value="{{ .QueryValue }}" aria-label="Search products" />
+
+        {{/* Search button */}}
+        <button id="search-btn" class="btn btn-search" title="Search" type="button">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <span class="d-none d-sm-inline">Search</span>
+        </button>
+
+        {{/* Show all button */}}
+        <button id="show-all-btn" class="btn btn-show-all" type="button" title="Show all">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+            <span class="d-none d-sm-inline">Show all</span>
+        </button>
+
+        {{/* Filters button */}}
+        <button class="btn btn-filters" type="button"
             data-bs-toggle="collapse" data-bs-target="#advanced-filters"
             aria-expanded="false" aria-controls="advanced-filters"
             title="Advanced filters">
             <i class="bi bi-funnel" aria-hidden="true"></i>
-            <span class="visually-hidden">Advanced filters</span>
+            <span class="d-none d-sm-inline">Filters</span>
         </button>
-        <button id="search-btn" class="btn btn-proviant-primary" title="Search">
-            <i class="bi bi-search me-1" aria-hidden="true"></i>
-            <span class="d-none d-sm-inline">Search</span>
-        </button>
-        <button id="show-all-btn" class="btn btn-proviant-secondary rounded-end" type="button" title="Show all">
-            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-            <span class="visually-hidden">Show all products</span>
-        </button>
-        <div id="advanced-filters" class="collapse w-100">
-            <div class="input-group my-2">
-                <label for="sort-param" class="input-group-text">Order by</label>
-                <select id="sort-param" class="form-select">
+    </div>
+
+    {{/* Advanced filters */}}
+    <div id="advanced-filters" class="collapse w-100 mt-2">
+        <div class="filter-row">
+            <div class="select-wrapper">
+                <label for="sort-param" class="filter-label">Order by</label>
+                <select id="sort-param" class="filter-select">
                     <option value="created_at" {{ if eq .Sort "created_at" }}selected{{ end }}>Created At</option>
                     <option value="expire_at" {{ if eq .Sort "expire_at" }}selected{{ end }}>Expire At</option>
                     <option value="scanned_at" {{ if eq .Sort "scanned_at" }}selected{{ end }}>Scanned At</option>
                     <option value="notified_at" {{ if eq .Sort "notified_at" }}selected{{ end }}>Notified At</option>
                 </select>
-                <select id="sort-order" class="form-select" aria-label="Sort order">
+                <i class="bi bi-chevron-down select-indicator" aria-hidden="true"></i>
+            </div>
+            <div class="select-wrapper">
+                <label for="sort-order" class="filter-label">Direction</label>
+                <select id="sort-order" class="filter-select" aria-label="Sort order">
                     <option value="asc" {{ if eq .Order "asc" }}selected{{ end }}>↑ Ascending</option>
                     <option value="desc" {{ if eq .Order "desc" }}selected{{ end }}>↓ Descending</option>
                 </select>
+                <i class="bi bi-chevron-down select-indicator" aria-hidden="true"></i>
             </div>
             {{ if .Locations }}
-            <div class="input-group my-2">
-                <label for="location-filter" class="input-group-text">Location</label>
-                <select id="location-filter" class="form-select">
+            <div class="select-wrapper">
+                <label for="location-filter" class="filter-label">Location</label>
+                <select id="location-filter" class="filter-select">
                     <option value="">All locations</option>
                     {{ range .Locations }}
                     <option value="{{ .ID }}"
@@ -53,6 +73,7 @@
                     </option>
                     {{ end }}
                 </select>
+                <i class="bi bi-chevron-down select-indicator" aria-hidden="true"></i>
             </div>
             {{ end }}
         </div>
