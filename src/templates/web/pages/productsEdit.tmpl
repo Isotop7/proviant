@@ -175,7 +175,13 @@
           </button>
           <a href="/products/{{ .Product.ID }}" class="pv-btn-secondary">Cancel</a>
           <div class="spacer"></div>
-          <button class="pv-btn-danger-ghost" type="button" data-bs-toggle="modal" data-bs-target="#deleteModal">
+          {{ if $.IsArchived }}
+          <button class="pv-btn-restore" type="button" id="btnRestoreProduct">
+            <i class="bi bi-arrow-counterclockwise"></i> Restore
+          </button>
+          {{ end }}
+          <button class="pv-btn-danger-ghost" type="button"
+            data-bs-toggle="modal" data-bs-target="#deleteModal">
             <i class="bi bi-trash3"></i> Delete
           </button>
         </div>
@@ -263,8 +269,13 @@
       <i class="bi bi-check2"></i> Update product
     </button>
     <a href="/products/{{ .Product.ID }}" class="pv-btn-secondary">Cancel</a>
+    {{ if $.IsArchived }}
+    <button type="button" class="pv-btn-restore" id="btnRestoreProductMobile">
+      <i class="bi bi-arrow-counterclockwise"></i> Restore
+    </button>
+    {{ end }}
     <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#deleteModal"
-      style="background:white;border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--status-expired);">
+      style="background:white;border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--status-expired);">
       <i class="bi bi-trash3" style="font-size:16px;"></i>
     </button>
   </div>

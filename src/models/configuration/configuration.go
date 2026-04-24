@@ -136,6 +136,12 @@ type RecipeAPIConfiguration struct {
 	CacheTTL     int    `mapstructure:"cache_ttl"` // hours, default 24
 }
 
+// ExpiryConfiguration controls the visual expiry-status thresholds.
+type ExpiryConfiguration struct {
+	CriticalThresholdDays int `mapstructure:"critical_threshold_days"` // days before expiry to mark as critical (default: 3)
+	SoonThresholdDays     int `mapstructure:"soon_threshold_days"`     // days before expiry to mark as expiring soon (default: 7)
+}
+
 // ProviantConfiguration is the configuration wrapper struct
 type ProviantConfiguration struct {
 	Database      DatabaseConfiguration
@@ -145,6 +151,7 @@ type ProviantConfiguration struct {
 	OpenFoodFacts OpenFoodFactsConfiguration
 	OCR           OCRConfiguration       `mapstructure:"ocr"`
 	RecipeAPI     RecipeAPIConfiguration `mapstructure:"recipe_api"`
+	Expiry        ExpiryConfiguration    `mapstructure:"expiry"`
 	TemplateCache map[string]*template.Template
 }
 

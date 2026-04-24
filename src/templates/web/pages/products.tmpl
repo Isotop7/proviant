@@ -3,7 +3,7 @@
 <div class="page-header">
     <div>
         <h1 class="page-header-title">Products</h1>
-        <p class="page-header-subtitle">{{ len .Products }} items in your household</p>
+        <p class="page-header-subtitle">{{ .ProductCount }} items in your household</p>
     </div>
     <button class="btn btn-proviant-primary d-none d-md-flex align-items-center gap-2" id="btnOpenAddProductModal">
         <i class="bi bi-plus-lg"></i> Add product
@@ -11,45 +11,149 @@
 </div>
 
 <div class="toolbar-sticky">
-    {{ template "searchBar" . }}
-
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2">
-        {{ if .Locations }}
-        <div class="d-flex flex-wrap gap-2">
-            <a href="/web/products" class="btn btn-sm {{ if not .LocationFilter }}btn-proviant-primary{{ else }}btn-proviant-secondary{{ end }}">
-                All
+    <!-- Row 1: search + view toggle + add button -->
+    <div class="d-flex gap-2 align-items-start mb-2">
+        <div class="flex-grow-1">
+            {{ template "searchBar" . }}
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-shrink-0">
+            <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}">
+                <i class="bi bi-list-ul"></i>
             </a>
-            {{ range .Locations }}
-            <a href="/web/products?locationId={{ .ID }}"
-               class="btn btn-sm {{ if eq $.LocationFilter (printf "%d" .ID) }}btn-proviant-primary{{ else }}btn-proviant-secondary{{ end }}">
-                {{ .Icon }} {{ .Name }}
+            <a href="?{{ queryWith .Params "view" "grid" }}" class="btn-view {{ if eq .View "grid" }}active{{ end }}">
+                <i class="bi bi-grid-3x3-gap"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Row 2: status filters + location filters | option bar + bulk actions (right) -->
+    <div class="d-flex gap-1 align-items-center flex-wrap">
+        <!-- Left side: filters -->
+        <div class="d-flex gap-1 align-items-center flex-wrap">
+            {{ range $s := stringSlice "all" "expired" "critical" "soon" "fresh" "nodate" "archived" }}
+            <a href="?{{ queryWith $.Params "status" $s }}"
+               class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
+                {{ if and (ne $s "all") (ne $s "archived") }}<span class="filter-dot dot-{{ $s }}"></span>{{ end }}
+                {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Archived{{ else }}No date{{ end }}
             </a>
             {{ end }}
-        </div>
-        {{ end }}
 
-        {{ if .Products }}
-        <div>
-            {{ template "productOptionBar" . }}
+            <div class="filter-separator"></div>
+
+            {{ range $l := .StorageLocations }}
+            <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
+               class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
+                {{ $l.Name }}
+            </a>
+            {{ end }}
+            {{ if .StorageLocations }}
+            <a href="?{{ queryWith .Params "locationId" "" }}"
+               class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">All</a>
+            {{ end }}
         </div>
-        {{ end }}
+
+        <!-- Right side: bulk actions + divider + export -->
+        <div class="ms-auto d-flex gap-1 align-items-center flex-wrap">
+            <div id="bulkActions" class="bulk-actions-bar">
+                <span id="bulkCount" class="bulk-count"></span>
+                {{ if eq $.StatusFilter "archived" }}
+                <button onclick="bulkAction('restore')" class="btn-bulk">
+                    <i class="bi bi-arrow-counterclockwise"></i> Restore
+                </button>
+                {{ else }}
+                <button onclick="bulkAction('archive')" class="btn-bulk">
+                    <i class="bi bi-archive"></i> Archive
+                </button>
+                {{ end }}
+                <button onclick="bulkAction('delete')" class="btn-bulk danger">
+                    <i class="bi bi-trash3"></i> Delete
+                </button>
+            </div>
+
+            {{ if .Products }}
+            <div class="toolbar-divider"></div>
+            <div>
+                {{ template "productOptionBar" . }}
+            </div>
+            {{ end }}
+        </div>
     </div>
 </div>
 
 {{ if .Products }}
-
-<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-3">
+{{ if eq .View "list" }}
+<div id="productList">
+    <div class="list-header">
+        <div class="list-checkbox-col">
+            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" class="list-checkbox">
+        </div>
+        <div class="col-product">Product</div>
+        <div class="col-status">Status</div>
+        <div class="col-expiry">Expiry</div>
+        <div class="col-location">Location</div>
+        <div class="col-qty">Qty</div>
+    </div>
     {{ range .Products }}
-
-    {{ template "productCard" . }}
-
+    <div class="list-row" data-id="{{ .Model.ID }}">
+        <div class="list-checkbox-col">
+            <input type="checkbox" class="row-checkbox list-checkbox" value="{{ .Model.ID }}"
+                onchange="updateBulkSelection()">
+        </div>
+        <div class="col-product">
+            <a href="/web/products/{{ .Model.ID }}/edit" class="list-thumb">
+                {{ if .ImageURL }}
+                <img src="{{ .ImageURL }}" alt="{{ .ProductName }}" class="list-thumb-img"
+                     onerror="this.style.display='none'; this.closest('.list-thumb').querySelector('.list-thumb-fallback').style.display='flex';">
+                {{ end }}
+                <div class="list-thumb-fallback" {{ if not .ImageURL }}style="display:flex;"{{ else }}style="display:none;"{{ end }}>
+                    <i class="bi bi-box-seam list-thumb-icon"></i>
+                </div>
+                <div class="list-status-dot status-{{ expiryStatusClass .ExpireAt }}"></div>
+            </a>
+            <div class="list-product-text">
+                <a href="/web/products/{{ .Model.ID }}/edit" class="list-product-name">
+                    {{ .ProductName }}
+                </a>
+                <div class="list-product-meta">
+                    #{{ .Model.ID }} · {{ .Barcode }}
+                </div>
+            </div>
+        </div>
+        <div class="col-status">
+            <span class="badge-status badge-{{ expiryStatusClass .ExpireAt }}">
+                <i class="bi bi-{{ expiryStatusIcon .ExpireAt }}"></i>
+                {{ expiryStatusLabel .ExpireAt }}
+            </span>
+        </div>
+        <div class="col-expiry expiry-text status-{{ expiryStatusClass .ExpireAt }}">
+            {{ with expiryUrgencyText .ExpireAt }}{{ . }}{{ else }}—{{ end }}
+        </div>
+        <div class="col-location">
+            {{ if .StorageLocation }}{{ .StorageLocation.Name }}{{ else }}—{{ end }}
+        </div>
+        <div class="col-qty">
+            {{ if eq $.StatusFilter "archived" }}
+            <span class="qty-static">{{ .Amount }}</span>
+            {{ else }}
+            <div class="qty-stepper">
+                <button type="button" onclick="changeQty({{ .Model.ID }}, -1)">−</button>
+                <span id="qty-{{ .Model.ID }}">{{ .Amount }}</span>
+                <button type="button" onclick="changeQty({{ .Model.ID }}, 1)">+</button>
+            </div>
+            {{ end }}
+        </div>
+    </div>
     {{ end }}
 </div>
-
 {{ else }}
-
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-3">
+    {{ range .Products }}
+    {{ template "productCard" . }}
+    {{ end }}
+</div>
+{{ end }}
+{{ else }}
 {{ template "noproducts" . }}
-
 {{ end }}
 
 <!-- Add product modal (desktop only — hidden on mobile via JS) -->

@@ -121,6 +121,7 @@ $bootstrap-icons-font-dir: "../fonts";
   --status-expired-border: oklch(.8 .12 25deg);
   --status-expired-fg: oklch(.98 .006 75deg);
   --status-expired-bar: oklch(.55 .2 25deg);
+  --status-expired-dot: oklch(.55 .2 25deg);
 
   /* Status: Critical */
   --status-critical: oklch(.64 .18 45deg);
@@ -129,6 +130,7 @@ $bootstrap-icons-font-dir: "../fonts";
   --status-critical-border: oklch(.82 .12 45deg);
   --status-critical-fg: oklch(.98 .006 75deg);
   --status-critical-bar: oklch(.64 .18 45deg);
+  --status-critical-dot: oklch(.64 .18 45deg);
 
   /* Status: Soon */
   --status-soon: oklch(.72 .16 80deg);
@@ -137,6 +139,7 @@ $bootstrap-icons-font-dir: "../fonts";
   --status-soon-border: oklch(.85 .1 80deg);
   --status-soon-fg: oklch(.18 .022 70deg);
   --status-soon-bar: oklch(.72 .16 80deg);
+  --status-soon-dot: oklch(.72 .16 80deg);
 
   /* Status: Fresh */
   --status-fresh: oklch(.52 .1 150deg);
@@ -145,6 +148,7 @@ $bootstrap-icons-font-dir: "../fonts";
   --status-fresh-border: oklch(.78 .08 145deg);
   --status-fresh-fg: oklch(.98 .006 75deg);
   --status-fresh-bar: oklch(.5 .12 162deg);
+  --status-fresh-dot: oklch(.5 .12 162deg);
 
   /* Status: No date */
   --status-nodate: oklch(.6 .01 70deg);
@@ -153,6 +157,10 @@ $bootstrap-icons-font-dir: "../fonts";
   --status-nodate-border: oklch(.8 .008 70deg);
   --status-nodate-fg: oklch(.98 .006 75deg);
   --status-nodate-bar: oklch(.6 .01 70deg);
+  --status-nodate-dot: oklch(.6 .01 70deg);
+
+  /* Accent border — reused for hover/active states */
+  --accent-border: oklch(.78 .08 162deg);
 
   /* Semantic feedback */
   --color-success: var(--status-fresh);
@@ -757,6 +765,20 @@ $bootstrap-icons-font-dir: "../fonts";
   padding-top: 1rem;
   padding-bottom: 1rem;
   background-color: var(--bs-body-bg);
+
+  #advanced-filters {
+    .form-select,
+    .form-control {
+      font-size: 11px;
+      padding: 0.25rem 0.5rem;
+      height: auto;
+    }
+    .input-group-text {
+      font-size: 11px;
+      padding: 0.25rem 0.5rem;
+      color: var(--fg-3);
+    }
+  }
 }
 
 div.form-floating > input#inputUsername {
@@ -802,7 +824,7 @@ th a {
 .search-bar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
 }
 
 //
@@ -2168,10 +2190,392 @@ select.pv-field-input {
   &:hover { background: oklch(.95 .05 25deg); }
 }
 
+.pv-btn-restore {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  padding: 10px 18px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  background: white;
+  border: 1px solid oklch(0.78 0.08 162);
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 150ms;
+
+  &:hover {
+    background: var(--accent-subtle);
+  }
+}
+
 @media (max-width: 767px) {
   .pv-edit-page-wrap { padding: 0 0 80px; }
   .pv-edit-grid { grid-template-columns: 1fr; }
   .pv-product-panel { position: static; }
   .pv-product-image-card { display: none; } // decorative on mobile; image URL card still shown
   .pv-meta-grid { grid-template-columns: 1fr; }
+}
+
+// ── Product list view ──────────────────────────────────────────────────────
+
+.list-checkbox-col {
+  width: 32px;
+}
+
+.list-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.list-thumb {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.list-thumb-img {
+  width: 32px;
+  height: 32px;
+  background: var(--bg-subtle);
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.list-thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--bg-subtle);
+  border-radius: 6px;
+}
+
+.list-thumb-icon {
+  font-size: 14px;
+  color: var(--fg-3);
+}
+
+.list-status-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+  background: var(--status-nodate-dot);
+  border: 1.5px solid white;
+  border-radius: 999px;
+
+  &.status-expired { background: var(--status-expired-dot); }
+  &.status-critical { background: var(--status-critical-dot); }
+  &.status-soon { background: var(--status-soon-dot); }
+  &.status-fresh { background: var(--status-fresh-dot); }
+  &.status-nodate { background: var(--status-nodate-dot); }
+}
+
+.list-product-text {
+  min-width: 0;
+}
+
+.list-product-name {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-product-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+}
+
+
+.list-header {
+  display: grid;
+  grid-template-columns: 32px 1fr 120px 140px 90px 80px;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+
+  > div {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--fg-3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+}
+
+.list-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 120px 140px 90px 80px;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 16px;
+  cursor: default;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 120ms;
+
+  &:hover {
+    background: var(--bg-subtle);
+  }
+
+  &.selected {
+    background: var(--accent-subtle);
+  }
+}
+
+.col-product {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.col-location {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+}
+
+.qty-stepper {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  overflow: hidden;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 26px;
+    font-size: 13px;
+    color: var(--fg-2);
+    cursor: pointer;
+    background: var(--bg-subtle);
+    border: none;
+    transition: background 120ms;
+
+    &:hover {
+      background: var(--border);
+    }
+  }
+
+   span {
+    width: 24px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--fg);
+    text-align: center;
+  }
+}
+
+.qty-static {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  height: 100%;
+}
+
+.filter-pill {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 10px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--fg-2);
+  text-decoration: none;
+  white-space: nowrap;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: all 120ms;
+
+  &:hover {
+    color: var(--fg);
+    background: var(--bg-subtle);
+  }
+
+  &.active {
+    font-weight: 600;
+    border-width: 1.5px;
+  }
+
+  &.active.status-all {
+    color: var(--accent);
+    background: var(--accent-subtle);
+    border-color: var(--accent-border);
+  }
+
+  &.active.status-expired {
+    color: var(--status-expired);
+    background: var(--status-expired-subtle);
+    border-color: var(--status-expired-border);
+  }
+
+  &.active.status-critical {
+    color: var(--status-critical);
+    background: var(--status-critical-subtle);
+    border-color: var(--status-critical-border);
+  }
+
+  &.active.status-soon {
+    color: var(--status-soon);
+    background: var(--status-soon-subtle);
+    border-color: var(--status-soon-border);
+  }
+
+  &.active.status-fresh {
+    color: var(--status-fresh);
+    background: var(--status-fresh-subtle);
+    border-color: var(--status-fresh-border);
+  }
+
+  &.active.status-nodate {
+    color: var(--status-nodate);
+    background: var(--status-nodate-subtle);
+    border-color: var(--status-nodate-border);
+  }
+
+  &.active.status-archived {
+    color: var(--fg-2);
+    background: var(--bg-subtle);
+    border-color: var(--border);
+  }
+}
+
+.filter-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.dot-expired { background: var(--status-expired-dot); }
+.dot-critical { background: var(--status-critical-dot); }
+.dot-soon { background: var(--status-soon-dot); }
+.dot-fresh { background: var(--status-fresh-dot); }
+.dot-nodate { background: var(--status-nodate-dot); }
+
+  .filter-separator {
+    width: 1px;
+    height: 16px;
+    background: var(--border);
+    margin: 0 6px;
+  }
+
+  .toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+    margin: 0 8px;
+  }
+
+.btn-view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+  color: var(--fg-3);
+  text-decoration: none;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  transition: all 120ms;
+
+  &:hover,
+  &.active {
+    color: var(--accent);
+    background: var(--accent-subtle);
+    border-color: var(--accent-border);
+  }
+}
+
+.bulk-actions-bar {
+  display: none;
+  gap: 6px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.bulk-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.btn-bulk {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 5px 10px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--fg-2);
+  cursor: pointer;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+
+  &.danger {
+    color: var(--status-expired);
+    background: var(--status-expired-subtle);
+    border-color: var(--status-expired-border);
+  }
+}
+
+.nav-badge {
+  min-width: 16px;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 700;
+  color: white;
+  text-align: center;
+  background: var(--status-expired);
+  border-radius: 999px;
+}
+
+.expiry-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+
+  &.status-expired { color: var(--status-expired); }
+  &.status-critical { color: var(--status-critical); }
+  &.status-soon { color: var(--status-soon); }
+  &.status-fresh { color: var(--fg-2); }
+  &.status-nodate { color: var(--fg-3); }
+}
+
+@media (max-width: 767.98px) {
+  .list-header,
+  .list-row {
+    grid-template-columns: 32px 1fr 100px 80px;
+  }
+
+  .col-status,
+  .col-location {
+    display: none;
+  }
 }

@@ -11,10 +11,11 @@
 		<a href="/web/products" class="pv-nav-item {{ if eq .Title "Products" }}active{{ end }}"
 			{{ if eq .Title "Products" }}aria-current="page"{{ end }}>
 			<i class="bi bi-box-seam" aria-hidden="true"></i> Products
-		</a>
-		<a href="/web/products/archived" class="pv-nav-item {{ if eq .Title "ArchivedProducts" }}active{{ end }}"
-			{{ if eq .Title "ArchivedProducts" }}aria-current="page"{{ end }}>
-			<i class="bi bi-archive" aria-hidden="true"></i> Archive
+			{{ if .UrgentCount }}
+			{{ if gt .UrgentCount 0 }}
+			<span class="nav-badge">{{ .UrgentCount }}</span>
+			{{ end }}
+			{{ end }}
 		</a>
 		<a href="/web/recipes" class="pv-nav-item {{ if eq .Title "Recipes" }}active{{ end }}"
 			{{ if eq .Title "Recipes" }}aria-current="page"{{ end }}>

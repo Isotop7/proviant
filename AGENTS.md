@@ -178,6 +178,7 @@ logger.Info().Msg("Logging initialized")
 - **Always run `task css` after any change to `.scss` files** — the compiled CSS is what gets served; editing SCSS without recompiling has no visible effect
 - JavaScript files served from `src/assets/js/`
 - Use Bootstrap for styling, Bootstrap Icons for icons
+- **Avoid inline `style="..."` attributes in templates** — define CSS classes in `src/templates/scss/main.scss` instead. Inline styles are only acceptable for truly dynamic values (e.g., a `width` set from a template variable). When in doubt, use a class.
 
 #### Service Worker Caching
 - The project uses a service worker (`src/assets/js/sw.js`)

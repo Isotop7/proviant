@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/templates"
@@ -229,27 +231,35 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	sort := ctx.DefaultQuery("sort", "created_at")
 	order := ctx.DefaultQuery("order", "asc")
 	locationFilter := ctx.Query("locationId")
+	view := ctx.DefaultQuery("view", "list")
+	statusFilter := ctx.DefaultQuery("status", "all")
 
 	locations, _ := storageLocationRepo.GetByHousehold(userID)
 
 	var products []dbModel.Product
 	var productErr error
 
-	switch {
-	case locationFilter != "":
-		if locationID, parseErr := strconv.ParseUint(locationFilter, 10, 64); parseErr == nil {
-			products, productErr = productRepo.GetUserProductsByLocation(userID, uint(locationID))
+	if statusFilter == "archived" {
+		// Fetch archived products directly
+		products, productErr = productRepo.GetUserArchivedProductsBulk(userID, -1)
+	} else {
+		// Normal active-product flow
+		switch {
+		case locationFilter != "":
+			if locationID, parseErr := strconv.ParseUint(locationFilter, 10, 64); parseErr == nil {
+				products, productErr = productRepo.GetUserProductsByLocation(userID, uint(locationID))
+			}
+		case queryParam != "" && queryValue != "":
+			enumParam := database.SearchParameterEnumFromString(queryParam)
+			if enumParam == database.InvalidParameter {
+				logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
+				templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrProductSearchInvalidQuery.Error())
+				return
+			}
+			products, productErr = productRepo.SearchProducts(enumParam, queryValue, sort, order, userID)
+		default:
+			products, productErr = productRepo.GetUserProductsBulk(userID, -1)
 		}
-	case queryParam != "" && queryValue != "":
-		enumParam := database.SearchParameterEnumFromString(queryParam)
-		if enumParam == database.InvalidParameter {
-			logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
-			templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrProductSearchInvalidQuery.Error())
-			return
-		}
-		products, productErr = productRepo.SearchProducts(enumParam, queryValue, sort, order, userID)
-	default:
-		products, productErr = productRepo.GetUserProductsBulk(userID, -1)
 	}
 
 	if productErr != nil {
@@ -258,64 +268,83 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		return
 	}
 
+	// Compute status counts on full product set before filtering
+	allProducts := products
+	expiredCount, criticalCount := 0, 0
+	now := time.Now()
+
+	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
+	criticalDays := proviantConfig.Expiry.CriticalThresholdDays
+	if criticalDays <= 0 {
+		criticalDays = 3
+	}
+	soonDays := proviantConfig.Expiry.SoonThresholdDays
+	if soonDays <= 0 {
+		soonDays = 7
+	}
+	criticalDuration := time.Duration(criticalDays) * 24 * time.Hour
+	soonDuration := time.Duration(soonDays) * 24 * time.Hour
+
+	for i := range allProducts {
+		p := &allProducts[i]
+		if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now) {
+			expiredCount++
+		} else if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now.Add(criticalDuration)) {
+			criticalCount++
+		}
+	}
+
+	// Filter products by status filter (skip for archived — already filtered)
+	if statusFilter != "all" && statusFilter != "archived" {
+		var filtered []dbModel.Product
+		for i := range allProducts {
+			p := &allProducts[i]
+			var status string
+			switch {
+			case p.ExpireAt.IsZero():
+				status = "nodate"
+			case p.ExpireAt.Before(now):
+				status = "expired"
+			case p.ExpireAt.Before(now.Add(criticalDuration)):
+				status = "critical"
+			case p.ExpireAt.Before(now.Add(soonDuration)):
+				status = "soon"
+			default:
+				status = "fresh"
+			}
+			if status == statusFilter {
+				filtered = append(filtered, *p)
+			}
+		}
+		products = filtered
+	}
+
+	// Build url.Values from current request
+	params := url.Values{}
+	for k, v := range ctx.Request.URL.Query() {
+		params[k] = v
+	}
+
 	pageData := map[string]any{
-		"InviteToken":    ctx.Query("invite_token"),
-		"Title":          "Products",
-		"Products":       products,
-		"QueryParam":     queryParam,
-		"QueryValue":     queryValue,
-		"Sort":           sort,
-		"Order":          order,
-		"Locations":      locations,
-		"LocationFilter": locationFilter,
+		"InviteToken":      ctx.Query("invite_token"),
+		"Title":            "Products",
+		"Products":         products,
+		"QueryParam":       queryParam,
+		"QueryValue":       queryValue,
+		"Sort":             sort,
+		"Order":            order,
+		"Locations":        locations,
+		"StorageLocations": locations,
+		"LocationFilter":   locationFilter,
+		"View":             view,
+		"StatusFilter":     statusFilter,
+		"ProductCount":     len(allProducts),
+		"ExpiredCount":     expiredCount,
+		"CriticalCount":    criticalCount,
+		"UrgentCount":      expiredCount + criticalCount,
+		"Params":           params,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
-}
-
-// ProductsArchived renders the archived products page
-// @Summary      Archived products page
-// @Description  Renders the archived products list page
-// @Tags         web
-// @Produce      html
-// @Success      200  {string}  html
-// @Failure      400  {object}  api.APIResponse
-// @Failure      500  {object}  api.APIResponse
-// @Router       /web/products/archived [get]
-func (frontend *Frontend) ProductsArchived(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-
-	// Get database instance from context
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
-		return
-	}
-
-	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
-		return
-	}
-
-	productRepo := database.NewProductRepository(dbHandle)
-	archivedProducts, productBulkErr := productRepo.GetUserArchivedProductsBulk(userID, -1)
-	if productBulkErr != nil {
-		logger.Error().Msgf("Error getting archivedproducts of user: %s", productBulkErr)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
-		return
-	}
-
-	pageData := map[string]any{
-		"InviteToken": ctx.Query("invite_token"),
-		"Title":       "ArchivedProducts",
-		"Products":    archivedProducts,
-	}
-	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsArchived.tmpl", pageData)
 }
 
 func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
@@ -368,7 +397,7 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	product, productErr := productRepo.GetProductByID(productID, userID)
+	product, productErr := productRepo.GetArchivedProductByID(productID, userID)
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
@@ -379,6 +408,7 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 		"InviteToken": ctx.Query("invite_token"),
 		"Title":       "Products",
 		"Product":     product,
+		"IsArchived":  product.DeletedAt.Valid,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsView.tmpl", pageData)
 }
@@ -425,7 +455,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	product, productErr := productRepo.GetProductByID(productID, userID)
+	product, productErr := productRepo.GetArchivedProductByID(productID, userID)
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
@@ -440,6 +470,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 		"Title":       "Products",
 		"Product":     product,
 		"Locations":   locations,
+		"IsArchived":  product.DeletedAt.Valid,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
 }

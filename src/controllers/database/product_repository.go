@@ -296,7 +296,7 @@ func (r *ProductRepository) UpdateProductAmount(productID int, userID uint, delt
 	}
 
 	var dbProduct database.Product
-	getError := r.DB.First(&dbProduct, productID)
+	getError := r.DB.Unscoped().First(&dbProduct, productID)
 	if getError.Error != nil {
 		return false, getError.Error
 	}

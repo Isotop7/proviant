@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -19,6 +20,18 @@ import (
 
 //go:embed "web" "notification"
 var TemplateFiles embed.FS
+
+var (
+	criticalThresholdDays = 3
+	soonThresholdDays     = 7
+)
+
+// SetExpiryThresholds updates the package-level thresholds used by expiry* functions.
+// Must be called before NewTemplateCache so the baked-in funcs use the correct values.
+func SetExpiryThresholds(critical, soon int) {
+	criticalThresholdDays = critical
+	soonThresholdDays = soon
+}
 
 func humanDateTime(t time.Time) string {
 	return t.Format("02.01.2006, 15:04")
@@ -52,10 +65,10 @@ func expiryBadgeClass(t time.Time) string {
 	if t.Before(now) {
 		return "bg-danger"
 	}
-	if t.Before(now.Add(3 * 24 * time.Hour)) {
+	if t.Before(now.Add(time.Duration(criticalThresholdDays) * 24 * time.Hour)) {
 		return "bg-danger"
 	}
-	if t.Before(now.Add(7 * 24 * time.Hour)) {
+	if t.Before(now.Add(time.Duration(soonThresholdDays) * 24 * time.Hour)) {
 		return "bg-warning"
 	}
 	return "bg-success"
@@ -69,10 +82,10 @@ func expiryStatusClass(t time.Time) string {
 	if t.Before(now) {
 		return "expired"
 	}
-	if t.Before(now.Add(3 * 24 * time.Hour)) {
+	if t.Before(now.Add(time.Duration(criticalThresholdDays) * 24 * time.Hour)) {
 		return "critical"
 	}
-	if t.Before(now.Add(7 * 24 * time.Hour)) {
+	if t.Before(now.Add(time.Duration(soonThresholdDays) * 24 * time.Hour)) {
 		return "soon"
 	}
 	return "fresh"
@@ -113,10 +126,42 @@ func expiryTextClass(t time.Time) string {
 		return "text-secondary"
 	}
 	now := time.Now()
-	if t.Before(now.Add(3 * 24 * time.Hour)) {
+	if t.Before(now.Add(time.Duration(criticalThresholdDays) * 24 * time.Hour)) {
 		return "text-danger"
 	}
 	return "text-warning"
+}
+
+func expiryColor(t time.Time) string {
+	switch expiryStatusClass(t) {
+	case "expired":
+		return "var(--status-expired)"
+	case "critical":
+		return "var(--status-critical)"
+	case "soon":
+		return "var(--status-soon)"
+	case "fresh":
+		return "var(--fg-2)"
+	default:
+		return "var(--fg-3)"
+	}
+}
+
+func queryWith(params url.Values, key, val string) template.URL {
+	p := url.Values{}
+	for k, v := range params {
+		p[k] = v
+	}
+	if val == "" {
+		p.Del(key)
+	} else {
+		p.Set(key, val)
+	}
+	return template.URL(p.Encode())
+}
+
+func stringSlice(vals ...string) []string {
+	return vals
 }
 
 func expiryUrgencyText(t time.Time) string {
@@ -255,6 +300,9 @@ var customTemplateFunctions = template.FuncMap{
 	"expiryStatusLabel":    expiryStatusLabel,
 	"expiryUrgencyText":    expiryUrgencyText,
 	"expiryTextClass":      expiryTextClass,
+	"expiryColor":          expiryColor,
+	"queryWith":            queryWith,
+	"stringSlice":          stringSlice,
 	"badgifyCategories":    badgifyCategories,
 	"splitString":          splitString,
 	"flagReplace":          flagReplace,

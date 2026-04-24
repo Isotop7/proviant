@@ -369,3 +369,67 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 });
+
+// ── List view: checkbox selection ──────────────────────────────
+function updateBulkSelection() {
+    const checked = document.querySelectorAll('.row-checkbox:checked');
+    const bulk = document.getElementById('bulkActions');
+    const count = document.getElementById('bulkCount');
+    const rows = document.querySelectorAll('.list-row');
+
+    rows.forEach(function (row) {
+        const cb = row.querySelector('.row-checkbox');
+        row.classList.toggle('selected', cb && cb.checked);
+    });
+
+    if (checked.length > 0) {
+        if (bulk) bulk.style.display = 'flex';
+        if (count) count.textContent = checked.length + ' selected';
+    } else {
+        if (bulk) bulk.style.display = 'none';
+    }
+
+    const all = document.getElementById('selectAll');
+    const total = document.querySelectorAll('.row-checkbox').length;
+    if (all) {
+        all.indeterminate = checked.length > 0 && checked.length < total;
+        all.checked = checked.length === total && total > 0;
+    }
+}
+
+function toggleSelectAll(cb) {
+    document.querySelectorAll('.row-checkbox').forEach(function (c) {
+        c.checked = cb.checked;
+    });
+    updateBulkSelection();
+}
+
+function bulkAction(action) {
+    const ids = [...document.querySelectorAll('.row-checkbox:checked')].map(function (c) {
+        return +c.value;
+    });
+    if (!ids.length) return;
+    if (action === 'delete') {
+        if (!confirm('Delete ' + ids.length + ' product(s)? This cannot be undone.')) return;
+        proviant.bulkDeleteProducts(ids).then(function () {
+            window.location.reload();
+        });
+    } else if (action === 'archive') {
+        proviant.bulkArchiveProducts(ids).then(function () {
+            window.location.reload();
+        });
+    } else if (action === 'restore') {
+        proviant.bulkRestoreProducts(ids).then(function () {
+            window.location.reload();
+        });
+    }
+}
+
+// ── List view: qty stepper ──────────────────────────────────────
+function changeQty(id, delta) {
+    const span = document.getElementById('qty-' + id);
+    if (!span) return;
+    const newVal = Math.max(0, parseInt(span.textContent, 10) + delta);
+    span.textContent = newVal;
+    proviant.updateProductAmount(id, delta);
+}

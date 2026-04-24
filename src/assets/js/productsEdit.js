@@ -80,6 +80,20 @@ function deleteProduct() {
     });
 }
 
+function restoreProduct() {
+    const labelProductID = document.getElementById('labelProductID');
+    const productID = Number.parseInt(labelProductID?.innerText?.trim());
+    if (!Number.isInteger(productID) || productID <= 0) return;
+
+    proviant.restoreProduct(productID).then((response) => {
+        if (response.code === 200) {
+            window.location.href = '/products';
+        } else {
+            proviant.showFeedback('error', 'Restore Failed', `Could not restore product: ${response.message}`);
+        }
+    });
+}
+
 /* Form submission */
 document.addEventListener("submit", function (event) {
     const target = event.target;
@@ -109,5 +123,8 @@ document.addEventListener("keyup", function (event) {
 document.addEventListener("click", function (event) {
     if (event.target.closest('#btnConfirmDelete')) {
         deleteProduct();
+    }
+    if (event.target.closest('#btnRestoreProduct') || event.target.closest('#btnRestoreProductMobile')) {
+        restoreProduct();
     }
 });

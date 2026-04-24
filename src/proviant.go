@@ -274,6 +274,7 @@ func main() {
 	}
 
 	// Setup template cache
+	templates.SetExpiryThresholds(proviantConfiguration.Expiry.CriticalThresholdDays, proviantConfiguration.Expiry.SoonThresholdDays)
 	templateCache, err := templates.NewTemplateCache()
 	if err != nil {
 		logger.Error().Msg(err.Error())
