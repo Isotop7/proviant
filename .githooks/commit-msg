@@ -1,0 +1,35 @@
+#!/bin/bash
+# Conventional Commit validator - pre-commit hook
+# Place this file at .git/hooks/commit-msg or use: ln -s ../../.githooks/commit-msg .git/hooks/commit-msg
+
+VALID_TYPES="feat|fix|refactor|change|update|perf|deprecat|remove|delete|security|doc|test|ci|chore|build|style|implement|add|hotfix|bug"
+
+commit_msg_file="$1"
+commit_msg=$(head -n1 "$commit_msg_file" | tr -d '\r' | xargs)
+
+# Allow empty commit messages for revert, merge, etc.
+if [ -z "$commit_msg" ]; then
+    exit 0
+fi
+
+if echo "$commit_msg" | grep -qE "^($VALID_TYPES)(\(.*\))?!?: .+"; then
+    exit 0
+fi
+
+echo "ERROR: Commit message does not follow Conventional Commits format."
+echo ""
+echo "Format: <type>[(<scope>)]!: <description>"
+echo ""
+echo "Valid types: feat, fix, docs, chore, refactor, test, ci, build, style,"
+echo "             perf, deprecat, remove, delete, security, implement, add, hotfix, bug"
+echo ""
+echo "Examples:"
+echo "  feat: add product archive functionality"
+echo "  fix(api): resolve barcode lookup timeout"
+echo "  docs: update installation instructions"
+echo "  chore: update dependencies"
+echo ""
+echo "Your commit message: $commit_msg"
+echo ""
+echo "To bypass (not recommended): git commit --no-verify"
+exit 1
