@@ -18,13 +18,16 @@
 
 - 📝 Track and log products with expiration dates.
 - 📷 Scan product barcodes via camera to auto-fill data from [OpenFoodFacts](https://world.openfoodfacts.org/), with optional local caching for offline use.
-- 🗄️ Archive and restore products; bulk delete, archive, and restore.
-- 🔍 Search and filter products by multiple parameters.
-- ⏰ Receive expiration reminders via email (SMTP), push notifications ([Ntfy](https://ntfy.sh/)), or [Telegram](https://telegram.org/) bot.
+- 📸 **OCR expiry date scanning** — use your camera to capture and extract expiry dates (Tesseract/Google/OpenAI).
+- 🗄️ **Archive and restore products** — view archived products separately; bulk archive, restore, or delete.
+- 🔍 **Advanced filtering** — filter by status (All, Expired, Critical, Expiring soon, Fresh, No date, Archived), storage location, or search by product name/barcode.
+- 📊 **Dashboard** — live metric tiles (active products, waste rate, archived counts, last added product, products expiring within 7 days) and charts (waste rate donut, category breakdown pie, 12-month expiry trend line).
+- ⏰ Expiration reminders via email (SMTP), push notifications ([Ntfy](https://ntfy.sh/)), or [Telegram](https://telegram.org/) bot.
 - 🔔 Per-user notification preferences.
 - 👥 Multi-user support with household scoping.
 - 🌙 Dark theme.
-- 📊 Dashboard portal with live metric tiles (active products, waste rate, archived counts, last added product, products expiring within 7 days) and charts (waste rate donut, category breakdown pie, 12-month expiry trend line).
+- 📥 **Export** — download products and archive data as CSV or JSON.
+- 🍽️ **Recipe suggestions** — get recipe ideas based on your products (TheMealDB / Spoonacular).
 
 ## Technologies and Tools
 
@@ -108,6 +111,24 @@ PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_HOUR=8                              # U
 PROVIANT_OPENFOODFACTS_URL="https://world.openfoodfacts.org/api/v2/product"  # OpenFoodFacts API URL
 PROVIANT_OPENFOODFACTS_TIMEOUT=5                                             # API request timeout in seconds
 PROVIANT_OPENFOODFACTS_CACHEENABLED=true                                     # Cache API responses in database for offline use
+PROVIANT_OPENFOODFACTS_IMAGECACHEENABLED=true                                # Cache product images locally
+PROVIANT_OPENFOODFACTS_IMAGECACHEPATH="./data/imagecache"                   # Path to image cache directory
+
+# OCR configuration (expiry date scanning)
+PROVIANT_OCR_ENABLED=true                                                    # Enable OCR expiry date scanning
+PROVIANT_OCR_PROVIDER="tesseract"                                            # OCR provider: "tesseract" (local), "google", "openai"
+PROVIANT_OCR_API_KEY=""                                                      # API key for cloud providers (Google/OpenAI)
+PROVIANT_OCR_ENDPOINT=""                                                     # Custom OCR server endpoint (for local Tesseract HTTP)
+PROVIANT_OCR_TIMEOUT=15                                                      # OCR request timeout in seconds
+PROVIANT_OCR_LANGUAGES="deu+eng"                                             # Tesseract language codes (e.g., "deu+eng")
+
+# Recipe API configuration (for recipe suggestions)
+PROVIANT_RECIPE_API_PROVIDER="themealdb"                                     # Recipe provider: "themealdb" or "spoonacular"
+PROVIANT_RECIPE_API_URL="https://www.themealdb.com/api/json/v1/1/search.php" # Recipe API endpoint
+PROVIANT_RECIPE_API_API_KEY=""                                                # API key (required for Spoonacular)
+PROVIANT_RECIPE_API_TIMEOUT=10                                               # API request timeout in seconds
+PROVIANT_RECIPE_API_CACHEENABLED=true                                        # Cache recipe responses
+PROVIANT_RECIPE_API_CACHETTL=24                                              # Cache TTL in hours
 ```
 
 Additionally `Gin` supports a debug mode, which also can be set with a environment variable:
