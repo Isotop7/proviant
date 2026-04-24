@@ -260,23 +260,6 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) f
 - **Breaking changes**: add `!` after type/scope — e.g., `feat!: drop support for SQLite`
 - **Body**: optional, separate from subject with blank line
 
-**Tools:**
-- `./scripts/conventional-commit-validator.sh` — standalone validator (check last N commits or single message)
-- `kilo conventional-commit` — Kilo skill (check, suggest, fix commands)
-- Pre-commit hook: `ln -s ../../.githooks/commit-msg .git/hooks/commit-msg` to enforce locally
-
-**Examples:**
-```bash
-# Validate last 10 commits
-./scripts/conventional-commit-validator.sh check
-
-# Get suggested message from staged changes
-kilo conventional-commit suggest
-
-# Install pre-commit hook
-cp .githooks/commit-msg .git/hooks/commit-msg
-```
-
 ## Release Automation
 
 - **CHANGELOG generation**: When a `v*` tag is pushed, `.forgejo/workflows/release.yml` triggers. It uses `git-cliff` (via `orhun/git-cliff-action@v3`) with `cliff.toml` to generate the CHANGELOG from conventional commits, then commits it back to the repository and attaches it as a release asset.
