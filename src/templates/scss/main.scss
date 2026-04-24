@@ -269,9 +269,10 @@ $bootstrap-icons-font-dir: "../fonts";
 
 // Ensure full page height on mobile
 @media (max-width: 767.98px) {
-  html, body {
-    min-height: 100vh;
+  html,
+  body {
     height: 100%;
+    min-height: 100vh;
   }
 }
 
@@ -832,18 +833,18 @@ th a {
 .search-bar {
   display: block;
   width: 100%;
-  max-width: 100%;
   min-width: 0;
+  max-width: 100%;
 }
 
 .search-row {
   display: flex;
-  align-items: center;
   gap: 0;
+  align-items: center;
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  overflow: hidden;
   transition: border-color var(--duration-base), box-shadow var(--duration-base);
 
   &:focus-within {
@@ -868,13 +869,12 @@ th a {
   font-family: var(--font-ui);
   font-size: var(--text-sm);
   color: var(--fg);
+  appearance: none;
+  cursor: pointer;
   background: transparent;
   border: none;
   border-right: 1px solid var(--border);
   outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
 
   &:focus {
     box-shadow: none;
@@ -950,13 +950,12 @@ th a {
   font-family: var(--font-ui);
   font-size: var(--text-sm);
   color: var(--fg);
+  appearance: none;
+  cursor: pointer;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
   transition: border-color var(--duration-base);
 
   &:focus {
@@ -1228,8 +1227,8 @@ th a {
   left: 0;
   z-index: 9999;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   height: 60px;
   padding: 0 8px;
   padding-bottom: env(safe-area-inset-bottom, 0);
@@ -1237,15 +1236,14 @@ th a {
   border-top: 1px solid var(--border);
   box-shadow: 0 -4px 20px oklch(.18 .022 70deg / .08);
   transform: translateZ(0);
-  -webkit-transform: translateZ(0);
 }
 
 .bottom-nav-left,
 .bottom-nav-right {
   display: flex;
   flex: 1;
-  justify-content: space-around;
   align-items: center;
+  justify-content: space-around;
 }
 
 .bottom-nav-center {
@@ -1261,10 +1259,10 @@ th a {
   width: 52px;
   height: 52px;
   color: var(--accent-fg);
+  text-decoration: none;
   background: var(--accent);
   border-radius: 50%;
   box-shadow: 0 4px 12px oklch(.5 .12 162deg / .4);
-  text-decoration: none;
   transition: transform var(--duration-base), box-shadow var(--duration-base);
 
   i {
@@ -1272,8 +1270,8 @@ th a {
   }
 
   &:hover {
-    transform: scale(1.05);
     box-shadow: 0 6px 16px oklch(.5 .12 162deg / .5);
+    transform: scale(1.05);
   }
 
   &.active {
@@ -1315,20 +1313,21 @@ th a {
 }
 
 @media (max-width: 767.98px) {
-  html, body {
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
+  html,
+  body {
     height: 100%;
+    min-height: 100vh;
+    padding: 0;
+    margin: 0;
     overflow-x: hidden;
   }
   .pv-sidebar {
     display: none;
   }
   #content-wrapper {
+    min-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0));
     padding-bottom: calc(60px + env(safe-area-inset-bottom, 0));
     margin-left: 0;
-    min-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0));
   }
   body {
     --offline-banner-left: 0px;
