@@ -36,9 +36,3 @@ jobs:
           git add CHANGELOG.md
           git commit -m "chore: update CHANGELOG.md for ${{ forgejo.ref_name }}"
           git push "https://${{ secrets.RELEASE_TOKEN }}@codeberg.org/${{ forgejo.repository }}.git" HEAD:main
-
-      - name: Upload release asset
-        uses: https://gitea.com/actions/release-action@main
-        with:
-          files: CHANGELOG.md
-          api_key: ${{ secrets.RELEASE_TOKEN }}
