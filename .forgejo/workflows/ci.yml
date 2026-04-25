@@ -6,7 +6,10 @@ env:
   CODEBERG_REGISTRY: codeberg.org
   PRIVATE_REGISTRY: registry.hr94.de
 
-on: [push]
+on:
+  push:
+    branches:
+      - '**'
 
 jobs:
   check:
