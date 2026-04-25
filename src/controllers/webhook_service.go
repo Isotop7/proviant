@@ -145,7 +145,7 @@ func ParseWebhookEvents(eventsJSON string) []string {
 	var events []string
 	parts := strings.Split(eventsJSON, ",")
 	for _, part := range parts {
-		event := strings.Trim(strings.Trim(part, `"`), ` `)
+		event := strings.Trim(strings.Trim(part, ` `), `"`)
 		if event != "" {
 			events = append(events, event)
 		}

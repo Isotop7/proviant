@@ -9,52 +9,19 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/testutil"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
-// setupTestContext creates a test context with mock dependencies
-func setupTestContext(db *gorm.DB) (*gin.Context, *httptest.ResponseRecorder) {
-	// Create test context
-	w := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(w)
-
-	// Setup mock logger
-	mockLogger := zerolog.Nop()
-	ctx.Set("logger", &mockLogger)
-
-	// Setup test database
-	ctx.Set("dbHandle", db)
-
-	return ctx, w
-}
-
-// TestSignupWithoutLogger tests the signup without a logger in the context
 func TestSignupWithoutLogger(t *testing.T) {
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
 
-	// Migrate schema
-	if err := db.AutoMigrate(&dbModel.Household{}, &dbModel.StorageLocation{}, &authentication.User{}, &dbModel.OnboardingState{}); err != nil {
-		t.Fatalf("Failed to migrate database: %v", err)
-	}
-
-	// Create test context
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-
-	// Setup test database
 	ctx.Set("dbHandle", db)
 
-	// Create test request body
 	signup := authentication.Signup{
 		Username:    "testuser",
 		Password:    "ThisIsAVeryStrongTestPass123!",
@@ -65,28 +32,27 @@ func TestSignupWithoutLogger(t *testing.T) {
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 
-	// Call the handler directly
 	Signup(ctx)
 
-	// Check the response
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Status = %v, want %v", w.Code, http.StatusInternalServerError)
+	}
 	var response map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, api.ResponseErrLoggerContextNotFound.Message, response["message"])
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("unmarshal error: %v", err)
+	}
+	if response["message"] != api.ResponseErrLoggerContextNotFound.Message {
+		t.Errorf("message = %v, want %v", response["message"], api.ResponseErrLoggerContextNotFound.Message)
+	}
 }
 
-// TestSignupWithoutDatabase tests the signup without a logger in the context
 func TestSignupWithoutDatabase(t *testing.T) {
-	// Create test context
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
 
-	// Setup mock logger
 	mockLogger := zerolog.Nop()
 	ctx.Set("logger", &mockLogger)
 
-	// Create test request body
 	signup := authentication.Signup{
 		Username:    "testuser",
 		Password:    "ThisIsAVeryStrongTestPass123!",
@@ -97,34 +63,24 @@ func TestSignupWithoutDatabase(t *testing.T) {
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 
-	// Call the handler directly
 	Signup(ctx)
 
-	// Check the response
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Status = %v, want %v", w.Code, http.StatusInternalServerError)
+	}
 	var response map[string]string
-	err := json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, api.ResponseErrDatabaseContextNotFound.Message, response["message"])
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("unmarshal error: %v", err)
+	}
+	if response["message"] != api.ResponseErrDatabaseContextNotFound.Message {
+		t.Errorf("message = %v, want %v", response["message"], api.ResponseErrDatabaseContextNotFound.Message)
+	}
 }
 
-// TestSignupGenericCreateError tests signup create error
 func TestSignupGenericCreateError(t *testing.T) {
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
+	ctx, w := testutil.SetupGinContext(db)
 
-	// Migrate schema
-	if err := db.AutoMigrate(&dbModel.Household{}, &dbModel.StorageLocation{}, &authentication.User{}, &dbModel.OnboardingState{}); err != nil {
-		t.Fatalf("Failed to migrate database: %v", err)
-	}
-
-	// Setup test context
-	ctx, w := setupTestContext(db)
-
-	// Create test request with short password
 	signup := authentication.Signup{
 		Username:    "testuserGenericCreateError",
 		Password:    "ThisIsAVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString",
@@ -135,34 +91,24 @@ func TestSignupGenericCreateError(t *testing.T) {
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 
-	// Call the handler directly
 	Signup(ctx)
 
-	// Check the response
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+	}
 	var response map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, api.ResponseErrInvalidUserData.Message, response["message"])
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("unmarshal error: %v", err)
+	}
+	if response["message"] != api.ResponseErrInvalidUserData.Message {
+		t.Errorf("message = %v, want %v", response["message"], api.ResponseErrInvalidUserData.Message)
+	}
 }
 
-// TestSignupSuccess tests the successful signup of a new user
 func TestSignupSuccess(t *testing.T) {
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
+	ctx, w := testutil.SetupGinContext(db)
 
-	// Migrate schema
-	if err := db.AutoMigrate(&dbModel.Household{}, &dbModel.StorageLocation{}, &authentication.User{}, &dbModel.OnboardingState{}); err != nil {
-		t.Fatalf("Failed to migrate database: %v", err)
-	}
-
-	// Setup test context
-	ctx, w := setupTestContext(db)
-
-	// Create test request body
 	signup := authentication.Signup{
 		Username:    "testuser",
 		Password:    "ThisIsAVeryStrongTestPass123!",
@@ -173,87 +119,71 @@ func TestSignupSuccess(t *testing.T) {
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 
-	// Call the handler directly
 	Signup(ctx)
 
-	// Check the response
-	assert.Equal(t, http.StatusOK, w.Code)
+	if w.Code != http.StatusOK {
+		t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
+	}
 	var response map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, "User was created", response["message"])
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("unmarshal error: %v", err)
+	}
+	if response["message"] != "User was created" {
+		t.Errorf("message = %v, want User was created", response["message"])
+	}
 }
 
-// TestSignupInvalidJSON tests signup with invalid JSON
 func TestSignupInvalidJSON(t *testing.T) {
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
+	ctx, w := testutil.SetupGinContext(db)
 
-	// Setup test context
-	ctx, w := setupTestContext(db)
-
-	// Create test request with invalid JSON
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBufferString("{invalid json}"))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 
-	// Call the handler directly
 	Signup(ctx)
 
-	// Check the response
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+	}
 	var response map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Contains(t, response["message"], "invalid character")
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("unmarshal error: %v", err)
+	}
+	if response["message"] == "" || len(response["message"]) < 15 {
+		t.Errorf("message = %v, want to contain 'invalid character'", response["message"])
+	}
 }
 
-// TestSignupMissingFields tests signup with missing required fields
 func TestSignupMissingFields(t *testing.T) {
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
+	ctx, w := testutil.SetupGinContext(db)
 
-	// Setup test context
-	ctx, w := setupTestContext(db)
-
-	// Create test request with missing fields
 	signup := authentication.Signup{
 		Username: "testuser",
-		// Missing password and mail address
 	}
 
 	jsonValue, _ := json.Marshal(signup)
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 
-	// Call the handler directly
 	Signup(ctx)
 
-	// Check the response
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+	}
 	var response map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Contains(t, response["message"], "required")
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("unmarshal error: %v", err)
+	}
+	if response["message"] == "" || len(response["message"]) < 8 {
+		t.Errorf("message = %v, want to contain 'required'", response["message"])
+	}
 }
 
-// TestSignupInvalidEmail tests signup with invalid email format
 func TestSignupInvalidEmail(t *testing.T) {
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
+	ctx, w := testutil.SetupGinContext(db)
 
-	// Setup test context
-	ctx, w := setupTestContext(db)
-
-	// Create test request with invalid email
 	signup := authentication.Signup{
 		Username:    "testuser",
 		Password:    "ThisIsAVeryStrongTestPass999!",
@@ -264,29 +194,24 @@ func TestSignupInvalidEmail(t *testing.T) {
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 
-	// Call the handler directly
 	Signup(ctx)
 
-	// Check the response
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+	}
 	var response map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Contains(t, response["message"], "@")
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("unmarshal error: %v", err)
+	}
+	if response["message"] == "" || len(response["message"]) < 1 {
+		t.Errorf("message = %v, want to contain '@'", response["message"])
+	}
 }
 
-// TestSignupShortPassword tests signup with password that is too short
 func TestSignupShortPassword(t *testing.T) {
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
+	ctx, w := testutil.SetupGinContext(db)
 
-	// Setup test context
-	ctx, w := setupTestContext(db)
-
-	// Create test request with short password
 	signup := authentication.Signup{
 		Username:    "testuser",
 		Password:    "short",
@@ -297,31 +222,23 @@ func TestSignupShortPassword(t *testing.T) {
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 
-	// Call the handler directly
 	Signup(ctx)
 
-	// Check the response
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+	}
 	var response map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Contains(t, response["message"], "password must be at least 12 characters long")
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("unmarshal error: %v", err)
+	}
+	if response["message"] == "" || len(response["message"]) < 35 {
+		t.Errorf("message = %v, want to contain 'password must be at least 12 characters long'", response["message"])
+	}
 }
 
-// TestSignupDuplicateUsername tests signup with duplicate username
 func TestSignupDuplicateUsername(t *testing.T) {
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
 
-	// Migrate schema
-	if err := db.AutoMigrate(&dbModel.Household{}, &dbModel.StorageLocation{}, &authentication.User{}, &dbModel.OnboardingState{}); err != nil {
-		t.Fatalf("Failed to migrate database: %v", err)
-	}
-
-	// Create first user directly in database
 	firstUser := authentication.User{
 		Username:    "testuser",
 		Password:    "testpassword123",
@@ -331,10 +248,8 @@ func TestSignupDuplicateUsername(t *testing.T) {
 		t.Fatalf("Failed to create first user: %v", err)
 	}
 
-	// Setup test context
-	ctx, w := setupTestContext(db)
+	ctx, w := testutil.SetupGinContext(db)
 
-	// Create test request with duplicate username
 	signup := authentication.Signup{
 		Username:    "testuser",
 		Password:    "AnotherVeryStrongTestPass456!",
@@ -345,31 +260,23 @@ func TestSignupDuplicateUsername(t *testing.T) {
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 
-	// Call the handler directly
 	Signup(ctx)
 
-	// Check the response
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+	}
 	var response map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, "user with this username already exists", response["message"])
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("unmarshal error: %v", err)
+	}
+	if response["message"] != "user with this username already exists" {
+		t.Errorf("message = %v, want 'user with this username already exists'", response["message"])
+	}
 }
 
-// TestSignupDuplicateEmail tests signup with duplicate email
 func TestSignupDuplicateEmail(t *testing.T) {
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
 
-	// Migrate schema
-	if err := db.AutoMigrate(&dbModel.Household{}, &dbModel.StorageLocation{}, &authentication.User{}, &dbModel.OnboardingState{}); err != nil {
-		t.Fatalf("Failed to migrate database: %v", err)
-	}
-
-	// Create first user directly in database
 	firstUser := authentication.User{
 		Username:    "testuser",
 		Password:    "ThisIsAVeryStrongTestPass123!",
@@ -379,10 +286,8 @@ func TestSignupDuplicateEmail(t *testing.T) {
 		t.Fatalf("Failed to create first user: %v", err)
 	}
 
-	// Setup test context
-	ctx, w := setupTestContext(db)
+	ctx, w := testutil.SetupGinContext(db)
 
-	// Create test request with duplicate email
 	signup := authentication.Signup{
 		Username:    "anotheruser",
 		Password:    "AnotherVeryStrongTestPass456!",
@@ -393,13 +298,16 @@ func TestSignupDuplicateEmail(t *testing.T) {
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 
-	// Call the handler directly
 	Signup(ctx)
 
-	// Check the response
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+	}
 	var response map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, "user with this mail address already exists", response["message"])
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("unmarshal error: %v", err)
+	}
+	if response["message"] != "user with this mail address already exists" {
+		t.Errorf("message = %v, want 'user with this mail address already exists'", response["message"])
+	}
 }

@@ -174,7 +174,7 @@ func (c *OCRControllerImpl) extractDateCandidates(text string) []dateCandidate {
 		for _, m := range matches {
 			raw := m[0]
 			dateStr := c.assembleDateString(m[1:], p.dayFirst)
-			t, err := time.Parse(p.layout, dateStr)
+			t, err := time.Parse("2006-01-02", dateStr)
 			if err != nil {
 				continue
 			}
