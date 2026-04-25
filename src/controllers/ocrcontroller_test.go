@@ -350,7 +350,7 @@ func TestParseWebhookEvents(t *testing.T) {
 			got := ParseWebhookEvents(tt.eventsJSON)
 
 			if tt.want == nil {
-				if got != nil && len(got) != 0 {
+				if len(got) != 0 {
 					t.Errorf("ParseWebhookEvents() = %v, want nil/empty", got)
 				}
 				return

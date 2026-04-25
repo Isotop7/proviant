@@ -105,7 +105,7 @@ func GetProduct(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	product, getError := productRepo.GetProductByID(productID, userID)
+	product, getError := productRepo.GetProductByID(uint(productID), userID)
 
 	switch getError {
 	// No error: return product
@@ -248,7 +248,7 @@ func UpdateProduct(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	updateErr := productRepo.UpdateProduct(productID, userID, &product)
+	updateErr := productRepo.UpdateProduct(uint(productID), userID, &product)
 
 	switch updateErr {
 	// No error => product was updated
@@ -309,7 +309,7 @@ func UpdateProductAmount(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	deleted, updateErr := productRepo.UpdateProductAmount(productID, userID, amountDTO.Delta)
+	deleted, updateErr := productRepo.UpdateProductAmount(uint(productID), userID, amountDTO.Delta)
 
 	switch updateErr {
 	case nil:
@@ -386,7 +386,7 @@ func DeleteProduct(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	deleteResult := productRepo.DeleteProduct(productID, userID, archiveOnly)
+	deleteResult := productRepo.DeleteProduct(uint(productID), userID, archiveOnly)
 	if deleteResult != nil {
 		logger.Error().Msgf("Error deleting product: %s", deleteResult)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: deleteResult.Error()})
@@ -438,14 +438,14 @@ func SetExpireAt(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	product, getErr := productRepo.GetProductByID(productID, userID)
+	product, getErr := productRepo.GetProductByID(uint(productID), userID)
 	if getErr != nil {
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
 		return
 	}
 
-	updateErr := productRepo.SetProductExpireAt(productID, userID, expireAt)
+	updateErr := productRepo.SetProductExpireAt(uint(productID), userID, expireAt)
 
 	switch updateErr {
 	// No error => product was updated and dto is returned

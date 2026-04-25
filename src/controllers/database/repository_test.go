@@ -87,7 +87,7 @@ func TestProductRepository_GetProductByID(t *testing.T) {
 	}
 	db.Create(&product)
 
-	foundProduct, err := repo.GetProductByID(int(product.ID), user.ID)
+	foundProduct, err := repo.GetProductByID(product.ID, user.ID)
 	if err != nil {
 		t.Fatalf("GetProductByID() error = %v", err)
 	}
@@ -174,7 +174,7 @@ func TestProductRepository_UpdateProduct(t *testing.T) {
 		ProductName: "Updated Name",
 	}
 
-	err := repo.UpdateProduct(int(product.ID), user.ID, &updateData)
+	err := repo.UpdateProduct(product.ID, user.ID, &updateData)
 	if err != nil {
 		t.Fatalf("UpdateProduct() error = %v", err)
 	}
@@ -208,7 +208,7 @@ func TestProductRepository_DeleteProduct(t *testing.T) {
 	}
 	db.Create(&product)
 
-	err := repo.DeleteProduct(int(product.ID), user.ID, true)
+	err := repo.DeleteProduct(product.ID, user.ID, true)
 	if err != nil {
 		t.Fatalf("DeleteProduct() error = %v", err)
 	}
@@ -342,7 +342,7 @@ func TestProductRepository_RestoreProduct(t *testing.T) {
 	db.Create(&product)
 	db.Delete(&product)
 
-	err := repo.RestoreProduct(int(product.ID), user.ID)
+	err := repo.RestoreProduct(product.ID, user.ID)
 	if err != nil {
 		t.Fatalf("RestoreProduct() error = %v", err)
 	}
@@ -443,7 +443,7 @@ func TestProductRepository_BulkDeleteProducts(t *testing.T) {
 	db.Delete(&product1)
 	db.Delete(&product2)
 
-	errors := repo.BulkDeleteProducts([]int{int(product1.ID), int(product2.ID)}, user.ID)
+	errors := repo.BulkDeleteProducts([]uint{product1.ID, product2.ID}, user.ID)
 	if len(errors) != 0 {
 		t.Errorf("BulkDeleteProducts() returned %d errors", len(errors))
 	}

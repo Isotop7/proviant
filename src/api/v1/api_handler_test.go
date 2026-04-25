@@ -466,7 +466,7 @@ func TestCreateWebhook(t *testing.T) {
 func TestConvertStringIDsToInts(t *testing.T) {
 	t.Run("valid string IDs", func(t *testing.T) {
 		ids := []string{"1", "2", "3"}
-		result, err := convertStringIDsToInts(ids)
+		result, err := convertStringIDsToUints(ids)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -480,7 +480,7 @@ func TestConvertStringIDsToInts(t *testing.T) {
 
 	t.Run("invalid string ID", func(t *testing.T) {
 		ids := []string{"1", "invalid", "3"}
-		result, err := convertStringIDsToInts(ids)
+		result, err := convertStringIDsToUints(ids)
 		if err == nil {
 			t.Error("Expected error for invalid ID")
 		}

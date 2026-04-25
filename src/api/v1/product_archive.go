@@ -16,14 +16,14 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func convertStringIDsToInts(ids []string) ([]int, error) {
-	result := make([]int, 0, len(ids))
+func convertStringIDsToUints(ids []string) ([]uint, error) {
+	result := make([]uint, 0, len(ids))
 	for _, id := range ids {
-		parsedID, err := strconv.Atoi(id)
+		parsedID, err := strconv.ParseUint(id, 10, 64)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, parsedID)
+		result = append(result, uint(parsedID))
 	}
 	return result, nil
 }
@@ -110,7 +110,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 		return
 	}
 
-	convertedProductIDs, convErr := convertStringIDsToInts(products.ProductIDs)
+	convertedProductIDs, convErr := convertStringIDsToUints(products.ProductIDs)
 	if convErr != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
@@ -137,7 +137,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 	}
 	strProductIDs := make([]string, len(convertedProductIDs))
 	for i, productID := range convertedProductIDs {
-		strProductIDs[i] = strconv.Itoa(productID)
+		strProductIDs[i] = strconv.FormatUint(uint64(productID), 10)
 	}
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", strings.Join(strProductIDs, ";"))})
 }
@@ -165,7 +165,7 @@ func BulkArchiveProducts(ctx *gin.Context) {
 		return
 	}
 
-	convertedProductIDs, convErr := convertStringIDsToInts(products.ProductIDs)
+	convertedProductIDs, convErr := convertStringIDsToUints(products.ProductIDs)
 	if convErr != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
@@ -192,7 +192,7 @@ func BulkArchiveProducts(ctx *gin.Context) {
 	}
 	strProductIDs := make([]string, len(convertedProductIDs))
 	for i, productID := range convertedProductIDs {
-		strProductIDs[i] = strconv.Itoa(productID)
+		strProductIDs[i] = strconv.FormatUint(uint64(productID), 10)
 	}
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were archived", strings.Join(strProductIDs, ";"))})
 }
@@ -228,7 +228,7 @@ func RestoreProduct(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	restoreResult := productRepo.RestoreProduct(productID, userID)
+	restoreResult := productRepo.RestoreProduct(uint(productID), userID)
 	if restoreResult != nil {
 		logger.Error().Msgf("Error restoring product: %s", restoreResult)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: restoreResult.Error()})
@@ -262,7 +262,7 @@ func BulkRestoreProducts(ctx *gin.Context) {
 		return
 	}
 
-	convertedProductIDs, convErr := convertStringIDsToInts(products.ProductIDs)
+	convertedProductIDs, convErr := convertStringIDsToUints(products.ProductIDs)
 	if convErr != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
@@ -289,7 +289,7 @@ func BulkRestoreProducts(ctx *gin.Context) {
 	}
 	strProductIDs := make([]string, len(convertedProductIDs))
 	for i, productID := range convertedProductIDs {
-		strProductIDs[i] = strconv.Itoa(productID)
+		strProductIDs[i] = strconv.FormatUint(uint64(productID), 10)
 	}
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were restored", strings.Join(strProductIDs, ";"))})
 }

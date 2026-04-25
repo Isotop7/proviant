@@ -49,9 +49,9 @@ func ConsumeProduct(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	product, fetchErr := productRepo.GetProductByID(productID, userID)
+	product, fetchErr := productRepo.GetProductByID(uint(productID), userID)
 
-	if err := productRepo.ConsumeProduct(productID, userID); err != nil {
+	if err := productRepo.ConsumeProduct(uint(productID), userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "Product not found"})
 			return
@@ -110,9 +110,9 @@ func WasteProduct(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	product, fetchErr := productRepo.GetProductByID(productID, userID)
+	product, fetchErr := productRepo.GetProductByID(uint(productID), userID)
 
-	if err := productRepo.WasteProduct(productID, userID); err != nil {
+	if err := productRepo.WasteProduct(uint(productID), userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "Product not found"})
 			return
