@@ -14,6 +14,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout main branch
+        run: |
+          git checkout main
+          git pull origin main
+
       - name: Install git-cliff
         uses: https://github.com/taiki-e/install-action@git-cliff
 
