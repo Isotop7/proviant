@@ -14,15 +14,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install git-cliff
+        uses: taiki-e/install-action@git-cliff
+
       - name: Generate changelog
-        uses: https://github.com/orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --verbose
-          github_token: ""
-          version: "v2.12.0"
-        env:
-          OUTPUT: CHANGELOG.md
+        run: |
+          git-cliff --config cliff.toml --verbose --output CHANGELOG.md
 
       - name: Configure git
         run: |
