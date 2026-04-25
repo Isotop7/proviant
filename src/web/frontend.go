@@ -397,7 +397,7 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	product, productErr := productRepo.GetArchivedProductByID(productID, userID)
+	product, productErr := productRepo.GetArchivedProductByID(uint(productID), userID)
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
@@ -455,7 +455,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	}
 
 	productRepo := database.NewProductRepository(dbHandle)
-	product, productErr := productRepo.GetArchivedProductByID(productID, userID)
+	product, productErr := productRepo.GetArchivedProductByID(uint(productID), userID)
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())

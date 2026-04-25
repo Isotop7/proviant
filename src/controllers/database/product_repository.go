@@ -42,7 +42,7 @@ func SearchParameterEnumFromString(str string) SearchParameterEnum {
 }
 
 type BulkOperationError struct {
-	productID int
+	productID uint
 	error     error
 }
 
@@ -131,8 +131,8 @@ func (r *ProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode in
 	return products, nil
 }
 
-func (r *ProductRepository) GetProductByID(productID int, userID uint) (database.Product, error) {
-	if productID <= 0 {
+func (r *ProductRepository) GetProductByID(productID uint, userID uint) (database.Product, error) {
+	if productID == 0 {
 		return database.Product{}, gorm.ErrNotImplemented
 	}
 
@@ -154,8 +154,8 @@ func (r *ProductRepository) GetProductByID(productID int, userID uint) (database
 	return product, nil
 }
 
-func (r *ProductRepository) GetArchivedProductByID(productID int, userID uint) (database.Product, error) {
-	if productID <= 0 {
+func (r *ProductRepository) GetArchivedProductByID(productID uint, userID uint) (database.Product, error) {
+	if productID == 0 {
 		return database.Product{}, gorm.ErrNotImplemented
 	}
 
@@ -256,8 +256,8 @@ func (r *ProductRepository) CreateProduct(userID uint, product *database.Product
 	return createErr.Error
 }
 
-func (r *ProductRepository) UpdateProduct(productID int, userID uint, product *database.ProductDTOPatch) error {
-	if productID <= 0 {
+func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *database.ProductDTOPatch) error {
+	if productID == 0 {
 		return gorm.ErrNotImplemented
 	}
 
@@ -290,8 +290,8 @@ func (r *ProductRepository) UpdateProduct(productID int, userID uint, product *d
 	return saveResult.Error
 }
 
-func (r *ProductRepository) UpdateProductAmount(productID int, userID uint, delta int) (bool, error) {
-	if productID <= 0 {
+func (r *ProductRepository) UpdateProductAmount(productID uint, userID uint, delta int) (bool, error) {
+	if productID == 0 {
 		return false, gorm.ErrNotImplemented
 	}
 
@@ -329,7 +329,7 @@ func (r *ProductRepository) UpdateProductAmount(productID int, userID uint, delt
 	return false, nil
 }
 
-func (r *ProductRepository) DeleteProduct(productID int, userID uint, archiveOnly bool) error {
+func (r *ProductRepository) DeleteProduct(productID uint, userID uint, archiveOnly bool) error {
 	_, getError := r.GetArchivedProductByID(productID, userID)
 	if getError != nil {
 		return getError
@@ -344,7 +344,7 @@ func (r *ProductRepository) DeleteProduct(productID int, userID uint, archiveOnl
 	return deleteResult.Error
 }
 
-func (r *ProductRepository) BulkDeleteProducts(productIDs []int, userID uint) []BulkOperationError {
+func (r *ProductRepository) BulkDeleteProducts(productIDs []uint, userID uint) []BulkOperationError {
 	bulkErrors := []BulkOperationError{}
 	for _, productID := range productIDs {
 		_, getError := r.GetArchivedProductByID(productID, userID)
@@ -359,7 +359,7 @@ func (r *ProductRepository) BulkDeleteProducts(productIDs []int, userID uint) []
 	return bulkErrors
 }
 
-func (r *ProductRepository) BulkArchiveProducts(productIDs []int, userID uint) []BulkOperationError {
+func (r *ProductRepository) BulkArchiveProducts(productIDs []uint, userID uint) []BulkOperationError {
 	bulkErrors := []BulkOperationError{}
 	for _, productID := range productIDs {
 		_, getError := r.GetArchivedProductByID(productID, userID)
@@ -374,7 +374,7 @@ func (r *ProductRepository) BulkArchiveProducts(productIDs []int, userID uint) [
 	return bulkErrors
 }
 
-func (r *ProductRepository) RestoreProduct(productID int, userID uint) error {
+func (r *ProductRepository) RestoreProduct(productID uint, userID uint) error {
 	product, getError := r.GetArchivedProductByID(productID, userID)
 	if getError != nil {
 		return getError
@@ -386,7 +386,7 @@ func (r *ProductRepository) RestoreProduct(productID int, userID uint) error {
 	return saveResult.Error
 }
 
-func (r *ProductRepository) BulkRestoreProducts(productIDs []int, userID uint) []BulkOperationError {
+func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) []BulkOperationError {
 	bulkErrors := []BulkOperationError{}
 	for _, productID := range productIDs {
 		product, getError := r.GetArchivedProductByID(productID, userID)
@@ -402,7 +402,7 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []int, userID uint) [
 	return bulkErrors
 }
 
-func (r *ProductRepository) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error {
+func (r *ProductRepository) SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error {
 	var dbProduct database.Product
 	getError := r.DB.First(&dbProduct, productID)
 	if getError.Error != nil {
@@ -880,14 +880,14 @@ func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database
 	return products, result.Error
 }
 
-func (r *ProductRepository) ConsumeProduct(productID int, userID uint) error {
+func (r *ProductRepository) ConsumeProduct(productID uint, userID uint) error {
 	if _, err := r.GetProductByID(productID, userID); err != nil {
 		return err
 	}
 	return r.DB.Delete(&database.Product{}, productID).Error
 }
 
-func (r *ProductRepository) WasteProduct(productID int, userID uint) error {
+func (r *ProductRepository) WasteProduct(productID uint, userID uint) error {
 	if _, err := r.GetProductByID(productID, userID); err != nil {
 		return err
 	}
