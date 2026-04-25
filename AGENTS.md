@@ -167,10 +167,31 @@ logger.Info().Msg("Logging initialized")
 ```
 
 ### Testing
-- No tests currently exist - add them for new functionality
+
+#### Test Setup
+- Use `testutil.SetupTestDB(t)` for database setup - creates in-memory SQLite with all models migrated
+- Use `testutil.SetupGinContext(db)` for API handler tests - creates test context with logger and db
+- Use `t.Run()` for all subtests
+
+#### Test Helpers (`src/testutil/`)
+- `testutil.SetupTestDB(t)` - Creates in-memory SQLite DB with all migrations
+- `testutil.SetupGinContext(db)` - Creates Gin test context with logger and db
+- `testutil.MockJWTClaims(ctx, userID)` - Sets JWT claims with "id" key
+- `testutil.MockJWTClaimsWithKey(ctx, userID, key)` - Sets JWT claims with custom key
+- `testutil.CreateTestUser(db, householdID)` - Creates test user
+- `testutil.CreateTestHousehold(db, adminID)` - Creates test household
+- `testutil.CreateTestProduct(db, householdID)` - Creates test product
+- `testutil.CreateTestStorageLocation(db, householdID)` - Creates test storage location
+
+#### Assertions
+- Use plain Go assertions: `if got != want { t.Errorf(...) }`
+- Both plain Go and testify/assert are acceptable but use plain Go for consistency
+
+#### Test Guidelines
 - Use `go test` for unit tests
 - Use `t.Run()` for subtests
 - Test both success and error paths
+- Keep test DB setup in the helper functions, not duplicated in each test file
 
 ### Frontend/Assets
 - SCSS files in `src/templates/scss/`

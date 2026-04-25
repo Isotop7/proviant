@@ -43,6 +43,15 @@ jobs:
           cd ./src
           go test -coverprofile=coverage.out ./... &&
           go mod verify
+      - name: Check coverage threshold
+        run: |
+          cd ./src
+          COVERAGE=$(go tool cover -func=coverage.out | grep total: | awk '{print $3}' | tr -d '%')
+          if (( $(echo "$COVERAGE < 15" | bc -l) )); then
+            echo "Coverage is $COVERAGE%, below minimum threshold of 15%"
+            exit 1
+          fi
+          echo "Coverage is $COVERAGE%, above minimum threshold of 15%"
       - name: Compile code
         run: |
           cd ./src

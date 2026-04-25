@@ -5,61 +5,23 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	jwt "github.com/appleboy/gin-jwt/v2"
+	"codeberg.org/isotop7/proviant/testutil"
+
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
-
-// setupTestContext creates a test context with database and logger
-func setupTestContext(db *gorm.DB) (*gin.Context, *httptest.ResponseRecorder) {
-	// Create test context
-	w := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(w)
-
-	// Setup mock logger
-	mockLogger := zerolog.Nop()
-	ctx.Set("logger", &mockLogger)
-
-	// Setup test database
-	ctx.Set("dbHandle", db)
-
-	return ctx, w
-}
-
-// mockJWTContext sets up JWT claims in context for testing
-func mockJWTContext(ctx *gin.Context, userID uint) {
-	// Mock JWT claims using the same structure as the JWT middleware
-	ctx.Set("JWT_PAYLOAD", jwt.MapClaims{
-		static.TokenIdentityKey: float64(userID),
-	})
-}
 
 // TestUpdateUser tests the UpdateUser endpoint
 func TestUpdateUser(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
-
-	// Migrate schema
-	if err := db.AutoMigrate(&authentication.User{}); err != nil {
-		t.Fatalf("Failed to migrate database: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
 
 	t.Run("successful user update", func(t *testing.T) {
 		// Create test user
 		testUser := authentication.User{
-			ID:          1,
 			Username:    "testuser",
 			Password:    "password123",
 			MailAddress: "test@example.com",
@@ -67,8 +29,8 @@ func TestUpdateUser(t *testing.T) {
 		db.Create(&testUser)
 
 		// Setup test context
-		ctx, w := setupTestContext(db)
-		mockJWTContext(ctx, testUser.ID)
+		ctx, w := testutil.SetupGinContext(db)
+		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
 
 		// Request body
 		reqBody := map[string]string{
@@ -109,8 +71,8 @@ func TestUpdateUser(t *testing.T) {
 		db.Create(&testUser)
 
 		// Setup test context
-		ctx, w := setupTestContext(db)
-		mockJWTContext(ctx, testUser.ID)
+		ctx, w := testutil.SetupGinContext(db)
+		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
 
 		// Request body with invalid data
 		userData := authentication.User{
@@ -136,8 +98,8 @@ func TestUpdateUser(t *testing.T) {
 
 	t.Run("user not found", func(t *testing.T) {
 		// Setup test context
-		ctx, w := setupTestContext(db)
-		mockJWTContext(ctx, 999) // Non-existent user ID
+		ctx, w := testutil.SetupGinContext(db)
+		testutil.MockJWTClaimsWithKey(ctx, 999, testutil.TokenIdentityKey) // Non-existent user ID
 
 		// Request body
 		userData := authentication.User{
@@ -166,16 +128,7 @@ func TestUpdateUser(t *testing.T) {
 func TestUpdateUserPassword(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
-
-	// Migrate schema
-	if err := db.AutoMigrate(&authentication.User{}); err != nil {
-		t.Fatalf("Failed to migrate database: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
 
 	t.Run("successful password update", func(t *testing.T) {
 		// Create test user
@@ -187,8 +140,8 @@ func TestUpdateUserPassword(t *testing.T) {
 		db.Create(&testUser)
 
 		// Setup test context
-		ctx, w := setupTestContext(db)
-		mockJWTContext(ctx, testUser.ID)
+		ctx, w := testutil.SetupGinContext(db)
+		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
 
 		// Request body
 		loginData := authentication.Login{
@@ -222,8 +175,8 @@ func TestUpdateUserPassword(t *testing.T) {
 		db.Create(&testUser)
 
 		// Setup test context
-		ctx, w := setupTestContext(db)
-		mockJWTContext(ctx, testUser.ID)
+		ctx, w := testutil.SetupGinContext(db)
+		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
 
 		// Request body with invalid data
 		loginData := authentication.Login{
@@ -249,8 +202,8 @@ func TestUpdateUserPassword(t *testing.T) {
 
 	t.Run("user not found", func(t *testing.T) {
 		// Setup test context
-		ctx, w := setupTestContext(db)
-		mockJWTContext(ctx, 999) // Non-existent user ID
+		ctx, w := testutil.SetupGinContext(db)
+		testutil.MockJWTClaimsWithKey(ctx, 999, testutil.TokenIdentityKey) // Non-existent user ID
 
 		// Request body
 		loginData := authentication.Login{
