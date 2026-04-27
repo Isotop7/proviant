@@ -7,6 +7,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/errors"
 	modelsAPI "codeberg.org/isotop7/proviant/models/api"
 
 	"codeberg.org/isotop7/proviant/models/configuration/static"
@@ -234,13 +235,22 @@ func JoinOnboardingByInvite(ctx *gin.Context) {
 	user, err := userRepo.GetUserByID(userID)
 	if err != nil {
 		logger.Error().Msgf("Failed to get user: %s", err.Error())
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get user"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	if err := invitationRepo.AcceptInvitation(req.Token, user.MailAddress, userID); err != nil {
 		logger.Error().Msgf("Failed to accept invitation: %s", err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		switch err {
+		case errors.ErrInvitationNotFound:
+			ctx.JSON(http.StatusNotFound, api.Error(err))
+		case errors.ErrInvitationExpired, errors.ErrInvitationAlreadyUsed, errors.ErrInvitationCancelled:
+			ctx.JSON(http.StatusConflict, api.Error(err))
+		case errors.ErrInvitationEmailMismatch:
+			ctx.JSON(http.StatusBadRequest, api.Error(err))
+		default:
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		}
 		return
 	}
 
@@ -359,7 +369,14 @@ func ApplyForHousehold(ctx *gin.Context) {
 	err := householdRepo.ApplyForHousehold(userID, req.HouseholdID)
 	if err != nil {
 		logger.Error().Msgf("Failed to apply for household: %s", err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		switch err {
+		case errors.ErrHouseholdNotFound:
+			ctx.JSON(http.StatusNotFound, api.Error(err))
+		case errors.ErrApplicationAlreadyPending:
+			ctx.JSON(http.StatusConflict, api.Error(err))
+		default:
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		}
 		return
 	}
 

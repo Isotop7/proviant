@@ -57,7 +57,7 @@ func ConsumeProduct(ctx *gin.Context) {
 			return
 		}
 		logger.Error().Msgf("ConsumeProduct: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -118,7 +118,7 @@ func WasteProduct(ctx *gin.Context) {
 			return
 		}
 		logger.Error().Msgf("WasteProduct: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 

@@ -46,7 +46,7 @@ func CreateInvitation(ctx *gin.Context) {
 	var req createInvitationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -58,11 +58,11 @@ func CreateInvitation(ctx *gin.Context) {
 	if err := dbHandle.First(&user, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.Error().Msgf("User with ID %d not found", userID)
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 			return
 		}
 		logger.Error().Msgf("Error fetching user: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -143,11 +143,11 @@ func GetInvitations(ctx *gin.Context) {
 	if err := dbHandle.First(&user, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.Error().Msgf("User with ID %d not found", userID)
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 			return
 		}
 		logger.Error().Msgf("Error fetching user: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -160,7 +160,7 @@ func GetInvitations(ctx *gin.Context) {
 	invitations, err := invitationRepo.GetInvitationsForHousehold(user.HouseholdID, userID)
 	if err != nil {
 		logger.Error().Msgf("Error fetching invitations: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -196,7 +196,7 @@ func CancelInvitation(ctx *gin.Context) {
 	invitationID, err := strconv.ParseUint(invitationIDStr, 10, 64)
 	if err != nil {
 		logger.Error().Msgf("Invalid invitation ID '%s': %s", invitationIDStr, err)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid invitation ID"})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("invitation ID must be a valid unsigned integer"))
 		return
 	}
 
@@ -213,7 +213,7 @@ func CancelInvitation(ctx *gin.Context) {
 			return
 		default:
 			logger.Error().Msgf("Error cancelling invitation: %s", err)
-			ctx.JSON(http.StatusInternalServerError, api.Error(err))
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
 			return
 		}
 	}

@@ -31,14 +31,14 @@ func CreateUserToken(ctx *gin.Context) {
 
 	var req api.CreateTokenRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, v1api.APIResponse{Message: "invalid request: " + err.Error()})
+		ctx.JSON(http.StatusBadRequest, v1api.InvalidInputErrorWithDetail(err.Error()))
 		return
 	}
 
 	rawToken, err := controllers.GeneratePAT()
 	if err != nil {
 		logger.Error().Msg(err.Error())
-		ctx.JSON(http.StatusInternalServerError, v1api.APIResponse{Message: "failed to generate token"})
+		ctx.JSON(http.StatusInternalServerError, v1api.InternalError())
 		return
 	}
 
@@ -48,7 +48,7 @@ func CreateUserToken(ctx *gin.Context) {
 	if req.ExpiresAt != nil && *req.ExpiresAt != "" {
 		parsed, parseErr := time.Parse(time.RFC3339, *req.ExpiresAt)
 		if parseErr != nil {
-			ctx.JSON(http.StatusBadRequest, v1api.APIResponse{Message: "invalid expires_at format, use RFC3339"})
+			ctx.JSON(http.StatusBadRequest, v1api.InvalidInputErrorWithDetail("expires_at must be in RFC3339 format"))
 			return
 		}
 		expiresAt = &parsed
@@ -58,7 +58,7 @@ func CreateUserToken(ctx *gin.Context) {
 	pat, err := patRepo.CreatePAT(userID, req.Name, tokenHash, expiresAt, req.Scopes)
 	if err != nil {
 		logger.Error().Msg(err.Error())
-		ctx.JSON(http.StatusInternalServerError, v1api.APIResponse{Message: "failed to create token"})
+		ctx.JSON(http.StatusInternalServerError, v1api.InternalError())
 		return
 	}
 
@@ -91,7 +91,7 @@ func ListUserTokens(ctx *gin.Context) {
 	patRepo := database.NewPATRepository(dbHandle)
 	pats, err := patRepo.GetPATsByUserID(userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, v1api.APIResponse{Message: "failed to list tokens"})
+		ctx.JSON(http.StatusInternalServerError, v1api.InternalError())
 		return
 	}
 
@@ -134,7 +134,7 @@ func DeleteUserToken(ctx *gin.Context) {
 	patIDStr := ctx.Param("id")
 	patIDRaw, parseErr := strconv.ParseUint(patIDStr, 10, 64)
 	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, v1api.APIResponse{Message: "invalid token id"})
+		ctx.JSON(http.StatusBadRequest, v1api.InvalidInputErrorWithDetail("token ID must be a valid unsigned integer"))
 		return
 	}
 	patID := uint(patIDRaw)
@@ -143,11 +143,11 @@ func DeleteUserToken(ctx *gin.Context) {
 	err := patRepo.DeletePAT(patID, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, v1api.APIResponse{Message: errors.ErrPATNotFound.Error()})
+			ctx.JSON(http.StatusNotFound, v1api.Error(errors.ErrPATNotFound))
 			return
 		}
 		logger.Error().Msg(err.Error())
-		ctx.JSON(http.StatusInternalServerError, v1api.APIResponse{Message: "failed to delete token"})
+		ctx.JSON(http.StatusInternalServerError, v1api.DeleteFailedError())
 		return
 	}
 

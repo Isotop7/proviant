@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
 func convertStringIDsToUints(ids []string) ([]uint, error) {
@@ -79,12 +80,18 @@ func GetArchivedProducts(ctx *gin.Context) {
 	products, productBulkErr := productRepo.GetUserArchivedProductsBulk(userID, limit)
 	if productBulkErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
-		return
-	} else {
-		ctx.JSON(http.StatusOK, products)
+		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{
+				Message: "Unable to retrieve archived products. Please check your account.",
+				Action:  "Ensure you are logged in with a valid household",
+			})
+		} else {
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		}
 		return
 	}
+	ctx.JSON(http.StatusOK, products)
+	return
 }
 
 // BulkDeleteProducts deletes a list of products of a user
@@ -106,14 +113,14 @@ func BulkDeleteProducts(ctx *gin.Context) {
 	var products apiModel.BulkProductsAPIModel
 	if err := ctx.ShouldBindJSON(&products); err != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
 	convertedProductIDs, convErr := convertStringIDsToUints(products.ProductIDs)
 	if convErr != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -132,7 +139,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 	if len(bulkDeleteResultError) > 0 {
 		msg := joinErrors(bulkDeleteResultError)
 		logger.Error().Msg(msg)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: msg})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	strProductIDs := make([]string, len(convertedProductIDs))
@@ -161,14 +168,14 @@ func BulkArchiveProducts(ctx *gin.Context) {
 	var products apiModel.BulkProductsAPIModel
 	if err := ctx.ShouldBindJSON(&products); err != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
 	convertedProductIDs, convErr := convertStringIDsToUints(products.ProductIDs)
 	if convErr != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -187,7 +194,7 @@ func BulkArchiveProducts(ctx *gin.Context) {
 	if len(bulkArchiveError) > 0 {
 		msg := joinErrors(bulkArchiveError)
 		logger.Error().Msg(msg)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: msg})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	strProductIDs := make([]string, len(convertedProductIDs))
@@ -231,7 +238,7 @@ func RestoreProduct(ctx *gin.Context) {
 	restoreResult := productRepo.RestoreProduct(uint(productID), userID)
 	if restoreResult != nil {
 		logger.Error().Msgf("Error restoring product: %s", restoreResult)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: restoreResult.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.RestoreFailedError())
 		return
 	} else {
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was restored", productID)})
@@ -258,14 +265,14 @@ func BulkRestoreProducts(ctx *gin.Context) {
 	var products apiModel.BulkProductsAPIModel
 	if err := ctx.ShouldBindJSON(&products); err != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
 	convertedProductIDs, convErr := convertStringIDsToUints(products.ProductIDs)
 	if convErr != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -284,7 +291,7 @@ func BulkRestoreProducts(ctx *gin.Context) {
 	if len(bulkRestoreError) > 0 {
 		msg := joinErrors(bulkRestoreError)
 		logger.Error().Msg(msg)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: msg})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	strProductIDs := make([]string, len(convertedProductIDs))

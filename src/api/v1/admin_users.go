@@ -45,14 +45,14 @@ func GetHouseholdUsers(ctx *gin.Context) {
 	user, err := userRepo.GetUserByID(userID)
 	if err != nil {
 		logger.Error().Msgf("Error fetching user: %s", err)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
 	household, hhErr := userRepo.GetHouseholdByID(user.HouseholdID)
 	if hhErr != nil {
 		logger.Error().Msgf("Error fetching household: %s", hhErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(hhErr))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	if household.AdminID != userID {
@@ -63,7 +63,7 @@ func GetHouseholdUsers(ctx *gin.Context) {
 	users, err := userRepo.GetUsersByHouseholdID(user.HouseholdID)
 	if err != nil {
 		logger.Error().Msgf("Error fetching household users: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -108,21 +108,21 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 	var req updateAdminUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
 	userRepo := database.NewUserRepository(dbHandle)
 	admin, adminErr := userRepo.GetUserByID(adminID)
 	if adminErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
 	household, hhErr := userRepo.GetHouseholdByID(admin.HouseholdID)
 	if hhErr != nil {
 		logger.Error().Msgf("Error fetching household: %s", hhErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(hhErr))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	if household.AdminID != adminID {
@@ -137,7 +137,7 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 			return
 		}
 		logger.Error().Msgf("Error fetching target user: %s", targetErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(targetErr))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	if targetUser.HouseholdID != admin.HouseholdID {
@@ -157,7 +157,7 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 	updateErr := userRepo.UpdateAdminUserFields(targetUser.ID, newUsername, newMailAddress)
 	if updateErr != nil {
 		logger.Error().Msgf("Error updating user: %s", updateErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	targetUser.Username = newUsername
@@ -202,14 +202,14 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 	userRepo := database.NewUserRepository(dbHandle)
 	admin, adminErr := userRepo.GetUserByID(adminID)
 	if adminErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
 	household, hhErr := userRepo.GetHouseholdByID(admin.HouseholdID)
 	if hhErr != nil {
 		logger.Error().Msgf("Error fetching household: %s", hhErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(hhErr))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	if household.AdminID != adminID {
@@ -229,7 +229,7 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 			return
 		}
 		logger.Error().Msgf("Error fetching target user: %s", targetErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(targetErr))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	if targetUser.HouseholdID != admin.HouseholdID {
@@ -240,7 +240,7 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 	deleteErr := userRepo.DeleteUser(uint(targetUserID))
 	if deleteErr != nil {
 		logger.Error().Msgf("Error deleting user: %s", deleteErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(deleteErr))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -283,14 +283,14 @@ func AdminResetUserPassword(ctx *gin.Context) {
 	userRepo := database.NewUserRepository(dbHandle)
 	admin, adminErr := userRepo.GetUserByID(adminID)
 	if adminErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
 	household, hhErr := userRepo.GetHouseholdByID(admin.HouseholdID)
 	if hhErr != nil {
 		logger.Error().Msgf("Error fetching household: %s", hhErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(hhErr))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	if household.AdminID != adminID {
@@ -305,7 +305,7 @@ func AdminResetUserPassword(ctx *gin.Context) {
 			return
 		}
 		logger.Error().Msgf("Error fetching target user: %s", targetErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(targetErr))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	if targetUser.HouseholdID != admin.HouseholdID {
@@ -316,14 +316,14 @@ func AdminResetUserPassword(ctx *gin.Context) {
 	token, tokErr := uuid.NewUUID()
 	if tokErr != nil {
 		logger.Error().Msgf("Error generating reset token: %s", tokErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "error generating reset token"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	expiresAt := time.Now().Add(24 * time.Hour)
 	if createErr := userRepo.CreateEmailVerification(targetUser.ID, token.String(), expiresAt); createErr != nil {
 		logger.Error().Msgf("Error creating reset token: %s", createErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(createErr))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -336,7 +336,7 @@ func AdminResetUserPassword(ctx *gin.Context) {
 		}
 		if sendErr := notificationController.SendEmailVerification(targetUser.MailAddress, targetUser.Username, token.String(), baseURL, expiresAt); sendErr != nil {
 			logger.Error().Msgf("Error sending reset email: %s", sendErr)
-			ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "error sending reset email"})
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
 			return
 		}
 	}
