@@ -42,7 +42,7 @@ func ListStorageLocations(ctx *gin.Context) {
 	locs, err := storageLocationRepo.GetByHousehold(userID)
 	if err != nil {
 		logger.Error().Msgf("Error listing storage locations: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -76,7 +76,7 @@ func CreateStorageLocation(ctx *gin.Context) {
 	var req storageLocationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -89,7 +89,7 @@ func CreateStorageLocation(ctx *gin.Context) {
 	loc, err := storageLocationRepo.Create(userID, req.Name, icon, req.SortOrder)
 	if err != nil {
 		logger.Error().Msgf("Error creating storage location: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
 		return
 	}
 
@@ -130,7 +130,7 @@ func UpdateStorageLocation(ctx *gin.Context) {
 	var req storageLocationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -151,7 +151,7 @@ func UpdateStorageLocation(ctx *gin.Context) {
 			return
 		}
 		logger.Error().Msgf("Error updating storage location: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
 		return
 	}
 
@@ -197,7 +197,7 @@ func DeleteStorageLocation(ctx *gin.Context) {
 			return
 		}
 		logger.Error().Msgf("Error deleting storage location: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 

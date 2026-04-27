@@ -67,12 +67,18 @@ func GetProducts(ctx *gin.Context) {
 	products, productBulkErr := productRepo.GetUserProductsBulk(userID, limit)
 	if productBulkErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
-		return
-	} else {
-		ctx.JSON(http.StatusOK, products)
+		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{
+				Message: "Unable to retrieve products. Please check your account.",
+				Action:  "Ensure you are logged in with a valid household",
+			})
+		} else {
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		}
 		return
 	}
+	ctx.JSON(http.StatusOK, products)
+	return
 }
 
 // GetProduct return a single product of a user
@@ -115,12 +121,18 @@ func GetProduct(ctx *gin.Context) {
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductForUserNotFound, productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+			Message: fmt.Sprintf("Product with ID '%d' was not found or you do not have access", productID),
+			Action:  "Check the product ID and try again",
+		})
 		return
 	// Unspecified error
 	default:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductNotFound, productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
+			Action:  "Check the product ID and try again",
+		})
 		return
 	}
 }
@@ -154,7 +166,7 @@ func CreateProduct(ctx *gin.Context) {
 	var product dbModel.Product
 	if err := ctx.ShouldBindJSON(&product); err != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -187,7 +199,7 @@ func CreateProduct(ctx *gin.Context) {
 	createResult := productRepo.CreateProduct(userID, &product)
 	if createResult != nil {
 		logger.Error().Msgf("Error creating product: %s", createResult)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: createResult.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
 		return
 	}
 
@@ -243,7 +255,7 @@ func UpdateProduct(ctx *gin.Context) {
 	var product dbModel.ProductDTOPatch
 	if err := ctx.ShouldBindJSON(&product); err != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -258,12 +270,15 @@ func UpdateProduct(ctx *gin.Context) {
 	// Requested product was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
+			Action:  "Check the product ID and try again",
+		})
 		return
 	// Unspecified error
 	default:
 		logger.Error().Msgf("Error saving product: %s", updateErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: updateErr.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
 		return
 	}
 }
@@ -304,7 +319,7 @@ func UpdateProductAmount(ctx *gin.Context) {
 	var amountDTO apiModel.ProductAmountDTO
 	if err := ctx.ShouldBindJSON(&amountDTO); err != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -328,11 +343,14 @@ func UpdateProductAmount(ctx *gin.Context) {
 		return
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
+			Action:  "Check the product ID and try again",
+		})
 		return
 	default:
 		logger.Error().Msgf("Error updating product amount: %s", updateErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: updateErr.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
 		return
 	}
 }
@@ -389,7 +407,7 @@ func DeleteProduct(ctx *gin.Context) {
 	deleteResult := productRepo.DeleteProduct(uint(productID), userID, archiveOnly)
 	if deleteResult != nil {
 		logger.Error().Msgf("Error deleting product: %s", deleteResult)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: deleteResult.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.DeleteFailedError())
 		return
 	} else {
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was deleted", productID)})
@@ -433,7 +451,7 @@ func SetExpireAt(ctx *gin.Context) {
 	var bindErr error
 	if bindErr = ctx.ShouldBindJSON(&expireAt); bindErr != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: bindErr.Error()})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -441,7 +459,10 @@ func SetExpireAt(ctx *gin.Context) {
 	product, getErr := productRepo.GetProductByID(uint(productID), userID)
 	if getErr != nil {
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
+			Action:  "Check the product ID and try again",
+		})
 		return
 	}
 
@@ -460,17 +481,23 @@ func SetExpireAt(ctx *gin.Context) {
 	// Product was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
+			Action:  "Check the product ID and try again",
+		})
 		return
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' for user was not found", productID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+			Message: fmt.Sprintf("Product with ID '%d' was not found or you do not have access", productID),
+			Action:  "Check the product ID and try again",
+		})
 		return
 	// Unspecified error
 	default:
 		logger.Error().Msgf("Error saving product: %s", updateErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: updateErr.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
 		return
 	}
 }

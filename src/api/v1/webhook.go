@@ -44,13 +44,13 @@ func CreateWebhook(ctx *gin.Context) {
 
 	var req apiModel.CreateWebhookRequest
 	if bindErr := ctx.ShouldBindJSON(&req); bindErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
 	for _, event := range req.Events {
 		if !isValidWebhookEvent(event) {
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrWebhookInvalidEvent.Error()})
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrWebhookInvalidEvent))
 			return
 		}
 	}
@@ -72,7 +72,7 @@ func CreateWebhook(ctx *gin.Context) {
 	repo := database.NewWebhookRepository(dbHandle)
 	if createErr := repo.CreateWebhook(&webhook); createErr != nil {
 		logger.Error().Msgf("Error creating webhook: %v", createErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(createErr))
+		ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
 		return
 	}
 
@@ -105,7 +105,7 @@ func ListWebhooks(ctx *gin.Context) {
 	webhooks, err := repo.GetWebhooksByUserID(userID)
 	if err != nil {
 		logger.Error().Msgf("Error listing webhooks: %v", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -143,7 +143,7 @@ func GetWebhook(ctx *gin.Context) {
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid webhook ID"})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("webhook ID must be a valid unsigned integer"))
 		return
 	}
 
@@ -153,7 +153,7 @@ func GetWebhook(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -195,7 +195,7 @@ func UpdateWebhook(ctx *gin.Context) {
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid webhook ID"})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("webhook ID must be a valid unsigned integer"))
 		return
 	}
 
@@ -205,7 +205,7 @@ func UpdateWebhook(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -217,7 +217,7 @@ func UpdateWebhook(ctx *gin.Context) {
 
 	var req apiModel.UpdateWebhookRequest
 	if bindErr := ctx.ShouldBindJSON(&req); bindErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -230,7 +230,7 @@ func UpdateWebhook(ctx *gin.Context) {
 	if req.Events != nil {
 		for _, event := range req.Events {
 			if !isValidWebhookEvent(event) {
-				ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrWebhookInvalidEvent.Error()})
+				ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrWebhookInvalidEvent))
 				return
 			}
 		}
@@ -243,7 +243,7 @@ func UpdateWebhook(ctx *gin.Context) {
 
 	if err := repo.UpdateWebhook(&webhook); err != nil {
 		logger.Error().Msgf("Error updating webhook: %v", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -276,7 +276,7 @@ func DeleteWebhook(ctx *gin.Context) {
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid webhook ID"})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("webhook ID must be a valid unsigned integer"))
 		return
 	}
 
@@ -286,13 +286,13 @@ func DeleteWebhook(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	if err := repo.DeleteWebhook(uint(webhookID)); err != nil {
 		logger.Error().Msgf("Error deleting webhook: %v", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -325,7 +325,7 @@ func GetWebhookDeliveries(ctx *gin.Context) {
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid webhook ID"})
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("webhook ID must be a valid unsigned integer"))
 		return
 	}
 
@@ -335,14 +335,14 @@ func GetWebhookDeliveries(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	logs, err := repo.GetDeliveryLogs(uint(webhookID), 50)
 	if err != nil {
 		logger.Error().Msgf("Error getting delivery logs: %v", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 

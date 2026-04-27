@@ -48,7 +48,7 @@ func GetStreak(ctx *gin.Context) {
 	streak, err := streakRepo.GetOrCreateStreakForHousehold(householdID)
 	if err != nil {
 		logger.Error().Msgf("GetStreak: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: err.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 

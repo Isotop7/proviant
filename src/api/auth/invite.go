@@ -50,7 +50,7 @@ func AcceptInvitation(ctx *gin.Context) {
 	var req acceptInvitationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
@@ -60,11 +60,11 @@ func AcceptInvitation(ctx *gin.Context) {
 	if err := dbHandle.First(&user, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.Error().Msgf("User with ID %d not found", userID)
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 			return
 		}
 		logger.Error().Msgf("Error fetching user: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -87,7 +87,7 @@ func AcceptInvitation(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, api.Error(err))
 		default:
 			logger.Error().Msgf("Error accepting invitation: %s", err)
-			ctx.JSON(http.StatusInternalServerError, api.Error(err))
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		}
 		return
 	}

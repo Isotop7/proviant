@@ -174,8 +174,8 @@ func TestCreateProduct(t *testing.T) {
 					ProductName: "New Product",
 					Barcode:     barcode,
 					Categories:  "Test Category",
-					Countries:  "de",
-					ImageURL:   "https://example.com/image.jpg",
+					Countries:   "de",
+					ImageURL:    "https://example.com/image.jpg",
 				}, nil
 			},
 		}

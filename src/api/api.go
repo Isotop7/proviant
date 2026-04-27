@@ -34,9 +34,59 @@ var (
 // APIResponse is the data model for a generic API response
 type APIResponse struct {
 	Message string `json:"message"`
+	Action  string `json:"action,omitempty"`
 }
 
 // Error returns an API response object from a error object
 func Error(err error) APIResponse {
 	return APIResponse{Message: err.Error()}
+}
+
+func InternalError() APIResponse {
+	return APIResponse{
+		Message: "An error occurred. Please try again or contact support if the problem persists.",
+		Action:  "Please try again later",
+	}
+}
+
+func InvalidInputError() APIResponse {
+	return APIResponse{
+		Message: "The submitted data is invalid. Please check your input and try again.",
+		Action:  "Please verify your input and try again",
+	}
+}
+
+func InvalidInputErrorWithDetail(detail string) APIResponse {
+	return APIResponse{
+		Message: "The submitted data is invalid: " + detail + ". Please check your input and try again.",
+		Action:  "Please verify your input and try again",
+	}
+}
+
+func CreateFailedError() APIResponse {
+	return APIResponse{
+		Message: "Failed to save your data. Please try again.",
+		Action:  "Please try again",
+	}
+}
+
+func UpdateFailedError() APIResponse {
+	return APIResponse{
+		Message: "Failed to update. Please try again.",
+		Action:  "Please try again",
+	}
+}
+
+func DeleteFailedError() APIResponse {
+	return APIResponse{
+		Message: "Failed to delete. Please try again.",
+		Action:  "Please try again",
+	}
+}
+
+func RestoreFailedError() APIResponse {
+	return APIResponse{
+		Message: "Failed to restore. Please try again.",
+		Action:  "Please try again",
+	}
 }
