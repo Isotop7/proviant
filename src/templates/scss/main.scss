@@ -441,6 +441,7 @@ $bootstrap-icons-font-dir: "../fonts";
   }
 
   .product-img {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -456,10 +457,24 @@ $bootstrap-icons-font-dir: "../fonts";
       );
 
     img {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: contain; // contain keeps full product visible; cover would crop
       background: var(--surface);
+      opacity: 0;
+      transition: opacity var(--duration-slow) var(--ease-out);
+    }
+
+    .product-img-fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: var(--fg-3);
+      font-size: 2rem;
     }
   }
 
@@ -2279,6 +2294,35 @@ select.pv-field-input {
   top: 24px;
 }
 
+.pv-mobile-thumb {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 4px;
+    opacity: 0;
+    transition: opacity var(--duration-slow) var(--ease-out);
+  }
+
+  .pv-mobile-thumb-icon {
+    font-size: 22px;
+    color: var(--fg-3);
+  }
+}
+
 .pv-product-image-card {
   margin-bottom: 16px;
   overflow: hidden;
@@ -2298,10 +2342,35 @@ select.pv-field-input {
   background: var(--bg-subtle);
 
   img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     padding: 12px;
     object-fit: contain;
+    opacity: 0;
+    transition: opacity var(--duration-slow) var(--ease-out);
+  }
+
+  .pv-product-image-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 100%;
+    padding: 24px;
+
+    i {
+      font-size: 40px;
+      color: var(--fg-3);
+    }
+
+    span {
+      font-size: 11px;
+      color: var(--fg-3);
+    }
   }
 }
 
@@ -2471,14 +2540,20 @@ select.pv-field-input {
 .list-thumb {
   position: relative;
   flex-shrink: 0;
+  width: 32px;
+  height: 32px;
 }
 
 .list-thumb-img {
+  position: absolute;
+  inset: 0;
   width: 32px;
   height: 32px;
   object-fit: contain;
   background: var(--bg-subtle);
   border-radius: 6px;
+  opacity: 0;
+  transition: opacity var(--duration-slow) var(--ease-out);
 }
 
 .list-thumb-fallback {
@@ -2902,5 +2977,19 @@ select.pv-field-input {
 @media (min-width: 768px) {
   .mobile-bulk-actions {
     display: none !important;
+  }
+}
+
+/* Button loading state */
+.btn-loading {
+  display: none;
+}
+.btn-proviant-primary.loading {
+  .btn-text {
+    display: none;
+  }
+  .btn-loading {
+    display: inline-flex;
+    align-items: center;
   }
 }

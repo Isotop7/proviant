@@ -17,12 +17,13 @@
 
   <!-- ── Mobile: image strip (hidden on desktop) ── -->
   <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-white d-md-none">
-    <div style="width:52px;height:52px;border-radius:8px;background:var(--bg-subtle);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+    <div class="pv-mobile-thumb">
       {{ if .Product.ImageURL }}
-      <img src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}" class="pv-img-product" style="width:100%;height:100%;object-fit:contain;padding:4px;">
-      {{ else }}
-      <i class="bi bi-image" style="font-size:22px;color:var(--fg-3);"></i>
+      <img src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}"
+           onload="this.style.opacity='1'; this.nextElementSibling.style.display='none';"
+           onerror="this.nextElementSibling.style.display='flex';">
       {{ end }}
+      <i class="bi bi-image pv-mobile-thumb-icon"></i>
     </div>
     <div class="flex-grow-1" style="min-width:0;">
       <div style="font-size:13px;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ .Product.ProductName }}</div>
@@ -195,13 +196,14 @@
         <div class="pv-product-image-card">
           <div class="pv-product-image-area">
             {{ if .Product.ImageURL }}
-            <img id="imgProduct" src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}" class="pv-img-product">
-            {{ else }}
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;height:100%;padding:24px;">
-              <i class="bi bi-image" style="font-size:40px;color:var(--fg-3);"></i>
-              <span style="font-size:11px;color:var(--fg-3);">No image</span>
-            </div>
+            <img id="imgProduct" src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}" class="pv-img-product"
+                 onload="this.style.opacity='1'; document.getElementById('imgProductFallback').style.display='none';"
+                 onerror="document.getElementById('imgProductFallback').style.display='flex';">
             {{ end }}
+            <div id="imgProductFallback" class="pv-product-image-fallback">
+              <i class="bi bi-image"></i>
+              <span>No image</span>
+            </div>
             <div class="pv-product-image-overlay">
               <button type="button" onclick="document.getElementById('inputImageURL').focus()">
                 <i class="bi bi-image"></i> Change image
