@@ -12,7 +12,16 @@
         </div>
         <div class="product-img">
             {{ if .ImageURL }}
-            <img src="{{ .ImageURL }}" alt="{{ .ProductName }}" loading="lazy">
+            <img src="{{ .ImageURL }}" alt="{{ .ProductName }}" loading="lazy"
+                 onload="this.style.opacity='1'; this.nextElementSibling.style.display='none';"
+                 onerror="this.nextElementSibling.style.display='flex';">
+            <div class="product-img-fallback">
+                <i class="bi bi-box-seam"></i>
+            </div>
+            {{ else }}
+            <div class="product-img-fallback">
+                <i class="bi bi-box-seam"></i>
+            </div>
             {{ end }}
         </div>
         <div class="card-body p-3">

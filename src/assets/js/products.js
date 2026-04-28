@@ -251,7 +251,8 @@ function performSearch() {
         params.locationId = locationFilter.value;
     }
 
-    window.location.href = `/web/products?${new URLSearchParams(params).toString()}`;
+    showSkeleton();
+  window.location.href = `/web/products?${new URLSearchParams(params).toString()}`;
 }
 
 /* ── Add-product modal ───────────────────────────────────────────────────────
@@ -479,3 +480,24 @@ function changeQty(id, delta) {
         }
     });
 }
+
+// Skeleton loading functions for filter/search operations
+function showSkeleton() {
+  const productRows = document.getElementById('productRows');
+  const skeletonRows = document.getElementById('skeletonRows');
+  if (productRows) productRows.classList.add('d-none');
+  if (skeletonRows) skeletonRows.classList.remove('d-none');
+}
+function hideSkeleton() {
+  const productRows = document.getElementById('productRows');
+  const skeletonRows = document.getElementById('skeletonRows');
+  if (productRows) productRows.classList.remove('d-none');
+  if (skeletonRows) skeletonRows.classList.add('d-none');
+}
+
+// Show skeleton when navigating via filter, view toggle, or clear-all
+document.addEventListener('click', function(event) {
+  if (event.target.closest('.filter-pill') || event.target.closest('.btn-view') || event.target.closest('#show-all-btn')) {
+    showSkeleton();
+  }
+});

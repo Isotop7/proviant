@@ -46,6 +46,18 @@ function clearProductInfo() {
     document.getElementById('productInfoName').innerText = '';
     document.getElementById('productInfoGenericName').innerText = '';
 }
+
+// Loading state helper for barcode lookup
+function setBarcodeLoading(loading) {
+  const el = document.getElementById('barcodeLookupLoading');
+  if (el) {
+    if (loading) {
+      el.classList.remove('d-none');
+    } else {
+      el.classList.add('d-none');
+    }
+  }
+}
 function showProductData(product) {
     document.getElementById('productInfoImage').src = product.imageUrl;
     document.getElementById('productInfoName').innerText = product.productName;
@@ -198,7 +210,9 @@ async function queryProductInfoRequest(barcode) {
 // Function handlers
 function queryProductInfo(barcode) {
     clearProductInfo();
+    setBarcodeLoading(true);
     queryProductInfoRequest(barcode).then((response) => {
+        setBarcodeLoading(false);
         if (response && response.code === 200) {
             showProductData(response.message);
         } else {
@@ -206,6 +220,7 @@ function queryProductInfo(barcode) {
             clearProductInfo();
         }
     }).catch((error) => {
+        setBarcodeLoading(false);
         showError('Error: ' + error);
         clearProductInfo();
     });
@@ -284,39 +299,44 @@ function handleBtnAddProduct() {
         return;
     }
 
-
-    try {
-        const barcode = document.getElementById('barcode').value;
-        if (barcode === '') {
-            throw new Error('Barcode cannot be empty');
-        }
-        const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
-        const amountEl = document.getElementById('amount');
-        const amount = amountEl ? parseInt(amountEl.value, 10) || 1 : 1;
-        const locationEl = document.getElementById('modalStorageLocation');
-        const storageLocationId = locationEl && locationEl.value ? parseInt(locationEl.value, 10) : null;
-        proviant.createProduct(barcode, expireAt, amount, storageLocationId).then((response) => {
-            switch (response.code) {
-                case 201:
-                    showAlert(true, `Product with barcode '${barcode}' was created successfully`);
-                    break;
-                case 400:
-                    showAlert(false, 'Request contained invalid data');
-                    break;
-                case 500:
-                    showAlert(false, 'Backend server error');
-                    break;
-                default:
-                    showAlert(false, `Undefined error: ${response.message}`);
-                    break;
-            }
-        }).catch(error => {
-            showAlert(false, error);
-        });
-    } catch (error) {
-        showAlert(false, error);
+    const barcode = document.getElementById('barcode').value;
+    if (barcode === '') {
+        showAlert(false, 'Barcode cannot be empty');
+        return;
     }
-};
+    const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
+    const amountEl = document.getElementById('amount');
+    const amount = amountEl ? parseInt(amountEl.value, 10) || 1 : 1;
+    const locationEl = document.getElementById('modalStorageLocation');
+    const storageLocationId = locationEl && locationEl.value ? parseInt(locationEl.value, 10) : null;
+
+    const btn = document.getElementById('btnAddProduct');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    proviant.createProduct(barcode, expireAt, amount, storageLocationId).then((response) => {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        switch (response.code) {
+            case 201:
+                showAlert(true, `Product with barcode '${barcode}' was created successfully`);
+                break;
+            case 400:
+                showAlert(false, 'Request contained invalid data');
+                break;
+            case 500:
+                showAlert(false, 'Backend server error');
+                break;
+            default:
+                showAlert(false, `Undefined error: ${response.message}`);
+                break;
+        }
+    }).catch((error) => {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        showAlert(false, error);
+    });
+}
 function handleBtnShowProduct() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
