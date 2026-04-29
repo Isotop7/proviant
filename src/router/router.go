@@ -367,7 +367,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Serve asset files
 	engine.StaticFS("/assets", http.FS(assets.AssetFiles))
 	if proviantConfiguration.OpenFoodFacts.ImageCacheEnabled {
-		engine.Static("/product-images", proviantConfiguration.OpenFoodFacts.ImageCachePath)
+		productImages := engine.Group("/product-images")
+		productImages.Use(func(c *gin.Context) {
+			c.Header("Cache-Control", "public, max-age=31536000")
+		})
+		productImages.Static("/", proviantConfiguration.OpenFoodFacts.ImageCachePath)
 	}
 	// Create frontend handler with template cache
 	webFrontendHandler := web.Frontend{TemplateCache: proviantConfiguration.TemplateCache}
