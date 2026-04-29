@@ -37,16 +37,13 @@ func Signup(ctx *gin.Context) {
 	}
 	logger := loggerValue.(*zerolog.Logger)
 
-	// Get database instance from context
-	dbHandle, ok := ctx.Get("dbHandle")
-	if !ok {
+	reposVal, reposExists := ctx.Get("repos")
+	repos, ok := reposVal.(*database.RepositoryContainer)
+	if !reposExists || !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
-
-	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
-	invitationRepo := database.NewInvitationRepository(dbHandle.(*gorm.DB))
 
 	var signup authentication.Signup
 	if err := ctx.ShouldBindJSON(&signup); err != nil {
@@ -94,21 +91,21 @@ func Signup(ctx *gin.Context) {
 	}
 
 	// Check if user with username already exists
-	if userRepo.UserExistsByUsername(&user) {
+	if repos.Users.UserExistsByUsername(&user) {
 		logger.Error().Msgf("User '%s' already exists", user.Username)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithUsernameExists)
 		return
 	}
 
 	// Check if user with mail address already exists
-	if userRepo.UserExistsByMailAddress(&user) {
+	if repos.Users.UserExistsByMailAddress(&user) {
 		logger.Error().Msgf("User with mail address '%s' already exists", user.MailAddress)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithMailAddressExists)
 		return
 	}
 
 	// Create user object in database
-	createError := userRepo.CreateUser(&user)
+	createError := repos.Users.CreateUser(&user)
 	if createError != nil {
 		logger.Error().Msgf("User '%s' with ID '%d' could not be created. Error: %s", user.Username, user.ID, createError.Error())
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
@@ -118,7 +115,7 @@ func Signup(ctx *gin.Context) {
 	logger.Info().Msgf("New User '%s' with ID '%d' created", user.Username, user.ID)
 
 	if signup.InviteToken != "" {
-		acceptErr := invitationRepo.AcceptInvitation(signup.InviteToken, user.MailAddress, user.ID)
+		acceptErr := repos.Invitations.AcceptInvitation(signup.InviteToken, user.MailAddress, user.ID)
 		if acceptErr != nil {
 			logger.Warn().Msgf("Failed to auto-accept invitation after signup: %s", acceptErr.Error())
 		} else {
@@ -147,7 +144,7 @@ func Signup(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
 		return
 	}
-	if err := userRepo.CreateEmailVerification(user.ID, token, expiresAt); err != nil {
+	if err := repos.Users.CreateEmailVerification(user.ID, token, expiresAt); err != nil {
 		logger.Error().Msgf("Failed to create email verification record: %s", err.Error())
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
 		return
@@ -184,8 +181,7 @@ func Logout(ctx *gin.Context) {
 	}
 	logger := loggerValue.(*zerolog.Logger)
 
-	// Get database instance from context
-	dbHandle, ok := ctx.Get("dbHandle")
+	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -231,8 +227,7 @@ func Logout(ctx *gin.Context) {
 	}
 
 	// Insert into database
-	db := dbHandle.(*gorm.DB)
-	if err := db.Create(&revokedToken).Error; err != nil {
+	if err := dbHandle.Create(&revokedToken).Error; err != nil {
 		logger.Error().Msgf("Failed to revoke token: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to logout"})
 		return

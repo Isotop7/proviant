@@ -9,7 +9,6 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -53,7 +52,7 @@ func GetProducts(ctx *gin.Context) {
 		limit = 0
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -63,8 +62,7 @@ func GetProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	products, productBulkErr := productRepo.GetUserProductsBulk(userID, limit)
+	products, productBulkErr := repos.Products.GetUserProductsBulk(userID, limit)
 	if productBulkErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
 		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
@@ -78,7 +76,6 @@ func GetProducts(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, products)
-	return
 }
 
 // GetProduct return a single product of a user
@@ -95,12 +92,12 @@ func GetProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -110,8 +107,7 @@ func GetProduct(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	product, getError := productRepo.GetProductByID(uint(productID), userID)
+	product, getError := repos.Products.GetProductByID(productID, userID)
 
 	switch getError {
 	// No error: return product
@@ -152,7 +148,7 @@ func CreateProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -195,8 +191,7 @@ func CreateProduct(ctx *gin.Context) {
 		product = apiProduct
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	createResult := productRepo.CreateProduct(userID, &product)
+	createResult := repos.Products.CreateProduct(userID, &product)
 	if createResult != nil {
 		logger.Error().Msgf("Error creating product: %s", createResult)
 		ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
@@ -236,12 +231,12 @@ func UpdateProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -259,8 +254,7 @@ func UpdateProduct(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	updateErr := productRepo.UpdateProduct(uint(productID), userID, &product)
+	updateErr := repos.Products.UpdateProduct(productID, userID, &product)
 
 	switch updateErr {
 	// No error => product was updated
@@ -300,12 +294,12 @@ func UpdateProductAmount(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -323,8 +317,7 @@ func UpdateProductAmount(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	deleted, updateErr := productRepo.UpdateProductAmount(uint(productID), userID, amountDTO.Delta)
+	deleted, updateErr := repos.Products.UpdateProductAmount(productID, userID, amountDTO.Delta)
 
 	switch updateErr {
 	case nil:
@@ -371,7 +364,7 @@ func DeleteProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
@@ -393,7 +386,7 @@ func DeleteProduct(ctx *gin.Context) {
 		}
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -403,8 +396,7 @@ func DeleteProduct(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	deleteResult := productRepo.DeleteProduct(uint(productID), userID, archiveOnly)
+	deleteResult := repos.Products.DeleteProduct(productID, userID, archiveOnly)
 	if deleteResult != nil {
 		logger.Error().Msgf("Error deleting product: %s", deleteResult)
 		ctx.JSON(http.StatusInternalServerError, api.DeleteFailedError())
@@ -431,12 +423,12 @@ func SetExpireAt(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -455,8 +447,7 @@ func SetExpireAt(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	product, getErr := productRepo.GetProductByID(uint(productID), userID)
+	product, getErr := repos.Products.GetProductByID(productID, userID)
 	if getErr != nil {
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
@@ -466,7 +457,7 @@ func SetExpireAt(ctx *gin.Context) {
 		return
 	}
 
-	updateErr := productRepo.SetProductExpireAt(uint(productID), userID, expireAt)
+	updateErr := repos.Products.SetProductExpireAt(productID, userID, expireAt)
 
 	switch updateErr {
 	// No error => product was updated and dto is returned

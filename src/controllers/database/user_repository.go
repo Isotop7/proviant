@@ -12,6 +12,38 @@ import (
 	"gorm.io/gorm"
 )
 
+type UserRepositoryInterface interface {
+	GetUserByUsername(username string) (authentication.User, error)
+	GetUserByID(userID uint) (authentication.User, error)
+	GetUserHouseholdByID(userID uint) (uint, error)
+	UserExistsByUsername(user *authentication.User) bool
+	UserExistsByMailAddress(user *authentication.User) bool
+	CreateUser(user *authentication.User) error
+	UpdateUser(userID uint, user *authentication.User) error
+	UpdateAdminUserFields(userID uint, username, mailAddress string) error
+	UpdateDisplayName(userID uint, displayName string) error
+	UpdateUserPassword(userID uint, login *authentication.Login) error
+	IsAccountLocked(userID uint, maxLoginAttempts int, lockoutDurationMins int) (bool, time.Duration)
+	RecordFailedLoginAttempt(userID uint, maxLoginAttempts int, lockoutDurationMins int) error
+	ResetFailedLoginAttempts(userID uint) error
+	CreateEmailVerification(userID uint, token string, expiresAt time.Time) error
+	GetEmailVerificationByToken(token string) (database.EmailVerification, error)
+	UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
+	UpdateEmailVerificationStatus(token string, status string) error
+	GetOnboardingState(userID uint) (database.OnboardingState, error)
+	MarkNotificationsSetup(userID uint) error
+	UpdateUsername(userID uint, username string) error
+	MarkProfileStepDone(userID uint) error
+	MarkHouseholdStepDone(userID uint) error
+	MarkOnboardingComplete(userID uint) error
+	EnsureOnboardingState(userID uint) error
+	GetHouseholdByID(householdID uint) (database.Household, error)
+	GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
+	DeleteUser(userID uint) error
+}
+
+var _ UserRepositoryInterface = (*UserRepository)(nil)
+
 type UserRepository struct {
 	DB *gorm.DB
 }

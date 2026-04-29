@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 
@@ -50,7 +49,7 @@ func CreateCalendarToken(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -67,8 +66,7 @@ func CreateCalendarToken(ctx *gin.Context) {
 		return
 	}
 
-	calendarTokenRepo := database.NewCalendarTokenRepository(dbHandle)
-	delErr := calendarTokenRepo.DeleteByUserID(userID)
+	delErr := repos.CalendarTokens.DeleteByUserID(userID)
 	if delErr != nil {
 		logger.Error().Msgf("DeleteByUserID: %s", delErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to regenerate calendar token"})
@@ -79,7 +77,7 @@ func CreateCalendarToken(ctx *gin.Context) {
 		UserID: userID,
 		Token:  rawToken,
 	}
-	createErr := calendarTokenRepo.Create(calendarToken)
+	createErr := repos.CalendarTokens.Create(calendarToken)
 	if createErr != nil {
 		logger.Error().Msgf("Create: %s", createErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to create calendar token"})
@@ -125,7 +123,7 @@ func DeleteCalendarToken(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -135,8 +133,7 @@ func DeleteCalendarToken(ctx *gin.Context) {
 		return
 	}
 
-	calendarTokenRepo := database.NewCalendarTokenRepository(dbHandle)
-	delErr := calendarTokenRepo.DeleteByUserID(userID)
+	delErr := repos.CalendarTokens.DeleteByUserID(userID)
 	if delErr != nil {
 		logger.Error().Msgf("DeleteByUserID: %s", delErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to delete calendar token"})
@@ -165,7 +162,7 @@ func GetCalendarTokenStatus(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -175,8 +172,7 @@ func GetCalendarTokenStatus(ctx *gin.Context) {
 		return
 	}
 
-	calendarTokenRepo := database.NewCalendarTokenRepository(dbHandle)
-	calendarToken, err := calendarTokenRepo.GetByUserID(userID)
+	calendarToken, err := repos.CalendarTokens.GetByUserID(userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusOK, gin.H{"hasToken": false})

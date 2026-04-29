@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 
 	"github.com/gin-gonic/gin"
@@ -28,7 +27,7 @@ type storageLocationRequest struct {
 func ListStorageLocations(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -38,8 +37,7 @@ func ListStorageLocations(ctx *gin.Context) {
 		return
 	}
 
-	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
-	locs, err := storageLocationRepo.GetByHousehold(userID)
+	locs, err := repos.StorageLocations.GetByHousehold(userID)
 	if err != nil {
 		logger.Error().Msgf("Error listing storage locations: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -63,7 +61,7 @@ func ListStorageLocations(ctx *gin.Context) {
 func CreateStorageLocation(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -85,8 +83,7 @@ func CreateStorageLocation(ctx *gin.Context) {
 		icon = "📦"
 	}
 
-	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
-	loc, err := storageLocationRepo.Create(userID, req.Name, icon, req.SortOrder)
+	loc, err := repos.StorageLocations.Create(userID, req.Name, icon, req.SortOrder)
 	if err != nil {
 		logger.Error().Msgf("Error creating storage location: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
@@ -117,7 +114,7 @@ func UpdateStorageLocation(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -139,8 +136,7 @@ func UpdateStorageLocation(ctx *gin.Context) {
 		icon = "📦"
 	}
 
-	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
-	loc, err := storageLocationRepo.Update(locationID, userID, req.Name, icon, req.SortOrder)
+	loc, err := repos.StorageLocations.Update(locationID, userID, req.Name, icon, req.SortOrder)
 	if err != nil {
 		if err == errors.ErrStorageLocationNotFound {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
@@ -176,7 +172,7 @@ func DeleteStorageLocation(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -186,8 +182,7 @@ func DeleteStorageLocation(ctx *gin.Context) {
 		return
 	}
 
-	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
-	if err := storageLocationRepo.Delete(locationID, userID); err != nil {
+	if err := repos.StorageLocations.Delete(locationID, userID); err != nil {
 		if err == errors.ErrStorageLocationNotFound {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
 			return

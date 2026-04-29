@@ -8,7 +8,6 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration"
 
@@ -31,7 +30,7 @@ import (
 func GetHouseholdUsers(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -41,15 +40,14 @@ func GetHouseholdUsers(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-	user, err := userRepo.GetUserByID(userID)
+	user, err := repos.Users.GetUserByID(userID)
 	if err != nil {
 		logger.Error().Msgf("Error fetching user: %s", err)
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
-	household, hhErr := userRepo.GetHouseholdByID(user.HouseholdID)
+	household, hhErr := repos.Users.GetHouseholdByID(user.HouseholdID)
 	if hhErr != nil {
 		logger.Error().Msgf("Error fetching household: %s", hhErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -60,7 +58,7 @@ func GetHouseholdUsers(ctx *gin.Context) {
 		return
 	}
 
-	users, err := userRepo.GetUsersByHouseholdID(user.HouseholdID)
+	users, err := repos.Users.GetUsersByHouseholdID(user.HouseholdID)
 	if err != nil {
 		logger.Error().Msgf("Error fetching household users: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -87,7 +85,7 @@ func GetHouseholdUsers(ctx *gin.Context) {
 func UpdateHouseholdUser(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -112,14 +110,13 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-	admin, adminErr := userRepo.GetUserByID(adminID)
+	admin, adminErr := repos.Users.GetUserByID(adminID)
 	if adminErr != nil {
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
-	household, hhErr := userRepo.GetHouseholdByID(admin.HouseholdID)
+	household, hhErr := repos.Users.GetHouseholdByID(admin.HouseholdID)
 	if hhErr != nil {
 		logger.Error().Msgf("Error fetching household: %s", hhErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -130,7 +127,7 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 		return
 	}
 
-	targetUser, targetErr := userRepo.GetUserByID(uint(targetUserID))
+	targetUser, targetErr := repos.Users.GetUserByID(uint(targetUserID))
 	if targetErr != nil {
 		if targetErr == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf("User with id '%d' not found", targetUserID)})
@@ -154,7 +151,7 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 		newMailAddress = req.MailAddress
 	}
 
-	updateErr := userRepo.UpdateAdminUserFields(targetUser.ID, newUsername, newMailAddress)
+	updateErr := repos.Users.UpdateAdminUserFields(targetUser.ID, newUsername, newMailAddress)
 	if updateErr != nil {
 		logger.Error().Msgf("Error updating user: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -181,7 +178,7 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 func DeleteHouseholdUser(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -199,14 +196,13 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-	admin, adminErr := userRepo.GetUserByID(adminID)
+	admin, adminErr := repos.Users.GetUserByID(adminID)
 	if adminErr != nil {
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
-	household, hhErr := userRepo.GetHouseholdByID(admin.HouseholdID)
+	household, hhErr := repos.Users.GetHouseholdByID(admin.HouseholdID)
 	if hhErr != nil {
 		logger.Error().Msgf("Error fetching household: %s", hhErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -222,7 +218,7 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 		return
 	}
 
-	targetUser, targetErr := userRepo.GetUserByID(uint(targetUserID))
+	targetUser, targetErr := repos.Users.GetUserByID(uint(targetUserID))
 	if targetErr != nil {
 		if targetErr == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf("User with id '%d' not found", targetUserID)})
@@ -237,7 +233,7 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 		return
 	}
 
-	deleteErr := userRepo.DeleteUser(uint(targetUserID))
+	deleteErr := repos.Users.DeleteUser(uint(targetUserID))
 	if deleteErr != nil {
 		logger.Error().Msgf("Error deleting user: %s", deleteErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -262,7 +258,7 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 func AdminResetUserPassword(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -280,14 +276,13 @@ func AdminResetUserPassword(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-	admin, adminErr := userRepo.GetUserByID(adminID)
+	admin, adminErr := repos.Users.GetUserByID(adminID)
 	if adminErr != nil {
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
-	household, hhErr := userRepo.GetHouseholdByID(admin.HouseholdID)
+	household, hhErr := repos.Users.GetHouseholdByID(admin.HouseholdID)
 	if hhErr != nil {
 		logger.Error().Msgf("Error fetching household: %s", hhErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -298,7 +293,7 @@ func AdminResetUserPassword(ctx *gin.Context) {
 		return
 	}
 
-	targetUser, targetErr := userRepo.GetUserByID(uint(targetUserID))
+	targetUser, targetErr := repos.Users.GetUserByID(uint(targetUserID))
 	if targetErr != nil {
 		if targetErr == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf("User with id '%d' not found", targetUserID)})
@@ -321,7 +316,7 @@ func AdminResetUserPassword(ctx *gin.Context) {
 	}
 
 	expiresAt := time.Now().Add(24 * time.Hour)
-	if createErr := userRepo.CreateEmailVerification(targetUser.ID, token.String(), expiresAt); createErr != nil {
+	if createErr := repos.Users.CreateEmailVerification(targetUser.ID, token.String(), expiresAt); createErr != nil {
 		logger.Error().Msgf("Error creating reset token: %s", createErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return

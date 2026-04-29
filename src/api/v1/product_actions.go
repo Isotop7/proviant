@@ -7,7 +7,6 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	"github.com/gin-gonic/gin"
@@ -33,12 +32,12 @@ func ConsumeProduct(ctx *gin.Context) {
 		return
 	}
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -48,10 +47,9 @@ func ConsumeProduct(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	product, fetchErr := productRepo.GetProductByID(uint(productID), userID)
+	product, fetchErr := repos.Products.GetProductByID(productID, userID)
 
-	if err := productRepo.ConsumeProduct(uint(productID), userID); err != nil {
+	if err := repos.Products.ConsumeProduct(productID, userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "Product not found"})
 			return
@@ -63,10 +61,8 @@ func ConsumeProduct(ctx *gin.Context) {
 
 	if fetchErr == nil {
 		go func(p dbModel.Product) {
-			userRepo := database.NewUserRepository(dbHandle)
-			if householdID, hhErr := userRepo.GetUserHouseholdByID(userID); hhErr == nil && householdID > 0 {
-				savingsRepo := database.NewSavingsRepository(dbHandle)
-				if recErr := savingsRepo.RecordSavingsEvent(householdID, &p, "consumed"); recErr != nil {
+			if householdID, hhErr := repos.Users.GetUserHouseholdByID(userID); hhErr == nil && householdID > 0 {
+				if recErr := repos.Savings.RecordSavingsEvent(householdID, &p, "consumed"); recErr != nil {
 					logger.Error().Msgf("ConsumeProduct: savings record failed: %s", recErr)
 				}
 			}
@@ -94,12 +90,12 @@ func WasteProduct(ctx *gin.Context) {
 		return
 	}
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -109,10 +105,9 @@ func WasteProduct(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	product, fetchErr := productRepo.GetProductByID(uint(productID), userID)
+	product, fetchErr := repos.Products.GetProductByID(productID, userID)
 
-	if err := productRepo.WasteProduct(uint(productID), userID); err != nil {
+	if err := repos.Products.WasteProduct(productID, userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "Product not found"})
 			return
@@ -123,10 +118,8 @@ func WasteProduct(ctx *gin.Context) {
 	}
 
 	// Record waste event for household streak tracking
-	userRepo := database.NewUserRepository(dbHandle)
-	if householdID, err := userRepo.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
-		streakRepo := database.NewStreakRepository(dbHandle)
-		if err := streakRepo.RecordWasteEvent(householdID); err != nil {
+	if householdID, err := repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
+		if err := repos.Streaks.RecordWasteEvent(householdID); err != nil {
 			logger.Error().Msgf("WasteProduct: failed to record waste event for streak: %s", err)
 		}
 	}
@@ -141,10 +134,8 @@ func WasteProduct(ctx *gin.Context) {
 
 	if fetchErr == nil {
 		go func(p dbModel.Product) {
-			userRepo := database.NewUserRepository(dbHandle)
-			if householdID, hhErr := userRepo.GetUserHouseholdByID(userID); hhErr == nil && householdID > 0 {
-				savingsRepo := database.NewSavingsRepository(dbHandle)
-				if recErr := savingsRepo.RecordSavingsEvent(householdID, &p, "wasted"); recErr != nil {
+			if householdID, hhErr := repos.Users.GetUserHouseholdByID(userID); hhErr == nil && householdID > 0 {
+				if recErr := repos.Savings.RecordSavingsEvent(householdID, &p, "wasted"); recErr != nil {
 					logger.Error().Msgf("WasteProduct: savings record failed: %s", recErr)
 				}
 			}

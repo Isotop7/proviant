@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
@@ -31,7 +30,7 @@ import (
 func UpdateUser(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -51,9 +50,7 @@ func UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-
-	user, fetchErr := userRepo.GetUserByID(userID)
+	user, fetchErr := repos.Users.GetUserByID(userID)
 	if fetchErr != nil {
 		logger.Error().Msgf("User with ID '%d' not found: %s", userID, fetchErr)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("User with id '%d' was not found", userID)})
@@ -63,7 +60,7 @@ func UpdateUser(ctx *gin.Context) {
 	user.DisplayName = req.DisplayName
 	user.MailAddress = req.MailAddress
 
-	updateErr := userRepo.UpdateUser(user.ID, &user)
+	updateErr := repos.Users.UpdateUser(user.ID, &user)
 	if updateErr != nil {
 		logger.Error().Msgf("Error saving user: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
@@ -88,7 +85,7 @@ func UpdateUserPassword(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -132,9 +129,7 @@ func UpdateUserPassword(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-
-	updateErr := userRepo.UpdateUserPassword(userID, &login)
+	updateErr := repos.Users.UpdateUserPassword(userID, &login)
 
 	switch updateErr {
 	// No error => password was updated
@@ -168,7 +163,7 @@ func GetUserNotificationPreferences(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -178,9 +173,7 @@ func GetUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-
-	user, getErr := userRepo.GetUserByID(userID)
+	user, getErr := repos.Users.GetUserByID(userID)
 	if getErr != nil {
 		logger.Error().Msgf("Error getting user: %s", getErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(getErr))
@@ -208,7 +201,7 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -244,9 +237,8 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 	}
 
 	// Create database controller
-	userRepo := database.NewUserRepository(dbHandle)
 
-	user, getErr := userRepo.GetUserByID(userID)
+	user, getErr := repos.Users.GetUserByID(userID)
 	if getErr != nil {
 		logger.Error().Msgf("Error getting user: %s", getErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(getErr))
@@ -286,7 +278,7 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 
 	user.NotificationPreferences = preferences
 
-	updateErr := userRepo.UpdateUser(user.ID, &user)
+	updateErr := repos.Users.UpdateUser(user.ID, &user)
 	if updateErr != nil {
 		logger.Error().Msgf("Error updating notification preferences: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
@@ -319,7 +311,7 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 func GenerateTelegramLinkToken(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -337,8 +329,7 @@ func GenerateTelegramLinkToken(ctx *gin.Context) {
 	}
 	token := hex.EncodeToString(tokenBytes)
 
-	notificationRepo := database.NewNotificationRepository(dbHandle)
-	if err := notificationRepo.SetTelegramLinkToken(userID, token); err != nil {
+	if err := repos.Notifications.SetTelegramLinkToken(userID, token); err != nil {
 		logger.Error().Msgf("Failed to save telegram link token: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 		return

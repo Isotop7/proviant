@@ -7,6 +7,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
+	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 
@@ -15,6 +16,17 @@ import (
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
+
+func mustGetRepos(ctx *gin.Context, logger *zerolog.Logger) (*database.RepositoryContainer, bool) {
+	reposVal, exists := ctx.Get("repos")
+	repos, ok := reposVal.(*database.RepositoryContainer)
+	if !exists || !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return nil, false
+	}
+	return repos, true
+}
 
 func mustGetDB(ctx *gin.Context, logger *zerolog.Logger) (*gorm.DB, bool) {
 	db, ok := ctx.MustGet("dbHandle").(*gorm.DB)
@@ -55,13 +67,13 @@ func getNotificationController(ctx *gin.Context) (*controllers.NotificationContr
 	return notificationController, ok
 }
 
-func parseIntParam(ctx *gin.Context, logger *zerolog.Logger, paramName string) (int, bool) {
+func parseUintPathParam(ctx *gin.Context, logger *zerolog.Logger, paramName string) (uint, bool) {
 	raw := ctx.Param(paramName)
-	id, err := strconv.Atoi(raw)
+	id, err := strconv.ParseUint(raw, 10, 64)
 	if err != nil {
 		logger.Warn().Msgf(errors.FormatInvalidRequestId, raw)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, raw)})
 		return 0, false
 	}
-	return id, true
+	return uint(id), true //nolint:gosec
 }

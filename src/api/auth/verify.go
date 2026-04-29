@@ -31,14 +31,12 @@ func VerifyEmail(ctx *gin.Context) {
 	}
 	logger := loggerValue.(*zerolog.Logger)
 
-	dbHandle, ok := ctx.Get("dbHandle")
+	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
-
-	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
 
 	token := ctx.Query("token")
 	if token == "" {
@@ -46,7 +44,7 @@ func VerifyEmail(ctx *gin.Context) {
 		return
 	}
 
-	verification, err := userRepo.GetEmailVerificationByToken(token)
+	verification, err := repos.Users.GetEmailVerificationByToken(token)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusBadRequest, gin.H{"code": "INVALID_TOKEN", "message": "Invalid verification token"})
@@ -63,19 +61,19 @@ func VerifyEmail(ctx *gin.Context) {
 	}
 
 	if verification.Status == dbModel.EmailVerificationStatusExpired || time.Now().After(verification.ExpiresAt) {
-		_ = userRepo.UpdateEmailVerificationStatus(token, dbModel.EmailVerificationStatusExpired)
+		_ = repos.Users.UpdateEmailVerificationStatus(token, dbModel.EmailVerificationStatusExpired)
 		ctx.JSON(http.StatusBadRequest, gin.H{"code": "TOKEN_EXPIRED", "message": "Verification token has expired"})
 		return
 	}
 
 	now := time.Now()
-	if err := userRepo.UpdateUserEmailVerified(verification.UserID, now); err != nil {
+	if err := repos.Users.UpdateUserEmailVerified(verification.UserID, now); err != nil {
 		logger.Error().Msgf("Error updating user email verified status: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Internal error"})
 		return
 	}
 
-	if err := userRepo.UpdateEmailVerificationStatus(token, dbModel.EmailVerificationStatusVerified); err != nil {
+	if err := repos.Users.UpdateEmailVerificationStatus(token, dbModel.EmailVerificationStatusVerified); err != nil {
 		logger.Error().Msgf("Error updating email verification status: %s", err.Error())
 	}
 

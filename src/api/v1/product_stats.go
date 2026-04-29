@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
@@ -26,7 +25,7 @@ func GetExpired(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -36,8 +35,7 @@ func GetExpired(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	products, getExpiredErr := productRepo.GetProductsExpired(userID)
+	products, getExpiredErr := repos.Products.GetProductsExpired(userID)
 
 	// Check for error or return products
 	if getExpiredErr != nil {
@@ -66,7 +64,7 @@ func GetProductSummary(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -76,30 +74,28 @@ func GetProductSummary(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-
-	expiringSoonCount, err := productRepo.GetExpiringSoonCount(userID, 7)
+	expiringSoonCount, err := repos.Products.GetExpiringSoonCount(userID, 7)
 	if err != nil {
 		logger.Error().Msgf("GetExpiringSoonCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon count"})
 		return
 	}
 
-	expiredCount, err := productRepo.GetExpiredProductsCount(userID)
+	expiredCount, err := repos.Products.GetExpiredProductsCount(userID)
 	if err != nil {
 		logger.Error().Msgf("GetExpiredProductsCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expired count"})
 		return
 	}
 
-	totalActive, err := productRepo.GetActiveProductsCount(userID)
+	totalActive, err := repos.Products.GetActiveProductsCount(userID)
 	if err != nil {
 		logger.Error().Msgf("GetActiveProductsCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing active product count"})
 		return
 	}
 
-	wasteThisMonth, err := productRepo.GetWasteThisMonth(userID)
+	wasteThisMonth, err := repos.Products.GetWasteThisMonth(userID)
 	if err != nil {
 		logger.Error().Msgf("GetWasteThisMonth: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing monthly waste count"})
@@ -130,7 +126,7 @@ func GetProductStats(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -140,16 +136,14 @@ func GetProductStats(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-
-	totalActive, err := productRepo.GetActiveProductsCount(userID)
+	totalActive, err := repos.Products.GetActiveProductsCount(userID)
 	if err != nil {
 		logger.Error().Msgf("GetActiveProductsCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing active product count"})
 		return
 	}
 
-	wasteCount, err := productRepo.GetExpiredProductsCount(userID)
+	wasteCount, err := repos.Products.GetExpiredProductsCount(userID)
 	if err != nil {
 		logger.Error().Msgf("GetExpiredProductsCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing waste count"})
@@ -162,32 +156,32 @@ func GetProductStats(ctx *gin.Context) {
 	}
 
 	expiringSoonDays := 7
-	if user, userErr := productRepo.GetUserByID(userID); userErr == nil && user.NotificationPreferences.NotificationThresholdDays > 0 {
+	if user, userErr := repos.Products.GetUserByID(userID); userErr == nil && user.NotificationPreferences.NotificationThresholdDays > 0 {
 		expiringSoonDays = user.NotificationPreferences.NotificationThresholdDays
 	}
 
-	expiringSoon, err := productRepo.GetExpiringSoonProducts(userID, expiringSoonDays)
+	expiringSoon, err := repos.Products.GetExpiringSoonProducts(userID, expiringSoonDays)
 	if err != nil {
 		logger.Error().Msgf("GetExpiringSoonProducts: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon products"})
 		return
 	}
 
-	categories, err := productRepo.GetProductCategoryBreakdown(userID)
+	categories, err := repos.Products.GetProductCategoryBreakdown(userID)
 	if err != nil {
 		logger.Error().Msgf("GetProductCategoryBreakdown: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing category breakdown"})
 		return
 	}
 
-	expiryTrend, err := productRepo.GetExpiryTrend(userID)
+	expiryTrend, err := repos.Products.GetExpiryTrend(userID)
 	if err != nil {
 		logger.Error().Msgf("GetExpiryTrend: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiry trend"})
 		return
 	}
 
-	archivedProducts, err := productRepo.GetUserArchivedProductsBulk(userID, -1)
+	archivedProducts, err := repos.Products.GetUserArchivedProductsBulk(userID, -1)
 	if err != nil {
 		logger.Error().Msgf("GetUserArchivedProductsBulk: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing archived count"})
@@ -195,7 +189,7 @@ func GetProductStats(ctx *gin.Context) {
 	}
 	totalArchived := len(archivedProducts)
 
-	uniqueArchivedMap, err := productRepo.GetArchivedProductsGroupedByBarcode(userID)
+	uniqueArchivedMap, err := repos.Products.GetArchivedProductsGroupedByBarcode(userID)
 	if err != nil {
 		logger.Error().Msgf("GetArchivedProductsGroupedByBarcode: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing unique archived count"})
@@ -204,9 +198,9 @@ func GetProductStats(ctx *gin.Context) {
 	uniqueArchived := len(uniqueArchivedMap)
 
 	var lastInsertedProduct string
-	householdID, householdErr := productRepo.GetUserHouseholdByID(userID)
+	householdID, householdErr := repos.Products.GetUserHouseholdByID(userID)
 	if householdErr == nil && householdID > 0 {
-		lastProduct, lastErr := productRepo.GetLastInsertedProduct(householdID)
+		lastProduct, lastErr := repos.Products.GetLastInsertedProduct(householdID)
 		if lastErr == nil && lastProduct.ID != 0 {
 			lastInsertedProduct = lastProduct.ProductName
 		}

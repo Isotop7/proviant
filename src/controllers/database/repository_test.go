@@ -410,7 +410,7 @@ func TestProductRepository_UserHasProductAccess(t *testing.T) {
 	}
 	db.Create(&product)
 
-	hasAccess := repo.UserHasProductAccess(user.ID, int(product.ID))
+	hasAccess := repo.UserHasProductAccess(user.ID, int(product.ID)) //nolint:gosec
 	if !hasAccess {
 		t.Error("User should have access to their own product")
 	}

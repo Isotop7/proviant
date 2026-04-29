@@ -7,6 +7,21 @@ import (
 	"gorm.io/gorm"
 )
 
+type WebhookRepositoryInterface interface {
+	CreateWebhook(webhook *database.Webhook) error
+	GetWebhooksByUserID(userID uint) ([]database.Webhook, error)
+	GetWebhookByID(webhookID uint) (database.Webhook, error)
+	GetActiveWebhooksByEvent(event string) ([]database.Webhook, error)
+	UpdateWebhook(webhook *database.Webhook) error
+	DeleteWebhook(webhookID uint) error
+	CreateDeliveryLog(log *database.WebhookDeliveryLog) error
+	GetDeliveryLogs(webhookID uint, limit int) ([]database.WebhookDeliveryLog, error)
+	TrimDeliveryLogs(webhookID uint, keep int) error
+	CheckOwnership(webhookID, userID uint) error
+}
+
+var _ WebhookRepositoryInterface = (*WebhookRepository)(nil)
+
 type WebhookRepository struct {
 	DB *gorm.DB
 }

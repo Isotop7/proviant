@@ -10,6 +10,25 @@ import (
 	"gorm.io/gorm"
 )
 
+type HouseholdRepositoryInterface interface {
+	GetHouseholdByID(householdID uint) (database.Household, error)
+	GetHouseholdMemberCount(householdID uint) (int64, error)
+	GetHouseholdMembers(householdID uint) ([]authentication.User, error)
+	LeaveHousehold(userID uint) error
+	CreateAndSwitchHousehold(userID uint, name string) error
+	ApplyForHousehold(applicantID, householdID uint) error
+	GetPendingApplicationsForAdmin(adminUserID uint) ([]database.HouseholdApplication, error)
+	ApproveApplication(applicationID, adminUserID uint) error
+	RejectApplication(applicationID, adminUserID uint) error
+	GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error)
+	CancelApplication(applicationID, applicantUserID uint) error
+	UpdateHouseholdName(householdID, adminUserID uint, name string) error
+	RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
+	GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
+}
+
+var _ HouseholdRepositoryInterface = (*HouseholdRepository)(nil)
+
 type HouseholdRepository struct {
 	DB *gorm.DB
 }

@@ -9,6 +9,14 @@ import (
 	"gorm.io/gorm"
 )
 
+type SavingsRepositoryInterface interface {
+	MatchCategory(categories string) (*dbModel.ProductCategoryPrice, error)
+	RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string) error
+	GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error)
+}
+
+var _ SavingsRepositoryInterface = (*SavingsRepository)(nil)
+
 // SavingsRepository handles savings event recording and statistics queries.
 type SavingsRepository struct {
 	DB *gorm.DB
