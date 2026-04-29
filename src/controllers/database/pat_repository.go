@@ -7,6 +7,17 @@ import (
 	"gorm.io/gorm"
 )
 
+type PATRepositoryInterface interface {
+	CreatePAT(userID uint, name, tokenHash string, expiresAt *time.Time, scopes string) (*authentication.PersonalAccessToken, error)
+	GetPATByTokenHash(tokenHash string) (*authentication.PersonalAccessToken, error)
+	GetPATsByUserID(userID uint) ([]authentication.PersonalAccessToken, error)
+	GetPATByID(patID uint) (*authentication.PersonalAccessToken, error)
+	DeletePAT(patID uint, userID uint) error
+	UpdateLastUsed(patID uint) error
+}
+
+var _ PATRepositoryInterface = (*PATRepository)(nil)
+
 type PATRepository struct {
 	DB *gorm.DB
 }

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
@@ -27,7 +26,7 @@ func GetStreak(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -37,15 +36,13 @@ func GetStreak(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-	householdID, err := userRepo.GetUserHouseholdByID(userID)
+	householdID, err := repos.Users.GetUserHouseholdByID(userID)
 	if err != nil || householdID == 0 {
 		ctx.JSON(http.StatusOK, apiModel.StreakResponse{CurrentStreak: 0, LongestStreak: 0})
 		return
 	}
 
-	streakRepo := database.NewStreakRepository(dbHandle)
-	streak, err := streakRepo.GetOrCreateStreakForHousehold(householdID)
+	streak, err := repos.Streaks.GetOrCreateStreakForHousehold(householdID)
 	if err != nil {
 		logger.Error().Msgf("GetStreak: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())

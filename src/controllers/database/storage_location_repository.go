@@ -7,6 +7,16 @@ import (
 	"gorm.io/gorm"
 )
 
+type StorageLocationRepositoryInterface interface {
+	GetByHousehold(userID uint) ([]database.StorageLocation, error)
+	GetByID(locationID, userID uint) (database.StorageLocation, error)
+	Create(userID uint, name, icon string, sortOrder int) (database.StorageLocation, error)
+	Update(locationID, userID uint, name, icon string, sortOrder int) (database.StorageLocation, error)
+	Delete(locationID, userID uint) error
+}
+
+var _ StorageLocationRepositoryInterface = (*StorageLocationRepository)(nil)
+
 type StorageLocationRepository struct {
 	DB *gorm.DB
 }

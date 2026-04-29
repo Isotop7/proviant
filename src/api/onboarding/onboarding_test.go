@@ -1,22 +1,27 @@
 package onboarding
 
 import (
+	"net/http"
 	"testing"
 
 	"codeberg.org/isotop7/proviant/testutil"
+	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+
 	"github.com/gin-gonic/gin"
 )
 
 func TestGetOnboardingState(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("user without onboarding state returns completed", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
-
-		ctx, _ := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
 		GetOnboardingState(ctx)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
+		}
 	})
 }

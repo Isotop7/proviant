@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
@@ -102,7 +101,7 @@ func ExportProductsCSV(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -113,9 +112,8 @@ func ExportProductsCSV(ctx *gin.Context) {
 	}
 
 	from, to := parseDateRange(ctx)
-	productRepo := database.NewProductRepository(dbHandle)
 
-	products, err := productRepo.GetUserActiveProductsFiltered(userID, from, to)
+	products, err := repos.Products.GetUserActiveProductsFiltered(userID, from, to)
 	if err != nil {
 		logger.Error().Msgf("GetUserActiveProductsFiltered: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})
@@ -158,7 +156,7 @@ func ExportProductsJSON(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -169,9 +167,8 @@ func ExportProductsJSON(ctx *gin.Context) {
 	}
 
 	from, to := parseDateRange(ctx)
-	productRepo := database.NewProductRepository(dbHandle)
 
-	products, err := productRepo.GetUserActiveProductsFiltered(userID, from, to)
+	products, err := repos.Products.GetUserActiveProductsFiltered(userID, from, to)
 	if err != nil {
 		logger.Error().Msgf("GetUserActiveProductsFiltered: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})
@@ -201,7 +198,7 @@ func ExportArchiveCSV(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -212,9 +209,8 @@ func ExportArchiveCSV(ctx *gin.Context) {
 	}
 
 	from, to := parseDateRange(ctx)
-	productRepo := database.NewProductRepository(dbHandle)
 
-	products, err := productRepo.GetUserArchivedProductsFiltered(userID, from, to)
+	products, err := repos.Products.GetUserArchivedProductsFiltered(userID, from, to)
 	if err != nil {
 		logger.Error().Msgf("GetUserArchivedProductsFiltered: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting archived products"})
@@ -262,7 +258,7 @@ func ExportFullJSON(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -272,51 +268,49 @@ func ExportFullJSON(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-
-	user, err := productRepo.GetUserByID(userID)
+	user, err := repos.Products.GetUserByID(userID)
 	if err != nil {
 		logger.Error().Msgf("GetUserByID: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting user"})
 		return
 	}
 
-	household, err := productRepo.GetHouseholdByID(user.HouseholdID)
+	household, err := repos.Products.GetHouseholdByID(user.HouseholdID)
 	if err != nil {
 		logger.Error().Msgf("GetHouseholdByID: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting household"})
 		return
 	}
 
-	members, err := productRepo.GetUsersByHouseholdID(user.HouseholdID)
+	members, err := repos.Products.GetUsersByHouseholdID(user.HouseholdID)
 	if err != nil {
 		logger.Error().Msgf("GetUsersByHouseholdID: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting household members"})
 		return
 	}
 
-	activeProducts, err := productRepo.GetUserActiveProductsFiltered(userID, nil, nil)
+	activeProducts, err := repos.Products.GetUserActiveProductsFiltered(userID, nil, nil)
 	if err != nil {
 		logger.Error().Msgf("GetUserActiveProductsFiltered: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting active products"})
 		return
 	}
 
-	archivedProducts, err := productRepo.GetUserArchivedProductsFiltered(userID, nil, nil)
+	archivedProducts, err := repos.Products.GetUserArchivedProductsFiltered(userID, nil, nil)
 	if err != nil {
 		logger.Error().Msgf("GetUserArchivedProductsFiltered: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting archived products"})
 		return
 	}
 
-	totalActive, err := productRepo.GetActiveProductsCount(userID)
+	totalActive, err := repos.Products.GetActiveProductsCount(userID)
 	if err != nil {
 		logger.Error().Msgf("GetActiveProductsCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing active product count"})
 		return
 	}
 
-	wasteCount, err := productRepo.GetExpiredProductsCount(userID)
+	wasteCount, err := repos.Products.GetExpiredProductsCount(userID)
 	if err != nil {
 		logger.Error().Msgf("GetExpiredProductsCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing waste count"})
@@ -333,28 +327,28 @@ func ExportFullJSON(ctx *gin.Context) {
 		expiringSoonDays = user.NotificationPreferences.NotificationThresholdDays
 	}
 
-	expiringSoon, err := productRepo.GetExpiringSoonProducts(userID, expiringSoonDays)
+	expiringSoon, err := repos.Products.GetExpiringSoonProducts(userID, expiringSoonDays)
 	if err != nil {
 		logger.Error().Msgf("GetExpiringSoonProducts: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon products"})
 		return
 	}
 
-	categories, err := productRepo.GetProductCategoryBreakdown(userID)
+	categories, err := repos.Products.GetProductCategoryBreakdown(userID)
 	if err != nil {
 		logger.Error().Msgf("GetProductCategoryBreakdown: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing category breakdown"})
 		return
 	}
 
-	expiryTrend, err := productRepo.GetExpiryTrend(userID)
+	expiryTrend, err := repos.Products.GetExpiryTrend(userID)
 	if err != nil {
 		logger.Error().Msgf("GetExpiryTrend: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiry trend"})
 		return
 	}
 
-	uniqueArchivedMap, err := productRepo.GetArchivedProductsGroupedByBarcode(userID)
+	uniqueArchivedMap, err := repos.Products.GetArchivedProductsGroupedByBarcode(userID)
 	if err != nil {
 		logger.Error().Msgf("GetArchivedProductsGroupedByBarcode: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing unique archived count"})
@@ -362,7 +356,7 @@ func ExportFullJSON(ctx *gin.Context) {
 	}
 
 	var lastInsertedProduct string
-	lastProduct, lastErr := productRepo.GetLastInsertedProduct(user.HouseholdID)
+	lastProduct, lastErr := repos.Products.GetLastInsertedProduct(user.HouseholdID)
 	if lastErr == nil && lastProduct.ID != 0 {
 		lastInsertedProduct = lastProduct.ProductName
 	}

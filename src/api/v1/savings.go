@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
@@ -28,7 +27,7 @@ func GetSavingsStats(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -38,8 +37,7 @@ func GetSavingsStats(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-	householdID, err := userRepo.GetUserHouseholdByID(userID)
+	householdID, err := repos.Users.GetUserHouseholdByID(userID)
 	if err != nil || householdID == 0 {
 		ctx.JSON(http.StatusOK, apiModel.SavingsStatsResponse{
 			CO2Source: "Agribalyse LCA database via Open Food Facts ecoscore_data",
@@ -47,8 +45,7 @@ func GetSavingsStats(ctx *gin.Context) {
 		return
 	}
 
-	savingsRepo := database.NewSavingsRepository(dbHandle)
-	stats, err := savingsRepo.GetSavingsStats(householdID)
+	stats, err := repos.Savings.GetSavingsStats(householdID)
 	if err != nil {
 		logger.Error().Msgf("GetSavingsStats: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing savings statistics"})

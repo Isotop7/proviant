@@ -8,6 +8,15 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+type RecipeRepositoryInterface interface {
+	GetCacheByQueryHash(hash string) (database.RecipeCache, error)
+	CreateCache(cache *database.RecipeCache) error
+	UpdateCacheHit(hash string) error
+	CleanupExpiredCaches() error
+}
+
+var _ RecipeRepositoryInterface = (*RecipeRepository)(nil)
+
 type RecipeRepository struct {
 	DB *gorm.DB
 }

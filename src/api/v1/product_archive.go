@@ -66,7 +66,7 @@ func GetArchivedProducts(ctx *gin.Context) {
 		limit = 0
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -76,8 +76,7 @@ func GetArchivedProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	products, productBulkErr := productRepo.GetUserArchivedProductsBulk(userID, limit)
+	products, productBulkErr := repos.Products.GetUserArchivedProductsBulk(userID, limit)
 	if productBulkErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
 		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
@@ -91,7 +90,6 @@ func GetArchivedProducts(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, products)
-	return
 }
 
 // BulkDeleteProducts deletes a list of products of a user
@@ -124,7 +122,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -134,8 +132,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	bulkDeleteResultError := productRepo.BulkDeleteProducts(convertedProductIDs, userID)
+	bulkDeleteResultError := repos.Products.BulkDeleteProducts(convertedProductIDs, userID)
 	if len(bulkDeleteResultError) > 0 {
 		msg := joinErrors(bulkDeleteResultError)
 		logger.Error().Msg(msg)
@@ -179,7 +176,7 @@ func BulkArchiveProducts(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -189,8 +186,7 @@ func BulkArchiveProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	bulkArchiveError := productRepo.BulkArchiveProducts(convertedProductIDs, userID)
+	bulkArchiveError := repos.Products.BulkArchiveProducts(convertedProductIDs, userID)
 	if len(bulkArchiveError) > 0 {
 		msg := joinErrors(bulkArchiveError)
 		logger.Error().Msg(msg)
@@ -219,12 +215,12 @@ func RestoreProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -234,8 +230,7 @@ func RestoreProduct(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	restoreResult := productRepo.RestoreProduct(uint(productID), userID)
+	restoreResult := repos.Products.RestoreProduct(productID, userID)
 	if restoreResult != nil {
 		logger.Error().Msgf("Error restoring product: %s", restoreResult)
 		ctx.JSON(http.StatusInternalServerError, api.RestoreFailedError())
@@ -276,7 +271,7 @@ func BulkRestoreProducts(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -286,8 +281,7 @@ func BulkRestoreProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	bulkRestoreError := productRepo.BulkRestoreProducts(convertedProductIDs, userID)
+	bulkRestoreError := repos.Products.BulkRestoreProducts(convertedProductIDs, userID)
 	if len(bulkRestoreError) > 0 {
 		msg := joinErrors(bulkRestoreError)
 		logger.Error().Msg(msg)

@@ -8,7 +8,6 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -32,7 +31,7 @@ import (
 func CreateWebhook(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -69,8 +68,7 @@ func CreateWebhook(ctx *gin.Context) {
 		Active: active,
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	if createErr := repo.CreateWebhook(&webhook); createErr != nil {
+	if createErr := repos.Webhooks.CreateWebhook(&webhook); createErr != nil {
 		logger.Error().Msgf("Error creating webhook: %v", createErr)
 		ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
 		return
@@ -91,7 +89,7 @@ func CreateWebhook(ctx *gin.Context) {
 func ListWebhooks(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -101,8 +99,7 @@ func ListWebhooks(ctx *gin.Context) {
 		return
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	webhooks, err := repo.GetWebhooksByUserID(userID)
+	webhooks, err := repos.Webhooks.GetWebhooksByUserID(userID)
 	if err != nil {
 		logger.Error().Msgf("Error listing webhooks: %v", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -131,7 +128,7 @@ func ListWebhooks(ctx *gin.Context) {
 func GetWebhook(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -147,8 +144,7 @@ func GetWebhook(ctx *gin.Context) {
 		return
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	if err := repo.CheckOwnership(uint(webhookID), userID); err != nil {
+	if err := repos.Webhooks.CheckOwnership(uint(webhookID), userID); err != nil {
 		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
 			return
@@ -157,7 +153,7 @@ func GetWebhook(ctx *gin.Context) {
 		return
 	}
 
-	webhook, err := repo.GetWebhookByID(uint(webhookID))
+	webhook, err := repos.Webhooks.GetWebhookByID(uint(webhookID))
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, api.Error(errors.ErrWebhookNotFound))
 		return
@@ -183,7 +179,7 @@ func GetWebhook(ctx *gin.Context) {
 func UpdateWebhook(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -199,8 +195,7 @@ func UpdateWebhook(ctx *gin.Context) {
 		return
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	if err := repo.CheckOwnership(uint(webhookID), userID); err != nil {
+	if err := repos.Webhooks.CheckOwnership(uint(webhookID), userID); err != nil {
 		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
 			return
@@ -209,7 +204,7 @@ func UpdateWebhook(ctx *gin.Context) {
 		return
 	}
 
-	webhook, err := repo.GetWebhookByID(uint(webhookID))
+	webhook, err := repos.Webhooks.GetWebhookByID(uint(webhookID))
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, api.Error(errors.ErrWebhookNotFound))
 		return
@@ -241,7 +236,7 @@ func UpdateWebhook(ctx *gin.Context) {
 		webhook.Active = *req.Active
 	}
 
-	if err := repo.UpdateWebhook(&webhook); err != nil {
+	if err := repos.Webhooks.UpdateWebhook(&webhook); err != nil {
 		logger.Error().Msgf("Error updating webhook: %v", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
@@ -264,7 +259,7 @@ func UpdateWebhook(ctx *gin.Context) {
 func DeleteWebhook(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -280,8 +275,7 @@ func DeleteWebhook(ctx *gin.Context) {
 		return
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	if err := repo.CheckOwnership(uint(webhookID), userID); err != nil {
+	if err := repos.Webhooks.CheckOwnership(uint(webhookID), userID); err != nil {
 		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
 			return
@@ -290,7 +284,7 @@ func DeleteWebhook(ctx *gin.Context) {
 		return
 	}
 
-	if err := repo.DeleteWebhook(uint(webhookID)); err != nil {
+	if err := repos.Webhooks.DeleteWebhook(uint(webhookID)); err != nil {
 		logger.Error().Msgf("Error deleting webhook: %v", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
@@ -313,7 +307,7 @@ func DeleteWebhook(ctx *gin.Context) {
 func GetWebhookDeliveries(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -329,8 +323,7 @@ func GetWebhookDeliveries(ctx *gin.Context) {
 		return
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	if err := repo.CheckOwnership(uint(webhookID), userID); err != nil {
+	if err := repos.Webhooks.CheckOwnership(uint(webhookID), userID); err != nil {
 		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
 			ctx.JSON(http.StatusNotFound, api.Error(err))
 			return
@@ -339,7 +332,7 @@ func GetWebhookDeliveries(ctx *gin.Context) {
 		return
 	}
 
-	logs, err := repo.GetDeliveryLogs(uint(webhookID), 50)
+	logs, err := repos.Webhooks.GetDeliveryLogs(uint(webhookID), 50)
 	if err != nil {
 		logger.Error().Msgf("Error getting delivery logs: %v", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())

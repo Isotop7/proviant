@@ -11,6 +11,21 @@ import (
 	"gorm.io/gorm"
 )
 
+type InvitationRepositoryInterface interface {
+	CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
+	GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
+	GetPendingInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
+	GetInvitationByToken(token string) (database.HouseholdInvitation, error)
+	AcceptInvitation(token, email string, userID uint) error
+	CancelInvitation(invitationID, userID uint) error
+	GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
+	MarkInvitationSent(invitationID uint) error
+	MarkInvitationSendFailed(invitationID uint) error
+	MarkInvitationExpired(invitationID uint) error
+}
+
+var _ InvitationRepositoryInterface = (*InvitationRepository)(nil)
+
 type InvitationRepository struct {
 	DB *gorm.DB
 }
@@ -169,4 +184,8 @@ func (r *InvitationRepository) MarkInvitationSendFailed(invitationID uint) error
 		Update("send_attempts", gorm.Expr("send_attempts + 1")).Error
 }
 
-var _ = (*InvitationRepository)(nil)
+func (r *InvitationRepository) MarkInvitationExpired(invitationID uint) error {
+	return r.DB.Model(&database.HouseholdInvitation{}).
+		Where("id = ?", invitationID).
+		Update("status", database.InvitationStatusExpired).Error
+}

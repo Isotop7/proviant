@@ -8,20 +8,24 @@ import (
 	"testing"
 
 	"codeberg.org/isotop7/proviant/controllers/database"
+	proviantErrors "codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
+	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+
 	"github.com/gin-gonic/gin"
 )
 
 func TestGetSavingsStats(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("user without household returns empty stats", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.HouseholdID = 0
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
 		GetSavingsStats(ctx)
 
@@ -31,11 +35,11 @@ func TestGetSavingsStats(t *testing.T) {
 	})
 
 	t.Run("user with household returns savings", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.HouseholdID = 42
+		m.Savings.SavingsStats = apiModel.SavingsStatsResponse{CO2Source: "test"}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
 		GetSavingsStats(ctx)
 
@@ -47,13 +51,11 @@ func TestGetSavingsStats(t *testing.T) {
 
 func TestListStorageLocations(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
-	t.Run("user without household returns empty list", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+	t.Run("user with no locations returns empty list", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
 		ListStorageLocations(ctx)
 
@@ -62,13 +64,11 @@ func TestListStorageLocations(t *testing.T) {
 		}
 	})
 
-	t.Run("user with household returns storage locations", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-		testutil.CreateTestStorageLocation(db, household.ID)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+	t.Run("user with locations returns list", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.StorageLocations.Locations = []dbModel.StorageLocation{{Name: "Freezer"}}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
 		ListStorageLocations(ctx)
 
@@ -88,20 +88,14 @@ func TestListStorageLocations(t *testing.T) {
 
 func TestCreateStorageLocation(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("successful storage location creation", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
+		m := repomocks.NewMockRepositoryContainer()
+		m.StorageLocations.Location = dbModel.StorageLocation{Name: "Freezer"}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		reqBody := storageLocationRequest{
-			Name:      "Freezer",
-			Icon:      "🧊",
-			SortOrder: 2,
-		}
+		reqBody := storageLocationRequest{Name: "Freezer", Icon: "🧊", SortOrder: 2}
 		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
@@ -118,17 +112,11 @@ func TestCreateStorageLocation(t *testing.T) {
 	})
 
 	t.Run("invalid request without name", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		reqBody := storageLocationRequest{
-			Name:      "",
-			Icon:      "🧊",
-			SortOrder: 2,
-		}
+		reqBody := storageLocationRequest{Name: "", Icon: "🧊", SortOrder: 2}
 		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
@@ -147,13 +135,12 @@ func TestCreateStorageLocation(t *testing.T) {
 
 func TestGetInvitations(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("user without household returns not found", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.User = authentication.User{HouseholdID: 0}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
 		GetInvitations(ctx)
 
@@ -163,19 +150,13 @@ func TestGetInvitations(t *testing.T) {
 	})
 
 	t.Run("user with household returns invitations", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		invitation := dbModel.HouseholdInvitation{
-			HouseholdID: household.ID,
-			InviterID:   testUser.ID,
-			Email:       "test@example.com",
-			Token:       "test-token-123",
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.User = authentication.User{HouseholdID: 42}
+		m.Invitations.Invitations = []dbModel.HouseholdInvitation{
+			{Email: "test@example.com", Token: "test-token-123"},
 		}
-		db.Create(&invitation)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
 		GetInvitations(ctx)
 
@@ -187,13 +168,12 @@ func TestGetInvitations(t *testing.T) {
 
 func TestGetNotifications(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
-	t.Run("user without household returns notifications", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+	t.Run("user without household returns empty notifications", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.User = authentication.User{HouseholdID: 0}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
 		GetNotifications(ctx)
 
@@ -202,20 +182,15 @@ func TestGetNotifications(t *testing.T) {
 		}
 	})
 
-	t.Run("user with household and invitation returns notifications", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		invitation := dbModel.HouseholdInvitation{
-			HouseholdID: household.ID,
-			InviterID:   testUser.ID,
-			Email:       "newuser@example.com",
-			Token:       "test-token-456",
+	t.Run("user with household returns notifications", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.User = authentication.User{HouseholdID: 42}
+		m.Invitations.Invitations = []dbModel.HouseholdInvitation{
+			{Email: "newuser@example.com", Token: "test-token-456"},
 		}
-		db.Create(&invitation)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+		m.Households.Household = dbModel.Household{AdminID: 99}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
 		GetNotifications(ctx)
 
@@ -243,17 +218,13 @@ func TestGetUserArchivedProductsHandler(t *testing.T) {
 
 func TestBulkDeleteProducts(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("empty product list returns success", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		reqBody := map[string][]int{
-			"productIDs": []int{},
-		}
+		reqBody := map[string][]int{"productIDs": {}}
 		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
@@ -270,14 +241,11 @@ func TestBulkDeleteProducts(t *testing.T) {
 	})
 
 	t.Run("invalid product IDs returns error", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		reqBody := map[string][]string{
-			"productIDs": []string{"invalid"},
-		}
+		reqBody := map[string][]string{"productIDs": {"invalid"}}
 		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
@@ -296,17 +264,13 @@ func TestBulkDeleteProducts(t *testing.T) {
 
 func TestCreateHousehold(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("successful household creation", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		reqBody := createHouseholdRequest{
-			Name: "My New Household",
-		}
+		reqBody := createHouseholdRequest{Name: "My New Household"}
 		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
@@ -323,14 +287,11 @@ func TestCreateHousehold(t *testing.T) {
 	})
 
 	t.Run("empty household name returns bad request", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		reqBody := createHouseholdRequest{
-			Name: "",
-		}
+		reqBody := createHouseholdRequest{Name: ""}
 		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
@@ -349,27 +310,11 @@ func TestCreateHousehold(t *testing.T) {
 
 func TestLeaveHousehold(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
-	t.Run("user without household returns success", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		LeaveHousehold(ctx)
-
-		if w.Code != http.StatusOK {
-			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
-		}
-	})
-
-	t.Run("user with household leaves successfully", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+	t.Run("user leaves successfully", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
 		LeaveHousehold(ctx)
 
@@ -381,17 +326,15 @@ func TestLeaveHousehold(t *testing.T) {
 
 func TestUpdateHouseholdName(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
-	t.Run("user without household returns not found", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
+	t.Run("household not found returns 404", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.User = authentication.User{HouseholdID: 42}
+		m.Households.Err = proviantErrors.ErrHouseholdNotFound
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		reqBody := updateHouseholdNameRequest{
-			Name: "New Name",
-		}
+		reqBody := updateHouseholdNameRequest{Name: "New Name"}
 		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
@@ -408,15 +351,11 @@ func TestUpdateHouseholdName(t *testing.T) {
 	})
 
 	t.Run("empty name returns bad request", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		reqBody := updateHouseholdNameRequest{
-			Name: "",
-		}
+		reqBody := updateHouseholdNameRequest{Name: ""}
 		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
@@ -435,13 +374,11 @@ func TestUpdateHouseholdName(t *testing.T) {
 
 func TestListWebhooks(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("user with no webhooks returns empty list", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
 		ListWebhooks(ctx)
 

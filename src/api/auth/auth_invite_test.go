@@ -9,24 +9,27 @@ import (
 	"testing"
 	"time"
 
+	proviantErrors "codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/authentication"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
+	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func TestAcceptInvitation(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("invitation not found", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.User = authentication.User{MailAddress: "test@example.com"}
+		m.Invitations.Err = proviantErrors.ErrInvitationNotFound
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		reqBody := acceptInvitationRequest{
-			Token: "non-existent-token",
-		}
+		reqBody := acceptInvitationRequest{Token: "non-existent-token"}
 		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
@@ -43,14 +46,11 @@ func TestAcceptInvitation(t *testing.T) {
 	})
 
 	t.Run("missing token returns bad request", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		ctx.Request = &http.Request{
-			Header: make(http.Header),
-		}
+		ctx.Request = &http.Request{Header: make(http.Header)}
 
 		AcceptInvitation(ctx)
 
@@ -62,19 +62,18 @@ func TestAcceptInvitation(t *testing.T) {
 
 func TestVerifyEmail(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("successful email verification", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		verification := testutil.CreateTestEmailVerification(db, testUser.ID, "valid-token")
-
-		ctx, w := testutil.SetupGinContext(db)
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.EmailVerification = dbModel.EmailVerification{
+			Status:    dbModel.EmailVerificationStatusPending,
+			ExpiresAt: time.Now().Add(1 * time.Hour),
+			UserID:    1,
+		}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		ctx.Request = &http.Request{
 			URL: &url.URL{RawQuery: "token=valid-token"},
 		}
-		_ = verification
 
 		VerifyEmail(ctx)
 
@@ -84,13 +83,9 @@ func TestVerifyEmail(t *testing.T) {
 	})
 
 	t.Run("missing token returns bad request", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
-		_ = testUser
-
-		ctx, w := testutil.SetupGinContext(db)
-		ctx.Request = &http.Request{
-			URL: &url.URL{RawQuery: "token="},
-		}
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		ctx.Request = &http.Request{URL: &url.URL{RawQuery: "token="}}
 
 		VerifyEmail(ctx)
 
@@ -100,13 +95,10 @@ func TestVerifyEmail(t *testing.T) {
 	})
 
 	t.Run("invalid token returns bad request", func(t *testing.T) {
-		testUser := testutil.CreateTestUser(db, 0)
-		_ = testUser
-
-		ctx, w := testutil.SetupGinContext(db)
-		ctx.Request = &http.Request{
-			URL: &url.URL{RawQuery: "token=invalid-token"},
-		}
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.Err = gorm.ErrRecordNotFound
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		ctx.Request = &http.Request{URL: &url.URL{RawQuery: "token=invalid-token"}}
 
 		VerifyEmail(ctx)
 
@@ -116,18 +108,14 @@ func TestVerifyEmail(t *testing.T) {
 	})
 
 	t.Run("expired token returns bad request", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		verification := testutil.CreateTestEmailVerification(db, testUser.ID, "expired-token")
-		verification.ExpiresAt = time.Now().Add(-1 * time.Hour)
-		verification.Status = "pending"
-		db.Save(&verification)
-
-		ctx, w := testutil.SetupGinContext(db)
-		ctx.Request = &http.Request{
-			URL: &url.URL{RawQuery: "token=expired-token"},
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.EmailVerification = dbModel.EmailVerification{
+			Status:    dbModel.EmailVerificationStatusPending,
+			ExpiresAt: time.Now().Add(-1 * time.Hour),
+			UserID:    1,
 		}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		ctx.Request = &http.Request{URL: &url.URL{RawQuery: "token=expired-token"}}
 
 		VerifyEmail(ctx)
 

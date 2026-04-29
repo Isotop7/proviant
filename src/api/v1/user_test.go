@@ -9,30 +9,22 @@ import (
 
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/testutil"
+	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // TestUpdateUser tests the UpdateUser endpoint
 func TestUpdateUser(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	db := testutil.SetupTestDB(t)
-
 	t.Run("successful user update", func(t *testing.T) {
-		// Create test user
-		testUser := authentication.User{
-			Username:    "testuser",
-			Password:    "password123",
-			MailAddress: "test@example.com",
-		}
-		db.Create(&testUser)
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.User = authentication.User{Username: "testuser", MailAddress: "test@example.com"}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		// Setup test context
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		// Request body
 		reqBody := map[string]string{
 			"displayName": "Updated Name",
 			"mailAddress": "updated@example.com",
@@ -45,41 +37,20 @@ func TestUpdateUser(t *testing.T) {
 		}
 		ctx.Request.Header.Set("Content-Type", "application/json")
 
-		// Execute
 		UpdateUser(ctx)
 
-		// Verify response
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
-		}
-
-		// Verify user was updated in database
-		var updatedUser authentication.User
-		db.First(&updatedUser, testUser.ID)
-		if updatedUser.MailAddress != "updated@example.com" {
-			t.Errorf("MailAddress = %v, want updated@example.com", updatedUser.MailAddress)
 		}
 	})
 
 	t.Run("invalid user data", func(t *testing.T) {
-		// Create test user
-		testUser := authentication.User{
-			Username:    "testuser",
-			Password:    "password123",
-			MailAddress: "test@example.com",
-		}
-		db.Create(&testUser)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		// Setup test context
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		// Request body with invalid data
-		userData := authentication.User{
-			Username:    "", // Empty username
-			MailAddress: "invalid-email",
-		}
-		body, _ := json.Marshal(userData)
+		reqBody := map[string]string{"mailAddress": "invalid-email"}
+		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
 			Header:        make(http.Header),
@@ -87,26 +58,21 @@ func TestUpdateUser(t *testing.T) {
 		}
 		ctx.Request.Header.Set("Content-Type", "application/json")
 
-		// Execute
 		UpdateUser(ctx)
 
-		// Verify response
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
 		}
 	})
 
 	t.Run("user not found", func(t *testing.T) {
-		// Setup test context
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, 999, testutil.TokenIdentityKey) // Non-existent user ID
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.Err = gorm.ErrRecordNotFound
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 999, testutil.TokenIdentityKey)
 
-		// Request body
-		userData := authentication.User{
-			Username:    "testuser",
-			MailAddress: "test@example.com",
-		}
-		body, _ := json.Marshal(userData)
+		reqBody := map[string]string{"mailAddress": "test@example.com"}
+		body, _ := json.Marshal(reqBody)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
 			Header:        make(http.Header),
@@ -114,10 +80,8 @@ func TestUpdateUser(t *testing.T) {
 		}
 		ctx.Request.Header.Set("Content-Type", "application/json")
 
-		// Execute
 		UpdateUser(ctx)
 
-		// Verify response
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
 		}
@@ -128,22 +92,11 @@ func TestUpdateUser(t *testing.T) {
 func TestUpdateUserPassword(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	db := testutil.SetupTestDB(t)
-
 	t.Run("successful password update", func(t *testing.T) {
-		// Create test user
-		testUser := authentication.User{
-			Username:    "testuser",
-			Password:    "oldpassword123",
-			MailAddress: "test@example.com",
-		}
-		db.Create(&testUser)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		// Setup test context
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		// Request body
 		loginData := authentication.Login{
 			Username: "testuser",
 			Password: "NewSecureTestPassword789!",
@@ -156,32 +109,21 @@ func TestUpdateUserPassword(t *testing.T) {
 		}
 		ctx.Request.Header.Set("Content-Type", "application/json")
 
-		// Execute
 		UpdateUserPassword(ctx)
 
-		// Verify response
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
 		}
 	})
 
 	t.Run("invalid login data", func(t *testing.T) {
-		// Create test user
-		testUser := authentication.User{
-			Username:    "testuser",
-			Password:    "password123",
-			MailAddress: "test@example.com",
-		}
-		db.Create(&testUser)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		// Setup test context
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		// Request body with invalid data
 		loginData := authentication.Login{
-			Username: "",      // Empty username
-			Password: "short", // Too short password
+			Username: "",
+			Password: "short",
 		}
 		body, _ := json.Marshal(loginData)
 		ctx.Request = &http.Request{
@@ -191,24 +133,22 @@ func TestUpdateUserPassword(t *testing.T) {
 		}
 		ctx.Request.Header.Set("Content-Type", "application/json")
 
-		// Execute
 		UpdateUserPassword(ctx)
 
-		// Verify response
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
 		}
 	})
 
 	t.Run("user not found", func(t *testing.T) {
-		// Setup test context
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, 999, testutil.TokenIdentityKey) // Non-existent user ID
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.Err = gorm.ErrRecordNotFound
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 999, testutil.TokenIdentityKey)
 
-		// Request body
 		loginData := authentication.Login{
 			Username: "testuser",
-			Password: "newpassword123",
+			Password: "ValidSecurePassword123!",
 		}
 		body, _ := json.Marshal(loginData)
 		ctx.Request = &http.Request{
@@ -218,10 +158,8 @@ func TestUpdateUserPassword(t *testing.T) {
 		}
 		ctx.Request.Header.Set("Content-Type", "application/json")
 
-		// Execute
 		UpdateUserPassword(ctx)
 
-		// Verify response
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
 		}

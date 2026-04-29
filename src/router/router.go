@@ -13,6 +13,7 @@ import (
 	v1 "codeberg.org/isotop7/proviant/api/v1"
 	"codeberg.org/isotop7/proviant/assets"
 	"codeberg.org/isotop7/proviant/controllers"
+	dbcontroller "codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
@@ -48,6 +49,8 @@ func cleanupRevokedTokens(db *gorm.DB, logger *zerolog.Logger) {
 // SetupRouter creates the gin engine and associated middleware
 func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) *gin.Engine {
 	go cleanupRevokedTokens(dbHandle, logger)
+
+	repos := dbcontroller.NewRepositoryContainer(dbHandle)
 
 	gin.DefaultWriter = zerologWriter{logger: logger, level: zerolog.DebugLevel}
 	gin.DefaultErrorWriter = zerologWriter{logger: logger, level: zerolog.WarnLevel}
@@ -85,6 +88,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Database
 	engine.Use(func(ctx *gin.Context) {
 		ctx.Set("dbHandle", dbHandle)
+		ctx.Next()
+	})
+
+	// Repository container
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set("repos", repos)
 		ctx.Next()
 	})
 

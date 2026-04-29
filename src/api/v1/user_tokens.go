@@ -7,7 +7,6 @@ import (
 
 	v1api "codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/api"
 
@@ -19,7 +18,7 @@ import (
 func CreateUserToken(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -54,8 +53,7 @@ func CreateUserToken(ctx *gin.Context) {
 		expiresAt = &parsed
 	}
 
-	patRepo := database.NewPATRepository(dbHandle)
-	pat, err := patRepo.CreatePAT(userID, req.Name, tokenHash, expiresAt, req.Scopes)
+	pat, err := repos.PATs.CreatePAT(userID, req.Name, tokenHash, expiresAt, req.Scopes)
 	if err != nil {
 		logger.Error().Msg(err.Error())
 		ctx.JSON(http.StatusInternalServerError, v1api.InternalError())
@@ -78,7 +76,7 @@ func CreateUserToken(ctx *gin.Context) {
 func ListUserTokens(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -88,8 +86,7 @@ func ListUserTokens(ctx *gin.Context) {
 		return
 	}
 
-	patRepo := database.NewPATRepository(dbHandle)
-	pats, err := patRepo.GetPATsByUserID(userID)
+	pats, err := repos.PATs.GetPATsByUserID(userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, v1api.InternalError())
 		return
@@ -121,7 +118,7 @@ func ListUserTokens(ctx *gin.Context) {
 func DeleteUserToken(ctx *gin.Context) {
 	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -139,8 +136,7 @@ func DeleteUserToken(ctx *gin.Context) {
 	}
 	patID := uint(patIDRaw)
 
-	patRepo := database.NewPATRepository(dbHandle)
-	err := patRepo.DeletePAT(patID, userID)
+	err := repos.PATs.DeletePAT(patID, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, v1api.Error(errors.ErrPATNotFound))

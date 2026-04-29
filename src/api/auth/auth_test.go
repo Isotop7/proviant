@@ -8,8 +8,10 @@ import (
 	"testing"
 
 	"codeberg.org/isotop7/proviant/api"
+	proviantErrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/testutil"
+	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -78,8 +80,9 @@ func TestSignupWithoutDatabase(t *testing.T) {
 }
 
 func TestSignupGenericCreateError(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	ctx, w := testutil.SetupGinContext(db)
+	m := repomocks.NewMockRepositoryContainer()
+	m.Users.Err = proviantErrors.ErrInvalidUserData
+	ctx, w := repomocks.SetupGinContextWithMocks(m)
 
 	signup := authentication.Signup{
 		Username:    "testuserGenericCreateError",
@@ -106,8 +109,8 @@ func TestSignupGenericCreateError(t *testing.T) {
 }
 
 func TestSignupSuccess(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	ctx, w := testutil.SetupGinContext(db)
+	m := repomocks.NewMockRepositoryContainer()
+	ctx, w := repomocks.SetupGinContextWithMocks(m)
 
 	signup := authentication.Signup{
 		Username:    "testuser",
@@ -134,8 +137,8 @@ func TestSignupSuccess(t *testing.T) {
 }
 
 func TestSignupInvalidJSON(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	ctx, w := testutil.SetupGinContext(db)
+	m := repomocks.NewMockRepositoryContainer()
+	ctx, w := repomocks.SetupGinContextWithMocks(m)
 
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBufferString("{invalid json}"))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -155,12 +158,10 @@ func TestSignupInvalidJSON(t *testing.T) {
 }
 
 func TestSignupMissingFields(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	ctx, w := testutil.SetupGinContext(db)
+	m := repomocks.NewMockRepositoryContainer()
+	ctx, w := repomocks.SetupGinContextWithMocks(m)
 
-	signup := authentication.Signup{
-		Username: "testuser",
-	}
+	signup := authentication.Signup{Username: "testuser"}
 
 	jsonValue, _ := json.Marshal(signup)
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
@@ -181,8 +182,8 @@ func TestSignupMissingFields(t *testing.T) {
 }
 
 func TestSignupInvalidEmail(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	ctx, w := testutil.SetupGinContext(db)
+	m := repomocks.NewMockRepositoryContainer()
+	ctx, w := repomocks.SetupGinContextWithMocks(m)
 
 	signup := authentication.Signup{
 		Username:    "testuser",
@@ -209,8 +210,8 @@ func TestSignupInvalidEmail(t *testing.T) {
 }
 
 func TestSignupShortPassword(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	ctx, w := testutil.SetupGinContext(db)
+	m := repomocks.NewMockRepositoryContainer()
+	ctx, w := repomocks.SetupGinContextWithMocks(m)
 
 	signup := authentication.Signup{
 		Username:    "testuser",
@@ -237,18 +238,9 @@ func TestSignupShortPassword(t *testing.T) {
 }
 
 func TestSignupDuplicateUsername(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-
-	firstUser := authentication.User{
-		Username:    "testuser",
-		Password:    "testpassword123",
-		MailAddress: "test@example.com",
-	}
-	if err := db.Create(&firstUser).Error; err != nil {
-		t.Fatalf("Failed to create first user: %v", err)
-	}
-
-	ctx, w := testutil.SetupGinContext(db)
+	m := repomocks.NewMockRepositoryContainer()
+	m.Users.UsernameExistsResult = true
+	ctx, w := repomocks.SetupGinContextWithMocks(m)
 
 	signup := authentication.Signup{
 		Username:    "testuser",
@@ -275,18 +267,10 @@ func TestSignupDuplicateUsername(t *testing.T) {
 }
 
 func TestSignupDuplicateEmail(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-
-	firstUser := authentication.User{
-		Username:    "testuser",
-		Password:    "ThisIsAVeryStrongTestPass123!",
-		MailAddress: "test@example.com",
-	}
-	if err := db.Create(&firstUser).Error; err != nil {
-		t.Fatalf("Failed to create first user: %v", err)
-	}
-
-	ctx, w := testutil.SetupGinContext(db)
+	m := repomocks.NewMockRepositoryContainer()
+	m.Users.UsernameExistsResult = false
+	m.Users.MailAddressExistsResult = true
+	ctx, w := repomocks.SetupGinContextWithMocks(m)
 
 	signup := authentication.Signup{
 		Username:    "anotheruser",

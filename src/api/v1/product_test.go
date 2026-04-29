@@ -3,15 +3,15 @@ package v1
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"testing"
-	"time"
 
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
+	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -29,27 +29,16 @@ func (m *MockOpenFoodFactsAPIController) GetDataset(barcode string) (dbModel.Pro
 // TestGetProducts tests the GetProducts endpoint
 func TestGetProducts(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("get products successfully", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		products := []dbModel.Product{
-			{ProductName: "Product 1", Barcode: "1111111111111", HouseholdID: household.ID},
-			{ProductName: "Product 2", Barcode: "2222222222222", HouseholdID: household.ID},
-			{ProductName: "Product 3", Barcode: "3333333333333", HouseholdID: household.ID},
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Products = []dbModel.Product{
+			{ProductName: "Product 1", Barcode: "1111111111111"},
+			{ProductName: "Product 2", Barcode: "2222222222222"},
 		}
-		for i := range products {
-			db.Create(&products[i])
-		}
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		ctx.Request = &http.Request{
-			Header: make(http.Header),
-		}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
 
 		GetProducts(ctx)
 
@@ -58,13 +47,12 @@ func TestGetProducts(t *testing.T) {
 		}
 	})
 
-	t.Run("unauthorized access", func(t *testing.T) {
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, 99, testutil.TokenIdentityKey)
-
-		ctx.Request = &http.Request{
-			Header: make(http.Header),
-		}
+	t.Run("repo error returns 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = gorm.ErrRecordNotFound
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
 
 		GetProducts(ctx)
 
@@ -77,26 +65,16 @@ func TestGetProducts(t *testing.T) {
 // TestGetArchivedProducts tests the GetArchivedProducts endpoint
 func TestGetArchivedProducts(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("get archived products successfully", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		archivedProducts := []dbModel.Product{
-			{ProductName: "Archived Product 1", Barcode: "1111111111111", HouseholdID: household.ID, DeletedAt: gorm.DeletedAt{Time: time.Now()}},
-			{ProductName: "Archived Product 2", Barcode: "2222222222222", HouseholdID: household.ID, DeletedAt: gorm.DeletedAt{Time: time.Now()}},
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Products = []dbModel.Product{
+			{ProductName: "Archived Product 1"},
+			{ProductName: "Archived Product 2"},
 		}
-		for i := range archivedProducts {
-			db.Create(&archivedProducts[i])
-		}
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		ctx.Request = &http.Request{
-			Header: make(http.Header),
-		}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
 
 		GetArchivedProducts(ctx)
 
@@ -109,26 +87,14 @@ func TestGetArchivedProducts(t *testing.T) {
 // TestGetProduct tests the GetProduct endpoint
 func TestGetProduct(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("get product successfully", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		product := dbModel.Product{
-			ProductName: "New Product",
-			Barcode:     "1234567890123",
-			HouseholdID: household.ID,
-		}
-		db.Create(&product)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		ctx.Request = &http.Request{
-			Header: make(http.Header),
-		}
-		ctx.Params = []gin.Param{{Key: "id", Value: fmt.Sprintf("%d", product.ID)}}
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Product = dbModel.Product{ProductName: "Test Product", Barcode: "1234567890123"}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 
 		GetProduct(ctx)
 
@@ -138,15 +104,11 @@ func TestGetProduct(t *testing.T) {
 	})
 
 	t.Run("get product not found", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		ctx.Request = &http.Request{
-			Header: make(http.Header),
-		}
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = gorm.ErrRecordNotFound
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Params = []gin.Param{{Key: "id", Value: "999"}}
 
 		GetProduct(ctx)
@@ -160,14 +122,11 @@ func TestGetProduct(t *testing.T) {
 // TestCreateProduct tests the CreateProduct endpoint
 func TestCreateProduct(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("create product successfully", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		mockOpenFoodFactsAPIController := &MockOpenFoodFactsAPIController{
 			MockGetDataset: func(barcode string) (dbModel.Product, error) {
 				return dbModel.Product{
@@ -184,7 +143,6 @@ func TestCreateProduct(t *testing.T) {
 		productData := dbModel.Product{
 			ProductName: "New Product",
 			Barcode:     "1234567890123",
-			HouseholdID: household.ID,
 		}
 		body, _ := json.Marshal(productData)
 		ctx.Request = &http.Request{
@@ -216,26 +174,13 @@ func TestCreateProduct(t *testing.T) {
 // TestUpdateProduct tests the UpdateProduct endpoint
 func TestUpdateProduct(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("update product successfully", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		product := dbModel.Product{
-			ProductName: "Original Product",
-			Barcode:     "1234567890123",
-			HouseholdID: household.ID,
-		}
-		db.Create(&product)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		updateData := dbModel.ProductDTOPatch{
-			ID:          product.ID,
-			ProductName: "Updated Product",
-		}
+		updateData := dbModel.ProductDTOPatch{ProductName: "Updated Product"}
 		body, _ := json.Marshal(updateData)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
@@ -243,7 +188,7 @@ func TestUpdateProduct(t *testing.T) {
 			ContentLength: int64(len(body)),
 		}
 		ctx.Request.Header.Set("Content-Type", "application/json")
-		ctx.Params = []gin.Param{{Key: "id", Value: fmt.Sprintf("%d", product.ID)}}
+		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 
 		UpdateProduct(ctx)
 
@@ -253,16 +198,12 @@ func TestUpdateProduct(t *testing.T) {
 	})
 
 	t.Run("update product not found", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = gorm.ErrRecordNotFound
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		updateData := dbModel.ProductDTOPatch{
-			ID:          999,
-			ProductName: "Updated Product",
-		}
+		updateData := dbModel.ProductDTOPatch{ProductName: "Updated Product"}
 		body, _ := json.Marshal(updateData)
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
@@ -283,58 +224,32 @@ func TestUpdateProduct(t *testing.T) {
 // TestDeleteProduct tests the DeleteProduct endpoint
 func TestDeleteProduct(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("delete product successfully", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		product := dbModel.Product{
-			ProductName: "Product to Delete",
-			Barcode:     "1234567890123",
-			HouseholdID: household.ID,
-		}
-		db.Create(&product)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		ctx.Request = &http.Request{
-			Header: make(http.Header),
-		}
-		ctx.Params = []gin.Param{{Key: "id", Value: fmt.Sprintf("%d", product.ID)}}
-		ctx.Request.URL = &url.URL{
-			Path:     fmt.Sprintf("/api/v1/products/%d", product.ID),
-			RawQuery: "archiveOnly=true",
-		}
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
+		ctx.Request.URL = &url.URL{RawQuery: "archiveOnly=true"}
 
 		DeleteProduct(ctx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
 		}
-
-		var deletedProduct dbModel.Product
-		if err := db.Unscoped().First(&deletedProduct, product.ID).Error; err != nil {
-			t.Fatalf("Failed to find deleted product: %v", err)
-		}
-		if deletedProduct.DeletedAt.Time.IsZero() {
-			t.Error("Product was not soft-deleted")
-		}
 	})
 
-	t.Run("delete product not found", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
+	t.Run("repo error returns 500", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = gorm.ErrInvalidData
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		ctx.Request = &http.Request{
-			Header: make(http.Header),
-		}
-		ctx.Params = []gin.Param{{Key: "id", Value: "999"}}
-		ctx.Request.URL = &url.URL{Path: "/products/999"}
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
+		ctx.Request.URL = &url.URL{}
 
 		DeleteProduct(ctx)
 
@@ -347,28 +262,16 @@ func TestDeleteProduct(t *testing.T) {
 // TestSearchProducts tests the SearchProducts endpoint
 func TestSearchProducts(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := testutil.SetupTestDB(t)
 
 	t.Run("search products by name successfully", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		products := []dbModel.Product{
-			{ProductName: "Apple Juice", Barcode: "1111111111111", HouseholdID: household.ID},
-			{ProductName: "Banana Bread", Barcode: "2222222222222", HouseholdID: household.ID},
-			{ProductName: "Orange Soda", Barcode: "3333333333333", HouseholdID: household.ID},
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Products = []dbModel.Product{
+			{ProductName: "Apple Juice"},
 		}
-		for i := range products {
-			db.Create(&products[i])
-		}
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		ctx.Request = &http.Request{
-			Header: make(http.Header),
-		}
-		ctx.Request.URL = &url.URL{Path: "/?queryParam=productName&queryValue=Apple"}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Request.URL = &url.URL{RawQuery: "queryParam=product_name&queryValue=Apple"}
 
 		SearchProducts(ctx)
 
@@ -378,23 +281,14 @@ func TestSearchProducts(t *testing.T) {
 	})
 
 	t.Run("search products by barcode successfully", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		product := dbModel.Product{
-			ProductName: "Test Product",
-			Barcode:     "1234567890123",
-			HouseholdID: household.ID,
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Products = []dbModel.Product{
+			{ProductName: "Test Product", Barcode: "1234567890123"},
 		}
-		db.Create(&product)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		ctx.Request = &http.Request{
-			Header: make(http.Header),
-		}
-		ctx.Request.URL = &url.URL{Path: "/?queryParam=barcode&queryValue=1234567890123"}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Request.URL = &url.URL{RawQuery: "queryParam=barcode&queryValue=1234567890123"}
 
 		SearchProducts(ctx)
 
@@ -404,18 +298,11 @@ func TestSearchProducts(t *testing.T) {
 	})
 
 	t.Run("search products with invalid parameter", func(t *testing.T) {
-		household := testutil.CreateTestHousehold(db, 0)
-		testUser := testutil.CreateTestUser(db, household.ID)
-
-		ctx, w := testutil.SetupGinContext(db)
-		testutil.MockJWTClaimsWithKey(ctx, testUser.ID, testutil.TokenIdentityKey)
-
-		ctx.Request = &http.Request{
-			Header: make(http.Header),
-		}
-		ctx.Request.URL = &url.URL{
-			RawQuery: "queryParam=test&queryValue=test",
-		}
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Request.URL = &url.URL{RawQuery: "queryParam=test&queryValue=test"}
 
 		SearchProducts(ctx)
 

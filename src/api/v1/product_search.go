@@ -45,7 +45,7 @@ func GetProductsByBarcode(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -55,8 +55,7 @@ func GetProductsByBarcode(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	products, getError := productRepo.GetUserProductsBulkByBarcode(userID, barcode)
+	products, getError := repos.Products.GetUserProductsBulkByBarcode(userID, barcode)
 
 	switch getError {
 	// No error: return product
@@ -107,7 +106,7 @@ func SearchProducts(ctx *gin.Context) {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -117,8 +116,7 @@ func SearchProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	products, productErr := productRepo.SearchProducts(enumParam, queryValue, sort, order, userID)
+	products, productErr := repos.Products.SearchProducts(enumParam, queryValue, sort, order, userID)
 	if productErr != nil {
 		logger.Error().Msgf("Error getting products: %s", productErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})

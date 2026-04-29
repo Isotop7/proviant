@@ -14,6 +14,55 @@ import (
 	"gorm.io/gorm"
 )
 
+type ProductRepositoryInterface interface {
+	GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
+	GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
+	GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
+	GetProductByID(productID uint, userID uint) (database.Product, error)
+	GetArchivedProductByID(productID uint, userID uint) (database.Product, error)
+	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
+	GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
+	CreateProduct(userID uint, product *database.Product) error
+	UpdateProduct(productID uint, userID uint, product *database.ProductDTOPatch) error
+	UpdateProductAmount(productID uint, userID uint, delta int) (bool, error)
+	DeleteProduct(productID uint, userID uint, archiveOnly bool) error
+	BulkDeleteProducts(productIDs []uint, userID uint) []BulkOperationError
+	BulkArchiveProducts(productIDs []uint, userID uint) []BulkOperationError
+	RestoreProduct(productID uint, userID uint) error
+	BulkRestoreProducts(productIDs []uint, userID uint) []BulkOperationError
+	SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error
+	SetProductNotifiedAt(productID uint) error
+	GetProductsExpired(userID uint) ([]*database.Product, error)
+	GetExpiredProductsCount(userID uint) (int, error)
+	GetArchivedProductsGroupedByBarcode(userID uint) (map[string]int, error)
+	GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error)
+	GetActiveProductsCount(userID uint) (int, error)
+	GetProductCategoryBreakdown(userID uint) (map[string]int, error)
+	GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
+	GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
+	GetLastNotifiedProduct(householdID uint) (database.Product, error)
+	GetExpiringInDays(userID uint, days int) ([]database.Product, error)
+	GetLastInsertedProduct(householdID uint) (database.Product, error)
+	UserHasProductAccess(userID uint, productID int) bool
+	GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error)
+	CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error
+	UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error
+	GetUserByID(userID uint) (authentication.User, error)
+	GetUserHouseholdByID(userID uint) (uint, error)
+	GetHouseholdByID(householdID uint) (database.Household, error)
+	GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
+	GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
+	GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
+	GetExpiringSoonCount(userID uint, days int) (int, error)
+	GetWasteThisMonth(userID uint) (int, error)
+	GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
+	GetProductsByHousehold(householdID uint) ([]database.Product, error)
+	ConsumeProduct(productID uint, userID uint) error
+	WasteProduct(productID uint, userID uint) error
+}
+
+var _ ProductRepositoryInterface = (*ProductRepository)(nil)
+
 type ProductRepository struct {
 	DB *gorm.DB
 }
@@ -894,6 +943,15 @@ func (r *ProductRepository) WasteProduct(productID uint, userID uint) error {
 	return r.DB.Unscoped().Delete(&database.Product{}, productID).Error
 }
 
+type CalendarTokenRepositoryInterface interface {
+	GetByToken(token string) (authentication.CalendarToken, error)
+	DeleteByUserID(userID uint) error
+	GetByUserID(userID uint) (authentication.CalendarToken, error)
+	Create(ct *authentication.CalendarToken) error
+}
+
+var _ CalendarTokenRepositoryInterface = (*CalendarTokenRepository)(nil)
+
 type CalendarTokenRepository struct {
 	DB *gorm.DB
 }
@@ -921,5 +979,3 @@ func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.Calen
 func (r *CalendarTokenRepository) Create(ct *authentication.CalendarToken) error {
 	return r.DB.Create(ct).Error
 }
-
-var _ = (*ProductRepository)(nil)

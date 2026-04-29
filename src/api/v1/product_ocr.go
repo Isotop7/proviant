@@ -19,7 +19,6 @@ import (
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 // ScanExpiryDate scans an uploaded image for expiry date
@@ -106,9 +105,9 @@ func ScanExpiryDate(ctx *gin.Context) {
 		// Optionally log the scan to database
 		if userID, ok := getCurrentUserID(ctx, logger); ok {
 			storeScan := func() {
-				dbHandle, dbOk := ctx.MustGet("dbHandle").(*gorm.DB)
+				repos, dbOk := ctx.MustGet("repos").(*database.RepositoryContainer)
 				if !dbOk {
-					logger.Warn().Msg("dbHandle not available for expiry scan logging")
+					logger.Warn().Msg("repos not available for expiry scan logging")
 					return
 				}
 				scan := &dbModel.ExpiryScan{
@@ -119,8 +118,7 @@ func ScanExpiryDate(ctx *gin.Context) {
 					RawText:      resp.RawText,
 					ImageHash:    hashImage(imgBytes),
 				}
-				repo := database.NewExpiryScanRepository(dbHandle)
-				if dbErr := repo.Create(scan); dbErr != nil {
+				if dbErr := repos.ExpiryScan.Create(scan); dbErr != nil {
 					logger.Warn().Msgf("Failed to store expiry scan: %s", dbErr.Error())
 				}
 			}
