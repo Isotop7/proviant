@@ -20,9 +20,9 @@ func TestNtfyProvider_GetProviderType(t *testing.T) {
 
 func TestNtfyProvider_IsConfigured(t *testing.T) {
 	tests := []struct {
-		name string
+		name   string
 		config configuration.NtfyConfiguration
-		want  bool
+		want   bool
 	}{
 		{"both empty", configuration.NtfyConfiguration{}, false},
 		{"url set", configuration.NtfyConfiguration{URL: "https://ntfy.sh"}, true},

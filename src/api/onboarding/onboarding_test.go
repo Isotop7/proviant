@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"codeberg.org/isotop7/proviant/errors"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
 	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +31,7 @@ func TestGetOnboardingState(t *testing.T) {
 	t.Run("state present reflects flags", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		m.Users.OnboardingState = dbModel.OnboardingState{
-			UserID:             1,
+			UserID:              1,
 			ProfileStepDone:     true,
 			NotificationsSetup:  false,
 			HouseholdStepDone:   true,

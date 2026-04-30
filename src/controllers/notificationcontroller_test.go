@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/models"
-	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
 	gomail "gopkg.in/mail.v2"
@@ -21,9 +21,9 @@ import (
 
 func TestTelegramTimeout(t *testing.T) {
 	tests := []struct {
-		name string
+		name   string
 		config *configuration.NotificationConfiguration
-		want  int
+		want   int
 	}{
 		{"zero timeout", &configuration.NotificationConfiguration{}, 15},
 		{"positive timeout", &configuration.NotificationConfiguration{Telegram: configuration.TelegramConfiguration{Timeout: 30}}, 30},
@@ -80,11 +80,11 @@ func TestSendNotificationsForRecipient(t *testing.T) {
 	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
 
 	tests := []struct {
-		name        string
-		threshold   int
-		expireOffset time.Duration
-		emailEnabled bool
-		ntfyEnabled  bool
+		name            string
+		threshold       int
+		expireOffset    time.Duration
+		emailEnabled    bool
+		ntfyEnabled     bool
 		telegramEnabled bool
 	}{
 		{"threshold 0 expired", 0, -1 * time.Hour, false, false, false},
@@ -106,14 +106,14 @@ func TestSendNotificationsForRecipient(t *testing.T) {
 				}
 			}
 			product := &dbModel.Product{
-				Model:      gorm.Model{ID: 1},
+				Model:       gorm.Model{ID: 1},
 				ProductName: "Test",
 				ExpireAt:    time.Now().Add(tt.expireOffset),
 			}
 			pref := models.NotificationRecipientInfo{
 				NotificationThresholdDays: tt.threshold,
-				EmailEnabled:           tt.emailEnabled,
-				EmailAddress:           "test@example.com",
+				EmailEnabled:              tt.emailEnabled,
+				EmailAddress:              "test@example.com",
 			}
 			nc.sendNotificationsForRecipient(product, &pref)
 		})
@@ -145,7 +145,7 @@ func TestInitializeProviders(t *testing.T) {
 
 	t.Run("email provider configured", func(t *testing.T) {
 		nc := &NotificationController{
-			Logger:        &logger,
+			Logger: &logger,
 			Configuration: &configuration.NotificationConfiguration{
 				SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587},
 			},
@@ -184,7 +184,6 @@ func TestDispatchEarlyReturn(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	})
 }
-
 
 func TestSendStreakMilestoneNotifications(t *testing.T) {
 	logger := zerolog.Nop()
@@ -237,10 +236,10 @@ func TestSendInvitationEmail(t *testing.T) {
 	logger := zerolog.Nop()
 	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
 	invitation := &dbModel.HouseholdInvitation{
-		Model:     gorm.Model{ID: 1},
-		Email:     "test@example.com",
+		Model:       gorm.Model{ID: 1},
+		Email:       "test@example.com",
 		HouseholdID: 1,
-		InviterID:  1,
+		InviterID:   1,
 	}
 	nc := &NotificationController{
 		Logger:           &logger,
@@ -285,10 +284,10 @@ func TestSendVerificationEmail(t *testing.T) {
 	logger := zerolog.Nop()
 	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
 	invitation := &dbModel.HouseholdInvitation{
-		Model:     gorm.Model{ID: 1},
-		Email:     "test@example.com",
+		Model:       gorm.Model{ID: 1},
+		Email:       "test@example.com",
 		HouseholdID: 1,
-		InviterID:  1,
+		InviterID:   1,
 	}
 	nc := &NotificationController{
 		Logger:           &logger,

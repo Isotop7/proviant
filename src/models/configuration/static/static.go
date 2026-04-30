@@ -24,4 +24,13 @@ var (
 
 	// BarcodeDecodingTimeout is the timoeut of the decoding operation in seconds
 	BarcodeDecodingTimeout = time.Second * time.Duration(5)
+
+	// RequestIDHeader is the header name for request ID
+	RequestIDHeader = "X-Request-ID"
+
+	// RequestIDContextKey is the context key for request ID
+	RequestIDContextKey = "requestID"
+
+	// UserIDContextKey is the context key for user ID (for logger enrichment)
+	UserIDContextKey = "userID"
 )

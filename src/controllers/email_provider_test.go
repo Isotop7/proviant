@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/models"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/models/configuration"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"github.com/rs/zerolog"
 	gomail "gopkg.in/mail.v2"
 )
@@ -21,9 +21,9 @@ func TestEmailProvider_GetProviderType(t *testing.T) {
 
 func TestEmailProvider_IsConfigured(t *testing.T) {
 	tests := []struct {
-		name string
+		name   string
 		config configuration.SMTPConfiguration
-		want  bool
+		want   bool
 	}{
 		{"empty host", configuration.SMTPConfiguration{}, false},
 		{"host set port zero", configuration.SMTPConfiguration{Host: "smtp.example.com"}, false},

@@ -78,12 +78,8 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Setup security headers
 	engine.Use(SecurityHeadersMiddleware(proviantConfiguration))
 
-	// Pass references to gin context
-	// Logging
-	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("logger", logger)
-		ctx.Next()
-	})
+	// RequestID middleware - must run before other context injectors
+	engine.Use(RequestIDMiddleware(logger))
 
 	// Database
 	engine.Use(func(ctx *gin.Context) {
@@ -214,12 +210,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Logout route (requires authentication)
 	logoutAuth := engine.Group("/auth")
-	logoutAuth.Use(jwtAPIMiddlewareWithPAT)
+	logoutAuth.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	logoutAuth.POST("/logout", auth.Logout)
 
 	// Public product routes
 	publicProductAPI := engine.Group("/api/v1/products")
-	publicProductAPI.Use(jwtAPIMiddlewareWithPAT)
+	publicProductAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	publicProductAPI.GET("", v1.GetProducts)
 	publicProductAPI.GET("/archived", v1.GetArchivedProducts)
 	publicProductAPI.GET("/expired", v1.GetExpired)
@@ -241,7 +237,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Protected user routes
 	protectedUserAPI := engine.Group("/api/v1/user")
-	protectedUserAPI.Use(jwtAPIMiddlewareWithPAT)
+	protectedUserAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	protectedUserAPI.PATCH("", v1.UpdateUser)
 	protectedUserAPI.POST("/password", v1.UpdateUserPassword)
 	protectedUserAPI.GET("/notification-preferences", v1.GetUserNotificationPreferences)
@@ -255,7 +251,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Onboarding routes (require authentication)
 	onboardingAPI := engine.Group("/api/v1/onboarding")
-	onboardingAPI.Use(jwtAPIMiddlewareWithPAT)
+	onboardingAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	onboardingAPI.GET("/state", onboarding.GetOnboardingState)
 	onboardingAPI.GET("/households", onboarding.GetAvailableHouseholds)
 	onboardingAPI.PATCH("/profile", onboarding.UpdateOnboardingProfile)
@@ -266,27 +262,27 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Streak routes
 	streakAPI := engine.Group("/api/v1/streak")
-	streakAPI.Use(jwtAPIMiddlewareWithPAT)
+	streakAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	streakAPI.GET("", v1.GetStreak)
 
 	// Savings routes
 	savingsAPI := engine.Group("/api/v1/savings")
-	savingsAPI.Use(jwtAPIMiddlewareWithPAT)
+	savingsAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	savingsAPI.GET("/stats", v1.GetSavingsStats)
 
 	// Recipe suggestion routes
 	recipeAPI := engine.Group("/api/v1/recipes")
-	recipeAPI.Use(jwtAPIMiddlewareWithPAT)
+	recipeAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	recipeAPI.GET("/suggestions", v1.GetRecipeSuggestions)
 
 	// Notification routes
 	notificationAPI := engine.Group("/api/v1/notifications")
-	notificationAPI.Use(jwtAPIMiddlewareWithPAT)
+	notificationAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	notificationAPI.GET("", v1.GetNotifications)
 
 	// Household application routes
 	householdAPI := engine.Group("/api/v1/household")
-	householdAPI.Use(jwtAPIMiddlewareWithPAT)
+	householdAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	householdAPI.POST("/:id/apply", v1.ApplyForHousehold)
 	householdAPI.GET("/applications", v1.GetHouseholdApplications)
 	householdAPI.POST("/applications/:id/approve", v1.ApproveHouseholdApplication)
@@ -308,7 +304,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Admin user management routes
 	adminAPI := engine.Group("/api/v1/admin/users")
-	adminAPI.Use(jwtAPIMiddlewareWithPAT)
+	adminAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	adminAPI.GET("", v1.GetHouseholdUsers)
 	adminAPI.PATCH("/:id", v1.UpdateHouseholdUser)
 	adminAPI.DELETE("/:id", v1.DeleteHouseholdUser)
@@ -316,7 +312,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")
-	protectedProductAPI.Use(jwtAPIUserAwareMiddlewareWithPAT)
+	protectedProductAPI.Use(jwtAPIUserAwareMiddlewareWithPAT, UserContextLoggerMiddleware())
 	protectedProductAPI.GET("/:id", v1.GetProduct)
 	protectedProductAPI.PATCH("/:id", v1.UpdateProduct)
 	protectedProductAPI.PATCH("/:id/amount", v1.UpdateProductAmount)
@@ -328,7 +324,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Webhook routes
 	webhookAPI := engine.Group("/api/v1/webhooks")
-	webhookAPI.Use(jwtAPIMiddlewareWithPAT)
+	webhookAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	webhookAPI.POST("", v1.CreateWebhook)
 	webhookAPI.GET("", v1.ListWebhooks)
 	webhookAPI.GET("/:id", v1.GetWebhook)
@@ -339,7 +335,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Calendar routes (export uses token query param, token management uses JWT)
 	calendarAPI := engine.Group("/api/v1/calendar")
 	calendarAPI.GET("/export.ics", v1.ExportICalendar)
-	calendarAPI.Use(jwtAPIMiddlewareWithPAT)
+	calendarAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
 	calendarAPI.POST("/token", v1.CreateCalendarToken)
 	calendarAPI.DELETE("/token", v1.DeleteCalendarToken)
 	calendarAPI.GET("/token", v1.GetCalendarTokenStatus)
@@ -380,7 +376,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Public web frontend routes
 	publicWebFrontend := engine.Group("/web")
-	publicWebFrontend.Use(jwtFrontendMiddleware.MiddlewareFunc())
+	publicWebFrontend.Use(jwtFrontendMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware())
 	publicWebFrontend.GET("/", webFrontendHandler.Root)
 	publicWebFrontend.GET("/user", webFrontendHandler.User)
 	publicWebFrontend.GET("/user/settings", webFrontendHandler.UserSettings)
@@ -397,7 +393,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")
-	protectedWebFrontend.Use(jwtFrontendUserAwareMiddleware.MiddlewareFunc())
+	protectedWebFrontend.Use(jwtFrontendUserAwareMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware())
 	protectedWebFrontend.GET("/products/:id/view", webFrontendHandler.ProductsView)
 	protectedWebFrontend.GET("/products/:id/edit", webFrontendHandler.ProductsEdit)
 
