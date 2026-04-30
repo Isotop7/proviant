@@ -19,7 +19,7 @@ const PRECACHE_URLS = [
 
 // Minimal offline fallback page (no asset dependencies)
 const OFFLINE_PAGE = `<!doctype html>
-<html lang="de" data-bs-theme="light">
+<html lang="en" data-bs-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
