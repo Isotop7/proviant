@@ -5,6 +5,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/testutil"
 
 	"github.com/rs/zerolog"
 	"gorm.io/driver/sqlite"
@@ -17,7 +18,7 @@ func TestRunBreakingDatabaseMigrations(t *testing.T) {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
 
-	if err := db.AutoMigrate(&database.Household{}, &database.StorageLocation{}, &authentication.User{}); err != nil {
+	if err := testutil.MigrateAllModels(db); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -75,7 +76,11 @@ func TestRunBreakingDatabaseMigrations_EmptyDatabase(t *testing.T) {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
 
-	if err := db.AutoMigrate(&database.Household{}, &database.StorageLocation{}, &authentication.User{}); err != nil {
+	if err := testutil.MigrateAllModels(db); err != nil {
+		t.Fatalf("Failed to migrate database: %v", err)
+	}
+
+	if err := testutil.MigrateAllModels(db); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -99,7 +104,7 @@ func TestRunBreakingDatabaseMigrations_UsersWithHouseholds(t *testing.T) {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
 
-	if err := db.AutoMigrate(&database.Household{}, &database.StorageLocation{}, &authentication.User{}); err != nil {
+	if err := testutil.MigrateAllModels(db); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
