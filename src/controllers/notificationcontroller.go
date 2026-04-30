@@ -26,6 +26,7 @@ type NotificationController struct {
 	StreakRepo       dbController.StreakRepositoryInterface
 	Providers        []NotificationProvider
 	telegramClient   *http.Client
+	telegramAPIBase  string
 	pollerCancels    sync.Map // userID(uint) → context.CancelFunc
 	botUsernames     sync.Map // userID(uint) → resolved bot username(string)
 }
@@ -40,6 +41,7 @@ func NewNotificationController(
 		Configuration:    config,
 		NotificationRepo: notificationRepo,
 		telegramClient:   &http.Client{Timeout: time.Duration(telegramTimeout(config)) * time.Second},
+		telegramAPIBase:  "https://api.telegram.org",
 	}
 
 	// Initialize providers
@@ -422,6 +424,10 @@ func (nc *NotificationController) DispatchStreakUpdates() {
 }
 
 func (nc *NotificationController) processStreakUpdates() {
+	if nc.StreakRepo == nil {
+		nc.Logger.Warn().Msg("StreakRepo not set, skipping streak updates")
+		return
+	}
 	streaks, err := nc.StreakRepo.GetAllStreaks()
 	if err != nil {
 		nc.Logger.Error().Msgf("Streak updater: failed to fetch streaks: %s", err)
@@ -521,8 +527,7 @@ func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken 
 	ctx, cancel := context.WithCancel(context.Background())
 	nc.pollerCancels.Store(userID, cancel)
 
-	pollClient := &http.Client{Timeout: 15 * time.Second}
-	baseURL := fmt.Sprintf("https://api.telegram.org/bot%s", botToken)
+	baseURL := fmt.Sprintf("%s/bot%s", nc.telegramAPIBase, botToken)
 
 	go func() {
 		defer nc.pollerCancels.Delete(userID)
@@ -531,7 +536,7 @@ func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken 
 
 		// Resolve bot username via getMe and persist it.
 		getMeURL := fmt.Sprintf("%s/getMe", baseURL)
-		if resp, err := pollClient.Get(getMeURL); err == nil {
+		if resp, err := nc.telegramClient.Get(getMeURL); err == nil {
 			var result struct {
 				OK     bool `json:"ok"`
 				Result struct {
@@ -561,7 +566,7 @@ func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken 
 			}
 
 			url := fmt.Sprintf("%s/getUpdates?timeout=10&offset=%d", baseURL, offset)
-			resp, err := pollClient.Get(url)
+			resp, err := nc.telegramClient.Get(url)
 			if err != nil {
 				nc.Logger.Error().Msgf("Telegram poller (user %d): getUpdates error: %s", userID, err)
 				select {
@@ -613,7 +618,7 @@ func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken 
 
 				parts := strings.Fields(text)
 				if len(parts) < 2 {
-					nc.sendTelegramText(pollClient, baseURL, chatID,
+					nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
 						"Send `/start <token>` with the token from your Proviant notification settings to link this chat.")
 					continue
 				}
@@ -622,20 +627,20 @@ func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken 
 				user, findErr := nc.NotificationRepo.FindUserByTelegramLinkToken(token)
 				if findErr != nil || user.ID != userID {
 					nc.Logger.Warn().Msgf("Telegram poller (user %d): invalid link token from chat %s", userID, chatID)
-					nc.sendTelegramText(pollClient, baseURL, chatID,
+					nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
 						"Invalid or expired token. Please generate a new one in Proviant settings.")
 					continue
 				}
 
 				if setErr := nc.NotificationRepo.SetTelegramChatID(userID, chatID); setErr != nil {
 					nc.Logger.Error().Msgf("Telegram poller (user %d): failed to save chat ID: %s", userID, setErr)
-					nc.sendTelegramText(pollClient, baseURL, chatID,
+					nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
 						"Something went wrong. Please try again.")
 					continue
 				}
 
 				nc.Logger.Info().Msgf("Telegram poller (user %d): linked chat %s", userID, chatID)
-				nc.sendTelegramText(pollClient, baseURL, chatID,
+				nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
 					"✅ Linked! You will now receive Proviant notifications here.")
 			}
 		}

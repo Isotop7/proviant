@@ -15,6 +15,10 @@ import (
 	gomail "gopkg.in/mail.v2"
 )
 
+var emailSendFunc = func(d *gomail.Dialer, m *gomail.Message) error {
+	return d.DialAndSend(m)
+}
+
 type EmailNotificationProvider struct {
 	Configuration configuration.SMTPConfiguration
 	Logger        *zerolog.Logger
@@ -87,7 +91,7 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 	mailDialer.SSL = e.Configuration.SSL
 
 	// Send mail and return error
-	return mailDialer.DialAndSend(mail)
+	return emailSendFunc(&mailDialer, mail)
 }
 
 // SendMonthlyWasteReport sends the monthly household waste report to a single recipient.
@@ -113,7 +117,7 @@ func (e *EmailNotificationProvider) SendMonthlyWasteReport(recipient string, sta
 		dialer.Username = e.Configuration.User
 		dialer.Password = e.Configuration.Password
 	}
-	return dialer.DialAndSend(mail)
+	return emailSendFunc(&dialer, mail)
 }
 
 // SendStreakMilestone sends a streak milestone notification email.
@@ -138,7 +142,7 @@ func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient
 		dialer.Username = e.Configuration.User
 		dialer.Password = e.Configuration.Password
 	}
-	return dialer.DialAndSend(mail)
+	return emailSendFunc(&dialer, mail)
 }
 
 // SendEmailVerificationEmail sends an email verification email to the recipient
@@ -182,7 +186,7 @@ func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, 
 		mailDialer.Password = e.Configuration.Password
 	}
 
-	return mailDialer.DialAndSend(mail)
+	return emailSendFunc(&mailDialer, mail)
 }
 
 // SendInvitationEmail sends an invitation email to the recipient
@@ -241,5 +245,5 @@ func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.Hous
 	}
 
 	// Send mail and return error
-	return mailDialer.DialAndSend(mail)
+	return emailSendFunc(&mailDialer, mail)
 }

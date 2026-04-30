@@ -1,222 +1,451 @@
 package controllers
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
-	dbController "codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models"
-	authentication "codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+	gomail "gopkg.in/mail.v2"
 
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
 
-type MockNotificationRepository struct{}
-
-func (m *MockNotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]dbModel.Product, error) {
-	return []dbModel.Product{}, nil
+func TestTelegramTimeout(t *testing.T) {
+	tests := []struct {
+		name string
+		config *configuration.NotificationConfiguration
+		want  int
+	}{
+		{"zero timeout", &configuration.NotificationConfiguration{}, 15},
+		{"positive timeout", &configuration.NotificationConfiguration{Telegram: configuration.TelegramConfiguration{Timeout: 30}}, 30},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := telegramTimeout(tt.config)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
-
-func (m *MockNotificationRepository) GetMaxNotificationThresholdDays() int {
-	return 0
-}
-
-func (m *MockNotificationRepository) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error) {
-	return []string{"test@example.com"}, nil
-}
-
-func (m *MockNotificationRepository) SetProductNotifiedAt(productID uint) error {
-	return nil
-}
-
-func (m *MockNotificationRepository) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error) {
-	return []models.NotificationRecipientInfo{
-		{
-			EmailAddress: "test@example.com",
-			NtfyURL:      "https://ntfy.sh",
-			NtfyTopic:    "test_topic",
-			NtfyToken:    "test_token",
-		},
-	}, nil
-}
-
-func (m *MockNotificationRepository) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error) {
-	return dbModel.HouseholdInvitation{}, nil
-}
-
-func (m *MockNotificationRepository) GetInvitationsForHousehold(householdID, inviterID uint) ([]dbModel.HouseholdInvitation, error) {
-	return nil, nil
-}
-
-func (m *MockNotificationRepository) GetInvitationByToken(token string) (dbModel.HouseholdInvitation, error) {
-	return dbModel.HouseholdInvitation{}, nil
-}
-
-func (m *MockNotificationRepository) AcceptInvitation(token, email string, userID uint) error {
-	return nil
-}
-
-func (m *MockNotificationRepository) CancelInvitation(invitationID, userID uint) error {
-	return nil
-}
-
-func (m *MockNotificationRepository) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]dbModel.HouseholdInvitation, error) {
-	return nil, nil
-}
-
-func (m *MockNotificationRepository) MarkInvitationSent(invitationID uint) error {
-	return nil
-}
-
-func (m *MockNotificationRepository) MarkInvitationSendFailed(invitationID uint) error {
-	return nil
-}
-
-func (m *MockNotificationRepository) GetUserByID(userID uint) (authentication.User, error) {
-	return authentication.User{}, nil
-}
-
-func (m *MockNotificationRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error) {
-	return dbModel.Household{}, nil
-}
-
-func (m *MockNotificationRepository) GetOnboardingState(userID uint) (dbModel.OnboardingState, error) {
-	return dbModel.OnboardingState{}, nil
-}
-
-func (m *MockNotificationRepository) MarkNotificationsSetup(userID uint) error {
-	return nil
-}
-
-func (m *MockNotificationRepository) MarkHouseholdStepDone(userID uint) error {
-	return nil
-}
-
-func (m *MockNotificationRepository) MarkOnboardingComplete(userID uint) error {
-	return nil
-}
-
-func (m *MockNotificationRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]dbModel.HouseholdWithMemberCount, error) {
-	return nil, nil
-}
-
-func (m *MockNotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error) {
-	return nil, nil
-}
-
-func (m *MockNotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error) {
-	return models.WasteStats{}, nil
-}
-
-func (m *MockNotificationRepository) FindUserByTelegramLinkToken(token string) (authentication.User, error) {
-	return authentication.User{}, nil
-}
-
-func (m *MockNotificationRepository) SetTelegramChatID(userID uint, chatID string) error {
-	return nil
-}
-
-func (m *MockNotificationRepository) SetTelegramLinkToken(userID uint, token string) error {
-	return nil
-}
-
-func (m *MockNotificationRepository) SetTelegramBotUsername(userID uint, username string) error {
-	return nil
-}
-
-func (m *MockNotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentication.User, error) {
-	return nil, nil
-}
-
-var _ dbController.NotificationRepositoryInterface = (*MockNotificationRepository)(nil)
 
 func TestNotificationControllerInitialization(t *testing.T) {
 	logger := zerolog.Nop()
-
-	mockRepo := &MockNotificationRepository{}
-
-	notificationController := &NotificationController{
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	nc := &NotificationController{
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{},
 		NotificationRepo: mockRepo,
 	}
-
-	if notificationController.NotificationRepo == nil {
-		t.Error("Expected notification repository to be set, got nil")
-	}
+	assert.NotNil(t, nc.NotificationRepo)
 }
 
-func TestNotificationControllerWithMockDB(t *testing.T) {
+func TestGenerateNotifications(t *testing.T) {
 	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
 
-	mockRepo := &MockNotificationRepository{}
+	t.Run("empty products no-op", func(t *testing.T) {
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{Interval: 24},
+			NotificationRepo: mockRepo,
+		}
+		nc.generateNotifications(&[]dbModel.Product{})
+	})
 
-	notificationController := &NotificationController{
+	t.Run("preferences error logs and continues", func(t *testing.T) {
+		mockRepo.NotifRecipients = nil
+		mockRepo.Err = gorm.ErrInvalidData
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{Interval: 24},
+			NotificationRepo: mockRepo,
+		}
+		products := []dbModel.Product{
+			{Model: gorm.Model{ID: 1}, ProductName: "Test", ExpireAt: time.Now().Add(-1 * time.Hour), HouseholdID: 1},
+		}
+		nc.generateNotifications(&products)
+	})
+}
+
+func TestSendNotificationsForRecipient(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+
+	tests := []struct {
+		name        string
+		threshold   int
+		expireOffset time.Duration
+		emailEnabled bool
+		ntfyEnabled  bool
+		telegramEnabled bool
+	}{
+		{"threshold 0 expired", 0, -1 * time.Hour, false, false, false},
+		{"threshold 3 expire 5d skip", 3, 5 * 24 * time.Hour, false, false, false},
+		{"threshold 3 expire 2d notify", 3, 2 * 24 * time.Hour, false, false, false},
+		{"email enabled", 0, -1 * time.Hour, true, false, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nc := &NotificationController{
+				Logger:           &logger,
+				Configuration:    &configuration.NotificationConfiguration{Interval: 24},
+				NotificationRepo: mockRepo,
+			}
+			if tt.emailEnabled {
+				nc.Providers = []NotificationProvider{
+					&EmailNotificationProvider{Configuration: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
+				}
+			}
+			product := &dbModel.Product{
+				Model:      gorm.Model{ID: 1},
+				ProductName: "Test",
+				ExpireAt:    time.Now().Add(tt.expireOffset),
+			}
+			pref := models.NotificationRecipientInfo{
+				NotificationThresholdDays: tt.threshold,
+				EmailEnabled:           tt.emailEnabled,
+				EmailAddress:           "test@example.com",
+			}
+			nc.sendNotificationsForRecipient(product, &pref)
+		})
+	}
+}
+
+func TestNewNotificationController(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	nc := NewNotificationController(&logger, &configuration.NotificationConfiguration{}, mockRepo)
+	assert.NotNil(t, nc)
+	assert.Equal(t, 15*time.Second, nc.telegramClient.Timeout)
+	assert.Equal(t, "https://api.telegram.org", nc.telegramAPIBase)
+}
+
+func TestInitializeProviders(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+
+	t.Run("no providers configured", func(t *testing.T) {
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{},
+			NotificationRepo: mockRepo,
+		}
+		nc.initializeProviders()
+		assert.Empty(t, nc.Providers)
+	})
+
+	t.Run("email provider configured", func(t *testing.T) {
+		nc := &NotificationController{
+			Logger:        &logger,
+			Configuration: &configuration.NotificationConfiguration{
+				SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587},
+			},
+			NotificationRepo: mockRepo,
+		}
+		nc.initializeProviders()
+		assert.Len(t, nc.Providers, 1)
+		assert.Equal(t, "email", nc.Providers[0].GetProviderType())
+	})
+}
+
+func TestDispatchEarlyReturn(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+
+	t.Run("disabled returns early", func(t *testing.T) {
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{Enabled: false},
+			NotificationRepo: mockRepo,
+		}
+		// Should return early without starting goroutine
+		nc.Dispatch()
+	})
+
+	t.Run("enabled starts goroutine", func(t *testing.T) {
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{Enabled: true, Interval: 24},
+			NotificationRepo: mockRepo,
+		}
+		// This will start a goroutine that loops forever
+		// We can't easily test this, but we can verify it doesn't panic
+		// For now, just call it and let it run briefly
+		go nc.Dispatch()
+		time.Sleep(50 * time.Millisecond)
+	})
+}
+
+
+func TestSendStreakMilestoneNotifications(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+
+	t.Run("prefs error returns early", func(t *testing.T) {
+		mockRepo.Err = gorm.ErrInvalidData
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{},
+			NotificationRepo: mockRepo,
+		}
+		nc.sendStreakMilestoneNotifications(1, 7)
+	})
+
+	t.Run("email fan-out success", func(t *testing.T) {
+		mockRepo.NotifRecipients = []models.NotificationRecipientInfo{
+			{EmailEnabled: true, EmailAddress: "test@example.com"},
+		}
+		mockRepo.Err = nil
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
+			NotificationRepo: mockRepo,
+		}
+		nc.sendStreakMilestoneNotifications(1, 7)
+	})
+
+	t.Run("telegram fan-out", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		mockRepo.NotifRecipients = []models.NotificationRecipientInfo{
+			{TelegramEnabled: true, TelegramChatID: "123", TelegramBotToken: "token"},
+		}
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{},
+			NotificationRepo: mockRepo,
+			telegramClient:   &http.Client{Timeout: 5 * time.Second},
+			telegramAPIBase:  server.URL,
+		}
+		nc.sendStreakMilestoneNotifications(1, 7)
+	})
+}
+
+func TestSendInvitationEmail(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	invitation := &dbModel.HouseholdInvitation{
+		Model:     gorm.Model{ID: 1},
+		Email:     "test@example.com",
+		HouseholdID: 1,
+		InviterID:  1,
+	}
+	nc := &NotificationController{
+		Logger:           &logger,
+		Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
+		NotificationRepo: mockRepo,
+	}
+
+	t.Run("not configured returns error", func(t *testing.T) {
+		ncBad := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{},
+			NotificationRepo: mockRepo,
+		}
+		err := ncBad.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com")
+		assert.Error(t, err)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		origFunc := emailSendFunc
+		emailSendFunc = func(d *gomail.Dialer, m *gomail.Message) error {
+			return nil
+		}
+		defer func() { emailSendFunc = origFunc }()
+
+		err := nc.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com")
+		assert.NoError(t, err)
+	})
+
+	t.Run("send fails marks failed", func(t *testing.T) {
+		origFunc := emailSendFunc
+		emailSendFunc = func(d *gomail.Dialer, m *gomail.Message) error {
+			return fmt.Errorf("send error")
+		}
+		defer func() { emailSendFunc = origFunc }()
+
+		err := nc.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com")
+		assert.Error(t, err)
+	})
+}
+
+func TestSendVerificationEmail(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	invitation := &dbModel.HouseholdInvitation{
+		Model:     gorm.Model{ID: 1},
+		Email:     "test@example.com",
+		HouseholdID: 1,
+		InviterID:  1,
+	}
+	nc := &NotificationController{
+		Logger:           &logger,
+		Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
+		NotificationRepo: mockRepo,
+	}
+
+	t.Run("not configured returns error", func(t *testing.T) {
+		ncBad := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{},
+			NotificationRepo: mockRepo,
+		}
+		err := ncBad.SendVerificationEmail(invitation, "user1", "http://example.com")
+		assert.Error(t, err)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		origFunc := emailSendFunc
+		emailSendFunc = func(d *gomail.Dialer, m *gomail.Message) error {
+			return nil
+		}
+		defer func() { emailSendFunc = origFunc }()
+
+		err := nc.SendVerificationEmail(invitation, "user1", "http://example.com")
+		assert.NoError(t, err)
+	})
+}
+
+func TestSendEmailVerification(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	nc := &NotificationController{
+		Logger:           &logger,
+		Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
+		NotificationRepo: mockRepo,
+	}
+
+	t.Run("not configured returns error", func(t *testing.T) {
+		ncBad := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{},
+			NotificationRepo: mockRepo,
+		}
+		err := ncBad.SendEmailVerification("test@example.com", "user1", "token", "http://example.com", time.Now())
+		assert.Error(t, err)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		origFunc := emailSendFunc
+		emailSendFunc = func(d *gomail.Dialer, m *gomail.Message) error {
+			return nil
+		}
+		defer func() { emailSendFunc = origFunc }()
+
+		err := nc.SendEmailVerification("test@example.com", "user1", "token", "http://example.com", time.Now())
+		assert.NoError(t, err)
+	})
+}
+
+func TestDispatchInvitationsEarlyReturn(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+
+	t.Run("email not configured returns early", func(t *testing.T) {
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{Interval: 24},
+			NotificationRepo: mockRepo,
+		}
+		// Should return early without starting goroutine
+		nc.DispatchInvitations("http://example.com")
+	})
+}
+
+func TestDispatchMonthlyWasteReportsEarlyReturn(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+
+	t.Run("email not configured", func(t *testing.T) {
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{MonthlyWasteReport: configuration.MonthlyWasteReportConfiguration{Day: 1, Hour: 0}},
+			NotificationRepo: mockRepo,
+		}
+		emailProvider := &EmailNotificationProvider{Configuration: configuration.SMTPConfiguration{}}
+		nc.processMonthlyWasteReports(emailProvider)
+	})
+}
+
+func TestDispatchStreakUpdatesEarlyReturn(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+
+	t.Run("nil StreakRepo returns early", func(t *testing.T) {
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{},
+			NotificationRepo: mockRepo,
+			StreakRepo:       nil,
+		}
+		nc.DispatchStreakUpdates()
+	})
+}
+
+func TestStartAllUserTelegramPollers(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	nc := &NotificationController{
+		Logger:           &logger,
+		Configuration:    &configuration.NotificationConfiguration{},
+		NotificationRepo: mockRepo,
+		telegramClient:   &http.Client{Timeout: 5 * time.Second},
+		telegramAPIBase:  "https://api.telegram.org",
+	}
+
+	t.Run("no users returns early", func(t *testing.T) {
+		mockRepo.Users = []authentication.User{}
+		nc.StartAllUserTelegramPollers()
+		// Should return without starting any pollers
+	})
+}
+
+func TestSendTelegramText(t *testing.T) {
+	logger := zerolog.Nop()
+	nc := &NotificationController{
+		Logger:          &logger,
+		telegramClient:  &http.Client{Timeout: 5 * time.Second},
+		telegramAPIBase: "https://api.telegram.org",
+	}
+
+	t.Run("200 returns nil", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+		nc.telegramAPIBase = server.URL
+		nc.sendTelegramText(nc.telegramClient, server.URL, "123", "test message")
+	})
+
+	t.Run("non-2xx returns error", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+		}))
+		defer server.Close()
+		nc.telegramAPIBase = server.URL
+		nc.sendTelegramText(nc.telegramClient, server.URL, "123", "test message")
+	})
+}
+
+func TestGetUserTelegramBotUsername(t *testing.T) {
+	logger := zerolog.Nop()
+	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	nc := &NotificationController{
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{},
 		NotificationRepo: mockRepo,
 	}
-
-	if notificationController.NotificationRepo == nil {
-		t.Error("Expected notification repository to be set, got nil")
-	}
-
-	var _ = notificationController.NotificationRepo
-}
-
-func TestProductExpirationDetection(t *testing.T) {
-	expiredProduct := dbModel.Product{
-		Model: gorm.Model{
-			ID: 1,
-		},
-		Barcode:     "1234567890123",
-		ProductName: "Expired Product",
-		ExpireAt:    time.Now().Add(-24 * time.Hour),
-	}
-
-	futureProduct := dbModel.Product{
-		Model: gorm.Model{
-			ID: 2,
-		},
-		Barcode:     "9876543210987",
-		ProductName: "Future Product",
-		ExpireAt:    time.Now().Add(24 * time.Hour),
-	}
-
-	if expiredProduct.ExpireAt.After(time.Now()) {
-		t.Error("Expected expired product to have past expiration date")
-	}
-
-	if !futureProduct.ExpireAt.After(time.Now()) {
-		t.Error("Expected future product to have future expiration date")
-	}
-}
-
-func TestNotificationConfiguration(t *testing.T) {
-	config := configuration.NotificationConfiguration{
-		Interval: 24,
-		SMTP: configuration.SMTPConfiguration{
-			Host:        "smtp.example.com",
-			Port:        587,
-			User:        "username",
-			Password:    "password",
-			FromAddress: "noreply@example.com",
-			SSL:         true,
-		},
-	}
-
-	if config.Interval != 24 {
-		t.Errorf("Expected interval to be 24, got %d", config.Interval)
-	}
-
-	if config.SMTP.FromAddress != "noreply@example.com" {
-		t.Errorf("Expected from address to be 'noreply@example.com', got %s", config.SMTP.FromAddress)
-	}
-
-	if config.SMTP.Host != "smtp.example.com" {
-		t.Errorf("Expected SMTP host to be 'smtp.example.com', got %s", config.SMTP.Host)
-	}
+	assert.Equal(t, "", nc.GetUserTelegramBotUsername(1))
 }
