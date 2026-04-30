@@ -12,6 +12,13 @@ import (
 	gomail "gopkg.in/mail.v2"
 )
 
+func TestEmailProvider_GetProviderType(t *testing.T) {
+	e := &EmailNotificationProvider{}
+	if got := e.GetProviderType(); got != "email" {
+		t.Errorf("GetProviderType() = %v, want email", got)
+	}
+}
+
 func TestEmailProvider_IsConfigured(t *testing.T) {
 	tests := []struct {
 		name string

@@ -424,6 +424,10 @@ func (nc *NotificationController) DispatchStreakUpdates() {
 }
 
 func (nc *NotificationController) processStreakUpdates() {
+	if nc.StreakRepo == nil {
+		nc.Logger.Warn().Msg("StreakRepo not set, skipping streak updates")
+		return
+	}
 	streaks, err := nc.StreakRepo.GetAllStreaks()
 	if err != nil {
 		nc.Logger.Error().Msgf("Streak updater: failed to fetch streaks: %s", err)
