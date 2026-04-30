@@ -22,6 +22,57 @@ import (
 
 var errEmailNotVerified = errors.New("email not verified")
 
+// parseRequestID validates if the string is a valid UUID, returns empty string if not
+func parseRequestID(s string) string {
+	if s == "" {
+		return ""
+	}
+	if _, err := uuid.Parse(s); err == nil {
+		return s
+	}
+	return ""
+}
+
+// RequestIDMiddleware mints a UUID per request, stashes it in gin.Context,
+// sets the response header, and replaces the context logger with a child logger
+func RequestIDMiddleware(baseLogger *zerolog.Logger) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		// Honor incoming X-Request-ID if present and valid; else mint
+		reqID := parseRequestID(ctx.GetHeader(static.RequestIDHeader))
+		if reqID == "" {
+			reqID = uuid.New().String()
+		}
+		ctx.Set(static.RequestIDContextKey, reqID)
+		ctx.Header(static.RequestIDHeader, reqID)
+
+		// Replace context logger with child carrying request_id
+		l := baseLogger.With().Str("request_id", reqID).Logger()
+		ctx.Set("logger", &l)
+
+		ctx.Next()
+	}
+}
+
+// UserContextLoggerMiddleware enriches the context logger with user_id after JWT/PAT auth
+func UserContextLoggerMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		claims := jwt.ExtractClaims(ctx)
+		if raw, ok := claims[static.TokenIdentityKey]; ok {
+			if f, ok := raw.(float64); ok {
+				uid := uint(f)
+				ctx.Set(static.UserIDContextKey, uid)
+
+				// Enrich ctx logger with user_id
+				if existing, ok := ctx.MustGet("logger").(*zerolog.Logger); ok {
+					enriched := existing.With().Uint("user_id", uid).Logger()
+					ctx.Set("logger", &enriched)
+				}
+			}
+		}
+		ctx.Next()
+	}
+}
+
 // ZerologMiddleware implements a gin.HandlerFunc and logs the output from gin
 func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -31,14 +82,24 @@ func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
 		// Process the request
 		ctx.Next()
 
+		// Read request_id and user_id from context
+		reqID, _ := ctx.Get(static.RequestIDContextKey)
+		userID, _ := ctx.Get(static.UserIDContextKey)
+
 		// Log the request details
-		logger.Info().
+		evt := logger.Info().
 			Str("remote", ctx.Request.RemoteAddr).
 			Str("method", ctx.Request.Method).
 			Str("path", ctx.Request.URL.Path).
 			Int("status", ctx.Writer.Status()).
-			Dur("duration", time.Since(start)).
-			Msg("Request handled")
+			Dur("duration", time.Since(start))
+		if reqID != nil {
+			evt = evt.Str("request_id", reqID.(string))
+		}
+		if userID != nil {
+			evt = evt.Uint("user_id", userID.(uint))
+		}
+		evt.Msg("Request handled")
 	}
 }
 

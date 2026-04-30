@@ -18,9 +18,9 @@ func TestTelegramProvider_GetProviderType(t *testing.T) {
 
 func TestTelegramProvider_IsConfigured(t *testing.T) {
 	tests := []struct {
-		name string
+		name     string
 		botToken string
-		want  bool
+		want     bool
 	}{
 		{"empty token", "", false},
 		{"has token", "token123", true},
