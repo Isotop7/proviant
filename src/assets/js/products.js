@@ -488,12 +488,6 @@ function showSkeleton() {
   if (productRows) productRows.classList.add('d-none');
   if (skeletonRows) skeletonRows.classList.remove('d-none');
 }
-function hideSkeleton() {
-  const productRows = document.getElementById('productRows');
-  const skeletonRows = document.getElementById('skeletonRows');
-  if (productRows) productRows.classList.remove('d-none');
-  if (skeletonRows) skeletonRows.classList.add('d-none');
-}
 
 // Show skeleton when navigating via filter, view toggle, or clear-all
 document.addEventListener('click', function(event) {

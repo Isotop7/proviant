@@ -8,7 +8,7 @@ import (
 
 type Webhook struct {
 	gorm.Model
-	UserID uint   `gorm:"index, not null" json:"-"`
+	UserID uint   `gorm:"index;not null" json:"-"`
 	URL    string `gorm:"not null" json:"url"`
 	Secret string `gorm:"not null" json:"-"`
 	Events string `gorm:"not null" json:"events"`
@@ -17,7 +17,7 @@ type Webhook struct {
 
 type WebhookDeliveryLog struct {
 	gorm.Model
-	WebhookID    uint      `gorm:"index, not null" json:"webhookId"`
+	WebhookID    uint      `gorm:"index;not null" json:"webhookId"`
 	StatusCode   int       `json:"statusCode"`
 	ResponseBody string    `json:"responseBody,omitempty"`
 	Error        string    `json:"error,omitempty"`

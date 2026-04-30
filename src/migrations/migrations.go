@@ -69,7 +69,6 @@ func AddNotificationPreferencesMigration(db *gorm.DB) error {
 // When the amount column is first added via AutoMigrate, existing rows receive NULL (not 0),
 // so both cases must be handled.
 func SetDefaultProductAmounts(logger *zerolog.Logger, db *gorm.DB) error {
-	logger.Info().Msg("Running database migrations for backfilling product amounts")
 	return db.Exec("UPDATE products SET amount = 1 WHERE amount IS NULL OR amount = 0").Error
 }
 
@@ -78,7 +77,6 @@ func SetDefaultProductAmounts(logger *zerolog.Logger, db *gorm.DB) error {
 // SQLite does not support IF EXISTS on DROP COLUMN, so we attempt the drop and swallow
 // any error that indicates the column is already absent.
 func DropLegacyStorageLocationColumn(logger *zerolog.Logger, db *gorm.DB) error {
-	logger.Info().Msg("Dropping legacy storage_location string column from products")
 	err := db.Exec(`ALTER TABLE products DROP COLUMN storage_location`).Error
 	if err != nil {
 		errStr := err.Error()
@@ -87,7 +85,7 @@ func DropLegacyStorageLocationColumn(logger *zerolog.Logger, db *gorm.DB) error 
 			strings.Contains(errStr, "Unknown column") ||
 			strings.Contains(errStr, "Can't DROP") ||
 			strings.Contains(errStr, "syntax error") {
-			logger.Warn().Msg("storage_location column not present or not droppable, skipping")
+			logger.Debug().Msg("storage_location column not present or not droppable, skipping")
 			return nil
 		}
 		return err
@@ -98,8 +96,6 @@ func DropLegacyStorageLocationColumn(logger *zerolog.Logger, db *gorm.DB) error 
 // SeedDefaultStorageLocations creates Fridge, Freezer and Pantry for every
 // existing household that has no storage locations yet.
 func SeedDefaultStorageLocations(logger *zerolog.Logger, db *gorm.DB) error {
-	logger.Info().Msg("Seeding default storage locations for existing households")
-
 	type defaultLocation struct {
 		Name      string
 		Icon      string
@@ -137,32 +133,59 @@ func SeedDefaultStorageLocations(logger *zerolog.Logger, db *gorm.DB) error {
 	return nil
 }
 
+// AddPerformanceIndexes creates missing indexes for product and user tables
+// to improve query performance for common access patterns.
+func AddPerformanceIndexes(logger *zerolog.Logger, db *gorm.DB) error {
+	statements := []string{
+		"CREATE INDEX IF NOT EXISTS idx_products_household_deleted ON products(household_id, deleted_at)",
+		"CREATE INDEX IF NOT EXISTS idx_products_expire_at ON products(expire_at)",
+		"CREATE INDEX IF NOT EXISTS idx_products_barcode_household ON products(barcode, household_id)",
+		"CREATE INDEX IF NOT EXISTS idx_users_mail_address ON users(mail_address)",
+		"CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+	}
+	for _, sql := range statements {
+		if err := db.Exec(sql).Error; err != nil {
+			return fmt.Errorf("creating index: %w (sql: %s)", err, sql)
+		}
+	}
+	return nil
+}
+
 func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
-	// Migrations version 0.2.0
-	logger.Info().Msg("Running database migrations for version 0.2.0")
+	logger.Info().Msg("Running database migrations")
+
+	logger.Debug().Msg("Running database migrations to assign households to users")
 	if err := assignHouseholdsToUsers(db); err != nil {
 		return err
 	}
 
 	// Migrations for notification preferences
-	logger.Info().Msg("Running database migrations for notification preferences")
+	logger.Debug().Msg("Running database migrations for notification preferences")
 	if err := AddNotificationPreferencesMigration(db); err != nil {
 		return err
 	}
 
 	// Backfill email verification for existing users
-	logger.Info().Msg("Running database migrations for email verification backfill")
+	logger.Debug().Msg("Running database migrations for email verification backfill")
 	if err := BackfillEmailVerification(logger, db); err != nil {
 		return err
 	}
 
 	// Drop legacy free-text storage_location column from products
+	logger.Debug().Msg("Drop legacy storage location columns")
 	if err := DropLegacyStorageLocationColumn(logger, db); err != nil {
 		return err
 	}
 
 	// Seed default storage locations for existing households
+	logger.Debug().Msg("Backfill database with default storage locations")
 	if err := SeedDefaultStorageLocations(logger, db); err != nil {
+		return err
+	}
+
+	// Add performance indexes
+	logger.Debug().Msg("Add performance indexes")
+	if err := AddPerformanceIndexes(logger, db); err != nil {
 		return err
 	}
 
@@ -172,8 +195,6 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 // BackfillEmailVerification sets EmailVerifiedAt for all existing users that don't have it set.
 // This is a one-time migration to ensure existing users aren't locked out after email verification is introduced.
 func BackfillEmailVerification(logger *zerolog.Logger, db *gorm.DB) error {
-	logger.Info().Msg("Running database migrations for backfilling email verification")
-
 	result := db.Exec("UPDATE users SET email_verified_at = ? WHERE email_verified_at IS NULL", time.Now())
 	if result.Error != nil {
 		return result.Error
