@@ -5,7 +5,7 @@ RUN apk add --no-cache --update g++ gcc go npm
 COPY ./src/go.mod ./src/go.sum ./
 RUN go mod download
 COPY ./ ./
-RUN npm install && \
+RUN npm ci && \
     npm run css && \
     cp node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/ && \
 	cp node_modules/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-*.woff2 ./src/assets/fonts/ && \
@@ -27,9 +27,8 @@ FROM docker.io/alpine:3.23
 WORKDIR /app
 
 COPY --from=buildenv /app/proviant /app/proviant
-RUN mkdir /app/data
-# Install Tesseract OCR with German and English language packs
-RUN apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng
+RUN mkdir /app/data && \
+    apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng
 COPY ./src/config.yaml.sqlite.tmpl /app/config.yaml
 ENV GIN_MODE=release
 EXPOSE 5050

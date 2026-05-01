@@ -10,9 +10,10 @@ cd "$PROJECT_ROOT"
 VALID_TYPES="feat|fix|refactor|change|update|perf|deprecat|remove|delete|security|doc|test|ci|chore|build|style|implement|add|hotfix|bug"
 
 validate_message() {
-    local msg=$(echo "$1" | head -n1 | tr -d '\r' | xargs)
+    local param="$1"
+    local msg=$(echo "${param}" | head -n1 | tr -d '\r' | xargs)
 
-    if [ -z "$msg" ]; then
+    if [[ -z "$msg" ]]; then
         echo "❌ INVALID: Empty commit message"
         return 1
     fi
@@ -33,7 +34,7 @@ check_range() {
     local commits
     commits=$(git log --format="%h %s" "$range" 2>/dev/null || true)
 
-    if [ -z "$commits" ]; then
+    if [[ -z "$commits" ]]; then
         echo "No commits in range '$range'"
         return 0
     fi
@@ -67,7 +68,7 @@ case "${1:-check}" in
         ;;
     validate)
         shift
-        if [ -z "$1" ]; then
+        if [[ -z "$1" ]]; then
             echo "Usage: $0 validate <commit_message>"
             exit 1
         fi
