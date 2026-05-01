@@ -42,7 +42,7 @@ func CreateWebhook(ctx *gin.Context) {
 	}
 
 	var req apiModel.CreateWebhookRequest
-	if bindErr := ctx.ShouldBindJSON(&req); bindErr != nil {
+	if ctx.ShouldBindJSON(&req) != nil {
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
