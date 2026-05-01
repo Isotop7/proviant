@@ -103,31 +103,30 @@ func ScanExpiryDate(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrOCRProcessing))
 		return
 	case resp := <-resultChan:
-		// Optionally log the scan to database
 		if userID, ok := getCurrentUserID(ctx, logger); ok {
-			storeScan := func() {
-				repos, dbOk := ctx.MustGet("repos").(*database.RepositoryContainer)
-				if !dbOk {
-					logger.Warn().Msg("repos not available for expiry scan logging")
-					return
-				}
-				scan := &dbModel.ExpiryScan{
-					UserID:       userID,
-					ScannedAt:    time.Now(),
-					DetectedDate: mustParseDate(resp.DetectedDate),
-					Confidence:   resp.Confidence,
-					RawText:      resp.RawText,
-					ImageHash:    hashImage(imgBytes),
-				}
-				if dbErr := repos.ExpiryScan.Create(scan); dbErr != nil {
-					logger.Warn().Msgf("Failed to store expiry scan: %s", dbErr.Error())
-				}
-			}
-			// Fire-and-forget in background to avoid slowing response
-			go storeScan()
+			go logExpiryScan(ctx, logger, userID, resp, imgBytes)
 		}
 		ctx.JSON(http.StatusOK, resp)
 		return
+	}
+}
+
+func logExpiryScan(ctx *gin.Context, logger *zerolog.Logger, userID uint, resp *apiModel.ExpiryScanResponse, imgBytes []byte) {
+	repos, dbOk := ctx.MustGet("repos").(*database.RepositoryContainer)
+	if !dbOk {
+		logger.Warn().Msg("repos not available for expiry scan logging")
+		return
+	}
+	scan := &dbModel.ExpiryScan{
+		UserID:       userID,
+		ScannedAt:    time.Now(),
+		DetectedDate: mustParseDate(resp.DetectedDate),
+		Confidence:   resp.Confidence,
+		RawText:      resp.RawText,
+		ImageHash:    hashImage(imgBytes),
+	}
+	if dbErr := repos.ExpiryScan.Create(scan); dbErr != nil {
+		logger.Warn().Msgf("Failed to store expiry scan: %s", dbErr.Error())
 	}
 }
 

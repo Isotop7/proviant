@@ -199,20 +199,27 @@ func GetOpenFoodFactsData(ctx *gin.Context) {
 	}
 
 	if offacntrl.Configuration.CacheEnabled {
-		if storeErr := productRepo.CreateOpenFoodFactsCache(&entry); storeErr != nil {
-			logger.Warn().Msgf("Failed to store cache entry for barcode '%s': %s", barcode, storeErr)
-		} else if offacntrl.Configuration.ImageCacheEnabled && entry.ImageURL != "" {
-			localPath, imgErr := offacntrl.DownloadImage(entry.ImageURL, barcode)
-			if imgErr != nil {
-				logger.Warn().Msgf("Failed to cache image for barcode '%s': %s", barcode, imgErr)
-			} else {
-				entry.ImageURL = localPath
-				if updateErr := productRepo.UpdateOpenFoodFactsCacheImageURL(barcode, localPath); updateErr != nil {
-					logger.Warn().Msgf("Failed to update cached image URL for barcode '%s': %s", barcode, updateErr)
-				}
-			}
-		}
+		storeCacheEntry(productRepo, offacntrl, logger, barcode, &entry)
 	}
 
 	ctx.JSON(http.StatusOK, entry)
+}
+
+func storeCacheEntry(productRepo *database.ProductRepository, offacntrl *controllers.OpenFoodFactsAPIController, logger *zerolog.Logger, barcode string, entry *dbModel.OpenFoodFactsCache) {
+	if storeErr := productRepo.CreateOpenFoodFactsCache(entry); storeErr != nil {
+		logger.Warn().Msgf("Failed to store cache entry for barcode '%s': %s", barcode, storeErr)
+		return
+	}
+	if !offacntrl.Configuration.ImageCacheEnabled || entry.ImageURL == "" {
+		return
+	}
+	localPath, imgErr := offacntrl.DownloadImage(entry.ImageURL, barcode)
+	if imgErr != nil {
+		logger.Warn().Msgf("Failed to cache image for barcode '%s': %s", barcode, imgErr)
+		return
+	}
+	entry.ImageURL = localPath
+	if updateErr := productRepo.UpdateOpenFoodFactsCacheImageURL(barcode, localPath); updateErr != nil {
+		logger.Warn().Msgf("Failed to update cached image URL for barcode '%s': %s", barcode, updateErr)
+	}
 }

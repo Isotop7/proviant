@@ -224,19 +224,10 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	// Validate ntfy configuration if enabled
-	if preferences.NtfyEnabled {
-		if preferences.NtfyTopic == "" {
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "ntfy topic is required when ntfy is enabled"})
-			return
-		}
-		if preferences.NtfyURL == "" {
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "ntfy URL is required when ntfy is enabled"})
-			return
-		}
+	if err := validateNtfyPreferences(preferences); err != nil {
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		return
 	}
-
-	// Create database controller
 
 	user, getErr := repos.Users.GetUserByID(userID)
 	if getErr != nil {
@@ -251,30 +242,7 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	// Handle bot token lifecycle: start/stop poller when token changes.
-	oldToken := user.NotificationPreferences.TelegramBotToken
-	newToken := preferences.TelegramBotToken
-	if newToken == "" {
-		// Preserve existing token if not provided (allows partial updates)
-		newToken = oldToken
-	}
-
-	tokenChanged := newToken != oldToken
-
-	if tokenChanged && newToken == "" {
-		// Token cleared — disable Telegram and wipe linked state.
-		preferences.TelegramEnabled = false
-		preferences.TelegramChatID = ""
-		preferences.TelegramBotUsername = ""
-	} else {
-		// Preserve linking fields — managed by the dedicated link-token endpoint.
-		preferences.TelegramChatID = user.NotificationPreferences.TelegramChatID
-		preferences.TelegramLinkToken = user.NotificationPreferences.TelegramLinkToken
-		if !tokenChanged {
-			preferences.TelegramBotUsername = user.NotificationPreferences.TelegramBotUsername
-		}
-	}
-	preferences.TelegramBotToken = newToken
+	newToken, tokenChanged := resolveTelegramTokenUpdate(&user, &preferences)
 
 	user.NotificationPreferences = preferences
 
@@ -285,18 +253,8 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	// Manage per-user Telegram poller when token changed.
-	if tokenChanged {
-		if notificationController, ok := getNotificationController(ctx); ok {
-			if newToken == "" {
-				notificationController.StopUserTelegramPoller(userID)
-			} else {
-				notificationController.StartUserTelegramPoller(userID, newToken)
-			}
-		}
-	}
+	manageUserTelegramPoller(ctx, userID, tokenChanged, newToken)
 
-	// Return success
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Notification preferences updated successfully"})
 }
 
@@ -344,4 +302,58 @@ func GenerateTelegramLinkToken(ctx *gin.Context) {
 		"token":       token,
 		"botUsername": botUsername,
 	})
+}
+
+func validateNtfyPreferences(prefs authentication.NotificationPreferences) error {
+	if !prefs.NtfyEnabled {
+		return nil
+	}
+	if prefs.NtfyTopic == "" {
+		return fmt.Errorf("ntfy topic is required when ntfy is enabled")
+	}
+	if prefs.NtfyURL == "" {
+		return fmt.Errorf("ntfy URL is required when ntfy is enabled")
+	}
+	return nil
+}
+
+// resolveTelegramTokenUpdate reconciles the incoming bot token with the stored one,
+// mutates prefs in place, and returns the resolved token and whether it changed.
+func resolveTelegramTokenUpdate(user *authentication.User, prefs *authentication.NotificationPreferences) (newToken string, tokenChanged bool) {
+	oldToken := user.NotificationPreferences.TelegramBotToken
+	newToken = prefs.TelegramBotToken
+	if newToken == "" {
+		newToken = oldToken
+	}
+	tokenChanged = newToken != oldToken
+	if tokenChanged && newToken == "" {
+		// Token cleared — disable Telegram and wipe linked state.
+		prefs.TelegramEnabled = false
+		prefs.TelegramChatID = ""
+		prefs.TelegramBotUsername = ""
+	} else {
+		// Preserve linking fields — managed by the dedicated link-token endpoint.
+		prefs.TelegramChatID = user.NotificationPreferences.TelegramChatID
+		prefs.TelegramLinkToken = user.NotificationPreferences.TelegramLinkToken
+		if !tokenChanged {
+			prefs.TelegramBotUsername = user.NotificationPreferences.TelegramBotUsername
+		}
+	}
+	prefs.TelegramBotToken = newToken
+	return
+}
+
+func manageUserTelegramPoller(ctx *gin.Context, userID uint, tokenChanged bool, newToken string) {
+	if !tokenChanged {
+		return
+	}
+	notificationController, ok := getNotificationController(ctx)
+	if !ok {
+		return
+	}
+	if newToken == "" {
+		notificationController.StopUserTelegramPoller(userID)
+	} else {
+		notificationController.StartUserTelegramPoller(userID, newToken)
+	}
 }

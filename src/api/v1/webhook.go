@@ -226,13 +226,11 @@ func UpdateWebhook(ctx *gin.Context) {
 	if req.Secret != "" {
 		webhook.Secret = req.Secret
 	}
+	if err := validateWebhookEvents(req.Events); err != nil {
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		return
+	}
 	if req.Events != nil {
-		for _, event := range req.Events {
-			if !isValidWebhookEvent(event) {
-				ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrWebhookInvalidEvent))
-				return
-			}
-		}
 		eventsJSON, _ := json.Marshal(req.Events)
 		webhook.Events = string(eventsJSON)
 	}
@@ -368,6 +366,15 @@ func toWebhookResponse(webhook *dbModel.Webhook) apiModel.WebhookResponse {
 		CreatedAt: webhook.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: webhook.UpdatedAt.Format(time.RFC3339),
 	}
+}
+
+func validateWebhookEvents(events []string) error {
+	for _, event := range events {
+		if !isValidWebhookEvent(event) {
+			return errors.ErrWebhookInvalidEvent
+		}
+	}
+	return nil
 }
 
 func isValidWebhookEvent(event string) bool {

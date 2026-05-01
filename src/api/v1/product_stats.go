@@ -5,11 +5,24 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers/database"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
+
+func getLastInsertedProductName(repos *database.RepositoryContainer, userID uint) string {
+	householdID, householdErr := repos.Products.GetUserHouseholdByID(userID)
+	if householdErr != nil || householdID == 0 {
+		return ""
+	}
+	lastProduct, lastErr := repos.Products.GetLastInsertedProduct(householdID)
+	if lastErr != nil || lastProduct.ID == 0 {
+		return ""
+	}
+	return lastProduct.ProductName
+}
 
 // GetExpired returns the list of all expired products of a user
 // @Summary      	Gets expired products
@@ -37,15 +50,12 @@ func GetExpired(ctx *gin.Context) {
 
 	products, getExpiredErr := repos.Products.GetProductsExpired(userID)
 
-	// Check for error or return products
 	if getExpiredErr != nil {
 		logger.Error().Msgf("Error getting expired products: %s", getExpiredErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting expired products"})
 		return
-	} else {
-		ctx.JSON(http.StatusOK, products)
-		return
 	}
+	ctx.JSON(http.StatusOK, products)
 }
 
 // GetProductSummary returns a lightweight count summary for Home Assistant sensor polling
@@ -197,14 +207,7 @@ func GetProductStats(ctx *gin.Context) {
 	}
 	uniqueArchived := len(uniqueArchivedMap)
 
-	var lastInsertedProduct string
-	householdID, householdErr := repos.Products.GetUserHouseholdByID(userID)
-	if householdErr == nil && householdID > 0 {
-		lastProduct, lastErr := repos.Products.GetLastInsertedProduct(householdID)
-		if lastErr == nil && lastProduct.ID != 0 {
-			lastInsertedProduct = lastProduct.ProductName
-		}
-	}
+	lastInsertedProduct := getLastInsertedProductName(repos, userID)
 
 	ctx.JSON(http.StatusOK, apiModel.ProductStatsResponse{
 		WasteCount:          wasteCount,
