@@ -144,31 +144,6 @@
           </div>
         </div>
 
-        <!-- Timestamps card -->
-        <div class="pv-card">
-          <div class="pv-card-header">
-            <div class="pv-card-header-icon"><i class="bi bi-clock-history"></i></div>
-            <div class="pv-card-header-title">Timestamps</div>
-            <span style="font-size:11px;color:var(--fg-3);margin-left:auto;">Read-only</span>
-          </div>
-          <div class="pv-card-body">
-            <div class="pv-meta-grid">
-              <div>
-                <div class="pv-meta-label">Scanned at</div>
-                <div class="pv-meta-value">{{ .Product.ScannedAt | humanDateTime }}</div>
-              </div>
-              <div>
-                <div class="pv-meta-label">Updated at</div>
-                <div class="pv-meta-value">{{ .Product.UpdatedAt | humanDateTime }}</div>
-              </div>
-              <div>
-                <div class="pv-meta-label">Notified at</div>
-                <div class="pv-meta-value">{{ .Product.NotifiedAt | humanDateTime }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Desktop form actions (hidden on mobile) -->
         <div class="pv-form-actions d-none d-md-flex">
           <button class="pv-btn-primary" type="submit">
