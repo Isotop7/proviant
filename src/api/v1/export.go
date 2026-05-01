@@ -18,7 +18,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
-const GetUserActiveProductsFiltered = "GetUserActiveProductsFiltered: %s"
+const (
+	GetUserActiveProductsFiltered    = "GetUserActiveProductsFiltered: %s"
+	fmtGetUserArchivedProductsFilter = "GetUserArchivedProductsFiltered: %s"
+	mimeTypeCSV                      = "text/csv"
+)
 
 
 func parseDateRange(ctx *gin.Context) (*time.Time, *time.Time) {
@@ -122,11 +126,11 @@ func ExportProductsCSV(ctx *gin.Context) {
 	products, err := repos.Products.GetUserActiveProductsFiltered(userID, from, to)
 	if err != nil {
 		logger.Error().Msgf(GetUserActiveProductsFiltered, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})
 		return
 	}
 
-	ctx.Header(util.RequestHeaderContentType, "text/csv")
+	ctx.Header(util.RequestHeaderContentType, mimeTypeCSV)
 	ctx.Header(util.RequestHeaderContentDisposition, "attachment; filename=\"products.csv\"")
 
 	writer := csv.NewWriter(ctx.Writer)
@@ -177,7 +181,7 @@ func ExportProductsJSON(ctx *gin.Context) {
 	products, err := repos.Products.GetUserActiveProductsFiltered(userID, from, to)
 	if err != nil {
 		logger.Error().Msgf(GetUserActiveProductsFiltered, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})
 		return
 	}
 
@@ -218,12 +222,12 @@ func ExportArchiveCSV(ctx *gin.Context) {
 
 	products, err := repos.Products.GetUserArchivedProductsFiltered(userID, from, to)
 	if err != nil {
-		logger.Error().Msgf("GetUserArchivedProductsFiltered: %s", err)
+		logger.Error().Msgf(fmtGetUserArchivedProductsFilter, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting archived products"})
 		return
 	}
 
-	ctx.Header(util.RequestHeaderContentType, "text/csv")
+	ctx.Header(util.RequestHeaderContentType, mimeTypeCSV)
 	ctx.Header(util.RequestHeaderContentDisposition, "attachment; filename=\"archive.csv\"")
 
 	writer := csv.NewWriter(ctx.Writer)
@@ -304,7 +308,7 @@ func ExportFullJSON(ctx *gin.Context) {
 
 	archivedProducts, err := repos.Products.GetUserArchivedProductsFiltered(userID, nil, nil)
 	if err != nil {
-		logger.Error().Msgf("GetUserArchivedProductsFiltered: %s", err)
+		logger.Error().Msgf(fmtGetUserArchivedProductsFilter, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting archived products"})
 		return
 	}
@@ -346,15 +350,15 @@ func ExportFullJSON(ctx *gin.Context) {
 func buildExportStats(ctx *gin.Context, repos *database.RepositoryContainer, userID uint, householdID uint, notificationThresholdDays int, archivedProductsLen int, logger *zerolog.Logger) (apiModel.ProductStatsResponse, bool) {
 	totalActive, err := repos.Products.GetActiveProductsCount(userID)
 	if err != nil {
-		logger.Error().Msgf("GetActiveProductsCount: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing active product count"})
+		logger.Error().Msgf(errors.FmtErrGetActiveProductsCount, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingActiveCount})
 		return apiModel.ProductStatsResponse{}, false
 	}
 
 	wasteCount, err := repos.Products.GetExpiredProductsCount(userID)
 	if err != nil {
-		logger.Error().Msgf("GetExpiredProductsCount: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing waste count"})
+		logger.Error().Msgf(errors.FmtErrGetExpiredProductsCount, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingWasteCount})
 		return apiModel.ProductStatsResponse{}, false
 	}
 
@@ -370,29 +374,29 @@ func buildExportStats(ctx *gin.Context, repos *database.RepositoryContainer, use
 
 	expiringSoon, err := repos.Products.GetExpiringSoonProducts(userID, expiringSoonDays)
 	if err != nil {
-		logger.Error().Msgf("GetExpiringSoonProducts: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon products"})
+		logger.Error().Msgf(errors.FmtErrGetExpiringSoonProducts, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiringSoon})
 		return apiModel.ProductStatsResponse{}, false
 	}
 
 	categories, err := repos.Products.GetProductCategoryBreakdown(userID)
 	if err != nil {
-		logger.Error().Msgf("GetProductCategoryBreakdown: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing category breakdown"})
+		logger.Error().Msgf(errors.FmtErrGetProductCategoryBreakdown, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingCategoryBreakdown})
 		return apiModel.ProductStatsResponse{}, false
 	}
 
 	expiryTrend, err := repos.Products.GetExpiryTrend(userID)
 	if err != nil {
-		logger.Error().Msgf("GetExpiryTrend: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiry trend"})
+		logger.Error().Msgf(errors.FmtErrGetExpiryTrend, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiryTrend})
 		return apiModel.ProductStatsResponse{}, false
 	}
 
 	uniqueArchivedMap, err := repos.Products.GetArchivedProductsGroupedByBarcode(userID)
 	if err != nil {
-		logger.Error().Msgf("GetArchivedProductsGroupedByBarcode: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing unique archived count"})
+		logger.Error().Msgf(errors.FmtErrGetArchivedProductsGroupedByBarcode, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingUniqueArchivedCount})
 		return apiModel.ProductStatsResponse{}, false
 	}
 

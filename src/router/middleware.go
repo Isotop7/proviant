@@ -12,6 +12,7 @@ import (
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	"codeberg.org/isotop7/proviant/templates"
+	"codeberg.org/isotop7/proviant/util"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -47,7 +48,7 @@ func RequestIDMiddleware(baseLogger *zerolog.Logger) gin.HandlerFunc {
 
 		// Replace context logger with child carrying request_id
 		l := baseLogger.With().Str("request_id", reqID).Logger()
-		ctx.Set("logger", &l)
+		ctx.Set(util.ContextKeyLogger, &l)
 
 		ctx.Next()
 	}
@@ -63,9 +64,9 @@ func UserContextLoggerMiddleware() gin.HandlerFunc {
 				ctx.Set(static.UserIDContextKey, uid)
 
 				// Enrich ctx logger with user_id
-				if existing, ok := ctx.MustGet("logger").(*zerolog.Logger); ok {
+				if existing, ok := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger); ok {
 					enriched := existing.With().Uint("user_id", uid).Logger()
-					ctx.Set("logger", &enriched)
+					ctx.Set(util.ContextKeyLogger, &enriched)
 				}
 			}
 		}
@@ -118,7 +119,7 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 		return
 	}
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
 		return
@@ -126,7 +127,7 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 
 	userRepo := database.NewUserRepository(dbHandle)
 
-	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
 	maxLoginAttempts := database.DefaultMaxLoginAttempts
 	lockoutDurationMins := database.DefaultLockoutDurationMins
 	if proviantConfig != nil {
@@ -189,7 +190,7 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
 	}
 
 	// Get database instance from context and fail if not found
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
 		return false
 	}
@@ -212,7 +213,7 @@ func isTokenRevoked(ctx *gin.Context) bool {
 		return false
 	}
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
 		return false
 	}

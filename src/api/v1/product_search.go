@@ -118,8 +118,8 @@ func SearchProducts(ctx *gin.Context) {
 
 	products, productErr := repos.Products.SearchProducts(enumParam, queryValue, sort, order, userID)
 	if productErr != nil {
-		logger.Error().Msgf("Error getting products: %s", productErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})
+		logger.Error().Msgf("%s: %s", errors.MsgErrGettingProducts, productErr)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})
 		return
 	}
 

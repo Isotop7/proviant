@@ -18,6 +18,7 @@ import (
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/templates"
+	"codeberg.org/isotop7/proviant/util"
 	"codeberg.org/isotop7/proviant/web"
 
 	"github.com/gin-contrib/cors"
@@ -83,13 +84,13 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Database
 	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("dbHandle", dbHandle)
+		ctx.Set(util.ContextKeyDBHandle, dbHandle)
 		ctx.Next()
 	})
 
 	// Repository container
 	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("repos", repos)
+		ctx.Set(util.ContextKeyRepos, repos)
 		ctx.Next()
 	})
 
@@ -107,7 +108,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Notification controller for invitation emails
 	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("notificationController", notificationController)
+		ctx.Set(util.ContextKeyNotificationController, notificationController)
 		ctx.Next()
 	})
 
@@ -119,7 +120,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Proviant configuration for access in handlers
 	engine.Use(func(ctx *gin.Context) {
-		ctx.Set("proviantConfig", proviantConfiguration)
+		ctx.Set(util.ContextKeyProviantConfig, proviantConfiguration)
 		ctx.Next()
 	})
 

@@ -15,6 +15,13 @@ import (
 	gomail "gopkg.in/mail.v2"
 )
 
+const (
+	mimeTypeHTML  = "text/html"
+	headerFrom    = "From"
+	headerTo      = "To"
+	headerSubject = "Subject"
+)
+
 var emailSendFunc = func(d *gomail.Dialer, m *gomail.Message) error {
 	return d.DialAndSend(m)
 }
@@ -42,14 +49,14 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 	mail := gomail.NewMessage()
 
 	// Set sender
-	mail.SetHeader("From", e.Configuration.FromAddress)
+	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
 
 	// Set recipient
-	mail.SetHeader("To", recipient)
+	mail.SetHeader(headerTo, recipient)
 
 	// Set header
 	subject := fmt.Sprintf("proviant - Warning - Product '%s' expired", product.ProductName)
-	mail.SetHeader("Subject", subject)
+	mail.SetHeader(headerSubject, subject)
 
 	// Generate email body from template
 	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/expired.html")
@@ -74,7 +81,7 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 	}
 
 	// Set body of mail to generated template output
-	mail.SetBody("text/html", bodyBuf.String())
+	mail.SetBody(mimeTypeHTML, bodyBuf.String())
 
 	// Settings for SMTP server
 	mailDialer := gomail.Dialer{
@@ -106,11 +113,11 @@ func (e *EmailNotificationProvider) SendMonthlyWasteReport(recipient string, sta
 	}
 
 	mail := gomail.NewMessage()
-	mail.SetHeader("From", e.Configuration.FromAddress)
-	mail.SetHeader("To", recipient)
-	mail.SetHeader("Subject", fmt.Sprintf("%s — Monthly Waste Report for %s",
+	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
+	mail.SetHeader(headerTo, recipient)
+	mail.SetHeader(headerSubject, fmt.Sprintf("%s — Monthly Waste Report for %s",
 		stats.HouseholdName, stats.MonthLabel))
-	mail.SetBody("text/html", buf.String())
+	mail.SetBody(mimeTypeHTML, buf.String())
 
 	dialer := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
 	if e.Configuration.User != "" && e.Configuration.Password != "" {
@@ -132,10 +139,10 @@ func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient
 	}
 
 	mail := gomail.NewMessage()
-	mail.SetHeader("From", e.Configuration.FromAddress)
-	mail.SetHeader("To", recipient)
-	mail.SetHeader("Subject", fmt.Sprintf("proviant - %d-day waste-free streak", milestone))
-	mail.SetBody("text/html", buf.String())
+	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
+	mail.SetHeader(headerTo, recipient)
+	mail.SetHeader(headerSubject, fmt.Sprintf("proviant - %d-day waste-free streak", milestone))
+	mail.SetBody(mimeTypeHTML, buf.String())
 
 	dialer := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
 	if e.Configuration.User != "" && e.Configuration.Password != "" {
@@ -170,10 +177,10 @@ func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, 
 	}
 
 	mail := gomail.NewMessage()
-	mail.SetHeader("From", e.Configuration.FromAddress)
-	mail.SetHeader("To", email)
-	mail.SetHeader("Subject", "Verify your email address for Proviant")
-	mail.SetBody("text/html", bodyBuf.String())
+	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
+	mail.SetHeader(headerTo, email)
+	mail.SetHeader(headerSubject, "Verify your email address for Proviant")
+	mail.SetBody(mimeTypeHTML, bodyBuf.String())
 
 	mailDialer := gomail.Dialer{
 		Host: e.Configuration.Host,
@@ -221,16 +228,16 @@ func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.Hous
 	mail := gomail.NewMessage()
 
 	// Set sender
-	mail.SetHeader("From", e.Configuration.FromAddress)
+	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
 
 	// Set recipient
-	mail.SetHeader("To", invitation.Email)
+	mail.SetHeader(headerTo, invitation.Email)
 
 	// Set subject
-	mail.SetHeader("Subject", fmt.Sprintf("You're invited to join '%s' on Proviant", householdName))
+	mail.SetHeader(headerSubject, fmt.Sprintf("You're invited to join '%s' on Proviant", householdName))
 
 	// Set body of mail to generated template output
-	mail.SetBody("text/html", bodyBuf.String())
+	mail.SetBody(mimeTypeHTML, bodyBuf.String())
 
 	// Settings for SMTP server
 	mailDialer := gomail.Dialer{

@@ -322,4 +322,25 @@ var (
 	 */
 	// ErrExportCSVWriteWrapper is used to interpolate csv export error
 	ErrExportCSVWriteWrapper = "CSV write error: %s"
+
+	/*
+	 * Stats/export shared log format strings
+	 */
+	FmtErrGetActiveProductsCount              = "GetActiveProductsCount: %s"
+	FmtErrGetExpiredProductsCount             = "GetExpiredProductsCount: %s"
+	FmtErrGetExpiringSoonProducts             = "GetExpiringSoonProducts: %s"
+	FmtErrGetProductCategoryBreakdown         = "GetProductCategoryBreakdown: %s"
+	FmtErrGetExpiryTrend                      = "GetExpiryTrend: %s"
+	FmtErrGetArchivedProductsGroupedByBarcode = "GetArchivedProductsGroupedByBarcode: %s"
+
+	/*
+	 * Stats/export shared HTTP response messages
+	 */
+	MsgErrComputingActiveCount         = "Error computing active product count"
+	MsgErrComputingWasteCount          = "Error computing waste count"
+	MsgErrComputingUniqueArchivedCount = "Error computing unique archived count"
+	MsgErrComputingExpiringSoon        = "Error computing expiring soon products"
+	MsgErrComputingCategoryBreakdown   = "Error computing category breakdown"
+	MsgErrComputingExpiryTrend         = "Error computing expiry trend"
+	MsgErrGettingProducts              = "Error getting products"
 )

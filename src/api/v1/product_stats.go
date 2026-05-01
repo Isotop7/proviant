@@ -6,6 +6,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
@@ -86,22 +87,22 @@ func GetProductSummary(ctx *gin.Context) {
 
 	expiringSoonCount, err := repos.Products.GetExpiringSoonCount(userID, 7)
 	if err != nil {
-		logger.Error().Msgf("GetExpiringSoonCount: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon count"})
+		logger.Error().Msgf(errors.FmtErrGetExpiringSoonProducts, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiringSoon})
 		return
 	}
 
 	expiredCount, err := repos.Products.GetExpiredProductsCount(userID)
 	if err != nil {
-		logger.Error().Msgf("GetExpiredProductsCount: %s", err)
+		logger.Error().Msgf(errors.FmtErrGetExpiredProductsCount, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expired count"})
 		return
 	}
 
 	totalActive, err := repos.Products.GetActiveProductsCount(userID)
 	if err != nil {
-		logger.Error().Msgf("GetActiveProductsCount: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing active product count"})
+		logger.Error().Msgf(errors.FmtErrGetActiveProductsCount, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingActiveCount})
 		return
 	}
 
@@ -148,15 +149,15 @@ func GetProductStats(ctx *gin.Context) {
 
 	totalActive, err := repos.Products.GetActiveProductsCount(userID)
 	if err != nil {
-		logger.Error().Msgf("GetActiveProductsCount: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing active product count"})
+		logger.Error().Msgf(errors.FmtErrGetActiveProductsCount, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingActiveCount})
 		return
 	}
 
 	wasteCount, err := repos.Products.GetExpiredProductsCount(userID)
 	if err != nil {
-		logger.Error().Msgf("GetExpiredProductsCount: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing waste count"})
+		logger.Error().Msgf(errors.FmtErrGetExpiredProductsCount, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingWasteCount})
 		return
 	}
 
@@ -172,22 +173,22 @@ func GetProductStats(ctx *gin.Context) {
 
 	expiringSoon, err := repos.Products.GetExpiringSoonProducts(userID, expiringSoonDays)
 	if err != nil {
-		logger.Error().Msgf("GetExpiringSoonProducts: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon products"})
+		logger.Error().Msgf(errors.FmtErrGetExpiringSoonProducts, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiringSoon})
 		return
 	}
 
 	categories, err := repos.Products.GetProductCategoryBreakdown(userID)
 	if err != nil {
-		logger.Error().Msgf("GetProductCategoryBreakdown: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing category breakdown"})
+		logger.Error().Msgf(errors.FmtErrGetProductCategoryBreakdown, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingCategoryBreakdown})
 		return
 	}
 
 	expiryTrend, err := repos.Products.GetExpiryTrend(userID)
 	if err != nil {
-		logger.Error().Msgf("GetExpiryTrend: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiry trend"})
+		logger.Error().Msgf(errors.FmtErrGetExpiryTrend, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiryTrend})
 		return
 	}
 
@@ -201,8 +202,8 @@ func GetProductStats(ctx *gin.Context) {
 
 	uniqueArchivedMap, err := repos.Products.GetArchivedProductsGroupedByBarcode(userID)
 	if err != nil {
-		logger.Error().Msgf("GetArchivedProductsGroupedByBarcode: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing unique archived count"})
+		logger.Error().Msgf(errors.FmtErrGetArchivedProductsGroupedByBarcode, err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingUniqueArchivedCount})
 		return
 	}
 	uniqueArchived := len(uniqueArchivedMap)

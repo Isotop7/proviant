@@ -15,6 +15,10 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	MsgProductNotFound = "Product not found"
+)
+
 // ConsumeProduct marks a product as consumed (soft-delete/archive, no product.wasted event)
 // @Summary      Mark product as consumed
 // @Description  Soft-deletes (archives) a product without firing a product.wasted webhook event
@@ -52,7 +56,7 @@ func ConsumeProduct(ctx *gin.Context) {
 
 	if err := repos.Products.ConsumeProduct(productID, userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "Product not found"})
+			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: MsgProductNotFound})
 			return
 		}
 		logger.Error().Msgf("ConsumeProduct: %s", err)
@@ -112,7 +116,7 @@ func WasteProduct(ctx *gin.Context) {
 
 	if err := repos.Products.WasteProduct(productID, userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "Product not found"})
+			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: MsgProductNotFound})
 			return
 		}
 		logger.Error().Msgf("WasteProduct: %s", err)
