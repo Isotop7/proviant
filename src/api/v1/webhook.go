@@ -16,6 +16,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const (
+	MsgWebhookIDMustBeValid = "webhook ID must be a valid unsigned integer"
+)
+
 // CreateWebhook creates a new webhook
 // @Summary      Create a webhook
 // @Description  Creates a new webhook for the authenticated user
@@ -140,7 +144,7 @@ func GetWebhook(ctx *gin.Context) {
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("webhook ID must be a valid unsigned integer"))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(MsgWebhookIDMustBeValid))
 		return
 	}
 
@@ -191,7 +195,7 @@ func UpdateWebhook(ctx *gin.Context) {
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("webhook ID must be a valid unsigned integer"))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(MsgWebhookIDMustBeValid))
 		return
 	}
 
@@ -271,7 +275,7 @@ func DeleteWebhook(ctx *gin.Context) {
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("webhook ID must be a valid unsigned integer"))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(MsgWebhookIDMustBeValid))
 		return
 	}
 
@@ -319,7 +323,7 @@ func GetWebhookDeliveries(ctx *gin.Context) {
 
 	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("webhook ID must be a valid unsigned integer"))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(MsgWebhookIDMustBeValid))
 		return
 	}
 
