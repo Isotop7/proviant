@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         options: { plugins: { legend: { display: false } } },
       });
     }
-  } catch (err) {
+  } catch {
     clearSkeletons();
     const status = document.getElementById('dashboard-status');
     if (status) status.textContent = 'Dashboard failed to load. Please refresh.';

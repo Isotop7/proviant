@@ -2241,6 +2241,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/scan-date": {
+            "post": {
+                "description": "Upload an image of product packaging; returns detected expiry date with confidence score",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Scan expiry date from product photo",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Product packaging image",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ExpiryScanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/search": {
             "get": {
                 "description": "Returns a list of products based on a query",
@@ -2543,6 +2587,49 @@ const docTemplate = `{
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/database.Product"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/recipes/suggestions": {
+            "get": {
+                "description": "Returns up to 6 recipe suggestions matching products expiring within 7 days",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recipes"
+                ],
+                "summary": "Recipe suggestions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Number of suggestions (default 6, max 10)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.RecipeSuggestionResponse"
                             }
                         }
                     },
@@ -3503,38 +3590,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/web/products/archived": {
-            "get": {
-                "description": "Renders the archived products list page",
-                "produces": [
-                    "text/html"
-                ],
-                "tags": [
-                    "web"
-                ],
-                "summary": "Archived products page",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/web/products/{id}/edit": {
             "get": {
                 "description": "Renders the page for editing a product",
@@ -3595,6 +3650,38 @@ const docTemplate = `{
                         "required": true
                     }
                 ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/recipes": {
+            "get": {
+                "description": "Shows recipe suggestions for expiring products",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Recipes page",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3720,6 +3807,9 @@ const docTemplate = `{
         "api.APIResponse": {
             "type": "object",
             "properties": {
+                "action": {
+                    "type": "string"
+                },
                 "message": {
                     "type": "string"
                 }
@@ -3786,6 +3876,27 @@ const docTemplate = `{
                 }
             }
         },
+        "api.ExpiryScanResponse": {
+            "type": "object",
+            "properties": {
+                "confidence": {
+                    "description": "0.0–1.0",
+                    "type": "number"
+                },
+                "detectedDate": {
+                    "description": "ISO 8601 (YYYY-MM-DD) if parsed, else empty",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "detected language if available",
+                    "type": "string"
+                },
+                "rawText": {
+                    "description": "full OCR text for manual correction",
+                    "type": "string"
+                }
+            }
+        },
         "api.HouseholdListItem": {
             "type": "object",
             "properties": {
@@ -3797,6 +3908,17 @@ const docTemplate = `{
                 },
                 "memberCount": {
                     "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.IngredientMatch": {
+            "type": "object",
+            "properties": {
+                "matched": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"
@@ -3919,6 +4041,46 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "wasteThisMonth": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.RecipeSuggestionResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "ingredients": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.IngredientMatch"
+                    }
+                },
+                "matchPercent": {
+                    "description": "0-100",
+                    "type": "number"
+                },
+                "matchedProducts": {
+                    "description": "deprecated, kept for compatibility",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "missingCount": {
+                    "type": "integer"
+                },
+                "sourceUrl": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "totalIngredients": {
                     "type": "integer"
                 }
             }
