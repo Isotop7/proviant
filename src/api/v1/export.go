@@ -24,7 +24,7 @@ func parseDateRange(ctx *gin.Context) (*time.Time, *time.Time) {
 	var from, to *time.Time
 
 	if fromStr := ctx.Query("from"); fromStr != "" {
-		if t, err := time.Parse("2006-01-02", fromStr); err == nil {
+		if t, err := time.Parse(util.DefaultDateFormatParseStr, fromStr); err == nil {
 			from = &t
 		}
 	}
