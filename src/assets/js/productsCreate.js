@@ -43,6 +43,7 @@ function showAlert(isSuccess, message) {
 }
 function clearProductInfo() {
     document.getElementById('productInfoImage').src = '';
+    document.getElementById('productInfoImage').alt = '';
     document.getElementById('productInfoName').innerText = '';
     document.getElementById('productInfoGenericName').innerText = '';
 }
@@ -60,6 +61,7 @@ function setBarcodeLoading(loading) {
 }
 function showProductData(product) {
     document.getElementById('productInfoImage').src = product.imageUrl;
+    document.getElementById('productInfoImage').alt = product.productName || 'Product image';
     document.getElementById('productInfoName').innerText = product.productName;
     if (product.categories != 'undefined' && product.categories != null) {
         document.getElementById('productInfoGenericName').innerText = product.categories;
