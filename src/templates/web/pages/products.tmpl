@@ -420,9 +420,9 @@
                     <div class="field-label">Barcode</div>
                     <div class="barcode-input-wrap" onclick="document.getElementById('barcode').focus()">
                         <i class="bi bi-upc-scan barcode-scan-icon"></i>
-                        <input id="barcode" type="number" placeholder="Scan or type EAN barcode…"
-                            min="1000000000000" max="9999999999999"
-                            autocomplete="off" spellcheck="false">
+<input id="barcode" type="text" inputmode="numeric" pattern="[0-9]{13}"
+			placeholder="Scan or type EAN barcode…"
+			autocomplete="off" spellcheck="false">
                         <span class="kbd-hint">↵</span>
                     </div>
     <div class="input-hint">

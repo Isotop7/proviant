@@ -121,9 +121,9 @@
                     <label for="barcode" class="form-label fw-medium small">EAN barcode</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-upc" aria-hidden="true"></i></span>
-                        <input type="number" class="form-control font-monospace" id="barcode"
-                               placeholder="13-digit EAN" aria-label="Barcode" data-barcode=""
-                               min="1000000000000" max="9999999999999">
+<input type="text" inputmode="numeric" pattern="[0-9]{13}"
+		       class="form-control font-monospace" id="barcode"
+		       placeholder="13-digit EAN" aria-label="Barcode" data-barcode="">
                         <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Must be a 13-digit number</div>
                     </div>
                 </form>
