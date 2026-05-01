@@ -130,7 +130,7 @@ func GetProduct(ctx *gin.Context) {
 	default:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
@@ -269,7 +269,7 @@ func UpdateProduct(ctx *gin.Context) {
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
@@ -341,7 +341,7 @@ func UpdateProductAmount(ctx *gin.Context) {
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
@@ -455,7 +455,7 @@ func SetExpireAt(ctx *gin.Context) {
 	if getErr != nil {
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
@@ -477,7 +477,7 @@ func SetExpireAt(ctx *gin.Context) {
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
