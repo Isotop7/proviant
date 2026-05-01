@@ -70,6 +70,9 @@ var (
 	// ErrParseBody is thrown when a body fails to parse
 	ErrParseBody = errors.New("error parsing body")
 
+	// ErrParseBodyWrapper is used to interpolate a non-parseable body
+	ErrParseBodyWrapper = "Error parsing body: %s"
+
 	// Message format template for generic error
 	FormatGenericError = "%s: %s"
 

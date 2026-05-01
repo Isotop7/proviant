@@ -25,7 +25,7 @@ func TestOnboardingFlowIntegration(t *testing.T) {
 	db.Save(&user)
 
 	// Create mock container and inject DB
-	m := repomocks.NewMockRepositoryContainer()
+	_ := repomocks.NewMockRepositoryContainer()
 	// Override repos with real DB implementations? Actually we need to use real repos.
 	// Instead, we can directly use the real repositories. But for simplicity, we'll use the mock container with DB.
 	// However, the onboarding handlers use repos from context. We need to set up real repos.
@@ -50,7 +50,7 @@ func TestInvitePathIntegration(t *testing.T) {
 	db.Create(&user)
 
 	// Test join endpoint
-	m := repomocks.NewMockRepositoryContainer()
+	_ := repomocks.NewMockRepositoryContainer()
 	ctx, w := repomocks.SetupGinContextWithDB(db)
 	testutil.MockJWTClaimsWithKey(ctx, user.ID, testutil.TokenIdentityKey)
 	testutil.CreateTestRequest(ctx, map[string]string{"token": invitation.Token})

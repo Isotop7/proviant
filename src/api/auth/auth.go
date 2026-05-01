@@ -6,16 +6,15 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
+
+const UserWasCreated = "User was created"
 
 // Signup creates a new user object in the database
 // @Summary      	Creates a new user
@@ -29,19 +28,13 @@ import (
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/auth/signup [post]
 func Signup(ctx *gin.Context) {
-	// Get logger instance from context
-	loggerValue, loggerOk := ctx.Get("logger")
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
+	logger, ok := mustGetLogger(ctx)
+	if !ok {
 		return
 	}
-	logger := loggerValue.(*zerolog.Logger)
 
-	reposVal, reposExists := ctx.Get("repos")
-	repos, ok := reposVal.(*database.RepositoryContainer)
-	if !reposExists || !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+	repos, ok := mustGetRepos(ctx, logger)
+	if !ok {
 		return
 	}
 
@@ -52,113 +45,43 @@ func Signup(ctx *gin.Context) {
 		return
 	}
 
-	var proviantConfig *configuration.ProviantConfiguration
-	proviantConfigInterface, pcOk := ctx.Get("proviantConfig")
-	if pcOk {
-		var ok bool
-		proviantConfig, ok = proviantConfigInterface.(*configuration.ProviantConfiguration)
-		if !ok {
-			proviantConfig = nil
-		}
-	}
-
-	var passwordValidator *authentication.PasswordValidator
-	if proviantConfig != nil {
-		passwordValidator = authentication.PasswordValidatorFromConfig(authentication.PasswordConfig{
-			MinLength:        proviantConfig.Server.Authentication.PasswordMinLength,
-			RequireUppercase: proviantConfig.Server.Authentication.PasswordRequireUppercase,
-			RequireDigit:     proviantConfig.Server.Authentication.PasswordRequireDigit,
-			RequireSpecial:   proviantConfig.Server.Authentication.PasswordRequireSpecial,
-			CheckBreached:    proviantConfig.Server.Authentication.PasswordCheckBreached,
-		})
-	}
-	if passwordValidator == nil {
-		passwordValidator = authentication.DefaultPasswordValidator()
-	}
-
-	validationErr := signup.IsValidWithValidator(passwordValidator)
-	if validationErr != nil {
+	passwordValidator := passwordValidatorFromContext(ctx)
+	if validationErr := signup.IsValidWithValidator(passwordValidator); validationErr != nil {
 		logger.Error().Msgf("User data was invalid: '%s'", validationErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(validationErr))
 		return
 	}
 
-	// Create new user object
 	user := authentication.User{
 		Username:    signup.Username,
 		Password:    signup.Password,
 		MailAddress: signup.MailAddress,
 	}
 
-	// Check if user with username already exists
 	if repos.Users.UserExistsByUsername(&user) {
 		logger.Error().Msgf("User '%s' already exists", user.Username)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithUsernameExists)
 		return
 	}
 
-	// Check if user with mail address already exists
 	if repos.Users.UserExistsByMailAddress(&user) {
 		logger.Error().Msgf("User with mail address '%s' already exists", user.MailAddress)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithMailAddressExists)
 		return
 	}
 
-	// Create user object in database
-	createError := repos.Users.CreateUser(&user)
-	if createError != nil {
-		logger.Error().Msgf("User '%s' with ID '%d' could not be created. Error: %s", user.Username, user.ID, createError.Error())
+	if err := repos.Users.CreateUser(&user); err != nil {
+		logger.Error().Msgf("User '%s' with ID '%d' could not be created. Error: %s", user.Username, user.ID, err.Error())
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
 		return
 	}
 
 	logger.Info().Msgf("New User '%s' with ID '%d' created", user.Username, user.ID)
 
-	if signup.InviteToken != "" {
-		acceptErr := repos.Invitations.AcceptInvitation(signup.InviteToken, user.MailAddress, user.ID)
-		if acceptErr != nil {
-			logger.Warn().Msgf("Failed to auto-accept invitation after signup: %s", acceptErr.Error())
-		} else {
-			logger.Info().Msgf("Successfully auto-accepted invitation for user '%s'", user.Username)
-		}
-	}
+	handleInviteAcceptance(repos, &signup, &user, logger)
+	trySendEmailVerification(ctx, repos, &user, logger)
 
-	notificationControllerInterface, ncOk := ctx.Get("notificationController")
-	if !ncOk {
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
-		return
-	}
-	notificationController, ok := notificationControllerInterface.(*controllers.NotificationController)
-	if !ok {
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
-		return
-	}
-	if proviantConfig == nil {
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
-		return
-	}
-
-	token, expiresAt, tokenErr := controllers.GenerateEmailVerificationToken()
-	if tokenErr != nil {
-		logger.Error().Msgf("Failed to generate email verification token: %s", tokenErr.Error())
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
-		return
-	}
-	if err := repos.Users.CreateEmailVerification(user.ID, token, expiresAt); err != nil {
-		logger.Error().Msgf("Failed to create email verification record: %s", err.Error())
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
-		return
-	}
-
-	go func() {
-		if sendErr := notificationController.SendEmailVerification(user.MailAddress, user.EffectiveName(), token, proviantConfig.Server.BaseURL, expiresAt); sendErr != nil {
-			logger.Error().Msgf("Failed to send email verification: %s", sendErr.Error())
-		} else {
-			logger.Info().Msgf("Email verification sent to %s", user.MailAddress)
-		}
-	}()
-
-	ctx.JSON(http.StatusOK, api.APIResponse{Message: "User was created"})
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: UserWasCreated})
 }
 
 // Logout revokes the current JWT token
@@ -173,7 +96,6 @@ func Signup(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/auth/logout [post]
 func Logout(ctx *gin.Context) {
-	// Get logger instance from context
 	loggerValue, loggerOk := ctx.Get("logger")
 	if !loggerOk {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
@@ -188,7 +110,6 @@ func Logout(ctx *gin.Context) {
 		return
 	}
 
-	// Extract claims from current token
 	claims := jwt.ExtractClaims(ctx)
 	jti, exists := claims["jti"]
 	if !exists {
@@ -220,13 +141,11 @@ func Logout(ctx *gin.Context) {
 
 	expiresAt := time.Unix(int64(expFloat), 0)
 
-	// Create revoked token entry
 	revokedToken := authentication.RevokedToken{
 		JTI:       jtiStr,
 		ExpiresAt: expiresAt,
 	}
 
-	// Insert into database
 	if err := dbHandle.Create(&revokedToken).Error; err != nil {
 		logger.Error().Msgf("Failed to revoke token: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to logout"})

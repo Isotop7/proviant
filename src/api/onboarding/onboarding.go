@@ -17,6 +17,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const (
+	MsgFailedToExtract       = "Failed to extract user ID from JWT claims"
+	MsgFailedToMarkHousehold = "Failed to mark household step done: %s"
+)
+
 // GetOnboardingState returns the current onboarding progress for the authenticated user
 // @Summary      	Get onboarding state
 // @Description  	Returns the current onboarding progress for the user
@@ -85,7 +90,7 @@ func UpdateOnboardingProfile(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID == 0 {
-		logger.Error().Msg("Failed to extract user ID from JWT claims")
+		logger.Error().Msg(MsgFailedToExtract)
 		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
 		return
 	}
@@ -101,7 +106,7 @@ func UpdateOnboardingProfile(ctx *gin.Context) {
 		DisplayName string `json:"displayName"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf("Error parsing body: %s", err.Error())
+		logger.Error().Msgf(errors.ErrParseBodyWrapper, err.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
@@ -141,7 +146,7 @@ func CreateOnboardingHousehold(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID == 0 {
-		logger.Error().Msg("Failed to extract user ID from JWT claims")
+		logger.Error().Msg(MsgFailedToExtract)
 		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
 		return
 	}
@@ -157,7 +162,7 @@ func CreateOnboardingHousehold(ctx *gin.Context) {
 		Name string `json:"name" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf("Error parsing body: %s", err.Error())
+		logger.Error().Msgf(errors.ErrParseBodyWrapper, err.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
@@ -175,7 +180,7 @@ func CreateOnboardingHousehold(ctx *gin.Context) {
 	}
 
 	if markErr := repos.Users.MarkHouseholdStepDone(userID); markErr != nil {
-		logger.Warn().Msgf("Failed to mark household step done: %s", markErr.Error())
+		logger.Warn().Msgf(MsgFailedToMarkHousehold, markErr.Error())
 	}
 
 	logger.Info().Msgf("User %d created household during onboarding", userID)
@@ -200,7 +205,7 @@ func JoinOnboardingByInvite(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID == 0 {
-		logger.Error().Msg("Failed to extract user ID from JWT claims")
+		logger.Error().Msg(MsgFailedToExtract)
 		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
 		return
 	}
@@ -216,7 +221,7 @@ func JoinOnboardingByInvite(ctx *gin.Context) {
 		Token string `json:"token" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf("Error parsing body: %s", err.Error())
+		logger.Error().Msgf(errors.ErrParseBodyWrapper, err.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
@@ -244,7 +249,7 @@ func JoinOnboardingByInvite(ctx *gin.Context) {
 	}
 
 	if markErr := repos.Users.MarkHouseholdStepDone(userID); markErr != nil {
-		logger.Warn().Msgf("Failed to mark household step done: %s", markErr.Error())
+		logger.Warn().Msgf(MsgFailedToMarkHousehold, markErr.Error())
 	}
 
 	logger.Info().Msgf("User %d joined household via invite during onboarding", userID)
@@ -266,7 +271,7 @@ func GetAvailableHouseholds(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID == 0 {
-		logger.Error().Msg("Failed to extract user ID from JWT claims")
+		logger.Error().Msg(MsgFailedToExtract)
 		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
 		return
 	}
@@ -322,7 +327,7 @@ func ApplyForHousehold(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID == 0 {
-		logger.Error().Msg("Failed to extract user ID from JWT claims")
+		logger.Error().Msg(MsgFailedToExtract)
 		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
 		return
 	}
@@ -338,7 +343,7 @@ func ApplyForHousehold(ctx *gin.Context) {
 		HouseholdID uint `json:"householdId" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf("Error parsing body: %s", err.Error())
+		logger.Error().Msgf(errors.ErrParseBodyWrapper, err.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
@@ -364,7 +369,7 @@ func ApplyForHousehold(ctx *gin.Context) {
 	}
 
 	if markErr := repos.Users.MarkHouseholdStepDone(userID); markErr != nil {
-		logger.Warn().Msgf("Failed to mark household step done: %s", markErr.Error())
+		logger.Warn().Msgf(MsgFailedToMarkHousehold, markErr.Error())
 	}
 
 	logger.Info().Msgf("User %d applied for household %d", userID, req.HouseholdID)
@@ -386,7 +391,7 @@ func CompleteOnboarding(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID == 0 {
-		logger.Error().Msg("Failed to extract user ID from JWT claims")
+		logger.Error().Msg(MsgFailedToExtract)
 		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
 		return
 	}

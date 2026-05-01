@@ -17,6 +17,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const MsgErrFetchingHousehold = "Error fetching household: %s"
+
 // GetHouseholdUsers returns all users in the household.
 // @Summary      List household members
 // @Description  Returns all users that belong to the household the caller is admin of
@@ -49,7 +51,7 @@ func GetHouseholdUsers(ctx *gin.Context) {
 
 	household, hhErr := repos.Users.GetHouseholdByID(user.HouseholdID)
 	if hhErr != nil {
-		logger.Error().Msgf("Error fetching household: %s", hhErr)
+		logger.Error().Msgf(MsgErrFetchingHousehold, hhErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
@@ -118,7 +120,7 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 
 	household, hhErr := repos.Users.GetHouseholdByID(admin.HouseholdID)
 	if hhErr != nil {
-		logger.Error().Msgf("Error fetching household: %s", hhErr)
+		logger.Error().Msgf(MsgErrFetchingHousehold, hhErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
@@ -204,7 +206,7 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 
 	household, hhErr := repos.Users.GetHouseholdByID(admin.HouseholdID)
 	if hhErr != nil {
-		logger.Error().Msgf("Error fetching household: %s", hhErr)
+		logger.Error().Msgf(MsgErrFetchingHousehold, hhErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
@@ -284,7 +286,7 @@ func AdminResetUserPassword(ctx *gin.Context) {
 
 	household, hhErr := repos.Users.GetHouseholdByID(admin.HouseholdID)
 	if hhErr != nil {
-		logger.Error().Msgf("Error fetching household: %s", hhErr)
+		logger.Error().Msgf(MsgErrFetchingHousehold, hhErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}

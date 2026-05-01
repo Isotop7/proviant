@@ -22,6 +22,7 @@ import "codeberg.org/isotop7/proviant/api"
 
 ## Index
 
+- [Constants](<#constants>)
 - [Variables](<#variables>)
 - [type APIResponse](<#APIResponse>)
   - [func CreateFailedError\(\) APIResponse](<#CreateFailedError>)
@@ -33,6 +34,14 @@ import "codeberg.org/isotop7/proviant/api"
   - [func RestoreFailedError\(\) APIResponse](<#RestoreFailedError>)
   - [func UpdateFailedError\(\) APIResponse](<#UpdateFailedError>)
 
+
+## Constants
+
+<a name="ActionTryAgain"></a>
+
+```go
+const ActionTryAgain = "Please try again later"
+```
 
 ## Variables
 
@@ -914,6 +923,9 @@ var (
 
     // ErrParseBody is thrown when a body fails to parse
     ErrParseBody = errors.New("error parsing body")
+
+    // ErrParseBodyWrapper is used to interpolate a non-parseable body
+    ErrParseBodyWrapper = "Error parsing body: %s"
 
     // Message format template for generic error
     FormatGenericError = "%s: %s"
@@ -1896,11 +1908,20 @@ auth contains authentication method handlers
 
 ## Index
 
+- [Constants](<#constants>)
 - [func AcceptInvitation\(ctx \*gin.Context\)](<#AcceptInvitation>)
 - [func Logout\(ctx \*gin.Context\)](<#Logout>)
 - [func Signup\(ctx \*gin.Context\)](<#Signup>)
 - [func VerifyEmail\(ctx \*gin.Context\)](<#VerifyEmail>)
 
+
+## Constants
+
+<a name="UserWasCreated"></a>
+
+```go
+const UserWasCreated = "User was created"
+```
 
 <a name="AcceptInvitation"></a>
 ## func AcceptInvitation
@@ -1970,6 +1991,7 @@ onboarding contains handlers for the post\-signup onboarding flow
 
 ## Index
 
+- [Constants](<#constants>)
 - [func ApplyForHousehold\(ctx \*gin.Context\)](<#ApplyForHousehold>)
 - [func CompleteOnboarding\(ctx \*gin.Context\)](<#CompleteOnboarding>)
 - [func CreateOnboardingHousehold\(ctx \*gin.Context\)](<#CreateOnboardingHousehold>)
@@ -1978,6 +2000,17 @@ onboarding contains handlers for the post\-signup onboarding flow
 - [func JoinOnboardingByInvite\(ctx \*gin.Context\)](<#JoinOnboardingByInvite>)
 - [func UpdateOnboardingProfile\(ctx \*gin.Context\)](<#UpdateOnboardingProfile>)
 
+
+## Constants
+
+<a name="MsgFailedToExtract"></a>
+
+```go
+const (
+    MsgFailedToExtract       = "Failed to extract user ID from JWT claims"
+    MsgFailedToMarkHousehold = "Failed to mark household step done: %s"
+)
+```
 
 <a name="ApplyForHousehold"></a>
 ## func ApplyForHousehold
@@ -2159,6 +2192,12 @@ const (
 
 ```go
 const CalendarTokenLength = 32
+```
+
+<a name="MsgErrFetchingHousehold"></a>
+
+```go
+const MsgErrFetchingHousehold = "Error fetching household: %s"
 ```
 
 <a name="AdminResetUserPassword"></a>
@@ -5221,7 +5260,7 @@ BulkProductsAPIModel represents a bulk product operation request
 
 ```go
 type BulkProductsAPIModel struct {
-    ProductIDs []string `json:"productIDs"`
+    ProductIDs []uint `json:"productIDs"`
 }
 ```
 
