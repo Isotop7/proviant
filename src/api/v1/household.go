@@ -376,7 +376,7 @@ func RemoveHouseholdMember(ctx *gin.Context) {
 		return
 	}
 
-	memberID, ok := parseUintParam(ctx, logger, "userId", "invalid user id")
+	memberID, ok := parseUintParam(ctx, logger, "userId", errors.ErrInvalidUserID.Error())
 	if !ok {
 		return
 	}

@@ -101,7 +101,7 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 	targetUserID, convErr := strconv.ParseUint(idParam, 10, 64)
 	if convErr != nil {
 		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid user id"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
 		return
 	}
 
@@ -132,7 +132,7 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 	targetUser, targetErr := repos.Users.GetUserByID(uint(targetUserID))
 	if targetErr != nil {
 		if targetErr == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf("User with id '%d' not found", targetUserID)})
+			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, targetUserID)})
 			return
 		}
 		logger.Error().Msgf("Error fetching target user: %s", targetErr)
@@ -194,7 +194,7 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 	targetUserID, convErr := strconv.ParseUint(idParam, 10, 64)
 	if convErr != nil {
 		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid user id"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
 		return
 	}
 
@@ -223,7 +223,7 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 	targetUser, targetErr := repos.Users.GetUserByID(uint(targetUserID))
 	if targetErr != nil {
 		if targetErr == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf("User with id '%d' not found", targetUserID)})
+			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, targetUserID)})
 			return
 		}
 		logger.Error().Msgf("Error fetching target user: %s", targetErr)
@@ -274,7 +274,7 @@ func AdminResetUserPassword(ctx *gin.Context) {
 	targetUserID, convErr := strconv.ParseUint(idParam, 10, 64)
 	if convErr != nil {
 		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid user id"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
 		return
 	}
 
@@ -298,7 +298,7 @@ func AdminResetUserPassword(ctx *gin.Context) {
 	targetUser, targetErr := repos.Users.GetUserByID(uint(targetUserID))
 	if targetErr != nil {
 		if targetErr == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf("User with id '%d' not found", targetUserID)})
+			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, targetUserID)})
 			return
 		}
 		logger.Error().Msgf("Error fetching target user: %s", targetErr)

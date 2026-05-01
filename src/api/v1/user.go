@@ -52,8 +52,8 @@ func UpdateUser(ctx *gin.Context) {
 
 	user, fetchErr := repos.Users.GetUserByID(userID)
 	if fetchErr != nil {
-		logger.Error().Msgf("User with ID '%d' not found: %s", userID, fetchErr)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("User with id '%d' was not found", userID)})
+		logger.Error().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, fetchErr)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
 		return
 	}
 
@@ -139,7 +139,7 @@ func UpdateUserPassword(ctx *gin.Context) {
 	// Requested user was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf("User with ID '%d' was not found in database", userID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("User with id '%d' was not found", userID)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
 		return
 	// Unspecified error
 	default:

@@ -54,7 +54,7 @@ func AcceptInvitation(ctx *gin.Context) {
 
 	user, err := repos.Users.GetUserByID(userID)
 	if err != nil {
-		logger.Error().Msgf("User with ID %d not found: %s", userID, err)
+		logger.Error().Msgf(errors.ErrInvalidUserIDWrapper, userID, err)
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}

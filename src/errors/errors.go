@@ -52,6 +52,10 @@ var (
 	// ErrInvalidUserID is thrown when supplied user data is invalid
 	ErrInvalidUserID = errors.New("invalid user ID")
 
+	// ErrInvalidUserIDWrapper is used to interpolate a invalid user id
+	ErrInvalidUserIDWrapper = "User with id '%d' not found"
+	ErrInvalidUserIDWrapperWithMessage = ErrInvalidUserIDWrapper + ": %s"
+
 	// ErrUserWithUsernameExists is thrown when a user with the same username already exists
 	ErrUserWithUsernameExists = errors.New("user with this username already exists")
 
