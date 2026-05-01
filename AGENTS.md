@@ -307,3 +307,48 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) f
   )
   ```
 - **OpenFoodFacts caching**: Barcode lookups go through the backend proxy endpoint `GET /api/v1/products/openfoodfacts/:barcode` (JWT-protected). When `openfoodfacts.cacheEnabled: true`, responses are stored in the `open_food_facts_caches` table (`src/models/database/openfoodfacts_cache.go`) and served from there on subsequent requests. The frontend (`src/assets/js/productsCreate.js`) calls `proviant.getOpenFoodFactsData()` from `proviant.js` — **do not** reintroduce direct browser calls to `world.openfoodfacts.org`. Cache operations are in `src/controllers/database/databasecontroller.go` (`GetOpenFoodFactsCacheByBarcode`, `CreateOpenFoodFactsCache`).
+
+## UI/UX Standards
+
+### Color & Contrast
+- Use CSS custom properties (Bootstrap variables) for theming — no raw hex values in templates
+- Maintain WCAG AA 4.5:1 minimum contrast ratio for normal text
+- Reserve the primary color for primary CTAs only; use secondary/neutral tones for non-essential actions
+
+### Layout & Spacing
+- Align to a 4pt/8pt grid using Bootstrap utility classes (e.g., `p-2`, `m-3`, `gap-2`)
+- Ensure touch targets are at least 44×44px for buttons, links, and form controls
+- **Never use inline `style="..."` attributes** for layout; define reusable utility or component classes
+
+### Typography
+- Limit the project to a maximum of five font sizes to preserve visual consistency
+- Establish hierarchy through font weight and size, not color alone
+
+### User Guidance
+- For any async operation exceeding 500ms, show a loading indicator and disable the triggering button until completion
+- Primary actions must use the `btn-primary` class
+- Provide inline validation on-blur for form fields; reserve full-page validation feedback for submit-time results
+- Always include a clear call-to-action in empty states (e.g., "Add your first product")
+- Require explicit confirmation before irreversible actions (e.g., deletion dialogs)
+
+### Feedback
+- Use `proviant.showFeedback()` for page-level async result messages
+- Use inline alerts for field-level or section-level errors only; avoid global banners for localized issues
+
+### Accessibility
+- Ensure the `lang` attribute on `<html>` matches the active UI language
+- All icon-only buttons require an `aria-label` describing the action
+- All interactive elements must be keyboard-navigable (`tabindex`, `focus-visible` styles)
+- Populate `aria-live` regions after dynamic content updates so screen readers announce changes
+
+### Nielsen 10 Heuristics (Quick Reference)
+1. Visibility of system status
+2. Match between system and the real world
+3. User control and freedom
+4. Consistency and standards
+5. Error prevention
+6. Recognition rather than recall
+7. Flexibility and efficiency of use
+8. Aesthetic and minimalist design
+9. Help users recognize, diagnose, and recover from errors
+10. Help and documentation
