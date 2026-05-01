@@ -128,3 +128,24 @@ document.addEventListener("click", function (event) {
         restoreProduct();
     }
 });
+
+/* Blur validation for required fields */
+document.addEventListener("DOMContentLoaded", function () {
+    const inputProductName = document.getElementById("inputProductName");
+    if (inputProductName) {
+        inputProductName.addEventListener("blur", function () {
+            const valid = this.value.trim() !== "";
+            this.classList.toggle("is-invalid", !valid);
+            this.classList.toggle("is-valid", valid);
+        });
+    }
+
+    const inputExpireAt = document.getElementById("inputExpireAt");
+    if (inputExpireAt) {
+        inputExpireAt.addEventListener("blur", function () {
+            const valid = this.value !== "";
+            this.classList.toggle("is-invalid", !valid);
+            this.classList.toggle("is-valid", valid);
+        });
+    }
+});

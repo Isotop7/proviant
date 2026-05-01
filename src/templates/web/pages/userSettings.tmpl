@@ -27,8 +27,8 @@
                         <label for="inputDisplayName" class="form-label fw-medium">Display Name</label>
                         <input type="text" class="form-control" id="inputDisplayName"
                                value="{{ .User.DisplayName }}" autocomplete="nickname"
-                               placeholder="Leave blank to use your username">
-                        <div class="form-text">Shown instead of your username throughout the app.</div>
+                               placeholder="Leave blank to use your mail address">
+                        <div class="form-text">Shown instead of your mail address throughout the app.</div>
                     </div>
                     <div class="col-md-6">
                         <label for="inputMailAddress" class="form-label fw-medium">
@@ -557,10 +557,9 @@
                                 <i class="bi bi-x-lg"></i> Cancel
                             </button>
                         </li>
-            {{ end }}
-            </ul>
-        </div>
-    </div>
+                        {{ end }}
+                    </ul>
+                </div>
                 {{ end }}
 
                 {{/* Invite by email */}}
@@ -599,37 +598,37 @@
                             {{ end }}
                         </li>
                         {{ end }}
+                    </ul>
+                {{ end }}
+
+                {{/* Collapsible cancelled invitations */}}
+                {{ $hasCancelled := false }}
+                {{ range .Invitations }}
+                {{ if eq .Status "cancelled" }}{{ $hasCancelled = true }}{{ end }}
+                {{ end }}
+                {{ if $hasCancelled }}
+                <div class="mt-3">
+                    <button type="button" class="btn btn-sm btn-proviant-secondary"
+                            data-bs-toggle="collapse" data-bs-target="#cancelledInvitations"
+                            aria-expanded="false" aria-controls="cancelledInvitations">
+                        <i class="bi bi-chevron-down me-1"></i>Show cancelled invitations
+                    </button>
+                </div>
+                <div class="collapse mt-2" id="cancelledInvitations">
+                    <ul class="list-group">
+                        {{ range .Invitations }}
+                        {{ if eq .Status "cancelled" }}
+                        <li class="list-group-item d-flex justify-content-between align-items-center text-muted" id="invitation-{{ .ID }}">
+                            <span>
+                                <i class="bi bi-envelope me-2"></i>{{ .Email }}
+                                <span class="badge bg-secondary ms-2">{{ .Status }}</span>
+                            </span>
+                        </li>
+                        {{ end }}
                         {{ end }}
                     </ul>
-
-                    {{/* Collapsible cancelled invitations */}}
-                    {{ $hasCancelled := false }}
-                    {{ range .Invitations }}
-                    {{ if eq .Status "cancelled" }}{{ $hasCancelled = true }}{{ end }}
-                    {{ end }}
-                    {{ if $hasCancelled }}
-                    <div class="mt-3">
-                        <button type="button" class="btn btn-sm btn-proviant-secondary"
-                                data-bs-toggle="collapse" data-bs-target="#cancelledInvitations"
-                                aria-expanded="false" aria-controls="cancelledInvitations">
-                            <i class="bi bi-chevron-down me-1"></i>Show cancelled invitations
-                        </button>
-                    </div>
-                    <div class="collapse mt-2" id="cancelledInvitations">
-                        <ul class="list-group">
-                            {{ range .Invitations }}
-                            {{ if eq .Status "cancelled" }}
-                            <li class="list-group-item d-flex justify-content-between align-items-center text-muted" id="invitation-{{ .ID }}">
-                                <span>
-                                    <i class="bi bi-envelope me-2"></i>{{ .Email }}
-                                    <span class="badge bg-secondary ms-2">{{ .Status }}</span>
-                                </span>
-                            </li>
-                            {{ end }}
-                            {{ end }}
-                        </ul>
-                    </div>
-                    {{ end }}
+                </div>
+                {{ end }}
                 </div>
                 {{ end }}
             </div>
@@ -656,7 +655,6 @@
                     </li>
                     {{ end }}
                 </ul>
-            {{ end }}
             {{ end }}
             {{ end }}
 
@@ -816,141 +814,139 @@
         </div>
     </div>
 
-
-</div>
-
-{{/* ── Webhook Secret Modal ────────────────────────────────────── */}}
-<div class="modal fade" id="webhookSecretModal" tabindex="-1" aria-labelledby="webhookSecretModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="webhookSecretModalLabel">Webhook Secret</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-body-secondary small mb-2">Copy this secret to verify webhook signatures. You will not be able to see it again.</p>
-                <input type="text" class="form-control" id="webhookSecretCopy" readonly>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-proviant-secondary" id="btnCloseWebhookSecret" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-proviant-primary" id="btnCopySecret">Copy</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{/* ── Webhook Deliveries Modal ───────────────────────────────── */}}
-<div class="modal fade" id="webhookDeliveriesModal" tabindex="-1" aria-labelledby="webhookDeliveriesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="webhookDeliveriesModalLabel">Webhook Delivery History</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="deliveriesModalBody">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{/* ── Telegram Help Modal ────────────────────────────────────── */}}
-<div class="modal fade" id="telegramHelpModal" tabindex="-1" aria-labelledby="telegramHelpModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="telegramHelpModalLabel">
-                    <i class="bi bi-telegram me-2" aria-hidden="true"></i>Telegram Bot Setup
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-body-secondary small mb-3">
-                    Each user creates and manages their own Telegram bot. No administrator involvement is required.
-                </p>
-                <ol class="small mb-3">
-                    <li class="mb-3">
-                        <strong>Create a bot</strong> — open Telegram, message
-                        <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a>,
-                        run <code>/newbot</code>, and follow the prompts. Copy the bot token you receive.
-                    </li>
-                    <li class="mb-3">
-                        <strong>Paste the token</strong> — enter your bot token in the <em>Bot Token</em> field in these settings and click <strong>Save</strong>.
-                        Proviant will start listening for messages on your bot immediately.
-                    </li>
-                    <li class="mb-3">
-                        <strong>Link your account</strong> — click <strong>Link Account</strong>, then <strong>Generate Token</strong>.
-                        Use the <em>Open in Telegram</em> button or copy the command and send it to your bot.
-                    </li>
-                    <li>
-                        <strong>Enable</strong> — toggle Telegram notifications on and save.
-                    </li>
-                </ol>
-                <div class="alert alert-info small mb-0 py-2">
-                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
-                    Your bot uses long-polling — no public URL or webhook configuration is required.
+    {{/* ── Webhook Secret Modal ────────────────────────────────────── */}}
+    <div class="modal fade" id="webhookSecretModal" tabindex="-1" aria-labelledby="webhookSecretModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="webhookSecretModalLabel">Webhook Secret</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-body-secondary small mb-2">Copy this secret to verify webhook signatures. You will not be able to see it again.</p>
+                    <input type="text" class="form-control" id="webhookSecretCopy" readonly>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-proviant-secondary" id="btnCloseWebhookSecret" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-proviant-primary" id="btnCopySecret">Copy</button>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+    </div>
+
+    {{/* ── Webhook Deliveries Modal ───────────────────────────────── */}}
+    <div class="modal fade" id="webhookDeliveriesModal" tabindex="-1" aria-labelledby="webhookDeliveriesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="webhookDeliveriesModalLabel">Webhook Delivery History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="deliveriesModalBody">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-{{/* ── Telegram Link Modal ─────────────────────────────────────── */}}
-<div class="modal fade" id="telegramLinkModal" tabindex="-1" aria-labelledby="telegramLinkModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="telegramLinkModalLabel">
-                    <i class="bi bi-telegram me-2" aria-hidden="true"></i>Link Telegram Account
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="telegramLinkSteps">
-                    <p class="text-body-secondary small mb-3">Follow these steps to connect your Telegram account:</p>
+    {{/* ── Telegram Help Modal ────────────────────────────────────── */}}
+    <div class="modal fade" id="telegramHelpModal" tabindex="-1" aria-labelledby="telegramHelpModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="telegramHelpModalLabel">
+                        <i class="bi bi-telegram me-2" aria-hidden="true"></i>Telegram Bot Setup
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-body-secondary small mb-3">
+                        Each user creates and manages their own Telegram bot. No administrator involvement is required.
+                    </p>
                     <ol class="small mb-3">
-                        <li class="mb-2">Click <strong>Generate Token</strong> below.</li>
-                        <li class="mb-2">Click <strong>Open in Telegram</strong> to open the bot directly — or copy the command and send it manually to your bot.</li>
-                        <li class="mb-2">Press <strong>Start</strong> in the Telegram chat (if using the link) or wait for the bot to confirm the link.</li>
+                        <li class="mb-3">
+                            <strong>Create a bot</strong> — open Telegram, message
+                            <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a>,
+                            run <code>/newbot</code>, and follow the prompts. Copy the bot token you receive.
+                        </li>
+                        <li class="mb-3">
+                            <strong>Paste the token</strong> — enter your bot token in the <em>Bot Token</em> field in these settings and click <strong>Save</strong>.
+                            Proviant will start listening for messages on your bot immediately.
+                        </li>
+                        <li class="mb-3">
+                            <strong>Link your account</strong> — click <strong>Link Account</strong>, then <strong>Generate Token</strong>.
+                            Use the <em>Open in Telegram</em> button or copy the command and send it to your bot.
+                        </li>
+                        <li>
+                            <strong>Enable</strong> — toggle Telegram notifications on and save.
+                        </li>
                     </ol>
-                    <div id="telegramLinkCommand" class="d-none mb-3">
-                        <a id="telegramDeepLink" href="#" target="_blank" rel="noopener noreferrer"
-                           class="btn btn-proviant-primary w-100 d-none">
-                            <i class="bi bi-telegram me-2" aria-hidden="true"></i>Open in Telegram
-                        </a>
-                        <div id="telegramManualCommand" class="mt-2">
-                            <small class="text-body-secondary d-block mb-1">
-                                Or copy and send this command directly to your bot:
-                            </small>
-                            <div class="input-group input-group-sm">
-                                <input type="text" class="form-control font-monospace" id="telegramLinkCommandText" readonly>
-                                <button type="button" class="btn btn-proviant-secondary" id="btnCopyTelegramCommand"
-                                        title="Copy command" aria-label="Copy command">
-                                    <i class="bi bi-clipboard" aria-hidden="true"></i>
-                                </button>
-                            </div>
-                            <div id="telegramCommandCopied" class="form-text text-success d-none">
-                                <i class="bi bi-check-circle me-1"></i>Copied!
+                    <div class="alert alert-info small mb-0 py-2">
+                        <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+                        Your bot uses long-polling — no public URL or webhook configuration is required.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{/* ── Telegram Link Modal ─────────────────────────────────────── */}}
+    <div class="modal fade" id="telegramLinkModal" tabindex="-1" aria-labelledby="telegramLinkModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="telegramLinkModalLabel">
+                        <i class="bi bi-telegram me-2" aria-hidden="true"></i>Link Telegram Account
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="telegramLinkSteps">
+                        <p class="text-body-secondary small mb-3">Follow these steps to connect your Telegram account:</p>
+                        <ol class="small mb-3">
+                            <li class="mb-2">Click <strong>Generate Token</strong> below.</li>
+                            <li class="mb-2">Click <strong>Open in Telegram</strong> to open the bot directly — or copy the command and send it manually to your bot.</li>
+                            <li class="mb-2">Press <strong>Start</strong> in the Telegram chat (if using the link) or wait for the bot to confirm the link.</li>
+                        </ol>
+                        <div id="telegramLinkCommand" class="d-none mb-3">
+                            <a id="telegramDeepLink" href="#" target="_blank" rel="noopener noreferrer"
+                            class="btn btn-proviant-primary w-100 d-none">
+                                <i class="bi bi-telegram me-2" aria-hidden="true"></i>Open in Telegram
+                            </a>
+                            <div id="telegramManualCommand" class="mt-2">
+                                <small class="text-body-secondary d-block mb-1">
+                                    Or copy and send this command directly to your bot:
+                                </small>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control font-monospace" id="telegramLinkCommandText" readonly>
+                                    <button type="button" class="btn btn-proviant-secondary" id="btnCopyTelegramCommand"
+                                            title="Copy command" aria-label="Copy command">
+                                        <i class="bi bi-clipboard" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                                <div id="telegramCommandCopied" class="form-text text-success d-none">
+                                    <i class="bi bi-check-circle me-1"></i>Copied!
+                                </div>
                             </div>
                         </div>
+                        <p class="small text-body-secondary mb-0">Token expires when used. Generate a new one if needed.</p>
                     </div>
-                    <p class="small text-body-secondary mb-0">Token expires when used. Generate a new one if needed.</p>
+                    <div id="telegramLinkAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
                 </div>
-                <div id="telegramLinkAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-proviant-primary" id="btnGenerateTelegramToken">
-                    <i class="bi bi-key me-1" aria-hidden="true"></i>Generate Token
-                </button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-proviant-primary" id="btnGenerateTelegramToken">
+                        <i class="bi bi-key me-1" aria-hidden="true"></i>Generate Token
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
 <script src="/assets/js/userSettings.js"></script>
+{{ end }}

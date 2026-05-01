@@ -1211,13 +1211,44 @@ document.addEventListener("input", function (event) {
 
   switch (target.id) {
     case "inputDisplayName":
+      clearInvalid(target);
+      break;
     case "inputMailAddress":
-      clearInvalid(target);
+      if (target.dataset.touched) {
+        const valid = target.validity.valid && target.value.trim() !== "";
+        target.classList.toggle("is-invalid", !valid);
+        target.classList.toggle("is-valid", valid);
+      } else {
+        clearInvalid(target);
+      }
       break;
-    case "inputPassword":
-    case "inputPasswordVerification":
-      clearInvalid(target);
+    case "inputPassword": {
+      if (target.dataset.touched) {
+        const valid = target.value.length >= 12;
+        target.classList.toggle("is-invalid", !valid);
+        target.classList.toggle("is-valid", valid);
+      } else {
+        clearInvalid(target);
+      }
+      const inputPasswordVerification = document.getElementById("inputPasswordVerification");
+      if (inputPasswordVerification && inputPasswordVerification.dataset.touched) {
+        const match = inputPasswordVerification.value === target.value && inputPasswordVerification.value !== "";
+        inputPasswordVerification.classList.toggle("is-invalid", !match);
+        inputPasswordVerification.classList.toggle("is-valid", match);
+      }
       break;
+    }
+    case "inputPasswordVerification": {
+      if (target.dataset.touched) {
+        const inputPassword = document.getElementById("inputPassword");
+        const match = inputPassword && target.value === inputPassword.value && target.value !== "";
+        target.classList.toggle("is-invalid", !match);
+        target.classList.toggle("is-valid", match);
+      } else {
+        clearInvalid(target);
+      }
+      break;
+    }
     case "inputNtfyUrl":
     case "inputNtfyTopic":
     case "inputNotificationThreshold":
@@ -1260,6 +1291,35 @@ document.addEventListener("DOMContentLoaded", function () {
   loadPATs();
   loadCalendarTokenStatus();
   LoadWebhooks();
+});
+
+/* ── Blur validation ─────────────────────────────────────────────── */
+document.addEventListener("focusout", function (event) {
+  const target = event.target;
+  switch (target.id) {
+    case "inputMailAddress": {
+      const valid = target.validity.valid && target.value.trim() !== "";
+      target.dataset.touched = "1";
+      target.classList.toggle("is-invalid", !valid);
+      target.classList.toggle("is-valid", valid);
+      break;
+    }
+    case "inputPassword": {
+      const valid = target.value.length >= 12;
+      target.dataset.touched = "1";
+      target.classList.toggle("is-invalid", !valid);
+      target.classList.toggle("is-valid", valid);
+      break;
+    }
+    case "inputPasswordVerification": {
+      const inputPassword = document.getElementById("inputPassword");
+      const match = inputPassword && target.value === inputPassword.value && target.value !== "";
+      target.dataset.touched = "1";
+      target.classList.toggle("is-invalid", !match);
+      target.classList.toggle("is-valid", match);
+      break;
+    }
+  }
 });
 
 /* ── Calendar Token Management ──────────────────────────────────── */
