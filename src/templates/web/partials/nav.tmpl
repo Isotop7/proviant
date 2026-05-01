@@ -1,8 +1,8 @@
 {{ define "nav" }}
 <nav class="pv-sidebar">
-	<div class="brand">
-		<img src="/assets/icons/header_transparent.png" alt="Proviant">
-	</div>
+	<a href="/web" class="brand" aria-label="Go to home">
+		<img src="/assets/icons/header_transparent.png" alt="">
+	</a>
 	<div class="nav-items">
 		<a href="/web" class="pv-nav-item {{ if eq .Title "Home" }}active{{ end }}"
 			{{ if eq .Title "Home" }}aria-current="page"{{ end }}
