@@ -290,15 +290,6 @@ function UpdateNotificationSettings() {
 }
 
 /* ── Household management helpers ────────────────────────────────── */
-function showHouseholdAlert(elementId, message, isSuccess) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
-  const span = el.querySelector("span") || el;
-  span.textContent = message;
-  el.classList.remove("d-none");
-  el.classList.add("show");
-}
 
 /* Leave household */
 function handleLeaveHousehold() {
@@ -313,7 +304,7 @@ function handleLeaveHousehold() {
             location.reload();
           });
         } else {
-          showHouseholdAlert("leaveHouseholdAlert", `Error: ${response.message}`, false);
+          proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
         }
       });
     },
@@ -331,14 +322,14 @@ function handleCreateHousehold() {
     return;
   }
   if (nameInput) nameInput.classList.remove("is-invalid");
-  proviant.createHousehold(name).then((response) => {
+    proviant.createHousehold(name).then((response) => {
     if (response.code === 200) {
       ShowSuccessModal("Household created. Reloading page.", function (e) {
         e.preventDefault();
         location.reload();
       });
     } else {
-      showHouseholdAlert("createHouseholdAlert", `Error: ${response.message}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
     }
   });
 }
@@ -356,11 +347,11 @@ function handleApplyHousehold() {
     if (response.code === 200) {
       location.reload();
     } else if (response.code === 409) {
-      showHouseholdAlert("applyHouseholdAlert", "You already have a pending application for this household.", false);
+      proviant.showFeedback('warning', 'Already Applied', "You already have a pending application for this household.");
     } else if (response.code === 404) {
-      showHouseholdAlert("applyHouseholdAlert", "Household not found.", false);
+      proviant.showFeedback('error', 'Not Found', "Household not found.");
     } else {
-      showHouseholdAlert("applyHouseholdAlert", `Error: ${response.message}`, false);
+      proviant.showFeedback('error', 'Apply Failed', `Error: ${response.message}`);
     }
   });
 }
@@ -369,12 +360,12 @@ function handleApplyHousehold() {
 function handleApproveApplication(btn) {
   const applicationID = btn.dataset.id;
   proviant.approveApplication(applicationID).then((response) => {
-    if (response.code === 200) {
-      const row = document.getElementById(`application-${applicationID}`);
-      if (row) row.remove();
-    } else {
-      showHouseholdAlert("applicationsAlert", `Error: ${response.message}`, false);
-    }
+     if (response.code === 200) {
+       const row = document.getElementById(`application-${applicationID}`);
+       if (row) row.remove();
+     } else {
+       proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+     }
   });
 }
 
@@ -382,12 +373,12 @@ function handleApproveApplication(btn) {
 function handleRejectApplication(btn) {
   const applicationID = btn.dataset.id;
   proviant.rejectApplication(applicationID).then((response) => {
-    if (response.code === 200) {
-      const row = document.getElementById(`application-${applicationID}`);
-      if (row) row.remove();
-    } else {
-      showHouseholdAlert("applicationsAlert", `Error: ${response.message}`, false);
-    }
+     if (response.code === 200) {
+       const row = document.getElementById(`application-${applicationID}`);
+       if (row) row.remove();
+     } else {
+       proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+     }
   });
 }
 
@@ -404,7 +395,7 @@ function handleUpdateHouseholdName() {
     if (response.code === 200) {
       location.reload();
     } else {
-      showHouseholdAlert("updateNameAlert", `Error: ${response.message}`, false);
+      proviant.showFeedback('error', 'Rename Failed', `Error: ${response.message}`);
     }
   });
 }
@@ -414,12 +405,12 @@ function handleCancelApplication(btn) {
   const applicationID = btn.dataset.id;
   proviant.showConfirm('Cancel Application', 'Cancel this pending application to join the household?', function () {
     proviant.cancelApplication(applicationID).then((response) => {
-      if (response.code === 200) {
-        const row = document.getElementById(`my-application-${applicationID}`);
-        if (row) row.remove();
-      } else {
-        proviant.showFeedback('error', 'Error', response.message || 'Could not cancel application.');
-      }
+    if (response.code === 200) {
+      const row = document.getElementById(`application-${applicationID}`);
+      if (row) row.remove();
+    } else {
+      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+    }
     });
   });
 }
@@ -440,15 +431,6 @@ function handleRemoveMember(btn) {
 }
 
 /* ── Invitation helpers ───────────────────────────────────────────── */
-function showInviteAlert(elementId, message, isSuccess) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
-  const span = el.querySelector("span") || el;
-  span.textContent = message;
-  el.classList.remove("d-none");
-  el.classList.add("show");
-}
 
 /* Send invitation */
 function handleSendInvitation() {
@@ -466,25 +448,16 @@ function handleSendInvitation() {
         location.reload();
       });
     } else if (response.code === 409) {
-      showInviteAlert("sendInviteAlert", response.message, false);
+      proviant.showFeedback('warning', 'Already Invited', response.message, false);
     } else if (response.code === 400) {
-      showInviteAlert("sendInviteAlert", response.message, false);
+      proviant.showFeedback('error', 'Invalid Email', response.message, false);
     } else {
-      showInviteAlert("sendInviteAlert", `Error: ${response.message}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
     }
   });
 }
 
 /* ── Admin User Management ─────────────────────────────────────── */
-function showAdminUserAlert(message, isSuccess) {
-  const el = document.getElementById("adminUserAlert");
-  if (!el) return;
-  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
-  const span = el.querySelector("span") || el;
-  span.textContent = message;
-  el.classList.remove("d-none");
-  el.classList.add("show");
-}
 
 function renderAdminUserRow(user, currentUserID) {
   if (!user || !user.username) return "";
@@ -537,7 +510,7 @@ function loadAdminUsers() {
     } else if (response.code === 403) {
       list.innerHTML = '<li class="list-group-item text-danger py-3">Access denied.</li>';
     } else {
-      showAdminUserAlert(`Error: ${response.message || "Unknown error"}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Unknown error"}`);
     }
   });
 }
@@ -594,7 +567,7 @@ function handleSaveUserEdit() {
       }
       loadAdminUsers();
     } else {
-      showAdminUserAlert(`Error: ${response.message}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
     }
   });
 }
@@ -629,7 +602,7 @@ function handleDeleteUser(btn) {
           const row = document.getElementById(`admin-user-${userID}`);
           if (row) row.remove();
         } else {
-          showAdminUserAlert(`Error: ${response.message}`, false);
+          proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
         }
       });
     },
@@ -639,15 +612,6 @@ function handleDeleteUser(btn) {
 }
 
 /* ── PAT (Personal Access Token) helpers ──────────────────────── */
-function showPATAlert(message, isSuccess) {
-  const el = document.getElementById("patAlert");
-  if (!el) return;
-  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
-  const span = el.querySelector("span") || el;
-  span.textContent = message;
-  el.classList.remove("d-none");
-  el.classList.add("show");
-}
 
 function renderPATRow(pat) {
   const expiresText = pat.expiresAt ? `Expires: ${new Date(pat.expiresAt).toLocaleDateString()}` : "No expiry";
@@ -682,7 +646,7 @@ function loadPATs() {
       }
       list.innerHTML = pats.map((p) => renderPATRow(p)).join("");
     } else {
-      showPATAlert(`Error: ${response.message || "Unknown error"}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Unknown error"}`);
     }
   });
 }
@@ -734,7 +698,7 @@ function handleSavePAT() {
       tokenDisplay.classList.remove("d-none");
       loadPATs();
     } else {
-      showPATAlert(`Error: ${response.message || "Failed to create token"}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to create token"}`);
     }
   });
 }
@@ -750,7 +714,7 @@ function handleDeletePAT(btn) {
           const row = document.getElementById(`pat-${patID}`);
           if (row) row.remove();
         } else {
-          showPATAlert(`Error: ${response.message || "Could not delete token"}`, false);
+          proviant.showFeedback('error', 'Error', `Error: ${response.message || "Could not delete token"}`);
         }
       });
     },
@@ -1299,18 +1263,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 /* ── Calendar Token Management ──────────────────────────────────── */
-function showCalendarAlert(message, isSuccess) {
-  const el = document.getElementById("calendarAlert");
-  if (!el) return;
-  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
-  const span = el.querySelector("span") || el;
-  span.textContent = message;
-  el.classList.remove("d-none");
-  el.classList.add("show");
-  setTimeout(() => {
-    el.classList.remove("show");
-  }, 5000);
-}
 
 function loadCalendarTokenStatus() {
   proviant.getCalendarTokenStatus().then((response) => {
@@ -1352,9 +1304,9 @@ function handleCalendarCreate() {
       hasTokenEl.classList.remove("d-none");
       urlInput.value = url;
 
-      showCalendarAlert("Calendar token created. Subscribe using the URL above.", true);
+      proviant.showFeedback('success', 'Calendar Token Created', 'Calendar token created. Subscribe using the URL above.');
     } else {
-      showCalendarAlert(`Error: ${response.message || "Failed to create calendar token"}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to create calendar token"}`);
     }
   });
 }
@@ -1373,9 +1325,9 @@ function handleCalendarRegenerate() {
           const url = response.message.url;
           const urlInput = document.getElementById("calendarUrl");
           urlInput.value = url;
-          showCalendarAlert("Calendar token regenerated with new URL.", true);
+          proviant.showFeedback('success', 'Token Regenerated', 'Calendar token regenerated with new URL.');
         } else {
-          showCalendarAlert(`Error: ${response.message || "Failed to regenerate calendar token"}`, false);
+          proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to regenerate calendar token"}`);
         }
       });
     },
@@ -1427,9 +1379,9 @@ function handleCalendarRemove() {
           hasTokenEl.classList.add("d-none");
           urlInput.value = "";
 
-          showCalendarAlert("Calendar token removed.", true);
+          proviant.showFeedback('success', 'Calendar Sync Removed', 'Calendar token removed.');
         } else {
-          showCalendarAlert(`Error: ${response.message || "Failed to remove calendar token"}`, false);
+          proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to remove calendar token"}`);
         }
       });
     },

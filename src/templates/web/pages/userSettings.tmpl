@@ -328,8 +328,6 @@
                     <i class="bi bi-trash me-1"></i>Remove Calendar Sync
                 </button>
             </div>
-
-            <div id="calendarAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
         </div>
     </div>
 
@@ -353,7 +351,6 @@
                     <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
                 </li>
             </ul>
-            <div id="patAlert" class="alert fade mt-2 d-none" role="alert"><span></span></div>
         </div>
     </div>
 
@@ -431,14 +428,13 @@
                 </li>
                 {{ end }}
             </ul>
-            {{ else }}
-            <p class="text-body-secondary small">No storage locations configured yet.</p>
-            {{ end }}
-            <div id="slAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
-        </div>
-    </div>
+             {{ else }}
+             <p class="text-body-secondary small">No storage locations configured yet.</p>
+             {{ end }}
+         </div>
+     </div>
 
-    <!-- Storage Location Add/Edit Modal -->
+     <!-- Storage Location Add/Edit Modal -->
     <div class="modal fade" id="storageLocationModal" tabindex="-1" aria-labelledby="storageLocationModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -496,7 +492,6 @@
                            value="{{ .Household.Name }}">
                     <button type="button" class="btn btn-proviant-secondary" id="btnUpdateHouseholdName">Rename</button>
                 </div>
-                <div id="updateNameAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
             </div>
             {{ end }}
 
@@ -521,8 +516,7 @@
                     </li>
                     {{ end }}
                 </ul>
-                <div id="membersAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
-                {{ else }}
+            {{ else }}
                 <div class="text-center py-4 text-muted">
                     <i class="bi bi-people fs-1 mb-2 d-block"></i>
                     <p class="mb-1">You're the only one here.</p>
@@ -547,7 +541,6 @@
                                placeholder="Household ID" aria-required="true" min="1">
                         <button type="button" class="btn btn-proviant-secondary" id="btnApplyHousehold">Apply</button>
                     </div>
-                    <div id="applyHouseholdAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
                 </div>
 
                 {{/* Outgoing pending applications */}}
@@ -564,9 +557,10 @@
                                 <i class="bi bi-x-lg"></i> Cancel
                             </button>
                         </li>
-                        {{ end }}
-                    </ul>
-                </div>
+            {{ end }}
+            </ul>
+        </div>
+    </div>
                 {{ end }}
 
                 {{/* Invite by email */}}
@@ -581,7 +575,6 @@
                                placeholder="user@example.com" aria-label="Email address to invite" autocomplete="email">
                         <button type="button" class="btn btn-proviant-secondary" id="btnSendInvitation">Send Invite</button>
                     </div>
-                    <div id="sendInviteAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
                 </div>
 
                 {{/* Sent invitations list */}}
@@ -663,8 +656,7 @@
                     </li>
                     {{ end }}
                 </ul>
-                <div id="applicationsAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
-            </div>
+            {{ end }}
             {{ end }}
             {{ end }}
 
@@ -684,7 +676,6 @@
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
                     </li>
                 </ul>
-                <div id="adminUserAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
 
                 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
@@ -810,7 +801,6 @@
                             Create &amp; Switch
                         </button>
                     </div>
-                    <div id="createHouseholdAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
                 </div>
 
                 {{/* Leave household */}}
@@ -821,7 +811,6 @@
                     </div>
                     <button type="button" class="btn btn-proviant-danger flex-shrink-0" id="btnLeaveHousehold">Leave</button>
                 </div>
-                <div id="leaveHouseholdAlert" class="alert fade mt-2 d-none" role="alert" aria-live="polite"><span></span></div>
             </div>
 
         </div>
