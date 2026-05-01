@@ -26,9 +26,9 @@ async function loadRecipeSuggestions(forceRefresh = false) {
         if (recipes.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-5">
-                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                    <i class="bi bi-inbox fs-1 text-secondary-custom"></i>
                     <p class="mt-3">No recipe suggestions found for your expiring products.</p>
-                    <p class="text-muted">Try adding products with expiry dates to get personalized suggestions!</p>
+                    <p class="text-secondary-custom">Try adding products with expiry dates to get personalized suggestions!</p>
                 </div>
             `;
             return;
@@ -57,7 +57,7 @@ function renderRecipes(recipes) {
                             <img src="${recipe.imageUrl}" class="card-img-top" alt="${escapeHtml(recipe.title)}" loading="lazy" style="height: 200px; object-fit: cover;">
                         ` : `
                             <div class="bg-light text-center py-4">
-                                <i class="bi bi-journal-richtext fs-1 text-muted"></i>
+                                <i class="bi bi-journal-richtext fs-1 text-secondary-custom"></i>
                             </div>
                         `}
                         <div class="card-body d-flex flex-column">
@@ -67,12 +67,12 @@ function renderRecipes(recipes) {
                                 <div class="progress" style="height: 6px;">
                                     <div class="progress-bar bg-success" role="progressbar" style="width: ${recipe.matchPercent}%" aria-valuenow="${Math.round(recipe.matchPercent)}" aria-valuemin="0" aria-valuemax="100"></div>
                                 </div>
-                                <small class="text-muted">${recipe.matchedProducts.length} of ${recipe.totalIngredients} ingredients matched</small>
+                                <small class="text-secondary-custom">${recipe.matchedProducts.length} of ${recipe.totalIngredients} ingredients matched</small>
                             </div>
 
                             ${ingredients.length > 0 ? `
                             <div class="ingredient-list mt-2">
-                                <small class="text-muted mb-1 d-block">Ingredients:</small>
+                                <small class="text-secondary-custom mb-1 d-block">Ingredients:</small>
                                 <div class="d-flex flex-wrap gap-1">
                                     ${ingredients.map(ing => `
                                         <span class="badge ${ing.matched ? 'bg-success' : 'bg-warning text-dark'}" 

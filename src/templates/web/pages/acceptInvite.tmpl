@@ -28,7 +28,7 @@
                     </div>
 
                     {{ else if .NeedsAuth }}
-                    <p class="text-center text-body-secondary">You've been invited to join <strong>{{ .HouseholdName }}</strong>.</p>
+                    <p class="text-center text-secondary-custom">You've been invited to join <strong>{{ .HouseholdName }}</strong>.</p>
                     <div class="alert alert-info mt-3" role="alert">
                         <i class="bi bi-info-circle me-2"></i>You must use the email address <strong>{{ .InvitationEmail }}</strong> to accept this invitation. If you already have an account, log in with that email. If you are new, sign up with this exact email address.
                     </div>
@@ -43,7 +43,7 @@
                     <div class="alert alert-info mt-3" role="alert">
                         <i class="bi bi-info-circle me-2"></i>You are logged in as <strong>{{ .InvitationEmail }}</strong>. Click below to join the household.
                     </div>
-                    <p class="text-center text-body-secondary small mt-2">Your current household membership will be replaced.</p>
+                    <p class="text-center text-secondary-custom small mt-2">Your current household membership will be replaced.</p>
                     <form id="acceptInviteForm" class="mt-4">
                         <input type="hidden" id="inviteToken" value="{{ .Token }}">
                         <div class="d-grid gap-2">

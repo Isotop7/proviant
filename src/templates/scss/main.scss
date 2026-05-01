@@ -265,7 +265,21 @@ $bootstrap-icons-font-dir: "../fonts";
   --nav-item-active-fg: var(--accent);
   --nav-item-fg: var(--fg-2);
   --nav-item-fg-hover: var(--fg);
+
+  /* Text hierarchy */
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --text-tertiary: #adb5bd;
+  --text-disabled: #ced4da;
 }
+
+//
+// Text hierarchy utilities
+//
+.text-primary-custom { color: var(--text-primary); }
+.text-secondary-custom { color: var(--text-secondary); }
+.text-tertiary { color: var(--text-tertiary); }
+.text-disabled-custom { color: var(--text-disabled); }
 
 // Ensure full page height on mobile
 @media (max-width: 767.98px) {

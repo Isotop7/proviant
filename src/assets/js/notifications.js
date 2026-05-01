@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   const response = await proviant.getNotifications();
 
   if (response.code !== 200) {
-    itemsEl.innerHTML = '<p class="text-body-secondary small px-3 py-2 mb-0">Could not load notifications.</p>';
+    itemsEl.innerHTML = '<p class="text-secondary-custom small px-3 py-2 mb-0">Could not load notifications.</p>';
     return;
   }
 
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   };
 
   if (data.total === 0) {
-    itemsEl.innerHTML = '<p class="text-body-secondary small px-3 py-2 mb-0">All clear — nothing pending.</p>';
+    itemsEl.innerHTML = '<p class="text-secondary-custom small px-3 py-2 mb-0">All clear — nothing pending.</p>';
     return;
   }
 
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         <i class="bi ${iconMap[item.type] || 'bi-bell'} text-primary flex-shrink-0 mt-1" aria-hidden="true"></i>
         <div>
           <div class="small text-body">${item.title}</div>
-          <div class="text-body-secondary notification-entry-date">${item.createdAt}</div>
+          <div class="text-secondary-custom notification-entry-date">${item.createdAt}</div>
         </div>
       </div>
     </a>`;

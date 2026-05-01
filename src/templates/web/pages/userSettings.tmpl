@@ -42,7 +42,7 @@
                         <label for="inputUsername" class="form-label fw-medium">Username</label>
                         <input type="text" class="form-control" id="inputUsername"
                                value="{{ .User.Username }}" readonly autocomplete="username">
-                        <div class="form-text text-muted">Login credential — cannot be changed here.</div>
+                        <div class="form-text text-secondary-custom">Login credential — cannot be changed here.</div>
                     </div>
                 </div>
             </form>
@@ -105,14 +105,14 @@
                 {{/* ── Delivery Channels ─────────────────────────────── */}}
                 <div class="mb-4">
                     <h3 class="h6 fw-semibold mb-1">Delivery Channels</h3>
-                    <p class="text-body-secondary small mb-3">How you receive product expiry alerts.</p>
+                    <p class="text-secondary-custom small mb-3">How you receive product expiry alerts.</p>
 
                     <div class="list-group list-group-flush border rounded-3">
                         <div class="list-group-item px-3 py-3">
                             <div class="d-flex align-items-center justify-content-between gap-3">
                                 <div>
                                     <div class="fw-medium small">Email</div>
-                                    <div class="text-body-secondary small">Expiry alerts sent to your registered email address.</div>
+                                    <div class="text-secondary-custom small">Expiry alerts sent to your registered email address.</div>
                                 </div>
                                 <div class="form-check form-switch mb-0 flex-shrink-0">
                                     <input class="form-check-input" type="checkbox" role="switch"
@@ -122,14 +122,14 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="emailSettings" class="list-group-item px-3 py-3 bg-light{{if not .User.NotificationPreferences.EmailEnabled}} d-none{{end}}">
-                            <p class="small mb-3 text-body-secondary">
+                        <div id="emailSettings" class="list-group-item px-3 py-3 bg-body-tertiary{{if not .User.NotificationPreferences.EmailEnabled}} d-none{{end}}">
+                            <p class="small mb-3 text-secondary-custom">
                                 <i class="bi bi-envelope me-1" aria-hidden="true"></i>
                                 Alerts will be sent to <strong class="text-body">{{ .User.MailAddress }}</strong>.
                                 Update your address in <a href="#inputMailAddress" class="text-decoration-none">Personal Details</a>.
                             </p>
                             <label for="inputNotificationThreshold" class="form-label fw-medium small">Expiry Threshold</label>
-                            <p class="text-body-secondary small mb-2">Notify this many days <strong>before</strong> a product expires. Set to 0 to only notify on or after the expiry date.</p>
+                            <p class="text-secondary-custom small mb-2">Notify this many days <strong>before</strong> a product expires. Set to 0 to only notify on or after the expiry date.</p>
                             <div class="input-group input-width-260">
                                 <span class="input-group-text"><i class="bi bi-alarm"></i></span>
                                 <input type="number" class="form-control" id="inputNotificationThreshold"
@@ -144,7 +144,7 @@
                             <div class="d-flex align-items-center justify-content-between gap-3">
                                 <div>
                                     <div class="fw-medium small">ntfy.sh</div>
-                                    <div class="text-body-secondary small">Push alerts via ntfy.sh to any subscribed device.</div>
+                                    <div class="text-secondary-custom small">Push alerts via ntfy.sh to any subscribed device.</div>
                                 </div>
                                 <div class="form-check form-switch mb-0 flex-shrink-0">
                                     <input class="form-check-input" type="checkbox" role="switch"
@@ -154,7 +154,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="ntfySettings" class="list-group-item px-3 py-3 bg-light{{if not .User.NotificationPreferences.NtfyEnabled}} d-none{{end}}">
+                        <div id="ntfySettings" class="list-group-item px-3 py-3 bg-body-tertiary{{if not .User.NotificationPreferences.NtfyEnabled}} d-none{{end}}">
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
                                     <label for="inputNtfyUrl" class="form-label fw-medium">
@@ -177,7 +177,7 @@
                             </div>
                             <div>
                                 <label for="inputNtfyToken" class="form-label fw-medium">
-                                    Access Token <span class="text-body-secondary fw-normal">(optional)</span>
+                                    Access Token <span class="text-secondary-custom fw-normal">(optional)</span>
                                 </label>
                                 <input type="password" class="form-control input-width-360" id="inputNtfyToken"
                                        placeholder="Optional access token" autocomplete="new-password">
@@ -187,7 +187,7 @@
                             <div class="d-flex align-items-center justify-content-between gap-3">
                                 <div>
                                     <div class="fw-medium small">Telegram</div>
-                                    <div class="text-body-secondary small">Push alerts via your own Telegram bot to any device.</div>
+                                    <div class="text-secondary-custom small">Push alerts via your own Telegram bot to any device.</div>
                                 </div>
                                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                     <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTelegramHelp"
@@ -204,7 +204,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="telegramSettings" class="list-group-item px-3 py-3 bg-light{{if not .User.NotificationPreferences.TelegramEnabled}} d-none{{end}}">
+                        <div id="telegramSettings" class="list-group-item px-3 py-3 bg-body-tertiary{{if not .User.NotificationPreferences.TelegramEnabled}} d-none{{end}}">
                             <div class="mb-3">
                                 <label class="form-label small fw-medium mb-1" for="inputTelegramBotToken">Bot Token</label>
                                 <input type="text" class="form-control form-control-sm input-width-360" id="inputTelegramBotToken"
@@ -222,10 +222,10 @@
                             <div class="d-flex align-items-center gap-2 mb-2">
                                 {{if .User.NotificationPreferences.TelegramLinked}}
                                 <span class="badge bg-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Linked</span>
-                                <span class="text-body-secondary small">Your Telegram account is connected.</span>
+                                <span class="text-secondary-custom small">Your Telegram account is connected.</span>
                                 {{else}}
                                 <span class="badge bg-secondary">Not linked</span>
-                                <span class="text-body-secondary small">Save your bot token, then link your account.</span>
+                                <span class="text-secondary-custom small">Save your bot token, then link your account.</span>
                                 {{end}}
                             </div>
                             <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTelegramLink"
@@ -241,14 +241,14 @@
                 {{/* ── Scheduled Reports ──────────────────────────────── */}}
                 <div>
                     <h3 class="h6 fw-semibold mb-1">Scheduled Reports</h3>
-                    <p class="text-body-secondary small mb-3">Periodic email summaries sent to all opted-in household members.</p>
+                    <p class="text-secondary-custom small mb-3">Periodic email summaries sent to all opted-in household members.</p>
 
                     <div class="list-group list-group-flush border rounded-3">
                         <div class="list-group-item px-3 py-3">
                             <div class="d-flex align-items-center justify-content-between gap-3">
                                 <div>
                                     <div class="fw-medium small">Monthly Waste Report</div>
-                                    <div class="text-body-secondary small">
+                                    <div class="text-secondary-custom small">
                                         <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>Sent on the 1st of each month &middot; items removed and expired per household
                                     </div>
                                 </div>
@@ -260,8 +260,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="monthlyWasteReportSettings" class="list-group-item px-3 py-3 bg-light{{if not .User.NotificationPreferences.MonthlyWasteReportEnabled}} d-none{{end}}">
-                            <ul class="small text-body-secondary mb-0 ps-3">
+                        <div id="monthlyWasteReportSettings" class="list-group-item px-3 py-3 bg-body-tertiary{{if not .User.NotificationPreferences.MonthlyWasteReportEnabled}} d-none{{end}}">
+                            <ul class="small text-secondary-custom mb-0 ps-3">
                                 <li>Covers products <strong class="text-body">deleted from pantry</strong> and <strong class="text-body">past best-before date</strong> during the month</li>
                                 <li>Includes waste rate and month-over-month comparison</li>
                                 <li>Sent to every household member with this option enabled</li>
@@ -288,11 +288,11 @@
             </button>
         </div>
         <div class="card-body px-4 py-4">
-            <p class="text-body-secondary small mb-3">Subscribe to your product expiry dates in Google Calendar, Apple Calendar, or Thunderbird using the iCal feed URL below.</p>
+            <p class="text-secondary-custom small mb-3">Subscribe to your product expiry dates in Google Calendar, Apple Calendar, or Thunderbird using the iCal feed URL below.</p>
 
             <div id="calendarNoToken">
-                <i class="bi bi-calendar-x text-muted fs-1 mb-3 d-block"></i>
-                <p class="text-muted mb-3">No calendar token configured.</p>
+                <i class="bi bi-calendar-x text-secondary-custom fs-1 mb-3 d-block"></i>
+                <p class="text-secondary-custom mb-3">No calendar token configured.</p>
                 <button type="button" class="btn btn-proviant-primary" id="btnCalendarCreate">
                     <i class="bi bi-plus-lg me-1"></i>Generate Calendar Token
                 </button>
@@ -317,7 +317,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-medium">Instructions</label>
-                    <ol class="text-body-secondary small mb-0">
+                    <ol class="text-secondary-custom small mb-0">
                         <li>Copy the subscription URL above</li>
                         <li>Open your calendar app (Google Calendar, Apple Calendar, Thunderbird)</li>
                         <li>Add a new calendar subscription with that URL</li>
@@ -345,9 +345,9 @@
             </button>
         </div>
         <div class="card-body px-4 py-4">
-            <p class="text-body-secondary small mb-3">Personal access tokens let you authenticate with the API without a browser session.</p>
+            <p class="text-secondary-custom small mb-3">Personal access tokens let you authenticate with the API without a browser session.</p>
             <ul class="list-group" id="patList">
-                <li class="list-group-item text-center text-muted py-3" id="patLoading">
+                <li class="list-group-item text-center text-secondary-custom py-3" id="patLoading">
                     <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
                 </li>
             </ul>
@@ -372,7 +372,7 @@
                         </div>
                         <div class="mb-3">
                             <label for="inputPatExpiry" class="form-label fw-medium">
-                                Expires At <span class="text-body-secondary fw-normal">(optional)</span>
+                                Expires At <span class="text-secondary-custom fw-normal">(optional)</span>
                             </label>
                             <input type="datetime-local" class="form-control" id="inputPatExpiry">
                         </div>
@@ -406,7 +406,7 @@
             {{ end }}
         </div>
         <div class="card-body px-4 py-4">
-            <p class="text-body-secondary small mb-3">Locations are shared across all household members.</p>
+            <p class="text-secondary-custom small mb-3">Locations are shared across all household members.</p>
             {{ if .Locations }}
             <ul class="list-group mb-3" id="storageLocationList">
                 {{ range .Locations }}
@@ -429,7 +429,7 @@
                 {{ end }}
             </ul>
              {{ else }}
-             <p class="text-body-secondary small">No storage locations configured yet.</p>
+             <p class="text-secondary-custom small">No storage locations configured yet.</p>
              {{ end }}
          </div>
      </div>
@@ -476,7 +476,7 @@
         <div class="card-body px-4 py-4">
 
             {{/* Current household info */}}
-            <div class="d-flex align-items-center gap-2 p-3 rounded bg-light mb-4">
+            <div class="d-flex align-items-center gap-2 p-3 rounded bg-body-tertiary mb-4">
                 <span class="badge bg-secondary">ID: {{ .Household.ID }}</span>
                 <strong>{{ .Household.Name }}</strong>
                 {{ if .IsAdmin }}<span class="badge bg-primary"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
@@ -517,7 +517,7 @@
                     {{ end }}
                 </ul>
             {{ else }}
-                <div class="text-center py-4 text-muted">
+                <div class="text-center py-4 text-secondary-custom">
                     <i class="bi bi-people fs-1 mb-2 d-block"></i>
                     <p class="mb-1">You're the only one here.</p>
                     <p class="small mb-0">Use the invite form below to add members to this household.</p>
@@ -527,14 +527,14 @@
 
             {{/* ── Join & Invite ───────────────────────────────── */}}
             <div class="mt-4 pt-4 border-top">
-                <h3 class="h6 fw-semibold text-muted mb-3"><i class="bi bi-person-plus me-1"></i>Join &amp; Invite</h3>
+                <h3 class="h6 fw-semibold text-secondary-custom mb-3"><i class="bi bi-person-plus me-1"></i>Join &amp; Invite</h3>
 
                 {{/* Apply to join a household */}}
                 <div class="mb-4">
                     <label for="inputApplyHouseholdID" class="form-label fw-medium">
                         Apply to Join a Household
                     </label>
-                    <p class="text-body-secondary small mb-2">Enter the ID of the household you want to join. The admin will need to approve your request.</p>
+                    <p class="text-secondary-custom small mb-2">Enter the ID of the household you want to join. The admin will need to approve your request.</p>
                     <div class="input-group input-width-360">
                         <span class="input-group-text"><i class="bi bi-hash"></i></span>
                         <input type="number" class="form-control" id="inputApplyHouseholdID"
@@ -547,7 +547,7 @@
                 {{ if .MyApplications }}
                 <div class="mb-4">
                     <h3 class="h6 fw-semibold mb-2"><i class="bi bi-send me-1"></i>Your Pending Applications</h3>
-                    <p class="text-body-secondary small mb-2">Awaiting admin approval.</p>
+                    <p class="text-secondary-custom small mb-2">Awaiting admin approval.</p>
                     <ul class="list-group" id="myApplicationList">
                         {{ range .MyApplications }}
                         <li class="list-group-item d-flex justify-content-between align-items-center" id="my-application-{{ .ID }}">
@@ -567,7 +567,7 @@
                     <label for="inputInviteEmail" class="form-label fw-medium">
                         <i class="bi bi-envelope-paper me-1"></i>Invite by Email
                     </label>
-                    <p class="text-body-secondary small mb-2">Send an invitation to join this household. The recipient will receive an email with a magic link to accept.</p>
+                    <p class="text-secondary-custom small mb-2">Send an invitation to join this household. The recipient will receive an email with a magic link to accept.</p>
                     <div class="input-group input-width-480">
                         <span class="input-group-text"><i class="bi bi-at"></i></span>
                         <input type="email" class="form-control" id="inputInviteEmail"
@@ -580,7 +580,7 @@
                 {{ if .Invitations }}
                 <div class="mb-3">
                     <h3 class="h6 fw-semibold mb-2"><i class="bi bi-send me-1"></i>Sent Invitations</h3>
-                    <p class="text-body-secondary small mb-2">Invitations you have sent. Cancelled invitations are hidden by default.</p>
+                    <p class="text-secondary-custom small mb-2">Invitations you have sent. Cancelled invitations are hidden by default.</p>
                     <ul class="list-group" id="invitationList">
                         {{ range .Invitations }}
                         {{ if ne .Status "cancelled" }}
@@ -588,7 +588,7 @@
                             <span>
                                 <i class="bi bi-envelope me-2"></i>{{ .Email }}
                                 <span class="badge bg-secondary ms-2">{{ .Status }}</span>
-                                <small class="text-muted ms-2">Expires: {{ .ExpiresAt.Format "2006-01-02" }}</small>
+                                <small class="text-secondary-custom ms-2">Expires: {{ .ExpiresAt.Format "2006-01-02" }}</small>
                             </span>
                             {{ if eq .Status "pending" }}
                             <button type="button" class="btn btn-sm btn-proviant-danger btn-cancel-invitation"
@@ -618,7 +618,7 @@
                     <ul class="list-group">
                         {{ range .Invitations }}
                         {{ if eq .Status "cancelled" }}
-                        <li class="list-group-item d-flex justify-content-between align-items-center text-muted" id="invitation-{{ .ID }}">
+                        <li class="list-group-item d-flex justify-content-between align-items-center text-secondary-custom" id="invitation-{{ .ID }}">
                             <span>
                                 <i class="bi bi-envelope me-2"></i>{{ .Email }}
                                 <span class="badge bg-secondary ms-2">{{ .Status }}</span>
@@ -662,7 +662,7 @@
             {{ if .IsAdmin }}
             <div class="mt-4 pt-4 border-top">
                 <h3 class="h6 fw-semibold mb-2"><i class="bi bi-person-gear me-1"></i>User Management</h3>
-                <p class="text-body-secondary small mb-3">Manage household members. Click edit to update username or email, reset password to send a password reset link, or remove to delete the user.</p>
+                <p class="text-secondary-custom small mb-3">Manage household members. Click edit to update username or email, reset password to send a password reset link, or remove to delete the user.</p>
 
                 <div class="mb-3">
                     <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnRefreshUsers">
@@ -670,7 +670,7 @@
                     </button>
                 </div>
                 <ul class="list-group" id="adminUserList">
-                    <li class="list-group-item text-center text-muted py-3" id="adminUserLoading">
+                    <li class="list-group-item text-center text-secondary-custom py-3" id="adminUserLoading">
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
                     </li>
                 </ul>
@@ -710,7 +710,7 @@
             {{/* ── Webhooks ──────────────────────────────────────── */}}
             <div class="mt-4 pt-4 border-top">
                 <h3 class="h6 fw-semibold mb-1"><i class="bi bi-webhook me-1"></i>Webhooks</h3>
-                <p class="text-body-secondary small mb-3">Receive event notifications via HTTP. Up to 3 retries on failure.</p>
+                <p class="text-secondary-custom small mb-3">Receive event notifications via HTTP. Up to 3 retries on failure.</p>
 
                 <div id="webhookList" class="mb-3"></div>
 
@@ -719,7 +719,7 @@
                         <div class="d-flex align-items-center justify-content-between gap-3">
                             <div>
                                 <div class="fw-medium small">Create New Webhook</div>
-                                <div class="text-body-secondary small">Add a new endpoint to receive event payloads.</div>
+                                <div class="text-secondary-custom small">Add a new endpoint to receive event payloads.</div>
                             </div>
                             <div class="form-check form-switch mb-0 flex-shrink-0">
                                 <input class="form-check-input" type="checkbox" role="switch" id="toggleWebhookCreate">
@@ -727,7 +727,7 @@
                             </div>
                         </div>
                     </div>
-                    <div id="webhookCreateSettings" class="list-group-item px-3 py-3 bg-light d-none">
+                    <div id="webhookCreateSettings" class="list-group-item px-3 py-3 bg-body-tertiary d-none">
                         <form id="webhookCreateForm" novalidate>
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
@@ -790,7 +790,7 @@
                     <label for="inputNewHouseholdName" class="form-label fw-medium">
                         <i class="bi bi-house-add me-1"></i>Create New Household
                     </label>
-                    <p class="text-body-secondary small mb-2">Create a new household and switch to it. If you are currently the sole member, your products will be moved.</p>
+                    <p class="text-secondary-custom small mb-2">Create a new household and switch to it. If you are currently the sole member, your products will be moved.</p>
                     <div class="input-group input-width-480">
                         <span class="input-group-text"><i class="bi bi-house"></i></span>
                         <input type="text" class="form-control" id="inputNewHouseholdName"
@@ -805,7 +805,7 @@
                 <div class="d-flex justify-content-between align-items-start gap-3">
                     <div>
                         <p class="fw-medium mb-1"><i class="bi bi-box-arrow-left me-1"></i>Leave Household</p>
-                        <p class="text-body-secondary small mb-0">You will be assigned a new personal household. If you are the sole member, your products will be moved with you.</p>
+                        <p class="text-secondary-custom small mb-0">You will be assigned a new personal household. If you are the sole member, your products will be moved with you.</p>
                     </div>
                     <button type="button" class="btn btn-proviant-danger flex-shrink-0" id="btnLeaveHousehold">Leave</button>
                 </div>
@@ -823,7 +823,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-body-secondary small mb-2">Copy this secret to verify webhook signatures. You will not be able to see it again.</p>
+                    <p class="text-secondary-custom small mb-2">Copy this secret to verify webhook signatures. You will not be able to see it again.</p>
                     <input type="text" class="form-control" id="webhookSecretCopy" readonly>
                 </div>
                 <div class="modal-footer">
@@ -862,7 +862,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-body-secondary small mb-3">
+                    <p class="text-secondary-custom small mb-3">
                         Each user creates and manages their own Telegram bot. No administrator involvement is required.
                     </p>
                     <ol class="small mb-3">
@@ -907,7 +907,7 @@
                 </div>
                 <div class="modal-body">
                     <div id="telegramLinkSteps">
-                        <p class="text-body-secondary small mb-3">Follow these steps to connect your Telegram account:</p>
+                        <p class="text-secondary-custom small mb-3">Follow these steps to connect your Telegram account:</p>
                         <ol class="small mb-3">
                             <li class="mb-2">Click <strong>Generate Token</strong> below.</li>
                             <li class="mb-2">Click <strong>Open in Telegram</strong> to open the bot directly — or copy the command and send it manually to your bot.</li>
@@ -919,7 +919,7 @@
                                 <i class="bi bi-telegram me-2" aria-hidden="true"></i>Open in Telegram
                             </a>
                             <div id="telegramManualCommand" class="mt-2">
-                                <small class="text-body-secondary d-block mb-1">
+                                <small class="text-secondary-custom d-block mb-1">
                                     Or copy and send this command directly to your bot:
                                 </small>
                                 <div class="input-group input-group-sm">
@@ -934,7 +934,7 @@
                                 </div>
                             </div>
                         </div>
-                        <p class="small text-body-secondary mb-0">Token expires when used. Generate a new one if needed.</p>
+                        <p class="small text-secondary-custom mb-0">Token expires when used. Generate a new one if needed.</p>
                     </div>
                     <div id="telegramLinkAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
                 </div>

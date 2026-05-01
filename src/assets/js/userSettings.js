@@ -466,7 +466,7 @@ function renderAdminUserRow(user, currentUserID) {
     <li class="list-group-item d-flex justify-content-between align-items-center" id="admin-user-${user.id}">
       <span>
         <i class="bi bi-person me-2"></i>${user.username}
-        <span class="text-muted ms-1">&lt;${user.mailAddress || ""}&gt;</span>
+        <span class="text-secondary-custom ms-1">&lt;${user.mailAddress || ""}&gt;</span>
         ${isSelf ? '<span class="badge bg-secondary ms-1">You</span>' : ""}
       </span>
       <div class="btn-group btn-group-sm">
@@ -497,13 +497,13 @@ function loadAdminUsers() {
     if (response.code === 200) {
       const users = response.message;
       if (!users || !Array.isArray(users) || users.length === 0) {
-        list.innerHTML = '<li class="list-group-item text-center text-muted py-3">No users in household.</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">No users in household.</li>';
         return;
       }
       const currentUserID = parseInt(document.querySelector('span.badge.bg-primary[ID]')?.textContent?.replace("#", "") || "0", 10);
       const rendered = users.map((u) => renderAdminUserRow(u, currentUserID)).join("");
       if (!rendered) {
-        list.innerHTML = '<li class="list-group-item text-center text-muted py-3">No users in household.</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">No users in household.</li>';
         return;
       }
       list.innerHTML = rendered;
@@ -620,7 +620,7 @@ function renderPATRow(pat) {
     <li class="list-group-item d-flex justify-content-between align-items-center" id="pat-${pat.id}">
       <span>
         <i class="bi bi-key me-2"></i>${pat.name}
-        <small class="text-muted d-block">${lastUsedText} · ${expiresText}</small>
+        <small class="text-secondary-custom d-block">${lastUsedText} · ${expiresText}</small>
       </span>
       <button type="button" class="btn btn-sm btn-outline-danger btn-delete-pat" data-id="${pat.id}" title="Delete token">
         <i class="bi bi-trash"></i>
@@ -641,7 +641,7 @@ function loadPATs() {
     if (response.code === 200) {
       const pats = response.message;
       if (!pats || !Array.isArray(pats) || pats.length === 0) {
-        list.innerHTML = '<li class="list-group-item text-center text-muted py-3">No tokens created yet.</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">No tokens created yet.</li>';
         return;
       }
       list.innerHTML = pats.map((p) => renderPATRow(p)).join("");
@@ -742,7 +742,7 @@ function RenderWebhookList() {
   if (!container) return;
 
   if (currentWebhooks.length === 0) {
-    container.innerHTML = '<div class="text-center text-muted py-4">No webhooks configured. Create one below.</div>';
+    container.innerHTML = '<div class="text-center text-secondary-custom py-4">No webhooks configured. Create one below.</div>';
     return;
   }
 
@@ -756,7 +756,7 @@ function RenderWebhookList() {
           <div class="d-flex justify-content-between align-items-start mb-2">
             <div>
               <h6 class="mb-1">${escapeHtml(wh.url)}</h6>
-              <small class="text-muted">Events: ${escapeHtml(eventsList)}</small>
+              <small class="text-secondary-custom">Events: ${escapeHtml(eventsList)}</small>
             </div>
             <div class="form-check form-switch">
               <input class="form-check-input webhook-toggle-active" type="checkbox" ${toggleChecked} data-id="${wh.id}">
@@ -838,7 +838,7 @@ function ShowDeliveriesModal(deliveries) {
   let html = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Time</th><th>Attempt</th><th>Status</th><th>Response</th><th>Error</th></tr></thead><tbody>';
   
   if (deliveries.length === 0) {
-    html += '<tr><td colspan="5" class="text-center text-muted">No delivery attempts yet</td></tr>';
+    html += '<tr><td colspan="5" class="text-center text-secondary-custom">No delivery attempts yet</td></tr>';
   } else {
     for (const d of deliveries) {
       const statusClass = d.statusCode >= 200 && d.statusCode < 300 ? 'text-success' : 'text-danger';

@@ -23,7 +23,7 @@ function showEmptyChart(canvasId, message) {
   canvas.style.display = 'none';
   canvas.insertAdjacentHTML(
     'afterend',
-    `<p class="text-body-secondary small text-center my-auto py-4">${message}</p>`,
+    `<p class="text-secondary-custom small text-center my-auto py-4">${message}</p>`,
   );
 }
 
@@ -65,14 +65,14 @@ function renderListTile(title, items, days) {
 
   let listHtml;
   if (items.length === 0) {
-    listHtml = `<li class="list-group-item text-body-secondary small py-2">No products expiring in the next ${days} day${days !== 1 ? 's' : ''}</li>`;
+    listHtml = `<li class="list-group-item text-secondary-custom small py-2">No products expiring in the next ${days} day${days !== 1 ? 's' : ''}</li>`;
   } else {
     listHtml = items.map((item) => {
       const date = new Date(item.expireAt + 'T00:00:00');
       const dateLabel = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       return `<li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
         <span class="text-truncate me-2 small">${item.productName}</span>
-        <span class="text-nowrap text-body-secondary small">${dateLabel}</span>
+        <span class="text-nowrap text-secondary-custom small">${dateLabel}</span>
       </li>`;
     }).join('');
   }
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       const currentStreak = streak ? streak.currentStreak : 0;
       const longestStreak = streak ? streak.longestStreak : 0;
       const streakHero = `${currentStreak} day${currentStreak !== 1 ? 's' : ''}`;
-      const streakHeroClass = currentStreak > 0 ? 'metric-value' : 'metric-value text-body-secondary';
+      const streakHeroClass = currentStreak > 0 ? 'metric-value' : 'metric-value text-secondary-custom';
       const streakSub = longestStreak > 0 ? `Best: ${longestStreak} day${longestStreak !== 1 ? 's' : ''}` : null;
       const streakCol = renderTile('<i class="bi bi-fire"></i> Waste-free streak', streakHero, null, streakHeroClass);
       if (streakSub) {

@@ -47,14 +47,14 @@
         <ul class="list-group list-group-flush">
             {{ if .StorageLocation }}
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-muted small">
+                <span class="text-secondary-custom small">
                     <i class="bi bi-geo-alt me-2" aria-hidden="true"></i>Location
                 </span>
                 <span class="badge bg-light text-dark border">{{ .StorageLocation.Icon }} {{ .StorageLocation.Name }}</span>
             </li>
             {{ end }}
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-muted small">
+                <span class="text-secondary-custom small">
                     <i class="bi bi-stack me-2" aria-hidden="true"></i>Amount
                 </span>
                 <span class="d-flex align-items-center gap-1">
@@ -64,13 +64,13 @@
                 </span>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-muted small">
+                <span class="text-secondary-custom small">
                     <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>Scanned
                 </span>
                 <span class="product-meta">{{ .ScannedAt | humanDateTime }}</span>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-muted small">
+                <span class="text-secondary-custom small">
                     <i class="bi bi-bell me-2" aria-hidden="true"></i>Notified
                 </span>
                 <span class="product-meta">{{ .NotifiedAt | humanDateTime }}</span>
