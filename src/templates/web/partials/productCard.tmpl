@@ -58,9 +58,9 @@
                     <i class="bi bi-stack me-2" aria-hidden="true"></i>Amount
                 </span>
                 <span class="d-flex align-items-center gap-1">
-                    <button class="btn btn-sm btn-proviant-secondary btn-amount-dec py-0 px-1" data-product-id="{{ .Model.ID }}" aria-label="Decrease amount">−</button>
+                    <button class="btn btn-sm btn-proviant-secondary btn-amount-dec" data-product-id="{{ .Model.ID }}" aria-label="Decrease amount">-</button>
                     <span id="amount-{{ .Model.ID }}" class="mx-1">{{ .Amount }}</span>
-                    <button class="btn btn-sm btn-proviant-secondary btn-amount-inc py-0 px-1" data-product-id="{{ .Model.ID }}" aria-label="Increase amount">+</button>
+                    <button class="btn btn-sm btn-proviant-secondary btn-amount-inc" data-product-id="{{ .Model.ID }}" aria-label="Increase amount">+</button>
                 </span>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
