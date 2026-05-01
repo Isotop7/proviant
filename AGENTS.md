@@ -198,8 +198,30 @@ logger.Info().Msg("Logging initialized")
 - Compiled CSS goes to `src/assets/css/`
 - **Always run `task css` after any change to `.scss` files** — the compiled CSS is what gets served; editing SCSS without recompiling has no visible effect
 - JavaScript files served from `src/assets/js/`
-- Use Bootstrap for styling, Bootstrap Icons for icons
+- **Always use Bootstrap 5 for styling and layout** — Context7 library ID: `/websites/getbootstrap`
+- **Always use Bootstrap Icons for icons** — Context7 library ID: `/twbs/icons`
 - **Avoid inline `style="..."` attributes in templates** — define CSS classes in `src/templates/scss/main.scss` instead. Inline styles are only acceptable for truly dynamic values (e.g., a `width` set from a template variable). When in doubt, use a class.
+
+#### Bootstrap & Bootstrap Icons — Documentation Workflow
+When implementing or modifying any HTML/CSS/template work, always consult the official
+documentation via Context7 MCP **before** writing code. Do not rely on memorized patterns.
+
+| Library          | Context7 ID               | Use for                                      |
+|------------------|---------------------------|----------------------------------------------|
+| Bootstrap 5      | `/websites/getbootstrap`  | Components, grid, utilities, JS plugins      |
+| Bootstrap Icons  | `/twbs/icons`             | Icon names, SVG usage, font usage            |
+
+**When to query docs (mandatory):**
+- Implementing any UI component (navbar, modal, offcanvas, accordion, toast, etc.)
+- Using grid, flexbox, or spacing utilities
+- Checking `data-bs-*` attribute options for JS plugins
+- Looking up an icon name before using it in a template
+- Verifying correct class names for color, sizing, or state variants
+
+**Workflow:**
+1. Call `query-docs` with the relevant Context7 library ID and a specific question.
+2. Implement based on the documented pattern — do not guess class names or attributes.
+3. After any SCSS change, run `task css` and bump `CACHE_NAME` in `sw.js`.
 
 #### Service Worker Caching
 - The project uses a service worker (`src/assets/js/sw.js`)
@@ -290,7 +312,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) f
 - **Tag format**: Use `vX.Y.Z` tags (e.g., `v0.4.0`). The `cliff.toml` tag pattern `v?[0-9].*` supports both new `v`-prefixed and legacy unprefixed tags.
 
 ## Important Notes
-- Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask
+- **Always use Context7 MCP** for code generation, setup/configuration steps, and library/API documentation — automatically call `resolve-library-id` and `query-docs` without waiting to be asked explicitly.
 - Project uses embedded filesystems (embed) for templates and assets
 - Supports both SQLite and MariaDB backends
 - Uses JWT tokens for API authentication
