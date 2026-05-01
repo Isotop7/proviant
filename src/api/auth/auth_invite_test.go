@@ -14,6 +14,7 @@ import (
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
 	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -36,7 +37,7 @@ func TestAcceptInvitation(t *testing.T) {
 			Header:        make(http.Header),
 			ContentLength: int64(len(body)),
 		}
-		ctx.Request.Header.Set("Content-Type", "application/json")
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 		AcceptInvitation(ctx)
 

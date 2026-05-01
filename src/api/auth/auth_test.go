@@ -12,6 +12,7 @@ import (
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/testutil"
 	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -32,7 +33,7 @@ func TestSignupWithoutLogger(t *testing.T) {
 
 	jsonValue, _ := json.Marshal(signup)
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
-	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	Signup(ctx)
 
@@ -63,7 +64,7 @@ func TestSignupWithoutDatabase(t *testing.T) {
 
 	jsonValue, _ := json.Marshal(signup)
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
-	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	Signup(ctx)
 
@@ -92,7 +93,7 @@ func TestSignupGenericCreateError(t *testing.T) {
 
 	jsonValue, _ := json.Marshal(signup)
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
-	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	Signup(ctx)
 
@@ -120,7 +121,7 @@ func TestSignupSuccess(t *testing.T) {
 
 	jsonValue, _ := json.Marshal(signup)
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
-	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	Signup(ctx)
 
@@ -141,7 +142,7 @@ func TestSignupInvalidJSON(t *testing.T) {
 	ctx, w := repomocks.SetupGinContextWithMocks(m)
 
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBufferString("{invalid json}"))
-	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	Signup(ctx)
 
@@ -165,7 +166,7 @@ func TestSignupMissingFields(t *testing.T) {
 
 	jsonValue, _ := json.Marshal(signup)
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
-	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	Signup(ctx)
 
@@ -193,7 +194,7 @@ func TestSignupInvalidEmail(t *testing.T) {
 
 	jsonValue, _ := json.Marshal(signup)
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
-	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	Signup(ctx)
 
@@ -221,7 +222,7 @@ func TestSignupShortPassword(t *testing.T) {
 
 	jsonValue, _ := json.Marshal(signup)
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
-	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	Signup(ctx)
 
@@ -250,7 +251,7 @@ func TestSignupDuplicateUsername(t *testing.T) {
 
 	jsonValue, _ := json.Marshal(signup)
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
-	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	Signup(ctx)
 
@@ -280,7 +281,7 @@ func TestSignupDuplicateEmail(t *testing.T) {
 
 	jsonValue, _ := json.Marshal(signup)
 	ctx.Request, _ = http.NewRequest("POST", "/auth/signup", bytes.NewBuffer(jsonValue))
-	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	Signup(ctx)
 

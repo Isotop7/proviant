@@ -97,7 +97,6 @@ function Login() {
             passwordInput.classList.toggle("is-invalid");
         }
         formIsValid = false;
-        return;
     }
 
     if (!formIsValid) {
@@ -122,7 +121,7 @@ function Login() {
                 clearLoginInputs();
                 break;
             case 403:
-                if (response.body && response.body.toLowerCase().includes("verify")) {
+                if (response.body?.toLowerCase().includes("verify")) {
                     showEmailVerificationModal(username);
                 } else {
                     showLoginError(response.body || "Access denied.");
@@ -130,9 +129,10 @@ function Login() {
                 clearLoginInputs();
                 break;
             case 429: {
-                const mins = response.retryAfter ? Math.ceil(parseInt(response.retryAfter, 10) / 60) : null;
+                const mins = response.retryAfter ? Math.ceil(Number.parseInt(response.retryAfter, 10) / 60) : null;
+                const s = mins !== 1 ? "s" : "";
                 const lockMsg = mins
-                    ? `Too many failed attempts. Account locked — try again in ${mins} minute${mins !== 1 ? "s" : ""}.`
+                    ? `Too many failed attempts. Account locked — try again in ${mins} minute${s}.`
                     : (response.body || "Too many failed attempts. Account is temporarily locked.");
                 showLoginError(lockMsg);
                 clearLoginInputs();

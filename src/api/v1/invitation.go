@@ -50,7 +50,7 @@ func CreateInvitation(ctx *gin.Context) {
 	// Get user's household
 	user, err := repos.Users.GetUserByID(userID)
 	if err != nil {
-		logger.Error().Msgf("User with ID %d not found: %s", userID, err)
+		logger.Error().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
@@ -128,7 +128,7 @@ func GetInvitations(ctx *gin.Context) {
 
 	user, err := repos.Users.GetUserByID(userID)
 	if err != nil {
-		logger.Error().Msgf("User with ID %d not found: %s", userID, err)
+		logger.Error().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}

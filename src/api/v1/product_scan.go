@@ -4,7 +4,9 @@ package v1
 import (
 	"context"
 	"image"
+	// Import for image decoding
 	_ "image/jpeg"
+	// Import for image decoding
 	_ "image/png"
 	"net/http"
 

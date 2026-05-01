@@ -22,6 +22,7 @@ import "codeberg.org/isotop7/proviant/api"
 
 ## Index
 
+- [Constants](<#constants>)
 - [Variables](<#variables>)
 - [type APIResponse](<#APIResponse>)
   - [func CreateFailedError\(\) APIResponse](<#CreateFailedError>)
@@ -33,6 +34,14 @@ import "codeberg.org/isotop7/proviant/api"
   - [func RestoreFailedError\(\) APIResponse](<#RestoreFailedError>)
   - [func UpdateFailedError\(\) APIResponse](<#UpdateFailedError>)
 
+
+## Constants
+
+<a name="ActionTryAgain"></a>
+
+```go
+const ActionTryAgain = "Please try again later"
+```
 
 ## Variables
 
@@ -897,6 +906,10 @@ var (
     // ErrInvalidUserID is thrown when supplied user data is invalid
     ErrInvalidUserID = errors.New("invalid user ID")
 
+    // ErrInvalidUserIDWrapper is used to interpolate a invalid user id
+    ErrInvalidUserIDWrapper            = "User with id '%d' not found"
+    ErrInvalidUserIDWrapperWithMessage = ErrInvalidUserIDWrapper + ": %s"
+
     // ErrUserWithUsernameExists is thrown when a user with the same username already exists
     ErrUserWithUsernameExists = errors.New("user with this username already exists")
 
@@ -914,6 +927,9 @@ var (
 
     // ErrParseBody is thrown when a body fails to parse
     ErrParseBody = errors.New("error parsing body")
+
+    // ErrParseBodyWrapper is used to interpolate a non-parseable body
+    ErrParseBodyWrapper = "Error parsing body: %s"
 
     // Message format template for generic error
     FormatGenericError = "%s: %s"
@@ -1744,6 +1760,29 @@ func SetupTestDB(t *testing.T) *gorm.DB
 
 
 
+# util
+
+```go
+import "codeberg.org/isotop7/proviant/util"
+```
+
+util contains helper functions and generic vars
+
+## Index
+
+- [Constants](<#constants>)
+
+
+## Constants
+
+<a name="DefaultDateFormatParseStr"></a>
+
+```go
+const (
+    DefaultDateFormatParseStr = "2006-01-02"
+)
+```
+
 # web
 
 ```go
@@ -1896,11 +1935,20 @@ auth contains authentication method handlers
 
 ## Index
 
+- [Constants](<#constants>)
 - [func AcceptInvitation\(ctx \*gin.Context\)](<#AcceptInvitation>)
 - [func Logout\(ctx \*gin.Context\)](<#Logout>)
 - [func Signup\(ctx \*gin.Context\)](<#Signup>)
 - [func VerifyEmail\(ctx \*gin.Context\)](<#VerifyEmail>)
 
+
+## Constants
+
+<a name="UserWasCreated"></a>
+
+```go
+const UserWasCreated = "User was created"
+```
 
 <a name="AcceptInvitation"></a>
 ## func AcceptInvitation
@@ -1970,6 +2018,7 @@ onboarding contains handlers for the post\-signup onboarding flow
 
 ## Index
 
+- [Constants](<#constants>)
 - [func ApplyForHousehold\(ctx \*gin.Context\)](<#ApplyForHousehold>)
 - [func CompleteOnboarding\(ctx \*gin.Context\)](<#CompleteOnboarding>)
 - [func CreateOnboardingHousehold\(ctx \*gin.Context\)](<#CreateOnboardingHousehold>)
@@ -1978,6 +2027,17 @@ onboarding contains handlers for the post\-signup onboarding flow
 - [func JoinOnboardingByInvite\(ctx \*gin.Context\)](<#JoinOnboardingByInvite>)
 - [func UpdateOnboardingProfile\(ctx \*gin.Context\)](<#UpdateOnboardingProfile>)
 
+
+## Constants
+
+<a name="MsgFailedToExtract"></a>
+
+```go
+const (
+    MsgFailedToExtract       = "Failed to extract user ID from JWT claims"
+    MsgFailedToMarkHousehold = "Failed to mark household step done: %s"
+)
+```
 
 <a name="ApplyForHousehold"></a>
 ## func ApplyForHousehold
@@ -2145,6 +2205,15 @@ v1 implements version 1 of the proviant API
 
 
 ## Constants
+
+<a name="MsgErrFetchingHousehold"></a>
+
+```go
+const (
+    MsgErrFetchingHousehold  = "Error fetching household: %s"
+    MsgErrFetchingTargetUser = "Error fetching target user: %s"
+)
+```
 
 <a name="CalendarExpireDays"></a>
 
@@ -5221,7 +5290,7 @@ BulkProductsAPIModel represents a bulk product operation request
 
 ```go
 type BulkProductsAPIModel struct {
-    ProductIDs []string `json:"productIDs"`
+    ProductIDs []uint `json:"productIDs"`
 }
 ```
 

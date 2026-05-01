@@ -31,6 +31,8 @@ var (
 	ResponseErrUserNoProductsFound       = APIResponse{Message: errors.ErrUserNoProductsFound.Error()}
 )
 
+const ActionTryAgain = "Please try again later"
+
 // APIResponse is the data model for a generic API response
 type APIResponse struct {
 	Message string `json:"message"`
@@ -45,7 +47,7 @@ func Error(err error) APIResponse {
 func InternalError() APIResponse {
 	return APIResponse{
 		Message: "An error occurred. Please try again or contact support if the problem persists.",
-		Action:  "Please try again later",
+		Action:  ActionTryAgain,
 	}
 }
 
@@ -66,27 +68,27 @@ func InvalidInputErrorWithDetail(detail string) APIResponse {
 func CreateFailedError() APIResponse {
 	return APIResponse{
 		Message: "Failed to save your data. Please try again.",
-		Action:  "Please try again",
+		Action:  ActionTryAgain,
 	}
 }
 
 func UpdateFailedError() APIResponse {
 	return APIResponse{
 		Message: "Failed to update. Please try again.",
-		Action:  "Please try again",
+		Action:  ActionTryAgain,
 	}
 }
 
 func DeleteFailedError() APIResponse {
 	return APIResponse{
 		Message: "Failed to delete. Please try again.",
-		Action:  "Please try again",
+		Action:  ActionTryAgain,
 	}
 }
 
 func RestoreFailedError() APIResponse {
 	return APIResponse{
 		Message: "Failed to restore. Please try again.",
-		Action:  "Please try again",
+		Action:  ActionTryAgain,
 	}
 }

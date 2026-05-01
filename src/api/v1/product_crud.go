@@ -18,6 +18,10 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	MsgCheckProductIdTryAgain = "Check the product ID and try again"
+)
+
 // GetProducts returns the products of a user
 // @Summary      Return a list of products
 // @Description  Return a list of products of user
@@ -119,15 +123,15 @@ func GetProduct(ctx *gin.Context) {
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
 			Message: fmt.Sprintf("Product with ID '%d' was not found or you do not have access", productID),
-			Action:  "Check the product ID and try again",
+			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
 	// Unspecified error
 	default:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
-			Action:  "Check the product ID and try again",
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
 	}
@@ -265,8 +269,8 @@ func UpdateProduct(ctx *gin.Context) {
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
-			Action:  "Check the product ID and try again",
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
 	// Unspecified error
@@ -337,8 +341,8 @@ func UpdateProductAmount(ctx *gin.Context) {
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
-			Action:  "Check the product ID and try again",
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
 	default:
@@ -451,8 +455,8 @@ func SetExpireAt(ctx *gin.Context) {
 	if getErr != nil {
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
-			Action:  "Check the product ID and try again",
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
 	}
@@ -473,8 +477,8 @@ func SetExpireAt(ctx *gin.Context) {
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found", productID),
-			Action:  "Check the product ID and try again",
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
 	// User id from claims not matching user id of product in database
@@ -482,7 +486,7 @@ func SetExpireAt(ctx *gin.Context) {
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
 			Message: fmt.Sprintf("Product with ID '%d' was not found or you do not have access", productID),
-			Action:  "Check the product ID and try again",
+			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
 	// Unspecified error

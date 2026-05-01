@@ -52,6 +52,10 @@ var (
 	// ErrInvalidUserID is thrown when supplied user data is invalid
 	ErrInvalidUserID = errors.New("invalid user ID")
 
+	// ErrInvalidUserIDWrapper is used to interpolate a invalid user id
+	ErrInvalidUserIDWrapper            = "User with id '%d' not found"
+	ErrInvalidUserIDWrapperWithMessage = ErrInvalidUserIDWrapper + ": %s"
+
 	// ErrUserWithUsernameExists is thrown when a user with the same username already exists
 	ErrUserWithUsernameExists = errors.New("user with this username already exists")
 
@@ -69,6 +73,9 @@ var (
 
 	// ErrParseBody is thrown when a body fails to parse
 	ErrParseBody = errors.New("error parsing body")
+
+	// ErrParseBodyWrapper is used to interpolate a non-parseable body
+	ErrParseBodyWrapper = "Error parsing body: %s"
 
 	// Message format template for generic error
 	FormatGenericError = "%s: %s"
@@ -309,4 +316,10 @@ var (
 
 	// ErrDatabaseOperationFailed is thrown when a database operation fails
 	ErrDatabaseOperationFailed = errors.New("database operation failed")
+
+	/*
+	 * Export related errors
+	 */
+	// ErrExportCSVWriteWrapper is used to interpolate csv export error
+	ErrExportCSVWriteWrapper = "CSV write error: %s"
 )

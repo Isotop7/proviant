@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 
 	"codeberg.org/isotop7/proviant/models/configuration/static"
+	"codeberg.org/isotop7/proviant/util"
+
 	"github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -46,7 +48,7 @@ func CreateTestRequest(ctx *gin.Context, body interface{}) {
 		Header:        make(http.Header),
 		ContentLength: int64(len(bodyBytes)),
 	}
-	ctx.Request.Header.Set("Content-Type", "application/json")
+	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 }
 
 func CreateJSONRequest(method string, path string, body interface{}) *http.Request {
@@ -55,6 +57,6 @@ func CreateJSONRequest(method string, path string, body interface{}) *http.Reque
 		bodyBytes, _ = json.Marshal(body)
 	}
 	req, _ := http.NewRequest(method, path, bytes.NewBuffer(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(util.RequestHeaderContentType, "application/json")
 	return req
 }

@@ -11,6 +11,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const (
+	MsgInvalidApplicationId = "invalid application id"
+)
+
 // LeaveHousehold removes the calling user from their current household and assigns them a new personal one.
 // @Summary      Leave current household
 // @Description  Creates a new personal household for the user. Products are moved if they were the sole member.
@@ -190,7 +194,7 @@ func ApproveHouseholdApplication(ctx *gin.Context) {
 		return
 	}
 
-	applicationID, ok := parseUintParam(ctx, logger, "id", "invalid application id")
+	applicationID, ok := parseUintParam(ctx, logger, "id", MsgInvalidApplicationId)
 	if !ok {
 		return
 	}
@@ -234,7 +238,7 @@ func RejectHouseholdApplication(ctx *gin.Context) {
 		return
 	}
 
-	applicationID, ok := parseUintParam(ctx, logger, "id", "invalid application id")
+	applicationID, ok := parseUintParam(ctx, logger, "id", MsgInvalidApplicationId)
 	if !ok {
 		return
 	}
@@ -333,7 +337,7 @@ func CancelHouseholdApplication(ctx *gin.Context) {
 		return
 	}
 
-	applicationID, ok := parseUintParam(ctx, logger, "id", "invalid application id")
+	applicationID, ok := parseUintParam(ctx, logger, "id", MsgInvalidApplicationId)
 	if !ok {
 		return
 	}
@@ -376,7 +380,7 @@ func RemoveHouseholdMember(ctx *gin.Context) {
 		return
 	}
 
-	memberID, ok := parseUintParam(ctx, logger, "userId", "invalid user id")
+	memberID, ok := parseUintParam(ctx, logger, "userId", errors.ErrInvalidUserID.Error())
 	if !ok {
 		return
 	}

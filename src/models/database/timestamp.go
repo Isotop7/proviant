@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"time"
+
+	"codeberg.org/isotop7/proviant/util"
 )
 
 // Date is a simple wrapper for time.Time
@@ -17,7 +19,7 @@ type Timestamp struct {
 // UnmarshalJSON parses JSON into Date
 func (d *Date) UnmarshalJSON(b []byte) error {
 	s := strings.Trim(string(b), "\"")
-	t, err := time.Parse("2006-01-02", s)
+	t, err := time.Parse(util.DefaultDateFormatParseStr, s)
 	if err != nil {
 		return err
 	}

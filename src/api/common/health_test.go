@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -42,8 +43,8 @@ func TestGetHealthResponseFormat(t *testing.T) {
 
 	GetHealth(ctx)
 
-	if w.Header().Get("Content-Type") != "application/json; charset=utf-8" {
-		t.Errorf("Content-Type = %v, want 'application/json; charset=utf-8'", w.Header().Get("Content-Type"))
+	if w.Header().Get(util.RequestHeaderContentType) != "application/json; charset=utf-8" {
+		t.Errorf("Content-Type = %v, want 'application/json; charset=utf-8'", w.Header().Get(util.RequestHeaderContentType))
 	}
 
 	var response map[string]interface{}

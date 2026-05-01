@@ -11,6 +11,7 @@ import (
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
 	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -150,7 +151,7 @@ func TestCreateProduct(t *testing.T) {
 			Header:        make(http.Header),
 			ContentLength: int64(len(body)),
 		}
-		ctx.Request.Header.Set("Content-Type", "application/json")
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 		CreateProduct(ctx)
 
@@ -187,7 +188,7 @@ func TestUpdateProduct(t *testing.T) {
 			Header:        make(http.Header),
 			ContentLength: int64(len(body)),
 		}
-		ctx.Request.Header.Set("Content-Type", "application/json")
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 
 		UpdateProduct(ctx)
@@ -210,7 +211,7 @@ func TestUpdateProduct(t *testing.T) {
 			Header:        make(http.Header),
 			ContentLength: int64(len(body)),
 		}
-		ctx.Request.Header.Set("Content-Type", "application/json")
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 		ctx.Params = []gin.Param{{Key: "id", Value: "999"}}
 
 		UpdateProduct(ctx)
