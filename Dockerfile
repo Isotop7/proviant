@@ -27,10 +27,14 @@ FROM docker.io/alpine:3.23
 WORKDIR /app
 
 COPY --from=buildenv /app/proviant /app/proviant
-RUN mkdir /app/data && \
-    apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng
-COPY ./src/config.yaml.sqlite.tmpl /app/config.yaml
+RUN addgroup -S proviant && \
+    adduser -S -G proviant proviant && \
+    mkdir /app/data && \
+    apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng && \
+    chown -R proviant:proviant /app
+COPY --chown=proviant:proviant ./src/config.yaml.sqlite.tmpl /app/config.yaml
 ENV GIN_MODE=release
 EXPOSE 5050
 
+USER proviant
 ENTRYPOINT [ "/app/proviant" ]
