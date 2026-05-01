@@ -72,6 +72,12 @@
                         <input id="inputPassword" type="password" class="form-control"
                                aria-required="true" autocomplete="new-password">
                         <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please enter a new password.</div>
+                        <ul class="list-unstyled small mt-1">
+                            <li id="req-length"><i class="bi bi-circle me-1"></i>At least 8 characters</li>
+                            <li id="req-upper"><i class="bi bi-circle me-1"></i>At least one uppercase letter</li>
+                            <li id="req-digit"><i class="bi bi-circle me-1"></i>At least one number</li>
+                            <li id="req-special"><i class="bi bi-circle me-1"></i>At least one special character</li>
+                        </ul>
                     </div>
                     <div class="col-md-6">
                         <label for="inputPasswordVerification" class="form-label fw-medium">

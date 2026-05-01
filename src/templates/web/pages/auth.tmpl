@@ -35,6 +35,12 @@
                     autocomplete="current-password">
                 <label for="inputPassword">Password</label>
             </div>
+            <ul class="list-unstyled small mt-1">
+                <li id="req-length"><i class="bi bi-circle me-1"></i>At least 8 characters</li>
+                <li id="req-upper"><i class="bi bi-circle me-1"></i>At least one uppercase letter</li>
+                <li id="req-digit"><i class="bi bi-circle me-1"></i>At least one number</li>
+                <li id="req-special"><i class="bi bi-circle me-1"></i>At least one special character</li>
+            </ul>
             <button id="btnAuth" form="authData" class="btn btn-proviant-primary w-100" type="submit">Sign in</button>
             <div id="loginAlert" class="alert alert-danger fade mt-3 d-none" role="alert">
                 <span id="loginAlertMessage"></span>
@@ -51,29 +57,6 @@
             </div>
         </form>
     </main>
-</div>
-
-<!-- Password requirements modal -->
-<div class="modal fade" id="passwordRequirementsModal" tabindex="-1" aria-labelledby="passwordRequirementsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="passwordRequirementsModalLabel">Password Requirements</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-2">Your password must meet the following requirements:</p>
-                <ul class="list-unstyled mb-0">
-                    <li id="req-length" class="text-danger">
-                        <i class="bi bi-x-circle-fill me-2"></i>At least 12 characters long
-                    </li>
-                </ul>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-proviant-primary" data-bs-dismiss="modal">Got it</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- Email verification modal -->

@@ -15,6 +15,34 @@ function ShowSuccessModal(message, btnFunction) {
   proviant.showFeedback('success', 'Done', message, btnFunction);
 }
 
+function validatePasswordRequirements(password) {
+    const requirements = {
+        length: password.length >= 8,
+        upper: /[A-Z]/.test(password),
+        digit: /[0-9]/.test(password),
+        special: /[^A-Za-z0-9]/.test(password)
+    };
+
+    const elements = {
+        length: document.getElementById("req-length"),
+        upper: document.getElementById("req-upper"),
+        digit: document.getElementById("req-digit"),
+        special: document.getElementById("req-special")
+    };
+
+    for (const [key, satisfied] of Object.entries(requirements)) {
+        const el = elements[key];
+        if (!el) continue;
+        const icon = el.querySelector("i");
+        if (!icon) continue;
+        icon.className = satisfied
+            ? "bi bi-check-circle text-success me-1"
+            : "bi bi-x-circle text-danger me-1";
+        el.classList.toggle("text-success", satisfied);
+        el.classList.toggle("text-danger", !satisfied);
+    }
+}
+
 /* ── Update personal details ─────────────────────────────────────── */
 function UpdateSettings() {
   let formIsValid = true;
@@ -1230,6 +1258,7 @@ document.addEventListener("input", function (event) {
       } else {
         clearInvalid(target);
       }
+      validatePasswordRequirements(target.value);
       const inputPasswordVerification = document.getElementById("inputPasswordVerification");
       if (inputPasswordVerification && inputPasswordVerification.dataset.touched) {
         const match = inputPasswordVerification.value === target.value && inputPasswordVerification.value !== "";

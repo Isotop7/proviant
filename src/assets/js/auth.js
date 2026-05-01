@@ -2,14 +2,6 @@ function showLoginError(message) {
     proviant.showFeedback("error", "Login Failed", message);
 }
 
-function showPasswordRequirementsModal() {
-    const modal = document.getElementById("passwordRequirementsModal");
-    if (modal) {
-        const modalBootstrap = new bootstrap.Modal(modal);
-        modalBootstrap.show();
-    }
-}
-
 function showEmailVerificationModal(email) {
     const modal = document.getElementById("emailVerificationModal");
     if (modal) {
@@ -17,6 +9,34 @@ function showEmailVerificationModal(email) {
         if (addressEl) addressEl.textContent = email || "your email address";
         const modalBootstrap = new bootstrap.Modal(modal);
         modalBootstrap.show();
+    }
+}
+
+function validatePasswordRequirements(password) {
+    const requirements = {
+        length: password.length >= 8,
+        upper: /[A-Z]/.test(password),
+        digit: /[0-9]/.test(password),
+        special: /[^A-Za-z0-9]/.test(password)
+    };
+
+    const elements = {
+        length: document.getElementById("req-length"),
+        upper: document.getElementById("req-upper"),
+        digit: document.getElementById("req-digit"),
+        special: document.getElementById("req-special")
+    };
+
+    for (const [key, satisfied] of Object.entries(requirements)) {
+        const el = elements[key];
+        if (!el) continue;
+        const icon = el.querySelector("i");
+        if (!icon) continue;
+        icon.className = satisfied
+            ? "bi bi-check-circle text-success me-1"
+            : "bi bi-x-circle text-danger me-1";
+        el.classList.toggle("text-success", satisfied);
+        el.classList.toggle("text-danger", !satisfied);
     }
 }
 
@@ -77,7 +97,6 @@ function Login() {
             passwordInput.classList.toggle("is-invalid");
         }
         formIsValid = false;
-        showPasswordRequirementsModal();
         return;
     }
 
@@ -161,7 +180,6 @@ function Signup() {
             passwordInput.classList.toggle("is-invalid");
         }
         formIsValid = false;
-        showPasswordRequirementsModal();
         return;
     }
     if (mailAddress == "") {
@@ -251,6 +269,7 @@ document.addEventListener("input", function (event) {
         if (target.value.length > 0 && target.classList.contains("is-invalid")) {
             target.classList.toggle("is-invalid");
         }
+        validatePasswordRequirements(target.value);
         return;
     }
 
