@@ -5,11 +5,13 @@
 	</div>
 	<div class="nav-items">
 		<a href="/web" class="pv-nav-item {{ if eq .Title "Home" }}active{{ end }}"
-			{{ if eq .Title "Home" }}aria-current="page"{{ end }}>
+			{{ if eq .Title "Home" }}aria-current="page"{{ end }}
+			data-bs-toggle="tooltip" data-bs-placement="right" title="Dashboard">
 			<i class="bi bi-speedometer2" aria-hidden="true"></i> Dashboard
 		</a>
 		<a href="/web/products" class="pv-nav-item {{ if eq .Title "Products" }}active{{ end }}"
-			{{ if eq .Title "Products" }}aria-current="page"{{ end }}>
+			{{ if eq .Title "Products" }}aria-current="page"{{ end }}
+			data-bs-toggle="tooltip" data-bs-placement="right" title="Products">
 			<i class="bi bi-box-seam" aria-hidden="true"></i> Products
 			{{ if .UrgentCount }}
 			{{ if gt .UrgentCount 0 }}
@@ -18,11 +20,13 @@
 			{{ end }}
 		</a>
 		<a href="/web/recipes" class="pv-nav-item {{ if eq .Title "Recipes" }}active{{ end }}"
-			{{ if eq .Title "Recipes" }}aria-current="page"{{ end }}>
+			{{ if eq .Title "Recipes" }}aria-current="page"{{ end }}
+			data-bs-toggle="tooltip" data-bs-placement="right" title="Recipes">
 			<i class="bi bi-journal-richtext" aria-hidden="true"></i> Recipes
 		</a>
 		<a href="/web/user/settings" class="pv-nav-item {{ if eq .Title "User Settings" }}active{{ end }}"
-			{{ if eq .Title "User Settings" }}aria-current="page"{{ end }}>
+			{{ if eq .Title "User Settings" }}aria-current="page"{{ end }}
+			data-bs-toggle="tooltip" data-bs-placement="right" title="Settings">
 			<i class="bi bi-gear-wide-connected" aria-hidden="true"></i> Settings
 		</a>
 	</div>
@@ -43,7 +47,8 @@
 				</div>
 			</div>
 		</div>
-		<a href="/web" id="btnLogout" class="pv-nav-item pv-nav-item--danger">
+		<a href="/web" id="btnLogout" class="pv-nav-item pv-nav-item--danger"
+			data-bs-toggle="tooltip" data-bs-placement="right" title="Logout">
 			<i class="bi bi-escape" aria-hidden="true"></i> Logout
 		</a>
 	</div>
