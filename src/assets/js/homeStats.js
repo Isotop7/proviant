@@ -120,12 +120,12 @@ document.addEventListener('DOMContentLoaded', async function () {
           hero: s.totalActive,
         },
         {
-          title: 'Expired (not archived)',
+          title: 'Expired (not consumed)',
           hero: `${s.wastePercent.toFixed(1)}%`,
           variant: s.wasteCount > 0 ? 'danger' : null,
         },
         {
-          title: 'Total Archived',
+          title: 'Total Consumed',
           hero: s.totalArchived,
         },
         {

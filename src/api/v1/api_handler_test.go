@@ -400,33 +400,6 @@ func TestCreateWebhook(t *testing.T) {
 	t.Skip("Skipping - handler requires user to be found via GetUserByID and complex webhook repo setup")
 }
 
-func TestConvertStringIDsToInts(t *testing.T) {
-	t.Run("valid string IDs", func(t *testing.T) {
-		ids := []string{"1", "2", "3"}
-		result, err := convertStringIDsToUints(ids)
-		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
-		}
-		if len(result) != 3 {
-			t.Errorf("len(result) = %v, want 3", len(result))
-		}
-		if result[0] != 1 || result[1] != 2 || result[2] != 3 {
-			t.Errorf("result = %v, want [1 2 3]", result)
-		}
-	})
-
-	t.Run("invalid string ID", func(t *testing.T) {
-		ids := []string{"1", "invalid", "3"}
-		result, err := convertStringIDsToUints(ids)
-		if err == nil {
-			t.Error("Expected error for invalid ID")
-		}
-		if result != nil {
-			t.Error("Expected nil result on error")
-		}
-	})
-}
-
 func TestJoinErrors(t *testing.T) {
 	t.Run("empty errors", func(t *testing.T) {
 		errs := []database.BulkOperationError{}

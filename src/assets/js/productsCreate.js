@@ -349,38 +349,39 @@ function handleBtnDeleteProductModal() {
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
     const productName = getSelectedProductName();
     proviant.showConfirm(
-        'Delete Product',
-        `Delete "${productName}"? This cannot be undone.`,
+        'Mark as wasted',
+        `Mark "${productName}" as wasted? This cannot be undone.`,
         function () {
             proviant.deleteProduct(productId, false).then((response) => {
                 if (response.code == 200) {
                     globalThis.location.reload();
                 } else {
-                    proviant.showFeedback('error', 'Delete Failed', `Error deleting product: ${response.message}`);
+                    proviant.showFeedback('error', 'Wasted Failed', `Error marking product as wasted: ${response.message}`);
                 }
             });
         },
-        'Delete',
+        'Wasted',
         'danger'
     );
 }
+
 function handleBtnArchiveProductModal() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
     const productName = getSelectedProductName();
     proviant.showConfirm(
-        'Archive Product',
-        `Archive "${productName}"?`,
+        'Mark as consumed',
+        `Mark "${productName}" as consumed?`,
         function () {
             proviant.deleteProduct(productId, true).then((response) => {
                 if (response.code == 200) {
                     globalThis.location.reload();
                 } else {
-                    proviant.showFeedback('error', 'Archive Failed', `Error archiving product: ${response.message}`);
+                    proviant.showFeedback('error', 'Consume Failed', `Error marking product as consumed: ${response.message}`);
                 }
             });
         },
-        'Archive',
+        'Consumed',
         'warning'
     );
 }
@@ -514,5 +515,3 @@ document.addEventListener('input', function (event) {
         handleChangedBarcode();
     }
 });
-
-

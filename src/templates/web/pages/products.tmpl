@@ -46,7 +46,7 @@
                 <a href="?{{ queryWith $.Params "status" $s }}"
                    class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
                     {{ if and (ne $s "all") (ne $s "archived") }}<span class="filter-dot dot-{{ $s }}"></span>{{ end }}
-                    {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Archived{{ else }}No date{{ end }}
+                    {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Consumed{{ else }}No date{{ end }}
                 </a>
                 {{ end }}
 
@@ -75,11 +75,11 @@
                 </button>
                 {{ else }}
                 <button onclick="bulkAction('archive')" class="btn-bulk">
-                    <i class="bi bi-archive"></i> Archive
+                    <i class="bi bi-check-circle"></i> Consumed
                 </button>
                 {{ end }}
                 <button onclick="bulkAction('delete')" class="btn-bulk danger">
-                    <i class="bi bi-trash3"></i> Delete
+                    <i class="bi bi-trash3"></i> Wasted
                 </button>
             </div>
 
@@ -95,7 +95,7 @@
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#" id="mobile-export-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Products CSV</a></li>
                         <li><a class="dropdown-item" href="#" id="mobile-export-json"><i class="bi bi-filetype-json me-2"></i>Products JSON</a></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-archive-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Archive CSV</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-archive-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Consumption History (CSV)</a></li>
                         <li><a class="dropdown-item" href="#" id="mobile-export-full"><i class="bi bi-files me-2"></i>Full JSON</a></li>
                         {{ end }}
                     </ul>
@@ -342,7 +342,7 @@
         <a href="?{{ queryWith $.Params "status" $s }}"
            class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
           {{ if and (ne $s "all") (ne $s "archived") }}<span class="filter-dot dot-{{ $s }}"></span>{{ end }}
-          {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Archived{{ else }}No date{{ end }}
+          {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Consumed{{ else }}No date{{ end }}
         </a>
         {{ end }}
       </div>
@@ -375,11 +375,11 @@
       </button>
       {{ else }}
       <button onclick="bulkAction('archive')" class="btn-bulk">
-        <i class="bi bi-archive"></i> Archive
+        <i class="bi bi-check-circle"></i> Consumed
       </button>
       {{ end }}
       <button onclick="bulkAction('delete')" class="btn-bulk danger">
-        <i class="bi bi-trash3"></i> Delete
+        <i class="bi bi-trash3"></i> Wasted
       </button>
     </div>
   </div>
@@ -553,7 +553,7 @@
 
                     <div class="d-flex gap-2">
                         <button id="btnArchiveProductModal" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
-                            <i class="bi bi-archive me-1" aria-hidden="true"></i>Archive
+                            <i class="bi bi-check-circle me-1" aria-hidden="true"></i>Consumed
                         </button>
                         <button id="btnDeleteProductModal" type="button" class="btn btn-sm btn-proviant-danger flex-fill" disabled>
                             <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete

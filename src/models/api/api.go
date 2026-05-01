@@ -2,7 +2,7 @@ package api
 
 // BulkProductsAPIModel represents a bulk product operation request
 type BulkProductsAPIModel struct {
-	ProductIDs []string `json:"productIDs"`
+	ProductIDs []uint `json:"productIDs"`
 }
 
 // OnboardingStateResponse represents the current onboarding progress

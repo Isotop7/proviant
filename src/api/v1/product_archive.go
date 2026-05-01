@@ -17,18 +17,6 @@ import (
 	"gorm.io/gorm"
 )
 
-func convertStringIDsToUints(ids []string) ([]uint, error) {
-	result := make([]uint, 0, len(ids))
-	for _, id := range ids {
-		parsedID, err := strconv.ParseUint(id, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, uint(parsedID))
-	}
-	return result, nil
-}
-
 func joinErrors(errs []database.BulkOperationError) string {
 	var b strings.Builder
 	for i := range errs {
@@ -115,13 +103,6 @@ func BulkDeleteProducts(ctx *gin.Context) {
 		return
 	}
 
-	convertedProductIDs, convErr := convertStringIDsToUints(products.ProductIDs)
-	if convErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
-		return
-	}
-
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
@@ -132,15 +113,15 @@ func BulkDeleteProducts(ctx *gin.Context) {
 		return
 	}
 
-	bulkDeleteResultError := repos.Products.BulkDeleteProducts(convertedProductIDs, userID)
+	bulkDeleteResultError := repos.Products.BulkDeleteProducts(products.ProductIDs, userID)
 	if len(bulkDeleteResultError) > 0 {
 		msg := joinErrors(bulkDeleteResultError)
 		logger.Error().Msg(msg)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-	strProductIDs := make([]string, len(convertedProductIDs))
-	for i, productID := range convertedProductIDs {
+	strProductIDs := make([]string, len(products.ProductIDs))
+	for i, productID := range products.ProductIDs {
 		strProductIDs[i] = strconv.FormatUint(uint64(productID), 10)
 	}
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", strings.Join(strProductIDs, ";"))})
@@ -169,13 +150,6 @@ func BulkArchiveProducts(ctx *gin.Context) {
 		return
 	}
 
-	convertedProductIDs, convErr := convertStringIDsToUints(products.ProductIDs)
-	if convErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
-		return
-	}
-
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
@@ -186,15 +160,15 @@ func BulkArchiveProducts(ctx *gin.Context) {
 		return
 	}
 
-	bulkArchiveError := repos.Products.BulkArchiveProducts(convertedProductIDs, userID)
+	bulkArchiveError := repos.Products.BulkArchiveProducts(products.ProductIDs, userID)
 	if len(bulkArchiveError) > 0 {
 		msg := joinErrors(bulkArchiveError)
 		logger.Error().Msg(msg)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-	strProductIDs := make([]string, len(convertedProductIDs))
-	for i, productID := range convertedProductIDs {
+	strProductIDs := make([]string, len(products.ProductIDs))
+	for i, productID := range products.ProductIDs {
 		strProductIDs[i] = strconv.FormatUint(uint64(productID), 10)
 	}
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were archived", strings.Join(strProductIDs, ";"))})
@@ -264,13 +238,6 @@ func BulkRestoreProducts(ctx *gin.Context) {
 		return
 	}
 
-	convertedProductIDs, convErr := convertStringIDsToUints(products.ProductIDs)
-	if convErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
-		return
-	}
-
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
@@ -281,15 +248,15 @@ func BulkRestoreProducts(ctx *gin.Context) {
 		return
 	}
 
-	bulkRestoreError := repos.Products.BulkRestoreProducts(convertedProductIDs, userID)
+	bulkRestoreError := repos.Products.BulkRestoreProducts(products.ProductIDs, userID)
 	if len(bulkRestoreError) > 0 {
 		msg := joinErrors(bulkRestoreError)
 		logger.Error().Msg(msg)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-	strProductIDs := make([]string, len(convertedProductIDs))
-	for i, productID := range convertedProductIDs {
+	strProductIDs := make([]string, len(products.ProductIDs))
+	for i, productID := range products.ProductIDs {
 		strProductIDs[i] = strconv.FormatUint(uint64(productID), 10)
 	}
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were restored", strings.Join(strProductIDs, ";"))})

@@ -73,7 +73,7 @@ function deleteProduct() {
 
     proviant.deleteProduct(productID, false).then((response) => {
         if (response.code === 200) {
-            window.location.href = '/products';
+            window.location.href = '/web/products';
         } else {
             proviant.showFeedback('error', 'Delete Failed', `Could not delete product: ${response.message}`);
         }
@@ -87,7 +87,7 @@ function restoreProduct() {
 
     proviant.restoreProduct(productID).then((response) => {
         if (response.code === 200) {
-            window.location.href = '/products';
+            window.location.href = '/web/products';
         } else {
             proviant.showFeedback('error', 'Restore Failed', `Could not restore product: ${response.message}`);
         }
@@ -119,6 +119,20 @@ document.addEventListener("keyup", function (event) {
     }
 });
 
+function consumeProduct() {
+    const labelProductID = document.getElementById('labelProductID');
+    const productID = Number.parseInt(labelProductID?.innerText?.trim());
+    if (!Number.isInteger(productID) || productID <= 0) return;
+
+    proviant.deleteProduct(productID, true).then((response) => {
+        if (response.code === 200) {
+            window.location.href = '/web/products';
+        } else {
+            proviant.showFeedback('error', 'Consume Failed', `Could not mark product as consumed: ${response.message}`);
+        }
+    });
+}
+
 /* Delete confirmation button in modal */
 document.addEventListener("click", function (event) {
     if (event.target.closest('#btnConfirmDelete')) {
@@ -126,6 +140,9 @@ document.addEventListener("click", function (event) {
     }
     if (event.target.closest('#btnRestoreProduct') || event.target.closest('#btnRestoreProductMobile')) {
         restoreProduct();
+    }
+    if (event.target.closest('#btnConsumeProduct') || event.target.closest('#btnConsumeProductMobile')) {
+        consumeProduct();
     }
 });
 

@@ -3,7 +3,7 @@
 
   <!-- ── Mobile: topbar (hidden on desktop) ── -->
   <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-white d-md-none">
-    <a href="/products/{{ .Product.ID }}" style="color:var(--fg-2);font-size:20px;">
+    <a href="/web/products" style="color:var(--fg-2);font-size:20px;">
       <i class="bi bi-arrow-left"></i>
     </a>
     <div class="flex-grow-1">
@@ -116,6 +116,12 @@
                 <div class="d-flex align-items-center gap-2">
                   <input type="date" class="pv-field-input mono" id="inputExpireAt"
                     value="{{ .Product.ExpireAt | inputDate }}" required style="flex:1;">
+                  {{ if .Product.ExpireAt.IsZero }}
+                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTodayExpiry" title="Set to today"
+                    onclick="var e=document.getElementById('inputExpireAt'); e.value = new Date().toISOString().slice(0,10); e.dispatchEvent(new Event('blur'));">
+                    <i class="bi bi-calendar-check"></i>
+                  </button>
+                  {{ end }}
                   <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="Scan expiry date">
                     <i class="bi bi-camera"></i>
                   </button>
@@ -149,16 +155,21 @@
           <button class="pv-btn-primary" type="submit">
             <i class="bi bi-check2"></i> Update product
           </button>
-          <a href="/products/{{ .Product.ID }}" class="pv-btn-secondary">Cancel</a>
+          <a href="/web/products" class="pv-btn-secondary">Cancel</a>
           <div class="spacer"></div>
           {{ if $.IsArchived }}
           <button class="pv-btn-restore" type="button" id="btnRestoreProduct">
             <i class="bi bi-arrow-counterclockwise"></i> Restore
           </button>
           {{ end }}
+          {{ if not $.IsArchived }}
+          <button class="pv-btn-secondary" type="button" id="btnConsumeProduct">
+            <i class="bi bi-check-circle"></i> Consumed
+          </button>
+          {{ end }}
           <button class="pv-btn-danger-ghost" type="button"
             data-bs-toggle="modal" data-bs-target="#deleteModal">
-            <i class="bi bi-trash3"></i> Delete
+            <i class="bi bi-trash3"></i> Wasted
           </button>
         </div>
 
@@ -245,10 +256,15 @@
     <button type="submit" form="editProductForm" class="pv-btn-primary flex-grow-1">
       <i class="bi bi-check2"></i> Update product
     </button>
-    <a href="/products/{{ .Product.ID }}" class="pv-btn-secondary">Cancel</a>
+    <a href="/web/products" class="pv-btn-secondary">Cancel</a>
     {{ if $.IsArchived }}
     <button type="button" class="pv-btn-restore" id="btnRestoreProductMobile">
       <i class="bi bi-arrow-counterclockwise"></i> Restore
+    </button>
+    {{ end }}
+    {{ if not $.IsArchived }}
+    <button type="button" class="pv-btn-secondary" id="btnConsumeProductMobile">
+      <i class="bi bi-check-circle"></i> Consumed
     </button>
     {{ end }}
     <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#deleteModal"
@@ -268,18 +284,18 @@
           <i class="bi bi-trash3-fill"></i>
         </div>
         <div class="flex-grow-1">
-          <h5 class="modal-title" style="font-size:15px;font-weight:700;">Delete {{ .Product.ProductName }}?</h5>
+          <h5 class="modal-title" style="font-size:15px;font-weight:700;">Mark {{ .Product.ProductName }} as wasted?</h5>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body" style="font-size:13px;color:var(--fg-2);line-height:1.6;padding:16px 20px;">
-        This product will be permanently deleted. Consider archiving instead if you want to keep the record.
+          This product will be permanently marked as wasted. Consider marking as consumed instead if you want to keep the record.
       </div>
       <div class="modal-footer" style="border-top:1px solid var(--border-subtle);padding:12px 20px;">
         <button class="pv-btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button id="btnConfirmDelete" class="pv-btn-danger-ghost" type="button"
           style="background:oklch(0.55 0.20 25);color:white;border:none;border-radius:8px;padding:10px 18px;">
-          <i class="bi bi-trash3"></i> Delete permanently
+          <i class="bi bi-trash3"></i> Wasted
         </button>
       </div>
     </div>

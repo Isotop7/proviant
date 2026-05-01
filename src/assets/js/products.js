@@ -44,12 +44,12 @@ document.addEventListener("click", function (event) {
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
         const count = selectedProducts.length;
         proviant.showConfirm(
-            'Delete Products',
-            `Delete ${count} selected product${count !== 1 ? 's' : ''}? This cannot be undone.`,
+            'Mark as wasted',
+            `Mark ${count} selected product${count !== 1 ? 's' : ''} as wasted? This cannot be undone.`,
             function () {
                 bulkAction('delete', selectedProducts).then(() => location.reload());
             },
-            'Delete',
+            'Wasted',
             'danger'
         );
         return;
@@ -63,18 +63,18 @@ document.addEventListener("click", function (event) {
         return;
     }
 
-    // Archive product button
+    // Archive (Consumed) product button
     if (target.closest("#archive-product")) {
         event.preventDefault();
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
         const count = selectedProducts.length;
         proviant.showConfirm(
-            'Archive Products',
-            `Archive ${count} selected product${count !== 1 ? 's' : ''}?`,
+            'Mark as consumed',
+            `Mark ${count} selected product${count !== 1 ? 's' : ''} as consumed?`,
             function () {
                 bulkAction('archive', selectedProducts).then(() => location.reload());
             },
-            'Archive',
+            'Consumed',
             'warning'
         );
         return;
@@ -444,7 +444,7 @@ function bulkAction(action) {
     });
     if (!ids.length) return;
     if (action === 'delete') {
-        if (!confirm('Delete ' + ids.length + ' product(s)? This cannot be undone.')) return;
+        if (!confirm('Mark ' + ids.length + ' product(s) as wasted? This cannot be undone.')) return;
         proviant.bulkDeleteProducts(ids).then(function () {
             window.location.reload();
         });
