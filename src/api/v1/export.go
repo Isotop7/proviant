@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -308,62 +309,9 @@ func ExportFullJSON(ctx *gin.Context) {
 		return
 	}
 
-	totalActive, err := repos.Products.GetActiveProductsCount(userID)
-	if err != nil {
-		logger.Error().Msgf("GetActiveProductsCount: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing active product count"})
+	stats, ok := buildExportStats(ctx, repos, userID, user.HouseholdID, user.NotificationPreferences.NotificationThresholdDays, len(archivedProducts), logger)
+	if !ok {
 		return
-	}
-
-	wasteCount, err := repos.Products.GetExpiredProductsCount(userID)
-	if err != nil {
-		logger.Error().Msgf("GetExpiredProductsCount: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing waste count"})
-		return
-	}
-
-	var wastePercent float64
-	if totalActive > 0 {
-		wastePercent = float64(wasteCount) / float64(totalActive) * 100
-	}
-
-	expiringSoonDays := 7
-	if user.NotificationPreferences.NotificationThresholdDays > 0 {
-		expiringSoonDays = user.NotificationPreferences.NotificationThresholdDays
-	}
-
-	expiringSoon, err := repos.Products.GetExpiringSoonProducts(userID, expiringSoonDays)
-	if err != nil {
-		logger.Error().Msgf("GetExpiringSoonProducts: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon products"})
-		return
-	}
-
-	categories, err := repos.Products.GetProductCategoryBreakdown(userID)
-	if err != nil {
-		logger.Error().Msgf("GetProductCategoryBreakdown: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing category breakdown"})
-		return
-	}
-
-	expiryTrend, err := repos.Products.GetExpiryTrend(userID)
-	if err != nil {
-		logger.Error().Msgf("GetExpiryTrend: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiry trend"})
-		return
-	}
-
-	uniqueArchivedMap, err := repos.Products.GetArchivedProductsGroupedByBarcode(userID)
-	if err != nil {
-		logger.Error().Msgf("GetArchivedProductsGroupedByBarcode: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing unique archived count"})
-		return
-	}
-
-	var lastInsertedProduct string
-	lastProduct, lastErr := repos.Products.GetLastInsertedProduct(user.HouseholdID)
-	if lastErr == nil && lastProduct.ID != 0 {
-		lastInsertedProduct = lastProduct.ProductName
 	}
 
 	exportedAt := time.Now().Format(time.RFC3339)
@@ -386,22 +334,84 @@ func ExportFullJSON(ctx *gin.Context) {
 			Active:   activeProducts,
 			Archived: archivedProducts,
 		},
-		Stats: apiModel.ProductStatsResponse{
-			WasteCount:          wasteCount,
-			WastePercent:        wastePercent,
-			TotalActive:         totalActive,
-			TotalArchived:       len(archivedProducts),
-			UniqueArchived:      len(uniqueArchivedMap),
-			LastInsertedProduct: lastInsertedProduct,
-			ExpiringSoon:        expiringSoon,
-			ExpiringSoonDays:    expiringSoonDays,
-			Categories:          categories,
-			ExpiryTrend:         expiryTrend,
-		},
+		Stats:     stats,
 		ExportedAt: exportedAt,
 	}
 
 	ctx.Header(util.RequestHeaderContentType, "application/json")
 	ctx.Header(util.RequestHeaderContentDisposition, "attachment; filename=\"full_export.json\"")
 	ctx.JSON(http.StatusOK, response)
+}
+
+func buildExportStats(ctx *gin.Context, repos *database.RepositoryContainer, userID uint, householdID uint, notificationThresholdDays int, archivedProductsLen int, logger *zerolog.Logger) (apiModel.ProductStatsResponse, bool) {
+	totalActive, err := repos.Products.GetActiveProductsCount(userID)
+	if err != nil {
+		logger.Error().Msgf("GetActiveProductsCount: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing active product count"})
+		return apiModel.ProductStatsResponse{}, false
+	}
+
+	wasteCount, err := repos.Products.GetExpiredProductsCount(userID)
+	if err != nil {
+		logger.Error().Msgf("GetExpiredProductsCount: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing waste count"})
+		return apiModel.ProductStatsResponse{}, false
+	}
+
+	var wastePercent float64
+	if totalActive > 0 {
+		wastePercent = float64(wasteCount) / float64(totalActive) * 100
+	}
+
+	expiringSoonDays := 7
+	if notificationThresholdDays > 0 {
+		expiringSoonDays = notificationThresholdDays
+	}
+
+	expiringSoon, err := repos.Products.GetExpiringSoonProducts(userID, expiringSoonDays)
+	if err != nil {
+		logger.Error().Msgf("GetExpiringSoonProducts: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiring soon products"})
+		return apiModel.ProductStatsResponse{}, false
+	}
+
+	categories, err := repos.Products.GetProductCategoryBreakdown(userID)
+	if err != nil {
+		logger.Error().Msgf("GetProductCategoryBreakdown: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing category breakdown"})
+		return apiModel.ProductStatsResponse{}, false
+	}
+
+	expiryTrend, err := repos.Products.GetExpiryTrend(userID)
+	if err != nil {
+		logger.Error().Msgf("GetExpiryTrend: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expiry trend"})
+		return apiModel.ProductStatsResponse{}, false
+	}
+
+	uniqueArchivedMap, err := repos.Products.GetArchivedProductsGroupedByBarcode(userID)
+	if err != nil {
+		logger.Error().Msgf("GetArchivedProductsGroupedByBarcode: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing unique archived count"})
+		return apiModel.ProductStatsResponse{}, false
+	}
+
+	var lastInsertedProduct string
+	lastProduct, lastErr := repos.Products.GetLastInsertedProduct(householdID)
+	if lastErr == nil && lastProduct.ID != 0 {
+		lastInsertedProduct = lastProduct.ProductName
+	}
+
+	return apiModel.ProductStatsResponse{
+		WasteCount:          wasteCount,
+		WastePercent:        wastePercent,
+		TotalActive:         totalActive,
+		TotalArchived:       archivedProductsLen,
+		UniqueArchived:      len(uniqueArchivedMap),
+		LastInsertedProduct: lastInsertedProduct,
+		ExpiringSoon:        expiringSoon,
+		ExpiringSoonDays:    expiringSoonDays,
+		Categories:          categories,
+		ExpiryTrend:         expiryTrend,
+	}, true
 }
