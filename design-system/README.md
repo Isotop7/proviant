@@ -1,152 +1,174 @@
-# Proviant Design System
+# Proviant UI Kit
 
 ## Overview
+Full interactive prototype of the Proviant web app. Built with React + Babel, all in the browser — no build step.
 
-Proviant is a web application for tracking food products and their expiration dates, helping households reduce food waste. Multiple users share a single household inventory; authentication is required.
+## Design System
+**v2 design system:** `../../proviant-design-system.html`  
+**Migration audit:** `../../DESIGN_SYSTEM_AUDIT.md`  
+**Token source:** `../../colors_and_type.css`
 
-**Design system source:** Brief only (no codebase or Figma provided). This system was built from scratch to specification.
-
----
-
-## Aesthetic Direction
-
-**Tone:** Warm utilitarian. A well-organized kitchen — purposeful, calm, slightly organic. Not a tech startup; a thoughtful household tool. Clean structure with warm undertones.
-
-**One unforgettable thing:** The expiry status system. Five precisely chosen status colors are the visual heartbeat of every screen. Everything else is intentionally restrained to let status pop.
+All CSS custom properties (colors, type, spacing, shadow, radius) are defined in `colors_and_type.css` and loaded by `index.html`. Do not hardcode values in component files — always reference tokens.
 
 ---
 
-## Content Fundamentals
+## Screens
 
-- **Voice:** Direct, calm, practical. Second person ("Your pantry", "You have 3 items expiring"). No exclamation points in alerts. No jargon.
-- **Casing:** Sentence case everywhere — labels, buttons, headings. Title case only for the product name "Proviant".
-- **Numbers:** Always show counts in context ("3 products expiring" not just "3").
-- **Dates:** Relative first ("in 2 days"), absolute on hover/detail ("Apr 22, 2026").
-- **Emoji:** Never used.
-- **Errors:** Specific and actionable ("Expiry date must be in the future" not "Invalid input").
-- **Empty states:** Always explain why and what to do next.
+| Screen | File | Status |
+|--------|------|--------|
+| Login / Signup | `Login.jsx` | Auth tabs, toast notifications, loading state |
+| Dashboard | `Dashboard.jsx` | Metric tiles, donut chart, category bars, sparkline |
+| Products | `Products.jsx` | Card grid, search, status/category filter, bulk select, archive/delete with modals |
+| Create Product | `CreateProduct.jsx` | Form with live status preview, simulated barcode scan → Open Food Facts lookup |
+| Archive | `Archive.jsx` | Archived products, restore/delete |
+| Settings | `Settings.jsx` | Profile, notification providers (Email/Ntfy/Telegram), household |
 
 ---
 
-## Visual Foundations
+## Component Files
+
+| File | Purpose |
+|------|---------|
+| `shared.jsx` | `StatusBadge`, `Btn`, `Input`, `Select`, `Modal`, sample data |
+| `Login.jsx` | Auth screen |
+| `Nav.jsx` | Sidebar navigation |
+| `Dashboard.jsx` | Overview / home screen |
+| `Products.jsx` | Product list + `ProductCard` |
+| `CreateProduct.jsx` | Add product form |
+| `Archive.jsx` | Archive screen |
+| `Settings.jsx` | Settings + `NotifCard` |
+| `App.jsx` | Root, routing, state, localStorage |
+
+---
+
+## Shared Components (`shared.jsx`)
+
+### `<StatusBadge status="expired|critical|soon|fresh|nodate" small? />`
+Pill badge with status dot and label. Uses `STATUS` map for colours (all sourced from `colors_and_type.css` tokens).
+
+**DS v2 change pending:** Icon (`bi-x-circle-fill` etc.) → plain 6px dot. See `DESIGN_SYSTEM_AUDIT.md §2`.
+
+### `<Btn variant="primary|secondary|ghost|danger" size="sm|md|lg" icon="bi-*" onClick disabled loading />`
+Consistent button. Maps to DS v2 button variants.
+
+**DS v2 changes pending:** explicit height (28/36/44px), primary box-shadow, hover `translateY(-1px)`. See `DESIGN_SYSTEM_AUDIT.md §3`.
+
+### `<Input label required placeholder value onChange icon error helper type />`
+Labelled input with focus ring, icon support, and error/helper text.
+
+**DS v2 change pending:** label uppercase + tracking, height 38px. See `DESIGN_SYSTEM_AUDIT.md §4`.
+
+### `<Select label value onChange options />`
+Styled native `<select>`.
+
+### `<Modal title icon iconColor onClose footer />`
+Overlay modal with icon header, body slot, and optional footer actions.
+
+**DS v2 changes pending:** border-radius → 16px, width → 460px, footer bg + border-top. See `DESIGN_SYSTEM_AUDIT.md §6`.
+
+---
+
+## Design Tokens (from `colors_and_type.css`)
 
 ### Colors
-See `colors_and_type.css` for all CSS custom properties.
+```
+--bg              parchment white page background
+--bg-subtle       slightly darker surface (sidebar, inputs)
+--surface         card / panel surface (white)
+--fg              primary text
+--fg-2            secondary text
+--fg-3            tertiary / placeholder
+--border          default border
+--border-subtle   dividers
+--accent          primary brand action (green)
+--accent-subtle   tinted green background
+```
 
-- **Background:** Warm parchment white `oklch(0.98 0.012 75)` — avoids harsh pure white
-- **Surface:** Slightly cooler card surface `oklch(0.96 0.008 75)`
-- **Foreground:** Warm near-black `oklch(0.18 0.022 70)`
-- **Secondary text:** Muted warm gray `oklch(0.48 0.018 70)`
-- **Accent:** Brand teal-green `oklch(0.50 0.12 162)` — extracted from logo basket outline; used for primary actions
-- **Brand slate:** `oklch(0.52 0.08 245)` — extracted from logo wordmark; used as secondary nav color
-- **Border:** `oklch(0.88 0.01 75)`
-
-#### Status Colors (core of the product)
-| Status | Color | Use |
-|--------|-------|-----|
-| Expired | Tomato red `oklch(0.55 0.20 25)` | Highest urgency |
-| Critical | Burnt orange `oklch(0.64 0.18 45)` | 1–3 days |
-| Expiring soon | Amber `oklch(0.72 0.16 80)` | 4–7 days |
-| Fresh | Sage green `oklch(0.52 0.10 145)` | >7 days |
-| No date | Warm gray `oklch(0.60 0.01 70)` | Unknown |
-
-Status is **always** conveyed with both color AND text — never color alone (WCAG AA requirement).
+### Status Colors
+```
+--status-expired        + -subtle, -border, -fg, -hover
+--status-critical       + -subtle, -border, -fg, -hover
+--status-soon           + -subtle, -border, -fg, -hover
+--status-fresh          + -subtle, -border, -fg, -hover
+--status-nodate         + -subtle, -border, -fg, -hover
+```
 
 ### Typography
-- **Display/UI:** Vend Sans (Google Fonts) — confirmed primary brand font; clean, modern, trustworthy
-- **Mono:** DM Mono (Google Fonts) — for dates, barcodes, codes, numeric data
-- **Scale:** 12 / 13 / 14 / 16 / 18 / 20 / 24 / 30 / 36px
-- **Weights:** 400 (body), 500 (label/emphasis), 600 (heading), 700 (display)
+```
+--font-ui         'VendSans', system-ui, sans-serif   ← UI font
+--font-mono       'DM Mono', 'Courier New', monospace  ← barcodes, IDs, dates
+--text-xs         12px
+--text-sm         13px
+--text-base       14px
+--text-md         16px
+--text-lg         18px
+--text-xl         20px
+--text-2xl        24px
+```
 
-### Spacing
-4px base unit. Scale: 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64 / 80 / 96px.
+### Spacing (4px base)
+```
+--space-1  4px   --space-4  16px   --space-8  32px
+--space-2  8px   --space-5  20px   --space-10 40px
+--space-3  12px  --space-6  24px   --space-12 48px
+```
 
-### Borders & Radius
-- **Inputs, cards:** 8px radius
-- **Badges, pills:** 999px (full pill)
-- **Buttons:** 8px radius
-- **Modals:** 12px radius
-- **Border color:** `var(--border)` — 1px solid
+### Radii
+```
+--radius-sm    4px   buttons sm, qty steppers
+--radius-md    8px   buttons, inputs, cards (current)
+--radius-lg    12px  modals, panels (DS v2 default for cards)
+--radius-pill  999px badges, chips
+```
+DS v2 adds: `--radius-xl: 16px` (modals), `--radius-2xl: 24px` (hero cards) — add to `colors_and_type.css`.
 
 ### Shadows
-- **Card (resting):** `0 1px 3px oklch(0.18 0.02 70 / 0.07), 0 1px 2px oklch(0.18 0.02 70 / 0.04)`
-- **Card (hover):** `0 4px 12px oklch(0.18 0.02 70 / 0.10), 0 2px 4px oklch(0.18 0.02 70 / 0.06)`
-- **Modal:** `0 20px 60px oklch(0.18 0.02 70 / 0.20)`
-- **Dropdown:** `0 8px 24px oklch(0.18 0.02 70 / 0.12)`
-
-### Motion
-- **Duration:** 150ms (micro), 200ms (transitions), 300ms (modals)
-- **Easing:** `ease-out` for enters, `ease-in` for exits. No bounces.
-- **Hover states:** Shadow lift + very subtle scale (1.002) on cards
-- **Buttons:** Background color transition 150ms ease-out
-
-### Backgrounds
-Solid parchment white. No gradients, no textures, no patterns. Dashboard chart areas use a very subtle `oklch(0.96 0.008 75)` surface.
-
-### Cards
-White surface `oklch(1 0 0)`, 8px radius, 1px border `var(--border)`, card-shadow. On hover: shadow lifts. No colored left-border accents.
-
-### Icons
-Bootstrap Icons only (CDN: `https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css`). Icon size matches text size. Never used as sole conveyors of meaning — always paired with text labels in key UI.
-
-### Imagery
-Product images in cards: 64×64px square thumbnails, `object-fit: cover`, 8px radius. Placeholder: striped SVG with "product image" label. No decorative photography.
+```
+--shadow-xs   barely-there (stat cards)
+--shadow-sm   default card
+--shadow-md   hover state
+--shadow-lg   dropdowns
+--shadow-xl   modals
+```
 
 ---
 
-## Iconography
-
-- **System:** Bootstrap Icons exclusively
-- **CDN:** `https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css`
-- **Usage:** `<i class="bi bi-{name}"></i>` inline in HTML
-- **Sizes:** Match surrounding text or explicit `font-size`
-- **Key icons used:**
-  - `bi-box-seam` — products / inventory
-  - `bi-speedometer2` — dashboard
-  - `bi-archive` — archive
-  - `bi-person-circle` — user / settings
-  - `bi-upc-scan` — barcode scan
-  - `bi-bell` — notifications
-  - `bi-trash3` — delete
-  - `bi-arrow-counterclockwise` — restore
-  - `bi-funnel` — filter
-  - `bi-search` — search
-  - `bi-plus-lg` — add / create
-  - `bi-check2` — confirm / success
-  - `bi-exclamation-triangle` — warning
-  - `bi-x-circle` — error
-  - `bi-info-circle` — info
-  - `bi-camera` — barcode scan camera
+## State
+All state persists to `localStorage` so the prototype survives page refreshes.
 
 ---
 
-## File Index
+## Icons
+Bootstrap Icons CDN — `bi-*` classes.  
+CDN: `https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css`
 
+---
+
+## Running
+Open `index.html` in a browser. No server needed for local use.  
+For cross-origin font loading (VendSans), serve from localhost:
 ```
-README.md                    ← This file
-SKILL.md                     ← Agent skill descriptor
-colors_and_type.css          ← All CSS custom properties (tokens)
-assets/
-  icon.svg                   ← Approved P lettermark icon (negative space, teal, 96×96)
-  header.png                 ← Horizontal lockup: P icon + Vend Sans bold wordmark
-preview/
-  brand.html                 ← Logo assets + brand colors + Vend Sans specimen
-  colors-brand.html          ← Brand color palette
-  colors-status.html         ← Status color system
-  colors-semantic.html       ← Semantic color tokens
-  type-scale.html            ← Typography scale
-  type-specimens.html        ← Type specimens (headings, body, mono)
-  spacing-tokens.html        ← Spacing & radius tokens
-  shadows-elevation.html     ← Shadow / elevation system
-  components-buttons.html    ← Button variants & states
-  components-badges.html     ← Status badges & chips
-  components-inputs.html     ← Form inputs & selects
-  components-cards.html      ← Product cards
-  components-modals.html     ← Modals (feedback, confirmation)
-  components-empty.html      ← Empty states
-ui_kits/
-  proviant/
-    index.html               ← Interactive prototype (React/JSX — design reference only)
-    bootstrap-snippets.html  ← Plain HTML + Bootstrap 5 components (copy into Go templates)
-    README.md                ← UI kit notes
+npx serve .
+# or
+python3 -m http.server 8080
 ```
+
+---
+
+## Pending DS v2 Migrations
+
+See `../../DESIGN_SYSTEM_AUDIT.md` for full details and code snippets.
+
+| Priority | Item | File |
+|----------|------|------|
+| 🔴 High | StatusBadge: icon → dot | `shared.jsx` |
+| 🔴 High | Filter chips replace `<select>` dropdowns | `Products.jsx` |
+| 🔴 High | Badge classes in Go templates | Go template SCSS |
+| 🟠 Medium | Btn: explicit height + hover shadow | `shared.jsx` |
+| 🟠 Medium | Input: label uppercase + height 38px | `shared.jsx` |
+| 🟠 Medium | Modal: radius 16px, width 460px, footer border | `shared.jsx` |
+| 🟠 Medium | Nav: active state → white bg + shadow | `Nav.jsx` |
+| 🟠 Medium | Warning banner when expired > 0 | `Dashboard.jsx` |
+| 🟡 Low | Card border-radius → `var(--radius-lg)` | `Products.jsx` |
+| 🟡 Low | Page title font token | `Dashboard.jsx`, `Products.jsx` |
+| 🟡 Low | Add `--radius-xl`, `--radius-2xl` tokens | `colors_and_type.css` |
