@@ -10,6 +10,7 @@ import (
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"gorm.io/gorm"
 )
@@ -684,7 +685,7 @@ func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]ap
 		if !expirationTime.Before(startOfToday) && !expirationTime.After(endOfWindow) {
 			result = append(result, apiModel.StatsExpiringProduct{
 				ProductName: products[i].ProductName,
-				ExpireAt:    expirationTime.Format("2006-01-02"),
+				ExpireAt:    expirationTime.Format(util.DefaultDateFormatParseStr),
 			})
 		}
 	}

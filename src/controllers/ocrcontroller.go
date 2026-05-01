@@ -16,6 +16,8 @@ import (
 
 	"codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/configuration"
+	"codeberg.org/isotop7/proviant/util"
+
 	"github.com/rs/zerolog"
 	"golang.org/x/image/draw"
 )
@@ -166,7 +168,7 @@ func (c *OCRControllerImpl) extractDateCandidates(text string) []dateCandidate {
 	}{
 		{regexp.MustCompile(`(\d{1,2})\.(\d{1,2})\.(\d{2,4})`), "02.01.2006", true},
 		{regexp.MustCompile(`(\d{1,2})/(\d{1,2})/(\d{2,4})`), "02/01/2006", true},
-		{regexp.MustCompile(`(\d{4})-(\d{2})-(\d{2})`), "2006-01-02", false},
+		{regexp.MustCompile(`(\d{4})-(\d{2})-(\d{2})`), util.DefaultDateFormatParseStr, false},
 	}
 
 	for _, p := range patterns {
@@ -247,7 +249,7 @@ func (c *OCRControllerImpl) selectBestDate(candidates []dateCandidate) *api.Expi
 		}
 	}
 	return &api.ExpiryScanResponse{
-		DetectedDate: best.date.Format("2006-01-02"),
+		DetectedDate: best.date.Format(util.DefaultDateFormatParseStr),
 		Confidence:   best.confidence,
 		RawText:      best.raw,
 	}

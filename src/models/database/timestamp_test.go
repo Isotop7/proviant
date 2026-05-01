@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"codeberg.org/isotop7/proviant/util"
 )
 
 func TestDateUnmarshalJSON(t *testing.T) {
@@ -104,7 +106,7 @@ func TestDateFormat(t *testing.T) {
 		{
 			name: "default format",
 			date: Date(time.Date(2023, 12, 25, 14, 30, 0, 0, time.UTC)),
-			fmt:  "2006-01-02",
+			fmt:  util.DefaultDateFormatParseStr,
 			want: "2023-12-25",
 		},
 		{
@@ -173,7 +175,7 @@ func TestTimestampUnmarshalJSON(t *testing.T) {
 				if err != nil {
 					t.Errorf("unexpected error: %v", err)
 				}
-				got := time.Time(ts.Timestamp).Format("2006-01-02")
+				got := time.Time(ts.Timestamp).Format(util.DefaultDateFormatParseStr)
 				if got != tt.want {
 					t.Errorf("got %v, want %v", got, tt.want)
 				}

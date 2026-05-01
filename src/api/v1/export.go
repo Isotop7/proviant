@@ -10,6 +10,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -25,7 +26,7 @@ func parseDateRange(ctx *gin.Context) (*time.Time, *time.Time) {
 	}
 
 	if toStr := ctx.Query("to"); toStr != "" {
-		if t, err := time.Parse("2006-01-02", toStr); err == nil {
+		if t, err := time.Parse(util.DefaultDateFormatParseStr, toStr); err == nil {
 			endOfDay := t.Add(24*time.Hour - time.Nanosecond)
 			to = &endOfDay
 		}
@@ -37,11 +38,11 @@ func parseDateRange(ctx *gin.Context) (*time.Time, *time.Time) {
 func productToExportRow(p *dbModel.Product) []string {
 	expireAt := ""
 	if !p.ExpireAt.IsZero() {
-		expireAt = p.ExpireAt.Format("2006-01-02")
+		expireAt = p.ExpireAt.Format(util.DefaultDateFormatParseStr)
 	}
 	addedAt := ""
 	if !p.CreatedAt.IsZero() {
-		addedAt = p.CreatedAt.Format("2006-01-02")
+		addedAt = p.CreatedAt.Format(util.DefaultDateFormatParseStr)
 	}
 	return []string{
 		p.ProductName,
@@ -232,7 +233,7 @@ func ExportArchiveCSV(ctx *gin.Context) {
 		if !product.DeletedAt.Valid {
 			row = append(row, "")
 		} else {
-			row = append(row, product.DeletedAt.Time.Format("2006-01-02"))
+			row = append(row, product.DeletedAt.Time.Format(util.DefaultDateFormatParseStr))
 		}
 		if err := writer.Write(row); err != nil {
 			logger.Error().Msgf("CSV write error: %s", err)
@@ -374,7 +375,7 @@ func ExportFullJSON(ctx *gin.Context) {
 	response := FullExportResponse{
 		Household: &FullExportHousehold{
 			Name:      household.Name,
-			CreatedAt: household.CreatedAt.Format("2006-01-02"),
+			CreatedAt: household.CreatedAt.Format(util.DefaultDateFormatParseStr),
 		},
 		Members: exportMembers,
 		Products: FullExportProducts{

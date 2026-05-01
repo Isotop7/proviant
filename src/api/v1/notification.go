@@ -6,6 +6,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -56,7 +57,7 @@ func GetNotifications(ctx *gin.Context) {
 					ID:        invitation.ID,
 					Type:      "invitation",
 					Title:     "Invitation pending: " + invitation.Email,
-					CreatedAt: invitation.CreatedAt.Format("2006-01-02"),
+					CreatedAt: invitation.CreatedAt.Format(util.DefaultDateFormatParseStr),
 				})
 			}
 		}
@@ -77,7 +78,7 @@ func GetNotifications(ctx *gin.Context) {
 						ID:        app.ID,
 						Type:      "application_incoming",
 						Title:     applicantName + " wants to join your household",
-						CreatedAt: app.CreatedAt.Format("2006-01-02"),
+						CreatedAt: app.CreatedAt.Format(util.DefaultDateFormatParseStr),
 					})
 				}
 			}
@@ -98,7 +99,7 @@ func GetNotifications(ctx *gin.Context) {
 				ID:        app.ID,
 				Type:      "application_outgoing",
 				Title:     "Awaiting approval to join " + householdName,
-				CreatedAt: app.CreatedAt.Format("2006-01-02"),
+				CreatedAt: app.CreatedAt.Format(util.DefaultDateFormatParseStr),
 			})
 		}
 	}

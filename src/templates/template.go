@@ -16,6 +16,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
+
+	"codeberg.org/isotop7/proviant/util"
 )
 
 //go:embed "web" "notification"
@@ -46,11 +48,11 @@ func humanDate(t time.Time) string {
 }
 
 func inputDate(t time.Time) string {
-	return t.Format("2006-01-02")
+	return t.Format(util.DefaultDateFormatParseStr)
 }
 
 func today() string {
-	return time.Now().Format("2006-01-02")
+	return time.Now().Format(util.DefaultDateFormatParseStr)
 }
 
 func hasPassed(t time.Time) bool {

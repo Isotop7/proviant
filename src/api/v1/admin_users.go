@@ -17,7 +17,10 @@ import (
 	"gorm.io/gorm"
 )
 
-const MsgErrFetchingHousehold = "Error fetching household: %s"
+const (
+	MsgErrFetchingHousehold  = "Error fetching household: %s"
+	MsgErrFetchingTargetUser = "Error fetching target user: %s"
+)
 
 // GetHouseholdUsers returns all users in the household.
 // @Summary      List household members
@@ -135,7 +138,7 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, targetUserID)})
 			return
 		}
-		logger.Error().Msgf("Error fetching target user: %s", targetErr)
+		logger.Error().Msgf(MsgErrFetchingTargetUser, targetErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
@@ -226,7 +229,7 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, targetUserID)})
 			return
 		}
-		logger.Error().Msgf("Error fetching target user: %s", targetErr)
+		logger.Error().Msgf(MsgErrFetchingTargetUser, targetErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
@@ -270,43 +273,18 @@ func AdminResetUserPassword(ctx *gin.Context) {
 		return
 	}
 
-	idParam := ctx.Param("id")
-	targetUserID, convErr := strconv.ParseUint(idParam, 10, 64)
-	if convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
+	targetUserID, ok := parseUintPathParam(ctx, logger, "id")
+	if !ok {
 		return
 	}
 
-	admin, adminErr := repos.Users.GetUserByID(adminID)
-	if adminErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
+	householdID, ok := authorizeHouseholdAdmin(ctx, repos, logger, adminID)
+	if !ok {
 		return
 	}
 
-	household, hhErr := repos.Users.GetHouseholdByID(admin.HouseholdID)
-	if hhErr != nil {
-		logger.Error().Msgf(MsgErrFetchingHousehold, hhErr)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-	if household.AdminID != adminID {
-		ctx.JSON(http.StatusForbidden, api.Error(errors.ErrNotHouseholdAdmin))
-		return
-	}
-
-	targetUser, targetErr := repos.Users.GetUserByID(uint(targetUserID))
-	if targetErr != nil {
-		if targetErr == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, targetUserID)})
-			return
-		}
-		logger.Error().Msgf("Error fetching target user: %s", targetErr)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-	if targetUser.HouseholdID != admin.HouseholdID {
-		ctx.JSON(http.StatusForbidden, api.Error(errors.ErrUserNotInHousehold))
+	targetUser, ok := fetchHouseholdMember(ctx, repos, logger, targetUserID, householdID)
+	if !ok {
 		return
 	}
 

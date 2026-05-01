@@ -9,6 +9,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -76,4 +77,45 @@ func parseUintPathParam(ctx *gin.Context, logger *zerolog.Logger, paramName stri
 		return 0, false
 	}
 	return uint(id), true //nolint:gosec
+}
+
+// authorizeHouseholdAdmin verifies the caller is a household admin.
+// Returns the household ID on success. Writes HTTP error and returns false on failure.
+func authorizeHouseholdAdmin(ctx *gin.Context, repos *database.RepositoryContainer, logger *zerolog.Logger, adminID uint) (uint, bool) {
+	admin, err := repos.Users.GetUserByID(adminID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
+		return 0, false
+	}
+	household, err := repos.Users.GetHouseholdByID(admin.HouseholdID)
+	if err != nil {
+		logger.Error().Msgf(MsgErrFetchingHousehold, err)
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		return 0, false
+	}
+	if household.AdminID != adminID {
+		ctx.JSON(http.StatusForbidden, api.Error(errors.ErrNotHouseholdAdmin))
+		return 0, false
+	}
+	return household.ID, true
+}
+
+// fetchHouseholdMember retrieves a user and verifies they belong to the given household.
+// Returns the user on success. Writes HTTP error and returns false on failure.
+func fetchHouseholdMember(ctx *gin.Context, repos *database.RepositoryContainer, logger *zerolog.Logger, targetUserID uint, householdID uint) (authentication.User, bool) {
+	targetUser, err := repos.Users.GetUserByID(targetUserID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, targetUserID)})
+			return authentication.User{}, false
+		}
+		logger.Error().Msgf(MsgErrFetchingTargetUser, err)
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		return authentication.User{}, false
+	}
+	if targetUser.HouseholdID != householdID {
+		ctx.JSON(http.StatusForbidden, api.Error(errors.ErrUserNotInHousehold))
+		return authentication.User{}, false
+	}
+	return targetUser, true
 }

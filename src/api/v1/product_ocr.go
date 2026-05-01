@@ -15,6 +15,7 @@ import (
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -162,7 +163,7 @@ func hashImage(img []byte) string {
 
 // mustParseDate converts ISO string to time.Time; returns zero time on failure
 func mustParseDate(s string) time.Time {
-	if t, err := time.Parse("2006-01-02", s); err == nil {
+	if t, err := time.Parse(util.DefaultDateFormatParseStr, s); err == nil {
 		return t
 	}
 	return time.Time{}

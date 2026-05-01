@@ -906,6 +906,10 @@ var (
     // ErrInvalidUserID is thrown when supplied user data is invalid
     ErrInvalidUserID = errors.New("invalid user ID")
 
+    // ErrInvalidUserIDWrapper is used to interpolate a invalid user id
+    ErrInvalidUserIDWrapper            = "User with id '%d' not found"
+    ErrInvalidUserIDWrapperWithMessage = ErrInvalidUserIDWrapper + ": %s"
+
     // ErrUserWithUsernameExists is thrown when a user with the same username already exists
     ErrUserWithUsernameExists = errors.New("user with this username already exists")
 
@@ -1756,6 +1760,29 @@ func SetupTestDB(t *testing.T) *gorm.DB
 
 
 
+# util
+
+```go
+import "codeberg.org/isotop7/proviant/util"
+```
+
+util contains helper functions and generic vars
+
+## Index
+
+- [Constants](<#constants>)
+
+
+## Constants
+
+<a name="DefaultDateFormatParseStr"></a>
+
+```go
+const (
+    DefaultDateFormatParseStr = "2006-01-02"
+)
+```
+
 # web
 
 ```go
@@ -2179,6 +2206,15 @@ v1 implements version 1 of the proviant API
 
 ## Constants
 
+<a name="MsgErrFetchingHousehold"></a>
+
+```go
+const (
+    MsgErrFetchingHousehold  = "Error fetching household: %s"
+    MsgErrFetchingTargetUser = "Error fetching target user: %s"
+)
+```
+
 <a name="CalendarExpireDays"></a>
 
 ```go
@@ -2192,12 +2228,6 @@ const (
 
 ```go
 const CalendarTokenLength = 32
-```
-
-<a name="MsgErrFetchingHousehold"></a>
-
-```go
-const MsgErrFetchingHousehold = "Error fetching household: %s"
 ```
 
 <a name="AdminResetUserPassword"></a>
