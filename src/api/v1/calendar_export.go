@@ -9,6 +9,8 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	dbRepo "codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
+
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
@@ -128,7 +130,7 @@ func ExportICalendar(ctx *gin.Context) {
 
 	sb.WriteString("END:VCALENDAR\r\n")
 
-	ctx.Header("Content-Type", "text/calendar; charset=utf-8")
-	ctx.Header("Content-Disposition", "inline")
+	ctx.Header(util.RequestHeaderContentType, "text/calendar; charset=utf-8")
+	ctx.Header(util.RequestHeaderContentDisposition, "inline")
 	ctx.Data(http.StatusOK, "text/calendar; charset=utf-8", []byte(sb.String()))
 }

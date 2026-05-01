@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
@@ -15,6 +16,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
+
+const GetUserActiveProductsFiltered = "GetUserActiveProductsFiltered: %s"
+
 
 func parseDateRange(ctx *gin.Context) (*time.Time, *time.Time) {
 	var from, to *time.Time
@@ -116,23 +120,23 @@ func ExportProductsCSV(ctx *gin.Context) {
 
 	products, err := repos.Products.GetUserActiveProductsFiltered(userID, from, to)
 	if err != nil {
-		logger.Error().Msgf("GetUserActiveProductsFiltered: %s", err)
+		logger.Error().Msgf(GetUserActiveProductsFiltered, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})
 		return
 	}
 
-	ctx.Header("Content-Type", "text/csv")
-	ctx.Header("Content-Disposition", "attachment; filename=\"products.csv\"")
+	ctx.Header(util.RequestHeaderContentType, "text/csv")
+	ctx.Header(util.RequestHeaderContentDisposition, "attachment; filename=\"products.csv\"")
 
 	writer := csv.NewWriter(ctx.Writer)
 	if err := writer.Write([]string{"name", "barcode", "quantity", "unit", "category", "storage_location", "expiry_date", "added_at"}); err != nil {
-		logger.Error().Msgf("CSV write error: %s", err)
+		logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
 		return
 	}
 
 	for i := range products {
 		if err := writer.Write(productToExportRow(&products[i])); err != nil {
-			logger.Error().Msgf("CSV write error: %s", err)
+			logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
 			return
 		}
 	}
@@ -171,13 +175,13 @@ func ExportProductsJSON(ctx *gin.Context) {
 
 	products, err := repos.Products.GetUserActiveProductsFiltered(userID, from, to)
 	if err != nil {
-		logger.Error().Msgf("GetUserActiveProductsFiltered: %s", err)
+		logger.Error().Msgf(GetUserActiveProductsFiltered, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})
 		return
 	}
 
-	ctx.Header("Content-Type", "application/json")
-	ctx.Header("Content-Disposition", "attachment; filename=\"products.json\"")
+	ctx.Header(util.RequestHeaderContentType, "application/json")
+	ctx.Header(util.RequestHeaderContentDisposition, "attachment; filename=\"products.json\"")
 	ctx.JSON(http.StatusOK, products)
 }
 
@@ -218,12 +222,12 @@ func ExportArchiveCSV(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Header("Content-Type", "text/csv")
-	ctx.Header("Content-Disposition", "attachment; filename=\"archive.csv\"")
+	ctx.Header(util.RequestHeaderContentType, "text/csv")
+	ctx.Header(util.RequestHeaderContentDisposition, "attachment; filename=\"archive.csv\"")
 
 	writer := csv.NewWriter(ctx.Writer)
 	if err := writer.Write([]string{"name", "barcode", "quantity", "unit", "category", "storage_location", "expiry_date", "added_at", "archived_at"}); err != nil {
-		logger.Error().Msgf("CSV write error: %s", err)
+		logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
 		return
 	}
 
@@ -236,7 +240,7 @@ func ExportArchiveCSV(ctx *gin.Context) {
 			row = append(row, product.DeletedAt.Time.Format(util.DefaultDateFormatParseStr))
 		}
 		if err := writer.Write(row); err != nil {
-			logger.Error().Msgf("CSV write error: %s", err)
+			logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
 			return
 		}
 	}
@@ -292,7 +296,7 @@ func ExportFullJSON(ctx *gin.Context) {
 
 	activeProducts, err := repos.Products.GetUserActiveProductsFiltered(userID, nil, nil)
 	if err != nil {
-		logger.Error().Msgf("GetUserActiveProductsFiltered: %s", err)
+		logger.Error().Msgf(GetUserActiveProductsFiltered, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting active products"})
 		return
 	}
@@ -397,7 +401,7 @@ func ExportFullJSON(ctx *gin.Context) {
 		ExportedAt: exportedAt,
 	}
 
-	ctx.Header("Content-Type", "application/json")
-	ctx.Header("Content-Disposition", "attachment; filename=\"full_export.json\"")
+	ctx.Header(util.RequestHeaderContentType, "application/json")
+	ctx.Header(util.RequestHeaderContentDisposition, "attachment; filename=\"full_export.json\"")
 	ctx.JSON(http.StatusOK, response)
 }

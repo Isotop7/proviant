@@ -316,4 +316,10 @@ var (
 
 	// ErrDatabaseOperationFailed is thrown when a database operation fails
 	ErrDatabaseOperationFailed = errors.New("database operation failed")
+
+	/*
+	 * Export related errors
+	 */
+	// ErrExportCSVWriteWrapper is used to interpolate csv export error
+	ErrExportCSVWriteWrapper = "CSV write error: %s"
 )
