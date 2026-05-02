@@ -7,6 +7,8 @@ import (
 
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
+
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
@@ -114,7 +116,7 @@ func SeedDefaultStorageLocations(logger *zerolog.Logger, db *gorm.DB) error {
 
 	for _, hhID := range householdIDs {
 		var count int64
-		db.Model(&database.StorageLocation{}).Where("household_id = ?", hhID).Count(&count)
+		db.Model(&database.StorageLocation{}).Where(util.QueryHouseholdId, hhID).Count(&count)
 		if count > 0 {
 			continue
 		}

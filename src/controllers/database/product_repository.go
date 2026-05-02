@@ -111,7 +111,7 @@ func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]datab
 	}
 
 	var products []database.Product
-	query := r.DB.Preload("StorageLocation").Where("household_id = ?", user.HouseholdID)
+	query := r.DB.Preload("StorageLocation").Where(util.QueryHouseholdId, user.HouseholdID)
 
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -150,7 +150,7 @@ func (r *ProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) 
 	}
 
 	var products []database.Product
-	query := r.DB.Preload("StorageLocation").Unscoped().Where("deleted_at IS NOT NULL").Where("household_id = ?", user.HouseholdID)
+	query := r.DB.Preload("StorageLocation").Unscoped().Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, user.HouseholdID)
 
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -235,8 +235,8 @@ func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, query
 
 	var foundProducts []database.Product
 	preloadedDataset := r.DB.Preload("StorageLocation").
-		Where("household_id = ?", user.HouseholdID).
-		Where("deleted_at IS NULL")
+		Where(util.QueryHouseholdId, user.HouseholdID).
+		Where(util.WhereDeletedIsNull)
 
 	queryValue = fmt.Sprintf("%%%s%%", queryValue)
 
@@ -698,8 +698,8 @@ func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]ap
 func (r *ProductRepository) GetLastNotifiedProduct(householdID uint) (database.Product, error) {
 	var lastNotifiedProduct database.Product
 	getNotifiedError := r.DB.
-		Where("household_id = ?", householdID).
-		Where("deleted_at IS NULL").
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
 		Order("notified_at DESC").
 		Limit(1).
 		Find(&lastNotifiedProduct)
@@ -723,8 +723,8 @@ func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database
 
 	var products []database.Product
 	err := r.DB.
-		Where("household_id = ?", user.HouseholdID).
-		Where("deleted_at IS NULL").
+		Where(util.QueryHouseholdId, user.HouseholdID).
+		Where(util.WhereDeletedIsNull).
 		Where("expire_at >= ?", startOfToday).
 		Where("expire_at <= ?", endOfWindow).
 		Order("expire_at ASC").
@@ -738,8 +738,8 @@ func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database
 func (r *ProductRepository) GetLastInsertedProduct(householdID uint) (database.Product, error) {
 	var lastProduct database.Product
 	getError := r.DB.
-		Where("household_id = ?", householdID).
-		Where("deleted_at IS NULL").
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
 		Order("created_at DESC").
 		Limit(1).
 		Find(&lastProduct)
@@ -810,7 +810,7 @@ func (r *ProductRepository) GetUserActiveProductsFiltered(userID uint, from, to 
 	}
 
 	var products []database.Product
-	query := r.DB.Where("household_id = ?", user.HouseholdID).Where("deleted_at IS NULL")
+	query := r.DB.Where(util.QueryHouseholdId, user.HouseholdID).Where(util.WhereDeletedIsNull)
 
 	if from != nil {
 		query = query.Where("created_at >= ?", *from)
@@ -837,7 +837,7 @@ func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, t
 	}
 
 	var products []database.Product
-	query := r.DB.Unscoped().Where("deleted_at IS NOT NULL").Where("household_id = ?", user.HouseholdID)
+	query := r.DB.Unscoped().Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, user.HouseholdID)
 
 	if from != nil {
 		query = query.Where("deleted_at >= ?", *from)
@@ -855,7 +855,7 @@ func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, t
 
 func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error) {
 	var users []authentication.User
-	err := r.DB.Where("household_id = ?", householdID).Find(&users).Error
+	err := r.DB.Where(util.QueryHouseholdId, householdID).Find(&users).Error
 	return users, err
 }
 
@@ -875,8 +875,8 @@ func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, er
 
 	var count int64
 	err := r.DB.Model(&database.Product{}).
-		Where("household_id = ?", user.HouseholdID).
-		Where("deleted_at IS NULL").
+		Where(util.QueryHouseholdId, user.HouseholdID).
+		Where(util.WhereDeletedIsNull).
 		Where("expire_at >= ?", startOfToday).
 		Where("expire_at <= ?", endOfWindow).
 		Count(&count).Error
@@ -902,8 +902,8 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 
 	var count int64
 	err := r.DB.Unscoped().Model(&database.Product{}).
-		Where("household_id = ?", user.HouseholdID).
-		Where("deleted_at IS NOT NULL").
+		Where(util.QueryHouseholdId, user.HouseholdID).
+		Where(util.WhereDeletedIsNotNull).
 		Where("deleted_at >= ?", monthStart).
 		Where("deleted_at <= ?", monthEnd).
 		Count(&count).Error
@@ -968,12 +968,12 @@ func (r *CalendarTokenRepository) GetByToken(token string) (authentication.Calen
 }
 
 func (r *CalendarTokenRepository) DeleteByUserID(userID uint) error {
-	return r.DB.Where("user_id = ?", userID).Delete(&authentication.CalendarToken{}).Error
+	return r.DB.Where(util.QueryUserId, userID).Delete(&authentication.CalendarToken{}).Error
 }
 
 func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.CalendarToken, error) {
 	var ct authentication.CalendarToken
-	err := r.DB.Where("user_id = ?", userID).First(&ct).Error
+	err := r.DB.Where(util.QueryUserId, userID).First(&ct).Error
 	return ct, err
 }
 

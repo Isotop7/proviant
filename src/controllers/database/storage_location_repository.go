@@ -4,6 +4,8 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
+
 	"gorm.io/gorm"
 )
 
@@ -31,7 +33,7 @@ func (r *StorageLocationRepository) GetByHousehold(userID uint) ([]database.Stor
 		return nil, err
 	}
 	var locs []database.StorageLocation
-	err := r.DB.Where("household_id = ?", user.HouseholdID).
+	err := r.DB.Where(util.QueryHouseholdId, user.HouseholdID).
 		Order("sort_order ASC, name ASC").
 		Find(&locs).Error
 	return locs, err
