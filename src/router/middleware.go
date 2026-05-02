@@ -21,6 +21,7 @@ import (
 	"gorm.io/gorm"
 )
 
+const MsgInvalidCredentials = "Invalid credentials"
 var errEmailNotVerified = errors.New("email not verified")
 
 // parseRequestID validates if the string is a valid UUID, returns empty string if not
@@ -115,13 +116,13 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 
 	failedUserID, failedUserIDExists := ctx.Get("failedUserID")
 	if !failedUserIDExists {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": MsgInvalidCredentials})
 		return
 	}
 
 	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": MsgInvalidCredentials})
 		return
 	}
 
@@ -141,7 +142,7 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 
 	locked, remaining := userRepo.IsAccountLocked(failedUserID.(uint), maxLoginAttempts, lockoutDurationMins)
 	if !locked {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": MsgInvalidCredentials})
 		return
 	}
 

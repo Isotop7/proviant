@@ -47,6 +47,11 @@ type RecipeSuggestion struct {
 	MatchPercent     float64               `json:"matchPercent"`
 }
 
+const (
+	MsgFailedCloseResponseBody  = "failed to close response body"
+	MsgApiReturnWrapper			= "API returned %d"
+)
+
 // NewRecipeController creates a new controller.
 func NewRecipeController(config configuration.RecipeAPIConfiguration, logger *zerolog.Logger, db *gorm.DB) *RecipeController {
 	repo := recipeRepo.NewRecipeRepository(db)
@@ -245,12 +250,12 @@ func (rc *RecipeController) fetchByCategory(category string) ([]Recipe, error) {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			rc.Logger.Debug().Err(err).Msg("failed to close response body")
+			rc.Logger.Debug().Err(err).Msg(MsgFailedCloseResponseBody)
 		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API returned %d", resp.StatusCode)
+		return nil, fmt.Errorf(MsgApiReturnWrapper, resp.StatusCode)
 	}
 
 	var result struct {
@@ -291,12 +296,12 @@ func (rc *RecipeController) searchByText(query string) ([]Recipe, error) {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			rc.Logger.Debug().Err(err).Msg("failed to close response body")
+			rc.Logger.Debug().Err(err).Msg(MsgFailedCloseResponseBody)
 		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API returned %d", resp.StatusCode)
+		return nil, fmt.Errorf(MsgApiReturnWrapper, resp.StatusCode)
 	}
 
 	var result struct {
@@ -340,12 +345,12 @@ func (rc *RecipeController) fetchDetails(mealID string) (Recipe, error) {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			rc.Logger.Debug().Err(err).Msg("failed to close response body")
+			rc.Logger.Debug().Err(err).Msg(MsgFailedCloseResponseBody)
 		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return Recipe{}, fmt.Errorf("API returned %d", resp.StatusCode)
+		return Recipe{}, fmt.Errorf(MsgApiReturnWrapper, resp.StatusCode)
 	}
 
 	var result struct {
