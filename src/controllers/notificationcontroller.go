@@ -176,75 +176,80 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 }
 
 func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) {
-	// Skip if the product's expiry date is still beyond this user's threshold window.
-	// A threshold of 0 means notify on/after expiry (current behaviour).
+	if !nc.isWithinNotificationThreshold(product, recipientInfo) {
+		return
+	}
+
+	notified := false
+
+	for _, provider := range nc.Providers {
+		if err := nc.sendViaProvider(provider, product, recipientInfo); err != nil {
+			nc.Logger.Error().Msgf("Failed to send %s notification: %s", provider.GetProviderType(), err.Error())
+			continue
+		}
+		nc.Logger.Info().Msgf("Successfully sent %s notification", provider.GetProviderType())
+		if !notified {
+			notified = nc.markNotified(product.ID)
+		}
+	}
+
+	if nc.sendTelegram(product, recipientInfo) && !notified {
+		notified = nc.markNotified(product.ID)
+	}
+
+	if !notified {
+		nc.Logger.Warn().Msgf("Failed to send any notifications for product '%s' (ID: %d)",
+			product.ProductName, product.ID)
+	}
+}
+
+func (nc *NotificationController) isWithinNotificationThreshold(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) bool {
 	cutoff := time.Now().AddDate(0, 0, recipientInfo.NotificationThresholdDays)
 	if product.ExpireAt.After(cutoff) {
 		nc.Logger.Debug().Msgf("Product '%s' (ID: %d) not yet within threshold for recipient, skipping",
 			product.ProductName, product.ID)
-		return
+		return false
 	}
+	return true
+}
 
-	notifiedAtUpdated := false
-
-	for _, provider := range nc.Providers {
-		providerType := provider.GetProviderType()
-
-		var sendError error
-		switch providerType {
-		case "email":
-			if recipientInfo.EmailEnabled && recipientInfo.EmailAddress != "" {
-				nc.Logger.Info().Msgf("Attempting email notification for product '%s' (ID: %d)", product.ProductName, product.ID)
-				sendError = provider.SendNotification(product, recipientInfo.EmailAddress)
-			}
-		case "ntfy":
-			if recipientInfo.NtfyEnabled {
-				nc.Logger.Info().Msgf("Attempting ntfy notification for product '%s' (ID: %d)", product.ProductName, product.ID)
-				sendError = provider.SendNotification(product, recipientInfo)
-			}
+func (nc *NotificationController) sendViaProvider(provider NotificationProvider, product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) error {
+	switch provider.GetProviderType() {
+	case "email":
+		if recipientInfo.EmailEnabled && recipientInfo.EmailAddress != "" {
+			nc.Logger.Info().Msgf("Attempting email notification for product '%s' (ID: %d)", product.ProductName, product.ID)
+			return provider.SendNotification(product, recipientInfo.EmailAddress)
 		}
-
-		if sendError != nil {
-			nc.Logger.Error().Msgf("Failed to send %s notification: %s", providerType, sendError.Error())
-			continue
-		}
-
-		nc.Logger.Info().Msgf("Successfully sent %s notification", providerType)
-
-		if !notifiedAtUpdated {
-			updateErr := nc.NotificationRepo.SetProductNotifiedAt(product.ID)
-			if updateErr != nil {
-				nc.Logger.Error().Msg(updateErr.Error())
-			} else {
-				nc.Logger.Info().Msg("Property NotifiedAt was updated")
-				notifiedAtUpdated = true
-			}
+	case "ntfy":
+		if recipientInfo.NtfyEnabled {
+			nc.Logger.Info().Msgf("Attempting ntfy notification for product '%s' (ID: %d)", product.ProductName, product.ID)
+			return provider.SendNotification(product, recipientInfo)
 		}
 	}
+	return nil
+}
 
-	// Telegram is per-user; use recipient's own bot token.
+func (nc *NotificationController) sendTelegram(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) bool {
 	if recipientInfo.TelegramEnabled && recipientInfo.TelegramChatID != "" && recipientInfo.TelegramBotToken != "" {
 		nc.Logger.Info().Msgf("Attempting telegram notification for product '%s' (ID: %d)", product.ProductName, product.ID)
 		telegramProvider := &TelegramNotificationProvider{BotToken: recipientInfo.TelegramBotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
 		if err := telegramProvider.SendNotification(product, recipientInfo.TelegramChatID); err != nil {
 			nc.Logger.Error().Msgf("Failed to send telegram notification: %s", err)
-		} else {
-			nc.Logger.Info().Msg("Successfully sent telegram notification")
-			if !notifiedAtUpdated {
-				if updateErr := nc.NotificationRepo.SetProductNotifiedAt(product.ID); updateErr != nil {
-					nc.Logger.Error().Msg(updateErr.Error())
-				} else {
-					nc.Logger.Info().Msg("Property NotifiedAt was updated")
-					notifiedAtUpdated = true
-				}
-			}
+			return false
 		}
+		nc.Logger.Info().Msg("Successfully sent telegram notification")
+		return true
 	}
+	return false
+}
 
-	if !notifiedAtUpdated {
-		nc.Logger.Warn().Msgf("Failed to send any notifications for product '%s' (ID: %d)",
-			product.ProductName, product.ID)
+func (nc *NotificationController) markNotified(productID uint) bool {
+	if err := nc.NotificationRepo.SetProductNotifiedAt(productID); err != nil {
+		nc.Logger.Error().Msg(err.Error())
+		return false
 	}
+	nc.Logger.Info().Msg("Property NotifiedAt was updated")
+	return true
 }
 
 // DispatchInvitations starts a background goroutine that periodically retries sending pending invitation emails.

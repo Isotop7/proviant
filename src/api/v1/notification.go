@@ -45,7 +45,7 @@ func GetNotifications(ctx *gin.Context) {
 		return
 	}
 
-	items := buildNotificationItems(repos, logger, user, userID)
+	items := buildNotificationItems(repos, logger, &user, userID)
 
 	ctx.JSON(http.StatusOK, apiModel.NotificationsResponse{
 		Total: len(items),
@@ -53,7 +53,7 @@ func GetNotifications(ctx *gin.Context) {
 	})
 }
 
-func buildNotificationItems(repos *database.RepositoryContainer, logger *zerolog.Logger, user authentication.User, userID uint) []apiModel.NotificationItem {
+func buildNotificationItems(repos *database.RepositoryContainer, logger *zerolog.Logger, user *authentication.User, userID uint) []apiModel.NotificationItem {
 	items := []apiModel.NotificationItem{}
 
 	if user.HouseholdID != 0 {

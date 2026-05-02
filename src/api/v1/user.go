@@ -224,7 +224,7 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	if err := validateNtfyPreferences(preferences); err != nil {
+	if err := validateNtfyPreferences(&preferences); err != nil {
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
 		return
 	}
@@ -304,7 +304,7 @@ func GenerateTelegramLinkToken(ctx *gin.Context) {
 	})
 }
 
-func validateNtfyPreferences(prefs authentication.NotificationPreferences) error {
+func validateNtfyPreferences(prefs *authentication.NotificationPreferences) error {
 	if !prefs.NtfyEnabled {
 		return nil
 	}

@@ -65,15 +65,15 @@ func ConsumeProduct(ctx *gin.Context) {
 	}
 
 	if fetchErr == nil {
-		go recordHouseholdSavingsEvent(repos, logger, userID, product, "consumed")
+		go recordHouseholdSavingsEvent(repos, logger, userID, &product, "consumed")
 	}
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d marked as consumed", productID)})
 }
 
-func recordHouseholdSavingsEvent(repos *database.RepositoryContainer, logger *zerolog.Logger, userID uint, product dbModel.Product, eventType string) {
+func recordHouseholdSavingsEvent(repos *database.RepositoryContainer, logger *zerolog.Logger, userID uint, product *dbModel.Product, eventType string) {
 	if householdID, err := repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
-		if err := repos.Savings.RecordSavingsEvent(householdID, &product, eventType); err != nil {
+		if err := repos.Savings.RecordSavingsEvent(householdID, product, eventType); err != nil {
 			logger.Error().Msgf("RecordSavingsEvent (%s): %s", eventType, err)
 		}
 	}
@@ -140,7 +140,7 @@ func WasteProduct(ctx *gin.Context) {
 	}()
 
 	if fetchErr == nil {
-		go recordHouseholdSavingsEvent(repos, logger, userID, product, "wasted")
+		go recordHouseholdSavingsEvent(repos, logger, userID, &product, "wasted")
 	}
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d marked as wasted", productID)})
