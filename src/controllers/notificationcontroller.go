@@ -31,6 +31,8 @@ type NotificationController struct {
 	botUsernames     sync.Map // userID(uint) → resolved bot username(string)
 }
 
+const MsgEmailProviderNotConfigured = "email provider not configured"
+
 func NewNotificationController(
 	logger *zerolog.Logger,
 	config *configuration.NotificationConfiguration,
@@ -286,7 +288,7 @@ func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.Househ
 	}
 
 	if !emailProvider.IsConfigured() {
-		return fmt.Errorf("email provider not configured")
+		return fmt.Errorf(MsgEmailProviderNotConfigured)
 	}
 
 	if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
@@ -314,7 +316,7 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 	}
 
 	if !emailProvider.IsConfigured() {
-		return fmt.Errorf("email provider not configured")
+		return fmt.Errorf(MsgEmailProviderNotConfigured)
 	}
 
 	if err := emailProvider.SendInvitationEmail(invitation, username, "your household", baseURL); err != nil {
@@ -342,7 +344,7 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 	}
 
 	if !emailProvider.IsConfigured() {
-		return fmt.Errorf("email provider not configured")
+		return fmt.Errorf(MsgEmailProviderNotConfigured)
 	}
 
 	if err := emailProvider.SendEmailVerificationEmail(email, username, token, baseURL, expiresAt); err != nil {
