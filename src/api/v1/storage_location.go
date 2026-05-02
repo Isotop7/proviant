@@ -5,6 +5,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -25,7 +26,7 @@ type storageLocationRequest struct {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/storage-locations [get]
 func ListStorageLocations(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -59,7 +60,7 @@ func ListStorageLocations(ctx *gin.Context) {
 // @Failure      500   {object}  api.APIResponse
 // @Router       /api/v1/household/storage-locations [post]
 func CreateStorageLocation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -107,7 +108,7 @@ func CreateStorageLocation(ctx *gin.Context) {
 // @Failure      500   {object}  api.APIResponse
 // @Router       /api/v1/household/storage-locations/:id [patch]
 func UpdateStorageLocation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	locationID, ok := parseUintParam(ctx, logger, "id", "location ID")
 	if !ok {
@@ -165,7 +166,7 @@ func UpdateStorageLocation(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/storage-locations/:id [delete]
 func DeleteStorageLocation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	locationID, ok := parseUintParam(ctx, logger, "id", "location ID")
 	if !ok {

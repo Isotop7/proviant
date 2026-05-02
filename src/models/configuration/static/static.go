@@ -3,34 +3,28 @@ package static
 
 import "time"
 
-var (
-	// Realm of tokens
+const (
+	// TokenRealm is the realm of tokens
 	TokenRealm = "proviant"
 
-	// Name of identity key in tokens
+	// TokenIdentityKey is the name of identity key in tokens
 	TokenIdentityKey = "id"
 
-	// Name of username key in tokens
+	// TokenUsernameKey is the name of username key in tokens
 	TokenUsernameKey = "username"
 
-	// Name of JTI key in tokens
+	// TokenJTIKey is the name of JTI key in tokens
 	TokenJTIKey = "jti"
 
-	// Name of authentication header in token
+	// TokenHeadName is the name of authentication header in token
 	TokenHeadName = "Bearer"
 
-	// Configuration for value lookup in token
+	// TokenLookup is the configuration for value lookup in token
 	TokenLookup = "header: Authorization, query: token, cookie: jwt"
 
-	// BarcodeDecodingTimeout is the timoeut of the decoding operation in seconds
-	BarcodeDecodingTimeout = time.Second * time.Duration(5)
+	// BarcodeDecodingTimeout is the timeout of the decoding operation
+	BarcodeDecodingTimeout = 5 * time.Second
 
 	// RequestIDHeader is the header name for request ID
 	RequestIDHeader = "X-Request-ID"
-
-	// RequestIDContextKey is the context key for request ID
-	RequestIDContextKey = "requestID"
-
-	// UserIDContextKey is the context key for user ID (for logger enrichment)
-	UserIDContextKey = "userID"
 )

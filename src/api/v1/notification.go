@@ -26,7 +26,7 @@ import (
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/notifications [get]
 func GetNotifications(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {

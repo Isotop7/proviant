@@ -10,6 +10,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -33,7 +34,7 @@ const (
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/users [get]
 func GetHouseholdUsers(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -88,7 +89,7 @@ func GetHouseholdUsers(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/users/{id} [patch]
 func UpdateHouseholdUser(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -181,7 +182,7 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/users/{id} [delete]
 func DeleteHouseholdUser(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -261,7 +262,7 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/users/{id}/reset-password [post]
 func AdminResetUserPassword(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -302,8 +303,8 @@ func AdminResetUserPassword(ctx *gin.Context) {
 		return
 	}
 
-	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
-	notificationController, _ := ctx.MustGet("notificationController").(*controllers.NotificationController)
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	notificationController, _ := ctx.MustGet(util.ContextKeyNotificationController).(*controllers.NotificationController)
 	if notificationController != nil {
 		baseURL := ""
 		if proviantConfig != nil {

@@ -11,6 +11,7 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -33,7 +34,7 @@ const (
 // @Router       /api/v1/webhooks [post]
 // @Security     BearerAuth
 func CreateWebhook(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -91,7 +92,7 @@ func CreateWebhook(ctx *gin.Context) {
 // @Router       /api/v1/webhooks [get]
 // @Security     BearerAuth
 func ListWebhooks(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -130,7 +131,7 @@ func ListWebhooks(ctx *gin.Context) {
 // @Router       /api/v1/webhooks/{id} [get]
 // @Security     BearerAuth
 func GetWebhook(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -181,7 +182,7 @@ func GetWebhook(ctx *gin.Context) {
 // @Router       /api/v1/webhooks/{id} [patch]
 // @Security     BearerAuth
 func UpdateWebhook(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -259,7 +260,7 @@ func UpdateWebhook(ctx *gin.Context) {
 // @Router       /api/v1/webhooks/{id} [delete]
 // @Security     BearerAuth
 func DeleteWebhook(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -307,7 +308,7 @@ func DeleteWebhook(ctx *gin.Context) {
 // @Router       /api/v1/webhooks/{id}/deliveries [get]
 // @Security     BearerAuth
 func GetWebhookDeliveries(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {

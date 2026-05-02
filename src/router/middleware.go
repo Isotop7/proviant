@@ -22,6 +22,7 @@ import (
 )
 
 const MsgInvalidCredentials = "Invalid credentials"
+
 var errEmailNotVerified = errors.New("email not verified")
 
 // parseRequestID validates if the string is a valid UUID, returns empty string if not
@@ -44,7 +45,7 @@ func RequestIDMiddleware(baseLogger *zerolog.Logger) gin.HandlerFunc {
 		if reqID == "" {
 			reqID = uuid.New().String()
 		}
-		ctx.Set(static.RequestIDContextKey, reqID)
+		ctx.Set(util.ContextKeyRequestID, reqID)
 		ctx.Header(static.RequestIDHeader, reqID)
 
 		// Replace context logger with child carrying request_id
@@ -62,7 +63,7 @@ func UserContextLoggerMiddleware() gin.HandlerFunc {
 		if raw, ok := claims[static.TokenIdentityKey]; ok {
 			if f, ok := raw.(float64); ok {
 				uid := uint(f)
-				ctx.Set(static.UserIDContextKey, uid)
+				ctx.Set(util.ContextKeyUserID, uid)
 
 				// Enrich ctx logger with user_id
 				if existing, ok := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger); ok {
@@ -85,8 +86,8 @@ func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
 		ctx.Next()
 
 		// Read request_id and user_id from context
-		reqID, _ := ctx.Get(static.RequestIDContextKey)
-		userID, _ := ctx.Get(static.UserIDContextKey)
+		reqID, _ := ctx.Get(util.ContextKeyRequestID)
+		userID, _ := ctx.Get(util.ContextKeyUserID)
 
 		// Log the request details
 		evt := logger.Info().

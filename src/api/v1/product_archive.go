@@ -11,6 +11,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -36,7 +37,7 @@ func joinErrors(errs []database.BulkOperationError) string {
 // @Router       /api/v1/products/archived [get]
 func GetArchivedProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse parameter limit
 	limitParam := ctx.Query("limit")
@@ -93,7 +94,7 @@ func GetArchivedProducts(ctx *gin.Context) {
 // @Router       	/api/v1/product/bulkDelete [delete]
 func BulkDeleteProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel
@@ -140,7 +141,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 // @Router       	/api/v1/product/bulkArchive [delete]
 func BulkArchiveProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel
@@ -187,7 +188,7 @@ func BulkArchiveProducts(ctx *gin.Context) {
 // @Router       	/api/v1/product/{id}/restore [post]
 func RestoreProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
@@ -228,7 +229,7 @@ func RestoreProduct(ctx *gin.Context) {
 // @Router       	/api/v1/product/bulkRestore [post]
 func BulkRestoreProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel

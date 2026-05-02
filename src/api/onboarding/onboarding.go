@@ -9,6 +9,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	modelsAPI "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/util"
 
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 
@@ -32,7 +33,7 @@ const (
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/state [get]
 func GetOnboardingState(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
@@ -42,7 +43,7 @@ func GetOnboardingState(ctx *gin.Context) {
 		return
 	}
 
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -85,7 +86,7 @@ func GetOnboardingState(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/profile [patch]
 func UpdateOnboardingProfile(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
@@ -95,7 +96,7 @@ func UpdateOnboardingProfile(ctx *gin.Context) {
 		return
 	}
 
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -141,7 +142,7 @@ func UpdateOnboardingProfile(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/create-household [post]
 func CreateOnboardingHousehold(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
@@ -151,7 +152,7 @@ func CreateOnboardingHousehold(ctx *gin.Context) {
 		return
 	}
 
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -200,7 +201,7 @@ func CreateOnboardingHousehold(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/join-invite [post]
 func JoinOnboardingByInvite(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
@@ -210,7 +211,7 @@ func JoinOnboardingByInvite(ctx *gin.Context) {
 		return
 	}
 
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -266,7 +267,7 @@ func JoinOnboardingByInvite(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/households [get]
 func GetAvailableHouseholds(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
@@ -276,7 +277,7 @@ func GetAvailableHouseholds(ctx *gin.Context) {
 		return
 	}
 
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -322,7 +323,7 @@ func GetAvailableHouseholds(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/apply-household [post]
 func ApplyForHousehold(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
@@ -332,7 +333,7 @@ func ApplyForHousehold(ctx *gin.Context) {
 		return
 	}
 
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -386,7 +387,7 @@ func ApplyForHousehold(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/complete [post]
 func CompleteOnboarding(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
@@ -396,7 +397,7 @@ func CompleteOnboarding(ctx *gin.Context) {
 		return
 	}
 
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)

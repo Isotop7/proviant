@@ -34,7 +34,7 @@ import (
 // @Failure       500  {object}  api.APIResponse
 // @Router        /api/v1/products/scan-date [post]
 func ScanExpiryDate(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get uploaded image file
 	file, err := ctx.FormFile("image")
@@ -112,7 +112,7 @@ func ScanExpiryDate(ctx *gin.Context) {
 }
 
 func logExpiryScan(ctx *gin.Context, logger *zerolog.Logger, userID uint, resp *apiModel.ExpiryScanResponse, imgBytes []byte) {
-	repos, dbOk := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, dbOk := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !dbOk {
 		logger.Warn().Msg("repos not available for expiry scan logging")
 		return
@@ -133,7 +133,7 @@ func logExpiryScan(ctx *gin.Context, logger *zerolog.Logger, userID uint, resp *
 // getCurrentUserID extracts user ID from JWT claims or PAT context
 func getCurrentUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
 	// PAT path: PAT middleware injects userID directly into context
-	if id, exists := ctx.Get("userID"); exists {
+	if id, exists := ctx.Get(util.ContextKeyUserID); exists {
 		if userID, ok := id.(uint); ok && userID > 0 {
 			return userID, true
 		}

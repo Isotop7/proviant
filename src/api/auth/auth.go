@@ -7,6 +7,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -96,14 +97,14 @@ func Signup(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/auth/logout [post]
 func Logout(ctx *gin.Context) {
-	loggerValue, loggerOk := ctx.Get("logger")
+	loggerValue, loggerOk := ctx.Get(util.ContextKeyLogger)
 	if !loggerOk {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return
 	}
 	logger := loggerValue.(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)

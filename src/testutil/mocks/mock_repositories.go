@@ -608,7 +608,7 @@ func NewMockRepositoryContainer() *MockRepositoryContainer {
 }
 
 // ToRepositoryContainer converts the mock container to a database.RepositoryContainer
-// suitable for injection into the Gin context via ctx.Set("repos", ...).
+// suitable for injection into the Gin context via ctx.Set(util.ContextKeyRepos, ...).
 func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryContainer {
 	return &database.RepositoryContainer{
 		Products:         m.Products,

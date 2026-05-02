@@ -11,6 +11,7 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
+	"codeberg.org/isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,7 @@ import (
 )
 
 func mustGetRepos(ctx *gin.Context, logger *zerolog.Logger) (*database.RepositoryContainer, bool) {
-	reposVal, exists := ctx.Get("repos")
+	reposVal, exists := ctx.Get(util.ContextKeyRepos)
 	repos, ok := reposVal.(*database.RepositoryContainer)
 	if !exists || !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
@@ -30,7 +31,7 @@ func mustGetRepos(ctx *gin.Context, logger *zerolog.Logger) (*database.Repositor
 }
 
 func mustGetDB(ctx *gin.Context, logger *zerolog.Logger) (*gorm.DB, bool) {
-	db, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	db, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -40,7 +41,7 @@ func mustGetDB(ctx *gin.Context, logger *zerolog.Logger) (*gorm.DB, bool) {
 
 func mustGetUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
 	// PAT path: PAT middleware injects userID directly into context
-	if id, exists := ctx.Get("userID"); exists {
+	if id, exists := ctx.Get(util.ContextKeyUserID); exists {
 		if userID, ok := id.(uint); ok && userID > 0 {
 			return userID, true
 		}
@@ -64,7 +65,7 @@ func mustGetUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
 }
 
 func getNotificationController(ctx *gin.Context) (*controllers.NotificationController, bool) {
-	notificationController, ok := ctx.MustGet("notificationController").(*controllers.NotificationController)
+	notificationController, ok := ctx.MustGet(util.ContextKeyNotificationController).(*controllers.NotificationController)
 	return notificationController, ok
 }
 

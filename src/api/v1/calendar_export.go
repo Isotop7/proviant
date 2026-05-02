@@ -85,7 +85,7 @@ func formatProductDescription(product *database.Product) string {
 // @Failure      500   {object} api.APIResponse
 // @Router       /api/v1/calendar/export.ics [get]
 func ExportICalendar(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	if !loggerOk {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return

@@ -15,6 +15,7 @@ import (
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/templates"
+	"codeberg.org/isotop7/proviant/util"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -25,8 +26,8 @@ type Frontend struct {
 }
 
 const (
-	AcceptInviteFileName 	= "acceptInvite.tmpl"
-	AcceptInvitationTitle	= "Accept Invitation"
+	AcceptInviteFileName  = "acceptInvite.tmpl"
+	AcceptInvitationTitle = "Accept Invitation"
 )
 
 // Root renders the home page for authenticated users
@@ -40,7 +41,7 @@ const (
 // @Router       /web [get]
 func (frontend *Frontend) Root(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Extract user id
 	claims := jwt.ExtractClaims(ctx)
@@ -52,7 +53,7 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 	}
 
 	// Get database instance from context
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -121,7 +122,7 @@ func (frontend *Frontend) User(ctx *gin.Context) {
 // @Router       /web/user/settings [get]
 func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Extract user id
 	claims := jwt.ExtractClaims(ctx)
@@ -133,7 +134,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	}
 
 	// Get database instance from context
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -201,10 +202,10 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 // @Router       /web/products [get]
 func (frontend *Frontend) Products(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get database instance from context
-	repos, dbErr := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, dbErr := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !dbErr {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
@@ -269,7 +270,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	expiredCount, criticalCount := 0, 0
 	now := time.Now()
 
-	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
 	criticalDays := proviantConfig.Expiry.CriticalThresholdDays
 	if criticalDays <= 0 {
 		criticalDays = 3
@@ -363,7 +364,7 @@ func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
 // @Router       /web/products/{id}/view [get]
 func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse parameter id
 	idParam := ctx.Param("id")
@@ -376,7 +377,7 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	}
 
 	// Get database instance from context
-	repos, dbErr := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, dbErr := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !dbErr {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
@@ -420,7 +421,7 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 // @Router       /web/products/{id}/edit [get]
 func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse parameter id
 	idParam := ctx.Param("id")
@@ -433,7 +434,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	}
 
 	// Get database instance from context
-	repos, dbErr := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, dbErr := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !dbErr {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
@@ -481,7 +482,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 // @Failure      500    {object}  api.APIResponse
 // @Router       /web/invite/accept [get]
 func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	token := ctx.Query("token")
 
 	if token == "" {
@@ -492,7 +493,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		return
 	}
 
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", AcceptInviteFileName, map[string]any{
@@ -615,9 +616,9 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web/onboarding [get]
 func (frontend *Frontend) Onboarding(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -656,7 +657,7 @@ func (frontend *Frontend) Onboarding(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web/recipes [get]
 func (frontend *Frontend) Recipes(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	claims := jwt.ExtractClaims(ctx)
 	userID64, ok := claims[static.TokenIdentityKey].(float64)
@@ -668,7 +669,7 @@ func (frontend *Frontend) Recipes(ctx *gin.Context) {
 	userID := uint(userID64)
 
 	// Verify user has household (optional, page can show empty state if none)
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)

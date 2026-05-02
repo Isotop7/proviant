@@ -14,6 +14,7 @@ const (
 	ContextKeyNotificationController 	= "notificationController"
 	ContextKeyProviantConfig         	= "proviantConfig"
 	ContextKeyUserID                 	= "userID"
+	ContextKeyRequestID              	= "requestID"
 
 	// Database query wrappers
 	QueryId								= "id = ?"
@@ -21,5 +22,5 @@ const (
 	QueryUserId							= "user_id = ?"
 	QueryWebhookId						= "webhook_id = ?"
 	WhereDeletedIsNotNull				= "deleted_at IS NOT NULL"
-	WhereDeletedIsNull					= "deleted_as IS NULL"
+	WhereDeletedIsNull					= "deleted_at IS NULL"
 )

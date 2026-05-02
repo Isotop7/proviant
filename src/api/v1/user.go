@@ -10,6 +10,7 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -28,7 +29,7 @@ import (
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user [patch]
 func UpdateUser(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -83,7 +84,7 @@ func UpdateUser(ctx *gin.Context) {
 // @Router        	/api/v1/user/password [post]
 func UpdateUserPassword(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -103,7 +104,7 @@ func UpdateUserPassword(ctx *gin.Context) {
 		return
 	}
 
-	proviantConfigInterface, pcOk := ctx.Get("proviantConfig")
+	proviantConfigInterface, pcOk := ctx.Get(util.ContextKeyProviantConfig)
 	var passwordValidator *authentication.PasswordValidator
 	if pcOk {
 		proviantConfig, ok := proviantConfigInterface.(*configuration.ProviantConfiguration)
@@ -161,7 +162,7 @@ func UpdateUserPassword(ctx *gin.Context) {
 // @Router        	/api/v1/user/notification-preferences [get]
 func GetUserNotificationPreferences(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -199,7 +200,7 @@ func GetUserNotificationPreferences(ctx *gin.Context) {
 // @Router        	/api/v1/user/notification-preferences [post]
 func UpdateUserNotificationPreferences(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -267,7 +268,7 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user/telegram-link-token [post]
 func GenerateTelegramLinkToken(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
