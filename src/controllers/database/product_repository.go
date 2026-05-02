@@ -652,10 +652,10 @@ func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthly
 	now := time.Now()
 	monthCounts := make(map[string]int, 12)
 	for i := 0; i < 12; i++ {
-		monthCounts[now.AddDate(0, i, 0).Format("2006-01")] = 0
+		monthCounts[now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)] = 0
 	}
 	for i := range products {
-		month := products[i].ExpireAt.Format("2006-01")
+		month := products[i].ExpireAt.Format(util.DefaultDateFormatMonthStr)
 		if _, ok := monthCounts[month]; ok {
 			monthCounts[month]++
 		}
@@ -663,7 +663,7 @@ func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthly
 
 	result := make([]apiModel.StatsMonthlyCount, 0, 12)
 	for i := 0; i < 12; i++ {
-		month := now.AddDate(0, i, 0).Format("2006-01")
+		month := now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)
 		result = append(result, apiModel.StatsMonthlyCount{Month: month, Count: monthCounts[month]})
 	}
 	return result, nil

@@ -7,11 +7,16 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
+	"codeberg.org/isotop7/proviant/controllers/database"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
+)
+
+const (
+	MsgProductNotFound = "Product not found"
 )
 
 // ConsumeProduct marks a product as consumed (soft-delete/archive, no product.wasted event)
@@ -51,7 +56,7 @@ func ConsumeProduct(ctx *gin.Context) {
 
 	if err := repos.Products.ConsumeProduct(productID, userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "Product not found"})
+			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: MsgProductNotFound})
 			return
 		}
 		logger.Error().Msgf("ConsumeProduct: %s", err)
@@ -60,16 +65,18 @@ func ConsumeProduct(ctx *gin.Context) {
 	}
 
 	if fetchErr == nil {
-		go func(p dbModel.Product) {
-			if householdID, hhErr := repos.Users.GetUserHouseholdByID(userID); hhErr == nil && householdID > 0 {
-				if recErr := repos.Savings.RecordSavingsEvent(householdID, &p, "consumed"); recErr != nil {
-					logger.Error().Msgf("ConsumeProduct: savings record failed: %s", recErr)
-				}
-			}
-		}(product)
+		go recordHouseholdSavingsEvent(repos, logger, userID, product, "consumed")
 	}
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d marked as consumed", productID)})
+}
+
+func recordHouseholdSavingsEvent(repos *database.RepositoryContainer, logger *zerolog.Logger, userID uint, product dbModel.Product, eventType string) {
+	if householdID, err := repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
+		if err := repos.Savings.RecordSavingsEvent(householdID, &product, eventType); err != nil {
+			logger.Error().Msgf("RecordSavingsEvent (%s): %s", eventType, err)
+		}
+	}
 }
 
 // WasteProduct marks a product as wasted (hard-delete, fires product.wasted webhook event)
@@ -109,7 +116,7 @@ func WasteProduct(ctx *gin.Context) {
 
 	if err := repos.Products.WasteProduct(productID, userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "Product not found"})
+			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: MsgProductNotFound})
 			return
 		}
 		logger.Error().Msgf("WasteProduct: %s", err)
@@ -133,13 +140,7 @@ func WasteProduct(ctx *gin.Context) {
 	}()
 
 	if fetchErr == nil {
-		go func(p dbModel.Product) {
-			if householdID, hhErr := repos.Users.GetUserHouseholdByID(userID); hhErr == nil && householdID > 0 {
-				if recErr := repos.Savings.RecordSavingsEvent(householdID, &p, "wasted"); recErr != nil {
-					logger.Error().Msgf("WasteProduct: savings record failed: %s", recErr)
-				}
-			}
-		}(product)
+		go recordHouseholdSavingsEvent(repos, logger, userID, product, "wasted")
 	}
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d marked as wasted", productID)})

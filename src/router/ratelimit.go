@@ -12,6 +12,11 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const (
+	codeRateLimitExceeded = "RATE_LIMIT_EXCEEDED"
+	headerRetryAfter      = "Retry-After"
+)
+
 type clientLimiter struct {
 	limiter  *rate.Limiter
 	lastSeen time.Time
@@ -56,9 +61,9 @@ func loginRateLimitMiddleware(ctx *gin.Context) {
 	reservation := limiter.Reserve()
 	if delay := reservation.Delay(); delay > 0 {
 		reservation.Cancel()
-		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-			"code":    "RATE_LIMIT_EXCEEDED",
+			"code":    codeRateLimitExceeded,
 			"message": "Too many login attempts. Please try again later.",
 		})
 		return
@@ -72,9 +77,9 @@ func signupRateLimitMiddleware(ctx *gin.Context) {
 	reservation := limiter.Reserve()
 	if delay := reservation.Delay(); delay > 0 {
 		reservation.Cancel()
-		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-			"code":    "RATE_LIMIT_EXCEEDED",
+			"code":    codeRateLimitExceeded,
 			"message": "Too many signup attempts. Please try again later.",
 		})
 		return
@@ -98,9 +103,9 @@ func exportRateLimitMiddleware(ctx *gin.Context) {
 	reservation := limiter.Reserve()
 	if delay := reservation.Delay(); delay > 0 {
 		reservation.Cancel()
-		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-			"code":    "RATE_LIMIT_EXCEEDED",
+			"code":    codeRateLimitExceeded,
 			"message": "Too many export requests. Please try again later.",
 		})
 		return

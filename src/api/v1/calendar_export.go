@@ -18,6 +18,7 @@ import (
 const (
 	CalendarExpireDays = 30
 	CalendarProdID     = "-//Proviant//ProductExpiry//EN"
+	mimeTypeCalendar   = "text/calendar; charset=utf-8"
 )
 
 func escapeICalText(s string) string {
@@ -130,7 +131,7 @@ func ExportICalendar(ctx *gin.Context) {
 
 	sb.WriteString("END:VCALENDAR\r\n")
 
-	ctx.Header(util.RequestHeaderContentType, "text/calendar; charset=utf-8")
+	ctx.Header(util.RequestHeaderContentType, mimeTypeCalendar)
 	ctx.Header(util.RequestHeaderContentDisposition, "inline")
-	ctx.Data(http.StatusOK, "text/calendar; charset=utf-8", []byte(sb.String()))
+	ctx.Data(http.StatusOK, mimeTypeCalendar, []byte(sb.String()))
 }

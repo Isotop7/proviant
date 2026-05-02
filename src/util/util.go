@@ -2,7 +2,16 @@
 package util
 
 const (
-	DefaultDateFormatParseStr 		= "2006-01-02"
-	RequestHeaderContentType 		= "Content-Type"
+	DefaultDateFormatParseStr       = "2006-01-02"
+	DefaultDateFormatMonthStr       = "2006-01"
+	RequestHeaderContentType        = "Content-Type"
 	RequestHeaderContentDisposition = "Content-Disposition"
+
+	// Gin context keys
+	ContextKeyLogger                 = "logger"
+	ContextKeyRepos                  = "repos"
+	ContextKeyDBHandle               = "dbHandle"
+	ContextKeyNotificationController = "notificationController"
+	ContextKeyProviantConfig         = "proviantConfig"
+	ContextKeyUserID                 = "userID"
 )

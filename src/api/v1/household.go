@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	MsgInvalidApplicationId = "invalid application id"
+	MsgInvalidApplicationId  = "invalid application id"
+	MsgHouseholdNameEmpty    = "household name cannot be empty"
 )
 
 // LeaveHousehold removes the calling user from their current household and assigns them a new personal one.
@@ -77,7 +78,7 @@ func CreateHousehold(ctx *gin.Context) {
 		return
 	}
 	if req.Name == "" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "household name cannot be empty"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: MsgHouseholdNameEmpty})
 		return
 	}
 
@@ -289,7 +290,7 @@ func UpdateHouseholdName(ctx *gin.Context) {
 		return
 	}
 	if req.Name == "" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "household name cannot be empty"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: MsgHouseholdNameEmpty})
 		return
 	}
 

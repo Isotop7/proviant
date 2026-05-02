@@ -19,7 +19,9 @@ import (
 )
 
 const (
-	MsgCheckProductIdTryAgain = "Check the product ID and try again"
+	MsgCheckProductIdTryAgain          = "Check the product ID and try again"
+	FmtProductNotFoundOrNoAccess       = "Product with ID '%d' was not found or you do not have access"
+	MsgFailedToGetControllerFromContext = "Failed to get controller from context"
 )
 
 // GetProducts returns the products of a user
@@ -122,7 +124,7 @@ func GetProduct(ctx *gin.Context) {
 	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found or you do not have access", productID),
+			Message: fmt.Sprintf(FmtProductNotFoundOrNoAccess, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
@@ -180,8 +182,8 @@ func CreateProduct(ctx *gin.Context) {
 	// Get OpenFoodFacts API controller from context
 	offacntrl, offaErr := ctx.MustGet("offacntrl").(controllers.OpenFoodFactsAPIControllerInterface)
 	if !offaErr {
-		logger.Error().Msg("Failed to get controller from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get controller from context"})
+		logger.Error().Msg(MsgFailedToGetControllerFromContext)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: MsgFailedToGetControllerFromContext})
 		return
 	}
 	// Get product data from API
@@ -485,7 +487,7 @@ func SetExpireAt(ctx *gin.Context) {
 	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{
-			Message: fmt.Sprintf("Product with ID '%d' was not found or you do not have access", productID),
+			Message: fmt.Sprintf(FmtProductNotFoundOrNoAccess, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
 		return
