@@ -213,7 +213,7 @@ type productQueryParams struct {
 func fetchProducts(
 	repos *database.RepositoryContainer,
 	userID uint,
-	params productQueryParams,
+	params *productQueryParams,
 ) ([]dbModel.Product, error) {
 	if params.statusFilter == "archived" {
 		return repos.Products.GetUserArchivedProductsBulk(userID, -1)
@@ -302,7 +302,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
-	products, productErr := fetchProducts(repos, userID, productQueryParams{
+	products, productErr := fetchProducts(repos, userID, &productQueryParams{
 		statusFilter:   statusFilter,
 		locationFilter: locationFilter,
 		queryParam:     queryParam,
