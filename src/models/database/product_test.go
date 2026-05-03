@@ -6,20 +6,20 @@ import (
 )
 
 func TestProductStruct(t *testing.T) {
-	t.Run("Product struct has correct fields", func(t *testing.T) {
-		now := time.Now()
-		product := Product{
-			Barcode:     "1234567890123",
-			ProductName: "Test Product",
-			Categories:  "en:test",
-			Countries:   "en:Germany",
-			ImageURL:    "http://example.com/image.jpg",
-			ExpireAt:    now,
-			ScannedAt:   now,
-			NotifiedAt:  now,
-			HouseholdID: 1,
-		}
+	now := time.Now()
+	product := Product{
+		Barcode:     "1234567890123",
+		ProductName: "Test Product",
+		Categories:  "en:test",
+		Countries:   "en:Germany",
+		ImageURL:    "http://example.com/image.jpg",
+		ExpireAt:    now,
+		ScannedAt:   now,
+		NotifiedAt:  now,
+		HouseholdID: 1,
+	}
 
+	t.Run("string fields", func(t *testing.T) {
 		if product.Barcode != "1234567890123" {
 			t.Errorf("Barcode = %v, want 1234567890123", product.Barcode)
 		}
@@ -35,6 +35,9 @@ func TestProductStruct(t *testing.T) {
 		if product.ImageURL != "http://example.com/image.jpg" {
 			t.Errorf("ImageURL = %v, want http://example.com/image.jpg", product.ImageURL)
 		}
+	})
+
+	t.Run("time fields", func(t *testing.T) {
 		if product.ExpireAt != now {
 			t.Errorf("ExpireAt mismatch")
 		}
@@ -44,6 +47,9 @@ func TestProductStruct(t *testing.T) {
 		if product.NotifiedAt != now {
 			t.Errorf("NotifiedAt mismatch")
 		}
+	})
+
+	t.Run("household id", func(t *testing.T) {
 		if product.HouseholdID != 1 {
 			t.Errorf("HouseholdID = %v, want 1", product.HouseholdID)
 		}

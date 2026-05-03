@@ -212,56 +212,49 @@ func TestOpenFoodFactsConfigurationStruct(t *testing.T) {
 }
 
 func TestProviantConfigurationStruct(t *testing.T) {
-	t.Run("can create ProviantConfiguration", func(t *testing.T) {
-		config := ProviantConfiguration{
-			Database: DatabaseConfiguration{
-				Engine: "sqlite",
-				SQLite: DatabaseSQLiteConfiguration{
-					Filepath: "/path/to/database.db",
-				},
+	config := ProviantConfiguration{
+		Database: DatabaseConfiguration{
+			Engine: "sqlite",
+			SQLite: DatabaseSQLiteConfiguration{
+				Filepath: "/path/to/database.db",
 			},
-			Server: ServerConfiguration{
-				Port: 5114,
-			},
-			Logging: LoggingConfiguration{
-				Enabled: true,
-			},
-			Notification: NotificationConfiguration{
-				Enabled: true,
-			},
-			OpenFoodFacts: OpenFoodFactsConfiguration{
-				URL: "https://world.openfoodfacts.org",
-			},
-			TemplateCache: make(map[string]*template.Template),
-		}
+		},
+		Server: ServerConfiguration{
+			Port: 5114,
+		},
+		Logging: LoggingConfiguration{
+			Enabled: true,
+		},
+		Notification: NotificationConfiguration{
+			Enabled: true,
+		},
+		OpenFoodFacts: OpenFoodFactsConfiguration{
+			URL: "https://world.openfoodfacts.org",
+		},
+		TemplateCache: make(map[string]*template.Template),
+	}
 
+	t.Run("database engine", func(t *testing.T) {
 		if config.Database.Engine != "sqlite" {
 			t.Errorf("Database.Engine = %v, want sqlite", config.Database.Engine)
 		}
+	})
+	t.Run("server port", func(t *testing.T) {
 		if config.Server.Port != 5114 {
 			t.Errorf("Server.Port = %v, want 5114", config.Server.Port)
 		}
+	})
+	t.Run("logging enabled", func(t *testing.T) {
 		if !config.Logging.Enabled {
 			t.Errorf("Logging.Enabled = %v, want true", config.Logging.Enabled)
 		}
+	})
+	t.Run("notification enabled", func(t *testing.T) {
 		if !config.Notification.Enabled {
 			t.Errorf("Notification.Enabled = %v, want true", config.Notification.Enabled)
 		}
-		if config.OpenFoodFacts.URL != "https://world.openfoodfacts.org" {
-			t.Errorf("OpenFoodFacts.URL = %v, want https://world.openfoodfacts.org", config.OpenFoodFacts.URL)
-		}
-		if config.Database.Engine != "sqlite" {
-			t.Errorf("Database.Engine = %v, want sqlite", config.Database.Engine)
-		}
-		if config.Server.Port != 5114 {
-			t.Errorf("Server.Port = %v, want 5114", config.Server.Port)
-		}
-		if !config.Logging.Enabled {
-			t.Errorf("Logging.Enabled = %v, want true", config.Logging.Enabled)
-		}
-		if !config.Notification.Enabled {
-			t.Errorf("Notification.Enabled = %v, want true", config.Notification.Enabled)
-		}
+	})
+	t.Run("openfoodfacts url", func(t *testing.T) {
 		if config.OpenFoodFacts.URL != "https://world.openfoodfacts.org" {
 			t.Errorf("OpenFoodFacts.URL = %v, want https://world.openfoodfacts.org", config.OpenFoodFacts.URL)
 		}

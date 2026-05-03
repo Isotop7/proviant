@@ -200,11 +200,73 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web/products [get]
+func fetchProducts(
+	repos *database.RepositoryContainer,
+	userID uint,
+	statusFilter, locationFilter, queryParam, queryValue, sort, order string,
+) ([]dbModel.Product, error) {
+	if statusFilter == "archived" {
+		return repos.Products.GetUserArchivedProductsBulk(userID, -1)
+	}
+	switch {
+	case locationFilter != "":
+		locationID, parseErr := strconv.ParseUint(locationFilter, 10, 64)
+		if parseErr != nil {
+			return nil, nil
+		}
+		return repos.Products.GetUserProductsByLocation(userID, uint(locationID)) //nolint:gosec
+	case queryParam != "" && queryValue != "":
+		enumParam := database.SearchParameterEnumFromString(queryParam)
+		if enumParam == database.InvalidParameter {
+			return nil, errors.ErrProductSearchInvalidQuery
+		}
+		return repos.Products.SearchProducts(enumParam, queryValue, sort, order, userID)
+	default:
+		return repos.Products.GetUserProductsBulk(userID, -1)
+	}
+}
+
+func productExpiryStatus(p *dbModel.Product, now time.Time, criticalDur, soonDur time.Duration) string {
+	switch {
+	case p.ExpireAt.IsZero():
+		return "nodate"
+	case p.ExpireAt.Before(now):
+		return "expired"
+	case p.ExpireAt.Before(now.Add(criticalDur)):
+		return "critical"
+	case p.ExpireAt.Before(now.Add(soonDur)):
+		return "soon"
+	default:
+		return "fresh"
+	}
+}
+
+func computeExpiryStats(products []dbModel.Product, now time.Time, criticalDur time.Duration) (expired, critical int) {
+	for i := range products {
+		p := &products[i]
+		if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now) {
+			expired++
+		} else if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now.Add(criticalDur)) {
+			critical++
+		}
+	}
+	return
+}
+
+func filterProductsByStatus(products []dbModel.Product, status string, now time.Time, criticalDur, soonDur time.Duration) []dbModel.Product {
+	filtered := make([]dbModel.Product, 0, len(products))
+	for i := range products {
+		p := &products[i]
+		if productExpiryStatus(p, now, criticalDur, soonDur) == status {
+			filtered = append(filtered, *p)
+		}
+	}
+	return filtered
+}
+
 func (frontend *Frontend) Products(ctx *gin.Context) {
-	// Get zerolog instance from context
 	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	// Get database instance from context
 	repos, dbErr := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !dbErr {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
@@ -212,7 +274,6 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		return
 	}
 
-	// Extract JWT claims from context
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
@@ -220,8 +281,6 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
 		return
 	}
-
-	// Get query parameters
 
 	queryParam := ctx.Query("queryParam")
 	queryValue := ctx.Query("queryValue")
@@ -233,41 +292,19 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
-	var products []dbModel.Product
-	var productErr error
-
-	if statusFilter == "archived" {
-		// Fetch archived products directly
-		products, productErr = repos.Products.GetUserArchivedProductsBulk(userID, -1)
-	} else {
-		// Normal active-product flow
-		switch {
-		case locationFilter != "":
-			if locationID, parseErr := strconv.ParseUint(locationFilter, 10, 64); parseErr == nil {
-				products, productErr = repos.Products.GetUserProductsByLocation(userID, uint(locationID)) //nolint:gosec
-			}
-		case queryParam != "" && queryValue != "":
-			enumParam := database.SearchParameterEnumFromString(queryParam)
-			if enumParam == database.InvalidParameter {
-				logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
-				templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrProductSearchInvalidQuery.Error())
-				return
-			}
-			products, productErr = repos.Products.SearchProducts(enumParam, queryValue, sort, order, userID)
-		default:
-			products, productErr = repos.Products.GetUserProductsBulk(userID, -1)
-		}
+	products, productErr := fetchProducts(repos, userID, statusFilter, locationFilter, queryParam, queryValue, sort, order)
+	if productErr == errors.ErrProductSearchInvalidQuery {
+		logger.Error().Msg(productErr.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, productErr.Error())
+		return
 	}
-
 	if productErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productErr)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
 		return
 	}
 
-	// Compute status counts on full product set before filtering
 	allProducts := products
-	expiredCount, criticalCount := 0, 0
 	now := time.Now()
 
 	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
@@ -282,41 +319,12 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	criticalDuration := time.Duration(criticalDays) * 24 * time.Hour
 	soonDuration := time.Duration(soonDays) * 24 * time.Hour
 
-	for i := range allProducts {
-		p := &allProducts[i]
-		if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now) {
-			expiredCount++
-		} else if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now.Add(criticalDuration)) {
-			criticalCount++
-		}
-	}
+	expiredCount, criticalCount := computeExpiryStats(allProducts, now, criticalDuration)
 
-	// Filter products by status filter (skip for archived — already filtered)
 	if statusFilter != "all" && statusFilter != "archived" {
-		var filtered []dbModel.Product
-		for i := range allProducts {
-			p := &allProducts[i]
-			var status string
-			switch {
-			case p.ExpireAt.IsZero():
-				status = "nodate"
-			case p.ExpireAt.Before(now):
-				status = "expired"
-			case p.ExpireAt.Before(now.Add(criticalDuration)):
-				status = "critical"
-			case p.ExpireAt.Before(now.Add(soonDuration)):
-				status = "soon"
-			default:
-				status = "fresh"
-			}
-			if status == statusFilter {
-				filtered = append(filtered, *p)
-			}
-		}
-		products = filtered
+		products = filterProductsByStatus(allProducts, statusFilter, now, criticalDuration, soonDuration)
 	}
 
-	// Build url.Values from current request
 	params := url.Values{}
 	for k, v := range ctx.Request.URL.Query() {
 		params[k] = v
