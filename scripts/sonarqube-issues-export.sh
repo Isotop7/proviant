@@ -22,6 +22,7 @@ cd "$PROJECT_ROOT"
 SONAR_URL="${SONAR_URL:-https://sonarcloud.io}"
 API_BASE="${SONAR_URL}/api/issues/search"
 OUTPUT_FILE="sonar-issues.json"
+STATUSES="OPEN"
 EXTRA_PARAMS=""
 
 usage() {
@@ -48,7 +49,8 @@ EOF
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		-o|--output) OUTPUT_FILE="$2"; shift 2 ;;
-		--statuses|--resolutions|--severities|--types|--tags)
+		--statuses) STATUSES="$2"; shift 2 ;;
+		--resolutions|--severities|--types|--tags)
 			EXTRA_PARAMS="${EXTRA_PARAMS}&${1#--}=$2"; shift 2 ;;
 		-h|--help) usage ;;
 		*) echo "Unknown option: $1"; usage ;;
@@ -73,7 +75,7 @@ fi
 echo "Instance: ${SONAR_URL}"
 echo "Project:  ${PROJECT_KEY}"
 
-BASE_URL="${API_BASE}?componentKeys=${PROJECT_KEY}${EXTRA_PARAMS}"
+BASE_URL="${API_BASE}?componentKeys=${PROJECT_KEY}&statuses=${STATUSES}${EXTRA_PARAMS}"
 
 total=$(curl -sS -u "${SONAR_TOKEN}:" "${BASE_URL}&ps=1" | jq -r '.total // 0')
 echo "Total issues: ${total}"
