@@ -181,7 +181,7 @@ func CreateProduct(ctx *gin.Context) {
 	}
 
 	// Get OpenFoodFacts API controller from context
-	offacntrl, offaErr := ctx.MustGet("offacntrl").(controllers.OpenFoodFactsAPIControllerInterface)
+	offacntrl, offaErr := ctx.MustGet("offacntrl").(controllers.DatasetGetter)
 	if !offaErr {
 		logger.Error().Msg(MsgFailedToGetControllerFromContext)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: MsgFailedToGetControllerFromContext})

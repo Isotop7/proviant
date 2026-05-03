@@ -19,8 +19,8 @@ type ProductRepositoryInterface interface {
 	GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
 	GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
 	GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
-	GetProductByID(productID uint, userID uint) (database.Product, error)
-	GetArchivedProductByID(productID uint, userID uint) (database.Product, error)
+	GetProductByID(productID, userID uint) (database.Product, error)
+	GetArchivedProductByID(productID, userID uint) (database.Product, error)
 	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
 	GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
 	CreateProduct(userID uint, product *database.Product) error
@@ -29,7 +29,7 @@ type ProductRepositoryInterface interface {
 	DeleteProduct(productID uint, userID uint, archiveOnly bool) error
 	BulkDeleteProducts(productIDs []uint, userID uint) []BulkOperationError
 	BulkArchiveProducts(productIDs []uint, userID uint) []BulkOperationError
-	RestoreProduct(productID uint, userID uint) error
+	RestoreProduct(productID, userID uint) error
 	BulkRestoreProducts(productIDs []uint, userID uint) []BulkOperationError
 	SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error
 	SetProductNotifiedAt(productID uint) error
@@ -58,8 +58,8 @@ type ProductRepositoryInterface interface {
 	GetWasteThisMonth(userID uint) (int, error)
 	GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
 	GetProductsByHousehold(householdID uint) ([]database.Product, error)
-	ConsumeProduct(productID uint, userID uint) error
-	WasteProduct(productID uint, userID uint) error
+	ConsumeProduct(productID, userID uint) error
+	WasteProduct(productID, userID uint) error
 }
 
 var _ ProductRepositoryInterface = (*ProductRepository)(nil)
@@ -181,7 +181,7 @@ func (r *ProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode in
 	return products, nil
 }
 
-func (r *ProductRepository) GetProductByID(productID uint, userID uint) (database.Product, error) {
+func (r *ProductRepository) GetProductByID(productID, userID uint) (database.Product, error) {
 	if productID == 0 {
 		return database.Product{}, gorm.ErrNotImplemented
 	}
@@ -204,7 +204,7 @@ func (r *ProductRepository) GetProductByID(productID uint, userID uint) (databas
 	return product, nil
 }
 
-func (r *ProductRepository) GetArchivedProductByID(productID uint, userID uint) (database.Product, error) {
+func (r *ProductRepository) GetArchivedProductByID(productID, userID uint) (database.Product, error) {
 	if productID == 0 {
 		return database.Product{}, gorm.ErrNotImplemented
 	}
@@ -424,7 +424,7 @@ func (r *ProductRepository) BulkArchiveProducts(productIDs []uint, userID uint) 
 	return bulkErrors
 }
 
-func (r *ProductRepository) RestoreProduct(productID uint, userID uint) error {
+func (r *ProductRepository) RestoreProduct(productID, userID uint) error {
 	product, getError := r.GetArchivedProductByID(productID, userID)
 	if getError != nil {
 		return getError
@@ -930,14 +930,14 @@ func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database
 	return products, result.Error
 }
 
-func (r *ProductRepository) ConsumeProduct(productID uint, userID uint) error {
+func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
 	if _, err := r.GetProductByID(productID, userID); err != nil {
 		return err
 	}
 	return r.DB.Delete(&database.Product{}, productID).Error
 }
 
-func (r *ProductRepository) WasteProduct(productID uint, userID uint) error {
+func (r *ProductRepository) WasteProduct(productID, userID uint) error {
 	if _, err := r.GetProductByID(productID, userID); err != nil {
 		return err
 	}

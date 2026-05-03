@@ -14,7 +14,7 @@ type PATRepositoryInterface interface {
 	GetPATByTokenHash(tokenHash string) (*authentication.PersonalAccessToken, error)
 	GetPATsByUserID(userID uint) ([]authentication.PersonalAccessToken, error)
 	GetPATByID(patID uint) (*authentication.PersonalAccessToken, error)
-	DeletePAT(patID uint, userID uint) error
+	DeletePAT(patID, userID uint) error
 	UpdateLastUsed(patID uint) error
 }
 
@@ -66,7 +66,7 @@ func (r *PATRepository) GetPATByID(patID uint) (*authentication.PersonalAccessTo
 	return &pat, nil
 }
 
-func (r *PATRepository) DeletePAT(patID uint, userID uint) error {
+func (r *PATRepository) DeletePAT(patID, userID uint) error {
 	result := r.DB.Where("id = ? AND user_id = ?", patID, userID).Delete(&authentication.PersonalAccessToken{})
 	if result.Error != nil {
 		return result.Error

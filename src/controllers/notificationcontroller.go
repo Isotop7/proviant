@@ -32,6 +32,25 @@ type NotificationController struct {
 	botUsernames     sync.Map // userID(uint) → resolved bot username(string)
 }
 
+type telegramResponse struct {
+	OK     bool             `json:"ok"`
+	Result []telegramUpdate `json:"result"`
+}
+
+type telegramUpdate struct {
+	UpdateID int64            `json:"update_id"`
+	Message  *telegramMessage `json:"message"`
+}
+
+type telegramMessage struct {
+	Chat telegramChat `json:"chat"`
+	Text string       `json:"text"`
+}
+
+type telegramChat struct {
+	ID int64 `json:"id"`
+}
+
 const MsgEmailProviderNotConfigured = "email provider not configured"
 
 func NewNotificationController(
@@ -672,18 +691,7 @@ func (nc *NotificationController) runTelegramPollerLoop(ctx context.Context, bas
 			continue
 		}
 
-		var result struct {
-			OK     bool `json:"ok"`
-			Result []struct {
-				UpdateID int64 `json:"update_id"`
-				Message  *struct {
-					Chat struct {
-						ID int64 `json:"id"`
-					} `json:"chat"`
-					Text string `json:"text"`
-				} `json:"message"`
-			} `json:"result"`
-		}
+		var result telegramResponse
 
 		if jsonErr := json.Unmarshal(body, &result); jsonErr != nil {
 			nc.Logger.Error().Msgf("Telegram poller (user %d): parse error: %s", userID, jsonErr)
