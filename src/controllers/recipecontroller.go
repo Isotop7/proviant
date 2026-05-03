@@ -47,6 +47,16 @@ type RecipeSuggestion struct {
 	MatchPercent     float64               `json:"matchPercent"`
 }
 
+type productIndex struct {
+	name       string
+	categories []string
+}
+
+var knownMealCategories = []string{
+	"beef", "chicken", "pork", "lamb", "vegan", "vegetarian",
+	"fish", "seafood", "pasta", "dessert", "breakfast",
+}
+
 const (
 	MsgFailedCloseResponseBody  = "failed to close response body"
 	MsgApiReturnWrapper			= "API returned %d"
@@ -72,84 +82,88 @@ func (rc *RecipeController) GetSuggestions(expiringProducts []dbModel.Product, a
 		return []RecipeSuggestion{}, nil
 	}
 
-	// Build cache key from sorted product IDs (expiring set)
 	expiringIDs := make([]uint, 0, len(expiringProducts))
 	for i := range expiringProducts {
-		p := &expiringProducts[i]
-		expiringIDs = append(expiringIDs, p.ID)
+		expiringIDs = append(expiringIDs, expiringProducts[i].ID)
 	}
 	sort.Slice(expiringIDs, func(i, j int) bool { return expiringIDs[i] < expiringIDs[j] })
 
 	cacheKey := dbModel.GenerateCacheKey(rc.Config.Provider, expiringIDs)
 
-	// Try cache
-	if rc.Config.CacheEnabled {
-		cached, err := rc.RecipeRepo.GetCacheByQueryHash(cacheKey)
-		if err == nil && !cached.IsExpired() {
-			var suggestions []RecipeSuggestion
-			if err := json.Unmarshal(cached.ResponseJSON, &suggestions); err == nil {
-				// Detect stale cache entries (created before Ingredients field existed)
-				stale := false
-				for i := range suggestions {
-					s := &suggestions[i]
-					if len(s.Ingredients) == 0 && s.TotalIngredients > 0 {
-						stale = true
-						break
-					}
-				}
-				if !stale {
-					if err := rc.RecipeRepo.UpdateCacheHit(cacheKey); err != nil {
-						rc.Logger.Warn().Err(err).Msg("failed to update cache hit count")
-					}
-					rc.Logger.Debug().Msg("recipe suggestions cache hit")
-					return rc.limitSuggestions(suggestions, limit), nil
-				}
-				rc.Logger.Debug().Msg("stale cache detected, refreshing")
-			}
-		}
+	if suggestions, hit := rc.tryGetCache(cacheKey); hit {
+		return rc.limitSuggestions(suggestions, limit), nil
 	}
 
-	// Fetch from API: aggregate categories and keywords from expiring products
 	keywords := rc.collectKeywords(expiringProducts)
 
-	// Fetch recipes from TheMealDB (by category first, then by keyword if needed)
 	rawRecipes, err := rc.fetchFromAPI(keywords)
 	if err != nil {
 		rc.Logger.Error().Err(err).Msg("failed to fetch recipes from API")
 		return nil, errors.ErrRecipeAPIUnavailable
 	}
 
-	// Match recipes against ALL household products
 	matched := rc.matchRecipesToProducts(rawRecipes, allProducts)
 	if len(matched) == 0 {
 		return []RecipeSuggestion{}, nil
 	}
 
-	// Defensive: ensure Ingredients is never nil (should be set by matchRecipesToProducts)
 	for i := range matched {
 		if matched[i].Ingredients == nil {
 			matched[i].Ingredients = []api.IngredientMatch{}
 		}
 	}
 
-	// Serialize and cache
-	data, err := json.Marshal(matched)
-	if err != nil {
-		rc.Logger.Warn().Err(err).Msg("failed to marshal recipe suggestions for caching")
-	} else if rc.Config.CacheEnabled {
-		ttl := time.Duration(rc.Config.CacheTTL) * time.Hour
-		cacheEntry := dbModel.RecipeCache{
-			QueryHash:    cacheKey,
-			Provider:     rc.Config.Provider,
-			ResponseJSON: data,
-			ExpiresAt:    time.Now().Add(ttl),
-		}
-		if err := rc.RecipeRepo.CreateCache(&cacheEntry); err != nil {
-			rc.Logger.Warn().Err(err).Msg("failed to store recipe cache entry")
-		}
-	}
+	rc.storeCache(cacheKey, matched)
 
 	return rc.limitSuggestions(matched, limit), nil
+}
+
+// tryGetCache returns cached suggestions and true on a valid, non-stale hit.
+func (rc *RecipeController) tryGetCache(cacheKey string) ([]RecipeSuggestion, bool) {
+	if !rc.Config.CacheEnabled {
+		return nil, false
+	}
+	cached, err := rc.RecipeRepo.GetCacheByQueryHash(cacheKey)
+	if err != nil || cached.IsExpired() {
+		return nil, false
+	}
+	var suggestions []RecipeSuggestion
+	if err := json.Unmarshal(cached.ResponseJSON, &suggestions); err != nil {
+		return nil, false
+	}
+	for i := range suggestions {
+		if len(suggestions[i].Ingredients) == 0 && suggestions[i].TotalIngredients > 0 {
+			rc.Logger.Debug().Msg("stale cache detected, refreshing")
+			return nil, false
+		}
+	}
+	if err := rc.RecipeRepo.UpdateCacheHit(cacheKey); err != nil {
+		rc.Logger.Warn().Err(err).Msg("failed to update cache hit count")
+	}
+	rc.Logger.Debug().Msg("recipe suggestions cache hit")
+	return suggestions, true
+}
+
+// storeCache marshals suggestions and writes a cache entry; logs on failure.
+func (rc *RecipeController) storeCache(cacheKey string, suggestions []RecipeSuggestion) {
+	data, err := json.Marshal(suggestions)
+	if err != nil {
+		rc.Logger.Warn().Err(err).Msg("failed to marshal recipe suggestions for caching")
+		return
+	}
+	if !rc.Config.CacheEnabled {
+		return
+	}
+	ttl := time.Duration(rc.Config.CacheTTL) * time.Hour
+	cacheEntry := dbModel.RecipeCache{
+		QueryHash:    cacheKey,
+		Provider:     rc.Config.Provider,
+		ResponseJSON: data,
+		ExpiresAt:    time.Now().Add(ttl),
+	}
+	if err := rc.RecipeRepo.CreateCache(&cacheEntry); err != nil {
+		rc.Logger.Warn().Err(err).Msg("failed to store recipe cache entry")
+	}
 }
 
 // collectKeywords builds a set of category tokens and product name tokens from expiring products.
@@ -184,57 +198,50 @@ func (rc *RecipeController) collectKeywords(products []dbModel.Product) []string
 // Strategy: try category-based search first for known categories, then fallback to text search.
 func (rc *RecipeController) fetchFromAPI(keywords []string) ([]Recipe, error) {
 	var allRecipes []Recipe
-
-	// TheMealDB: try category-based search for known categories
-	knownCategories := []string{"beef", "chicken", "pork", "lamb", "vegan", "vegetarian", "fish", "seafood", "pasta", "dessert", "breakfast"}
 	categoryRecipes := make(map[string][]Recipe)
 
 	for _, kw := range keywords {
-		// If keyword is a known category, fetch by category
-		isCategory := false
-		for _, cat := range knownCategories {
-			if kw == cat || strings.Contains(kw, cat) || strings.Contains(cat, kw) {
-				isCategory = true
-				recipes, err := rc.fetchByCategory(cat)
-				if err == nil && len(recipes) > 0 {
-					categoryRecipes[cat] = recipes
-				}
-				break
+		if cat, ok := matchKnownCategory(kw); ok {
+			recipes, err := rc.fetchByCategory(cat)
+			if err == nil && len(recipes) > 0 {
+				categoryRecipes[cat] = recipes
 			}
-		}
-		if isCategory {
 			continue
 		}
-
-		// General text search for ingredient or dish name
 		recipes, err := rc.searchByText(kw)
 		if err == nil && len(recipes) > 0 {
 			allRecipes = append(allRecipes, recipes...)
 		}
 	}
 
-	// Merge category-based recipes (avoid duplicates by ID)
-	seen := make(map[string]bool)
 	for _, recipes := range categoryRecipes {
-		for _, r := range recipes {
-			if !seen[r.ID] {
-				seen[r.ID] = true
-				allRecipes = append(allRecipes, r)
-			}
-		}
+		allRecipes = append(allRecipes, recipes...)
 	}
 
-	// Deduplicate allRecipes by ID
-	unique := make([]Recipe, 0, len(allRecipes))
-	seen = make(map[string]bool)
-	for _, r := range allRecipes {
+	return deduplicateRecipes(allRecipes), nil
+}
+
+// matchKnownCategory returns the known meal category that kw maps to, or ("", false).
+func matchKnownCategory(kw string) (string, bool) {
+	for _, cat := range knownMealCategories {
+		if kw == cat || strings.Contains(kw, cat) || strings.Contains(cat, kw) {
+			return cat, true
+		}
+	}
+	return "", false
+}
+
+// deduplicateRecipes removes duplicate Recipe entries by ID, preserving first occurrence.
+func deduplicateRecipes(recipes []Recipe) []Recipe {
+	seen := make(map[string]bool, len(recipes))
+	unique := make([]Recipe, 0, len(recipes))
+	for _, r := range recipes {
 		if !seen[r.ID] {
 			seen[r.ID] = true
 			unique = append(unique, r)
 		}
 	}
-
-	return unique, nil
+	return unique
 }
 
 // fetchByCategory retrieves meals for a given category from TheMealDB.
@@ -423,25 +430,7 @@ func (rc *RecipeController) extractIngredients(ings ...*string) []string {
 // matchRecipesToProducts matches recipes against the full product list and returns suggestions.
 func (rc *RecipeController) matchRecipesToProducts(recipes []Recipe, allProducts []dbModel.Product) []RecipeSuggestion {
 	suggestions := make([]RecipeSuggestion, 0)
-
-	// Build searchable index: lowercase name + categories per product
-	type productIndex struct {
-		name       string
-		categories []string
-	}
-	normalized := make([]productIndex, len(allProducts))
-	for i := range allProducts {
-		p := &allProducts[i]
-		normName := normalizeString(p.ProductName)
-		var cats []string
-		for _, c := range strings.Split(p.Categories, ",") {
-			nc := normalizeString(c)
-			if nc != "" {
-				cats = append(cats, nc)
-			}
-		}
-		normalized[i] = productIndex{name: normName, categories: cats}
-	}
+	normalized := buildNormalizedIndex(allProducts)
 
 	for _, recipe := range recipes {
 		rc.Logger.Debug().Str("recipe", recipe.Title).Int("ingredients_total", len(recipe.Ingredients)).Msg("Matching recipe")
@@ -449,27 +438,7 @@ func (rc *RecipeController) matchRecipesToProducts(recipes []Recipe, allProducts
 		var matched []string
 
 		for _, ingredient := range recipe.Ingredients {
-			normIng := normalizeString(ingredient)
-			isMatched := false
-			if normIng != "" {
-				for _, np := range normalized {
-					// Match product name
-					if strings.Contains(np.name, normIng) || strings.Contains(normIng, np.name) {
-						isMatched = true
-						break
-					}
-					// Match category
-					for _, cat := range np.categories {
-						if strings.Contains(cat, normIng) || strings.Contains(normIng, cat) {
-							isMatched = true
-							break
-						}
-					}
-					if isMatched {
-						break
-					}
-				}
-			}
+			isMatched := ingredientMatched(normalizeString(ingredient), normalized)
 			ingredientMatches = append(ingredientMatches, api.IngredientMatch{
 				Name:    ingredient,
 				Matched: isMatched,
@@ -496,7 +465,6 @@ func (rc *RecipeController) matchRecipesToProducts(recipes []Recipe, allProducts
 		}
 	}
 
-	// Sort: match% desc, then missingCount asc
 	sort.Slice(suggestions, func(i, j int) bool {
 		if suggestions[i].MatchPercent == suggestions[j].MatchPercent {
 			return suggestions[i].MissingCount < suggestions[j].MissingCount
@@ -505,6 +473,40 @@ func (rc *RecipeController) matchRecipesToProducts(recipes []Recipe, allProducts
 	})
 
 	return suggestions
+}
+
+// buildNormalizedIndex builds a searchable index of normalized product names and categories.
+func buildNormalizedIndex(allProducts []dbModel.Product) []productIndex {
+	normalized := make([]productIndex, len(allProducts))
+	for i := range allProducts {
+		p := &allProducts[i]
+		var cats []string
+		for _, c := range strings.Split(p.Categories, ",") {
+			if nc := normalizeString(c); nc != "" {
+				cats = append(cats, nc)
+			}
+		}
+		normalized[i] = productIndex{name: normalizeString(p.ProductName), categories: cats}
+	}
+	return normalized
+}
+
+// ingredientMatched reports whether normIng matches any product name or category in the index.
+func ingredientMatched(normIng string, normalized []productIndex) bool {
+	if normIng == "" {
+		return false
+	}
+	for _, np := range normalized {
+		if strings.Contains(np.name, normIng) || strings.Contains(normIng, np.name) {
+			return true
+		}
+		for _, cat := range np.categories {
+			if strings.Contains(cat, normIng) || strings.Contains(normIng, cat) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // limitSuggestions returns at most limit items.

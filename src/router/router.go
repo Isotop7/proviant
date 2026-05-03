@@ -14,13 +14,13 @@ import (
 	"codeberg.org/isotop7/proviant/assets"
 	"codeberg.org/isotop7/proviant/controllers"
 	dbcontroller "codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/templates"
 	"codeberg.org/isotop7/proviant/util"
 	"codeberg.org/isotop7/proviant/web"
 
+	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -45,6 +45,26 @@ func cleanupRevokedTokens(db *gorm.DB, logger *zerolog.Logger) {
 		result := db.Where("expires_at < ?", time.Now()).Delete(&authentication.RevokedToken{})
 		logger.Info().Int64("deleted", result.RowsAffected).Msg("Cleaned up expired revoked tokens")
 	}
+}
+
+// mustInitJWT creates and fully initializes a GinJWTMiddleware; panics on any error.
+func mustInitJWT(
+	logger *zerolog.Logger,
+	config *configuration.ProviantConfiguration,
+	db *gorm.DB,
+	authorizatorFunc func(data any, ctx *gin.Context) bool,
+	unauthorizedFunc func(ctx *gin.Context, code int, message string),
+) *jwt.GinJWTMiddleware {
+	middleware, err := JWTMiddleware(config, db, authorizatorFunc, unauthorizedFunc)
+	if err != nil {
+		logger.Error().Msg(err.Error())
+		panic(err.Error())
+	}
+	if err := middleware.MiddlewareInit(); err != nil {
+		logger.Error().Msg(err.Error())
+		panic(err.Error())
+	}
+	return middleware
 }
 
 // SetupRouter creates the gin engine and associated middleware
@@ -135,57 +155,10 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		ctx.Next()
 	})
 
-	// Setup JWT authentication middleware for API
-	jwtAPIMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedAPIFunc)
-	if jwtAPIAuthSetupErr != nil {
-		logger.Error().Msg(jwtAPIAuthSetupErr.Error())
-		panic(jwtAPIAuthSetupErr.Error())
-	}
-	// Initialize JWT authentication middleware
-	jwtAuthMiddlewareInitErr := jwtAPIMiddleware.MiddlewareInit()
-	if jwtAuthMiddlewareInitErr != nil {
-		logger.Error().Msg(jwtAuthMiddlewareInitErr.Error())
-		panic(jwtAuthMiddlewareInitErr.Error())
-	}
-
-	// Setup JWT authentication and authorization middleware, aka user-aware
-	jwtAPIUserAwareMiddleware, jwtAPIAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorUserAware, UnauthorizedAPIFunc)
-	if jwtAPIAuthSetupErr != nil {
-		logger.Error().Msg(jwtAPIAuthSetupErr.Error())
-		panic(jwtAPIAuthSetupErr.Error())
-	}
-	// Initialize JWT authentication and authorization middleware
-	jwtAuthUserAwareMiddlewareInitErr := jwtAPIUserAwareMiddleware.MiddlewareInit()
-	if jwtAuthUserAwareMiddlewareInitErr != nil {
-		logger.Error().Msg(jwtAuthUserAwareMiddlewareInitErr.Error())
-		panic(jwtAuthUserAwareMiddlewareInitErr.Error())
-	}
-
-	// Setup JWT authentication middleware for Frontend
-	jwtFrontendMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedFrontendFunc)
-	if jwtFrontendAuthSetupErr != nil {
-		logger.Error().Msg(jwtFrontendAuthSetupErr.Error())
-		panic(jwtFrontendAuthSetupErr.Error())
-	}
-	// Initialize JWT authentication middleware
-	jwtFrontendAuthMiddlewareInitErr := jwtFrontendMiddleware.MiddlewareInit()
-	if jwtFrontendAuthMiddlewareInitErr != nil {
-		logger.Error().Msg(errors.ErrAuthMiddlewareInit.Error())
-		panic(errors.ErrAuthMiddlewareInit.Error())
-	}
-
-	// Setup JWT authentication and authorization middleware, aka user-aware
-	jwtFrontendUserAwareMiddleware, jwtFrontendAuthSetupErr := JWTMiddleware(proviantConfiguration, dbHandle, AuthorizatorUserAware, UnauthorizedFrontendFunc)
-	if jwtFrontendAuthSetupErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrUserAwareAuthMiddlewareInit.Error(), jwtFrontendAuthSetupErr.Error())
-		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
-	}
-	// Initialize JWT authentication and authorization middleware
-	jwtAuthUserAwareMiddlewareInitErr = jwtAPIUserAwareMiddleware.MiddlewareInit()
-	if jwtAuthUserAwareMiddlewareInitErr != nil {
-		logger.Error().Msg(errors.ErrUserAwareAuthMiddlewareInit.Error())
-		panic(errors.ErrUserAwareAuthMiddlewareInit.Error())
-	}
+	jwtAPIMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedAPIFunc)
+	jwtAPIUserAwareMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, AuthorizatorUserAware, UnauthorizedAPIFunc)
+	jwtFrontendMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedFrontendFunc)
+	jwtFrontendUserAwareMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, AuthorizatorUserAware, UnauthorizedFrontendFunc)
 
 	// Wrap JWT middlewares with PAT support
 	jwtAPIMiddlewareWithPAT := PATMiddleware(jwtAPIMiddleware)

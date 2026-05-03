@@ -292,6 +292,19 @@ func TestTruncateString(t *testing.T) {
 	}
 }
 
+func assertStringSliceEqual(t *testing.T, got, want []string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Errorf("slice length = %d, want %d", len(got), len(want))
+		return
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Errorf("[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
 func TestParseWebhookEvents(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -348,24 +361,13 @@ func TestParseWebhookEvents(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ParseWebhookEvents(tt.eventsJSON)
-
 			if tt.want == nil {
 				if len(got) != 0 {
 					t.Errorf("ParseWebhookEvents() = %v, want nil/empty", got)
 				}
 				return
 			}
-
-			if len(got) != len(tt.want) {
-				t.Errorf("ParseWebhookEvents() returned %d events, want %d", len(got), len(tt.want))
-				return
-			}
-
-			for i := range got {
-				if got[i] != tt.want[i] {
-					t.Errorf("ParseWebhookEvents()[%d] = %q, want %q", i, got[i], tt.want[i])
-				}
-			}
+			assertStringSliceEqual(t, got, tt.want)
 		})
 	}
 }

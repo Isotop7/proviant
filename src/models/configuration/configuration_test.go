@@ -268,6 +268,30 @@ func TestProviantConfigurationStruct(t *testing.T) {
 	})
 }
 
+func assertValidationError(t *testing.T, err error, want error) {
+	t.Helper()
+	if want == nil {
+		if err != nil {
+			t.Errorf("expected no error but got: %v", err)
+		}
+		return
+	}
+	if err == nil {
+		t.Errorf("expected error but got none")
+		return
+	}
+	if err.Error() != want.Error() {
+		t.Errorf("error = %v, want %v", err.Error(), want.Error())
+	}
+}
+
+func assertEngineSet(t *testing.T, config *ProviantConfiguration) {
+	t.Helper()
+	if config.Database.SelectedEngine != database.MariaDB && config.Database.SelectedEngine != database.SQLite {
+		t.Errorf("SelectedEngine not set correctly")
+	}
+}
+
 func TestValidateOpenFoodFactsConfiguration(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -329,18 +353,7 @@ func TestValidateOpenFoodFactsConfiguration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.ValidateOpenFoodFactsConfiguration()
-
-			if tt.wantErr == nil {
-				if err != nil {
-					t.Errorf("expected no error but got: %v", err)
-				}
-			} else {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				} else if err.Error() != tt.wantErr.Error() {
-					t.Errorf("error = %v, want %v", err.Error(), tt.wantErr.Error())
-				}
-			}
+			assertValidationError(t, err, tt.wantErr)
 		})
 	}
 }
@@ -526,20 +539,9 @@ func TestValidateDatabaseConfiguration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.ValidateDatabaseConfiguration()
-
+			assertValidationError(t, err, tt.wantErr)
 			if tt.wantErr == nil {
-				if err != nil {
-					t.Errorf("expected no error but got: %v", err)
-				}
-				if tt.config.Database.SelectedEngine != database.MariaDB && tt.config.Database.SelectedEngine != database.SQLite {
-					t.Errorf("SelectedEngine not set correctly")
-				}
-			} else {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				} else if err.Error() != tt.wantErr.Error() {
-					t.Errorf("error = %v, want %v", err.Error(), tt.wantErr.Error())
-				}
+				assertEngineSet(t, tt.config)
 			}
 		})
 	}

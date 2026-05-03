@@ -153,14 +153,11 @@ func (c *OCRControllerImpl) extractDateCandidates(text string) []dateCandidate {
 	var candidates []dateCandidate
 	now := time.Now()
 
-	// Normalize whitespace
 	text = regexp.MustCompile(`\s+`).ReplaceAllString(text, " ")
 
-	// Keywords
 	keywordRe := regexp.MustCompile(`(?i)(Mindesthaltbarkeit|Verbrauch[_\s]?bis|Haltbar[_\s]?bis|Mindestens[_\s]?haltbar[_\s]?bis|Zu[_\s]?verbrauchen[_\s]?bis|Gültig[_\s]?bis|Best[_\s]?before|Expiry|Use[_\s]?by|Mindestens|Haltbar|Verbrauchen|Mindesthaltbar)`)
 	hasKeyword := keywordRe.MatchString(text)
 
-	// Date patterns — match even if surrounded by other chars
 	patterns := []struct {
 		regex    *regexp.Regexp
 		layout   string
@@ -172,41 +169,46 @@ func (c *OCRControllerImpl) extractDateCandidates(text string) []dateCandidate {
 	}
 
 	for _, p := range patterns {
-		matches := p.regex.FindAllStringSubmatch(text, -1)
-		for _, m := range matches {
+		for _, m := range p.regex.FindAllStringSubmatch(text, -1) {
 			raw := m[0]
-			dateStr := c.assembleDateString(m[1:], p.dayFirst)
-			t, err := time.Parse(p.layout, dateStr)
-			if err != nil {
+			t, err := time.Parse(p.layout, c.assembleDateString(m[1:], p.dayFirst))
+			if err != nil || !isDateInRange(t, now) {
 				continue
 			}
-			// Reasonable range
-			if t.Before(now.AddDate(0, 0, -30)) || t.After(now.AddDate(5, 0, 0)) {
-				continue
-			}
-			conf := 0.5
-			if hasKeyword {
-				conf += 0.3
-				lowerText := strings.ToLower(text)
-				kwIdx := keywordRe.FindStringIndex(lowerText)
-				dateIdx := strings.Index(lowerText, strings.ToLower(raw))
-				if kwIdx != nil && kwIdx[0] >= 0 && dateIdx >= 0 && abs(kwIdx[0]-dateIdx) <= 30 {
-					conf += 0.1
-				}
-			}
-			if p.dayFirst {
-				conf += 0.1
-			}
-			if len(m[len(m)-1]) == 4 {
-				conf += 0.1
-			}
-			if conf > 1.0 {
-				conf = 1.0
-			}
+			conf := c.scoreDateCandidate(hasKeyword, keywordRe, text, raw, p.dayFirst, len(m[len(m)-1]))
 			candidates = append(candidates, dateCandidate{date: t, raw: raw, confidence: conf})
 		}
 	}
 	return candidates
+}
+
+// isDateInRange reports whether t falls within [now-30d, now+5y].
+func isDateInRange(t, now time.Time) bool {
+	return !t.Before(now.AddDate(0, 0, -30)) && !t.After(now.AddDate(5, 0, 0))
+}
+
+// scoreDateCandidate computes a confidence value in [0,1] for a matched date.
+func (c *OCRControllerImpl) scoreDateCandidate(hasKeyword bool, keywordRe *regexp.Regexp, text, raw string, dayFirst bool, yearLen int) float64 {
+	conf := 0.5
+	if hasKeyword {
+		conf += 0.3
+		lowerText := strings.ToLower(text)
+		kwIdx := keywordRe.FindStringIndex(lowerText)
+		dateIdx := strings.Index(lowerText, strings.ToLower(raw))
+		if kwIdx != nil && kwIdx[0] >= 0 && dateIdx >= 0 && abs(kwIdx[0]-dateIdx) <= 30 {
+			conf += 0.1
+		}
+	}
+	if dayFirst {
+		conf += 0.1
+	}
+	if yearLen == 4 {
+		conf += 0.1
+	}
+	if conf > 1.0 {
+		conf = 1.0
+	}
+	return conf
 }
 
 // assembleDateString reconstructs a YYYY-MM-DD date from regex capture groups
