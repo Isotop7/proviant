@@ -130,16 +130,7 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 	userRepo := database.NewUserRepository(dbHandle)
 
 	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
-	maxLoginAttempts := database.DefaultMaxLoginAttempts
-	lockoutDurationMins := database.DefaultLockoutDurationMins
-	if proviantConfig != nil {
-		if proviantConfig.Server.Authentication.MaxLoginAttempts > 0 {
-			maxLoginAttempts = proviantConfig.Server.Authentication.MaxLoginAttempts
-		}
-		if proviantConfig.Server.Authentication.LockoutDurationMins > 0 {
-			lockoutDurationMins = proviantConfig.Server.Authentication.LockoutDurationMins
-		}
-	}
+	maxLoginAttempts, lockoutDurationMins := lockoutConfig(proviantConfig)
 
 	locked, remaining := userRepo.IsAccountLocked(failedUserID.(uint), maxLoginAttempts, lockoutDurationMins)
 	if !locked {
@@ -251,6 +242,21 @@ func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool {
 	return true
 }
 
+func lockoutConfig(cfg *configuration.ProviantConfiguration) (maxAttempts, lockoutMins int) {
+	maxAttempts = database.DefaultMaxLoginAttempts
+	lockoutMins = database.DefaultLockoutDurationMins
+	if cfg == nil {
+		return
+	}
+	if cfg.Server.Authentication.MaxLoginAttempts > 0 {
+		maxAttempts = cfg.Server.Authentication.MaxLoginAttempts
+	}
+	if cfg.Server.Authentication.LockoutDurationMins > 0 {
+		lockoutMins = cfg.Server.Authentication.LockoutDurationMins
+	}
+	return
+}
+
 // JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization (optional)
 func JWTMiddleware(
 	proviantConfiguration *configuration.ProviantConfiguration,
@@ -297,16 +303,7 @@ func JWTMiddleware(
 
 			userRepo := database.NewUserRepository(dbHandle)
 
-			maxLoginAttempts := database.DefaultMaxLoginAttempts
-			lockoutDurationMins := database.DefaultLockoutDurationMins
-			if proviantConfiguration != nil {
-				if proviantConfiguration.Server.Authentication.MaxLoginAttempts > 0 {
-					maxLoginAttempts = proviantConfiguration.Server.Authentication.MaxLoginAttempts
-				}
-				if proviantConfiguration.Server.Authentication.LockoutDurationMins > 0 {
-					lockoutDurationMins = proviantConfiguration.Server.Authentication.LockoutDurationMins
-				}
-			}
+			maxLoginAttempts, lockoutDurationMins := lockoutConfig(proviantConfiguration)
 
 			user, err := userRepo.GetUserByUsername(loginVals.Username)
 			if err != nil {
