@@ -12,6 +12,7 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -19,8 +20,8 @@ import (
 )
 
 const (
-	MsgCheckProductIdTryAgain          = "Check the product ID and try again"
-	FmtProductNotFoundOrNoAccess       = "Product with ID '%d' was not found or you do not have access"
+	MsgCheckProductIdTryAgain           = "Check the product ID and try again"
+	FmtProductNotFoundOrNoAccess        = "Product with ID '%d' was not found or you do not have access"
 	MsgFailedToGetControllerFromContext = "Failed to get controller from context"
 )
 
@@ -35,7 +36,7 @@ const (
 // @Router       /api/v1/products [get]
 func GetProducts(ctx *gin.Context) {
 	// Get logger instance from context
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	if !loggerOk {
 		logger.Error().Msg(api.ResponseErrLoggerContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
@@ -96,7 +97,7 @@ func GetProducts(ctx *gin.Context) {
 // @Router       /api/v1/product/{id} [get]
 func GetProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
@@ -152,7 +153,7 @@ func GetProduct(ctx *gin.Context) {
 // @Router       	/api/v1/products [post]
 func CreateProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -180,7 +181,7 @@ func CreateProduct(ctx *gin.Context) {
 	}
 
 	// Get OpenFoodFacts API controller from context
-	offacntrl, offaErr := ctx.MustGet("offacntrl").(controllers.OpenFoodFactsAPIControllerInterface)
+	offacntrl, offaErr := ctx.MustGet("offacntrl").(controllers.DatasetGetter)
 	if !offaErr {
 		logger.Error().Msg(MsgFailedToGetControllerFromContext)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: MsgFailedToGetControllerFromContext})
@@ -235,7 +236,7 @@ func CreateProduct(ctx *gin.Context) {
 // @Router       	/api/v1/product/{id} [patch]
 func UpdateProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
@@ -298,7 +299,7 @@ func UpdateProduct(ctx *gin.Context) {
 // @Router       	/api/v1/products/{id}/amount [patch]
 func UpdateProductAmount(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
@@ -368,7 +369,7 @@ func UpdateProductAmount(ctx *gin.Context) {
 // @Router       	/api/v1/product/{id} [delete]
 func DeleteProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
@@ -427,7 +428,7 @@ func DeleteProduct(ctx *gin.Context) {
 // @Router       	/api/v1/product/{id}/expire [post]
 func SetExpireAt(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {

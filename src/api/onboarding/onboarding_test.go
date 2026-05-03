@@ -9,6 +9,7 @@ import (
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
 	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -45,7 +46,7 @@ func TestGetOnboardingState(t *testing.T) {
 
 	t.Run("missing repos in ctx returns 500", func(t *testing.T) {
 		ctx, w := repomocks.SetupGinContextWithMocks(repomocks.NewMockRepositoryContainer())
-		ctx.Set("repos", nil)
+		ctx.Set(util.ContextKeyRepos, nil)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		GetOnboardingState(ctx)
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -258,7 +259,7 @@ func TestGetAvailableHouseholds(t *testing.T) {
 	t.Run("missing repos returns 500", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
-		ctx.Set("repos", nil)
+		ctx.Set(util.ContextKeyRepos, nil)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		GetAvailableHouseholds(ctx)
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -311,7 +312,7 @@ func TestApplyForHousehold(t *testing.T) {
 	t.Run("missing repos returns 500", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
-		ctx.Set("repos", nil)
+		ctx.Set(util.ContextKeyRepos, nil)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		testutil.CreateTestRequest(ctx, map[string]uint{"householdId": 1})
 		ApplyForHousehold(ctx)
@@ -334,7 +335,7 @@ func TestCompleteOnboarding(t *testing.T) {
 	t.Run("missing repos returns 500", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
-		ctx.Set("repos", nil)
+		ctx.Set(util.ContextKeyRepos, nil)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		CompleteOnboarding(ctx)
 		assert.Equal(t, http.StatusInternalServerError, w.Code)

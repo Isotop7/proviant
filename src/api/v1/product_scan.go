@@ -4,6 +4,7 @@ package v1
 import (
 	"context"
 	"image"
+
 	// Import for image decoding
 	_ "image/jpeg"
 	// Import for image decoding
@@ -18,6 +19,7 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/makiuchi-d/gozxing"
@@ -38,7 +40,7 @@ import (
 // @Router       	/api/v1/products/scan [post]
 func ScanProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Create variables
 	var decodedBarcode string
@@ -148,7 +150,7 @@ func ScanProduct(ctx *gin.Context) {
 // @Failure      502  {object}  api.APIResponse
 // @Router       /api/v1/products/openfoodfacts/{barcode} [get]
 func GetOpenFoodFactsData(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	barcode := ctx.Param("barcode")
 	if barcode == "" {

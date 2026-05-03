@@ -19,8 +19,8 @@ type ProductRepositoryInterface interface {
 	GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
 	GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
 	GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
-	GetProductByID(productID uint, userID uint) (database.Product, error)
-	GetArchivedProductByID(productID uint, userID uint) (database.Product, error)
+	GetProductByID(productID, userID uint) (database.Product, error)
+	GetArchivedProductByID(productID, userID uint) (database.Product, error)
 	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
 	GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
 	CreateProduct(userID uint, product *database.Product) error
@@ -29,7 +29,7 @@ type ProductRepositoryInterface interface {
 	DeleteProduct(productID uint, userID uint, archiveOnly bool) error
 	BulkDeleteProducts(productIDs []uint, userID uint) []BulkOperationError
 	BulkArchiveProducts(productIDs []uint, userID uint) []BulkOperationError
-	RestoreProduct(productID uint, userID uint) error
+	RestoreProduct(productID, userID uint) error
 	BulkRestoreProducts(productIDs []uint, userID uint) []BulkOperationError
 	SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error
 	SetProductNotifiedAt(productID uint) error
@@ -58,8 +58,8 @@ type ProductRepositoryInterface interface {
 	GetWasteThisMonth(userID uint) (int, error)
 	GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
 	GetProductsByHousehold(householdID uint) ([]database.Product, error)
-	ConsumeProduct(productID uint, userID uint) error
-	WasteProduct(productID uint, userID uint) error
+	ConsumeProduct(productID, userID uint) error
+	WasteProduct(productID, userID uint) error
 }
 
 var _ ProductRepositoryInterface = (*ProductRepository)(nil)
@@ -111,7 +111,7 @@ func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]datab
 	}
 
 	var products []database.Product
-	query := r.DB.Preload("StorageLocation").Where("household_id = ?", user.HouseholdID)
+	query := r.DB.Preload("StorageLocation").Where(util.QueryHouseholdId, user.HouseholdID)
 
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -150,7 +150,7 @@ func (r *ProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) 
 	}
 
 	var products []database.Product
-	query := r.DB.Preload("StorageLocation").Unscoped().Where("deleted_at IS NOT NULL").Where("household_id = ?", user.HouseholdID)
+	query := r.DB.Preload("StorageLocation").Unscoped().Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, user.HouseholdID)
 
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -181,7 +181,7 @@ func (r *ProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode in
 	return products, nil
 }
 
-func (r *ProductRepository) GetProductByID(productID uint, userID uint) (database.Product, error) {
+func (r *ProductRepository) GetProductByID(productID, userID uint) (database.Product, error) {
 	if productID == 0 {
 		return database.Product{}, gorm.ErrNotImplemented
 	}
@@ -204,7 +204,7 @@ func (r *ProductRepository) GetProductByID(productID uint, userID uint) (databas
 	return product, nil
 }
 
-func (r *ProductRepository) GetArchivedProductByID(productID uint, userID uint) (database.Product, error) {
+func (r *ProductRepository) GetArchivedProductByID(productID, userID uint) (database.Product, error) {
 	if productID == 0 {
 		return database.Product{}, gorm.ErrNotImplemented
 	}
@@ -235,8 +235,8 @@ func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, query
 
 	var foundProducts []database.Product
 	preloadedDataset := r.DB.Preload("StorageLocation").
-		Where("household_id = ?", user.HouseholdID).
-		Where("deleted_at IS NULL")
+		Where(util.QueryHouseholdId, user.HouseholdID).
+		Where(util.WhereDeletedIsNull)
 
 	queryValue = fmt.Sprintf("%%%s%%", queryValue)
 
@@ -424,7 +424,7 @@ func (r *ProductRepository) BulkArchiveProducts(productIDs []uint, userID uint) 
 	return bulkErrors
 }
 
-func (r *ProductRepository) RestoreProduct(productID uint, userID uint) error {
+func (r *ProductRepository) RestoreProduct(productID, userID uint) error {
 	product, getError := r.GetArchivedProductByID(productID, userID)
 	if getError != nil {
 		return getError
@@ -698,8 +698,8 @@ func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]ap
 func (r *ProductRepository) GetLastNotifiedProduct(householdID uint) (database.Product, error) {
 	var lastNotifiedProduct database.Product
 	getNotifiedError := r.DB.
-		Where("household_id = ?", householdID).
-		Where("deleted_at IS NULL").
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
 		Order("notified_at DESC").
 		Limit(1).
 		Find(&lastNotifiedProduct)
@@ -723,8 +723,8 @@ func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database
 
 	var products []database.Product
 	err := r.DB.
-		Where("household_id = ?", user.HouseholdID).
-		Where("deleted_at IS NULL").
+		Where(util.QueryHouseholdId, user.HouseholdID).
+		Where(util.WhereDeletedIsNull).
 		Where("expire_at >= ?", startOfToday).
 		Where("expire_at <= ?", endOfWindow).
 		Order("expire_at ASC").
@@ -738,8 +738,8 @@ func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database
 func (r *ProductRepository) GetLastInsertedProduct(householdID uint) (database.Product, error) {
 	var lastProduct database.Product
 	getError := r.DB.
-		Where("household_id = ?", householdID).
-		Where("deleted_at IS NULL").
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
 		Order("created_at DESC").
 		Limit(1).
 		Find(&lastProduct)
@@ -810,7 +810,7 @@ func (r *ProductRepository) GetUserActiveProductsFiltered(userID uint, from, to 
 	}
 
 	var products []database.Product
-	query := r.DB.Where("household_id = ?", user.HouseholdID).Where("deleted_at IS NULL")
+	query := r.DB.Where(util.QueryHouseholdId, user.HouseholdID).Where(util.WhereDeletedIsNull)
 
 	if from != nil {
 		query = query.Where("created_at >= ?", *from)
@@ -837,7 +837,7 @@ func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, t
 	}
 
 	var products []database.Product
-	query := r.DB.Unscoped().Where("deleted_at IS NOT NULL").Where("household_id = ?", user.HouseholdID)
+	query := r.DB.Unscoped().Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, user.HouseholdID)
 
 	if from != nil {
 		query = query.Where("deleted_at >= ?", *from)
@@ -855,7 +855,7 @@ func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, t
 
 func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error) {
 	var users []authentication.User
-	err := r.DB.Where("household_id = ?", householdID).Find(&users).Error
+	err := r.DB.Where(util.QueryHouseholdId, householdID).Find(&users).Error
 	return users, err
 }
 
@@ -875,8 +875,8 @@ func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, er
 
 	var count int64
 	err := r.DB.Model(&database.Product{}).
-		Where("household_id = ?", user.HouseholdID).
-		Where("deleted_at IS NULL").
+		Where(util.QueryHouseholdId, user.HouseholdID).
+		Where(util.WhereDeletedIsNull).
 		Where("expire_at >= ?", startOfToday).
 		Where("expire_at <= ?", endOfWindow).
 		Count(&count).Error
@@ -902,8 +902,8 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 
 	var count int64
 	err := r.DB.Unscoped().Model(&database.Product{}).
-		Where("household_id = ?", user.HouseholdID).
-		Where("deleted_at IS NOT NULL").
+		Where(util.QueryHouseholdId, user.HouseholdID).
+		Where(util.WhereDeletedIsNotNull).
 		Where("deleted_at >= ?", monthStart).
 		Where("deleted_at <= ?", monthEnd).
 		Count(&count).Error
@@ -930,14 +930,14 @@ func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database
 	return products, result.Error
 }
 
-func (r *ProductRepository) ConsumeProduct(productID uint, userID uint) error {
+func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
 	if _, err := r.GetProductByID(productID, userID); err != nil {
 		return err
 	}
 	return r.DB.Delete(&database.Product{}, productID).Error
 }
 
-func (r *ProductRepository) WasteProduct(productID uint, userID uint) error {
+func (r *ProductRepository) WasteProduct(productID, userID uint) error {
 	if _, err := r.GetProductByID(productID, userID); err != nil {
 		return err
 	}
@@ -968,12 +968,12 @@ func (r *CalendarTokenRepository) GetByToken(token string) (authentication.Calen
 }
 
 func (r *CalendarTokenRepository) DeleteByUserID(userID uint) error {
-	return r.DB.Where("user_id = ?", userID).Delete(&authentication.CalendarToken{}).Error
+	return r.DB.Where(util.QueryUserId, userID).Delete(&authentication.CalendarToken{}).Error
 }
 
 func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.CalendarToken, error) {
 	var ct authentication.CalendarToken
-	err := r.DB.Where("user_id = ?", userID).First(&ct).Error
+	err := r.DB.Where(util.QueryUserId, userID).First(&ct).Error
 	return ct, err
 }
 

@@ -7,6 +7,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
@@ -24,14 +25,14 @@ import (
 // @Failure      500    {object}  api.APIResponse
 // @Router       /auth/verify-email [post]
 func VerifyEmail(ctx *gin.Context) {
-	loggerValue, loggerOk := ctx.Get("logger")
+	loggerValue, loggerOk := ctx.Get(util.ContextKeyLogger)
 	if !loggerOk {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return
 	}
 	logger := loggerValue.(*zerolog.Logger)
 
-	repos, ok := ctx.MustGet("repos").(*database.RepositoryContainer)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)

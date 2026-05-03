@@ -7,6 +7,7 @@ import (
 	"codeberg.org/isotop7/proviant/models"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"gorm.io/gorm"
 )
@@ -79,7 +80,7 @@ func (r *NotificationRepository) GetHouseholdMembersMailAddressesByID(householdI
 	}
 
 	var users []*authentication.User
-	findErr := r.DB.Where("household_id = ?", householdID).Find(&users)
+	findErr := r.DB.Where(util.QueryHouseholdId, householdID).Find(&users)
 	if findErr != nil {
 		return mailAddresses, findErr.Error
 	}
@@ -99,7 +100,7 @@ func (r *NotificationRepository) GetHouseholdMembersNotificationPreferences(hous
 	}
 
 	var users []*authentication.User
-	findErr := r.DB.Where("household_id = ?", householdID).Find(&users)
+	findErr := r.DB.Where(util.QueryHouseholdId, householdID).Find(&users)
 	if findErr.Error != nil {
 		return preferences, findErr.Error
 	}
@@ -260,7 +261,7 @@ func (r *NotificationRepository) FindUserByTelegramLinkToken(token string) (auth
 
 func (r *NotificationRepository) SetTelegramChatID(userID uint, chatID string) error {
 	return r.DB.Model(&authentication.User{}).
-		Where("id = ?", userID).
+		Where(util.QueryId, userID).
 		Updates(map[string]interface{}{
 			"telegram_chat_id":    chatID,
 			"telegram_link_token": "",
@@ -270,13 +271,13 @@ func (r *NotificationRepository) SetTelegramChatID(userID uint, chatID string) e
 
 func (r *NotificationRepository) SetTelegramLinkToken(userID uint, token string) error {
 	return r.DB.Model(&authentication.User{}).
-		Where("id = ?", userID).
+		Where(util.QueryId, userID).
 		Update("telegram_link_token", token).Error
 }
 
 func (r *NotificationRepository) SetTelegramBotUsername(userID uint, username string) error {
 	return r.DB.Model(&authentication.User{}).
-		Where("id = ?", userID).
+		Where(util.QueryId, userID).
 		Update("telegram_bot_username", username).Error
 }
 
@@ -294,7 +295,7 @@ func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, mon
 	countDeleted := func(from, to time.Time) (int64, error) {
 		var n int64
 		err := r.DB.Unscoped().Model(&database.Product{}).
-			Where("household_id = ?", householdID).
+			Where(util.QueryHouseholdId, householdID).
 			Where("deleted_at >= ? AND deleted_at < ?", from, to).
 			Count(&n).Error
 		return n, err
@@ -304,7 +305,7 @@ func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, mon
 	countExpired := func(from, to time.Time) (int64, error) {
 		var n int64
 		err := r.DB.Model(&database.Product{}).
-			Where("household_id = ?", householdID).
+			Where(util.QueryHouseholdId, householdID).
 			Where("expire_at >= ? AND expire_at < ?", from, to).
 			Count(&n).Error
 		return n, err
@@ -314,7 +315,7 @@ func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, mon
 	countActive := func(from, to time.Time) (int64, error) {
 		var n int64
 		err := r.DB.Unscoped().Model(&database.Product{}).
-			Where("household_id = ?", householdID).
+			Where(util.QueryHouseholdId, householdID).
 			Where("created_at < ?", to).
 			Where("deleted_at IS NULL OR deleted_at >= ?", from).
 			Count(&n).Error

@@ -105,7 +105,7 @@ type FullExportProducts struct {
 // @Failure      500    {object}  api.APIResponse
 // @Router       /api/v1/products/export/products.csv [get]
 func ExportProductsCSV(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	if !loggerOk {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return
@@ -160,7 +160,7 @@ func ExportProductsCSV(ctx *gin.Context) {
 // @Failure      500    {object}  api.APIResponse
 // @Router       /api/v1/products/export/products.json [get]
 func ExportProductsJSON(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	if !loggerOk {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return
@@ -202,7 +202,7 @@ func ExportProductsJSON(ctx *gin.Context) {
 // @Failure      500    {object}  api.APIResponse
 // @Router       /api/v1/products/export/archive.csv [get]
 func ExportArchiveCSV(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	if !loggerOk {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return
@@ -262,7 +262,7 @@ func ExportArchiveCSV(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/export/full.json [get]
 func ExportFullJSON(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	if !loggerOk {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return

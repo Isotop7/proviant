@@ -35,10 +35,10 @@ func (m *MockProductRepository) GetUserArchivedProductsBulk(userID uint, limit i
 func (m *MockProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
-func (m *MockProductRepository) GetProductByID(productID uint, userID uint) (dbModel.Product, error) {
+func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.Product, error) {
 	return m.Product, m.Err
 }
-func (m *MockProductRepository) GetArchivedProductByID(productID uint, userID uint) (dbModel.Product, error) {
+func (m *MockProductRepository) GetArchivedProductByID(productID, userID uint) (dbModel.Product, error) {
 	return m.Product, m.Err
 }
 func (m *MockProductRepository) SearchProducts(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]dbModel.Product, error) {
@@ -65,7 +65,7 @@ func (m *MockProductRepository) BulkDeleteProducts(productIDs []uint, userID uin
 func (m *MockProductRepository) BulkArchiveProducts(productIDs []uint, userID uint) []database.BulkOperationError {
 	return nil
 }
-func (m *MockProductRepository) RestoreProduct(productID uint, userID uint) error { return m.Err }
+func (m *MockProductRepository) RestoreProduct(productID, userID uint) error { return m.Err }
 func (m *MockProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) []database.BulkOperationError {
 	return nil
 }
@@ -152,8 +152,8 @@ func (m *MockProductRepository) GetExpiringProductsByHousehold(householdID uint,
 func (m *MockProductRepository) GetProductsByHousehold(householdID uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
-func (m *MockProductRepository) ConsumeProduct(productID uint, userID uint) error { return m.Err }
-func (m *MockProductRepository) WasteProduct(productID uint, userID uint) error   { return m.Err }
+func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error { return m.Err }
+func (m *MockProductRepository) WasteProduct(productID, userID uint) error   { return m.Err }
 
 var _ database.ProductRepositoryInterface = (*MockProductRepository)(nil)
 
@@ -214,7 +214,7 @@ func (m *MockUserRepository) GetEmailVerificationByToken(token string) (dbModel.
 func (m *MockUserRepository) UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error {
 	return m.Err
 }
-func (m *MockUserRepository) UpdateEmailVerificationStatus(token string, status string) error {
+func (m *MockUserRepository) UpdateEmailVerificationStatus(token, status string) error {
 	return m.Err
 }
 func (m *MockUserRepository) GetOnboardingState(userID uint) (dbModel.OnboardingState, error) {
@@ -394,7 +394,7 @@ func (m *MockPATRepository) GetPATsByUserID(userID uint) ([]authentication.Perso
 func (m *MockPATRepository) GetPATByID(patID uint) (*authentication.PersonalAccessToken, error) {
 	return m.PAT, m.Err
 }
-func (m *MockPATRepository) DeletePAT(patID uint, userID uint) error { return m.Err }
+func (m *MockPATRepository) DeletePAT(patID, userID uint) error { return m.Err }
 func (m *MockPATRepository) UpdateLastUsed(patID uint) error         { return m.Err }
 
 var _ database.PATRepositoryInterface = (*MockPATRepository)(nil)
@@ -608,7 +608,7 @@ func NewMockRepositoryContainer() *MockRepositoryContainer {
 }
 
 // ToRepositoryContainer converts the mock container to a database.RepositoryContainer
-// suitable for injection into the Gin context via ctx.Set("repos", ...).
+// suitable for injection into the Gin context via ctx.Set(util.ContextKeyRepos, ...).
 func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryContainer {
 	return &database.RepositoryContainer{
 		Products:         m.Products,

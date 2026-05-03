@@ -212,60 +212,77 @@ func TestOpenFoodFactsConfigurationStruct(t *testing.T) {
 }
 
 func TestProviantConfigurationStruct(t *testing.T) {
-	t.Run("can create ProviantConfiguration", func(t *testing.T) {
-		config := ProviantConfiguration{
-			Database: DatabaseConfiguration{
-				Engine: "sqlite",
-				SQLite: DatabaseSQLiteConfiguration{
-					Filepath: "/path/to/database.db",
-				},
+	config := ProviantConfiguration{
+		Database: DatabaseConfiguration{
+			Engine: "sqlite",
+			SQLite: DatabaseSQLiteConfiguration{
+				Filepath: "/path/to/database.db",
 			},
-			Server: ServerConfiguration{
-				Port: 5114,
-			},
-			Logging: LoggingConfiguration{
-				Enabled: true,
-			},
-			Notification: NotificationConfiguration{
-				Enabled: true,
-			},
-			OpenFoodFacts: OpenFoodFactsConfiguration{
-				URL: "https://world.openfoodfacts.org",
-			},
-			TemplateCache: make(map[string]*template.Template),
-		}
+		},
+		Server: ServerConfiguration{
+			Port: 5114,
+		},
+		Logging: LoggingConfiguration{
+			Enabled: true,
+		},
+		Notification: NotificationConfiguration{
+			Enabled: true,
+		},
+		OpenFoodFacts: OpenFoodFactsConfiguration{
+			URL: "https://world.openfoodfacts.org",
+		},
+		TemplateCache: make(map[string]*template.Template),
+	}
 
+	t.Run("database engine", func(t *testing.T) {
 		if config.Database.Engine != "sqlite" {
 			t.Errorf("Database.Engine = %v, want sqlite", config.Database.Engine)
 		}
+	})
+	t.Run("server port", func(t *testing.T) {
 		if config.Server.Port != 5114 {
 			t.Errorf("Server.Port = %v, want 5114", config.Server.Port)
 		}
+	})
+	t.Run("logging enabled", func(t *testing.T) {
 		if !config.Logging.Enabled {
 			t.Errorf("Logging.Enabled = %v, want true", config.Logging.Enabled)
 		}
+	})
+	t.Run("notification enabled", func(t *testing.T) {
 		if !config.Notification.Enabled {
 			t.Errorf("Notification.Enabled = %v, want true", config.Notification.Enabled)
 		}
-		if config.OpenFoodFacts.URL != "https://world.openfoodfacts.org" {
-			t.Errorf("OpenFoodFacts.URL = %v, want https://world.openfoodfacts.org", config.OpenFoodFacts.URL)
-		}
-		if config.Database.Engine != "sqlite" {
-			t.Errorf("Database.Engine = %v, want sqlite", config.Database.Engine)
-		}
-		if config.Server.Port != 5114 {
-			t.Errorf("Server.Port = %v, want 5114", config.Server.Port)
-		}
-		if !config.Logging.Enabled {
-			t.Errorf("Logging.Enabled = %v, want true", config.Logging.Enabled)
-		}
-		if !config.Notification.Enabled {
-			t.Errorf("Notification.Enabled = %v, want true", config.Notification.Enabled)
-		}
+	})
+	t.Run("openfoodfacts url", func(t *testing.T) {
 		if config.OpenFoodFacts.URL != "https://world.openfoodfacts.org" {
 			t.Errorf("OpenFoodFacts.URL = %v, want https://world.openfoodfacts.org", config.OpenFoodFacts.URL)
 		}
 	})
+}
+
+func assertValidationError(t *testing.T, err error, want error) {
+	t.Helper()
+	if want == nil {
+		if err != nil {
+			t.Errorf("expected no error but got: %v", err)
+		}
+		return
+	}
+	if err == nil {
+		t.Errorf("expected error but got none")
+		return
+	}
+	if err.Error() != want.Error() {
+		t.Errorf("error = %v, want %v", err.Error(), want.Error())
+	}
+}
+
+func assertEngineSet(t *testing.T, config *ProviantConfiguration) {
+	t.Helper()
+	if config.Database.SelectedEngine != database.MariaDB && config.Database.SelectedEngine != database.SQLite {
+		t.Errorf("SelectedEngine not set correctly")
+	}
 }
 
 func TestValidateOpenFoodFactsConfiguration(t *testing.T) {
@@ -329,18 +346,7 @@ func TestValidateOpenFoodFactsConfiguration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.ValidateOpenFoodFactsConfiguration()
-
-			if tt.wantErr == nil {
-				if err != nil {
-					t.Errorf("expected no error but got: %v", err)
-				}
-			} else {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				} else if err.Error() != tt.wantErr.Error() {
-					t.Errorf("error = %v, want %v", err.Error(), tt.wantErr.Error())
-				}
-			}
+			assertValidationError(t, err, tt.wantErr)
 		})
 	}
 }
@@ -526,20 +532,9 @@ func TestValidateDatabaseConfiguration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.ValidateDatabaseConfiguration()
-
+			assertValidationError(t, err, tt.wantErr)
 			if tt.wantErr == nil {
-				if err != nil {
-					t.Errorf("expected no error but got: %v", err)
-				}
-				if tt.config.Database.SelectedEngine != database.MariaDB && tt.config.Database.SelectedEngine != database.SQLite {
-					t.Errorf("SelectedEngine not set correctly")
-				}
-			} else {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				} else if err.Error() != tt.wantErr.Error() {
-					t.Errorf("error = %v, want %v", err.Error(), tt.wantErr.Error())
-				}
+				assertEngineSet(t, tt.config)
 			}
 		})
 	}

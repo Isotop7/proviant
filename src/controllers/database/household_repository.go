@@ -6,6 +6,7 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"gorm.io/gorm"
 )
@@ -45,13 +46,13 @@ func (r *HouseholdRepository) GetHouseholdByID(householdID uint) (database.House
 
 func (r *HouseholdRepository) GetHouseholdMemberCount(householdID uint) (int64, error) {
 	var count int64
-	result := r.DB.Model(&authentication.User{}).Where("household_id = ?", householdID).Count(&count)
+	result := r.DB.Model(&authentication.User{}).Where(util.QueryHouseholdId, householdID).Count(&count)
 	return count, result.Error
 }
 
 func (r *HouseholdRepository) GetHouseholdMembers(householdID uint) ([]authentication.User, error) {
 	var users []authentication.User
-	err := r.DB.Where("household_id = ?", householdID).Find(&users).Error
+	err := r.DB.Where(util.QueryHouseholdId, householdID).Find(&users).Error
 	return users, err
 }
 
@@ -79,9 +80,9 @@ func (r *HouseholdRepository) LeaveHousehold(userID uint) error {
 	}
 
 	var memberCount int64
-	tx.Model(&authentication.User{}).Where("household_id = ?", oldHouseholdID).Count(&memberCount)
+	tx.Model(&authentication.User{}).Where(util.QueryHouseholdId, oldHouseholdID).Count(&memberCount)
 	if memberCount == 1 {
-		if err := tx.Model(&database.Product{}).Where("household_id = ?", oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
+		if err := tx.Model(&database.Product{}).Where(util.QueryHouseholdId, oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -117,9 +118,9 @@ func (r *HouseholdRepository) CreateAndSwitchHousehold(userID uint, name string)
 	}
 
 	var memberCount int64
-	tx.Model(&authentication.User{}).Where("household_id = ?", oldHouseholdID).Count(&memberCount)
+	tx.Model(&authentication.User{}).Where(util.QueryHouseholdId, oldHouseholdID).Count(&memberCount)
 	if memberCount == 1 {
-		if err := tx.Model(&database.Product{}).Where("household_id = ?", oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
+		if err := tx.Model(&database.Product{}).Where(util.QueryHouseholdId, oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -212,7 +213,7 @@ func (r *HouseholdRepository) ApproveApplication(applicationID, adminUserID uint
 		return errors.ErrNotHouseholdAdmin
 	}
 
-	if err := tx.Model(&authentication.User{}).Where("id = ?", application.ApplicantID).Update("household_id", application.HouseholdID).Error; err != nil {
+	if err := tx.Model(&authentication.User{}).Where(util.QueryId, application.ApplicantID).Update("household_id", application.HouseholdID).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -343,9 +344,9 @@ func (r *HouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserI
 	}
 
 	var memberCount int64
-	tx.Model(&authentication.User{}).Where("household_id = ?", household.ID).Count(&memberCount)
+	tx.Model(&authentication.User{}).Where(util.QueryHouseholdId, household.ID).Count(&memberCount)
 	if memberCount == 1 {
-		if err := tx.Model(&database.Product{}).Where("household_id = ?", household.ID).Update("household_id", newHousehold.ID).Error; err != nil {
+		if err := tx.Model(&database.Product{}).Where(util.QueryHouseholdId, household.ID).Update("household_id", newHousehold.ID).Error; err != nil {
 			tx.Rollback()
 			return err
 		}

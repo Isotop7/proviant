@@ -356,7 +356,7 @@ func NewTemplateCache() (map[string]*template.Template, error) {
 
 func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base, page string, data map[string]any) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	writer := ctx.Writer
 	ts, ok := tc[page]
@@ -390,7 +390,7 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 
 func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, message string) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	writer := ctx.Writer
 	ts, ok := tc["error.tmpl"]

@@ -8,13 +8,14 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
 
 func mustGetLogger(ctx *gin.Context) (*zerolog.Logger, bool) {
-	loggerVal, ok := ctx.Get("logger")
+	loggerVal, ok := ctx.Get(util.ContextKeyLogger)
 	if !ok {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return nil, false
@@ -28,7 +29,7 @@ func mustGetLogger(ctx *gin.Context) (*zerolog.Logger, bool) {
 }
 
 func mustGetRepos(ctx *gin.Context, logger *zerolog.Logger) (*database.RepositoryContainer, bool) {
-	reposVal, exists := ctx.Get("repos")
+	reposVal, exists := ctx.Get(util.ContextKeyRepos)
 	repos, ok := reposVal.(*database.RepositoryContainer)
 	if !exists || !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
@@ -39,7 +40,7 @@ func mustGetRepos(ctx *gin.Context, logger *zerolog.Logger) (*database.Repositor
 }
 
 func passwordValidatorFromContext(ctx *gin.Context) *authentication.PasswordValidator {
-	proviantConfigVal, ok := ctx.Get("proviantConfig")
+	proviantConfigVal, ok := ctx.Get(util.ContextKeyProviantConfig)
 	if !ok {
 		return authentication.DefaultPasswordValidator()
 	}
@@ -57,7 +58,7 @@ func passwordValidatorFromContext(ctx *gin.Context) *authentication.PasswordVali
 }
 
 func getNotificationController(ctx *gin.Context) (*controllers.NotificationController, bool) {
-	ncVal, ok := ctx.Get("notificationController")
+	ncVal, ok := ctx.Get(util.ContextKeyNotificationController)
 	if !ok {
 		return nil, false
 	}
@@ -82,7 +83,7 @@ func trySendEmailVerification(ctx *gin.Context, repos *database.RepositoryContai
 	if !ncOk {
 		return
 	}
-	proviantConfigVal, pcOk := ctx.Get("proviantConfig")
+	proviantConfigVal, pcOk := ctx.Get(util.ContextKeyProviantConfig)
 	if !pcOk {
 		return
 	}

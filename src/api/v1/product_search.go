@@ -9,6 +9,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -26,7 +27,7 @@ import (
 // @Router       /api/v1/productsByBarcode [get]
 func GetProductsByBarcode(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse parameter barcode
 	barcodeParam := ctx.Param("barcode")
@@ -90,7 +91,7 @@ func GetProductsByBarcode(ctx *gin.Context) {
 // @Router       	/api/v1/products/search [GET]
 func SearchProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get search parameters
 	var queryParam = ctx.DefaultQuery("queryParam", "product_name")

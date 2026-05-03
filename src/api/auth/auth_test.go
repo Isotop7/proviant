@@ -23,7 +23,7 @@ func TestSignupWithoutLogger(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-	ctx.Set("dbHandle", db)
+	ctx.Set(util.ContextKeyDBHandle, db)
 
 	signup := authentication.Signup{
 		Username:    "testuser",
@@ -54,7 +54,7 @@ func TestSignupWithoutDatabase(t *testing.T) {
 	ctx, _ := gin.CreateTestContext(w)
 
 	mockLogger := zerolog.Nop()
-	ctx.Set("logger", &mockLogger)
+	ctx.Set(util.ContextKeyLogger, &mockLogger)
 
 	signup := authentication.Signup{
 		Username:    "testuser",

@@ -9,7 +9,8 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
-	"github.com/appleboy/gin-jwt/v2"
+	"codeberg.org/isotop7/proviant/util"
+	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
@@ -26,8 +27,8 @@ import (
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/recipes/suggestions [get]
 func GetRecipeSuggestions(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(500, api.Error(errors.ErrDatabaseContextNotFound))

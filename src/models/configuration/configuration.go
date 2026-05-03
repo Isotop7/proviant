@@ -169,27 +169,43 @@ func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error {
 	return nil
 }
 
+func validateSMTPConfig(smtp *SMTPConfiguration) error {
+	if smtp.Host == "" {
+		return nil
+	}
+	if smtp.Port <= 0 {
+		return errors.ErrNotificationInvalidSMTPPort
+	}
+	if smtp.FromAddress == "" {
+		return errors.ErrNotificationEmptyFromAddress
+	}
+	return nil
+}
+
+func validateNtfyConfig(ntfy NtfyConfiguration) error {
+	if ntfy.URL == "" {
+		return nil
+	}
+	if ntfy.Topic == "" {
+		return errors.ErrNotificationEmptyNtfyTopic
+	}
+	if !strings.HasPrefix(ntfy.URL, "http://") && !strings.HasPrefix(ntfy.URL, "https://") {
+		return errors.ErrNotificationInvalidNtfyURL
+	}
+	return nil
+}
+
 // ValidateNotificationConfiguration validates the notification configuration
 func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error {
 	if !ec.Notification.Enabled {
-		return nil // Notifications disabled, no validation needed
+		return nil
 	}
-
 	if ec.Notification.Interval <= 0 {
 		return errors.ErrNotificationInvalidInterval
 	}
-
-	// Validate SMTP configuration if SMTP host is provided
-	if ec.Notification.SMTP.Host != "" {
-		if ec.Notification.SMTP.Port <= 0 {
-			return errors.ErrNotificationInvalidSMTPPort
-		}
-		if ec.Notification.SMTP.FromAddress == "" {
-			return errors.ErrNotificationEmptyFromAddress
-		}
+	if err := validateSMTPConfig(&ec.Notification.SMTP); err != nil {
+		return err
 	}
-
-	// Validate monthly waste report schedule
 	day := ec.Notification.MonthlyWasteReport.Day
 	if day < 1 || day > 28 {
 		return errors.ErrNotificationInvalidWasteReportDay
@@ -198,20 +214,7 @@ func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error {
 	if hour < 0 || hour > 23 {
 		return errors.ErrNotificationInvalidWasteReportHour
 	}
-
-	// Validate ntfy configuration if ntfy URL is provided
-	if ec.Notification.Ntfy.URL != "" {
-		if ec.Notification.Ntfy.Topic == "" {
-			return errors.ErrNotificationEmptyNtfyTopic
-		}
-		// Basic URL validation
-		if !strings.HasPrefix(ec.Notification.Ntfy.URL, "http://") &&
-			!strings.HasPrefix(ec.Notification.Ntfy.URL, "https://") {
-			return errors.ErrNotificationInvalidNtfyURL
-		}
-	}
-
-	return nil
+	return validateNtfyConfig(ec.Notification.Ntfy)
 }
 
 // ValidateDatabaseConfiguration checks the current database configuration for common errors

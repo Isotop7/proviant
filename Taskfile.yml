@@ -176,7 +176,15 @@ tasks:
     desc: Scan all dependencies for vulnerabilities
     deps: [vuln-go, vuln-npm]
 
-  sonar:
+  sonar-issues:
+    desc: Export SonarQube issues to JSON for agent consumption (requires SONAR_TOKEN)
+    preconditions:
+      - sh: '[ -n "$SONAR_TOKEN" ]'
+        msg: "SONAR_TOKEN env var is not set."
+    cmds:
+      - ./scripts/sonarqube-issues-export.sh
+
+  sonar-scan:
     desc: Run SonarCloud scan locally and save output to sonar-report.txt (requires SONAR_TOKEN)
     preconditions:
       - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'

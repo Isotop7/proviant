@@ -6,6 +6,8 @@ import (
 
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
+
 	"gorm.io/gorm"
 )
 
@@ -108,7 +110,7 @@ func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsS
 	}
 
 	var allRecords []dbModel.SavingsRecord
-	if err := r.DB.Where("household_id = ?", householdID).Find(&allRecords).Error; err != nil {
+	if err := r.DB.Where(util.QueryHouseholdId, householdID).Find(&allRecords).Error; err != nil {
 		return apiModel.SavingsStatsResponse{}, err
 	}
 

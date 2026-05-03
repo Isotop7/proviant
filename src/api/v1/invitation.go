@@ -9,6 +9,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -28,7 +29,7 @@ import (
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/household/invitations [post]
 func CreateInvitation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -80,8 +81,8 @@ func CreateInvitation(ctx *gin.Context) {
 	}
 
 	// Send invitation email via NotificationController
-	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
-	notificationController, _ := ctx.MustGet("notificationController").(*controllers.NotificationController)
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	notificationController, _ := ctx.MustGet(util.ContextKeyNotificationController).(*controllers.NotificationController)
 	if notificationController != nil {
 		inviterName := user.EffectiveName()
 		household, householdErr := repos.Users.GetHouseholdByID(user.HouseholdID)
@@ -114,7 +115,7 @@ func CreateInvitation(ctx *gin.Context) {
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/household/invitations [get]
 func GetInvitations(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
@@ -162,7 +163,7 @@ func GetInvitations(ctx *gin.Context) {
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/household/invitations/{id} [delete]
 func CancelInvitation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {

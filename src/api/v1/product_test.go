@@ -17,12 +17,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// MockOpenFoodFactsAPIController is a test double for OpenFoodFactsAPIControllerInterface
+// MockOpenFoodFactsAPIController is a test double for DatasetGetter
 type MockOpenFoodFactsAPIController struct {
 	MockGetDataset func(barcode string) (dbModel.Product, error)
 }
 
-// GetDataset implements OpenFoodFactsAPIControllerInterface and simply returns a generic product
+// GetDataset implements DatasetGetter and simply returns a generic product
 func (m *MockOpenFoodFactsAPIController) GetDataset(barcode string) (dbModel.Product, error) {
 	return m.MockGetDataset(barcode)
 }

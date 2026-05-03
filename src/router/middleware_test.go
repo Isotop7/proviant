@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"codeberg.org/isotop7/proviant/models/configuration/static"
+	"codeberg.org/isotop7/proviant/util"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -19,7 +20,7 @@ func setupTestRouterWithRequestID(baseLogger *zerolog.Logger) *gin.Engine {
 	r := gin.New()
 	r.Use(RequestIDMiddleware(baseLogger))
 	r.GET("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"request_id": c.GetString(static.RequestIDContextKey)})
+		c.JSON(http.StatusOK, gin.H{"request_id": c.GetString(util.ContextKeyRequestID)})
 	})
 	return r
 }
@@ -86,7 +87,7 @@ func TestRequestIDMiddleware_LoggerCarriesField(t *testing.T) {
 	r := gin.New()
 	r.Use(RequestIDMiddleware(&logger))
 	r.GET("/test", func(c *gin.Context) {
-		logger, _ := c.MustGet("logger").(*zerolog.Logger)
+		logger, _ := c.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 		logger.Info().Msg("test message")
 		c.Status(http.StatusOK)
 	})
@@ -108,7 +109,7 @@ func TestUserContextLogger_AddsUserID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(func(c *gin.Context) {
-		c.Set("logger", &logger)
+		c.Set(util.ContextKeyLogger, &logger)
 		c.Next()
 	})
 	r.Use(func(c *gin.Context) {
@@ -119,11 +120,11 @@ func TestUserContextLogger_AddsUserID(t *testing.T) {
 	})
 	r.Use(UserContextLoggerMiddleware())
 	r.GET("/test", func(c *gin.Context) {
-		userID, exists := c.Get(static.UserIDContextKey)
+		userID, exists := c.Get(util.ContextKeyUserID)
 		assert.True(t, exists)
 		assert.Equal(t, uint(123), userID)
 
-		logger, _ := c.MustGet("logger").(*zerolog.Logger)
+		logger, _ := c.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 		logger.Info().Msg("test with user")
 		c.Status(http.StatusOK)
 	})
@@ -147,7 +148,7 @@ func TestZerologMiddleware_AccessLogContainsBothFields(t *testing.T) {
 	r.Use(RequestIDMiddleware(&logger))
 	r.Use(ZerologMiddleware(&logger))
 	r.GET("/test", func(c *gin.Context) {
-		c.Set(static.UserIDContextKey, uint(456))
+		c.Set(util.ContextKeyUserID, uint(456))
 		c.Status(http.StatusOK)
 	})
 
