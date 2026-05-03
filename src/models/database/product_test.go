@@ -5,55 +5,56 @@ import (
 	"time"
 )
 
-func TestProductStruct(t *testing.T) {
-	now := time.Now()
+func TestProductStringFields(t *testing.T) {
 	product := Product{
 		Barcode:     "1234567890123",
 		ProductName: "Test Product",
 		Categories:  "en:test",
 		Countries:   "en:Germany",
 		ImageURL:    "http://example.com/image.jpg",
-		ExpireAt:    now,
-		ScannedAt:   now,
-		NotifiedAt:  now,
+	}
+	if product.Barcode != "1234567890123" {
+		t.Errorf("Barcode = %v, want 1234567890123", product.Barcode)
+	}
+	if product.ProductName != "Test Product" {
+		t.Errorf("ProductName = %v, want Test Product", product.ProductName)
+	}
+	if product.Categories != "en:test" {
+		t.Errorf("Categories = %v, want en:test", product.Categories)
+	}
+	if product.Countries != "en:Germany" {
+		t.Errorf("Countries = %v, want en:Germany", product.Countries)
+	}
+	if product.ImageURL != "http://example.com/image.jpg" {
+		t.Errorf("ImageURL = %v, want http://example.com/image.jpg", product.ImageURL)
+	}
+}
+
+func TestProductTimeFields(t *testing.T) {
+	now := time.Now()
+	product := Product{
+		ExpireAt:   now,
+		ScannedAt:  now,
+		NotifiedAt: now,
+	}
+	if product.ExpireAt != now {
+		t.Errorf("ExpireAt mismatch")
+	}
+	if product.ScannedAt != now {
+		t.Errorf("ScannedAt mismatch")
+	}
+	if product.NotifiedAt != now {
+		t.Errorf("NotifiedAt mismatch")
+	}
+}
+
+func TestProductHouseholdID(t *testing.T) {
+	product := Product{
 		HouseholdID: 1,
 	}
-
-	t.Run("string fields", func(t *testing.T) {
-		if product.Barcode != "1234567890123" {
-			t.Errorf("Barcode = %v, want 1234567890123", product.Barcode)
-		}
-		if product.ProductName != "Test Product" {
-			t.Errorf("ProductName = %v, want Test Product", product.ProductName)
-		}
-		if product.Categories != "en:test" {
-			t.Errorf("Categories = %v, want en:test", product.Categories)
-		}
-		if product.Countries != "en:Germany" {
-			t.Errorf("Countries = %v, want en:Germany", product.Countries)
-		}
-		if product.ImageURL != "http://example.com/image.jpg" {
-			t.Errorf("ImageURL = %v, want http://example.com/image.jpg", product.ImageURL)
-		}
-	})
-
-	t.Run("time fields", func(t *testing.T) {
-		if product.ExpireAt != now {
-			t.Errorf("ExpireAt mismatch")
-		}
-		if product.ScannedAt != now {
-			t.Errorf("ScannedAt mismatch")
-		}
-		if product.NotifiedAt != now {
-			t.Errorf("NotifiedAt mismatch")
-		}
-	})
-
-	t.Run("household id", func(t *testing.T) {
-		if product.HouseholdID != 1 {
-			t.Errorf("HouseholdID = %v, want 1", product.HouseholdID)
-		}
-	})
+	if product.HouseholdID != 1 {
+		t.Errorf("HouseholdID = %v, want 1", product.HouseholdID)
+	}
 }
 
 func TestProductDTOPatch(t *testing.T) {

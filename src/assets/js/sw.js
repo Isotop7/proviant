@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v59';
+const CACHE_NAME = 'proviant-v60';
 
 // Static shell to pre-cache on install
 const PRECACHE_URLS = [

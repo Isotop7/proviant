@@ -27,22 +27,21 @@ func TestTokenConstants(t *testing.T) {
 			}
 		})
 	}
+}
 
-	t.Run("TokenLookup", func(t *testing.T) {
-		if TokenLookup == "" {
-			t.Error("TokenLookup is empty")
-			return
+func TestTokenLookup(t *testing.T) {
+	if TokenLookup == "" {
+		t.Fatal("TokenLookup is empty")
+	}
+	for _, sub := range []string{"header: Authorization", "query: token", "cookie: jwt"} {
+		if !strings.Contains(TokenLookup, sub) {
+			t.Errorf("TokenLookup does not contain %q", sub)
 		}
-		for _, sub := range []string{"header: Authorization", "query: token", "cookie: jwt"} {
-			if !strings.Contains(TokenLookup, sub) {
-				t.Errorf("TokenLookup does not contain %q", sub)
-			}
-		}
-	})
+	}
+}
 
-	t.Run("BarcodeDecodingTimeout", func(t *testing.T) {
-		if BarcodeDecodingTimeout == 0 {
-			t.Error("BarcodeDecodingTimeout is zero")
-		}
-	})
+func TestBarcodeDecodingTimeout(t *testing.T) {
+	if BarcodeDecodingTimeout == 0 {
+		t.Error("BarcodeDecodingTimeout is zero")
+	}
 }

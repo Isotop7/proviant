@@ -200,27 +200,37 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web/products [get]
+
+type productQueryParams struct {
+	statusFilter   string
+	locationFilter string
+	queryParam     string
+	queryValue     string
+	sort           string
+	order          string
+}
+
 func fetchProducts(
 	repos *database.RepositoryContainer,
 	userID uint,
-	statusFilter, locationFilter, queryParam, queryValue, sort, order string,
+	params productQueryParams,
 ) ([]dbModel.Product, error) {
-	if statusFilter == "archived" {
+	if params.statusFilter == "archived" {
 		return repos.Products.GetUserArchivedProductsBulk(userID, -1)
 	}
 	switch {
-	case locationFilter != "":
-		locationID, parseErr := strconv.ParseUint(locationFilter, 10, 64)
+	case params.locationFilter != "":
+		locationID, parseErr := strconv.ParseUint(params.locationFilter, 10, 64)
 		if parseErr != nil {
 			return nil, nil
 		}
 		return repos.Products.GetUserProductsByLocation(userID, uint(locationID)) //nolint:gosec
-	case queryParam != "" && queryValue != "":
-		enumParam := database.SearchParameterEnumFromString(queryParam)
+	case params.queryParam != "" && params.queryValue != "":
+		enumParam := database.SearchParameterEnumFromString(params.queryParam)
 		if enumParam == database.InvalidParameter {
 			return nil, errors.ErrProductSearchInvalidQuery
 		}
-		return repos.Products.SearchProducts(enumParam, queryValue, sort, order, userID)
+		return repos.Products.SearchProducts(enumParam, params.queryValue, params.sort, params.order, userID)
 	default:
 		return repos.Products.GetUserProductsBulk(userID, -1)
 	}
@@ -292,7 +302,14 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
-	products, productErr := fetchProducts(repos, userID, statusFilter, locationFilter, queryParam, queryValue, sort, order)
+	products, productErr := fetchProducts(repos, userID, productQueryParams{
+		statusFilter:   statusFilter,
+		locationFilter: locationFilter,
+		queryParam:     queryParam,
+		queryValue:     queryValue,
+		sort:           sort,
+		order:          order,
+	})
 	if productErr == errors.ErrProductSearchInvalidQuery {
 		logger.Error().Msg(productErr.Error())
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, productErr.Error())
