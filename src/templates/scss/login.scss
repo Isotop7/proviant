@@ -17,47 +17,47 @@
 
 // ── Brand panel ─────────────────────────────────────────────────────────────
 .login-brand {
-  width: 440px;
-  flex-shrink: 0;
-  background: var(--accent);
   position: relative;
-  overflow: hidden;
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   justify-content: space-between;
+  width: 440px;
   padding: 48px 48px 44px;
+  overflow: hidden;
+  background: var(--accent);
 
   &::before {
-    content: '';
     position: absolute;
-    width: 340px;
-    height: 340px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, .07);
     top: -80px;
     right: -100px;
+    width: 340px;
+    height: 340px;
+    content: "";
+    background: rgba(255, 255, 255, .07);
+    border-radius: 50%;
   }
 
   &::after {
-    content: '';
     position: absolute;
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, .05);
     bottom: 40px;
     left: -60px;
+    width: 220px;
+    height: 220px;
+    content: "";
+    background: rgba(255, 255, 255, .05);
+    border-radius: 50%;
   }
 }
 
 .brand-circle-sm {
   position: absolute;
+  right: 30px;
+  bottom: 160px;
   width: 120px;
   height: 120px;
-  border-radius: 50%;
   background: rgba(255, 255, 255, .06);
-  bottom: 160px;
-  right: 30px;
+  border-radius: 50%;
 }
 
 .brand-top {
@@ -67,24 +67,24 @@
 
 .brand-logo {
   display: flex;
-  align-items: center;
   gap: 12px;
+  align-items: center;
   margin-bottom: 52px;
 }
 
 .brand-logo-mark {
-  width: 44px;
-  height: 44px;
-  background: rgba(255, 255, 255, .18);
-  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 44px;
+  height: 44px;
   font-size: 20px;
   font-weight: 700;
   color: #fff;
   letter-spacing: -.5px;
+  background: rgba(255, 255, 255, .18);
   border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 12px;
 }
 
 .brand-logo-name {
@@ -95,19 +95,19 @@
 }
 
 .brand-headline {
+  margin-bottom: 16px;
   font-size: 32px;
   font-weight: 700;
-  color: #fff;
   line-height: 1.15;
+  color: #fff;
   letter-spacing: -.8px;
-  margin-bottom: 16px;
 }
 
 .brand-sub {
-  font-size: 15px;
-  color: rgba(255, 255, 255, .72);
-  line-height: 1.6;
   max-width: 320px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, .72);
 }
 
 .brand-features {
@@ -120,29 +120,29 @@
 
 .brand-feature {
   display: flex;
-  align-items: center;
   gap: 14px;
+  align-items: center;
 }
 
 .brand-feature-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, .14);
-  border: 1px solid rgba(255, 255, 255, .18);
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  width: 36px;
+  height: 36px;
   font-size: 16px;
   color: #fff;
-  flex-shrink: 0;
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 10px;
 }
 
 .brand-feature-text {
   font-size: 13px;
-  color: rgba(255, 255, 255, .85);
   font-weight: 500;
   line-height: 1.4;
+  color: rgba(255, 255, 255, .85);
   text-decoration: none;
 }
 
@@ -156,13 +156,13 @@
 
 // ── Form panel ──────────────────────────────────────────────────────────────
 .login-form-panel {
-  flex: 1;
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   padding: 48px 32px;
-  background: var(--bg);
   overflow-y: auto;
+  background: var(--bg);
 }
 
 .login-form-inner {
@@ -173,22 +173,22 @@
 // ── Invite banner ────────────────────────────────────────────────────────────
 .invite-banner {
   display: flex;
-  align-items: flex-start;
   gap: 10px;
+  align-items: flex-start;
   padding: 12px 14px;
   margin-bottom: 20px;
-  background: var(--accent-subtle);
-  border: 1px solid oklch(.78 .08 162deg);
-  border-radius: 10px;
   font-size: 13px;
-  color: var(--fg-2);
   line-height: 1.5;
+  color: var(--fg-2);
+  background: var(--accent-subtle);
+  border: 1px solid oklch(78% .08 162deg);
+  border-radius: 10px;
 
   i {
-    color: var(--accent);
-    font-size: 15px;
     flex-shrink: 0;
     margin-top: 1px;
+    font-size: 15px;
+    color: var(--accent);
   }
 
   strong {
@@ -199,33 +199,33 @@
 // ── Tab switcher ─────────────────────────────────────────────────────────────
 .auth-tabs {
   display: flex;
-  border-bottom: 1px solid var(--border-subtle);
   margin-bottom: 32px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .auth-tab {
   padding: 10px 20px;
+  margin-bottom: -1px;
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 500;
   color: var(--fg-3);
+  text-decoration: none;
+  letter-spacing: -.1px;
+  cursor: pointer;
+  background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  background: transparent;
-  cursor: pointer;
   transition: color 150ms ease, border-color 150ms ease;
-  margin-bottom: -1px;
-  letter-spacing: -.1px;
-  text-decoration: none;
 
   &:hover {
     color: var(--fg-2);
   }
 
   &.active {
+    font-weight: 600;
     color: var(--accent);
     border-bottom-color: var(--accent);
-    font-weight: 600;
   }
 }
 
@@ -235,17 +235,17 @@
 }
 
 .form-heading-title {
+  margin-bottom: 4px;
   font-size: 22px;
   font-weight: 700;
   color: var(--fg);
   letter-spacing: -.5px;
-  margin-bottom: 4px;
 }
 
 .form-heading-sub {
   font-size: 13px;
-  color: var(--fg-2);
   line-height: 1.5;
+  color: var(--fg-2);
 }
 
 // ── Fields ───────────────────────────────────────────────────────────────────
@@ -258,12 +258,12 @@
 
 // Override Bootstrap's .field-label in main.scss (too generic) for auth context
 .login-form-inner .field-label {
+  margin-bottom: 0;
   font-size: 11px;
   font-weight: 600;
   color: var(--fg-2);
-  letter-spacing: .5px;
   text-transform: uppercase;
-  margin-bottom: 0;
+  letter-spacing: .5px;
 }
 
 .field-input-wrap {
@@ -272,13 +272,13 @@
 
 .field-icon {
   position: absolute;
-  left: 12px;
   top: 50%;
-  transform: translateY(-50%);
-  color: var(--fg-3);
+  left: 12px;
   font-size: 15px;
+  color: var(--fg-3);
   pointer-events: none;
   transition: color 150ms ease;
+  transform: translateY(-50%);
 }
 
 .field-input-wrap:focus-within .field-icon {
@@ -286,15 +286,15 @@
 }
 
 .field-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px 0 38px;
   font-family: var(--font-ui);
   font-size: 14px;
   color: var(--fg);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 0 12px 0 38px;
-  height: 44px;
-  width: 100%;
   outline: none;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 
@@ -304,19 +304,19 @@
 
   &:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px oklch(.5 .12 162deg / .12);
+    box-shadow: 0 0 0 3px oklch(50% .12 162deg / .12);
   }
 
   &.error {
     border-color: var(--status-expired);
-    box-shadow: 0 0 0 3px oklch(.55 .2 25deg / .10);
+    box-shadow: 0 0 0 3px oklch(55% .2 25deg / .1);
   }
 }
 
 .field-error {
   display: flex;
-  align-items: center;
   gap: 5px;
+  align-items: center;
   font-size: 12px;
   color: var(--status-expired);
 }
@@ -324,18 +324,18 @@
 // ── Password toggle ───────────────────────────────────────────────────────────
 .pwd-toggle {
   position: absolute;
-  right: 12px;
   top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--fg-3);
-  font-size: 15px;
-  padding: 0;
+  right: 12px;
   display: flex;
   align-items: center;
+  padding: 0;
+  font-size: 15px;
+  color: var(--fg-3);
+  cursor: pointer;
+  background: none;
+  border: none;
   transition: color 150ms;
+  transform: translateY(-50%);
 
   &:hover {
     color: var(--fg-2);
@@ -352,32 +352,32 @@
 .strength-bar {
   flex: 1;
   height: 3px;
-  border-radius: 2px;
   background: var(--border);
+  border-radius: 2px;
   transition: background 300ms ease;
 }
 
 .strength-label {
+  margin-top: 4px;
   font-size: 11px;
   font-weight: 500;
-  margin-top: 4px;
 }
 
 // ── Password requirements list ────────────────────────────────────────────────
 .password-requirements {
-  list-style: none;
-  padding: 0;
-  margin: 6px 0 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
+  padding: 0;
+  margin: 6px 0 0;
+  list-style: none;
 
   li {
+    display: flex;
+    gap: 5px;
+    align-items: center;
     font-size: 11px;
     color: var(--fg-3);
-    display: flex;
-    align-items: center;
-    gap: 5px;
     transition: color 150ms;
 
     i {
@@ -399,9 +399,9 @@
 
   a {
     font-size: 12px;
+    font-weight: 500;
     color: var(--accent);
     text-decoration: none;
-    font-weight: 500;
 
     &:hover {
       text-decoration: underline;
@@ -412,38 +412,38 @@
 // ── Submit button ─────────────────────────────────────────────────────────────
 .btn-submit {
   display: flex;
+  gap: 8px;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   width: 100%;
   height: 44px;
-  border-radius: 10px;
-  border: 1px solid var(--accent-active);
-  background: var(--accent);
-  color: white;
+  margin-top: 8px;
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
+  color: white;
   letter-spacing: -.1px;
-  margin-top: 8px;
+  cursor: pointer;
+  background: var(--accent);
+  border: 1px solid var(--accent-active);
+  border-radius: 10px;
   box-shadow: 0 1px 0 rgba(0, 0, 0, .12), inset 0 1px 0 rgba(255, 255, 255, .12);
   transition: background 150ms ease, box-shadow 150ms ease, transform 120ms ease;
 
   &:hover:not(:disabled) {
     background: var(--accent-hover);
-    box-shadow: 0 3px 10px oklch(.5 .12 162deg / .35), 0 1px 0 rgba(0, 0, 0, .12);
+    box-shadow: 0 3px 10px oklch(50% .12 162deg / .35), 0 1px 0 rgba(0, 0, 0, .12);
     transform: translateY(-1px);
   }
 
   &:active:not(:disabled) {
-    transform: translateY(0);
     box-shadow: none;
+    transform: translateY(0);
   }
 
   &:disabled {
-    opacity: .7;
     cursor: not-allowed;
+    opacity: .7;
   }
 }
 
@@ -451,8 +451,8 @@
 .terms-note {
   margin-top: 16px;
   font-size: 11px;
-  color: var(--fg-3);
   line-height: 1.6;
+  color: var(--fg-3);
   text-align: center;
 
   a {
@@ -464,22 +464,22 @@
 // ── Mobile logo ───────────────────────────────────────────────────────────────
 .mobile-logo {
   display: none;
-  align-items: center;
   gap: 10px;
+  align-items: center;
   margin-bottom: 32px;
 }
 
 .mobile-logo-mark {
-  width: 38px;
-  height: 38px;
-  background: var(--accent);
-  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  width: 38px;
+  height: 38px;
   font-size: 18px;
   font-weight: 700;
+  color: white;
+  background: var(--accent);
+  border-radius: 10px;
 }
 
 .mobile-logo-name {
