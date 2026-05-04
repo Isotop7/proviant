@@ -110,9 +110,7 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 	}
 
 	var req updateAdminUserRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
+	if !bindJSON(ctx, logger, &req) {
 		return
 	}
 

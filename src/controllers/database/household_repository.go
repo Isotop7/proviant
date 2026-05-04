@@ -191,68 +191,54 @@ func (r *HouseholdRepository) GetPendingApplicationsForAdmin(adminUserID uint) (
 	return applications, err
 }
 
-func (r *HouseholdRepository) ApproveApplication(applicationID, adminUserID uint) error {
-	tx := r.DB.Begin()
-
+func (r *HouseholdRepository) fetchAndAuthorizeApplication(tx *gorm.DB, applicationID, adminUserID uint) (database.HouseholdApplication, error) {
 	var application database.HouseholdApplication
 	if err := tx.First(&application, applicationID).Error; err != nil {
 		tx.Rollback()
 		if err == gorm.ErrRecordNotFound {
-			return errors.ErrApplicationNotFound
+			return application, errors.ErrApplicationNotFound
 		}
-		return err
+		return application, err
 	}
-
 	var household database.Household
 	if err := tx.First(&household, application.HouseholdID).Error; err != nil {
 		tx.Rollback()
-		return err
+		return application, err
 	}
 	if household.AdminID != adminUserID {
 		tx.Rollback()
-		return errors.ErrNotHouseholdAdmin
+		return application, errors.ErrNotHouseholdAdmin
 	}
+	return application, nil
+}
 
+func (r *HouseholdRepository) ApproveApplication(applicationID, adminUserID uint) error {
+	tx := r.DB.Begin()
+	application, err := r.fetchAndAuthorizeApplication(tx, applicationID, adminUserID)
+	if err != nil {
+		return err
+	}
 	if err := tx.Model(&authentication.User{}).Where(util.QueryId, application.ApplicantID).Update("household_id", application.HouseholdID).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
-
 	if err := tx.Model(&application).Update("status", database.ApplicationStatusApproved).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
-
 	return tx.Commit().Error
 }
 
 func (r *HouseholdRepository) RejectApplication(applicationID, adminUserID uint) error {
 	tx := r.DB.Begin()
-
-	var application database.HouseholdApplication
-	if err := tx.First(&application, applicationID).Error; err != nil {
-		tx.Rollback()
-		if err == gorm.ErrRecordNotFound {
-			return errors.ErrApplicationNotFound
-		}
+	application, err := r.fetchAndAuthorizeApplication(tx, applicationID, adminUserID)
+	if err != nil {
 		return err
 	}
-
-	var household database.Household
-	if err := tx.First(&household, application.HouseholdID).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-	if household.AdminID != adminUserID {
-		tx.Rollback()
-		return errors.ErrNotHouseholdAdmin
-	}
-
 	if err := tx.Model(&application).Update("status", database.ApplicationStatusRejected).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
-
 	return tx.Commit().Error
 }
 

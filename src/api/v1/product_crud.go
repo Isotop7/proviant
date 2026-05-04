@@ -43,20 +43,9 @@ func GetProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Get and parse parameter limit
-	limitParam := ctx.Query("limit")
-	var limit int
-	// Check if limit was found in query
-	if limitParam != "" {
-		var parseError error
-		if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
-			logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
-			return
-		}
-	} else {
-		// Set default limit
-		limit = 0
+	limit, ok := parseLimitParam(ctx, logger)
+	if !ok {
+		return
 	}
 
 	repos, ok := mustGetRepos(ctx, logger)
@@ -167,9 +156,7 @@ func CreateProduct(ctx *gin.Context) {
 
 	// Get and parse body to product
 	var product dbModel.Product
-	if err := ctx.ShouldBindJSON(&product); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
+	if !bindJSON(ctx, logger, &product) {
 		return
 	}
 
@@ -255,9 +242,7 @@ func UpdateProduct(ctx *gin.Context) {
 
 	// Get and parse body to product
 	var product dbModel.ProductDTOPatch
-	if err := ctx.ShouldBindJSON(&product); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
+	if !bindJSON(ctx, logger, &product) {
 		return
 	}
 
@@ -318,9 +303,7 @@ func UpdateProductAmount(ctx *gin.Context) {
 
 	// Get and parse body
 	var amountDTO apiModel.ProductAmountDTO
-	if err := ctx.ShouldBindJSON(&amountDTO); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
+	if !bindJSON(ctx, logger, &amountDTO) {
 		return
 	}
 

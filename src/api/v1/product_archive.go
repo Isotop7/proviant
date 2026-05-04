@@ -39,20 +39,9 @@ func GetArchivedProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	// Get and parse parameter limit
-	limitParam := ctx.Query("limit")
-	var limit int
-	// Check if limit was found in query
-	if limitParam != "" {
-		var parseError error
-		if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
-			logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
-			return
-		}
-	} else {
-		// Set default limit
-		limit = 0
+	limit, ok := parseLimitParam(ctx, logger)
+	if !ok {
+		return
 	}
 
 	repos, ok := mustGetRepos(ctx, logger)
@@ -98,9 +87,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel
-	if err := ctx.ShouldBindJSON(&products); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
+	if !bindJSON(ctx, logger, &products) {
 		return
 	}
 
@@ -145,9 +132,7 @@ func BulkArchiveProducts(ctx *gin.Context) {
 
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel
-	if err := ctx.ShouldBindJSON(&products); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
+	if !bindJSON(ctx, logger, &products) {
 		return
 	}
 
@@ -233,9 +218,7 @@ func BulkRestoreProducts(ctx *gin.Context) {
 
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel
-	if err := ctx.ShouldBindJSON(&products); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
+	if !bindJSON(ctx, logger, &products) {
 		return
 	}
 

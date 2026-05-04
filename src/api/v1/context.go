@@ -69,6 +69,29 @@ func getNotificationController(ctx *gin.Context) (*controllers.NotificationContr
 	return notificationController, ok
 }
 
+func parseLimitParam(ctx *gin.Context, logger *zerolog.Logger) (int, bool) {
+	limitParam := ctx.Query("limit")
+	if limitParam == "" {
+		return 0, true
+	}
+	limit, err := strconv.Atoi(limitParam)
+	if err != nil {
+		logger.Warn().Msgf("Invalid limit '%s' was specified", limitParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%s' is invalid", limitParam)})
+		return 0, false
+	}
+	return limit, true
+}
+
+func bindJSON(ctx *gin.Context, logger *zerolog.Logger, v any) bool {
+	if err := ctx.ShouldBindJSON(v); err != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
+		return false
+	}
+	return true
+}
+
 func parseUintPathParam(ctx *gin.Context, logger *zerolog.Logger, paramName string) (uint, bool) {
 	raw := ctx.Param(paramName)
 	id, err := strconv.ParseUint(raw, 10, 64)
