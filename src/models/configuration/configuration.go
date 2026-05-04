@@ -122,8 +122,9 @@ type OCRConfiguration struct {
 	Provider  string `mapstructure:"provider"`  // "tesseract" (local), "google", "openai"
 	APIKey    string `mapstructure:"apiKey"`    // for cloud providers
 	Endpoint  string `mapstructure:"endpoint"`  // custom endpoint (e.g., Tesseract HTTP server)
-	Timeout   int    `mapstructure:"timeout"`   // seconds per request
-	Languages string `mapstructure:"languages"` // Tesseract language codes, e.g. "deu+eng"
+	Timeout      int    `mapstructure:"timeout"`      // seconds per request
+	Languages    string `mapstructure:"languages"`    // Tesseract language codes, e.g. "deu+eng"
+	TesseractPath string `mapstructure:"tesseractPath"` // absolute path to tesseract binary
 }
 
 // RecipeAPIConfiguration contains settings for the recipe suggestions feature

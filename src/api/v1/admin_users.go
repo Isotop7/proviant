@@ -1,9 +1,7 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
@@ -15,7 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 const (
@@ -101,11 +98,8 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 		return
 	}
 
-	idParam := ctx.Param("id")
-	targetUserID, convErr := strconv.ParseUint(idParam, 10, 64)
-	if convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
+	targetUserID, ok := parseUintPathParam(ctx, logger, "id")
+	if !ok {
 		return
 	}
 
@@ -114,35 +108,13 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 		return
 	}
 
-	admin, adminErr := repos.Users.GetUserByID(adminID)
-	if adminErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
+	householdID, ok := authorizeHouseholdAdmin(ctx, repos, logger, adminID)
+	if !ok {
 		return
 	}
 
-	household, hhErr := repos.Users.GetHouseholdByID(admin.HouseholdID)
-	if hhErr != nil {
-		logger.Error().Msgf(MsgErrFetchingHousehold, hhErr)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-	if household.AdminID != adminID {
-		ctx.JSON(http.StatusForbidden, api.Error(errors.ErrNotHouseholdAdmin))
-		return
-	}
-
-	targetUser, targetErr := repos.Users.GetUserByID(uint(targetUserID))
-	if targetErr != nil {
-		if targetErr == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, targetUserID)})
-			return
-		}
-		logger.Error().Msgf(MsgErrFetchingTargetUser, targetErr)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-	if targetUser.HouseholdID != admin.HouseholdID {
-		ctx.JSON(http.StatusForbidden, api.Error(errors.ErrUserNotInHousehold))
+	targetUser, ok := fetchHouseholdMember(ctx, repos, logger, targetUserID, householdID)
+	if !ok {
 		return
 	}
 
@@ -192,52 +164,27 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 		return
 	}
 
-	idParam := ctx.Param("id")
-	targetUserID, convErr := strconv.ParseUint(idParam, 10, 64)
-	if convErr != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
+	targetUserID, ok := parseUintPathParam(ctx, logger, "id")
+	if !ok {
 		return
 	}
 
-	admin, adminErr := repos.Users.GetUserByID(adminID)
-	if adminErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
-		return
-	}
-
-	household, hhErr := repos.Users.GetHouseholdByID(admin.HouseholdID)
-	if hhErr != nil {
-		logger.Error().Msgf(MsgErrFetchingHousehold, hhErr)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-	if household.AdminID != adminID {
-		ctx.JSON(http.StatusForbidden, api.Error(errors.ErrNotHouseholdAdmin))
-		return
-	}
-
-	if uint(targetUserID) == adminID {
+	if targetUserID == adminID {
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrCannotRemoveAdmin))
 		return
 	}
 
-	targetUser, targetErr := repos.Users.GetUserByID(uint(targetUserID))
-	if targetErr != nil {
-		if targetErr == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, targetUserID)})
-			return
-		}
-		logger.Error().Msgf(MsgErrFetchingTargetUser, targetErr)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-	if targetUser.HouseholdID != admin.HouseholdID {
-		ctx.JSON(http.StatusForbidden, api.Error(errors.ErrUserNotInHousehold))
+	householdID, ok := authorizeHouseholdAdmin(ctx, repos, logger, adminID)
+	if !ok {
 		return
 	}
 
-	deleteErr := repos.Users.DeleteUser(uint(targetUserID))
+	_, ok = fetchHouseholdMember(ctx, repos, logger, targetUserID, householdID)
+	if !ok {
+		return
+	}
+
+	deleteErr := repos.Users.DeleteUser(targetUserID)
 	if deleteErr != nil {
 		logger.Error().Msgf("Error deleting user: %s", deleteErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())

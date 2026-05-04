@@ -103,6 +103,23 @@ func parseUintPathParam(ctx *gin.Context, logger *zerolog.Logger, paramName stri
 	return uint(id), true //nolint:gosec
 }
 
+// mustGetOwnedWebhookID parses the "id" path param, verifies ownership, and returns the webhook ID.
+func mustGetOwnedWebhookID(ctx *gin.Context, repos *database.RepositoryContainer, logger *zerolog.Logger, userID uint) (uint, bool) {
+	webhookID, ok := parseUintPathParam(ctx, logger, "id")
+	if !ok {
+		return 0, false
+	}
+	if err := repos.Webhooks.CheckOwnership(webhookID, userID); err != nil {
+		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
+			ctx.JSON(http.StatusNotFound, api.Error(err))
+			return 0, false
+		}
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		return 0, false
+	}
+	return webhookID, true
+}
+
 // authorizeHouseholdAdmin verifies the caller is a household admin.
 // Returns the household ID on success. Writes HTTP error and returns false on failure.
 func authorizeHouseholdAdmin(ctx *gin.Context, repos *database.RepositoryContainer, logger *zerolog.Logger, adminID uint) (uint, bool) {

@@ -3,7 +3,6 @@ package v1
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
@@ -17,9 +16,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-const (
-	MsgWebhookIDMustBeValid = "webhook ID must be a valid unsigned integer"
-)
 
 // CreateWebhook creates a new webhook
 // @Summary      Create a webhook
@@ -143,22 +139,12 @@ func GetWebhook(ctx *gin.Context) {
 		return
 	}
 
-	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(MsgWebhookIDMustBeValid))
+	webhookID, ok := mustGetOwnedWebhookID(ctx, repos, logger, userID)
+	if !ok {
 		return
 	}
 
-	if err := repos.Webhooks.CheckOwnership(uint(webhookID), userID); err != nil {
-		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-
-	webhook, err := repos.Webhooks.GetWebhookByID(uint(webhookID))
+	webhook, err := repos.Webhooks.GetWebhookByID(webhookID)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, api.Error(errors.ErrWebhookNotFound))
 		return
@@ -194,22 +180,12 @@ func UpdateWebhook(ctx *gin.Context) {
 		return
 	}
 
-	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(MsgWebhookIDMustBeValid))
+	webhookID, ok := mustGetOwnedWebhookID(ctx, repos, logger, userID)
+	if !ok {
 		return
 	}
 
-	if err := repos.Webhooks.CheckOwnership(uint(webhookID), userID); err != nil {
-		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-
-	webhook, err := repos.Webhooks.GetWebhookByID(uint(webhookID))
+	webhook, err := repos.Webhooks.GetWebhookByID(webhookID)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, api.Error(errors.ErrWebhookNotFound))
 		return
@@ -272,22 +248,12 @@ func DeleteWebhook(ctx *gin.Context) {
 		return
 	}
 
-	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(MsgWebhookIDMustBeValid))
+	webhookID, ok := mustGetOwnedWebhookID(ctx, repos, logger, userID)
+	if !ok {
 		return
 	}
 
-	if err := repos.Webhooks.CheckOwnership(uint(webhookID), userID); err != nil {
-		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-
-	if err := repos.Webhooks.DeleteWebhook(uint(webhookID)); err != nil {
+	if err := repos.Webhooks.DeleteWebhook(webhookID); err != nil {
 		logger.Error().Msgf("Error deleting webhook: %v", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
@@ -320,22 +286,12 @@ func GetWebhookDeliveries(ctx *gin.Context) {
 		return
 	}
 
-	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(MsgWebhookIDMustBeValid))
+	webhookID, ok := mustGetOwnedWebhookID(ctx, repos, logger, userID)
+	if !ok {
 		return
 	}
 
-	if err := repos.Webhooks.CheckOwnership(uint(webhookID), userID); err != nil {
-		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-
-	logs, err := repos.Webhooks.GetDeliveryLogs(uint(webhookID), 50)
+	logs, err := repos.Webhooks.GetDeliveryLogs(webhookID, 50)
 	if err != nil {
 		logger.Error().Msgf("Error getting delivery logs: %v", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())

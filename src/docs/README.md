@@ -177,6 +177,7 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [func InitWebhookService\(db \*gorm.DB, logger \*zerolog.Logger\)](<#InitWebhookService>)
 - [func ParseWebhookEvents\(eventsJSON string\) \[\]string](<#ParseWebhookEvents>)
 - [func ValidateAndLookupPAT\(token string, dbHandle \*gorm.DB\) \(\*authentication.PersonalAccessToken, error\)](<#ValidateAndLookupPAT>)
+- [type DatasetGetter](<#DatasetGetter>)
 - [type EmailNotificationProvider](<#EmailNotificationProvider>)
   - [func \(e \*EmailNotificationProvider\) GetProviderType\(\) string](<#EmailNotificationProvider.GetProviderType>)
   - [func \(e \*EmailNotificationProvider\) IsConfigured\(\) bool](<#EmailNotificationProvider.IsConfigured>)
@@ -211,7 +212,6 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
   - [func \(offacntrl OpenFoodFactsAPIController\) DownloadImage\(imageURL, barcode string\) \(string, error\)](<#OpenFoodFactsAPIController.DownloadImage>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
-- [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
 - [type Recipe](<#Recipe>)
 - [type RecipeController](<#RecipeController>)
   - [func NewRecipeController\(config configuration.RecipeAPIConfiguration, logger \*zerolog.Logger, db \*gorm.DB\) \*RecipeController](<#NewRecipeController>)
@@ -230,6 +230,15 @@ import "codeberg.org/isotop7/proviant/controllers"
 
 ## Constants
 
+<a name="MsgFailedCloseResponseBody"></a>
+
+```go
+const (
+    MsgFailedCloseResponseBody = "failed to close response body"
+    MsgApiReturnWrapper        = "API returned %d"
+)
+```
+
 <a name="EmailVerificationTokenDuration"></a>
 
 ```go
@@ -240,6 +249,12 @@ const EmailVerificationTokenDuration = 24 * time.Hour
 
 ```go
 const EmailVerificationTokenLength = 32
+```
+
+<a name="MsgEmailProviderNotConfigured"></a>
+
+```go
+const MsgEmailProviderNotConfigured = "email provider not configured"
 ```
 
 <a name="TokenLength"></a>
@@ -307,6 +322,17 @@ func ValidateAndLookupPAT(token string, dbHandle *gorm.DB) (*authentication.Pers
 ```
 
 
+
+<a name="DatasetGetter"></a>
+## type DatasetGetter
+
+DatasetGetter defines the contract for getting OpenFoodFacts dataset by barcode
+
+```go
+type DatasetGetter interface {
+    GetDataset(barcode string) (database.Product, error)
+}
+```
 
 <a name="EmailNotificationProvider"></a>
 ## type EmailNotificationProvider
@@ -639,17 +665,6 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 ```
 
 GetDataset gets data from OpenFoodFacts by its API. The search parameter is the barcode of the product
-
-<a name="OpenFoodFactsAPIControllerInterface"></a>
-## type OpenFoodFactsAPIControllerInterface
-
-OpenFoodFactsAPIControllerInterface defines the contract for interacting with OpenFoodFacts
-
-```go
-type OpenFoodFactsAPIControllerInterface interface {
-    GetDataset(barcode string) (database.Product, error)
-}
-```
 
 <a name="Recipe"></a>
 ## type Recipe
@@ -1170,6 +1185,33 @@ var (
 
     // ErrDatabaseOperationFailed is thrown when a database operation fails
     ErrDatabaseOperationFailed = errors.New("database operation failed")
+
+    /*
+     * Export related errors
+     */
+    // ErrExportCSVWriteWrapper is used to interpolate csv export error
+    ErrExportCSVWriteWrapper = "CSV write error: %s"
+
+    /*
+     * Stats/export shared log format strings
+     */
+    FmtErrGetActiveProductsCount              = "GetActiveProductsCount: %s"
+    FmtErrGetExpiredProductsCount             = "GetExpiredProductsCount: %s"
+    FmtErrGetExpiringSoonProducts             = "GetExpiringSoonProducts: %s"
+    FmtErrGetProductCategoryBreakdown         = "GetProductCategoryBreakdown: %s"
+    FmtErrGetExpiryTrend                      = "GetExpiryTrend: %s"
+    FmtErrGetArchivedProductsGroupedByBarcode = "GetArchivedProductsGroupedByBarcode: %s"
+
+    /*
+     * Stats/export shared HTTP response messages
+     */
+    MsgErrComputingActiveCount         = "Error computing active product count"
+    MsgErrComputingWasteCount          = "Error computing waste count"
+    MsgErrComputingUniqueArchivedCount = "Error computing unique archived count"
+    MsgErrComputingExpiringSoon        = "Error computing expiring soon products"
+    MsgErrComputingCategoryBreakdown   = "Error computing category breakdown"
+    MsgErrComputingExpiryTrend         = "Error computing expiry trend"
+    MsgErrGettingProducts              = "Error getting products"
 )
 ```
 
@@ -1430,6 +1472,7 @@ router contains the gin router definitions and maps requests to handlers
 
 ## Index
 
+- [Constants](<#constants>)
 - [func AuthorizatorNotUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorNotUserAware>)
 - [func AuthorizatorUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorUserAware>)
 - [func JWTMiddleware\(proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
@@ -1442,6 +1485,14 @@ router contains the gin router definitions and maps requests to handlers
 - [func UserContextLoggerMiddleware\(\) gin.HandlerFunc](<#UserContextLoggerMiddleware>)
 - [func ZerologMiddleware\(logger \*zerolog.Logger\) gin.HandlerFunc](<#ZerologMiddleware>)
 
+
+## Constants
+
+<a name="MsgInvalidCredentials"></a>
+
+```go
+const MsgInvalidCredentials = "Invalid credentials"
+```
 
 <a name="AuthorizatorNotUserAware"></a>
 ## func AuthorizatorNotUserAware
@@ -1779,7 +1830,27 @@ util contains helper functions and generic vars
 
 ```go
 const (
-    DefaultDateFormatParseStr = "2006-01-02"
+    DefaultDateFormatParseStr       = "2006-01-02"
+    DefaultDateFormatMonthStr       = "2006-01"
+    RequestHeaderContentType        = "Content-Type"
+    RequestHeaderContentDisposition = "Content-Disposition"
+
+    // Gin context keys
+    ContextKeyLogger                 = "logger"
+    ContextKeyRepos                  = "repos"
+    ContextKeyDBHandle               = "dbHandle"
+    ContextKeyNotificationController = "notificationController"
+    ContextKeyProviantConfig         = "proviantConfig"
+    ContextKeyUserID                 = "userID"
+    ContextKeyRequestID              = "requestID"
+
+    // Database query wrappers
+    QueryId               = "id = ?"
+    QueryHouseholdId      = "household_id = ?"
+    QueryUserId           = "user_id = ?"
+    QueryWebhookId        = "webhook_id = ?"
+    WhereDeletedIsNotNull = "deleted_at IS NOT NULL"
+    WhereDeletedIsNull    = "deleted_at IS NULL"
 )
 ```
 
@@ -1791,6 +1862,7 @@ import "codeberg.org/isotop7/proviant/web"
 
 ## Index
 
+- [Constants](<#constants>)
 - [type Frontend](<#Frontend>)
   - [func \(frontend \*Frontend\) AcceptInvite\(ctx \*gin.Context\)](<#Frontend.AcceptInvite>)
   - [func \(frontend \*Frontend\) Auth\(ctx \*gin.Context\)](<#Frontend.Auth>)
@@ -1805,6 +1877,17 @@ import "codeberg.org/isotop7/proviant/web"
   - [func \(frontend \*Frontend\) UserSettings\(ctx \*gin.Context\)](<#Frontend.UserSettings>)
   - [func \(frontend \*Frontend\) VerifyEmail\(ctx \*gin.Context\)](<#Frontend.VerifyEmail>)
 
+
+## Constants
+
+<a name="AcceptInviteFileName"></a>
+
+```go
+const (
+    AcceptInviteFileName  = "acceptInvite.tmpl"
+    AcceptInvitationTitle = "Accept Invitation"
+)
+```
 
 <a name="Frontend"></a>
 ## type Frontend
@@ -1851,7 +1934,7 @@ Onboarding renders the post\-signup onboarding wizard @Summary Onboarding page @
 func (frontend *Frontend) Products(ctx *gin.Context)
 ```
 
-Products renders the products list page @Summary Products page @Description Renders the products list page with optional search @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products \[get\]
+
 
 <a name="Frontend.ProductsEdit"></a>
 ### func \(\*Frontend\) ProductsEdit
@@ -2224,10 +2307,45 @@ const (
 )
 ```
 
+<a name="MsgInvalidApplicationId"></a>
+
+```go
+const (
+    MsgInvalidApplicationId = "invalid application id"
+    MsgHouseholdNameEmpty   = "household name cannot be empty"
+)
+```
+
+<a name="MsgCheckProductIdTryAgain"></a>
+
+```go
+const (
+    MsgCheckProductIdTryAgain           = "Check the product ID and try again"
+    FmtProductNotFoundOrNoAccess        = "Product with ID '%d' was not found or you do not have access"
+    MsgFailedToGetControllerFromContext = "Failed to get controller from context"
+)
+```
+
 <a name="CalendarTokenLength"></a>
 
 ```go
 const CalendarTokenLength = 32
+```
+
+<a name="GetUserActiveProductsFiltered"></a>
+
+```go
+const (
+    GetUserActiveProductsFiltered = "GetUserActiveProductsFiltered: %s"
+)
+```
+
+<a name="MsgProductNotFound"></a>
+
+```go
+const (
+    MsgProductNotFound = "Product not found"
+)
 ```
 
 <a name="AdminResetUserPassword"></a>
@@ -2993,7 +3111,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 - [type PATRepository](<#PATRepository>)
   - [func NewPATRepository\(db \*gorm.DB\) \*PATRepository](<#NewPATRepository>)
   - [func \(r \*PATRepository\) CreatePAT\(userID uint, name, tokenHash string, expiresAt \*time.Time, scopes string\) \(\*authentication.PersonalAccessToken, error\)](<#PATRepository.CreatePAT>)
-  - [func \(r \*PATRepository\) DeletePAT\(patID uint, userID uint\) error](<#PATRepository.DeletePAT>)
+  - [func \(r \*PATRepository\) DeletePAT\(patID, userID uint\) error](<#PATRepository.DeletePAT>)
   - [func \(r \*PATRepository\) GetPATByID\(patID uint\) \(\*authentication.PersonalAccessToken, error\)](<#PATRepository.GetPATByID>)
   - [func \(r \*PATRepository\) GetPATByTokenHash\(tokenHash string\) \(\*authentication.PersonalAccessToken, error\)](<#PATRepository.GetPATByTokenHash>)
   - [func \(r \*PATRepository\) GetPATsByUserID\(userID uint\) \(\[\]authentication.PersonalAccessToken, error\)](<#PATRepository.GetPATsByUserID>)
@@ -3004,12 +3122,12 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) BulkArchiveProducts\(productIDs \[\]uint, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkArchiveProducts>)
   - [func \(r \*ProductRepository\) BulkDeleteProducts\(productIDs \[\]uint, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkDeleteProducts>)
   - [func \(r \*ProductRepository\) BulkRestoreProducts\(productIDs \[\]uint, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkRestoreProducts>)
-  - [func \(r \*ProductRepository\) ConsumeProduct\(productID uint, userID uint\) error](<#ProductRepository.ConsumeProduct>)
+  - [func \(r \*ProductRepository\) ConsumeProduct\(productID, userID uint\) error](<#ProductRepository.ConsumeProduct>)
   - [func \(r \*ProductRepository\) CreateOpenFoodFactsCache\(entry \*database.OpenFoodFactsCache\) error](<#ProductRepository.CreateOpenFoodFactsCache>)
   - [func \(r \*ProductRepository\) CreateProduct\(userID uint, product \*database.Product\) error](<#ProductRepository.CreateProduct>)
   - [func \(r \*ProductRepository\) DeleteProduct\(productID uint, userID uint, archiveOnly bool\) error](<#ProductRepository.DeleteProduct>)
   - [func \(r \*ProductRepository\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetActiveProductsCount>)
-  - [func \(r \*ProductRepository\) GetArchivedProductByID\(productID uint, userID uint\) \(database.Product, error\)](<#ProductRepository.GetArchivedProductByID>)
+  - [func \(r \*ProductRepository\) GetArchivedProductByID\(productID, userID uint\) \(database.Product, error\)](<#ProductRepository.GetArchivedProductByID>)
   - [func \(r \*ProductRepository\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetArchivedProductsGroupedByBarcode>)
   - [func \(r \*ProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetExpiredProductsCount>)
   - [func \(r \*ProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringInDays>)
@@ -3021,7 +3139,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetLastInsertedProduct\(householdID uint\) \(database.Product, error\)](<#ProductRepository.GetLastInsertedProduct>)
   - [func \(r \*ProductRepository\) GetLastNotifiedProduct\(householdID uint\) \(database.Product, error\)](<#ProductRepository.GetLastNotifiedProduct>)
   - [func \(r \*ProductRepository\) GetOpenFoodFactsCacheByBarcode\(barcode string\) \(database.OpenFoodFactsCache, error\)](<#ProductRepository.GetOpenFoodFactsCacheByBarcode>)
-  - [func \(r \*ProductRepository\) GetProductByID\(productID uint, userID uint\) \(database.Product, error\)](<#ProductRepository.GetProductByID>)
+  - [func \(r \*ProductRepository\) GetProductByID\(productID, userID uint\) \(database.Product, error\)](<#ProductRepository.GetProductByID>)
   - [func \(r \*ProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetProductCategoryBreakdown>)
   - [func \(r \*ProductRepository\) GetProductsByHousehold\(householdID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetProductsByHousehold>)
   - [func \(r \*ProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#ProductRepository.GetProductsExpired>)
@@ -3036,7 +3154,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetUserProductsByLocation\(userID, locationID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsByLocation>)
   - [func \(r \*ProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#ProductRepository.GetUsersByHouseholdID>)
   - [func \(r \*ProductRepository\) GetWasteThisMonth\(userID uint\) \(int, error\)](<#ProductRepository.GetWasteThisMonth>)
-  - [func \(r \*ProductRepository\) RestoreProduct\(productID uint, userID uint\) error](<#ProductRepository.RestoreProduct>)
+  - [func \(r \*ProductRepository\) RestoreProduct\(productID, userID uint\) error](<#ProductRepository.RestoreProduct>)
   - [func \(r \*ProductRepository\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.SearchProducts>)
   - [func \(r \*ProductRepository\) SetProductExpireAt\(productID uint, userID uint, expireAt database.Timestamp\) error](<#ProductRepository.SetProductExpireAt>)
   - [func \(r \*ProductRepository\) SetProductNotifiedAt\(productID uint\) error](<#ProductRepository.SetProductNotifiedAt>)
@@ -3044,7 +3162,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) UpdateProduct\(productID uint, userID uint, product \*database.ProductDTOPatch\) error](<#ProductRepository.UpdateProduct>)
   - [func \(r \*ProductRepository\) UpdateProductAmount\(productID uint, userID uint, delta int\) \(bool, error\)](<#ProductRepository.UpdateProductAmount>)
   - [func \(r \*ProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#ProductRepository.UserHasProductAccess>)
-  - [func \(r \*ProductRepository\) WasteProduct\(productID uint, userID uint\) error](<#ProductRepository.WasteProduct>)
+  - [func \(r \*ProductRepository\) WasteProduct\(productID, userID uint\) error](<#ProductRepository.WasteProduct>)
 - [type ProductRepositoryInterface](<#ProductRepositoryInterface>)
 - [type RecipeRepository](<#RecipeRepository>)
   - [func NewRecipeRepository\(db \*gorm.DB\) \*RecipeRepository](<#NewRecipeRepository>)
@@ -3102,7 +3220,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*UserRepository\) ResetFailedLoginAttempts\(userID uint\) error](<#UserRepository.ResetFailedLoginAttempts>)
   - [func \(r \*UserRepository\) UpdateAdminUserFields\(userID uint, username, mailAddress string\) error](<#UserRepository.UpdateAdminUserFields>)
   - [func \(r \*UserRepository\) UpdateDisplayName\(userID uint, displayName string\) error](<#UserRepository.UpdateDisplayName>)
-  - [func \(r \*UserRepository\) UpdateEmailVerificationStatus\(token string, status string\) error](<#UserRepository.UpdateEmailVerificationStatus>)
+  - [func \(r \*UserRepository\) UpdateEmailVerificationStatus\(token, status string\) error](<#UserRepository.UpdateEmailVerificationStatus>)
   - [func \(r \*UserRepository\) UpdateUser\(userID uint, user \*authentication.User\) error](<#UserRepository.UpdateUser>)
   - [func \(r \*UserRepository\) UpdateUserEmailVerified\(userID uint, verifiedAt time.Time\) error](<#UserRepository.UpdateUserEmailVerified>)
   - [func \(r \*UserRepository\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#UserRepository.UpdateUserPassword>)
@@ -3909,7 +4027,7 @@ func (r *PATRepository) CreatePAT(userID uint, name, tokenHash string, expiresAt
 ### func \(\*PATRepository\) DeletePAT
 
 ```go
-func (r *PATRepository) DeletePAT(patID uint, userID uint) error
+func (r *PATRepository) DeletePAT(patID, userID uint) error
 ```
 
 
@@ -3961,7 +4079,7 @@ type PATRepositoryInterface interface {
     GetPATByTokenHash(tokenHash string) (*authentication.PersonalAccessToken, error)
     GetPATsByUserID(userID uint) ([]authentication.PersonalAccessToken, error)
     GetPATByID(patID uint) (*authentication.PersonalAccessToken, error)
-    DeletePAT(patID uint, userID uint) error
+    DeletePAT(patID, userID uint) error
     UpdateLastUsed(patID uint) error
 }
 ```
@@ -4017,7 +4135,7 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) 
 ### func \(\*ProductRepository\) ConsumeProduct
 
 ```go
-func (r *ProductRepository) ConsumeProduct(productID uint, userID uint) error
+func (r *ProductRepository) ConsumeProduct(productID, userID uint) error
 ```
 
 
@@ -4062,7 +4180,7 @@ func (r *ProductRepository) GetActiveProductsCount(userID uint) (int, error)
 ### func \(\*ProductRepository\) GetArchivedProductByID
 
 ```go
-func (r *ProductRepository) GetArchivedProductByID(productID uint, userID uint) (database.Product, error)
+func (r *ProductRepository) GetArchivedProductByID(productID, userID uint) (database.Product, error)
 ```
 
 
@@ -4170,7 +4288,7 @@ func (r *ProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (data
 ### func \(\*ProductRepository\) GetProductByID
 
 ```go
-func (r *ProductRepository) GetProductByID(productID uint, userID uint) (database.Product, error)
+func (r *ProductRepository) GetProductByID(productID, userID uint) (database.Product, error)
 ```
 
 
@@ -4305,7 +4423,7 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error)
 ### func \(\*ProductRepository\) RestoreProduct
 
 ```go
-func (r *ProductRepository) RestoreProduct(productID uint, userID uint) error
+func (r *ProductRepository) RestoreProduct(productID, userID uint) error
 ```
 
 
@@ -4377,7 +4495,7 @@ func (r *ProductRepository) UserHasProductAccess(userID uint, productID int) boo
 ### func \(\*ProductRepository\) WasteProduct
 
 ```go
-func (r *ProductRepository) WasteProduct(productID uint, userID uint) error
+func (r *ProductRepository) WasteProduct(productID, userID uint) error
 ```
 
 
@@ -4392,8 +4510,8 @@ type ProductRepositoryInterface interface {
     GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
     GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
     GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
-    GetProductByID(productID uint, userID uint) (database.Product, error)
-    GetArchivedProductByID(productID uint, userID uint) (database.Product, error)
+    GetProductByID(productID, userID uint) (database.Product, error)
+    GetArchivedProductByID(productID, userID uint) (database.Product, error)
     SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
     GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
     CreateProduct(userID uint, product *database.Product) error
@@ -4402,7 +4520,7 @@ type ProductRepositoryInterface interface {
     DeleteProduct(productID uint, userID uint, archiveOnly bool) error
     BulkDeleteProducts(productIDs []uint, userID uint) []BulkOperationError
     BulkArchiveProducts(productIDs []uint, userID uint) []BulkOperationError
-    RestoreProduct(productID uint, userID uint) error
+    RestoreProduct(productID, userID uint) error
     BulkRestoreProducts(productIDs []uint, userID uint) []BulkOperationError
     SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error
     SetProductNotifiedAt(productID uint) error
@@ -4431,8 +4549,8 @@ type ProductRepositoryInterface interface {
     GetWasteThisMonth(userID uint) (int, error)
     GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
     GetProductsByHousehold(householdID uint) ([]database.Product, error)
-    ConsumeProduct(productID uint, userID uint) error
-    WasteProduct(productID uint, userID uint) error
+    ConsumeProduct(productID, userID uint) error
+    WasteProduct(productID, userID uint) error
 }
 ```
 
@@ -5008,7 +5126,7 @@ func (r *UserRepository) UpdateDisplayName(userID uint, displayName string) erro
 ### func \(\*UserRepository\) UpdateEmailVerificationStatus
 
 ```go
-func (r *UserRepository) UpdateEmailVerificationStatus(token string, status string) error
+func (r *UserRepository) UpdateEmailVerificationStatus(token, status string) error
 ```
 
 
@@ -5090,7 +5208,7 @@ type UserRepositoryInterface interface {
     CreateEmailVerification(userID uint, token string, expiresAt time.Time) error
     GetEmailVerificationByToken(token string) (database.EmailVerification, error)
     UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
-    UpdateEmailVerificationStatus(token string, status string) error
+    UpdateEmailVerificationStatus(token, status string) error
     GetOnboardingState(userID uint) (database.OnboardingState, error)
     MarkNotificationsSetup(userID uint) error
     UpdateUsername(userID uint, username string) error
@@ -5939,15 +6057,15 @@ AuthenticationConfiguration contains all properties regarding the JSON Web Token
 
 ```go
 type AuthenticationConfiguration struct {
-    TokenPassword            string
-    TokenLifetime            int
-    MaxLoginAttempts         int
-    LockoutDurationMins      int
-    PasswordMinLength        int
-    PasswordRequireUppercase bool
-    PasswordRequireDigit     bool
-    PasswordRequireSpecial   bool
-    PasswordCheckBreached    bool
+    TokenPassword            string `mapstructure:"tokenPassword"`
+    TokenLifetime            int    `mapstructure:"tokenLifetime"`
+    MaxLoginAttempts         int    `mapstructure:"max_login_attempts"`
+    LockoutDurationMins      int    `mapstructure:"lockout_duration_mins"`
+    PasswordMinLength        int    `mapstructure:"password_min_length"`
+    PasswordRequireUppercase bool   `mapstructure:"password_require_uppercase"`
+    PasswordRequireDigit     bool   `mapstructure:"password_require_digit"`
+    PasswordRequireSpecial   bool   `mapstructure:"password_require_special"`
+    PasswordCheckBreached    bool   `mapstructure:"password_check_breached"`
 }
 ```
 
@@ -6076,12 +6194,13 @@ OCRConfiguration contains settings for OCR expiry date detection
 
 ```go
 type OCRConfiguration struct {
-    Enabled   bool   `json:"enabled"`   // master switch
-    Provider  string `json:"provider"`  // "tesseract" (local), "google", "openai"
-    APIKey    string `json:"apiKey"`    // for cloud providers
-    Endpoint  string `json:"endpoint"`  // custom endpoint (e.g., Tesseract HTTP server)
-    Timeout   int    `json:"timeout"`   // seconds per request
-    Languages string `json:"languages"` // Tesseract language codes, e.g. "deu+eng"
+    Enabled       bool   `mapstructure:"enabled"`       // master switch
+    Provider      string `mapstructure:"provider"`      // "tesseract" (local), "google", "openai"
+    APIKey        string `mapstructure:"apiKey"`        // for cloud providers
+    Endpoint      string `mapstructure:"endpoint"`      // custom endpoint (e.g., Tesseract HTTP server)
+    Timeout       int    `mapstructure:"timeout"`       // seconds per request
+    Languages     string `mapstructure:"languages"`     // Tesseract language codes, e.g. "deu+eng"
+    TesseractPath string `mapstructure:"tesseractPath"` // absolute path to tesseract binary
 }
 ```
 
@@ -6682,6 +6801,8 @@ external provides model definitions from external parties
 ## Index
 
 - [Variables](<#variables>)
+- [type AgribalyseData](<#AgribalyseData>)
+- [type EcoscoreData](<#EcoscoreData>)
 - [type OpenFoodFactsAPIDataset](<#OpenFoodFactsAPIDataset>)
 
 
@@ -6697,6 +6818,28 @@ var (
 )
 ```
 
+<a name="AgribalyseData"></a>
+## type AgribalyseData
+
+
+
+```go
+type AgribalyseData struct {
+    CO2Total float64 `json:"co2_total"`
+}
+```
+
+<a name="EcoscoreData"></a>
+## type EcoscoreData
+
+
+
+```go
+type EcoscoreData struct {
+    Agribalyse AgribalyseData `json:"agribalyse"`
+}
+```
+
 <a name="OpenFoodFactsAPIDataset"></a>
 ## type OpenFoodFactsAPIDataset
 
@@ -6707,17 +6850,13 @@ type OpenFoodFactsAPIDataset struct {
     gorm.Model
     Barcode string `json:"code"`
     Product struct {
-        ID           string `json:"_id"`
-        ProductName  string `json:"product_name"`
-        Categories   string `json:"categories"`
-        Countries    string `json:"countries"`
-        GenericName  string `json:"generic_name"`
-        ImageURL     string `json:"image_url"`
-        EcoscoreData struct {
-            Agribalyse struct {
-                CO2Total float64 `json:"co2_total"`
-            } `json:"agribalyse"`
-        }   `json:"ecoscore_data"`
+        ID           string       `json:"_id"`
+        ProductName  string       `json:"product_name"`
+        Categories   string       `json:"categories"`
+        Countries    string       `json:"countries"`
+        GenericName  string       `json:"generic_name"`
+        ImageURL     string       `json:"image_url"`
+        EcoscoreData EcoscoreData `json:"ecoscore_data"`
     }   `json:"product"`
 }
 ```
@@ -6798,7 +6937,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockNotificationRepository\) SetTelegramLinkToken\(userID uint, token string\) error](<#MockNotificationRepository.SetTelegramLinkToken>)
 - [type MockPATRepository](<#MockPATRepository>)
   - [func \(m \*MockPATRepository\) CreatePAT\(userID uint, name, tokenHash string, expiresAt \*time.Time, scopes string\) \(\*authentication.PersonalAccessToken, error\)](<#MockPATRepository.CreatePAT>)
-  - [func \(m \*MockPATRepository\) DeletePAT\(patID uint, userID uint\) error](<#MockPATRepository.DeletePAT>)
+  - [func \(m \*MockPATRepository\) DeletePAT\(patID, userID uint\) error](<#MockPATRepository.DeletePAT>)
   - [func \(m \*MockPATRepository\) GetPATByID\(patID uint\) \(\*authentication.PersonalAccessToken, error\)](<#MockPATRepository.GetPATByID>)
   - [func \(m \*MockPATRepository\) GetPATByTokenHash\(tokenHash string\) \(\*authentication.PersonalAccessToken, error\)](<#MockPATRepository.GetPATByTokenHash>)
   - [func \(m \*MockPATRepository\) GetPATsByUserID\(userID uint\) \(\[\]authentication.PersonalAccessToken, error\)](<#MockPATRepository.GetPATsByUserID>)
@@ -6807,12 +6946,12 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) BulkArchiveProducts\(productIDs \[\]uint, userID uint\) \[\]database.BulkOperationError](<#MockProductRepository.BulkArchiveProducts>)
   - [func \(m \*MockProductRepository\) BulkDeleteProducts\(productIDs \[\]uint, userID uint\) \[\]database.BulkOperationError](<#MockProductRepository.BulkDeleteProducts>)
   - [func \(m \*MockProductRepository\) BulkRestoreProducts\(productIDs \[\]uint, userID uint\) \[\]database.BulkOperationError](<#MockProductRepository.BulkRestoreProducts>)
-  - [func \(m \*MockProductRepository\) ConsumeProduct\(productID uint, userID uint\) error](<#MockProductRepository.ConsumeProduct>)
+  - [func \(m \*MockProductRepository\) ConsumeProduct\(productID, userID uint\) error](<#MockProductRepository.ConsumeProduct>)
   - [func \(m \*MockProductRepository\) CreateOpenFoodFactsCache\(entry \*dbModel.OpenFoodFactsCache\) error](<#MockProductRepository.CreateOpenFoodFactsCache>)
   - [func \(m \*MockProductRepository\) CreateProduct\(userID uint, product \*dbModel.Product\) error](<#MockProductRepository.CreateProduct>)
   - [func \(m \*MockProductRepository\) DeleteProduct\(productID uint, userID uint, archiveOnly bool\) error](<#MockProductRepository.DeleteProduct>)
   - [func \(m \*MockProductRepository\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#MockProductRepository.GetActiveProductsCount>)
-  - [func \(m \*MockProductRepository\) GetArchivedProductByID\(productID uint, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetArchivedProductByID>)
+  - [func \(m \*MockProductRepository\) GetArchivedProductByID\(productID, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetArchivedProductByID>)
   - [func \(m \*MockProductRepository\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#MockProductRepository.GetArchivedProductsGroupedByBarcode>)
   - [func \(m \*MockProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#MockProductRepository.GetExpiredProductsCount>)
   - [func \(m \*MockProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetExpiringInDays>)
@@ -6824,7 +6963,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) GetLastInsertedProduct\(householdID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetLastInsertedProduct>)
   - [func \(m \*MockProductRepository\) GetLastNotifiedProduct\(householdID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetLastNotifiedProduct>)
   - [func \(m \*MockProductRepository\) GetOpenFoodFactsCacheByBarcode\(barcode string\) \(dbModel.OpenFoodFactsCache, error\)](<#MockProductRepository.GetOpenFoodFactsCacheByBarcode>)
-  - [func \(m \*MockProductRepository\) GetProductByID\(productID uint, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetProductByID>)
+  - [func \(m \*MockProductRepository\) GetProductByID\(productID, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetProductByID>)
   - [func \(m \*MockProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#MockProductRepository.GetProductCategoryBreakdown>)
   - [func \(m \*MockProductRepository\) GetProductsByHousehold\(householdID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetProductsByHousehold>)
   - [func \(m \*MockProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*dbModel.Product, error\)](<#MockProductRepository.GetProductsExpired>)
@@ -6839,7 +6978,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) GetUserProductsByLocation\(userID, locationID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserProductsByLocation>)
   - [func \(m \*MockProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#MockProductRepository.GetUsersByHouseholdID>)
   - [func \(m \*MockProductRepository\) GetWasteThisMonth\(userID uint\) \(int, error\)](<#MockProductRepository.GetWasteThisMonth>)
-  - [func \(m \*MockProductRepository\) RestoreProduct\(productID uint, userID uint\) error](<#MockProductRepository.RestoreProduct>)
+  - [func \(m \*MockProductRepository\) RestoreProduct\(productID, userID uint\) error](<#MockProductRepository.RestoreProduct>)
   - [func \(m \*MockProductRepository\) SearchProducts\(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.SearchProducts>)
   - [func \(m \*MockProductRepository\) SetProductExpireAt\(productID uint, userID uint, expireAt dbModel.Timestamp\) error](<#MockProductRepository.SetProductExpireAt>)
   - [func \(m \*MockProductRepository\) SetProductNotifiedAt\(productID uint\) error](<#MockProductRepository.SetProductNotifiedAt>)
@@ -6847,7 +6986,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) UpdateProduct\(productID uint, userID uint, product \*dbModel.ProductDTOPatch\) error](<#MockProductRepository.UpdateProduct>)
   - [func \(m \*MockProductRepository\) UpdateProductAmount\(productID uint, userID uint, delta int\) \(bool, error\)](<#MockProductRepository.UpdateProductAmount>)
   - [func \(m \*MockProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#MockProductRepository.UserHasProductAccess>)
-  - [func \(m \*MockProductRepository\) WasteProduct\(productID uint, userID uint\) error](<#MockProductRepository.WasteProduct>)
+  - [func \(m \*MockProductRepository\) WasteProduct\(productID, userID uint\) error](<#MockProductRepository.WasteProduct>)
 - [type MockRecipeRepository](<#MockRecipeRepository>)
   - [func \(m \*MockRecipeRepository\) CleanupExpiredCaches\(\) error](<#MockRecipeRepository.CleanupExpiredCaches>)
   - [func \(m \*MockRecipeRepository\) CreateCache\(cache \*dbModel.RecipeCache\) error](<#MockRecipeRepository.CreateCache>)
@@ -6892,7 +7031,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockUserRepository\) ResetFailedLoginAttempts\(userID uint\) error](<#MockUserRepository.ResetFailedLoginAttempts>)
   - [func \(m \*MockUserRepository\) UpdateAdminUserFields\(userID uint, username, mailAddress string\) error](<#MockUserRepository.UpdateAdminUserFields>)
   - [func \(m \*MockUserRepository\) UpdateDisplayName\(userID uint, displayName string\) error](<#MockUserRepository.UpdateDisplayName>)
-  - [func \(m \*MockUserRepository\) UpdateEmailVerificationStatus\(token string, status string\) error](<#MockUserRepository.UpdateEmailVerificationStatus>)
+  - [func \(m \*MockUserRepository\) UpdateEmailVerificationStatus\(token, status string\) error](<#MockUserRepository.UpdateEmailVerificationStatus>)
   - [func \(m \*MockUserRepository\) UpdateUser\(userID uint, user \*authentication.User\) error](<#MockUserRepository.UpdateUser>)
   - [func \(m \*MockUserRepository\) UpdateUserEmailVerified\(userID uint, verifiedAt time.Time\) error](<#MockUserRepository.UpdateUserEmailVerified>)
   - [func \(m \*MockUserRepository\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#MockUserRepository.UpdateUserPassword>)
@@ -6919,7 +7058,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
 func SetupGinContextWithDB(db *gorm.DB) (*gin.Context, *httptest.ResponseRecorder)
 ```
 
-SetupGinContextWithDB creates a Gin test context with both dbHandle and a live RepositoryContainer backed by the provided GORM connection. Use this in handler integration tests instead of testutil.SetupGinContext when the handler under test reads from ctx.Get\("repos"\).
+SetupGinContextWithDB creates a Gin test context with both dbHandle and a live RepositoryContainer backed by the provided GORM connection. Use this in handler integration tests instead of testutil.SetupGinContext when the handler under test reads from ctx.Get\(util.ContextKeyRepos\).
 
 <a name="SetupGinContextWithMocks"></a>
 ## func SetupGinContextWithMocks
@@ -7546,7 +7685,7 @@ func (m *MockPATRepository) CreatePAT(userID uint, name, tokenHash string, expir
 ### func \(\*MockPATRepository\) DeletePAT
 
 ```go
-func (m *MockPATRepository) DeletePAT(patID uint, userID uint) error
+func (m *MockPATRepository) DeletePAT(patID, userID uint) error
 ```
 
 
@@ -7640,7 +7779,7 @@ func (m *MockProductRepository) BulkRestoreProducts(productIDs []uint, userID ui
 ### func \(\*MockProductRepository\) ConsumeProduct
 
 ```go
-func (m *MockProductRepository) ConsumeProduct(productID uint, userID uint) error
+func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error
 ```
 
 
@@ -7685,7 +7824,7 @@ func (m *MockProductRepository) GetActiveProductsCount(userID uint) (int, error)
 ### func \(\*MockProductRepository\) GetArchivedProductByID
 
 ```go
-func (m *MockProductRepository) GetArchivedProductByID(productID uint, userID uint) (dbModel.Product, error)
+func (m *MockProductRepository) GetArchivedProductByID(productID, userID uint) (dbModel.Product, error)
 ```
 
 
@@ -7793,7 +7932,7 @@ func (m *MockProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (
 ### func \(\*MockProductRepository\) GetProductByID
 
 ```go
-func (m *MockProductRepository) GetProductByID(productID uint, userID uint) (dbModel.Product, error)
+func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.Product, error)
 ```
 
 
@@ -7928,7 +8067,7 @@ func (m *MockProductRepository) GetWasteThisMonth(userID uint) (int, error)
 ### func \(\*MockProductRepository\) RestoreProduct
 
 ```go
-func (m *MockProductRepository) RestoreProduct(productID uint, userID uint) error
+func (m *MockProductRepository) RestoreProduct(productID, userID uint) error
 ```
 
 
@@ -8000,7 +8139,7 @@ func (m *MockProductRepository) UserHasProductAccess(userID uint, productID int)
 ### func \(\*MockProductRepository\) WasteProduct
 
 ```go
-func (m *MockProductRepository) WasteProduct(productID uint, userID uint) error
+func (m *MockProductRepository) WasteProduct(productID, userID uint) error
 ```
 
 
@@ -8092,7 +8231,7 @@ NewMockRepositoryContainer creates a MockRepositoryContainer with all mocks init
 func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryContainer
 ```
 
-ToRepositoryContainer converts the mock container to a database.RepositoryContainer suitable for injection into the Gin context via ctx.Set\("repos", ...\).
+ToRepositoryContainer converts the mock container to a database.RepositoryContainer suitable for injection into the Gin context via ctx.Set\(util.ContextKeyRepos, ...\).
 
 <a name="MockSavingsRepository"></a>
 ## type MockSavingsRepository
@@ -8446,7 +8585,7 @@ func (m *MockUserRepository) UpdateDisplayName(userID uint, displayName string) 
 ### func \(\*MockUserRepository\) UpdateEmailVerificationStatus
 
 ```go
-func (m *MockUserRepository) UpdateEmailVerificationStatus(token string, status string) error
+func (m *MockUserRepository) UpdateEmailVerificationStatus(token, status string) error
 ```
 
 
@@ -8619,44 +8758,38 @@ static implements "constants" used in proviant
 
 ## Index
 
-- [Variables](<#variables>)
+- [Constants](<#constants>)
 
 
-## Variables
+## Constants
 
 <a name="TokenRealm"></a>
 
 ```go
-var (
-    // Realm of tokens
+const (
+    // TokenRealm is the realm of tokens
     TokenRealm = "proviant"
 
-    // Name of identity key in tokens
+    // TokenIdentityKey is the name of identity key in tokens
     TokenIdentityKey = "id"
 
-    // Name of username key in tokens
+    // TokenUsernameKey is the name of username key in tokens
     TokenUsernameKey = "username"
 
-    // Name of JTI key in tokens
+    // TokenJTIKey is the name of JTI key in tokens
     TokenJTIKey = "jti"
 
-    // Name of authentication header in token
+    // TokenHeadName is the name of authentication header in token
     TokenHeadName = "Bearer"
 
-    // Configuration for value lookup in token
+    // TokenLookup is the configuration for value lookup in token
     TokenLookup = "header: Authorization, query: token, cookie: jwt"
 
-    // BarcodeDecodingTimeout is the timoeut of the decoding operation in seconds
-    BarcodeDecodingTimeout = time.Second * time.Duration(5)
+    // BarcodeDecodingTimeout is the timeout of the decoding operation
+    BarcodeDecodingTimeout = 5 * time.Second
 
     // RequestIDHeader is the header name for request ID
     RequestIDHeader = "X-Request-ID"
-
-    // RequestIDContextKey is the context key for request ID
-    RequestIDContextKey = "requestID"
-
-    // UserIDContextKey is the context key for user ID (for logger enrichment)
-    UserIDContextKey = "userID"
 )
 ```
 

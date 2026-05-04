@@ -58,7 +58,7 @@ func (c *OCRControllerImpl) ScanExpiryDate(image []byte) (*api.ExpiryScanRespons
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Config.Timeout)*time.Second)
 	defer cancel()
 
-	stdout, stderr, err := runTesseract(ctx, encoded, c.Config.Languages)
+	stdout, stderr, err := c.runTesseract(ctx, encoded, c.Config.Languages)
 	if err != nil {
 		return nil, fmt.Errorf("tesseract error: %w, stderr: %s", err, stderr)
 	}
@@ -125,9 +125,13 @@ func (c *OCRControllerImpl) encodeImage(img image.Image) ([]byte, error) {
 }
 
 // runTesseract with basic parameters
-func runTesseract(ctx context.Context, img []byte, langs string) (stdout, stderr string, err error) {
-	// #nosec G204 — command is hardcoded, not user-controlled
-	cmd := exec.CommandContext(ctx, "tesseract", "stdin", "stdout",
+func (c *OCRControllerImpl) runTesseract(ctx context.Context, img []byte, langs string) (stdout, stderr string, err error) {
+	tesseractPath := c.Config.TesseractPath
+	if tesseractPath == "" {
+		tesseractPath = "tesseract"
+	}
+	// #nosec G204 — path is from fixed configuration, not user-controlled
+	cmd := exec.CommandContext(ctx, tesseractPath, "stdin", "stdout",
 		"-l", langs,
 		"--dpi", "300",
 	)

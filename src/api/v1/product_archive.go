@@ -26,6 +26,14 @@ func joinErrors(errs []database.BulkOperationError) string {
 	return b.String()
 }
 
+func formatProductIDs(ids []uint) string {
+	parts := make([]string, len(ids))
+	for i, id := range ids {
+		parts[i] = strconv.FormatUint(uint64(id), 10)
+	}
+	return strings.Join(parts, ";")
+}
+
 // GetArchivedProducts returns the archived products of a user
 // @Summary      Return a list of archived products
 // @Description  Return a list of archived products of user
@@ -108,11 +116,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-	strProductIDs := make([]string, len(products.ProductIDs))
-	for i, productID := range products.ProductIDs {
-		strProductIDs[i] = strconv.FormatUint(uint64(productID), 10)
-	}
-	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", strings.Join(strProductIDs, ";"))})
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", formatProductIDs(products.ProductIDs))})
 }
 
 // BulkArchiveProducts archives a list of products of a user
@@ -153,11 +157,7 @@ func BulkArchiveProducts(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-	strProductIDs := make([]string, len(products.ProductIDs))
-	for i, productID := range products.ProductIDs {
-		strProductIDs[i] = strconv.FormatUint(uint64(productID), 10)
-	}
-	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were archived", strings.Join(strProductIDs, ";"))})
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were archived", formatProductIDs(products.ProductIDs))})
 }
 
 // RestoreProduct restores an archived product of a user
@@ -239,9 +239,5 @@ func BulkRestoreProducts(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-	strProductIDs := make([]string, len(products.ProductIDs))
-	for i, productID := range products.ProductIDs {
-		strProductIDs[i] = strconv.FormatUint(uint64(productID), 10)
-	}
-	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were restored", strings.Join(strProductIDs, ";"))})
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were restored", formatProductIDs(products.ProductIDs))})
 }

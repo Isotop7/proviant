@@ -2960,27 +2960,6 @@ paths:
       summary: Onboarding page
       tags:
       - web
-  /web/products:
-    get:
-      description: Renders the products list page with optional search
-      produces:
-      - text/html
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Products page
-      tags:
-      - web
   /web/products/{id}/edit:
     get:
       description: Renders the page for editing a product

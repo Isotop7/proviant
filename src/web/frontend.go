@@ -30,6 +30,24 @@ const (
 	AcceptInvitationTitle = "Accept Invitation"
 )
 
+func (frontend *Frontend) mustGetPageContext(ctx *gin.Context) (*zerolog.Logger, *database.RepositoryContainer, uint, bool) {
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		return nil, nil, 0, false
+	}
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return nil, nil, 0, false
+	}
+	return logger, repos, userID, true
+}
+
 // Root renders the home page for authenticated users
 // @Summary      Home page
 // @Description  Renders the home page showing product dashboard
@@ -40,23 +58,8 @@ const (
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web [get]
 func (frontend *Frontend) Root(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	// Extract user id
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
-		return
-	}
-
-	// Get database instance from context
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	logger, repos, userID, ok := frontend.mustGetPageContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -139,23 +142,8 @@ func (frontend *Frontend) User(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web/user/settings [get]
 func (frontend *Frontend) UserSettings(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	// Extract user id
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
-		return
-	}
-
-	// Get database instance from context
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	logger, repos, userID, ok := frontend.mustGetPageContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -677,20 +665,8 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web/onboarding [get]
 func (frontend *Frontend) Onboarding(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	logger, repos, userID, ok := frontend.mustGetPageContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
-		return
-	}
-
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
 		return
 	}
 
@@ -718,22 +694,8 @@ func (frontend *Frontend) Onboarding(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web/recipes [get]
 func (frontend *Frontend) Recipes(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	claims := jwt.ExtractClaims(ctx)
-	userID64, ok := claims[static.TokenIdentityKey].(float64)
+	_, repos, userID, ok := frontend.mustGetPageContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
-		return
-	}
-	userID := uint(userID64)
-
-	// Verify user has household (optional, page can show empty state if none)
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
-	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 

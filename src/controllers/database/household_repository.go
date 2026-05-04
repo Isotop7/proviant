@@ -56,25 +56,15 @@ func (r *HouseholdRepository) GetHouseholdMembers(householdID uint) ([]authentic
 	return users, err
 }
 
-func (r *HouseholdRepository) LeaveHousehold(userID uint) error {
-	tx := r.DB.Begin()
-
-	var user authentication.User
-	if err := tx.First(&user, userID).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	oldHouseholdID := user.HouseholdID
-
-	newHousehold := database.Household{
-		Name: fmt.Sprintf("%s's Household", user.Username),
-	}
+// createSoloHousehold creates a new household named after the user, sets adminID,
+// moves products if the user was the sole member of the old household, then moves the user.
+func createSoloHousehold(tx *gorm.DB, user authentication.User, oldHouseholdID uint, newName string) error {
+	newHousehold := database.Household{Name: newName}
 	if err := tx.Create(&newHousehold).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
-	if err := tx.Model(&newHousehold).Update("admin_id", userID).Error; err != nil {
+	if err := tx.Model(&newHousehold).Update("admin_id", user.ID).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -90,6 +80,22 @@ func (r *HouseholdRepository) LeaveHousehold(userID uint) error {
 
 	if err := tx.Model(&user).Update("household_id", newHousehold.ID).Error; err != nil {
 		tx.Rollback()
+		return err
+	}
+	return nil
+}
+
+func (r *HouseholdRepository) LeaveHousehold(userID uint) error {
+	tx := r.DB.Begin()
+
+	var user authentication.User
+	if err := tx.First(&user, userID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	oldHouseholdID := user.HouseholdID
+	if err := createSoloHousehold(tx, user, oldHouseholdID, fmt.Sprintf("%s's Household", user.Username)); err != nil {
 		return err
 	}
 
@@ -106,35 +112,19 @@ func (r *HouseholdRepository) CreateAndSwitchHousehold(userID uint, name string)
 	}
 
 	oldHouseholdID := user.HouseholdID
-
-	newHousehold := database.Household{Name: name}
-	if err := tx.Create(&newHousehold).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err := tx.Model(&newHousehold).Update("admin_id", userID).Error; err != nil {
-		tx.Rollback()
+	if err := createSoloHousehold(tx, user, oldHouseholdID, name); err != nil {
 		return err
 	}
 
-	var memberCount int64
-	tx.Model(&authentication.User{}).Where(util.QueryHouseholdId, oldHouseholdID).Count(&memberCount)
-	if memberCount == 1 {
-		if err := tx.Model(&database.Product{}).Where(util.QueryHouseholdId, oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-
-	if err := tx.Model(&user).Update("household_id", newHousehold.ID).Error; err != nil {
+	if err := tx.First(&user, userID).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	defaultLocations := []database.StorageLocation{
-		{HouseholdID: newHousehold.ID, Name: "Fridge", Icon: "🧊", SortOrder: 0},
-		{HouseholdID: newHousehold.ID, Name: "Freezer", Icon: "❄️", SortOrder: 1},
-		{HouseholdID: newHousehold.ID, Name: "Pantry", Icon: "🗄️", SortOrder: 2},
+		{HouseholdID: user.HouseholdID, Name: "Fridge", Icon: "🧊", SortOrder: 0},
+		{HouseholdID: user.HouseholdID, Name: "Freezer", Icon: "❄️", SortOrder: 1},
+		{HouseholdID: user.HouseholdID, Name: "Pantry", Icon: "🗄️", SortOrder: 2},
 	}
 	for i := range defaultLocations {
 		if err := tx.Create(&defaultLocations[i]).Error; err != nil {
@@ -317,29 +307,7 @@ func (r *HouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserI
 		return errors.ErrCannotRemoveAdmin
 	}
 
-	newHousehold := database.Household{
-		Name: fmt.Sprintf("%s's Household", memberUser.Username),
-	}
-	if err := tx.Create(&newHousehold).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err := tx.Model(&newHousehold).Update("admin_id", memberUserID).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	var memberCount int64
-	tx.Model(&authentication.User{}).Where(util.QueryHouseholdId, household.ID).Count(&memberCount)
-	if memberCount == 1 {
-		if err := tx.Model(&database.Product{}).Where(util.QueryHouseholdId, household.ID).Update("household_id", newHousehold.ID).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-
-	if err := tx.Model(&memberUser).Update("household_id", newHousehold.ID).Error; err != nil {
-		tx.Rollback()
+	if err := createSoloHousehold(tx, memberUser, household.ID, fmt.Sprintf("%s's Household", memberUser.Username)); err != nil {
 		return err
 	}
 

@@ -23,6 +23,27 @@ const (
 	MsgFailedToMarkHousehold = "Failed to mark household step done: %s"
 )
 
+func mustGetOnboardingContext(ctx *gin.Context) (*zerolog.Logger, *database.RepositoryContainer, uint, bool) {
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID == 0 {
+		logger.Error().Msg(MsgFailedToExtract)
+		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
+		return nil, nil, 0, false
+	}
+
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return nil, nil, 0, false
+	}
+
+	return logger, repos, userID, true
+}
+
 // GetOnboardingState returns the current onboarding progress for the authenticated user
 // @Summary      	Get onboarding state
 // @Description  	Returns the current onboarding progress for the user
@@ -33,20 +54,8 @@ const (
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/state [get]
 func GetOnboardingState(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID == 0 {
-		logger.Error().Msg("Failed to extract user ID from JWT claims")
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
-		return
-	}
-
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	logger, repos, userID, ok := mustGetOnboardingContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -86,20 +95,8 @@ func GetOnboardingState(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/profile [patch]
 func UpdateOnboardingProfile(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID == 0 {
-		logger.Error().Msg(MsgFailedToExtract)
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
-		return
-	}
-
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	logger, repos, userID, ok := mustGetOnboardingContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -142,20 +139,8 @@ func UpdateOnboardingProfile(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/create-household [post]
 func CreateOnboardingHousehold(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID == 0 {
-		logger.Error().Msg(MsgFailedToExtract)
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
-		return
-	}
-
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	logger, repos, userID, ok := mustGetOnboardingContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -201,20 +186,8 @@ func CreateOnboardingHousehold(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/join-invite [post]
 func JoinOnboardingByInvite(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID == 0 {
-		logger.Error().Msg(MsgFailedToExtract)
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
-		return
-	}
-
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	logger, repos, userID, ok := mustGetOnboardingContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -267,20 +240,8 @@ func JoinOnboardingByInvite(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/households [get]
 func GetAvailableHouseholds(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID == 0 {
-		logger.Error().Msg(MsgFailedToExtract)
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
-		return
-	}
-
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	logger, repos, userID, ok := mustGetOnboardingContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -323,20 +284,8 @@ func GetAvailableHouseholds(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/apply-household [post]
 func ApplyForHousehold(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID == 0 {
-		logger.Error().Msg(MsgFailedToExtract)
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
-		return
-	}
-
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	logger, repos, userID, ok := mustGetOnboardingContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 
@@ -387,20 +336,8 @@ func ApplyForHousehold(ctx *gin.Context) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/onboarding/complete [post]
 func CompleteOnboarding(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID == 0 {
-		logger.Error().Msg(MsgFailedToExtract)
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
-		return
-	}
-
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	logger, repos, userID, ok := mustGetOnboardingContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
 

@@ -3552,38 +3552,6 @@
                 }
             }
         },
-        "/web/products": {
-            "get": {
-                "description": "Renders the products list page with optional search",
-                "produces": [
-                    "text/html"
-                ],
-                "tags": [
-                    "web"
-                ],
-                "summary": "Products page",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/web/products/{id}/edit": {
             "get": {
                 "description": "Renders the page for editing a product",
