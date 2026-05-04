@@ -1,0 +1,510 @@
+// ── Login page — split-panel layout ──────────────────────────────────────────
+
+@keyframes auth-spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin-icon {
+  display: inline-block;
+  animation: auth-spin .7s linear infinite;
+}
+
+// ── Layout ──────────────────────────────────────────────────────────────────
+.login-root {
+  display: flex;
+  min-height: 100vh;
+}
+
+// ── Brand panel ─────────────────────────────────────────────────────────────
+.login-brand {
+  width: 440px;
+  flex-shrink: 0;
+  background: var(--accent);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px 48px 44px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 340px;
+    height: 340px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .07);
+    top: -80px;
+    right: -100px;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .05);
+    bottom: 40px;
+    left: -60px;
+  }
+}
+
+.brand-circle-sm {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .06);
+  bottom: 160px;
+  right: 30px;
+}
+
+.brand-top {
+  position: relative;
+  z-index: 1;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 52px;
+}
+
+.brand-logo-mark {
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, .18);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -.5px;
+  border: 1px solid rgba(255, 255, 255, .25);
+}
+
+.brand-logo-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -.5px;
+}
+
+.brand-headline {
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.15;
+  letter-spacing: -.8px;
+  margin-bottom: 16px;
+}
+
+.brand-sub {
+  font-size: 15px;
+  color: rgba(255, 255, 255, .72);
+  line-height: 1.6;
+  max-width: 320px;
+}
+
+.brand-features {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.brand-feature {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.brand-feature-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, .85);
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.brand-bottom {
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  color: rgba(255, 255, 255, .45);
+  letter-spacing: .2px;
+}
+
+// ── Form panel ──────────────────────────────────────────────────────────────
+.login-form-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+.login-form-inner {
+  width: 100%;
+  max-width: 380px;
+}
+
+// ── Invite banner ────────────────────────────────────────────────────────────
+.invite-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  background: var(--accent-subtle);
+  border: 1px solid oklch(.78 .08 162deg);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--fg-2);
+  line-height: 1.5;
+
+  i {
+    color: var(--accent);
+    font-size: 15px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  strong {
+    color: var(--fg);
+  }
+}
+
+// ── Tab switcher ─────────────────────────────────────────────────────────────
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 32px;
+}
+
+.auth-tab {
+  padding: 10px 20px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg-3);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease;
+  margin-bottom: -1px;
+  letter-spacing: -.1px;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--fg-2);
+  }
+
+  &.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+  }
+}
+
+// ── Form heading ─────────────────────────────────────────────────────────────
+.form-heading {
+  margin-bottom: 28px;
+}
+
+.form-heading-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -.5px;
+  margin-bottom: 4px;
+}
+
+.form-heading-sub {
+  font-size: 13px;
+  color: var(--fg-2);
+  line-height: 1.5;
+}
+
+// ── Fields ───────────────────────────────────────────────────────────────────
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+// Override Bootstrap's .field-label in main.scss (too generic) for auth context
+.login-form-inner .field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-2);
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  margin-bottom: 0;
+}
+
+.field-input-wrap {
+  position: relative;
+}
+
+.field-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-3);
+  font-size: 15px;
+  pointer-events: none;
+  transition: color 150ms ease;
+}
+
+.field-input-wrap:focus-within .field-icon {
+  color: var(--accent);
+}
+
+.field-input {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 12px 0 38px;
+  height: 44px;
+  width: 100%;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+
+  &::placeholder {
+    color: var(--fg-3);
+  }
+
+  &:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px oklch(.5 .12 162deg / .12);
+  }
+
+  &.error {
+    border-color: var(--status-expired);
+    box-shadow: 0 0 0 3px oklch(.55 .2 25deg / .10);
+  }
+}
+
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--status-expired);
+}
+
+// ── Password toggle ───────────────────────────────────────────────────────────
+.pwd-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--fg-3);
+  font-size: 15px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 150ms;
+
+  &:hover {
+    color: var(--fg-2);
+  }
+}
+
+// ── Password strength meter ───────────────────────────────────────────────────
+.strength-meter {
+  display: flex;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.strength-bar {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 300ms ease;
+}
+
+.strength-label {
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+// ── Password requirements list ────────────────────────────────────────────────
+.password-requirements {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  li {
+    font-size: 11px;
+    color: var(--fg-3);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 150ms;
+
+    i {
+      font-size: 10px;
+    }
+
+    &.req-met {
+      color: var(--status-fresh);
+    }
+  }
+}
+
+// ── Forgot password ───────────────────────────────────────────────────────────
+.forgot-link {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -10px;
+  margin-bottom: 16px;
+
+  a {
+    font-size: 12px;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// ── Submit button ─────────────────────────────────────────────────────────────
+.btn-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--accent-active);
+  background: var(--accent);
+  color: white;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: -.1px;
+  margin-top: 8px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .12), inset 0 1px 0 rgba(255, 255, 255, .12);
+  transition: background 150ms ease, box-shadow 150ms ease, transform 120ms ease;
+
+  &:hover:not(:disabled) {
+    background: var(--accent-hover);
+    box-shadow: 0 3px 10px oklch(.5 .12 162deg / .35), 0 1px 0 rgba(0, 0, 0, .12);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  &:disabled {
+    opacity: .7;
+    cursor: not-allowed;
+  }
+}
+
+// ── Terms note ────────────────────────────────────────────────────────────────
+.terms-note {
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--fg-3);
+  line-height: 1.6;
+  text-align: center;
+
+  a {
+    color: var(--fg-2);
+    text-decoration: underline;
+  }
+}
+
+// ── Mobile logo ───────────────────────────────────────────────────────────────
+.mobile-logo {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+
+.mobile-logo-mark {
+  width: 38px;
+  height: 38px;
+  background: var(--accent);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.mobile-logo-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -.4px;
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 768px) {
+  .login-brand {
+    display: none;
+  }
+
+  .mobile-logo {
+    display: flex;
+  }
+
+  .login-form-panel {
+    align-items: flex-start;
+    padding: 40px 24px;
+  }
+
+  .login-form-inner {
+    max-width: 100%;
+  }
+}

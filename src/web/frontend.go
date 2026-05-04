@@ -87,9 +87,27 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 // @Success      200  {string}  html
 // @Router       /web/auth [get]
 func (frontend *Frontend) Auth(ctx *gin.Context) {
+	minLength := 12
+	requireUppercase := false
+	requireDigit := false
+	requireSpecial := false
+
+	if cfgVal, ok := ctx.Get(util.ContextKeyProviantConfig); ok {
+		if cfg, ok := cfgVal.(*configuration.ProviantConfiguration); ok {
+			minLength = cfg.Server.Authentication.PasswordMinLength
+			requireUppercase = cfg.Server.Authentication.PasswordRequireUppercase
+			requireDigit = cfg.Server.Authentication.PasswordRequireDigit
+			requireSpecial = cfg.Server.Authentication.PasswordRequireSpecial
+		}
+	}
+
 	pageData := map[string]any{
-		"InviteToken": ctx.Query("invite_token"),
-		"Title":       "Authentication",
+		"InviteToken":              ctx.Query("invite_token"),
+		"Title":                    "Authentication",
+		"PasswordMinLength":        minLength,
+		"PasswordRequireUppercase": requireUppercase,
+		"PasswordRequireDigit":     requireDigit,
+		"PasswordRequireSpecial":   requireSpecial,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "auth.tmpl", pageData)
 }
@@ -171,17 +189,35 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
+	minLength := 12
+	requireUppercase := false
+	requireDigit := false
+	requireSpecial := false
+
+	if cfgVal, ok := ctx.Get(util.ContextKeyProviantConfig); ok {
+		if cfg, ok := cfgVal.(*configuration.ProviantConfiguration); ok {
+			minLength = cfg.Server.Authentication.PasswordMinLength
+			requireUppercase = cfg.Server.Authentication.PasswordRequireUppercase
+			requireDigit = cfg.Server.Authentication.PasswordRequireDigit
+			requireSpecial = cfg.Server.Authentication.PasswordRequireSpecial
+		}
+	}
+
 	pageData := map[string]any{
-		"InviteToken":         ctx.Query("invite_token"),
-		"Title":               "User Settings",
-		"User":                user,
-		"Household":           household,
-		"IsAdmin":             isAdmin,
-		"Members":             members,
-		"PendingApplications": pendingApplications,
-		"MyApplications":      myApplications,
-		"TelegramConfigured":  telegramConfigured,
-		"Locations":           locations,
+		"InviteToken":              ctx.Query("invite_token"),
+		"Title":                    "User Settings",
+		"User":                     user,
+		"Household":                household,
+		"IsAdmin":                  isAdmin,
+		"Members":                  members,
+		"PendingApplications":      pendingApplications,
+		"MyApplications":           myApplications,
+		"TelegramConfigured":       telegramConfigured,
+		"Locations":                locations,
+		"PasswordMinLength":        minLength,
+		"PasswordRequireUppercase": requireUppercase,
+		"PasswordRequireDigit":     requireDigit,
+		"PasswordRequireSpecial":   requireSpecial,
 	}
 
 	if isAdmin {

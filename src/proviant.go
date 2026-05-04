@@ -194,6 +194,7 @@ func main() {
 	// Setup logging
 	logger := setupLogging(proviantConfiguration)
 	logger.Info().Msg("Logging initialized")
+	logger.Info().Msgf("Configuration loaded from: %s", viper.ConfigFileUsed())
 	stdlog.SetOutput(logger)
 	stdlog.SetFlags(0)
 

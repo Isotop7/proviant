@@ -32,15 +32,15 @@ type DatabaseConfiguration struct {
 
 // AuthenticationConfiguration contains all properties regarding the JSON Web Tokens
 type AuthenticationConfiguration struct {
-	TokenPassword            string
-	TokenLifetime            int
-	MaxLoginAttempts         int
-	LockoutDurationMins      int
-	PasswordMinLength        int
-	PasswordRequireUppercase bool
-	PasswordRequireDigit     bool
-	PasswordRequireSpecial   bool
-	PasswordCheckBreached    bool
+	TokenPassword            string `mapstructure:"tokenPassword"`
+	TokenLifetime            int    `mapstructure:"tokenLifetime"`
+	MaxLoginAttempts         int    `mapstructure:"max_login_attempts"`
+	LockoutDurationMins      int    `mapstructure:"lockout_duration_mins"`
+	PasswordMinLength        int    `mapstructure:"password_min_length"`
+	PasswordRequireUppercase bool   `mapstructure:"password_require_uppercase"`
+	PasswordRequireDigit     bool   `mapstructure:"password_require_digit"`
+	PasswordRequireSpecial   bool   `mapstructure:"password_require_special"`
+	PasswordCheckBreached    bool   `mapstructure:"password_check_breached"`
 }
 
 // CorsConfiguration contains all properties for the CORS configuration of the proviant server
@@ -118,12 +118,12 @@ type OpenFoodFactsConfiguration struct {
 
 // OCRConfiguration contains settings for OCR expiry date detection
 type OCRConfiguration struct {
-	Enabled   bool   `json:"enabled"`   // master switch
-	Provider  string `json:"provider"`  // "tesseract" (local), "google", "openai"
-	APIKey    string `json:"apiKey"`    // for cloud providers
-	Endpoint  string `json:"endpoint"`  // custom endpoint (e.g., Tesseract HTTP server)
-	Timeout   int    `json:"timeout"`   // seconds per request
-	Languages string `json:"languages"` // Tesseract language codes, e.g. "deu+eng"
+	Enabled   bool   `mapstructure:"enabled"`   // master switch
+	Provider  string `mapstructure:"provider"`  // "tesseract" (local), "google", "openai"
+	APIKey    string `mapstructure:"apiKey"`    // for cloud providers
+	Endpoint  string `mapstructure:"endpoint"`  // custom endpoint (e.g., Tesseract HTTP server)
+	Timeout   int    `mapstructure:"timeout"`   // seconds per request
+	Languages string `mapstructure:"languages"` // Tesseract language codes, e.g. "deu+eng"
 }
 
 // RecipeAPIConfiguration contains settings for the recipe suggestions feature

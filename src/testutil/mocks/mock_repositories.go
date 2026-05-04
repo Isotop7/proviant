@@ -395,7 +395,7 @@ func (m *MockPATRepository) GetPATByID(patID uint) (*authentication.PersonalAcce
 	return m.PAT, m.Err
 }
 func (m *MockPATRepository) DeletePAT(patID, userID uint) error { return m.Err }
-func (m *MockPATRepository) UpdateLastUsed(patID uint) error         { return m.Err }
+func (m *MockPATRepository) UpdateLastUsed(patID uint) error    { return m.Err }
 
 var _ database.PATRepositoryInterface = (*MockPATRepository)(nil)
 

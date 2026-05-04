@@ -58,8 +58,8 @@ var knownMealCategories = []string{
 }
 
 const (
-	MsgFailedCloseResponseBody  = "failed to close response body"
-	MsgApiReturnWrapper			= "API returned %d"
+	MsgFailedCloseResponseBody = "failed to close response body"
+	MsgApiReturnWrapper        = "API returned %d"
 )
 
 // NewRecipeController creates a new controller.

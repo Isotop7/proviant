@@ -70,13 +70,23 @@
                             New Password <span class="text-danger" aria-hidden="true">*</span>
                         </label>
                         <input id="inputPassword" type="password" class="form-control"
-                               aria-required="true" autocomplete="new-password">
+                               aria-required="true" autocomplete="new-password"
+                               data-min-length="{{ .PasswordMinLength }}"
+                               data-require-uppercase="{{ .PasswordRequireUppercase }}"
+                               data-require-digit="{{ .PasswordRequireDigit }}"
+                               data-require-special="{{ .PasswordRequireSpecial }}">
                         <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please enter a new password.</div>
                         <ul class="list-unstyled small mt-1">
-                            <li id="req-length"><i class="bi bi-circle me-1"></i>At least 8 characters</li>
+                            <li id="req-length"><i class="bi bi-circle me-1"></i>At least {{ .PasswordMinLength }} characters</li>
+                            {{ if .PasswordRequireUppercase }}
                             <li id="req-upper"><i class="bi bi-circle me-1"></i>At least one uppercase letter</li>
+                            {{ end }}
+                            {{ if .PasswordRequireDigit }}
                             <li id="req-digit"><i class="bi bi-circle me-1"></i>At least one number</li>
+                            {{ end }}
+                            {{ if .PasswordRequireSpecial }}
                             <li id="req-special"><i class="bi bi-circle me-1"></i>At least one special character</li>
+                            {{ end }}
                         </ul>
                     </div>
                     <div class="col-md-6">

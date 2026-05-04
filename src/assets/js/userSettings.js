@@ -16,8 +16,10 @@ function ShowSuccessModal(message, btnFunction) {
 }
 
 function validatePasswordRequirements(password) {
+    const pwInput = document.getElementById("inputPassword");
+    const minLen = pwInput ? parseInt(pwInput.dataset.minLength || "12", 10) : 12;
     const requirements = {
-        length: password.length >= 8,
+        length: password.length >= minLen,
         upper: /[A-Z]/.test(password),
         digit: /[0-9]/.test(password),
         special: /[^A-Za-z0-9]/.test(password)
@@ -97,11 +99,12 @@ function UpdatePassword() {
     inputUsername.classList.add("is-invalid");
     formIsValid = false;
   }
+  const minLength = parseInt(inputPassword.dataset.minLength || "12", 10);
   if (!password) {
     inputPassword.classList.add("is-invalid");
     formIsValid = false;
   }
-  if (password && password.length < 12) {
+  if (password && password.length < minLength) {
     inputPassword.classList.add("is-invalid");
     formIsValid = false;
   }
@@ -1252,7 +1255,8 @@ document.addEventListener("input", function (event) {
       break;
     case "inputPassword": {
       if (target.dataset.touched) {
-        const valid = target.value.length >= 12;
+        const minLen = parseInt(target.dataset.minLength || "12", 10);
+        const valid = target.value.length >= minLen;
         target.classList.toggle("is-invalid", !valid);
         target.classList.toggle("is-valid", valid);
       } else {
@@ -1334,7 +1338,8 @@ document.addEventListener("focusout", function (event) {
       break;
     }
     case "inputPassword": {
-      const valid = target.value.length >= 12;
+      const minLen = parseInt(target.dataset.minLength || "12", 10);
+      const valid = target.value.length >= minLen;
       target.dataset.touched = "1";
       target.classList.toggle("is-invalid", !valid);
       target.classList.toggle("is-valid", valid);

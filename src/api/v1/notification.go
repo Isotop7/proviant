@@ -6,8 +6,8 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/models/authentication"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"

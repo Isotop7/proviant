@@ -27,6 +27,7 @@ node_modules/
 # assets
 src/assets/css/main.css*
 src/assets/css/fonts.css*
+src/assets/css/login.css*
 src/assets/js/bootstrap*
 src/assets/js/html5-qrcode.min.js
 src/assets/js/chart*

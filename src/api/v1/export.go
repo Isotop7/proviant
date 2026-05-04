@@ -24,7 +24,6 @@ const (
 	mimeTypeCSV                      = "text/csv"
 )
 
-
 func parseDateRange(ctx *gin.Context) (*time.Time, *time.Time) {
 	var from, to *time.Time
 
@@ -338,7 +337,7 @@ func ExportFullJSON(ctx *gin.Context) {
 			Active:   activeProducts,
 			Archived: archivedProducts,
 		},
-		Stats:     stats,
+		Stats:      stats,
 		ExportedAt: exportedAt,
 	}
 

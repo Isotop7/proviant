@@ -818,15 +818,6 @@ $bootstrap-icons-font-dir: "../fonts";
   }
 }
 
-div.form-floating > input#inputUsername {
-  margin-bottom: -1px;
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-div.form-floating > input#inputMailAddress {
-  margin-bottom: 10px;
-}
 
 td a,
 th a {
@@ -1944,6 +1935,9 @@ button.pv-nav-item {
     color: var(--status-expired-hover);
   }
 }
+
+// Login page
+@import './login';
 
 //
 // Auth page toast
