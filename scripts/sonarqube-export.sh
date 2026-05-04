@@ -21,21 +21,23 @@ cd "$PROJECT_ROOT"
 
 SONAR_URL="${SONAR_URL:-https://sonarcloud.io}"
 API_BASE="${SONAR_URL}/api/issues/search"
-OUTPUT_FILE="sonar-issues.json"
+OUTPUT_FILE="sonar-export.json"
 STATUSES="OPEN"
 EXTRA_PARAMS=""
+MODE="issues"
 
 usage() {
 	cat <<'EOF'
 Usage: sonarqube-issues-export.sh [options]
 
 Options:
-  -o, --output <file>       Output file path (default: sonarqube-issues.json)
+  -o, --output <file>       Output file path (default: sonar-issues.json)
   --statuses <list>         Comma-separated: OPEN,CONFIRMED,REOPENED,RESOLVED,CLOSED
   --resolutions <list>      Comma-separated: FALSE-POSITIVE,WONTFIX,FIXED,REMOVED
   --severities <list>       Comma-separated: BLOCKER,CRITICAL,MAJOR,MINOR,INFO
   --types <list>            Comma-separated: BUG,VULNERABILITY,CODE_SMELL
   --tags <list>             Comma-separated tag filter
+  --duplications            Export code duplication metrics instead of issues
   -h, --help                Show this help
 
 Env vars:
@@ -52,6 +54,7 @@ while [[ $# -gt 0 ]]; do
 		--statuses) STATUSES="$2"; shift 2 ;;
 		--resolutions|--severities|--types|--tags)
 			EXTRA_PARAMS="${EXTRA_PARAMS}&${1#--}=$2"; shift 2 ;;
+		--duplications) MODE="duplications"; shift ;;
 		-h|--help) usage ;;
 		*) echo "Unknown option: $1"; usage ;;
 	esac
@@ -74,6 +77,50 @@ fi
 
 echo "Instance: ${SONAR_URL}"
 echo "Project:  ${PROJECT_KEY}"
+
+if [ "$MODE" = "duplications" ]; then
+	DUPLICATION_METRICS="duplicated_lines_density,duplicated_lines,duplicated_blocks"
+	TREE_BASE="${SONAR_URL}/api/measures/component_tree?component=${PROJECT_KEY}&metricKeys=${DUPLICATION_METRICS}&qualifiers=FIL&strategy=leaves&ps=500"
+
+	page=1
+	all_files="[]"
+
+	while true; do
+		echo -n "  Fetching page ${page} ..."
+		resp=$(curl -sS -u "${SONAR_TOKEN}:" "${TREE_BASE}&p=${page}")
+
+		if echo "$resp" | jq -e '.errors' > /dev/null 2>&1; then
+			echo ""
+			echo "ERROR: $(echo "$resp" | jq -r '.errors[].msg')"
+			exit 1
+		fi
+
+		fetched=$(echo "$resp" | jq '.components | length')
+		total_pages=$(echo "$resp" | jq '.paging | ceil(.total / .pageSize)' 2>/dev/null || echo "$page")
+		echo " ${fetched} files"
+
+		batch=$(echo "$resp" | jq '[.components[] | {
+			path: .path,
+			name: .name,
+			duplicated_lines_density: (.measures[] | select(.metric == "duplicated_lines_density") | .value | tonumber),
+			duplicated_lines: (.measures[] | select(.metric == "duplicated_lines") | .value | tonumber),
+			duplicated_blocks: (.measures[] | select(.metric == "duplicated_blocks") | .value | tonumber)
+		}]')
+
+		all_files=$(echo "$all_files $batch" | jq -s '.[0] + .[1]')
+
+		if [ "$fetched" -lt 500 ]; then
+			break
+		fi
+		page=$((page + 1))
+	done
+
+	echo "$all_files" | jq 'sort_by(-.duplicated_lines_density)' > "$OUTPUT_FILE"
+
+	final_count=$(jq 'length' "$OUTPUT_FILE")
+	echo "Exported ${final_count} files to ${OUTPUT_FILE}"
+	exit 0
+fi
 
 BASE_URL="${API_BASE}?componentKeys=${PROJECT_KEY}&statuses=${STATUSES}${EXTRA_PARAMS}"
 

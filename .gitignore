@@ -13,7 +13,7 @@
 
 # Sonar scan
 sonar-report.txt
-sonar-issues.json
+sonar-export.json
 
 # Go workspace file
 go.work

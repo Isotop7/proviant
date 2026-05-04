@@ -182,7 +182,15 @@ tasks:
       - sh: '[ -n "$SONAR_TOKEN" ]'
         msg: "SONAR_TOKEN env var is not set."
     cmds:
-      - ./scripts/sonarqube-issues-export.sh
+      - ./scripts/sonarqube-export.sh
+
+  sonar-duplications:
+    desc: Export SonarQube code duplications to JSON for agent consumption (requires SONAR_TOKEN)
+    preconditions:
+      - sh: '[ -n "$SONAR_TOKEN" ]'
+        msg: "SONAR_TOKEN env var is not set."
+    cmds:
+      - ./scripts/sonarqube-export.sh --duplications
 
   sonar-scan:
     desc: Run SonarCloud scan locally and save output to sonar-report.txt (requires SONAR_TOKEN)
