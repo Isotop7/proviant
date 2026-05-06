@@ -19,9 +19,7 @@
   <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-white d-md-none">
     <div class="pv-mobile-thumb">
       {{ if .Product.ImageURL }}
-      <img src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}"
-           onload="this.style.opacity='1'; this.nextElementSibling.style.display='none';"
-           onerror="this.nextElementSibling.style.display='flex';">
+       <img src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}">
       {{ end }}
       <i class="bi bi-image pv-mobile-thumb-icon"></i>
     </div>
@@ -29,8 +27,7 @@
       <div style="font-size:13px;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ .Product.ProductName }}</div>
       <div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-3);margin-top:2px;">{{ .Product.Barcode }}</div>
     </div>
-    <button type="button" class="btn" style="background:var(--accent-subtle);border:1px solid oklch(0.78 0.08 162);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--accent);font-weight:600;"
-      onclick="document.getElementById('inputImageURL').focus();">
+    <button type="button" id="btnMobilePhotoFocus" class="btn" style="background:var(--accent-subtle);border:1px solid oklch(0.78 0.08 162);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--accent);font-weight:600;">
       <i class="bi bi-image"></i> Photo
     </button>
   </div>
@@ -117,8 +114,7 @@
                   <input type="date" class="pv-field-input mono" id="inputExpireAt"
                     value="{{ .Product.ExpireAt | inputDate }}" required style="flex:1;">
                   {{ if .Product.ExpireAt.IsZero }}
-                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTodayExpiry" title="Set to today"
-                    onclick="var e=document.getElementById('inputExpireAt'); e.value = new Date().toISOString().slice(0,10); e.dispatchEvent(new Event('blur'));">
+                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTodayExpiry" title="Set to today">
                     <i class="bi bi-calendar-check"></i>
                   </button>
                   {{ end }}
@@ -130,9 +126,9 @@
               <div class="pv-field">
                 <label class="pv-field-label">Amount</label>
                 <div class="pv-stepper">
-                  <button type="button" onclick="let i=this.nextElementSibling;i.value=Math.max(0,+i.value-1)">−</button>
+                  <button type="button" data-amount-step="-1">−</button>
                   <input type="number" id="inputAmount" value="{{ .Product.Amount }}" min="0">
-                  <button type="button" onclick="let i=this.previousElementSibling;i.value=+i.value+1">+</button>
+                  <button type="button" data-amount-step="1">+</button>
                 </div>
               </div>
             </div>
@@ -182,16 +178,14 @@
         <div class="pv-product-image-card">
           <div class="pv-product-image-area">
             {{ if .Product.ImageURL }}
-            <img id="imgProduct" src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}" class="pv-img-product"
-                 onload="this.style.opacity='1'; document.getElementById('imgProductFallback').style.display='none';"
-                 onerror="document.getElementById('imgProductFallback').style.display='flex';">
+            <img id="imgProduct" src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}" class="pv-img-product">
             {{ end }}
             <div id="imgProductFallback" class="pv-product-image-fallback">
               <i class="bi bi-image"></i>
               <span>No image</span>
             </div>
             <div class="pv-product-image-overlay">
-              <button type="button" onclick="document.getElementById('inputImageURL').focus()">
+              <button type="button" id="btnDesktopChangeImage">
                 <i class="bi bi-image"></i> Change image
               </button>
             </div>

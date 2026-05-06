@@ -367,6 +367,13 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 		return
 	}
 
+	// Inject CSP nonce if available and not already set
+	if _, exists := data["CSPNonce"]; !exists {
+		if nonce, ok := ctx.Get(util.ContextKeyCSPNonce); ok {
+			data["CSPNonce"] = nonce
+		}
+	}
+
 	// Write parsed template to temporary buffer
 	buf := new(bytes.Buffer)
 
@@ -412,6 +419,11 @@ func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, m
 		"Title":   fmt.Sprintf("Error %d", code),
 		"Code":    code,
 		"Message": message,
+	}
+
+	// Inject CSP nonce if available
+	if nonce, ok := ctx.Get(util.ContextKeyCSPNonce); ok {
+		data["CSPNonce"] = nonce
 	}
 
 	// Check for errors

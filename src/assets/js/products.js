@@ -206,20 +206,59 @@ document.addEventListener("click", function (event) {
         proviant.exportFullJSON();
         return;
     }
+
+    // Bulk action buttons (data-bulk-action attribute)
+    var bulkBtn = target.closest('[data-bulk-action]');
+    if (bulkBtn) {
+        event.preventDefault();
+        bulkAction(bulkBtn.dataset.bulkAction);
+        return;
+    }
+
+    // List-view qty stepper buttons
+    var qtyBtn = target.closest('[data-qty-action]');
+    if (qtyBtn) {
+        event.preventDefault();
+        var id = parseInt(qtyBtn.dataset.productId, 10);
+        var delta = qtyBtn.dataset.qtyAction === 'inc' ? 1 : -1;
+        changeQty(id, delta);
+        return;
+    }
+
+    // Focus-target delegator (click wrapper div to focus input)
+    var focusDiv = target.closest('[data-focus-target]');
+    if (focusDiv) {
+        var targetEl = document.getElementById(focusDiv.dataset.focusTarget);
+        if (targetEl) targetEl.focus();
+    }
 });
 
 /* Event delegation for checkbox changes */
 document.addEventListener("change", function (event) {
-    const target = event.target;
-    if (target.matches('input[type="checkbox"]')) {
-        const cardId = `card-${target.id.split('-')[1]}`;
-        const card = document.getElementById(cardId);
-        const checkbox = document.getElementById(`checkbox-${target.id.split('-')[1]}`);
-        if (card) {
-            card.classList.toggle('border-info');
-            if (checkbox) {
-                checkbox.checked = !checkbox.checked;
-            }
+    var target = event.target;
+    if (!target.matches('input[type="checkbox"]')) return;
+
+    if (target.id === 'selectAll') {
+        var checked = target.checked;
+        document.querySelectorAll('.row-checkbox').forEach(function (cb) {
+            cb.checked = checked;
+        });
+        updateBulkSelection();
+        return;
+    }
+
+    if (target.matches('.row-checkbox')) {
+        updateBulkSelection();
+        return;
+    }
+
+    var cardId = 'card-' + target.id.split('-')[1];
+    var card = document.getElementById(cardId);
+    var checkbox = document.getElementById('checkbox-' + target.id.split('-')[1]);
+    if (card) {
+        card.classList.toggle('border-info');
+        if (checkbox) {
+            checkbox.checked = !checkbox.checked;
         }
     }
 });
@@ -460,7 +499,6 @@ function bulkAction(action) {
 }
 
 // ── List view: qty stepper ──────────────────────────────────────
-// Inline onclick handlers in list view call this function
 function changeQty(id, delta) {
     proviant.updateProductAmount(id, delta).then((response) => {
         if (response.code === 200) {
@@ -494,4 +532,31 @@ document.addEventListener('click', function(event) {
   if (event.target.closest('.filter-pill') || event.target.closest('.btn-view') || event.target.closest('#show-all-btn')) {
     showSkeleton();
   }
+});
+
+// ── Image fallback handling ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    function findFallback(img) {
+        var listThumb = img.closest('.list-thumb');
+        if (listThumb) {
+            return listThumb.querySelector('.list-thumb-fallback');
+        }
+        var productImg = img.closest('.product-img');
+        if (productImg) {
+            return productImg.querySelector('.product-img-fallback');
+        }
+        return null;
+    }
+
+    document.querySelectorAll('.list-thumb-img, .product-card .product-img img').forEach(function (img) {
+        img.addEventListener('load', function () {
+            img.style.opacity = '1';
+            var fb = findFallback(img);
+            if (fb) fb.style.display = 'none';
+        });
+        img.addEventListener('error', function () {
+            var fb = findFallback(img);
+            if (fb) fb.style.display = 'flex';
+        });
+    });
 });

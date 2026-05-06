@@ -144,25 +144,75 @@ document.addEventListener("click", function (event) {
     if (event.target.closest('#btnConsumeProduct') || event.target.closest('#btnConsumeProductMobile')) {
         consumeProduct();
     }
+
+    // Set expiry date to today
+    if (event.target.closest('#btnTodayExpiry')) {
+        var expireInput = document.getElementById('inputExpireAt');
+        if (expireInput) {
+            expireInput.value = new Date().toISOString().slice(0, 10);
+            expireInput.dispatchEvent(new Event('blur'));
+        }
+    }
+
+    // Amount stepper buttons
+    var stepBtn = event.target.closest('[data-amount-step]');
+    if (stepBtn) {
+        var amountInput = document.getElementById('inputAmount');
+        if (amountInput) {
+            var step = parseInt(stepBtn.dataset.amountStep, 10);
+            amountInput.value = Math.max(0, parseInt(amountInput.value, 10) + step);
+        }
+    }
+
+    // Focus image URL input
+    if (event.target.closest('#btnMobilePhotoFocus') || event.target.closest('#btnDesktopChangeImage')) {
+        var imageInput = document.getElementById('inputImageURL');
+        if (imageInput) imageInput.focus();
+    }
 });
 
 /* Blur validation for required fields */
 document.addEventListener("DOMContentLoaded", function () {
-    const inputProductName = document.getElementById("inputProductName");
+    var inputProductName = document.getElementById("inputProductName");
     if (inputProductName) {
         inputProductName.addEventListener("blur", function () {
-            const valid = this.value.trim() !== "";
+            var valid = this.value.trim() !== "";
             this.classList.toggle("is-invalid", !valid);
             this.classList.toggle("is-valid", valid);
         });
     }
 
-    const inputExpireAt = document.getElementById("inputExpireAt");
+    var inputExpireAt = document.getElementById("inputExpireAt");
     if (inputExpireAt) {
         inputExpireAt.addEventListener("blur", function () {
-            const valid = this.value !== "";
+            var valid = this.value !== "";
             this.classList.toggle("is-invalid", !valid);
             this.classList.toggle("is-valid", valid);
+        });
+    }
+
+    // Set up image fallback handling
+    var imgProduct = document.getElementById('imgProduct');
+    if (imgProduct) {
+        imgProduct.addEventListener('load', function () {
+            this.style.opacity = '1';
+            var fb = document.getElementById('imgProductFallback');
+            if (fb) fb.style.display = 'none';
+        });
+        imgProduct.addEventListener('error', function () {
+            var fb = document.getElementById('imgProductFallback');
+            if (fb) fb.style.display = 'flex';
+        });
+    }
+
+    var mobileThumb = document.querySelector('.pv-mobile-thumb img');
+    if (mobileThumb) {
+        mobileThumb.addEventListener('load', function () {
+            this.style.opacity = '1';
+            if (this.nextElementSibling) this.nextElementSibling.style.display = 'none';
+        });
+        mobileThumb.addEventListener('error', function () {
+            if (this.nextElementSibling) this.nextElementSibling.style.display = 'flex';
         });
     }
 });

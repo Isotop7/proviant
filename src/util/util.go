@@ -15,6 +15,7 @@ const (
 	ContextKeyProviantConfig         = "proviantConfig"
 	ContextKeyUserID                 = "userID"
 	ContextKeyRequestID              = "requestID"
+	ContextKeyCSPNonce               = "cspNonce"
 
 	// Database query wrappers
 	QueryId               = "id = ?"

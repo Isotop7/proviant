@@ -139,7 +139,7 @@
 </div>
 
 <script src="/assets/js/html5-qrcode.min.js"></script>
-<script>
+<script nonce="{{ .CSPNonce }}">
 // On successful camera scan, activate the scan line animation
 document.addEventListener('DOMContentLoaded', function () {
     const scanLine = document.getElementById('scanLine');

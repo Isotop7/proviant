@@ -70,15 +70,15 @@
             <div id="bulkActions" class="bulk-actions-bar">
                 <span id="bulkCount" class="bulk-count"></span>
                 {{ if eq $.StatusFilter "archived" }}
-                <button onclick="bulkAction('restore')" class="btn-bulk">
+                <button data-bulk-action="restore" class="btn-bulk">
                     <i class="bi bi-arrow-counterclockwise"></i> Restore
                 </button>
                 {{ else }}
-                <button onclick="bulkAction('archive')" class="btn-bulk">
+                <button data-bulk-action="archive" class="btn-bulk">
                     <i class="bi bi-check-circle"></i> Consumed
                 </button>
                 {{ end }}
-                <button onclick="bulkAction('delete')" class="btn-bulk danger">
+                <button data-bulk-action="delete" class="btn-bulk danger">
                     <i class="bi bi-trash3"></i> Wasted
                 </button>
             </div>
@@ -117,7 +117,7 @@
 <div id="productList">
     <div class="list-header">
         <div class="list-checkbox-col">
-            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" class="list-checkbox">
+            <input type="checkbox" id="selectAll" class="list-checkbox">
         </div>
         <div class="col-product">Product</div>
         <div class="col-status">Status</div>
@@ -261,15 +261,12 @@
     {{ range .Products }}
     <div class="list-row" data-id="{{ .Model.ID }}">
         <div class="list-checkbox-col">
-            <input type="checkbox" class="row-checkbox list-checkbox" value="{{ .Model.ID }}"
-                onchange="updateBulkSelection()">
+            <input type="checkbox" class="row-checkbox list-checkbox" value="{{ .Model.ID }}">
         </div>
         <div class="col-product">
             <a href="/web/products/{{ .Model.ID }}/edit" class="list-thumb">
                 {{ if .ImageURL }}
-                <img src="{{ .ImageURL }}" alt="{{ .ProductName }}" class="list-thumb-img" loading="lazy"
-                     onload="this.style.opacity='1'; this.closest('.list-thumb').querySelector('.list-thumb-fallback').style.display='none';"
-                     onerror="this.closest('.list-thumb').querySelector('.list-thumb-fallback').style.display='flex';">
+                <img src="{{ .ImageURL }}" alt="{{ .ProductName }}" class="list-thumb-img" loading="lazy">
                 {{ end }}
                 <div class="list-thumb-fallback">
                     <i class="bi bi-box-seam list-thumb-icon"></i>
@@ -308,9 +305,9 @@
             <span class="qty-static">{{ .Amount }}</span>
             {{ else }}
             <div class="qty-stepper">
-                <button type="button" onclick="changeQty({{ .Model.ID }}, -1)">−</button>
+                <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}">−</button>
                 <span id="qty-{{ .Model.ID }}">{{ .Amount }}</span>
-                <button type="button" onclick="changeQty({{ .Model.ID }}, 1)">+</button>
+                <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}">+</button>
             </div>
             {{ end }}
         </div>
@@ -370,15 +367,15 @@
     <span id="mobileBulkCount" class="bulk-count"></span>
     <div class="d-flex gap-2">
       {{ if eq $.StatusFilter "archived" }}
-      <button onclick="bulkAction('restore')" class="btn-bulk">
+      <button data-bulk-action="restore" class="btn-bulk">
         <i class="bi bi-arrow-counterclockwise"></i> Restore
       </button>
       {{ else }}
-      <button onclick="bulkAction('archive')" class="btn-bulk">
+      <button data-bulk-action="archive" class="btn-bulk">
         <i class="bi bi-check-circle"></i> Consumed
       </button>
       {{ end }}
-      <button onclick="bulkAction('delete')" class="btn-bulk danger">
+      <button data-bulk-action="delete" class="btn-bulk danger">
         <i class="bi bi-trash3"></i> Wasted
       </button>
     </div>
@@ -418,7 +415,7 @@
                 <!-- Manual input section -->
                 <div id="manualInputSection">
                     <div class="field-label">Barcode</div>
-                    <div class="barcode-input-wrap" onclick="document.getElementById('barcode').focus()">
+                    <div class="barcode-input-wrap" data-focus-target="barcode">
                         <i class="bi bi-upc-scan barcode-scan-icon"></i>
 <input id="barcode" type="text" inputmode="numeric" pattern="[0-9]{13}"
 			placeholder="Scan or type EAN barcode…"
