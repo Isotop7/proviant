@@ -15,8 +15,8 @@ import (
 func newTestOCRController() *OCRControllerImpl {
 	logger := zerolog.Nop()
 	config := configuration.OCRConfiguration{
-		Timeout:      30,
-		Languages:    "eng",
+		Timeout:       30,
+		Languages:     "eng",
 		TesseractPath: "/usr/bin/tesseract",
 	}
 	return NewOCRController(&logger, &config)

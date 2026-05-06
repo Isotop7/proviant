@@ -61,6 +61,7 @@ type ServerConfiguration struct {
 	CORS            CorsConfiguration
 	BaseURL         string
 	SecurityHeaders SecurityHeadersConfiguration
+	TrustedProxies  []string `mapstructure:"trustedProxies"`
 }
 
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog
@@ -118,12 +119,12 @@ type OpenFoodFactsConfiguration struct {
 
 // OCRConfiguration contains settings for OCR expiry date detection
 type OCRConfiguration struct {
-	Enabled   bool   `mapstructure:"enabled"`   // master switch
-	Provider  string `mapstructure:"provider"`  // "tesseract" (local), "google", "openai"
-	APIKey    string `mapstructure:"apiKey"`    // for cloud providers
-	Endpoint  string `mapstructure:"endpoint"`  // custom endpoint (e.g., Tesseract HTTP server)
-	Timeout      int    `mapstructure:"timeout"`      // seconds per request
-	Languages    string `mapstructure:"languages"`    // Tesseract language codes, e.g. "deu+eng"
+	Enabled       bool   `mapstructure:"enabled"`       // master switch
+	Provider      string `mapstructure:"provider"`      // "tesseract" (local), "google", "openai"
+	APIKey        string `mapstructure:"apiKey"`        // for cloud providers
+	Endpoint      string `mapstructure:"endpoint"`      // custom endpoint (e.g., Tesseract HTTP server)
+	Timeout       int    `mapstructure:"timeout"`       // seconds per request
+	Languages     string `mapstructure:"languages"`     // Tesseract language codes, e.g. "deu+eng"
 	TesseractPath string `mapstructure:"tesseractPath"` // absolute path to tesseract binary
 }
 

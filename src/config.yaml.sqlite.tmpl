@@ -17,6 +17,13 @@ server:
     allowedOrigins:
       - "http://localhost"
       - "http://myproviant.instance"
+  # If proviant runs behind a reverse proxy (nginx, traefik, caddy), list the
+  # proxy's IP CIDRs here so X-Forwarded-For / X-Real-IP headers are trusted
+  # for rate limiting. Otherwise leave empty (or omit) — headers are ignored
+  # and RemoteAddr is used instead.
+  # trustedProxies:
+  #   - "127.0.0.1/32"
+  #   - "10.0.0.0/8"
   securityHeaders:
     contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
 

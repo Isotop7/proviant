@@ -16,7 +16,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-
 // CreateWebhook creates a new webhook
 // @Summary      Create a webhook
 // @Description  Creates a new webhook for the authenticated user

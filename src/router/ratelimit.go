@@ -32,17 +32,6 @@ var (
 	exportRate = rate.Limit(1.0 / 60.0)
 )
 
-func getClientIP(ctx *gin.Context) string {
-	clientIP := ctx.GetHeader("X-Forwarded-For")
-	if clientIP == "" {
-		clientIP = ctx.GetHeader("X-Real-IP")
-	}
-	if clientIP == "" {
-		clientIP = ctx.ClientIP()
-	}
-	return clientIP
-}
-
 func getLimiter(store *sync.Map, key string, limit rate.Limit) *rate.Limiter {
 	now := time.Now()
 	if storedValue, ok := store.Load(key); ok {
@@ -56,7 +45,7 @@ func getLimiter(store *sync.Map, key string, limit rate.Limit) *rate.Limiter {
 }
 
 func loginRateLimitMiddleware(ctx *gin.Context) {
-	clientIP := getClientIP(ctx)
+	clientIP := ctx.ClientIP()
 	limiter := getLimiter(loginLimiters, clientIP, loginRate)
 	reservation := limiter.Reserve()
 	if delay := reservation.Delay(); delay > 0 {
@@ -72,7 +61,7 @@ func loginRateLimitMiddleware(ctx *gin.Context) {
 }
 
 func signupRateLimitMiddleware(ctx *gin.Context) {
-	clientIP := getClientIP(ctx)
+	clientIP := ctx.ClientIP()
 	limiter := getLimiter(signupLimiters, clientIP, signupRate)
 	reservation := limiter.Reserve()
 	if delay := reservation.Delay(); delay > 0 {

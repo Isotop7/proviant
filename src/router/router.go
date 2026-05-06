@@ -79,6 +79,16 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Generate new gin instance
 	engine := gin.New()
 
+	if len(proviantConfiguration.Server.TrustedProxies) > 0 {
+		if err := engine.SetTrustedProxies(proviantConfiguration.Server.TrustedProxies); err != nil {
+			logger.Fatal().Err(err).Msg("Failed to set trusted proxies")
+		}
+	} else {
+		if err := engine.SetTrustedProxies(nil); err != nil {
+			logger.Fatal().Err(err).Msg("Failed to set trusted proxies")
+		}
+	}
+
 	// Inject logging middleware
 	engine.Use(ZerologMiddleware(logger), gin.Recovery())
 
@@ -199,7 +209,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.GET("/byBarcode/:barcode", v1.GetProductsByBarcode)
 	publicProductAPI.GET("/openfoodfacts/:barcode", v1.GetOpenFoodFactsData)
 	publicProductAPI.GET("/search", v1.SearchProducts)
-	publicProductAPI.DELETE("/bulkDelete", v1.BulkDeleteProducts)     // Deprecated: use /bulkWaste instead
+	publicProductAPI.DELETE("/bulkDelete", v1.BulkDeleteProducts)   // Deprecated: use /bulkWaste instead
 	publicProductAPI.DELETE("/bulkArchive", v1.BulkArchiveProducts) // Deprecated: use /bulkConsume instead
 	publicProductAPI.POST("/bulkRestore", v1.BulkRestoreProducts)
 	publicProductAPI.POST("/bulkConsume", v1.BulkConsumeProducts)
