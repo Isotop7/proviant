@@ -146,7 +146,12 @@ func getCurrentUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
 		return 0, false
 	}
-	userID := uint(idClaim.(float64))
+	idFloat, ok := idClaim.(float64)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		return 0, false
+	}
+	userID := uint(idFloat)
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
 		return 0, false
