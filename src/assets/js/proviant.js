@@ -251,6 +251,40 @@ proviant.bulkArchiveProducts = async function (productIDs) {
   return response;
 };
 
+proviant.bulkConsumeProducts = async function (productIDs) {
+  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkConsume`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ productIDs }),
+  });
+  const body = await apiCall.json();
+  let response = {
+    code: apiCall.status,
+    message: body.message,
+  };
+  return response;
+};
+
+proviant.bulkWasteProducts = async function (productIDs) {
+  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkWaste`;
+  const apiCall = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ productIDs }),
+  });
+  const body = await apiCall.json();
+  let response = {
+    code: apiCall.status,
+    message: body.message,
+  };
+  return response;
+};
+
 proviant.restoreProduct = async function (productID) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/restore`;
   const apiCall = await fetch(url, {

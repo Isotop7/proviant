@@ -60,6 +60,8 @@ type ProductRepositoryInterface interface {
 	GetProductsByHousehold(householdID uint) ([]database.Product, error)
 	ConsumeProduct(productID, userID uint) error
 	WasteProduct(productID, userID uint) error
+	BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
+	BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
 }
 
 var _ ProductRepositoryInterface = (*ProductRepository)(nil)
@@ -918,6 +920,26 @@ func (r *ProductRepository) WasteProduct(productID, userID uint) error {
 		return err
 	}
 	return r.DB.Unscoped().Delete(&database.Product{}, productID).Error
+}
+
+func (r *ProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError {
+	bulkErrors := []BulkOperationError{}
+	for _, productID := range productIDs {
+		if err := r.ConsumeProduct(productID, userID); err != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, err})
+		}
+	}
+	return bulkErrors
+}
+
+func (r *ProductRepository) BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError {
+	bulkErrors := []BulkOperationError{}
+	for _, productID := range productIDs {
+		if err := r.WasteProduct(productID, userID); err != nil {
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, err})
+		}
+	}
+	return bulkErrors
 }
 
 type CalendarTokenRepositoryInterface interface {

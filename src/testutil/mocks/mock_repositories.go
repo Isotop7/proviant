@@ -152,8 +152,14 @@ func (m *MockProductRepository) GetExpiringProductsByHousehold(householdID uint,
 func (m *MockProductRepository) GetProductsByHousehold(householdID uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
-func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error { return m.Err }
-func (m *MockProductRepository) WasteProduct(productID, userID uint) error   { return m.Err }
+func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error  { return m.Err }
+func (m *MockProductRepository) WasteProduct(productID, userID uint) error    { return m.Err }
+func (m *MockProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []database.BulkOperationError {
+	return nil
+}
+func (m *MockProductRepository) BulkWasteProducts(productIDs []uint, userID uint) []database.BulkOperationError {
+	return nil
+}
 
 var _ database.ProductRepositoryInterface = (*MockProductRepository)(nil)
 

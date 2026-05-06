@@ -79,6 +79,7 @@ func GetArchivedProducts(ctx *gin.Context) {
 }
 
 // BulkDeleteProducts deletes a list of products of a user
+// Deprecated: Use BulkWasteProducts instead
 // @Summary      	Deletes a list of products
 // @Description  	Deletes a list of products of a user
 // @Tags         	product
@@ -120,6 +121,7 @@ func BulkDeleteProducts(ctx *gin.Context) {
 }
 
 // BulkArchiveProducts archives a list of products of a user
+// Deprecated: Use BulkConsumeProducts instead
 // @Summary      	Archives a list of products
 // @Description  	Archives a list of products of a user
 // @Tags         	product

@@ -199,9 +199,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.GET("/byBarcode/:barcode", v1.GetProductsByBarcode)
 	publicProductAPI.GET("/openfoodfacts/:barcode", v1.GetOpenFoodFactsData)
 	publicProductAPI.GET("/search", v1.SearchProducts)
-	publicProductAPI.DELETE("/bulkDelete", v1.BulkDeleteProducts)
-	publicProductAPI.DELETE("/bulkArchive", v1.BulkArchiveProducts)
+	publicProductAPI.DELETE("/bulkDelete", v1.BulkDeleteProducts)     // Deprecated: use /bulkWaste instead
+	publicProductAPI.DELETE("/bulkArchive", v1.BulkArchiveProducts) // Deprecated: use /bulkConsume instead
 	publicProductAPI.POST("/bulkRestore", v1.BulkRestoreProducts)
+	publicProductAPI.POST("/bulkConsume", v1.BulkConsumeProducts)
+	publicProductAPI.POST("/bulkWaste", v1.BulkWasteProducts)
 	publicProductAPI.GET("/stats", v1.GetProductStats)
 	publicProductAPI.GET("/summary", v1.GetProductSummary)
 	publicProductAPI.GET("/export/products.csv", exportRateLimitMiddleware, v1.ExportProductsCSV)

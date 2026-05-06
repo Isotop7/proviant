@@ -1,7 +1,7 @@
 /* exported changeQty */
 
 async function bulkAction(action, productIDs) {
-    const fn = { delete: proviant.bulkDeleteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkArchiveProducts }[action];
+    const fn = { delete: proviant.bulkWasteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkConsumeProducts }[action];
     const response = await fn(productIDs);
     if (response.code !== 200) console.error(response.message);
 }
@@ -445,11 +445,11 @@ function bulkAction(action) {
     if (!ids.length) return;
     if (action === 'delete') {
         if (!confirm('Mark ' + ids.length + ' product(s) as wasted? This cannot be undone.')) return;
-        proviant.bulkDeleteProducts(ids).then(function () {
+        proviant.bulkWasteProducts(ids).then(function () {
             window.location.reload();
         });
     } else if (action === 'archive') {
-        proviant.bulkArchiveProducts(ids).then(function () {
+        proviant.bulkConsumeProducts(ids).then(function () {
             window.location.reload();
         });
     } else if (action === 'restore') {
