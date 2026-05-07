@@ -115,28 +115,28 @@ func Logout(ctx *gin.Context) {
 	jti, exists := claims["jti"]
 	if !exists {
 		logger.Error().Msg("No JTI found in token claims")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid token: no JTI"})
+		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Invalid token: no JTI"})
 		return
 	}
 
 	jtiStr, ok := jti.(string)
 	if !ok {
 		logger.Error().Msg("JTI claim is not a string")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid token: JTI not string"})
+		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Invalid token: JTI not string"})
 		return
 	}
 
 	exp, exists := claims["exp"]
 	if !exists {
 		logger.Error().Msg("No exp found in token claims")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid token: no expiry"})
+		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Invalid token: no expiry"})
 		return
 	}
 
 	expFloat, ok := exp.(float64)
 	if !ok {
 		logger.Error().Msg("exp claim is not a number")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid token: expiry not number"})
+		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Invalid token: expiry not number"})
 		return
 	}
 

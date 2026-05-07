@@ -304,7 +304,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	repos, dbErr := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !dbErr {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
 	}
 
@@ -312,7 +312,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusUnauthorized, errors.ErrUserIDFromToken.Error())
 		return
 	}
 
@@ -429,7 +429,7 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	repos, dbErr := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !dbErr {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
 	}
 
@@ -438,14 +438,14 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusUnauthorized, errors.ErrUserIDFromToken.Error())
 		return
 	}
 
 	product, productErr := repos.Products.GetArchivedProductByID(uint(productIDRaw), userID) //nolint:gosec
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusNotFound, errors.ErrUserNoProductsFound.Error())
 		return
 	}
 
@@ -486,7 +486,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	repos, dbErr := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !dbErr {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
 	}
 
@@ -495,14 +495,14 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusUnauthorized, errors.ErrUserIDFromToken.Error())
 		return
 	}
 
 	product, productErr := repos.Products.GetArchivedProductByID(uint(productIDRaw), userID) //nolint:gosec
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusNotFound, errors.ErrUserNoProductsFound.Error())
 		return
 	}
 

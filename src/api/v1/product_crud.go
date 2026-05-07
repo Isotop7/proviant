@@ -82,6 +82,7 @@ func GetProducts(ctx *gin.Context) {
 // @Param        id   path      int  true  "Product ID"
 // @Success      200  {object}  database.Product
 // @Failure      400  {object}  api.APIResponse
+// @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/product/{id} [get]
 func GetProduct(ctx *gin.Context) {
@@ -113,7 +114,7 @@ func GetProduct(ctx *gin.Context) {
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(FmtProductNotFoundOrNoAccess, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
@@ -121,7 +122,7 @@ func GetProduct(ctx *gin.Context) {
 	// Unspecified error
 	default:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
@@ -219,6 +220,7 @@ func CreateProduct(ctx *gin.Context) {
 // @Param			product	body	database.Product	true	"Product"
 // @Success      	200  {object}  database.Product
 // @Failure      	400  {object}  api.APIResponse
+// @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/product/{id} [patch]
 func UpdateProduct(ctx *gin.Context) {
@@ -256,7 +258,7 @@ func UpdateProduct(ctx *gin.Context) {
 	// Requested product was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
@@ -280,6 +282,7 @@ func UpdateProduct(ctx *gin.Context) {
 // @Param        	delta	body	api.ProductAmountDTO		true	"Amount delta"
 // @Success      	200  {object}  database.Product
 // @Failure      	400  {object}  api.APIResponse
+// @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/{id}/amount [patch]
 func UpdateProductAmount(ctx *gin.Context) {
@@ -326,7 +329,7 @@ func UpdateProductAmount(ctx *gin.Context) {
 		return
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
@@ -407,6 +410,7 @@ func DeleteProduct(ctx *gin.Context) {
 // @Param			timestamp	body	database.Timestamp	true	"Timestamp"
 // @Success      	200  {object}  database.ProductDTOExpire
 // @Failure      	400  {object}  api.APIResponse
+// @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/product/{id}/expire [post]
 func SetExpireAt(ctx *gin.Context) {
@@ -440,7 +444,7 @@ func SetExpireAt(ctx *gin.Context) {
 	product, getErr := repos.Products.GetProductByID(productID, userID)
 	if getErr != nil {
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
@@ -462,7 +466,7 @@ func SetExpireAt(ctx *gin.Context) {
 	// Product was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
@@ -470,7 +474,7 @@ func SetExpireAt(ctx *gin.Context) {
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
 		logger.Error().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(FmtProductNotFoundOrNoAccess, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})

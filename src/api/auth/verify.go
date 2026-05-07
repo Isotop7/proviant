@@ -48,7 +48,7 @@ func VerifyEmail(ctx *gin.Context) {
 	verification, err := repos.Users.GetEmailVerificationByToken(token)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusBadRequest, gin.H{"code": "INVALID_TOKEN", "message": "Invalid verification token"})
+			ctx.JSON(http.StatusNotFound, gin.H{"code": "INVALID_TOKEN", "message": "Invalid verification token"})
 			return
 		}
 		logger.Error().Msgf("Error looking up email verification token: %s", err.Error())

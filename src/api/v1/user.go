@@ -26,6 +26,7 @@ import (
 // @Produce       	json
 // @Success       	200  {object}  api.APIResponse
 // @Failure       	400  {object}  api.APIResponse
+// @Failure       	404  {object}  api.APIResponse
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user [patch]
 func UpdateUser(ctx *gin.Context) {
@@ -54,7 +55,7 @@ func UpdateUser(ctx *gin.Context) {
 	user, fetchErr := repos.Users.GetUserByID(userID)
 	if fetchErr != nil {
 		logger.Error().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, fetchErr)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
+		ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
 		return
 	}
 
@@ -80,6 +81,7 @@ func UpdateUser(ctx *gin.Context) {
 // @Param         	login   body    authentication.Login  true  "Login"
 // @Success       	200  {object}  api.APIResponse
 // @Failure       	400  {object}  api.APIResponse
+// @Failure       	404  {object}  api.APIResponse
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user/password [post]
 func UpdateUserPassword(ctx *gin.Context) {
@@ -140,7 +142,7 @@ func UpdateUserPassword(ctx *gin.Context) {
 	// Requested user was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf("User with ID '%d' was not found in database", userID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
+		ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
 		return
 	// Unspecified error
 	default:

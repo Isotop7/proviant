@@ -95,7 +95,7 @@ func TestVerifyEmail(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid token returns bad request", func(t *testing.T) {
+	t.Run("invalid token returns not found", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		m.Users.Err = gorm.ErrRecordNotFound
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
@@ -103,8 +103,8 @@ func TestVerifyEmail(t *testing.T) {
 
 		VerifyEmail(ctx)
 
-		if w.Code != http.StatusBadRequest {
-			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
 		}
 	})
 

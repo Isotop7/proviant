@@ -59,7 +59,7 @@ func ScanProduct(ctx *gin.Context) {
 		file, formErr := ctx.FormFile("image")
 		if formErr != nil {
 			logger.Error().Msgf("Error reading image from body: %s", formErr.Error())
-			ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrNoBarcodeFoundInImage))
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
 			decodingProcessChannel <- false
 			return
 		}
@@ -99,7 +99,7 @@ func ScanProduct(ctx *gin.Context) {
 		bmp, bmpErr := gozxing.NewBinaryBitmapFromImage(convertedImage)
 		if bmpErr != nil {
 			logger.Error().Msgf("Error converting image to bitmap: %s", bmpErr.Error())
-			ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrNoBarcodeFoundInImage))
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
 			decodingProcessChannel <- false
 			return
 		}
@@ -116,7 +116,7 @@ func ScanProduct(ctx *gin.Context) {
 		code, scanErr := scanner.Decode(bmp, hints)
 		if scanErr != nil {
 			logger.Error().Msgf("Error decoding image when finding barcode: %s", scanErr.Error())
-			ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrNoBarcodeFoundInImage))
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
 			return
 		} else {
 			// If barcode is found, return it

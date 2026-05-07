@@ -83,8 +83,8 @@ func TestUpdateUser(t *testing.T) {
 
 		UpdateUser(ctx)
 
-		if w.Code != http.StatusBadRequest {
-			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
 		}
 	})
 }
@@ -161,8 +161,8 @@ func TestUpdateUserPassword(t *testing.T) {
 
 		UpdateUserPassword(ctx)
 
-		if w.Code != http.StatusBadRequest {
-			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
 		}
 	})
 }

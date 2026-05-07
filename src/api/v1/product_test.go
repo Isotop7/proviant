@@ -114,8 +114,8 @@ func TestGetProduct(t *testing.T) {
 
 		GetProduct(ctx)
 
-		if w.Code != http.StatusBadRequest {
-			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
 		}
 	})
 }
@@ -216,8 +216,8 @@ func TestUpdateProduct(t *testing.T) {
 
 		UpdateProduct(ctx)
 
-		if w.Code != http.StatusBadRequest {
-			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
 		}
 	})
 }
