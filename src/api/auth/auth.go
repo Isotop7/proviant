@@ -41,14 +41,14 @@ func Signup(ctx *gin.Context) {
 
 	var signup authentication.Signup
 	if err := ctx.ShouldBindJSON(&signup); err != nil {
-		logger.Error().Msgf("Error parsing body: %s", err.Error())
+		logger.Warn().Msgf("Error parsing body: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
 
 	passwordValidator := passwordValidatorFromContext(ctx)
 	if validationErr := signup.IsValidWithValidator(passwordValidator); validationErr != nil {
-		logger.Error().Msgf("User data was invalid: '%s'", validationErr.Error())
+		logger.Warn().Msgf("User data was invalid: '%s'", validationErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(validationErr))
 		return
 	}
@@ -60,13 +60,13 @@ func Signup(ctx *gin.Context) {
 	}
 
 	if repos.Users.UserExistsByUsername(&user) {
-		logger.Error().Msgf("User '%s' already exists", user.Username)
+		logger.Warn().Msgf("User '%s' already exists", user.Username)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithUsernameExists)
 		return
 	}
 
 	if repos.Users.UserExistsByMailAddress(&user) {
-		logger.Error().Msgf("User with mail address '%s' already exists", user.MailAddress)
+		logger.Warn().Msgf("User with mail address '%s' already exists", user.MailAddress)
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithMailAddressExists)
 		return
 	}

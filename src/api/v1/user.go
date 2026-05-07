@@ -54,8 +54,8 @@ func UpdateUser(ctx *gin.Context) {
 
 	user, fetchErr := repos.Users.GetUserByID(userID)
 	if fetchErr != nil {
-		logger.Error().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, fetchErr)
-		ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
+	logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, fetchErr)
+	ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
 		return
 	}
 

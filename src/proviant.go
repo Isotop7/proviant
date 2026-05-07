@@ -318,7 +318,7 @@ func startRevokedTokenCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
 func cleanupExpiredRevokedTokens(logger *zerolog.Logger, dbHandle *gorm.DB) {
 	result := dbHandle.Where("expires_at < ?", time.Now()).Delete(&authentication.RevokedToken{})
 	if result.Error != nil {
-		logger.Error().Msgf("Failed to cleanup expired revoked tokens: %s", result.Error.Error())
+		logger.Warn().Msgf("Failed to cleanup expired revoked tokens: %s", result.Error.Error())
 		return
 	}
 	if result.RowsAffected > 0 {
@@ -340,7 +340,7 @@ func startRecipeCacheCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
 func cleanupExpiredRecipeCaches(logger *zerolog.Logger, dbHandle *gorm.DB) {
 	result := dbHandle.Where("expires_at < ?", time.Now()).Delete(&dbModel.RecipeCache{})
 	if result.Error != nil {
-		logger.Error().Msgf("Failed to cleanup expired recipe caches: %s", result.Error.Error())
+		logger.Warn().Msgf("Failed to cleanup expired recipe caches: %s", result.Error.Error())
 		return
 	}
 	if result.RowsAffected > 0 {

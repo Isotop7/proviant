@@ -157,13 +157,46 @@ tx.Commit()
 ### Logging
 - Use zerolog for all logging
 - Get logger from Gin context (don't create new loggers)
-- Use appropriate log levels: `Debug()`, `Info()`, `Warn()`, `Error()`
+- Use appropriate log levels: `Debug()`, `Info()`, `Warn()`, `Error()`, `Fatal()`
 - Format messages with `Msg()` or `Msgf()`
 - Example:
 ```go
 logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-logger.Error().Msg(err.Error())
+logger.Warn().Msg(err.Error())
 logger.Info().Msg("Logging initialized")
+```
+
+#### Log Level Policy
+
+| Level | When to use | Examples |
+|-------|-------------|----------|
+| **Trace** | SQL query tracing, extremely detailed debug | GORM adapter SQL tracing |
+| **Debug** | Dev-time info, cache hit/miss, migration steps, individual event processing | "migration step running", "cache hit", "recipe match attempt" |
+| **Info** | Normal operational events worth recording in production | Startup, user created, config loaded, cleanup counts, notification sent, email sent |
+| **Warn** | Recoverable, expected, or user-caused issues that don't require immediate action | Invalid user input (4xx), missing optional dependencies, background task failures, cache misses/errors, "not found" in user-requested lookups, file close errors |
+| **Error** | Unexpected server-side failures requiring attention | DB operation failures, external API failures, missing required context values (controllers, repos), 5xx-causing errors, internal logic errors |
+| **Fatal** | Immediate startup termination | Cannot bind port, cannot set trusted proxies |
+
+##### Decision Tree for API Handlers
+
+```
+Is this a user/client error? (4xx response)
+  → Warn
+
+Is this a resource not found that the user requested?
+  → Warn
+
+Is this a background/non-critical side operation failing?
+  → Warn
+
+Is this a server-side error or unexpected failure? (5xx response)
+  → Error
+
+Is this a missing required dependency or context value?
+  → Error
+
+Is this a startup failure that prevents the app from running?
+  → Fatal
 ```
 
 ### Testing

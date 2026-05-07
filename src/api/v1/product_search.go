@@ -69,12 +69,12 @@ func GetProductsByBarcode(ctx *gin.Context) {
 		return
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
-		logger.Error().Msgf("Products with barcode '%d' for user were not found in database (mismatched userID in JWT <> DB)", barcode)
+		logger.Warn().Msgf("Products with barcode '%d' for user were not found in database (mismatched userID in JWT <> DB)", barcode)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Products with barcode '%d' for user were not found", barcode)})
 		return
 	// Unspecified error
 	default:
-		logger.Error().Msgf("Products with barcode '%d' were not found in database", barcode)
+		logger.Warn().Msgf("Products with barcode '%d' were not found in database", barcode)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Products with barcode '%d' were not found", barcode)})
 		return
 	}
@@ -106,7 +106,7 @@ func SearchProducts(ctx *gin.Context) {
 	enumParam := database.SearchParameterEnumFromString(queryParam)
 	if enumParam == database.InvalidParameter {
 		// If no supported parameter was found, exit
-		logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
+		logger.Warn().Msg(errors.ErrProductSearchInvalidQuery.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "No valid search parameters found"})
 		return
 	}

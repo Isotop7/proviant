@@ -113,7 +113,7 @@ func GetProduct(ctx *gin.Context) {
 		return
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
-		logger.Error().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
+		logger.Warn().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(FmtProductNotFoundOrNoAccess, productID),
 			Action:  MsgCheckProductIdTryAgain,
@@ -121,7 +121,7 @@ func GetProduct(ctx *gin.Context) {
 		return
 	// Unspecified error
 	default:
-		logger.Error().Msgf(errors.FormatProductNotFound, productID)
+		logger.Warn().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
@@ -163,7 +163,7 @@ func CreateProduct(ctx *gin.Context) {
 
 	// Check for required parameters
 	if product.Barcode == "" {
-		logger.Error().Msgf("Body is missing barcode")
+		logger.Warn().Msgf("Body is missing barcode")
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
 		return
 	}
@@ -257,7 +257,7 @@ func UpdateProduct(ctx *gin.Context) {
 		return
 	// Requested product was not found
 	case gorm.ErrRecordNotFound:
-		logger.Error().Msgf(errors.FormatProductNotFound, productID)
+		logger.Warn().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
@@ -328,7 +328,7 @@ func UpdateProductAmount(ctx *gin.Context) {
 		}
 		return
 	case gorm.ErrRecordNotFound:
-		logger.Error().Msgf(errors.FormatProductNotFound, productID)
+		logger.Warn().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
@@ -436,14 +436,14 @@ func SetExpireAt(ctx *gin.Context) {
 	var expireAt dbModel.Timestamp
 	var bindErr error
 	if bindErr = ctx.ShouldBindJSON(&expireAt); bindErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
+		logger.Warn().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
 	product, getErr := repos.Products.GetProductByID(productID, userID)
 	if getErr != nil {
-		logger.Error().Msgf(errors.FormatProductNotFound, productID)
+		logger.Warn().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
@@ -465,7 +465,7 @@ func SetExpireAt(ctx *gin.Context) {
 		return
 	// Product was not found
 	case gorm.ErrRecordNotFound:
-		logger.Error().Msgf(errors.FormatProductNotFound, productID)
+		logger.Warn().Msgf(errors.FormatProductNotFound, productID)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
@@ -473,7 +473,7 @@ func SetExpireAt(ctx *gin.Context) {
 		return
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
-		logger.Error().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
+		logger.Warn().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(FmtProductNotFoundOrNoAccess, productID),
 			Action:  MsgCheckProductIdTryAgain,

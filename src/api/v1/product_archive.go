@@ -64,7 +64,7 @@ func GetArchivedProducts(ctx *gin.Context) {
 
 	products, productBulkErr := repos.Products.GetUserArchivedProductsBulk(userID, limit)
 	if productBulkErr != nil {
-		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
+		logger.Warn().Msgf("Error getting products of user: %s", productBulkErr)
 		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusBadRequest, api.APIResponse{
 				Message: "Unable to retrieve archived products. Please check your account.",

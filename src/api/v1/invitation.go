@@ -43,7 +43,7 @@ func CreateInvitation(ctx *gin.Context) {
 
 	var req createInvitationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		logger.Warn().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
@@ -51,13 +51,13 @@ func CreateInvitation(ctx *gin.Context) {
 	// Get user's household
 	user, err := repos.Users.GetUserByID(userID)
 	if err != nil {
-		logger.Error().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
+		logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
 	if user.HouseholdID == 0 {
-		logger.Error().Msgf("User %d has no household", userID)
+		logger.Warn().Msgf("User %d has no household", userID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "user has no household"})
 		return
 	}
@@ -129,7 +129,7 @@ func GetInvitations(ctx *gin.Context) {
 
 	user, err := repos.Users.GetUserByID(userID)
 	if err != nil {
-		logger.Error().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
+		logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
@@ -178,7 +178,7 @@ func CancelInvitation(ctx *gin.Context) {
 	invitationIDStr := ctx.Param("id")
 	invitationID, err := strconv.ParseUint(invitationIDStr, 10, 64)
 	if err != nil {
-		logger.Error().Msgf("Invalid invitation ID '%s': %s", invitationIDStr, err)
+		logger.Warn().Msgf("Invalid invitation ID '%s': %s", invitationIDStr, err)
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("invitation ID must be a valid unsigned integer"))
 		return
 	}

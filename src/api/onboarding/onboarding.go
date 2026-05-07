@@ -148,7 +148,7 @@ func CreateOnboardingHousehold(ctx *gin.Context) {
 		Name string `json:"name" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf(errors.ErrParseBodyWrapper, err.Error())
+		logger.Warn().Msgf(errors.ErrParseBodyWrapper, err.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
@@ -195,7 +195,7 @@ func JoinOnboardingByInvite(ctx *gin.Context) {
 		Token string `json:"token" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf(errors.ErrParseBodyWrapper, err.Error())
+		logger.Warn().Msgf(errors.ErrParseBodyWrapper, err.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
