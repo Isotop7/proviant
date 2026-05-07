@@ -73,6 +73,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	repos := dbcontroller.NewRepositoryContainer(dbHandle)
 
+	if proviantConfiguration.Server.Debug {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	gin.DefaultWriter = zerologWriter{logger: logger, level: zerolog.DebugLevel}
 	gin.DefaultErrorWriter = zerologWriter{logger: logger, level: zerolog.WarnLevel}
 

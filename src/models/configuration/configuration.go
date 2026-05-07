@@ -64,6 +64,7 @@ type ServerConfiguration struct {
 	SecurityHeaders SecurityHeadersConfiguration
 	TrustedProxies  []string `mapstructure:"trustedProxies"`
 	MaxUploadSizeMB int      `mapstructure:"maxUploadSizeMB"`
+	Debug           bool     `mapstructure:"debug"`
 }
 
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog
