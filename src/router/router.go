@@ -39,11 +39,21 @@ func (w zerologWriter) Write(p []byte) (n int, err error) {
 }
 
 func cleanupRevokedTokens(db *gorm.DB, logger *zerolog.Logger) {
+	const batchSize = 500
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 	for range ticker.C {
-		result := db.Where("expires_at < ?", time.Now()).Delete(&authentication.RevokedToken{})
-		logger.Info().Int64("deleted", result.RowsAffected).Msg("Cleaned up expired revoked tokens")
+		now := time.Now()
+		var totalDeleted int64
+		for {
+			result := db.Where("expires_at < ?", now).Limit(batchSize).Delete(&authentication.RevokedToken{})
+			totalDeleted += result.RowsAffected
+			if result.RowsAffected < int64(batchSize) {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		logger.Info().Int64("deleted", totalDeleted).Msg("Cleaned up expired revoked tokens")
 	}
 }
 
