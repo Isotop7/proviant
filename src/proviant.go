@@ -115,8 +115,8 @@ func setupConfig() *configuration.ProviantConfiguration {
 
 	// Set default password policy
 	viper.SetDefault("server.authentication.passwordMinLength", 12)
-	viper.SetDefault("server.authentication.passwordRequireUppercase", false)
-	viper.SetDefault("server.authentication.passwordRequireDigit", false)
+	viper.SetDefault("server.authentication.passwordRequireUppercase", true)
+	viper.SetDefault("server.authentication.passwordRequireDigit", true)
 	viper.SetDefault("server.authentication.passwordRequireSpecial", false)
 	viper.SetDefault("server.authentication.passwordCheckBreached", true)
 	viper.SetDefault("server.maxUploadSizeMB", 5)

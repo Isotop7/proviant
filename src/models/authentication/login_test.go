@@ -20,7 +20,7 @@ func TestLoginIsValid(t *testing.T) {
 			name: "valid login with longer password",
 			login: Login{
 				Username: "testuser",
-				Password: "verylongpassword123supersafe",
+				Password: "VeryLongPassword123safe",
 			},
 			wantErr: false,
 		},

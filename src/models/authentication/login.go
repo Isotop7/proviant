@@ -4,8 +4,8 @@ import "codeberg.org/isotop7/proviant/errors"
 
 var defaultPasswordConfig = PasswordConfig{
 	MinLength:        12,
-	RequireUppercase: false,
-	RequireDigit:     false,
+	RequireUppercase: true,
+	RequireDigit:     true,
 	RequireSpecial:   false,
 	CheckBreached:    true,
 }
