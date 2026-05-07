@@ -57,6 +57,13 @@
     You're offline — showing cached data. Changes will sync when reconnected.
     <span id="offlineQueueCount" class="ms-1 fw-semibold d-none"></span>
   </div>
+  <!-- Update banner — shown by JS when new service worker activates -->
+  <div id="swUpdateBanner" class="sw-update-banner d-none" role="status" aria-live="polite">
+    <i class="bi bi-arrow-repeat me-2" aria-hidden="true"></i>
+    Update available —
+    <button class="btn btn-link btn-sm p-0 fw-semibold sw-update-reload" onclick="location.reload()">Reload</button>
+    to get the latest version.
+  </div>
 
   <main>
     <div id="content-wrapper">

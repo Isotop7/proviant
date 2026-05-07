@@ -1638,6 +1638,27 @@ th a {
 }
 
 //
+// SW update banner
+//
+.sw-update-banner {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: var(--offline-banner-left, var(--sidebar-width));
+  z-index: 99;
+  padding: 8px 16px;
+  font-size: var(--text-sm);
+  text-align: center;
+  background: var(--accent-subtle);
+  border-bottom: 1px solid var(--accent-border);
+
+  .sw-update-reload {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+}
+
+//
 // Modal header extensions
 //
 .modal-icon-danger {
