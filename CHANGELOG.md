@@ -5,6 +5,143 @@ All notable changes to `proviant` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-05-07
+
+### Added
+
+- **api:** Unify error responses
+- **assets:** Update user settings
+- **assets:** Improve products creation barcode handling
+- **models:** Add db indexes
+- **router:** Add request-id and user logging
+- **templates:** Update nav
+- **templates:** Update product card
+- **web:** Add skeleton loading and image fallbacks
+- **web:** Redesign auth page
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Changed
+
+- **api:** Use uint for IDs
+- **api:** Introduce repository pattern
+- **api:** Extract helpers
+- **assets:** Cache product images in sw and browser
+- **controllers:** Improve testability
+- **notification:** Simplify sender
+- **web:** Pass by pointer
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Fixed
+
+- **controllers:** Check repo
+
+
+
+
+### Miscellaneous
+
+- **login:** Drop backgrounds
+- **sonar:** Add duplications export
+- **web:** Update product pages
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Testing
+
+- **api:** Update onboarding
+
+
+
+
+
+## [0.9.0-rc1] - 2026-04-25
+
+### Miscellaneous
+
+
+
 ## [0.9.0] - 2026-04-24
 
 ### Added
