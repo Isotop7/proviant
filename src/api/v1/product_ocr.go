@@ -13,6 +13,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
@@ -44,8 +45,9 @@ func ScanExpiryDate(ctx *gin.Context) {
 		return
 	}
 
-	// Validate size (max 5MB)
-	if file.Size > 5*1024*1024 {
+	// Validate size (configured via config)
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	if file.Size > int64(proviantConfig.Server.MaxUploadSizeMB)*1024*1024 {
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrFileTooLarge))
 		return
 	}

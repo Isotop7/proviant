@@ -119,6 +119,7 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetDefault("server.authentication.passwordRequireDigit", false)
 	viper.SetDefault("server.authentication.passwordRequireSpecial", false)
 	viper.SetDefault("server.authentication.passwordCheckBreached", true)
+	viper.SetDefault("server.maxUploadSizeMB", 5)
 
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {

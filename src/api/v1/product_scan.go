@@ -17,6 +17,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
@@ -59,6 +60,13 @@ func ScanProduct(ctx *gin.Context) {
 		if formErr != nil {
 			logger.Error().Msgf("Error reading image from body: %s", formErr.Error())
 			ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrNoBarcodeFoundInImage))
+			decodingProcessChannel <- false
+			return
+		}
+
+		proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+		if file.Size > int64(proviantConfig.Server.MaxUploadSizeMB)*1024*1024 {
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrFileTooLarge))
 			decodingProcessChannel <- false
 			return
 		}
