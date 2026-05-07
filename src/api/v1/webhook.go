@@ -47,6 +47,11 @@ func CreateWebhook(ctx *gin.Context) {
 		return
 	}
 
+	if err := validateWebhookURL(req.URL); err != nil {
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		return
+	}
+
 	for _, event := range req.Events {
 		if !isValidWebhookEvent(event) {
 			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrWebhookInvalidEvent))
@@ -197,6 +202,10 @@ func UpdateWebhook(ctx *gin.Context) {
 	}
 
 	if req.URL != "" {
+		if err := validateWebhookURL(req.URL); err != nil {
+			ctx.JSON(http.StatusBadRequest, api.Error(err))
+			return
+		}
 		webhook.URL = req.URL
 	}
 	if req.Secret != "" {

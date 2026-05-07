@@ -251,6 +251,12 @@ var (
 	// ErrWebhookURLInvalid is thrown when a webhook URL is invalid
 	ErrWebhookURLInvalid = errors.New("webhook URL is invalid")
 
+	// ErrWebhookURLPrivateIP is thrown when a webhook URL resolves to a private or internal IP address
+	ErrWebhookURLPrivateIP = errors.New("webhook URL must not point to a private or internal IP address")
+
+	// ErrWebhookURLNotHTTPS is thrown when a webhook URL does not use HTTPS
+	ErrWebhookURLNotHTTPS = errors.New("webhook URL must use HTTPS")
+
 	// ErrWebhookSecretTooShort is thrown when a webhook secret is too short
 	ErrWebhookSecretTooShort = errors.New("webhook secret must be at least 16 characters")
 
