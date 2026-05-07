@@ -78,13 +78,21 @@ func getNotificationController(ctx *gin.Context) (*controllers.NotificationContr
 func parseLimitParam(ctx *gin.Context, logger *zerolog.Logger) (int, bool) {
 	limitParam := ctx.Query("limit")
 	if limitParam == "" {
-		return 0, true
+		return 100, true
 	}
 	limit, err := strconv.Atoi(limitParam)
 	if err != nil {
 		logger.Warn().Msgf("Invalid limit '%s' was specified", limitParam)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%s' is invalid", limitParam)})
 		return 0, false
+	}
+	if limit < 1 {
+		logger.Warn().Msgf("Limit must be at least 1, got %d", limit)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Limit must be at least 1"})
+		return 0, false
+	}
+	if limit > 1000 {
+		return 1000, true
 	}
 	return limit, true
 }
