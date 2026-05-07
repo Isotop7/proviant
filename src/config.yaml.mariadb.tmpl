@@ -29,6 +29,10 @@ server:
   securityHeaders:
     contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
     csrf_token_max_age: 86400
+  rateLimit:
+    login_per_minute: 5
+    signup_per_minute: 3
+    export_per_minute: 1
 
 database:
   engine: mariadb

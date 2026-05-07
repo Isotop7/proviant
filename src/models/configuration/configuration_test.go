@@ -99,6 +99,26 @@ func TestCorsConfigurationStruct(t *testing.T) {
 	})
 }
 
+func TestRateLimitConfigurationStruct(t *testing.T) {
+	t.Run("can create RateLimitConfiguration", func(t *testing.T) {
+		config := RateLimitConfiguration{
+			LoginPerMinute:  5,
+			SignupPerMinute: 3,
+			ExportPerMinute: 1,
+		}
+
+		if config.LoginPerMinute != 5 {
+			t.Errorf("LoginPerMinute = %v, want 5", config.LoginPerMinute)
+		}
+		if config.SignupPerMinute != 3 {
+			t.Errorf("SignupPerMinute = %v, want 3", config.SignupPerMinute)
+		}
+		if config.ExportPerMinute != 1 {
+			t.Errorf("ExportPerMinute = %v, want 1", config.ExportPerMinute)
+		}
+	})
+}
+
 func TestServerConfigurationStruct(t *testing.T) {
 	t.Run("can create ServerConfiguration", func(t *testing.T) {
 		config := ServerConfiguration{
@@ -554,9 +574,82 @@ func TestValidateServerConfiguration(t *testing.T) {
 						TokenPassword: "secret-key-12345",
 						TokenLifetime: 24,
 					},
+					RateLimit: RateLimitConfiguration{
+						LoginPerMinute:  5,
+						SignupPerMinute: 3,
+						ExportPerMinute: 1,
+					},
 				},
 			},
 			wantErr: nil,
+		},
+		{
+			name: "zero login rate limit",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 24,
+					},
+					RateLimit: RateLimitConfiguration{
+						LoginPerMinute:  0,
+						SignupPerMinute: 3,
+						ExportPerMinute: 1,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrRateLimitInvalidValue,
+		},
+		{
+			name: "zero signup rate limit",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 24,
+					},
+					RateLimit: RateLimitConfiguration{
+						LoginPerMinute:  5,
+						SignupPerMinute: 0,
+						ExportPerMinute: 1,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrRateLimitInvalidValue,
+		},
+		{
+			name: "zero export rate limit",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 24,
+					},
+					RateLimit: RateLimitConfiguration{
+						LoginPerMinute:  5,
+						SignupPerMinute: 3,
+						ExportPerMinute: 0,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrRateLimitInvalidValue,
+		},
+		{
+			name: "negative rate limit value",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 24,
+					},
+					RateLimit: RateLimitConfiguration{
+						LoginPerMinute:  -1,
+						SignupPerMinute: 3,
+						ExportPerMinute: 1,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrRateLimitInvalidValue,
 		},
 		{
 			name: "empty token password",

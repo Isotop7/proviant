@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,12 @@ var (
 	signupRate = rate.Limit(3.0 / 60.0)
 	exportRate = rate.Limit(1.0 / 60.0)
 )
+
+func InitRateLimits(cfg configuration.RateLimitConfiguration) {
+	loginRate = rate.Limit(float64(cfg.LoginPerMinute) / 60.0)
+	signupRate = rate.Limit(float64(cfg.SignupPerMinute) / 60.0)
+	exportRate = rate.Limit(float64(cfg.ExportPerMinute) / 60.0)
+}
 
 func getLimiter(store *sync.Map, key string, limit rate.Limit) *rate.Limiter {
 	now := time.Now()

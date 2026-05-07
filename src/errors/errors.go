@@ -275,6 +275,9 @@ var (
 	// ErrServerInvalidTokenLifetime is thrown if an invalid JWT token lifetime was specified
 	ErrServerInvalidTokenLifetime = errors.New("JWT token lifetime must be greater than 0")
 
+	// ErrRateLimitInvalidValue is thrown if any rate limit value is zero or negative
+	ErrRateLimitInvalidValue = errors.New("rate limit values must be greater than 0")
+
 	/*
 	 * CSRF related errors
 	 */

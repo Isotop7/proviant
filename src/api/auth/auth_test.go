@@ -87,7 +87,7 @@ func TestSignupGenericCreateError(t *testing.T) {
 
 	signup := authentication.Signup{
 		Username:    "testuserGenericCreateError",
-		Password:    "ThisIsAVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString",
+		Password:    "ThisIsAVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString1",
 		MailAddress: "testuserGenericCreateError@example.com",
 	}
 

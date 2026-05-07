@@ -55,6 +55,13 @@ type SecurityHeadersConfiguration struct {
 	CSRFTokenMaxAge       int `mapstructure:"csrf_token_max_age"` // seconds; default 86400 (24h)
 }
 
+// RateLimitConfiguration holds per-endpoint rate limits in requests per minute.
+type RateLimitConfiguration struct {
+	LoginPerMinute  int `mapstructure:"login_per_minute"`
+	SignupPerMinute int `mapstructure:"signup_per_minute"`
+	ExportPerMinute int `mapstructure:"export_per_minute"`
+}
+
 // ServerConfiguration contains all properties regarding the proviant server
 type ServerConfiguration struct {
 	Port            int
@@ -62,9 +69,10 @@ type ServerConfiguration struct {
 	CORS            CorsConfiguration
 	BaseURL         string
 	SecurityHeaders SecurityHeadersConfiguration
-	TrustedProxies  []string `mapstructure:"trustedProxies"`
-	MaxUploadSizeMB int      `mapstructure:"maxUploadSizeMB"`
-	Debug           bool     `mapstructure:"debug"`
+	RateLimit       RateLimitConfiguration `mapstructure:"rateLimit"`
+	TrustedProxies  []string               `mapstructure:"trustedProxies"`
+	MaxUploadSizeMB int                    `mapstructure:"maxUploadSizeMB"`
+	Debug           bool                   `mapstructure:"debug"`
 }
 
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog
@@ -261,6 +269,10 @@ func (ec *ProviantConfiguration) ValidateServerConfiguration() error {
 	}
 	if ec.Server.Authentication.TokenLifetime <= 0 {
 		return errors.ErrServerInvalidTokenLifetime
+	}
+	rl := ec.Server.RateLimit
+	if rl.LoginPerMinute <= 0 || rl.SignupPerMinute <= 0 || rl.ExportPerMinute <= 0 {
+		return errors.ErrRateLimitInvalidValue
 	}
 	return nil
 }

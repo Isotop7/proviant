@@ -120,6 +120,9 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetDefault("server.authentication.passwordRequireSpecial", false)
 	viper.SetDefault("server.authentication.passwordCheckBreached", true)
 	viper.SetDefault("server.maxUploadSizeMB", 5)
+	viper.SetDefault("server.rateLimit.login_per_minute", 5)
+	viper.SetDefault("server.rateLimit.signup_per_minute", 3)
+	viper.SetDefault("server.rateLimit.export_per_minute", 1)
 
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
