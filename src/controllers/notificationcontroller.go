@@ -79,6 +79,33 @@ func telegramTimeout(config *configuration.NotificationConfiguration) int {
 	return 15
 }
 
+func (nc *NotificationController) newEmailProvider() *EmailNotificationProvider {
+	return &EmailNotificationProvider{
+		Configuration: nc.Configuration.SMTP,
+		Logger:        nc.Logger,
+	}
+}
+
+func (nc *NotificationController) newNtfyProvider() *NtfyNotificationProvider {
+	timeout := time.Duration(nc.Configuration.Ntfy.Timeout) * time.Second
+	if timeout <= 0 {
+		timeout = 15 * time.Second
+	}
+	return &NtfyNotificationProvider{
+		Configuration: nc.Configuration.Ntfy,
+		Logger:        nc.Logger,
+		HTTPClient:    &http.Client{Timeout: timeout},
+	}
+}
+
+func (nc *NotificationController) newTelegramProvider(botToken string) *TelegramNotificationProvider {
+	return &TelegramNotificationProvider{
+		BotToken:   botToken,
+		Logger:     nc.Logger,
+		HTTPClient: nc.telegramClient,
+	}
+}
+
 // GetUserTelegramBotUsername returns the bot username resolved at poller start for a user.
 func (nc *NotificationController) GetUserTelegramBotUsername(userID uint) string {
 	if v, ok := nc.botUsernames.Load(userID); ok {
@@ -91,21 +118,13 @@ func (nc *NotificationController) GetUserTelegramBotUsername(userID uint) string
 
 func (nc *NotificationController) initializeProviders() {
 	// Add email provider if configured
-	emailProvider := &EmailNotificationProvider{
-		Configuration: nc.Configuration.SMTP,
-		Logger:        nc.Logger,
-	}
-
+	emailProvider := nc.newEmailProvider()
 	if emailProvider.IsConfigured() {
 		nc.Providers = append(nc.Providers, emailProvider)
 	}
 
 	// Add ntfy provider if configured
-	ntfyProvider := &NtfyNotificationProvider{
-		Configuration: nc.Configuration.Ntfy,
-		Logger:        nc.Logger,
-		HTTPClient:    &http.Client{Timeout: time.Duration(nc.Configuration.Ntfy.Timeout) * time.Second},
-	}
+	ntfyProvider := nc.newNtfyProvider()
 	if ntfyProvider.IsConfigured() {
 		nc.Providers = append(nc.Providers, ntfyProvider)
 	}
@@ -254,7 +273,7 @@ func (nc *NotificationController) sendViaProvider(provider NotificationProvider,
 func (nc *NotificationController) sendTelegram(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) bool {
 	if recipientInfo.TelegramEnabled && recipientInfo.TelegramChatID != "" && recipientInfo.TelegramBotToken != "" {
 		nc.Logger.Info().Msgf("Attempting telegram notification for product '%s' (ID: %d)", product.ProductName, product.ID)
-		telegramProvider := &TelegramNotificationProvider{BotToken: recipientInfo.TelegramBotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
+		telegramProvider := nc.newTelegramProvider(recipientInfo.TelegramBotToken)
 		if err := telegramProvider.SendNotification(product, recipientInfo.TelegramChatID); err != nil {
 			nc.Logger.Error().Msgf("Failed to send telegram notification: %s", err)
 			return false
@@ -277,10 +296,7 @@ func (nc *NotificationController) markNotified(productID uint) bool {
 // DispatchInvitations starts a background goroutine that periodically retries sending pending invitation emails.
 // It runs once immediately on startup, then every Interval hours (reusing the same config as product notifications).
 func (nc *NotificationController) DispatchInvitations(baseURL string) {
-	emailProvider := &EmailNotificationProvider{
-		Configuration: nc.Configuration.SMTP,
-		Logger:        nc.Logger,
-	}
+	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
 		nc.Logger.Info().Msg("Invitation dispatch: email provider not configured, skipping")
@@ -302,10 +318,7 @@ func (nc *NotificationController) DispatchInvitations(baseURL string) {
 
 // SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database.
 func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
-	emailProvider := &EmailNotificationProvider{
-		Configuration: nc.Configuration.SMTP,
-		Logger:        nc.Logger,
-	}
+	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
 		return errors.New(MsgEmailProviderNotConfigured)
@@ -330,10 +343,7 @@ func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.Househ
 
 // SendVerificationEmail sends an email verification link using the invitation email system.
 func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.HouseholdInvitation, username, baseURL string) error {
-	emailProvider := &EmailNotificationProvider{
-		Configuration: nc.Configuration.SMTP,
-		Logger:        nc.Logger,
-	}
+	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
 		return errors.New(MsgEmailProviderNotConfigured)
@@ -358,10 +368,7 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 
 // SendEmailVerification sends a verification email directly to the user with a verification token.
 func (nc *NotificationController) SendEmailVerification(email, username, token, baseURL string, expiresAt time.Time) error {
-	emailProvider := &EmailNotificationProvider{
-		Configuration: nc.Configuration.SMTP,
-		Logger:        nc.Logger,
-	}
+	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
 		return errors.New(MsgEmailProviderNotConfigured)
@@ -379,7 +386,7 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 // DispatchMonthlyWasteReports starts a goroutine that sends household waste reports
 // on the configured day/hour (UTC) of each month to opted-in members via all enabled providers.
 func (nc *NotificationController) DispatchMonthlyWasteReports() {
-	emailProvider := &EmailNotificationProvider{Configuration: nc.Configuration.SMTP, Logger: nc.Logger}
+	emailProvider := nc.newEmailProvider()
 
 	notificationConfig := nc.Configuration.MonthlyWasteReport
 	go func() {
@@ -518,16 +525,8 @@ func (nc *NotificationController) sendStreakMilestoneNotifications(householdID u
 		return
 	}
 
-	emailProvider := &EmailNotificationProvider{Configuration: nc.Configuration.SMTP, Logger: nc.Logger}
-	ntfyTimeout := time.Duration(nc.Configuration.Ntfy.Timeout) * time.Second
-	if ntfyTimeout <= 0 {
-		ntfyTimeout = 15 * time.Second
-	}
-	ntfyProvider := &NtfyNotificationProvider{
-		Configuration: nc.Configuration.Ntfy,
-		Logger:        nc.Logger,
-		HTTPClient:    &http.Client{Timeout: ntfyTimeout},
-	}
+	emailProvider := nc.newEmailProvider()
+	ntfyProvider := nc.newNtfyProvider()
 
 	for i := range preferences {
 		nc.sendStreakEmailIfEnabled(milestone, &preferences[i], emailProvider)
@@ -565,7 +564,7 @@ func (nc *NotificationController) sendStreakTelegramIfEnabled(
 	pref *models.NotificationRecipientInfo,
 ) {
 	if pref.TelegramEnabled && pref.TelegramChatID != "" && pref.TelegramBotToken != "" {
-		telegramProvider := &TelegramNotificationProvider{BotToken: pref.TelegramBotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
+		telegramProvider := nc.newTelegramProvider(pref.TelegramBotToken)
 		if sendErr := telegramProvider.SendStreakMilestone(milestone, pref.TelegramChatID); sendErr != nil {
 			nc.Logger.Error().Msgf("Streak milestone: telegram failed: %s", sendErr)
 		}
