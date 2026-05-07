@@ -11,22 +11,12 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
-
-func convertStringIDsToInts(ids []string) ([]int, error) {
-	result := make([]int, 0, len(ids))
-	for _, id := range ids {
-		parsedID, err := strconv.Atoi(id)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, parsedID)
-	}
-	return result, nil
-}
 
 func joinErrors(errs []database.BulkOperationError) string {
 	var b strings.Builder
@@ -34,6 +24,14 @@ func joinErrors(errs []database.BulkOperationError) string {
 		b.WriteString(errs[i].Error())
 	}
 	return b.String()
+}
+
+func formatProductIDs(ids []uint) string {
+	parts := make([]string, len(ids))
+	for i, id := range ids {
+		parts[i] = strconv.FormatUint(uint64(id), 10)
+	}
+	return strings.Join(parts, ";")
 }
 
 // GetArchivedProducts returns the archived products of a user
@@ -47,25 +45,14 @@ func joinErrors(errs []database.BulkOperationError) string {
 // @Router       /api/v1/products/archived [get]
 func GetArchivedProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	// Get and parse parameter limit
-	limitParam := ctx.Query("limit")
-	var limit int
-	// Check if limit was found in query
-	if limitParam != "" {
-		var parseError error
-		if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
-			logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
-			return
-		}
-	} else {
-		// Set default limit
-		limit = 0
+	limit, ok := parseLimitParam(ctx, logger)
+	if !ok {
+		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -75,19 +62,24 @@ func GetArchivedProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	products, productBulkErr := productRepo.GetUserArchivedProductsBulk(userID, limit)
+	products, productBulkErr := repos.Products.GetUserArchivedProductsBulk(userID, limit)
 	if productBulkErr != nil {
-		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
-		return
-	} else {
-		ctx.JSON(http.StatusOK, products)
+		logger.Warn().Msgf("Error getting products of user: %s", productBulkErr)
+		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{
+				Message: "Unable to retrieve archived products. Please check your account.",
+				Action:  "Ensure you are logged in with a valid household",
+			})
+		} else {
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		}
 		return
 	}
+	ctx.JSON(http.StatusOK, products)
 }
 
 // BulkDeleteProducts deletes a list of products of a user
+// Deprecated: Use BulkWasteProducts instead
 // @Summary      	Deletes a list of products
 // @Description  	Deletes a list of products of a user
 // @Tags         	product
@@ -100,24 +92,15 @@ func GetArchivedProducts(ctx *gin.Context) {
 // @Router       	/api/v1/product/bulkDelete [delete]
 func BulkDeleteProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel
-	if err := ctx.ShouldBindJSON(&products); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+	if !bindJSON(ctx, logger, &products) {
 		return
 	}
 
-	convertedProductIDs, convErr := convertStringIDsToInts(products.ProductIDs)
-	if convErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
-		return
-	}
-
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -127,22 +110,18 @@ func BulkDeleteProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	bulkDeleteResultError := productRepo.BulkDeleteProducts(convertedProductIDs, userID)
+	bulkDeleteResultError := repos.Products.BulkDeleteProducts(products.ProductIDs, userID)
 	if len(bulkDeleteResultError) > 0 {
 		msg := joinErrors(bulkDeleteResultError)
 		logger.Error().Msg(msg)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: msg})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-	strProductIDs := make([]string, len(convertedProductIDs))
-	for i, productID := range convertedProductIDs {
-		strProductIDs[i] = strconv.Itoa(productID)
-	}
-	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", strings.Join(strProductIDs, ";"))})
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were deleted", formatProductIDs(products.ProductIDs))})
 }
 
 // BulkArchiveProducts archives a list of products of a user
+// Deprecated: Use BulkConsumeProducts instead
 // @Summary      	Archives a list of products
 // @Description  	Archives a list of products of a user
 // @Tags         	product
@@ -155,24 +134,15 @@ func BulkDeleteProducts(ctx *gin.Context) {
 // @Router       	/api/v1/product/bulkArchive [delete]
 func BulkArchiveProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel
-	if err := ctx.ShouldBindJSON(&products); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+	if !bindJSON(ctx, logger, &products) {
 		return
 	}
 
-	convertedProductIDs, convErr := convertStringIDsToInts(products.ProductIDs)
-	if convErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
-		return
-	}
-
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -182,19 +152,14 @@ func BulkArchiveProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	bulkArchiveError := productRepo.BulkArchiveProducts(convertedProductIDs, userID)
+	bulkArchiveError := repos.Products.BulkArchiveProducts(products.ProductIDs, userID)
 	if len(bulkArchiveError) > 0 {
 		msg := joinErrors(bulkArchiveError)
 		logger.Error().Msg(msg)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: msg})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-	strProductIDs := make([]string, len(convertedProductIDs))
-	for i, productID := range convertedProductIDs {
-		strProductIDs[i] = strconv.Itoa(productID)
-	}
-	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were archived", strings.Join(strProductIDs, ";"))})
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were archived", formatProductIDs(products.ProductIDs))})
 }
 
 // RestoreProduct restores an archived product of a user
@@ -210,14 +175,14 @@ func BulkArchiveProducts(ctx *gin.Context) {
 // @Router       	/api/v1/product/{id}/restore [post]
 func RestoreProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -227,11 +192,10 @@ func RestoreProduct(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	restoreResult := productRepo.RestoreProduct(productID, userID)
+	restoreResult := repos.Products.RestoreProduct(productID, userID)
 	if restoreResult != nil {
 		logger.Error().Msgf("Error restoring product: %s", restoreResult)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: restoreResult.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.RestoreFailedError())
 		return
 	} else {
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was restored", productID)})
@@ -252,24 +216,15 @@ func RestoreProduct(ctx *gin.Context) {
 // @Router       	/api/v1/product/bulkRestore [post]
 func BulkRestoreProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse body to list of product IDs
 	var products apiModel.BulkProductsAPIModel
-	if err := ctx.ShouldBindJSON(&products); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+	if !bindJSON(ctx, logger, &products) {
 		return
 	}
 
-	convertedProductIDs, convErr := convertStringIDsToInts(products.ProductIDs)
-	if convErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), convErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: convErr.Error()})
-		return
-	}
-
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -279,17 +234,12 @@ func BulkRestoreProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	bulkRestoreError := productRepo.BulkRestoreProducts(convertedProductIDs, userID)
+	bulkRestoreError := repos.Products.BulkRestoreProducts(products.ProductIDs, userID)
 	if len(bulkRestoreError) > 0 {
 		msg := joinErrors(bulkRestoreError)
 		logger.Error().Msg(msg)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: msg})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-	strProductIDs := make([]string, len(convertedProductIDs))
-	for i, productID := range convertedProductIDs {
-		strProductIDs[i] = strconv.Itoa(productID)
-	}
-	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were restored", strings.Join(strProductIDs, ";"))})
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Products with ID '%s' were restored", formatProductIDs(products.ProductIDs))})
 }

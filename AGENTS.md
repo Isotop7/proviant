@@ -157,28 +157,104 @@ tx.Commit()
 ### Logging
 - Use zerolog for all logging
 - Get logger from Gin context (don't create new loggers)
-- Use appropriate log levels: `Debug()`, `Info()`, `Warn()`, `Error()`
+- Use appropriate log levels: `Debug()`, `Info()`, `Warn()`, `Error()`, `Fatal()`
 - Format messages with `Msg()` or `Msgf()`
 - Example:
 ```go
 logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-logger.Error().Msg(err.Error())
+logger.Warn().Msg(err.Error())
 logger.Info().Msg("Logging initialized")
 ```
 
+#### Log Level Policy
+
+| Level | When to use | Examples |
+|-------|-------------|----------|
+| **Trace** | SQL query tracing, extremely detailed debug | GORM adapter SQL tracing |
+| **Debug** | Dev-time info, cache hit/miss, migration steps, individual event processing | "migration step running", "cache hit", "recipe match attempt" |
+| **Info** | Normal operational events worth recording in production | Startup, user created, config loaded, cleanup counts, notification sent, email sent |
+| **Warn** | Recoverable, expected, or user-caused issues that don't require immediate action | Invalid user input (4xx), missing optional dependencies, background task failures, cache misses/errors, "not found" in user-requested lookups, file close errors |
+| **Error** | Unexpected server-side failures requiring attention | DB operation failures, external API failures, missing required context values (controllers, repos), 5xx-causing errors, internal logic errors |
+| **Fatal** | Immediate startup termination | Cannot bind port, cannot set trusted proxies |
+
+##### Decision Tree for API Handlers
+
+```
+Is this a user/client error? (4xx response)
+  → Warn
+
+Is this a resource not found that the user requested?
+  → Warn
+
+Is this a background/non-critical side operation failing?
+  → Warn
+
+Is this a server-side error or unexpected failure? (5xx response)
+  → Error
+
+Is this a missing required dependency or context value?
+  → Error
+
+Is this a startup failure that prevents the app from running?
+  → Fatal
+```
+
 ### Testing
-- No tests currently exist - add them for new functionality
+
+#### Test Setup
+- Use `testutil.SetupTestDB(t)` for database setup - creates in-memory SQLite with all models migrated
+- Use `testutil.SetupGinContext(db)` for API handler tests - creates test context with logger and db
+- Use `t.Run()` for all subtests
+
+#### Test Helpers (`src/testutil/`)
+- `testutil.SetupTestDB(t)` - Creates in-memory SQLite DB with all migrations
+- `testutil.SetupGinContext(db)` - Creates Gin test context with logger and db
+- `testutil.MockJWTClaims(ctx, userID)` - Sets JWT claims with "id" key
+- `testutil.MockJWTClaimsWithKey(ctx, userID, key)` - Sets JWT claims with custom key
+- `testutil.CreateTestUser(db, householdID)` - Creates test user
+- `testutil.CreateTestHousehold(db, adminID)` - Creates test household
+- `testutil.CreateTestProduct(db, householdID)` - Creates test product
+- `testutil.CreateTestStorageLocation(db, householdID)` - Creates test storage location
+
+#### Assertions
+- Use plain Go assertions: `if got != want { t.Errorf(...) }`
+- Both plain Go and testify/assert are acceptable but use plain Go for consistency
+
+#### Test Guidelines
 - Use `go test` for unit tests
 - Use `t.Run()` for subtests
 - Test both success and error paths
+- Keep test DB setup in the helper functions, not duplicated in each test file
 
 ### Frontend/Assets
 - SCSS files in `src/templates/scss/`
 - Compiled CSS goes to `src/assets/css/`
 - **Always run `task css` after any change to `.scss` files** — the compiled CSS is what gets served; editing SCSS without recompiling has no visible effect
 - JavaScript files served from `src/assets/js/`
-- Use Bootstrap for styling, Bootstrap Icons for icons
+- **Always use Bootstrap 5 for styling and layout** — Context7 library ID: `/websites/getbootstrap`
+- **Always use Bootstrap Icons for icons** — Context7 library ID: `/twbs/icons`
 - **Avoid inline `style="..."` attributes in templates** — define CSS classes in `src/templates/scss/main.scss` instead. Inline styles are only acceptable for truly dynamic values (e.g., a `width` set from a template variable). When in doubt, use a class.
+
+#### Bootstrap & Bootstrap Icons — Documentation Workflow
+When implementing or modifying any HTML/CSS/template work, always consult the official
+documentation via Context7 MCP **before** writing code. Do not rely on memorized patterns.
+
+| Library          | Context7 ID               | Use for                                      |
+|------------------|---------------------------|----------------------------------------------|
+| Bootstrap 5      | `/websites/getbootstrap`  | Components, grid, utilities, JS plugins      |
+| Bootstrap Icons  | `/twbs/icons`             | Icon names, SVG usage, font usage            |
+
+**When to query docs (mandatory):**
+- Implementing any UI component (navbar, modal, offcanvas, accordion, toast, etc.)
+- Using grid, flexbox, or spacing utilities
+- Checking `data-bs-*` attribute options for JS plugins
+- Looking up an icon name before using it in a template
+- Verifying correct class names for color, sizing, or state variants
+
+**Workflow:**
+1. Call `query-docs` with the relevant Context7 library ID and a specific question.
+2. Implement based on the documented pattern — do not guess class names or attributes.
+3. After any SCSS change, run `task css` and bump `CACHE_NAME` in `sw.js`.
 
 #### Service Worker Caching
 - The project uses a service worker (`src/assets/js/sw.js`)
@@ -269,7 +345,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) f
 - **Tag format**: Use `vX.Y.Z` tags (e.g., `v0.4.0`). The `cliff.toml` tag pattern `v?[0-9].*` supports both new `v`-prefixed and legacy unprefixed tags.
 
 ## Important Notes
-- Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask
+- **Always use Context7 MCP** for code generation, setup/configuration steps, and library/API documentation — automatically call `resolve-library-id` and `query-docs` without waiting to be asked explicitly.
 - Project uses embedded filesystems (embed) for templates and assets
 - Supports both SQLite and MariaDB backends
 - Uses JWT tokens for API authentication
@@ -286,3 +362,48 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) f
   )
   ```
 - **OpenFoodFacts caching**: Barcode lookups go through the backend proxy endpoint `GET /api/v1/products/openfoodfacts/:barcode` (JWT-protected). When `openfoodfacts.cacheEnabled: true`, responses are stored in the `open_food_facts_caches` table (`src/models/database/openfoodfacts_cache.go`) and served from there on subsequent requests. The frontend (`src/assets/js/productsCreate.js`) calls `proviant.getOpenFoodFactsData()` from `proviant.js` — **do not** reintroduce direct browser calls to `world.openfoodfacts.org`. Cache operations are in `src/controllers/database/databasecontroller.go` (`GetOpenFoodFactsCacheByBarcode`, `CreateOpenFoodFactsCache`).
+
+## UI/UX Standards
+
+### Color & Contrast
+- Use CSS custom properties (Bootstrap variables) for theming — no raw hex values in templates
+- Maintain WCAG AA 4.5:1 minimum contrast ratio for normal text
+- Reserve the primary color for primary CTAs only; use secondary/neutral tones for non-essential actions
+
+### Layout & Spacing
+- Align to a 4pt/8pt grid using Bootstrap utility classes (e.g., `p-2`, `m-3`, `gap-2`)
+- Ensure touch targets are at least 44×44px for buttons, links, and form controls
+- **Never use inline `style="..."` attributes** for layout; define reusable utility or component classes
+
+### Typography
+- Limit the project to a maximum of five font sizes to preserve visual consistency
+- Establish hierarchy through font weight and size, not color alone
+
+### User Guidance
+- For any async operation exceeding 500ms, show a loading indicator and disable the triggering button until completion
+- Primary actions must use the `btn-primary` class
+- Provide inline validation on-blur for form fields; reserve full-page validation feedback for submit-time results
+- Always include a clear call-to-action in empty states (e.g., "Add your first product")
+- Require explicit confirmation before irreversible actions (e.g., deletion dialogs)
+
+### Feedback
+- Use `proviant.showFeedback()` for page-level async result messages
+- Use inline alerts for field-level or section-level errors only; avoid global banners for localized issues
+
+### Accessibility
+- Ensure the `lang` attribute on `<html>` matches the active UI language
+- All icon-only buttons require an `aria-label` describing the action
+- All interactive elements must be keyboard-navigable (`tabindex`, `focus-visible` styles)
+- Populate `aria-live` regions after dynamic content updates so screen readers announce changes
+
+### Nielsen 10 Heuristics (Quick Reference)
+1. Visibility of system status
+2. Match between system and the real world
+3. User control and freedom
+4. Consistency and standards
+5. Error prevention
+6. Recognition rather than recall
+7. Flexibility and efficiency of use
+8. Aesthetic and minimalist design
+9. Help users recognize, diagnose, and recover from errors
+10. Help and documentation

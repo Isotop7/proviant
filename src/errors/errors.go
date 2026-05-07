@@ -52,6 +52,10 @@ var (
 	// ErrInvalidUserID is thrown when supplied user data is invalid
 	ErrInvalidUserID = errors.New("invalid user ID")
 
+	// ErrInvalidUserIDWrapper is used to interpolate a invalid user id
+	ErrInvalidUserIDWrapper            = "User with id '%d' not found"
+	ErrInvalidUserIDWrapperWithMessage = ErrInvalidUserIDWrapper + ": %s"
+
 	// ErrUserWithUsernameExists is thrown when a user with the same username already exists
 	ErrUserWithUsernameExists = errors.New("user with this username already exists")
 
@@ -69,6 +73,9 @@ var (
 
 	// ErrParseBody is thrown when a body fails to parse
 	ErrParseBody = errors.New("error parsing body")
+
+	// ErrParseBodyWrapper is used to interpolate a non-parseable body
+	ErrParseBodyWrapper = "Error parsing body: %s"
 
 	// Message format template for generic error
 	FormatGenericError = "%s: %s"
@@ -244,6 +251,12 @@ var (
 	// ErrWebhookURLInvalid is thrown when a webhook URL is invalid
 	ErrWebhookURLInvalid = errors.New("webhook URL is invalid")
 
+	// ErrWebhookURLPrivateIP is thrown when a webhook URL resolves to a private or internal IP address
+	ErrWebhookURLPrivateIP = errors.New("webhook URL must not point to a private or internal IP address")
+
+	// ErrWebhookURLNotHTTPS is thrown when a webhook URL does not use HTTPS
+	ErrWebhookURLNotHTTPS = errors.New("webhook URL must use HTTPS")
+
 	// ErrWebhookSecretTooShort is thrown when a webhook secret is too short
 	ErrWebhookSecretTooShort = errors.New("webhook secret must be at least 16 characters")
 
@@ -252,6 +265,24 @@ var (
 
 	// ErrWebhookNotOwner is thrown when a user tries to access a webhook they do not own
 	ErrWebhookNotOwner = errors.New("webhook does not belong to user")
+
+	/*
+	 * Server configuration related errors
+	 */
+	// ErrServerEmptyTokenPassword is thrown if no JWT token password was specified
+	ErrServerEmptyTokenPassword = errors.New("JWT token password cannot be empty")
+
+	// ErrServerInvalidTokenLifetime is thrown if an invalid JWT token lifetime was specified
+	ErrServerInvalidTokenLifetime = errors.New("JWT token lifetime must be greater than 0")
+
+	// ErrRateLimitInvalidValue is thrown if any rate limit value is zero or negative
+	ErrRateLimitInvalidValue = errors.New("rate limit values must be greater than 0")
+
+	/*
+	 * CSRF related errors
+	 */
+	// ErrCSRFTokenInvalid is thrown when a CSRF token is missing or does not match the expected value
+	ErrCSRFTokenInvalid = errors.New("CSRF token validation failed")
 
 	/*
 	 * Savings related errors
@@ -309,4 +340,31 @@ var (
 
 	// ErrDatabaseOperationFailed is thrown when a database operation fails
 	ErrDatabaseOperationFailed = errors.New("database operation failed")
+
+	/*
+	 * Export related errors
+	 */
+	// ErrExportCSVWriteWrapper is used to interpolate csv export error
+	ErrExportCSVWriteWrapper = "CSV write error: %s"
+
+	/*
+	 * Stats/export shared log format strings
+	 */
+	FmtErrGetActiveProductsCount              = "GetActiveProductsCount: %s"
+	FmtErrGetExpiredProductsCount             = "GetExpiredProductsCount: %s"
+	FmtErrGetExpiringSoonProducts             = "GetExpiringSoonProducts: %s"
+	FmtErrGetProductCategoryBreakdown         = "GetProductCategoryBreakdown: %s"
+	FmtErrGetExpiryTrend                      = "GetExpiryTrend: %s"
+	FmtErrGetArchivedProductsGroupedByBarcode = "GetArchivedProductsGroupedByBarcode: %s"
+
+	/*
+	 * Stats/export shared HTTP response messages
+	 */
+	MsgErrComputingActiveCount         = "Error computing active product count"
+	MsgErrComputingWasteCount          = "Error computing waste count"
+	MsgErrComputingUniqueArchivedCount = "Error computing unique archived count"
+	MsgErrComputingExpiringSoon        = "Error computing expiring soon products"
+	MsgErrComputingCategoryBreakdown   = "Error computing category breakdown"
+	MsgErrComputingExpiryTrend         = "Error computing expiry trend"
+	MsgErrGettingProducts              = "Error getting products"
 )

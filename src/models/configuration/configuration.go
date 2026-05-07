@@ -32,15 +32,15 @@ type DatabaseConfiguration struct {
 
 // AuthenticationConfiguration contains all properties regarding the JSON Web Tokens
 type AuthenticationConfiguration struct {
-	TokenPassword            string
-	TokenLifetime            int
-	MaxLoginAttempts         int
-	LockoutDurationMins      int
-	PasswordMinLength        int
-	PasswordRequireUppercase bool
-	PasswordRequireDigit     bool
-	PasswordRequireSpecial   bool
-	PasswordCheckBreached    bool
+	TokenPassword            string `mapstructure:"tokenPassword"`
+	TokenLifetime            int    `mapstructure:"tokenLifetime"`
+	MaxLoginAttempts         int    `mapstructure:"max_login_attempts"`
+	LockoutDurationMins      int    `mapstructure:"lockout_duration_mins"`
+	PasswordMinLength        int    `mapstructure:"password_min_length"`
+	PasswordRequireUppercase bool   `mapstructure:"password_require_uppercase"`
+	PasswordRequireDigit     bool   `mapstructure:"password_require_digit"`
+	PasswordRequireSpecial   bool   `mapstructure:"password_require_special"`
+	PasswordCheckBreached    bool   `mapstructure:"password_check_breached"`
 }
 
 // CorsConfiguration contains all properties for the CORS configuration of the proviant server
@@ -52,6 +52,14 @@ type CorsConfiguration struct {
 // SecurityHeadersConfiguration contains all properties for HTTP security headers
 type SecurityHeadersConfiguration struct {
 	ContentSecurityPolicy string
+	CSRFTokenMaxAge       int `mapstructure:"csrf_token_max_age"` // seconds; default 86400 (24h)
+}
+
+// RateLimitConfiguration holds per-endpoint rate limits in requests per minute.
+type RateLimitConfiguration struct {
+	LoginPerMinute  int `mapstructure:"login_per_minute"`
+	SignupPerMinute int `mapstructure:"signup_per_minute"`
+	ExportPerMinute int `mapstructure:"export_per_minute"`
 }
 
 // ServerConfiguration contains all properties regarding the proviant server
@@ -61,6 +69,10 @@ type ServerConfiguration struct {
 	CORS            CorsConfiguration
 	BaseURL         string
 	SecurityHeaders SecurityHeadersConfiguration
+	RateLimit       RateLimitConfiguration `mapstructure:"rateLimit"`
+	TrustedProxies  []string               `mapstructure:"trustedProxies"`
+	MaxUploadSizeMB int                    `mapstructure:"maxUploadSizeMB"`
+	Debug           bool                   `mapstructure:"debug"`
 }
 
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog
@@ -94,7 +106,8 @@ type MonthlyWasteReportConfiguration struct {
 
 // TelegramConfiguration holds per-instance Telegram settings (no global bot token).
 type TelegramConfiguration struct {
-	Timeout int // HTTP client timeout in seconds (default: 15)
+	Timeout       int // HTTP client timeout in seconds (default: 15)
+	PollerWorkers int // Number of worker goroutines for polling all users (default: 10)
 }
 
 // NotificationConfiguration contains all properties regarding the notification handler
@@ -118,12 +131,13 @@ type OpenFoodFactsConfiguration struct {
 
 // OCRConfiguration contains settings for OCR expiry date detection
 type OCRConfiguration struct {
-	Enabled   bool   `json:"enabled"`   // master switch
-	Provider  string `json:"provider"`  // "tesseract" (local), "google", "openai"
-	APIKey    string `json:"apiKey"`    // for cloud providers
-	Endpoint  string `json:"endpoint"`  // custom endpoint (e.g., Tesseract HTTP server)
-	Timeout   int    `json:"timeout"`   // seconds per request
-	Languages string `json:"languages"` // Tesseract language codes, e.g. "deu+eng"
+	Enabled       bool   `mapstructure:"enabled"`       // master switch
+	Provider      string `mapstructure:"provider"`      // "tesseract" (local), "google", "openai"
+	APIKey        string `mapstructure:"apiKey"`        // for cloud providers
+	Endpoint      string `mapstructure:"endpoint"`      // custom endpoint (e.g., Tesseract HTTP server)
+	Timeout       int    `mapstructure:"timeout"`       // seconds per request
+	Languages     string `mapstructure:"languages"`     // Tesseract language codes, e.g. "deu+eng"
+	TesseractPath string `mapstructure:"tesseractPath"` // absolute path to tesseract binary
 }
 
 // RecipeAPIConfiguration contains settings for the recipe suggestions feature
@@ -169,27 +183,43 @@ func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error {
 	return nil
 }
 
+func validateSMTPConfig(smtp *SMTPConfiguration) error {
+	if smtp.Host == "" {
+		return nil
+	}
+	if smtp.Port <= 0 {
+		return errors.ErrNotificationInvalidSMTPPort
+	}
+	if smtp.FromAddress == "" {
+		return errors.ErrNotificationEmptyFromAddress
+	}
+	return nil
+}
+
+func validateNtfyConfig(ntfy NtfyConfiguration) error {
+	if ntfy.URL == "" {
+		return nil
+	}
+	if ntfy.Topic == "" {
+		return errors.ErrNotificationEmptyNtfyTopic
+	}
+	if !strings.HasPrefix(ntfy.URL, "http://") && !strings.HasPrefix(ntfy.URL, "https://") {
+		return errors.ErrNotificationInvalidNtfyURL
+	}
+	return nil
+}
+
 // ValidateNotificationConfiguration validates the notification configuration
 func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error {
 	if !ec.Notification.Enabled {
-		return nil // Notifications disabled, no validation needed
+		return nil
 	}
-
 	if ec.Notification.Interval <= 0 {
 		return errors.ErrNotificationInvalidInterval
 	}
-
-	// Validate SMTP configuration if SMTP host is provided
-	if ec.Notification.SMTP.Host != "" {
-		if ec.Notification.SMTP.Port <= 0 {
-			return errors.ErrNotificationInvalidSMTPPort
-		}
-		if ec.Notification.SMTP.FromAddress == "" {
-			return errors.ErrNotificationEmptyFromAddress
-		}
+	if err := validateSMTPConfig(&ec.Notification.SMTP); err != nil {
+		return err
 	}
-
-	// Validate monthly waste report schedule
 	day := ec.Notification.MonthlyWasteReport.Day
 	if day < 1 || day > 28 {
 		return errors.ErrNotificationInvalidWasteReportDay
@@ -198,20 +228,7 @@ func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error {
 	if hour < 0 || hour > 23 {
 		return errors.ErrNotificationInvalidWasteReportHour
 	}
-
-	// Validate ntfy configuration if ntfy URL is provided
-	if ec.Notification.Ntfy.URL != "" {
-		if ec.Notification.Ntfy.Topic == "" {
-			return errors.ErrNotificationEmptyNtfyTopic
-		}
-		// Basic URL validation
-		if !strings.HasPrefix(ec.Notification.Ntfy.URL, "http://") &&
-			!strings.HasPrefix(ec.Notification.Ntfy.URL, "https://") {
-			return errors.ErrNotificationInvalidNtfyURL
-		}
-	}
-
-	return nil
+	return validateNtfyConfig(ec.Notification.Ntfy)
 }
 
 // ValidateDatabaseConfiguration checks the current database configuration for common errors
@@ -242,6 +259,21 @@ func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error {
 		if ec.Database.SQLite.Filepath == "" {
 			return errors.ErrDatabaseSQLiteInvalidPath
 		}
+	}
+	return nil
+}
+
+// ValidateServerConfiguration validates the server authentication configuration
+func (ec *ProviantConfiguration) ValidateServerConfiguration() error {
+	if ec.Server.Authentication.TokenPassword == "" {
+		return errors.ErrServerEmptyTokenPassword
+	}
+	if ec.Server.Authentication.TokenLifetime <= 0 {
+		return errors.ErrServerInvalidTokenLifetime
+	}
+	rl := ec.Server.RateLimit
+	if rl.LoginPerMinute <= 0 || rl.SignupPerMinute <= 0 || rl.ExportPerMinute <= 0 {
+		return errors.ErrRateLimitInvalidValue
 	}
 	return nil
 }

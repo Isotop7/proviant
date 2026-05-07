@@ -7,6 +7,8 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -24,9 +26,9 @@ import (
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/notifications [get]
 func GetNotifications(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -36,79 +38,96 @@ func GetNotifications(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-	invitationRepo := database.NewInvitationRepository(dbHandle)
-	items := []apiModel.NotificationItem{}
-
-	user, err := userRepo.GetUserByID(userID)
+	user, err := repos.Users.GetUserByID(userID)
 	if err != nil {
 		logger.Error().Msgf("Error fetching user %d: %s", userID, err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 		return
 	}
 
-	if user.HouseholdID != 0 {
-		// Pending invitations sent by any member of the user's household
-		invitations, invErr := invitationRepo.GetPendingInvitationsForHousehold(user.HouseholdID)
-		if invErr != nil {
-			logger.Error().Msgf("Error fetching pending invitations: %s", invErr)
-		} else {
-			for i := range invitations {
-				invitation := &invitations[i]
-				items = append(items, apiModel.NotificationItem{
-					ID:        invitation.ID,
-					Type:      "invitation",
-					Title:     "Invitation pending: " + invitation.Email,
-					CreatedAt: invitation.CreatedAt.Format("2006-01-02"),
-				})
-			}
-		}
-
-		// If the user is the household admin, surface incoming join requests
-		household, householdErr := householdRepo.GetHouseholdByID(user.HouseholdID)
-		if householdErr == nil && household.AdminID == userID {
-			applications, appErr := householdRepo.GetPendingApplicationsForAdmin(userID)
-			if appErr != nil {
-				logger.Error().Msgf("Error fetching pending applications for admin: %s", appErr)
-			} else {
-				for _, app := range applications {
-					applicantName := fmt.Sprintf("User #%d", app.ApplicantID)
-					if applicant, uErr := userRepo.GetUserByID(app.ApplicantID); uErr == nil {
-						applicantName = applicant.EffectiveName()
-					}
-					items = append(items, apiModel.NotificationItem{
-						ID:        app.ID,
-						Type:      "application_incoming",
-						Title:     applicantName + " wants to join your household",
-						CreatedAt: app.CreatedAt.Format("2006-01-02"),
-					})
-				}
-			}
-		}
-	}
-
-	// User's own outgoing pending applications to other households
-	ownApplications, ownErr := householdRepo.GetPendingApplicationsForApplicant(userID)
-	if ownErr != nil {
-		logger.Error().Msgf("Error fetching user's pending applications: %s", ownErr)
-	} else {
-		for _, app := range ownApplications {
-			householdName := fmt.Sprintf("Household #%d", app.HouseholdID)
-			if h, hErr := householdRepo.GetHouseholdByID(app.HouseholdID); hErr == nil {
-				householdName = h.Name
-			}
-			items = append(items, apiModel.NotificationItem{
-				ID:        app.ID,
-				Type:      "application_outgoing",
-				Title:     "Awaiting approval to join " + householdName,
-				CreatedAt: app.CreatedAt.Format("2006-01-02"),
-			})
-		}
-	}
+	items := buildNotificationItems(repos, logger, &user, userID)
 
 	ctx.JSON(http.StatusOK, apiModel.NotificationsResponse{
 		Total: len(items),
 		Items: items,
 	})
+}
+
+func buildNotificationItems(repos *database.RepositoryContainer, logger *zerolog.Logger, user *authentication.User, userID uint) []apiModel.NotificationItem {
+	items := []apiModel.NotificationItem{}
+
+	if user.HouseholdID != 0 {
+		items = append(items, invitationNotificationItems(repos, logger, user.HouseholdID)...)
+		items = append(items, incomingApplicationNotificationItems(repos, logger, user.HouseholdID, userID)...)
+	}
+
+	items = append(items, outgoingApplicationNotificationItems(repos, logger, userID)...)
+	return items
+}
+
+func invitationNotificationItems(repos *database.RepositoryContainer, logger *zerolog.Logger, householdID uint) []apiModel.NotificationItem {
+	invitations, err := repos.Invitations.GetPendingInvitationsForHousehold(householdID)
+	if err != nil {
+		logger.Error().Msgf("Error fetching pending invitations: %s", err)
+		return nil
+	}
+	items := make([]apiModel.NotificationItem, 0, len(invitations))
+	for i := range invitations {
+		inv := &invitations[i]
+		items = append(items, apiModel.NotificationItem{
+			ID:        inv.ID,
+			Type:      "invitation",
+			Title:     "Invitation pending: " + inv.Email,
+			CreatedAt: inv.CreatedAt.Format(util.DefaultDateFormatParseStr),
+		})
+	}
+	return items
+}
+
+func incomingApplicationNotificationItems(repos *database.RepositoryContainer, logger *zerolog.Logger, householdID uint, userID uint) []apiModel.NotificationItem {
+	household, err := repos.Households.GetHouseholdByID(householdID)
+	if err != nil || household.AdminID != userID {
+		return nil
+	}
+	applications, err := repos.Households.GetPendingApplicationsForAdmin(userID)
+	if err != nil {
+		logger.Error().Msgf("Error fetching pending applications for admin: %s", err)
+		return nil
+	}
+	items := make([]apiModel.NotificationItem, 0, len(applications))
+	for _, app := range applications {
+		applicantName := fmt.Sprintf("User #%d", app.ApplicantID)
+		if applicant, uErr := repos.Users.GetUserByID(app.ApplicantID); uErr == nil {
+			applicantName = applicant.EffectiveName()
+		}
+		items = append(items, apiModel.NotificationItem{
+			ID:        app.ID,
+			Type:      "application_incoming",
+			Title:     applicantName + " wants to join your household",
+			CreatedAt: app.CreatedAt.Format(util.DefaultDateFormatParseStr),
+		})
+	}
+	return items
+}
+
+func outgoingApplicationNotificationItems(repos *database.RepositoryContainer, logger *zerolog.Logger, userID uint) []apiModel.NotificationItem {
+	applications, err := repos.Households.GetPendingApplicationsForApplicant(userID)
+	if err != nil {
+		logger.Error().Msgf("Error fetching user's pending applications: %s", err)
+		return nil
+	}
+	items := make([]apiModel.NotificationItem, 0, len(applications))
+	for _, app := range applications {
+		householdName := fmt.Sprintf("Household #%d", app.HouseholdID)
+		if h, hErr := repos.Households.GetHouseholdByID(app.HouseholdID); hErr == nil {
+			householdName = h.Name
+		}
+		items = append(items, apiModel.NotificationItem{
+			ID:        app.ID,
+			Type:      "application_outgoing",
+			Title:     "Awaiting approval to join " + householdName,
+			CreatedAt: app.CreatedAt.Format(util.DefaultDateFormatParseStr),
+		})
+	}
+	return items
 }

@@ -22,10 +22,26 @@ import "codeberg.org/isotop7/proviant/api"
 
 ## Index
 
+- [Constants](<#constants>)
 - [Variables](<#variables>)
 - [type APIResponse](<#APIResponse>)
+  - [func CreateFailedError\(\) APIResponse](<#CreateFailedError>)
+  - [func DeleteFailedError\(\) APIResponse](<#DeleteFailedError>)
   - [func Error\(err error\) APIResponse](<#Error>)
+  - [func InternalError\(\) APIResponse](<#InternalError>)
+  - [func InvalidInputError\(\) APIResponse](<#InvalidInputError>)
+  - [func InvalidInputErrorWithDetail\(detail string\) APIResponse](<#InvalidInputErrorWithDetail>)
+  - [func RestoreFailedError\(\) APIResponse](<#RestoreFailedError>)
+  - [func UpdateFailedError\(\) APIResponse](<#UpdateFailedError>)
 
+
+## Constants
+
+<a name="ActionTryAgain"></a>
+
+```go
+const ActionTryAgain = "Please try again later"
+```
 
 ## Variables
 
@@ -51,8 +67,27 @@ APIResponse is the data model for a generic API response
 ```go
 type APIResponse struct {
     Message string `json:"message"`
+    Action  string `json:"action,omitempty"`
 }
 ```
+
+<a name="CreateFailedError"></a>
+### func CreateFailedError
+
+```go
+func CreateFailedError() APIResponse
+```
+
+
+
+<a name="DeleteFailedError"></a>
+### func DeleteFailedError
+
+```go
+func DeleteFailedError() APIResponse
+```
+
+
 
 <a name="Error"></a>
 ### func Error
@@ -62,6 +97,51 @@ func Error(err error) APIResponse
 ```
 
 Error returns an API response object from a error object
+
+<a name="InternalError"></a>
+### func InternalError
+
+```go
+func InternalError() APIResponse
+```
+
+
+
+<a name="InvalidInputError"></a>
+### func InvalidInputError
+
+```go
+func InvalidInputError() APIResponse
+```
+
+
+
+<a name="InvalidInputErrorWithDetail"></a>
+### func InvalidInputErrorWithDetail
+
+```go
+func InvalidInputErrorWithDetail(detail string) APIResponse
+```
+
+
+
+<a name="RestoreFailedError"></a>
+### func RestoreFailedError
+
+```go
+func RestoreFailedError() APIResponse
+```
+
+
+
+<a name="UpdateFailedError"></a>
+### func UpdateFailedError
+
+```go
+func UpdateFailedError() APIResponse
+```
+
+
 
 # assets
 
@@ -97,6 +177,7 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [func InitWebhookService\(db \*gorm.DB, logger \*zerolog.Logger\)](<#InitWebhookService>)
 - [func ParseWebhookEvents\(eventsJSON string\) \[\]string](<#ParseWebhookEvents>)
 - [func ValidateAndLookupPAT\(token string, dbHandle \*gorm.DB\) \(\*authentication.PersonalAccessToken, error\)](<#ValidateAndLookupPAT>)
+- [type DatasetGetter](<#DatasetGetter>)
 - [type EmailNotificationProvider](<#EmailNotificationProvider>)
   - [func \(e \*EmailNotificationProvider\) GetProviderType\(\) string](<#EmailNotificationProvider.GetProviderType>)
   - [func \(e \*EmailNotificationProvider\) IsConfigured\(\) bool](<#EmailNotificationProvider.IsConfigured>)
@@ -123,11 +204,19 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(n \*NtfyNotificationProvider\) GetProviderType\(\) string](<#NtfyNotificationProvider.GetProviderType>)
   - [func \(n \*NtfyNotificationProvider\) IsConfigured\(\) bool](<#NtfyNotificationProvider.IsConfigured>)
   - [func \(n \*NtfyNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#NtfyNotificationProvider.SendNotification>)
-  - [func \(n \*NtfyNotificationProvider\) SendStreakMilestone\(milestone int, recipient models.NotificationRecipientInfo\) error](<#NtfyNotificationProvider.SendStreakMilestone>)
+  - [func \(n \*NtfyNotificationProvider\) SendStreakMilestone\(milestone int, recipient \*models.NotificationRecipientInfo\) error](<#NtfyNotificationProvider.SendStreakMilestone>)
+- [type OCRController](<#OCRController>)
+- [type OCRControllerImpl](<#OCRControllerImpl>)
+  - [func NewOCRController\(logger \*zerolog.Logger, config \*configuration.OCRConfiguration\) \*OCRControllerImpl](<#NewOCRController>)
+  - [func \(c \*OCRControllerImpl\) ScanExpiryDate\(image \[\]byte\) \(\*api.ExpiryScanResponse, error\)](<#OCRControllerImpl.ScanExpiryDate>)
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
   - [func \(offacntrl OpenFoodFactsAPIController\) DownloadImage\(imageURL, barcode string\) \(string, error\)](<#OpenFoodFactsAPIController.DownloadImage>)
   - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
-- [type OpenFoodFactsAPIControllerInterface](<#OpenFoodFactsAPIControllerInterface>)
+- [type Recipe](<#Recipe>)
+- [type RecipeController](<#RecipeController>)
+  - [func NewRecipeController\(config configuration.RecipeAPIConfiguration, logger \*zerolog.Logger, db \*gorm.DB\) \*RecipeController](<#NewRecipeController>)
+  - [func \(rc \*RecipeController\) GetSuggestions\(expiringProducts \[\]dbModel.Product, allProducts \[\]dbModel.Product, limit int\) \(\[\]RecipeSuggestion, error\)](<#RecipeController.GetSuggestions>)
+- [type RecipeSuggestion](<#RecipeSuggestion>)
 - [type TelegramNotificationProvider](<#TelegramNotificationProvider>)
   - [func \(t \*TelegramNotificationProvider\) GetProviderType\(\) string](<#TelegramNotificationProvider.GetProviderType>)
   - [func \(t \*TelegramNotificationProvider\) IsConfigured\(\) bool](<#TelegramNotificationProvider.IsConfigured>)
@@ -141,6 +230,15 @@ import "codeberg.org/isotop7/proviant/controllers"
 
 ## Constants
 
+<a name="MsgFailedCloseResponseBody"></a>
+
+```go
+const (
+    MsgFailedCloseResponseBody = "failed to close response body"
+    MsgApiReturnWrapper        = "API returned %d"
+)
+```
+
 <a name="EmailVerificationTokenDuration"></a>
 
 ```go
@@ -151,6 +249,12 @@ const EmailVerificationTokenDuration = 24 * time.Hour
 
 ```go
 const EmailVerificationTokenLength = 32
+```
+
+<a name="MsgEmailProviderNotConfigured"></a>
+
+```go
+const MsgEmailProviderNotConfigured = "email provider not configured"
 ```
 
 <a name="TokenLength"></a>
@@ -218,6 +322,17 @@ func ValidateAndLookupPAT(token string, dbHandle *gorm.DB) (*authentication.Pers
 ```
 
 
+
+<a name="DatasetGetter"></a>
+## type DatasetGetter
+
+DatasetGetter defines the contract for getting OpenFoodFacts dataset by barcode
+
+```go
+type DatasetGetter interface {
+    GetDataset(barcode string) (database.Product, error)
+}
+```
 
 <a name="EmailNotificationProvider"></a>
 ## type EmailNotificationProvider
@@ -475,10 +590,51 @@ func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, re
 ### func \(\*NtfyNotificationProvider\) SendStreakMilestone
 
 ```go
-func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient models.NotificationRecipientInfo) error
+func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient *models.NotificationRecipientInfo) error
 ```
 
 SendStreakMilestone sends a streak milestone push notification via ntfy.
+
+<a name="OCRController"></a>
+## type OCRController
+
+OCRController interfaces for scanning expiry dates from images
+
+```go
+type OCRController interface {
+    ScanExpiryDate(image []byte) (*api.ExpiryScanResponse, error)
+}
+```
+
+<a name="OCRControllerImpl"></a>
+## type OCRControllerImpl
+
+
+
+```go
+type OCRControllerImpl struct {
+    Logger *zerolog.Logger
+    Config configuration.OCRConfiguration
+}
+```
+
+<a name="NewOCRController"></a>
+### func NewOCRController
+
+```go
+func NewOCRController(logger *zerolog.Logger, config *configuration.OCRConfiguration) *OCRControllerImpl
+```
+
+NewOCRController creates a new OCR controller instance
+
+<a name="OCRControllerImpl.ScanExpiryDate"></a>
+### func \(\*OCRControllerImpl\) ScanExpiryDate
+
+```go
+func (c *OCRControllerImpl) ScanExpiryDate(image []byte) (*api.ExpiryScanResponse, error)
+```
+
+ScanExpiryDate processes an image and returns detected expiry date
 
 <a name="OpenFoodFactsAPIController"></a>
 ## type OpenFoodFactsAPIController
@@ -510,14 +666,69 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 
 GetDataset gets data from OpenFoodFacts by its API. The search parameter is the barcode of the product
 
-<a name="OpenFoodFactsAPIControllerInterface"></a>
-## type OpenFoodFactsAPIControllerInterface
+<a name="Recipe"></a>
+## type Recipe
 
-OpenFoodFactsAPIControllerInterface defines the contract for interacting with OpenFoodFacts
+Recipe represents a normalized recipe from TheMealDB.
 
 ```go
-type OpenFoodFactsAPIControllerInterface interface {
-    GetDataset(barcode string) (database.Product, error)
+type Recipe struct {
+    ID          string
+    Title       string
+    ImageURL    string
+    SourceURL   string
+    Ingredients []string
+}
+```
+
+<a name="RecipeController"></a>
+## type RecipeController
+
+RecipeController handles recipe suggestions from external APIs.
+
+```go
+type RecipeController struct {
+    Logger     *zerolog.Logger
+    Config     configuration.RecipeAPIConfiguration
+    RecipeRepo *recipeRepo.RecipeRepository
+    HTTPClient *http.Client
+}
+```
+
+<a name="NewRecipeController"></a>
+### func NewRecipeController
+
+```go
+func NewRecipeController(config configuration.RecipeAPIConfiguration, logger *zerolog.Logger, db *gorm.DB) *RecipeController
+```
+
+NewRecipeController creates a new controller.
+
+<a name="RecipeController.GetSuggestions"></a>
+### func \(\*RecipeController\) GetSuggestions
+
+```go
+func (rc *RecipeController) GetSuggestions(expiringProducts []dbModel.Product, allProducts []dbModel.Product, limit int) ([]RecipeSuggestion, error)
+```
+
+GetSuggestions returns up to limit recipe suggestions based on expiring products.
+
+<a name="RecipeSuggestion"></a>
+## type RecipeSuggestion
+
+RecipeSuggestion is a recipe matched to household products.
+
+```go
+type RecipeSuggestion struct {
+    ID               string                `json:"id"`
+    Title            string                `json:"title"`
+    ImageURL         string                `json:"imageUrl"`
+    SourceURL        string                `json:"sourceUrl"`
+    Ingredients      []api.IngredientMatch `json:"ingredients"`
+    MatchedProducts  []string              `json:"matchedProducts"` // kept for backwards compatibility
+    MissingCount     int                   `json:"missingCount"`
+    TotalIngredients int                   `json:"totalIngredients"`
+    MatchPercent     float64               `json:"matchPercent"`
 }
 ```
 
@@ -710,6 +921,10 @@ var (
     // ErrInvalidUserID is thrown when supplied user data is invalid
     ErrInvalidUserID = errors.New("invalid user ID")
 
+    // ErrInvalidUserIDWrapper is used to interpolate a invalid user id
+    ErrInvalidUserIDWrapper            = "User with id '%d' not found"
+    ErrInvalidUserIDWrapperWithMessage = ErrInvalidUserIDWrapper + ": %s"
+
     // ErrUserWithUsernameExists is thrown when a user with the same username already exists
     ErrUserWithUsernameExists = errors.New("user with this username already exists")
 
@@ -727,6 +942,9 @@ var (
 
     // ErrParseBody is thrown when a body fails to parse
     ErrParseBody = errors.New("error parsing body")
+
+    // ErrParseBodyWrapper is used to interpolate a non-parseable body
+    ErrParseBodyWrapper = "Error parsing body: %s"
 
     // Message format template for generic error
     FormatGenericError = "%s: %s"
@@ -919,6 +1137,81 @@ var (
 
     // ErrSavingsStatsUnavailable is thrown when savings statistics cannot be computed
     ErrSavingsStatsUnavailable = errors.New("savings statistics unavailable")
+
+    /*
+     * OCR related errors
+     */
+    // ErrOCRTimeout is thrown when OCR processing exceeds the configured timeout
+    ErrOCRTimeout = errors.New("OCR processing timeout exceeded")
+
+    // ErrOCRProcessing is thrown when OCR processing fails (generic)
+    ErrOCRProcessing = errors.New("OCR processing failed")
+
+    // ErrFileTooLarge is thrown when the uploaded image exceeds the size limit
+    ErrFileTooLarge = errors.New("uploaded file too large")
+
+    // ErrInvalidRequest is thrown when the request is malformed or missing required parameters
+    ErrInvalidRequest = errors.New("invalid request")
+
+    // ErrInternalServer is thrown when an internal server error occurs
+    ErrInternalServer = errors.New("internal server error")
+
+    /*
+     * Recipe related errors
+     */
+    // ErrRecipeAPIUnavailable is thrown when the recipe API is unreachable or returns an error
+    ErrRecipeAPIUnavailable = errors.New("recipe service unavailable")
+
+    // ErrRecipeCacheMiss is thrown when a cache lookup fails to find an entry
+    ErrRecipeCacheMiss = errors.New("recipe cache miss")
+
+    // ErrRecipeInvalidProvider is thrown when the configured recipe API provider is not supported
+    ErrRecipeInvalidProvider = errors.New("invalid recipe API provider")
+
+    // ErrRecipeAPIEmptyURL is thrown when the recipe API URL is empty
+    ErrRecipeAPIEmptyURL = errors.New("empty recipe API URL")
+
+    // ErrRecipeAPIInvalidTimeout is thrown when the recipe API timeout is invalid
+    ErrRecipeAPIInvalidTimeout = errors.New("invalid timeout for recipe API")
+
+    // ErrRecipeNoMatchesFound is thrown when no recipes match the given products
+    ErrRecipeNoMatchesFound = errors.New("no matching recipes found")
+
+    // ErrUserHasNoHousehold is thrown when a user does not belong to a household
+    ErrUserHasNoHousehold = errors.New("user has no household")
+
+    // ErrInvalidQueryParameter is thrown when a query parameter is invalid
+    ErrInvalidQueryParameter = errors.New("invalid query parameter")
+
+    // ErrDatabaseOperationFailed is thrown when a database operation fails
+    ErrDatabaseOperationFailed = errors.New("database operation failed")
+
+    /*
+     * Export related errors
+     */
+    // ErrExportCSVWriteWrapper is used to interpolate csv export error
+    ErrExportCSVWriteWrapper = "CSV write error: %s"
+
+    /*
+     * Stats/export shared log format strings
+     */
+    FmtErrGetActiveProductsCount              = "GetActiveProductsCount: %s"
+    FmtErrGetExpiredProductsCount             = "GetExpiredProductsCount: %s"
+    FmtErrGetExpiringSoonProducts             = "GetExpiringSoonProducts: %s"
+    FmtErrGetProductCategoryBreakdown         = "GetProductCategoryBreakdown: %s"
+    FmtErrGetExpiryTrend                      = "GetExpiryTrend: %s"
+    FmtErrGetArchivedProductsGroupedByBarcode = "GetArchivedProductsGroupedByBarcode: %s"
+
+    /*
+     * Stats/export shared HTTP response messages
+     */
+    MsgErrComputingActiveCount         = "Error computing active product count"
+    MsgErrComputingWasteCount          = "Error computing waste count"
+    MsgErrComputingUniqueArchivedCount = "Error computing unique archived count"
+    MsgErrComputingExpiringSoon        = "Error computing expiring soon products"
+    MsgErrComputingCategoryBreakdown   = "Error computing category breakdown"
+    MsgErrComputingExpiryTrend         = "Error computing expiry trend"
+    MsgErrGettingProducts              = "Error getting products"
 )
 ```
 
@@ -1005,6 +1298,7 @@ import "codeberg.org/isotop7/proviant/migrations"
 ## Index
 
 - [func AddNotificationPreferencesMigration\(db \*gorm.DB\) error](<#AddNotificationPreferencesMigration>)
+- [func AddPerformanceIndexes\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#AddPerformanceIndexes>)
 - [func BackfillEmailVerification\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillEmailVerification>)
 - [func DropLegacyStorageLocationColumn\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#DropLegacyStorageLocationColumn>)
 - [func RunBreakingDatabaseMigrations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RunBreakingDatabaseMigrations>)
@@ -1021,6 +1315,15 @@ func AddNotificationPreferencesMigration(db *gorm.DB) error
 ```
 
 AddNotificationPreferencesMigration adds notification preference columns to users table
+
+<a name="AddPerformanceIndexes"></a>
+## func AddPerformanceIndexes
+
+```go
+func AddPerformanceIndexes(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+AddPerformanceIndexes creates missing indexes for product and user tables to improve query performance for common access patterns.
 
 <a name="BackfillEmailVerification"></a>
 ## func BackfillEmailVerification
@@ -1169,16 +1472,27 @@ router contains the gin router definitions and maps requests to handlers
 
 ## Index
 
+- [Constants](<#constants>)
 - [func AuthorizatorNotUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorNotUserAware>)
 - [func AuthorizatorUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorUserAware>)
 - [func JWTMiddleware\(proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
 - [func PATMiddleware\(jwtMiddleware \*jwt.GinJWTMiddleware\) gin.HandlerFunc](<#PATMiddleware>)
+- [func RequestIDMiddleware\(baseLogger \*zerolog.Logger\) gin.HandlerFunc](<#RequestIDMiddleware>)
 - [func SecurityHeadersMiddleware\(proviantConfig \*configuration.ProviantConfiguration\) gin.HandlerFunc](<#SecurityHeadersMiddleware>)
-- [func SetupRouter\(logger \*zerolog.Logger, proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl \*controllers.OpenFoodFactsAPIController, notificationController \*controllers.NotificationController\) \*gin.Engine](<#SetupRouter>)
+- [func SetupRouter\(logger \*zerolog.Logger, proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl \*controllers.OpenFoodFactsAPIController, notificationController \*controllers.NotificationController, ocrController \*controllers.OCRControllerImpl\) \*gin.Engine](<#SetupRouter>)
 - [func UnauthorizedAPIFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedAPIFunc>)
 - [func UnauthorizedFrontendFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedFrontendFunc>)
+- [func UserContextLoggerMiddleware\(\) gin.HandlerFunc](<#UserContextLoggerMiddleware>)
 - [func ZerologMiddleware\(logger \*zerolog.Logger\) gin.HandlerFunc](<#ZerologMiddleware>)
 
+
+## Constants
+
+<a name="MsgInvalidCredentials"></a>
+
+```go
+const MsgInvalidCredentials = "Invalid credentials"
+```
 
 <a name="AuthorizatorNotUserAware"></a>
 ## func AuthorizatorNotUserAware
@@ -1216,6 +1530,15 @@ func PATMiddleware(jwtMiddleware *jwt.GinJWTMiddleware) gin.HandlerFunc
 
 
 
+<a name="RequestIDMiddleware"></a>
+## func RequestIDMiddleware
+
+```go
+func RequestIDMiddleware(baseLogger *zerolog.Logger) gin.HandlerFunc
+```
+
+RequestIDMiddleware mints a UUID per request, stashes it in gin.Context, sets the response header, and replaces the context logger with a child logger
+
 <a name="SecurityHeadersMiddleware"></a>
 ## func SecurityHeadersMiddleware
 
@@ -1229,7 +1552,7 @@ func SecurityHeadersMiddleware(proviantConfig *configuration.ProviantConfigurati
 ## func SetupRouter
 
 ```go
-func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController) *gin.Engine
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) *gin.Engine
 ```
 
 SetupRouter creates the gin engine and associated middleware
@@ -1252,6 +1575,15 @@ func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string)
 
 
 
+<a name="UserContextLoggerMiddleware"></a>
+## func UserContextLoggerMiddleware
+
+```go
+func UserContextLoggerMiddleware() gin.HandlerFunc
+```
+
+UserContextLoggerMiddleware enriches the context logger with user\_id after JWT/PAT auth
+
 <a name="ZerologMiddleware"></a>
 ## func ZerologMiddleware
 
@@ -1273,6 +1605,7 @@ import "codeberg.org/isotop7/proviant/templates"
 - [func NewTemplateCache\(\) \(map\[string\]\*template.Template, error\)](<#NewTemplateCache>)
 - [func Render\(ctx \*gin.Context, tc map\[string\]\*template.Template, status int, base, page string, data map\[string\]any\)](<#Render>)
 - [func RenderError\(ctx \*gin.Context, tc map\[string\]\*template.Template, code int, message string\)](<#RenderError>)
+- [func SetExpiryThresholds\(critical, soon int\)](<#SetExpiryThresholds>)
 
 
 ## Variables
@@ -1310,6 +1643,217 @@ func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, m
 
 
 
+<a name="SetExpiryThresholds"></a>
+## func SetExpiryThresholds
+
+```go
+func SetExpiryThresholds(critical, soon int)
+```
+
+SetExpiryThresholds updates the package\-level thresholds used by expiry\* functions. Must be called before NewTemplateCache so the baked\-in funcs use the correct values.
+
+# testutil
+
+```go
+import "codeberg.org/isotop7/proviant/testutil"
+```
+
+## Index
+
+- [Variables](<#variables>)
+- [func CreateJSONRequest\(method string, path string, body interface\{\}\) \*http.Request](<#CreateJSONRequest>)
+- [func CreateTestEmailVerification\(db \*gorm.DB, userID uint, token string\) \*dbModel.EmailVerification](<#CreateTestEmailVerification>)
+- [func CreateTestHousehold\(db \*gorm.DB, adminID uint\) \*dbModel.Household](<#CreateTestHousehold>)
+- [func CreateTestInvitation\(db \*gorm.DB, householdID, inviterID uint, email string\) \*dbModel.HouseholdInvitation](<#CreateTestInvitation>)
+- [func CreateTestProduct\(db \*gorm.DB, householdID uint\) \*dbModel.Product](<#CreateTestProduct>)
+- [func CreateTestRequest\(ctx \*gin.Context, body interface\{\}\)](<#CreateTestRequest>)
+- [func CreateTestStorageLocation\(db \*gorm.DB, householdID uint\) \*dbModel.StorageLocation](<#CreateTestStorageLocation>)
+- [func CreateTestUser\(db \*gorm.DB, householdID uint\) \*authentication.User](<#CreateTestUser>)
+- [func CreateTestWebhook\(db \*gorm.DB, userID uint\) \*dbModel.Webhook](<#CreateTestWebhook>)
+- [func MigrateAllModels\(db \*gorm.DB\) error](<#MigrateAllModels>)
+- [func MockJWTClaims\(ctx \*gin.Context, userID uint\)](<#MockJWTClaims>)
+- [func MockJWTClaimsWithKey\(ctx \*gin.Context, userID uint, key string\)](<#MockJWTClaimsWithKey>)
+- [func SetupGinContext\(db \*gorm.DB\) \(\*gin.Context, \*httptest.ResponseRecorder\)](<#SetupGinContext>)
+- [func SetupTestDB\(t \*testing.T\) \*gorm.DB](<#SetupTestDB>)
+
+
+## Variables
+
+<a name="TokenIdentityKey"></a>
+
+```go
+var TokenIdentityKey = static.TokenIdentityKey
+```
+
+<a name="CreateJSONRequest"></a>
+## func CreateJSONRequest
+
+```go
+func CreateJSONRequest(method string, path string, body interface{}) *http.Request
+```
+
+
+
+<a name="CreateTestEmailVerification"></a>
+## func CreateTestEmailVerification
+
+```go
+func CreateTestEmailVerification(db *gorm.DB, userID uint, token string) *dbModel.EmailVerification
+```
+
+
+
+<a name="CreateTestHousehold"></a>
+## func CreateTestHousehold
+
+```go
+func CreateTestHousehold(db *gorm.DB, adminID uint) *dbModel.Household
+```
+
+
+
+<a name="CreateTestInvitation"></a>
+## func CreateTestInvitation
+
+```go
+func CreateTestInvitation(db *gorm.DB, householdID, inviterID uint, email string) *dbModel.HouseholdInvitation
+```
+
+
+
+<a name="CreateTestProduct"></a>
+## func CreateTestProduct
+
+```go
+func CreateTestProduct(db *gorm.DB, householdID uint) *dbModel.Product
+```
+
+
+
+<a name="CreateTestRequest"></a>
+## func CreateTestRequest
+
+```go
+func CreateTestRequest(ctx *gin.Context, body interface{})
+```
+
+
+
+<a name="CreateTestStorageLocation"></a>
+## func CreateTestStorageLocation
+
+```go
+func CreateTestStorageLocation(db *gorm.DB, householdID uint) *dbModel.StorageLocation
+```
+
+
+
+<a name="CreateTestUser"></a>
+## func CreateTestUser
+
+```go
+func CreateTestUser(db *gorm.DB, householdID uint) *authentication.User
+```
+
+
+
+<a name="CreateTestWebhook"></a>
+## func CreateTestWebhook
+
+```go
+func CreateTestWebhook(db *gorm.DB, userID uint) *dbModel.Webhook
+```
+
+
+
+<a name="MigrateAllModels"></a>
+## func MigrateAllModels
+
+```go
+func MigrateAllModels(db *gorm.DB) error
+```
+
+
+
+<a name="MockJWTClaims"></a>
+## func MockJWTClaims
+
+```go
+func MockJWTClaims(ctx *gin.Context, userID uint)
+```
+
+
+
+<a name="MockJWTClaimsWithKey"></a>
+## func MockJWTClaimsWithKey
+
+```go
+func MockJWTClaimsWithKey(ctx *gin.Context, userID uint, key string)
+```
+
+
+
+<a name="SetupGinContext"></a>
+## func SetupGinContext
+
+```go
+func SetupGinContext(db *gorm.DB) (*gin.Context, *httptest.ResponseRecorder)
+```
+
+
+
+<a name="SetupTestDB"></a>
+## func SetupTestDB
+
+```go
+func SetupTestDB(t *testing.T) *gorm.DB
+```
+
+
+
+# util
+
+```go
+import "codeberg.org/isotop7/proviant/util"
+```
+
+util contains helper functions and generic vars
+
+## Index
+
+- [Constants](<#constants>)
+
+
+## Constants
+
+<a name="DefaultDateFormatParseStr"></a>
+
+```go
+const (
+    DefaultDateFormatParseStr       = "2006-01-02"
+    DefaultDateFormatMonthStr       = "2006-01"
+    RequestHeaderContentType        = "Content-Type"
+    RequestHeaderContentDisposition = "Content-Disposition"
+
+    // Gin context keys
+    ContextKeyLogger                 = "logger"
+    ContextKeyRepos                  = "repos"
+    ContextKeyDBHandle               = "dbHandle"
+    ContextKeyNotificationController = "notificationController"
+    ContextKeyProviantConfig         = "proviantConfig"
+    ContextKeyUserID                 = "userID"
+    ContextKeyRequestID              = "requestID"
+
+    // Database query wrappers
+    QueryId               = "id = ?"
+    QueryHouseholdId      = "household_id = ?"
+    QueryUserId           = "user_id = ?"
+    QueryWebhookId        = "webhook_id = ?"
+    WhereDeletedIsNotNull = "deleted_at IS NOT NULL"
+    WhereDeletedIsNull    = "deleted_at IS NULL"
+)
+```
+
 # web
 
 ```go
@@ -1318,20 +1862,32 @@ import "codeberg.org/isotop7/proviant/web"
 
 ## Index
 
+- [Constants](<#constants>)
 - [type Frontend](<#Frontend>)
   - [func \(frontend \*Frontend\) AcceptInvite\(ctx \*gin.Context\)](<#Frontend.AcceptInvite>)
   - [func \(frontend \*Frontend\) Auth\(ctx \*gin.Context\)](<#Frontend.Auth>)
   - [func \(frontend \*Frontend\) Onboarding\(ctx \*gin.Context\)](<#Frontend.Onboarding>)
   - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
-  - [func \(frontend \*Frontend\) ProductsArchived\(ctx \*gin.Context\)](<#Frontend.ProductsArchived>)
   - [func \(frontend \*Frontend\) ProductsEdit\(ctx \*gin.Context\)](<#Frontend.ProductsEdit>)
   - [func \(frontend \*Frontend\) ProductsScan\(ctx \*gin.Context\)](<#Frontend.ProductsScan>)
   - [func \(frontend \*Frontend\) ProductsView\(ctx \*gin.Context\)](<#Frontend.ProductsView>)
+  - [func \(frontend \*Frontend\) Recipes\(ctx \*gin.Context\)](<#Frontend.Recipes>)
   - [func \(frontend \*Frontend\) Root\(ctx \*gin.Context\)](<#Frontend.Root>)
   - [func \(frontend \*Frontend\) User\(ctx \*gin.Context\)](<#Frontend.User>)
   - [func \(frontend \*Frontend\) UserSettings\(ctx \*gin.Context\)](<#Frontend.UserSettings>)
   - [func \(frontend \*Frontend\) VerifyEmail\(ctx \*gin.Context\)](<#Frontend.VerifyEmail>)
 
+
+## Constants
+
+<a name="AcceptInviteFileName"></a>
+
+```go
+const (
+    AcceptInviteFileName  = "acceptInvite.tmpl"
+    AcceptInvitationTitle = "Accept Invitation"
+)
+```
 
 <a name="Frontend"></a>
 ## type Frontend
@@ -1378,16 +1934,7 @@ Onboarding renders the post\-signup onboarding wizard @Summary Onboarding page @
 func (frontend *Frontend) Products(ctx *gin.Context)
 ```
 
-Products renders the products list page @Summary Products page @Description Renders the products list page with optional search @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products \[get\]
 
-<a name="Frontend.ProductsArchived"></a>
-### func \(\*Frontend\) ProductsArchived
-
-```go
-func (frontend *Frontend) ProductsArchived(ctx *gin.Context)
-```
-
-ProductsArchived renders the archived products page @Summary Archived products page @Description Renders the archived products list page @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products/archived \[get\]
 
 <a name="Frontend.ProductsEdit"></a>
 ### func \(\*Frontend\) ProductsEdit
@@ -1415,6 +1962,15 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context)
 ```
 
 ProductsView renders the product view page @Summary Product view page @Description Renders the product details page @Tags web @Produce html @Param id path int true "Product ID" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products/\{id\}/view \[get\]
+
+<a name="Frontend.Recipes"></a>
+### func \(\*Frontend\) Recipes
+
+```go
+func (frontend *Frontend) Recipes(ctx *gin.Context)
+```
+
+Recipes renders the recipe suggestions page @Summary Recipes page @Description Shows recipe suggestions for expiring products @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/recipes \[get\]
 
 <a name="Frontend.Root"></a>
 ### func \(\*Frontend\) Root
@@ -1462,11 +2018,20 @@ auth contains authentication method handlers
 
 ## Index
 
+- [Constants](<#constants>)
 - [func AcceptInvitation\(ctx \*gin.Context\)](<#AcceptInvitation>)
 - [func Logout\(ctx \*gin.Context\)](<#Logout>)
 - [func Signup\(ctx \*gin.Context\)](<#Signup>)
 - [func VerifyEmail\(ctx \*gin.Context\)](<#VerifyEmail>)
 
+
+## Constants
+
+<a name="UserWasCreated"></a>
+
+```go
+const UserWasCreated = "User was created"
+```
 
 <a name="AcceptInvitation"></a>
 ## func AcceptInvitation
@@ -1536,6 +2101,7 @@ onboarding contains handlers for the post\-signup onboarding flow
 
 ## Index
 
+- [Constants](<#constants>)
 - [func ApplyForHousehold\(ctx \*gin.Context\)](<#ApplyForHousehold>)
 - [func CompleteOnboarding\(ctx \*gin.Context\)](<#CompleteOnboarding>)
 - [func CreateOnboardingHousehold\(ctx \*gin.Context\)](<#CreateOnboardingHousehold>)
@@ -1544,6 +2110,17 @@ onboarding contains handlers for the post\-signup onboarding flow
 - [func JoinOnboardingByInvite\(ctx \*gin.Context\)](<#JoinOnboardingByInvite>)
 - [func UpdateOnboardingProfile\(ctx \*gin.Context\)](<#UpdateOnboardingProfile>)
 
+
+## Constants
+
+<a name="MsgFailedToExtract"></a>
+
+```go
+const (
+    MsgFailedToExtract       = "Failed to extract user ID from JWT claims"
+    MsgFailedToMarkHousehold = "Failed to mark household step done: %s"
+)
+```
 
 <a name="ApplyForHousehold"></a>
 ## func ApplyForHousehold
@@ -1676,6 +2253,7 @@ v1 implements version 1 of the proviant API
 - [func GetProductSummary\(ctx \*gin.Context\)](<#GetProductSummary>)
 - [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
+- [func GetRecipeSuggestions\(ctx \*gin.Context\)](<#GetRecipeSuggestions>)
 - [func GetSavingsStats\(ctx \*gin.Context\)](<#GetSavingsStats>)
 - [func GetStreak\(ctx \*gin.Context\)](<#GetStreak>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context\)](<#GetUserNotificationPreferences>)
@@ -1688,6 +2266,7 @@ v1 implements version 1 of the proviant API
 - [func RejectHouseholdApplication\(ctx \*gin.Context\)](<#RejectHouseholdApplication>)
 - [func RemoveHouseholdMember\(ctx \*gin.Context\)](<#RemoveHouseholdMember>)
 - [func RestoreProduct\(ctx \*gin.Context\)](<#RestoreProduct>)
+- [func ScanExpiryDate\(ctx \*gin.Context\)](<#ScanExpiryDate>)
 - [func ScanProduct\(ctx \*gin.Context\)](<#ScanProduct>)
 - [func SearchProducts\(ctx \*gin.Context\)](<#SearchProducts>)
 - [func SetExpireAt\(ctx \*gin.Context\)](<#SetExpireAt>)
@@ -1710,6 +2289,15 @@ v1 implements version 1 of the proviant API
 
 ## Constants
 
+<a name="MsgErrFetchingHousehold"></a>
+
+```go
+const (
+    MsgErrFetchingHousehold  = "Error fetching household: %s"
+    MsgErrFetchingTargetUser = "Error fetching target user: %s"
+)
+```
+
 <a name="CalendarExpireDays"></a>
 
 ```go
@@ -1719,10 +2307,45 @@ const (
 )
 ```
 
+<a name="MsgInvalidApplicationId"></a>
+
+```go
+const (
+    MsgInvalidApplicationId = "invalid application id"
+    MsgHouseholdNameEmpty   = "household name cannot be empty"
+)
+```
+
+<a name="MsgCheckProductIdTryAgain"></a>
+
+```go
+const (
+    MsgCheckProductIdTryAgain           = "Check the product ID and try again"
+    FmtProductNotFoundOrNoAccess        = "Product with ID '%d' was not found or you do not have access"
+    MsgFailedToGetControllerFromContext = "Failed to get controller from context"
+)
+```
+
 <a name="CalendarTokenLength"></a>
 
 ```go
 const CalendarTokenLength = 32
+```
+
+<a name="GetUserActiveProductsFiltered"></a>
+
+```go
+const (
+    GetUserActiveProductsFiltered = "GetUserActiveProductsFiltered: %s"
+)
+```
+
+<a name="MsgProductNotFound"></a>
+
+```go
+const (
+    MsgProductNotFound = "Product not found"
+)
 ```
 
 <a name="AdminResetUserPassword"></a>
@@ -2096,6 +2719,15 @@ func GetProductsByBarcode(ctx *gin.Context)
 
 GetProductsByBarcode returns a list of products of a user matching a barcode @Summary Returns a list of products @Description Returns a list of products of user matching the given barcode @Tags product @Produce json @Param barcode path int true "Barcode" @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/productsByBarcode \[get\]
 
+<a name="GetRecipeSuggestions"></a>
+## func GetRecipeSuggestions
+
+```go
+func GetRecipeSuggestions(ctx *gin.Context)
+```
+
+GetRecipeSuggestions returns recipe suggestions based on expiring products @Summary Recipe suggestions @Description Returns up to 6 recipe suggestions matching products expiring within 7 days @Tags recipes @Produce json @Param limit query int false "Number of suggestions \(default 6, max 10\)" @Success 200 \{array\} apiModel.RecipeSuggestionResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes/suggestions \[get\]
+
 <a name="GetSavingsStats"></a>
 ## func GetSavingsStats
 
@@ -2203,6 +2835,15 @@ func RestoreProduct(ctx *gin.Context)
 ```
 
 RestoreProduct restores an archived product of a user @Summary Restores a product @Description Restores an archived product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/restore \[post\]
+
+<a name="ScanExpiryDate"></a>
+## func ScanExpiryDate
+
+```go
+func ScanExpiryDate(ctx *gin.Context)
+```
+
+ScanExpiryDate scans an uploaded image for expiry date @Summary Scan expiry date from product photo @Description Upload an image of product packaging; returns detected expiry date with confidence score @Tags product @Accept multipart/form\-data @Produce json @Param image formData file true "Product packaging image" @Success 200 \{object\} apiModel.ExpiryScanResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/scan\-date \[post\]
 
 <a name="ScanProduct"></a>
 ## func ScanProduct
@@ -2401,6 +3042,12 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*CalendarTokenRepository\) DeleteByUserID\(userID uint\) error](<#CalendarTokenRepository.DeleteByUserID>)
   - [func \(r \*CalendarTokenRepository\) GetByToken\(token string\) \(authentication.CalendarToken, error\)](<#CalendarTokenRepository.GetByToken>)
   - [func \(r \*CalendarTokenRepository\) GetByUserID\(userID uint\) \(authentication.CalendarToken, error\)](<#CalendarTokenRepository.GetByUserID>)
+- [type CalendarTokenRepositoryInterface](<#CalendarTokenRepositoryInterface>)
+- [type ExpiryScanRepository](<#ExpiryScanRepository>)
+  - [func NewExpiryScanRepository\(db \*gorm.DB\) \*ExpiryScanRepository](<#NewExpiryScanRepository>)
+  - [func \(r \*ExpiryScanRepository\) Create\(scan \*database.ExpiryScan\) error](<#ExpiryScanRepository.Create>)
+  - [func \(r \*ExpiryScanRepository\) GetByUser\(userID uint, limit int\) \(\[\]database.ExpiryScan, error\)](<#ExpiryScanRepository.GetByUser>)
+- [type ExpiryScanRepositoryInterface](<#ExpiryScanRepositoryInterface>)
 - [type HouseholdRepository](<#HouseholdRepository>)
   - [func NewHouseholdRepository\(db \*gorm.DB\) \*HouseholdRepository](<#NewHouseholdRepository>)
   - [func \(r \*HouseholdRepository\) ApplyForHousehold\(applicantID, householdID uint\) error](<#HouseholdRepository.ApplyForHousehold>)
@@ -2417,6 +3064,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*HouseholdRepository\) RejectApplication\(applicationID, adminUserID uint\) error](<#HouseholdRepository.RejectApplication>)
   - [func \(r \*HouseholdRepository\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#HouseholdRepository.RemoveMemberFromHousehold>)
   - [func \(r \*HouseholdRepository\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#HouseholdRepository.UpdateHouseholdName>)
+- [type HouseholdRepositoryInterface](<#HouseholdRepositoryInterface>)
 - [type InvitationRepository](<#InvitationRepository>)
   - [func NewInvitationRepository\(db \*gorm.DB\) \*InvitationRepository](<#NewInvitationRepository>)
   - [func \(r \*InvitationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#InvitationRepository.AcceptInvitation>)
@@ -2426,8 +3074,10 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*InvitationRepository\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]database.HouseholdInvitation, error\)](<#InvitationRepository.GetInvitationsForHousehold>)
   - [func \(r \*InvitationRepository\) GetPendingInvitationsForHousehold\(householdID uint\) \(\[\]database.HouseholdInvitation, error\)](<#InvitationRepository.GetPendingInvitationsForHousehold>)
   - [func \(r \*InvitationRepository\) GetPendingInvitationsNotSent\(retryInterval time.Duration\) \(\[\]database.HouseholdInvitation, error\)](<#InvitationRepository.GetPendingInvitationsNotSent>)
+  - [func \(r \*InvitationRepository\) MarkInvitationExpired\(invitationID uint\) error](<#InvitationRepository.MarkInvitationExpired>)
   - [func \(r \*InvitationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#InvitationRepository.MarkInvitationSendFailed>)
   - [func \(r \*InvitationRepository\) MarkInvitationSent\(invitationID uint\) error](<#InvitationRepository.MarkInvitationSent>)
+- [type InvitationRepositoryInterface](<#InvitationRepositoryInterface>)
 - [type NotificationRepository](<#NotificationRepository>)
   - [func NewNotificationRepository\(db \*gorm.DB\) \*NotificationRepository](<#NewNotificationRepository>)
   - [func \(r \*NotificationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#NotificationRepository.AcceptInvitation>)
@@ -2461,25 +3111,27 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 - [type PATRepository](<#PATRepository>)
   - [func NewPATRepository\(db \*gorm.DB\) \*PATRepository](<#NewPATRepository>)
   - [func \(r \*PATRepository\) CreatePAT\(userID uint, name, tokenHash string, expiresAt \*time.Time, scopes string\) \(\*authentication.PersonalAccessToken, error\)](<#PATRepository.CreatePAT>)
-  - [func \(r \*PATRepository\) DeletePAT\(patID uint, userID uint\) error](<#PATRepository.DeletePAT>)
+  - [func \(r \*PATRepository\) DeletePAT\(patID, userID uint\) error](<#PATRepository.DeletePAT>)
   - [func \(r \*PATRepository\) GetPATByID\(patID uint\) \(\*authentication.PersonalAccessToken, error\)](<#PATRepository.GetPATByID>)
   - [func \(r \*PATRepository\) GetPATByTokenHash\(tokenHash string\) \(\*authentication.PersonalAccessToken, error\)](<#PATRepository.GetPATByTokenHash>)
   - [func \(r \*PATRepository\) GetPATsByUserID\(userID uint\) \(\[\]authentication.PersonalAccessToken, error\)](<#PATRepository.GetPATsByUserID>)
   - [func \(r \*PATRepository\) UpdateLastUsed\(patID uint\) error](<#PATRepository.UpdateLastUsed>)
+- [type PATRepositoryInterface](<#PATRepositoryInterface>)
 - [type ProductRepository](<#ProductRepository>)
   - [func NewProductRepository\(db \*gorm.DB\) \*ProductRepository](<#NewProductRepository>)
-  - [func \(r \*ProductRepository\) BulkArchiveProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkArchiveProducts>)
-  - [func \(r \*ProductRepository\) BulkDeleteProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkDeleteProducts>)
-  - [func \(r \*ProductRepository\) BulkRestoreProducts\(productIDs \[\]int, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkRestoreProducts>)
-  - [func \(r \*ProductRepository\) ConsumeProduct\(productID int, userID uint\) error](<#ProductRepository.ConsumeProduct>)
+  - [func \(r \*ProductRepository\) BulkArchiveProducts\(productIDs \[\]uint, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkArchiveProducts>)
+  - [func \(r \*ProductRepository\) BulkDeleteProducts\(productIDs \[\]uint, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkDeleteProducts>)
+  - [func \(r \*ProductRepository\) BulkRestoreProducts\(productIDs \[\]uint, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkRestoreProducts>)
+  - [func \(r \*ProductRepository\) ConsumeProduct\(productID, userID uint\) error](<#ProductRepository.ConsumeProduct>)
   - [func \(r \*ProductRepository\) CreateOpenFoodFactsCache\(entry \*database.OpenFoodFactsCache\) error](<#ProductRepository.CreateOpenFoodFactsCache>)
   - [func \(r \*ProductRepository\) CreateProduct\(userID uint, product \*database.Product\) error](<#ProductRepository.CreateProduct>)
-  - [func \(r \*ProductRepository\) DeleteProduct\(productID int, userID uint, archiveOnly bool\) error](<#ProductRepository.DeleteProduct>)
+  - [func \(r \*ProductRepository\) DeleteProduct\(productID uint, userID uint, archiveOnly bool\) error](<#ProductRepository.DeleteProduct>)
   - [func \(r \*ProductRepository\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetActiveProductsCount>)
-  - [func \(r \*ProductRepository\) GetArchivedProductByID\(productID int, userID uint\) \(database.Product, error\)](<#ProductRepository.GetArchivedProductByID>)
+  - [func \(r \*ProductRepository\) GetArchivedProductByID\(productID, userID uint\) \(database.Product, error\)](<#ProductRepository.GetArchivedProductByID>)
   - [func \(r \*ProductRepository\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetArchivedProductsGroupedByBarcode>)
   - [func \(r \*ProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetExpiredProductsCount>)
   - [func \(r \*ProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringInDays>)
+  - [func \(r \*ProductRepository\) GetExpiringProductsByHousehold\(householdID uint, daysAhead int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringProductsByHousehold>)
   - [func \(r \*ProductRepository\) GetExpiringSoonCount\(userID uint, days int\) \(int, error\)](<#ProductRepository.GetExpiringSoonCount>)
   - [func \(r \*ProductRepository\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#ProductRepository.GetExpiringSoonProducts>)
   - [func \(r \*ProductRepository\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#ProductRepository.GetExpiryTrend>)
@@ -2487,8 +3139,9 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetLastInsertedProduct\(householdID uint\) \(database.Product, error\)](<#ProductRepository.GetLastInsertedProduct>)
   - [func \(r \*ProductRepository\) GetLastNotifiedProduct\(householdID uint\) \(database.Product, error\)](<#ProductRepository.GetLastNotifiedProduct>)
   - [func \(r \*ProductRepository\) GetOpenFoodFactsCacheByBarcode\(barcode string\) \(database.OpenFoodFactsCache, error\)](<#ProductRepository.GetOpenFoodFactsCacheByBarcode>)
-  - [func \(r \*ProductRepository\) GetProductByID\(productID int, userID uint\) \(database.Product, error\)](<#ProductRepository.GetProductByID>)
+  - [func \(r \*ProductRepository\) GetProductByID\(productID, userID uint\) \(database.Product, error\)](<#ProductRepository.GetProductByID>)
   - [func \(r \*ProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetProductCategoryBreakdown>)
+  - [func \(r \*ProductRepository\) GetProductsByHousehold\(householdID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetProductsByHousehold>)
   - [func \(r \*ProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#ProductRepository.GetProductsExpired>)
   - [func \(r \*ProductRepository\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetTopArchivedProducts>)
   - [func \(r \*ProductRepository\) GetUserActiveProductsFiltered\(userID uint, from, to \*time.Time\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserActiveProductsFiltered>)
@@ -2501,20 +3154,31 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetUserProductsByLocation\(userID, locationID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsByLocation>)
   - [func \(r \*ProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#ProductRepository.GetUsersByHouseholdID>)
   - [func \(r \*ProductRepository\) GetWasteThisMonth\(userID uint\) \(int, error\)](<#ProductRepository.GetWasteThisMonth>)
-  - [func \(r \*ProductRepository\) RestoreProduct\(productID int, userID uint\) error](<#ProductRepository.RestoreProduct>)
+  - [func \(r \*ProductRepository\) RestoreProduct\(productID, userID uint\) error](<#ProductRepository.RestoreProduct>)
   - [func \(r \*ProductRepository\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.SearchProducts>)
-  - [func \(r \*ProductRepository\) SetProductExpireAt\(productID int, userID uint, expireAt database.Timestamp\) error](<#ProductRepository.SetProductExpireAt>)
+  - [func \(r \*ProductRepository\) SetProductExpireAt\(productID uint, userID uint, expireAt database.Timestamp\) error](<#ProductRepository.SetProductExpireAt>)
   - [func \(r \*ProductRepository\) SetProductNotifiedAt\(productID uint\) error](<#ProductRepository.SetProductNotifiedAt>)
   - [func \(r \*ProductRepository\) UpdateOpenFoodFactsCacheImageURL\(barcode, imageURL string\) error](<#ProductRepository.UpdateOpenFoodFactsCacheImageURL>)
-  - [func \(r \*ProductRepository\) UpdateProduct\(productID int, userID uint, product \*database.ProductDTOPatch\) error](<#ProductRepository.UpdateProduct>)
-  - [func \(r \*ProductRepository\) UpdateProductAmount\(productID int, userID uint, delta int\) \(bool, error\)](<#ProductRepository.UpdateProductAmount>)
+  - [func \(r \*ProductRepository\) UpdateProduct\(productID uint, userID uint, product \*database.ProductDTOPatch\) error](<#ProductRepository.UpdateProduct>)
+  - [func \(r \*ProductRepository\) UpdateProductAmount\(productID uint, userID uint, delta int\) \(bool, error\)](<#ProductRepository.UpdateProductAmount>)
   - [func \(r \*ProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#ProductRepository.UserHasProductAccess>)
-  - [func \(r \*ProductRepository\) WasteProduct\(productID int, userID uint\) error](<#ProductRepository.WasteProduct>)
+  - [func \(r \*ProductRepository\) WasteProduct\(productID, userID uint\) error](<#ProductRepository.WasteProduct>)
+- [type ProductRepositoryInterface](<#ProductRepositoryInterface>)
+- [type RecipeRepository](<#RecipeRepository>)
+  - [func NewRecipeRepository\(db \*gorm.DB\) \*RecipeRepository](<#NewRecipeRepository>)
+  - [func \(r \*RecipeRepository\) CleanupExpiredCaches\(\) error](<#RecipeRepository.CleanupExpiredCaches>)
+  - [func \(r \*RecipeRepository\) CreateCache\(cache \*database.RecipeCache\) error](<#RecipeRepository.CreateCache>)
+  - [func \(r \*RecipeRepository\) GetCacheByQueryHash\(hash string\) \(database.RecipeCache, error\)](<#RecipeRepository.GetCacheByQueryHash>)
+  - [func \(r \*RecipeRepository\) UpdateCacheHit\(hash string\) error](<#RecipeRepository.UpdateCacheHit>)
+- [type RecipeRepositoryInterface](<#RecipeRepositoryInterface>)
+- [type RepositoryContainer](<#RepositoryContainer>)
+  - [func NewRepositoryContainer\(db \*gorm.DB\) \*RepositoryContainer](<#NewRepositoryContainer>)
 - [type SavingsRepository](<#SavingsRepository>)
   - [func NewSavingsRepository\(db \*gorm.DB\) \*SavingsRepository](<#NewSavingsRepository>)
   - [func \(r \*SavingsRepository\) GetSavingsStats\(householdID uint\) \(apiModel.SavingsStatsResponse, error\)](<#SavingsRepository.GetSavingsStats>)
   - [func \(r \*SavingsRepository\) MatchCategory\(categories string\) \(\*dbModel.ProductCategoryPrice, error\)](<#SavingsRepository.MatchCategory>)
   - [func \(r \*SavingsRepository\) RecordSavingsEvent\(householdID uint, product \*dbModel.Product, eventType string\) error](<#SavingsRepository.RecordSavingsEvent>)
+- [type SavingsRepositoryInterface](<#SavingsRepositoryInterface>)
 - [type SearchParameterEnum](<#SearchParameterEnum>)
   - [func SearchParameterEnumFromString\(str string\) SearchParameterEnum](<#SearchParameterEnumFromString>)
 - [type StorageLocationRepository](<#StorageLocationRepository>)
@@ -2524,6 +3188,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*StorageLocationRepository\) GetByHousehold\(userID uint\) \(\[\]database.StorageLocation, error\)](<#StorageLocationRepository.GetByHousehold>)
   - [func \(r \*StorageLocationRepository\) GetByID\(locationID, userID uint\) \(database.StorageLocation, error\)](<#StorageLocationRepository.GetByID>)
   - [func \(r \*StorageLocationRepository\) Update\(locationID, userID uint, name, icon string, sortOrder int\) \(database.StorageLocation, error\)](<#StorageLocationRepository.Update>)
+- [type StorageLocationRepositoryInterface](<#StorageLocationRepositoryInterface>)
 - [type StreakRepository](<#StreakRepository>)
   - [func NewStreakRepository\(db \*gorm.DB\) \*StreakRepository](<#NewStreakRepository>)
   - [func \(r \*StreakRepository\) GetAllStreaks\(\) \(\[\]dbModel.WasteStreak, error\)](<#StreakRepository.GetAllStreaks>)
@@ -2555,13 +3220,14 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*UserRepository\) ResetFailedLoginAttempts\(userID uint\) error](<#UserRepository.ResetFailedLoginAttempts>)
   - [func \(r \*UserRepository\) UpdateAdminUserFields\(userID uint, username, mailAddress string\) error](<#UserRepository.UpdateAdminUserFields>)
   - [func \(r \*UserRepository\) UpdateDisplayName\(userID uint, displayName string\) error](<#UserRepository.UpdateDisplayName>)
-  - [func \(r \*UserRepository\) UpdateEmailVerificationStatus\(token string, status string\) error](<#UserRepository.UpdateEmailVerificationStatus>)
+  - [func \(r \*UserRepository\) UpdateEmailVerificationStatus\(token, status string\) error](<#UserRepository.UpdateEmailVerificationStatus>)
   - [func \(r \*UserRepository\) UpdateUser\(userID uint, user \*authentication.User\) error](<#UserRepository.UpdateUser>)
   - [func \(r \*UserRepository\) UpdateUserEmailVerified\(userID uint, verifiedAt time.Time\) error](<#UserRepository.UpdateUserEmailVerified>)
   - [func \(r \*UserRepository\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#UserRepository.UpdateUserPassword>)
   - [func \(r \*UserRepository\) UpdateUsername\(userID uint, username string\) error](<#UserRepository.UpdateUsername>)
   - [func \(r \*UserRepository\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#UserRepository.UserExistsByMailAddress>)
   - [func \(r \*UserRepository\) UserExistsByUsername\(user \*authentication.User\) bool](<#UserRepository.UserExistsByUsername>)
+- [type UserRepositoryInterface](<#UserRepositoryInterface>)
 - [type WebhookRepository](<#WebhookRepository>)
   - [func NewWebhookRepository\(db \*gorm.DB\) \*WebhookRepository](<#NewWebhookRepository>)
   - [func \(r \*WebhookRepository\) CheckOwnership\(webhookID, userID uint\) error](<#WebhookRepository.CheckOwnership>)
@@ -2574,6 +3240,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*WebhookRepository\) GetWebhooksByUserID\(userID uint\) \(\[\]database.Webhook, error\)](<#WebhookRepository.GetWebhooksByUserID>)
   - [func \(r \*WebhookRepository\) TrimDeliveryLogs\(webhookID uint, keep int\) error](<#WebhookRepository.TrimDeliveryLogs>)
   - [func \(r \*WebhookRepository\) UpdateWebhook\(webhook \*database.Webhook\) error](<#WebhookRepository.UpdateWebhook>)
+- [type WebhookRepositoryInterface](<#WebhookRepositoryInterface>)
 
 
 ## Constants
@@ -2662,6 +3329,70 @@ func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.Calen
 ```
 
 
+
+<a name="CalendarTokenRepositoryInterface"></a>
+## type CalendarTokenRepositoryInterface
+
+
+
+```go
+type CalendarTokenRepositoryInterface interface {
+    GetByToken(token string) (authentication.CalendarToken, error)
+    DeleteByUserID(userID uint) error
+    GetByUserID(userID uint) (authentication.CalendarToken, error)
+    Create(ct *authentication.CalendarToken) error
+}
+```
+
+<a name="ExpiryScanRepository"></a>
+## type ExpiryScanRepository
+
+
+
+```go
+type ExpiryScanRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewExpiryScanRepository"></a>
+### func NewExpiryScanRepository
+
+```go
+func NewExpiryScanRepository(db *gorm.DB) *ExpiryScanRepository
+```
+
+
+
+<a name="ExpiryScanRepository.Create"></a>
+### func \(\*ExpiryScanRepository\) Create
+
+```go
+func (r *ExpiryScanRepository) Create(scan *database.ExpiryScan) error
+```
+
+Create inserts a new expiry scan record
+
+<a name="ExpiryScanRepository.GetByUser"></a>
+### func \(\*ExpiryScanRepository\) GetByUser
+
+```go
+func (r *ExpiryScanRepository) GetByUser(userID uint, limit int) ([]database.ExpiryScan, error)
+```
+
+GetByUser returns recent scans for a user
+
+<a name="ExpiryScanRepositoryInterface"></a>
+## type ExpiryScanRepositoryInterface
+
+
+
+```go
+type ExpiryScanRepositoryInterface interface {
+    Create(scan *database.ExpiryScan) error
+    GetByUser(userID uint, limit int) ([]database.ExpiryScan, error)
+}
+```
 
 <a name="HouseholdRepository"></a>
 ## type HouseholdRepository
@@ -2809,6 +3540,30 @@ func (r *HouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint,
 
 
 
+<a name="HouseholdRepositoryInterface"></a>
+## type HouseholdRepositoryInterface
+
+
+
+```go
+type HouseholdRepositoryInterface interface {
+    GetHouseholdByID(householdID uint) (database.Household, error)
+    GetHouseholdMemberCount(householdID uint) (int64, error)
+    GetHouseholdMembers(householdID uint) ([]authentication.User, error)
+    LeaveHousehold(userID uint) error
+    CreateAndSwitchHousehold(userID uint, name string) error
+    ApplyForHousehold(applicantID, householdID uint) error
+    GetPendingApplicationsForAdmin(adminUserID uint) ([]database.HouseholdApplication, error)
+    ApproveApplication(applicationID, adminUserID uint) error
+    RejectApplication(applicationID, adminUserID uint) error
+    GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error)
+    CancelApplication(applicationID, applicantUserID uint) error
+    UpdateHouseholdName(householdID, adminUserID uint, name string) error
+    RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
+    GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
+}
+```
+
 <a name="InvitationRepository"></a>
 ## type InvitationRepository
 
@@ -2892,6 +3647,15 @@ func (r *InvitationRepository) GetPendingInvitationsNotSent(retryInterval time.D
 
 
 
+<a name="InvitationRepository.MarkInvitationExpired"></a>
+### func \(\*InvitationRepository\) MarkInvitationExpired
+
+```go
+func (r *InvitationRepository) MarkInvitationExpired(invitationID uint) error
+```
+
+
+
 <a name="InvitationRepository.MarkInvitationSendFailed"></a>
 ### func \(\*InvitationRepository\) MarkInvitationSendFailed
 
@@ -2909,6 +3673,26 @@ func (r *InvitationRepository) MarkInvitationSent(invitationID uint) error
 ```
 
 
+
+<a name="InvitationRepositoryInterface"></a>
+## type InvitationRepositoryInterface
+
+
+
+```go
+type InvitationRepositoryInterface interface {
+    CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
+    GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
+    GetPendingInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
+    GetInvitationByToken(token string) (database.HouseholdInvitation, error)
+    AcceptInvitation(token, email string, userID uint) error
+    CancelInvitation(invitationID, userID uint) error
+    GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
+    MarkInvitationSent(invitationID uint) error
+    MarkInvitationSendFailed(invitationID uint) error
+    MarkInvitationExpired(invitationID uint) error
+}
+```
 
 <a name="NotificationRepository"></a>
 ## type NotificationRepository
@@ -3243,7 +4027,7 @@ func (r *PATRepository) CreatePAT(userID uint, name, tokenHash string, expiresAt
 ### func \(\*PATRepository\) DeletePAT
 
 ```go
-func (r *PATRepository) DeletePAT(patID uint, userID uint) error
+func (r *PATRepository) DeletePAT(patID, userID uint) error
 ```
 
 
@@ -3284,6 +4068,22 @@ func (r *PATRepository) UpdateLastUsed(patID uint) error
 
 
 
+<a name="PATRepositoryInterface"></a>
+## type PATRepositoryInterface
+
+
+
+```go
+type PATRepositoryInterface interface {
+    CreatePAT(userID uint, name, tokenHash string, expiresAt *time.Time, scopes string) (*authentication.PersonalAccessToken, error)
+    GetPATByTokenHash(tokenHash string) (*authentication.PersonalAccessToken, error)
+    GetPATsByUserID(userID uint) ([]authentication.PersonalAccessToken, error)
+    GetPATByID(patID uint) (*authentication.PersonalAccessToken, error)
+    DeletePAT(patID, userID uint) error
+    UpdateLastUsed(patID uint) error
+}
+```
+
 <a name="ProductRepository"></a>
 ## type ProductRepository
 
@@ -3308,7 +4108,7 @@ func NewProductRepository(db *gorm.DB) *ProductRepository
 ### func \(\*ProductRepository\) BulkArchiveProducts
 
 ```go
-func (r *ProductRepository) BulkArchiveProducts(productIDs []int, userID uint) []BulkOperationError
+func (r *ProductRepository) BulkArchiveProducts(productIDs []uint, userID uint) []BulkOperationError
 ```
 
 
@@ -3317,7 +4117,7 @@ func (r *ProductRepository) BulkArchiveProducts(productIDs []int, userID uint) [
 ### func \(\*ProductRepository\) BulkDeleteProducts
 
 ```go
-func (r *ProductRepository) BulkDeleteProducts(productIDs []int, userID uint) []BulkOperationError
+func (r *ProductRepository) BulkDeleteProducts(productIDs []uint, userID uint) []BulkOperationError
 ```
 
 
@@ -3326,7 +4126,7 @@ func (r *ProductRepository) BulkDeleteProducts(productIDs []int, userID uint) []
 ### func \(\*ProductRepository\) BulkRestoreProducts
 
 ```go
-func (r *ProductRepository) BulkRestoreProducts(productIDs []int, userID uint) []BulkOperationError
+func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) []BulkOperationError
 ```
 
 
@@ -3335,7 +4135,7 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []int, userID uint) [
 ### func \(\*ProductRepository\) ConsumeProduct
 
 ```go
-func (r *ProductRepository) ConsumeProduct(productID int, userID uint) error
+func (r *ProductRepository) ConsumeProduct(productID, userID uint) error
 ```
 
 
@@ -3362,7 +4162,7 @@ func (r *ProductRepository) CreateProduct(userID uint, product *database.Product
 ### func \(\*ProductRepository\) DeleteProduct
 
 ```go
-func (r *ProductRepository) DeleteProduct(productID int, userID uint, archiveOnly bool) error
+func (r *ProductRepository) DeleteProduct(productID uint, userID uint, archiveOnly bool) error
 ```
 
 
@@ -3380,7 +4180,7 @@ func (r *ProductRepository) GetActiveProductsCount(userID uint) (int, error)
 ### func \(\*ProductRepository\) GetArchivedProductByID
 
 ```go
-func (r *ProductRepository) GetArchivedProductByID(productID int, userID uint) (database.Product, error)
+func (r *ProductRepository) GetArchivedProductByID(productID, userID uint) (database.Product, error)
 ```
 
 
@@ -3411,6 +4211,15 @@ func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database
 ```
 
 
+
+<a name="ProductRepository.GetExpiringProductsByHousehold"></a>
+### func \(\*ProductRepository\) GetExpiringProductsByHousehold
+
+```go
+func (r *ProductRepository) GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
+```
+
+GetExpiringProductsByHousehold returns products for a household that expire within daysAhead.
 
 <a name="ProductRepository.GetExpiringSoonCount"></a>
 ### func \(\*ProductRepository\) GetExpiringSoonCount
@@ -3479,7 +4288,7 @@ func (r *ProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (data
 ### func \(\*ProductRepository\) GetProductByID
 
 ```go
-func (r *ProductRepository) GetProductByID(productID int, userID uint) (database.Product, error)
+func (r *ProductRepository) GetProductByID(productID, userID uint) (database.Product, error)
 ```
 
 
@@ -3492,6 +4301,15 @@ func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string
 ```
 
 
+
+<a name="ProductRepository.GetProductsByHousehold"></a>
+### func \(\*ProductRepository\) GetProductsByHousehold
+
+```go
+func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database.Product, error)
+```
+
+GetProductsByHousehold returns all non\-deleted products for a household.
 
 <a name="ProductRepository.GetProductsExpired"></a>
 ### func \(\*ProductRepository\) GetProductsExpired
@@ -3605,7 +4423,7 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error)
 ### func \(\*ProductRepository\) RestoreProduct
 
 ```go
-func (r *ProductRepository) RestoreProduct(productID int, userID uint) error
+func (r *ProductRepository) RestoreProduct(productID, userID uint) error
 ```
 
 
@@ -3623,7 +4441,7 @@ func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, query
 ### func \(\*ProductRepository\) SetProductExpireAt
 
 ```go
-func (r *ProductRepository) SetProductExpireAt(productID int, userID uint, expireAt database.Timestamp) error
+func (r *ProductRepository) SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error
 ```
 
 
@@ -3650,7 +4468,7 @@ func (r *ProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL s
 ### func \(\*ProductRepository\) UpdateProduct
 
 ```go
-func (r *ProductRepository) UpdateProduct(productID int, userID uint, product *database.ProductDTOPatch) error
+func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *database.ProductDTOPatch) error
 ```
 
 
@@ -3659,7 +4477,7 @@ func (r *ProductRepository) UpdateProduct(productID int, userID uint, product *d
 ### func \(\*ProductRepository\) UpdateProductAmount
 
 ```go
-func (r *ProductRepository) UpdateProductAmount(productID int, userID uint, delta int) (bool, error)
+func (r *ProductRepository) UpdateProductAmount(productID uint, userID uint, delta int) (bool, error)
 ```
 
 
@@ -3677,10 +4495,166 @@ func (r *ProductRepository) UserHasProductAccess(userID uint, productID int) boo
 ### func \(\*ProductRepository\) WasteProduct
 
 ```go
-func (r *ProductRepository) WasteProduct(productID int, userID uint) error
+func (r *ProductRepository) WasteProduct(productID, userID uint) error
 ```
 
 
+
+<a name="ProductRepositoryInterface"></a>
+## type ProductRepositoryInterface
+
+
+
+```go
+type ProductRepositoryInterface interface {
+    GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
+    GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
+    GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
+    GetProductByID(productID, userID uint) (database.Product, error)
+    GetArchivedProductByID(productID, userID uint) (database.Product, error)
+    SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
+    GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
+    CreateProduct(userID uint, product *database.Product) error
+    UpdateProduct(productID uint, userID uint, product *database.ProductDTOPatch) error
+    UpdateProductAmount(productID uint, userID uint, delta int) (bool, error)
+    DeleteProduct(productID uint, userID uint, archiveOnly bool) error
+    BulkDeleteProducts(productIDs []uint, userID uint) []BulkOperationError
+    BulkArchiveProducts(productIDs []uint, userID uint) []BulkOperationError
+    RestoreProduct(productID, userID uint) error
+    BulkRestoreProducts(productIDs []uint, userID uint) []BulkOperationError
+    SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error
+    SetProductNotifiedAt(productID uint) error
+    GetProductsExpired(userID uint) ([]*database.Product, error)
+    GetExpiredProductsCount(userID uint) (int, error)
+    GetArchivedProductsGroupedByBarcode(userID uint) (map[string]int, error)
+    GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error)
+    GetActiveProductsCount(userID uint) (int, error)
+    GetProductCategoryBreakdown(userID uint) (map[string]int, error)
+    GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
+    GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
+    GetLastNotifiedProduct(householdID uint) (database.Product, error)
+    GetExpiringInDays(userID uint, days int) ([]database.Product, error)
+    GetLastInsertedProduct(householdID uint) (database.Product, error)
+    UserHasProductAccess(userID uint, productID int) bool
+    GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error)
+    CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error
+    UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error
+    GetUserByID(userID uint) (authentication.User, error)
+    GetUserHouseholdByID(userID uint) (uint, error)
+    GetHouseholdByID(householdID uint) (database.Household, error)
+    GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
+    GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
+    GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
+    GetExpiringSoonCount(userID uint, days int) (int, error)
+    GetWasteThisMonth(userID uint) (int, error)
+    GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
+    GetProductsByHousehold(householdID uint) ([]database.Product, error)
+    ConsumeProduct(productID, userID uint) error
+    WasteProduct(productID, userID uint) error
+}
+```
+
+<a name="RecipeRepository"></a>
+## type RecipeRepository
+
+
+
+```go
+type RecipeRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewRecipeRepository"></a>
+### func NewRecipeRepository
+
+```go
+func NewRecipeRepository(db *gorm.DB) *RecipeRepository
+```
+
+
+
+<a name="RecipeRepository.CleanupExpiredCaches"></a>
+### func \(\*RecipeRepository\) CleanupExpiredCaches
+
+```go
+func (r *RecipeRepository) CleanupExpiredCaches() error
+```
+
+CleanupExpiredCaches deletes all cache entries where expires\_at \< now.
+
+<a name="RecipeRepository.CreateCache"></a>
+### func \(\*RecipeRepository\) CreateCache
+
+```go
+func (r *RecipeRepository) CreateCache(cache *database.RecipeCache) error
+```
+
+CreateCache inserts or replaces a cache entry atomically using ON CONFLICT \(upsert\). If an entry with the same query\_hash exists, it is overwritten \(resetting hit\_count and updated\_at\).
+
+<a name="RecipeRepository.GetCacheByQueryHash"></a>
+### func \(\*RecipeRepository\) GetCacheByQueryHash
+
+```go
+func (r *RecipeRepository) GetCacheByQueryHash(hash string) (database.RecipeCache, error)
+```
+
+GetCacheByQueryHash retrieves a cache entry by its query hash if not expired.
+
+<a name="RecipeRepository.UpdateCacheHit"></a>
+### func \(\*RecipeRepository\) UpdateCacheHit
+
+```go
+func (r *RecipeRepository) UpdateCacheHit(hash string) error
+```
+
+UpdateCacheHit increments the hit count for a cache entry.
+
+<a name="RecipeRepositoryInterface"></a>
+## type RecipeRepositoryInterface
+
+
+
+```go
+type RecipeRepositoryInterface interface {
+    GetCacheByQueryHash(hash string) (database.RecipeCache, error)
+    CreateCache(cache *database.RecipeCache) error
+    UpdateCacheHit(hash string) error
+    CleanupExpiredCaches() error
+}
+```
+
+<a name="RepositoryContainer"></a>
+## type RepositoryContainer
+
+RepositoryContainer holds all repository interfaces. Injected into the Gin context under the key "repos" so handlers can depend on interfaces rather than constructing concrete types.
+
+```go
+type RepositoryContainer struct {
+    Products         ProductRepositoryInterface
+    Users            UserRepositoryInterface
+    Households       HouseholdRepositoryInterface
+    Invitations      InvitationRepositoryInterface
+    StorageLocations StorageLocationRepositoryInterface
+    Webhooks         WebhookRepositoryInterface
+    PATs             PATRepositoryInterface
+    Recipes          RecipeRepositoryInterface
+    Savings          SavingsRepositoryInterface
+    Notifications    NotificationRepositoryInterface
+    Streaks          StreakRepositoryInterface
+    ExpiryScan       ExpiryScanRepositoryInterface
+    CalendarTokens   CalendarTokenRepositoryInterface
+}
+```
+
+<a name="NewRepositoryContainer"></a>
+### func NewRepositoryContainer
+
+```go
+func NewRepositoryContainer(db *gorm.DB) *RepositoryContainer
+```
+
+NewRepositoryContainer creates a RepositoryContainer backed by GORM implementations.
 
 <a name="SavingsRepository"></a>
 ## type SavingsRepository
@@ -3728,6 +4702,19 @@ func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbMode
 ```
 
 RecordSavingsEvent writes a SavingsRecord for a consume or waste action. eventType must be "consumed" or "wasted". CO2 priority: per\-product Agribalyse rate \(product.CO2KgPerKg\) \> seeded category fallback. Price priority: product.PriceOverride \> seeded category average.
+
+<a name="SavingsRepositoryInterface"></a>
+## type SavingsRepositoryInterface
+
+
+
+```go
+type SavingsRepositoryInterface interface {
+    MatchCategory(categories string) (*dbModel.ProductCategoryPrice, error)
+    RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string) error
+    GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error)
+}
+```
 
 <a name="SearchParameterEnum"></a>
 ## type SearchParameterEnum
@@ -3821,6 +4808,21 @@ func (r *StorageLocationRepository) Update(locationID, userID uint, name, icon s
 ```
 
 
+
+<a name="StorageLocationRepositoryInterface"></a>
+## type StorageLocationRepositoryInterface
+
+
+
+```go
+type StorageLocationRepositoryInterface interface {
+    GetByHousehold(userID uint) ([]database.StorageLocation, error)
+    GetByID(locationID, userID uint) (database.StorageLocation, error)
+    Create(userID uint, name, icon string, sortOrder int) (database.StorageLocation, error)
+    Update(locationID, userID uint, name, icon string, sortOrder int) (database.StorageLocation, error)
+    Delete(locationID, userID uint) error
+}
+```
 
 <a name="StreakRepository"></a>
 ## type StreakRepository
@@ -4124,7 +5126,7 @@ func (r *UserRepository) UpdateDisplayName(userID uint, displayName string) erro
 ### func \(\*UserRepository\) UpdateEmailVerificationStatus
 
 ```go
-func (r *UserRepository) UpdateEmailVerificationStatus(token string, status string) error
+func (r *UserRepository) UpdateEmailVerificationStatus(token, status string) error
 ```
 
 
@@ -4182,6 +5184,43 @@ func (r *UserRepository) UserExistsByUsername(user *authentication.User) bool
 ```
 
 
+
+<a name="UserRepositoryInterface"></a>
+## type UserRepositoryInterface
+
+
+
+```go
+type UserRepositoryInterface interface {
+    GetUserByUsername(username string) (authentication.User, error)
+    GetUserByID(userID uint) (authentication.User, error)
+    GetUserHouseholdByID(userID uint) (uint, error)
+    UserExistsByUsername(user *authentication.User) bool
+    UserExistsByMailAddress(user *authentication.User) bool
+    CreateUser(user *authentication.User) error
+    UpdateUser(userID uint, user *authentication.User) error
+    UpdateAdminUserFields(userID uint, username, mailAddress string) error
+    UpdateDisplayName(userID uint, displayName string) error
+    UpdateUserPassword(userID uint, login *authentication.Login) error
+    IsAccountLocked(userID uint, maxLoginAttempts int, lockoutDurationMins int) (bool, time.Duration)
+    RecordFailedLoginAttempt(userID uint, maxLoginAttempts int, lockoutDurationMins int) error
+    ResetFailedLoginAttempts(userID uint) error
+    CreateEmailVerification(userID uint, token string, expiresAt time.Time) error
+    GetEmailVerificationByToken(token string) (database.EmailVerification, error)
+    UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
+    UpdateEmailVerificationStatus(token, status string) error
+    GetOnboardingState(userID uint) (database.OnboardingState, error)
+    MarkNotificationsSetup(userID uint) error
+    UpdateUsername(userID uint, username string) error
+    MarkProfileStepDone(userID uint) error
+    MarkHouseholdStepDone(userID uint) error
+    MarkOnboardingComplete(userID uint) error
+    EnsureOnboardingState(userID uint) error
+    GetHouseholdByID(householdID uint) (database.Household, error)
+    GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
+    DeleteUser(userID uint) error
+}
+```
 
 <a name="WebhookRepository"></a>
 ## type WebhookRepository
@@ -4293,6 +5332,26 @@ func (r *WebhookRepository) UpdateWebhook(webhook *database.Webhook) error
 
 
 
+<a name="WebhookRepositoryInterface"></a>
+## type WebhookRepositoryInterface
+
+
+
+```go
+type WebhookRepositoryInterface interface {
+    CreateWebhook(webhook *database.Webhook) error
+    GetWebhooksByUserID(userID uint) ([]database.Webhook, error)
+    GetWebhookByID(webhookID uint) (database.Webhook, error)
+    GetActiveWebhooksByEvent(event string) ([]database.Webhook, error)
+    UpdateWebhook(webhook *database.Webhook) error
+    DeleteWebhook(webhookID uint) error
+    CreateDeliveryLog(log *database.WebhookDeliveryLog) error
+    GetDeliveryLogs(webhookID uint, limit int) ([]database.WebhookDeliveryLog, error)
+    TrimDeliveryLogs(webhookID uint, keep int) error
+    CheckOwnership(webhookID, userID uint) error
+}
+```
+
 # api
 
 ```go
@@ -4308,13 +5367,16 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type CreateWebhookRequest](<#CreateWebhookRequest>)
 - [type DeliveryLogListResponse](<#DeliveryLogListResponse>)
 - [type DeliveryLogResponse](<#DeliveryLogResponse>)
+- [type ExpiryScanResponse](<#ExpiryScanResponse>)
 - [type HouseholdListItem](<#HouseholdListItem>)
+- [type IngredientMatch](<#IngredientMatch>)
 - [type NotificationItem](<#NotificationItem>)
 - [type NotificationsResponse](<#NotificationsResponse>)
 - [type OnboardingStateResponse](<#OnboardingStateResponse>)
 - [type ProductAmountDTO](<#ProductAmountDTO>)
 - [type ProductStatsResponse](<#ProductStatsResponse>)
 - [type ProductSummaryResponse](<#ProductSummaryResponse>)
+- [type RecipeSuggestionResponse](<#RecipeSuggestionResponse>)
 - [type SavingsStatsResponse](<#SavingsStatsResponse>)
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
@@ -4346,7 +5408,7 @@ BulkProductsAPIModel represents a bulk product operation request
 
 ```go
 type BulkProductsAPIModel struct {
-    ProductIDs []string `json:"productIDs"`
+    ProductIDs []uint `json:"productIDs"`
 }
 ```
 
@@ -4418,6 +5480,20 @@ type DeliveryLogResponse struct {
 }
 ```
 
+<a name="ExpiryScanResponse"></a>
+## type ExpiryScanResponse
+
+ExpiryScanResponse returns detected expiry date and confidence
+
+```go
+type ExpiryScanResponse struct {
+    DetectedDate string  `json:"detectedDate"`       // ISO 8601 (YYYY-MM-DD) if parsed, else empty
+    Confidence   float64 `json:"confidence"`         // 0.0–1.0
+    RawText      string  `json:"rawText"`            // full OCR text for manual correction
+    Language     string  `json:"language,omitempty"` // detected language if available
+}
+```
+
 <a name="HouseholdListItem"></a>
 ## type HouseholdListItem
 
@@ -4429,6 +5505,18 @@ type HouseholdListItem struct {
     Name        string `json:"name"`
     Description string `json:"description"`
     MemberCount int    `json:"memberCount"`
+}
+```
+
+<a name="IngredientMatch"></a>
+## type IngredientMatch
+
+IngredientMatch represents a single ingredient with its matched status
+
+```go
+type IngredientMatch struct {
+    Name    string `json:"name"`
+    Matched bool   `json:"matched"`
 }
 ```
 
@@ -4514,6 +5602,25 @@ type ProductSummaryResponse struct {
     ExpiredCount      int `json:"expiredCount"`
     TotalActive       int `json:"totalActive"`
     WasteThisMonth    int `json:"wasteThisMonth"`
+}
+```
+
+<a name="RecipeSuggestionResponse"></a>
+## type RecipeSuggestionResponse
+
+RecipeSuggestionResponse represents a single recipe suggestion for expiring products
+
+```go
+type RecipeSuggestionResponse struct {
+    ID               string            `json:"id"`
+    Title            string            `json:"title"`
+    ImageURL         string            `json:"imageUrl"`
+    SourceURL        string            `json:"sourceUrl"`
+    Ingredients      []IngredientMatch `json:"ingredients"`
+    MatchedProducts  []string          `json:"matchedProducts"` // deprecated, kept for compatibility
+    MissingCount     int               `json:"missingCount"`
+    TotalIngredients int               `json:"totalIngredients"`
+    MatchPercent     float64           `json:"matchPercent"` // 0-100
 }
 ```
 
@@ -4869,9 +5976,9 @@ User is the struct for the database definition and the JWT claims A single user 
 type User struct {
     gorm.Model
     ID                      uint       `gorm:"primaryKey,unique"`
-    Username                string     `json:"username"`
+    Username                string     `gorm:"index" json:"username"`
     DisplayName             string     `json:"displayName"`
-    MailAddress             string     `json:"mailAddress"`
+    MailAddress             string     `gorm:"index" json:"mailAddress"`
     Password                string     `json:"-"`
     EmailVerifiedAt         *time.Time `json:"emailVerifiedAt,omitempty"`
     HouseholdID             uint       `gorm:"index"`
@@ -4924,15 +6031,19 @@ configuration defines structs and methods for proviants configuration and specif
 - [type DatabaseConfiguration](<#DatabaseConfiguration>)
 - [type DatabaseMariaDBConfiguration](<#DatabaseMariaDBConfiguration>)
 - [type DatabaseSQLiteConfiguration](<#DatabaseSQLiteConfiguration>)
+- [type ExpiryConfiguration](<#ExpiryConfiguration>)
 - [type LoggingConfiguration](<#LoggingConfiguration>)
 - [type MonthlyWasteReportConfiguration](<#MonthlyWasteReportConfiguration>)
 - [type NotificationConfiguration](<#NotificationConfiguration>)
 - [type NtfyConfiguration](<#NtfyConfiguration>)
+- [type OCRConfiguration](<#OCRConfiguration>)
 - [type OpenFoodFactsConfiguration](<#OpenFoodFactsConfiguration>)
 - [type ProviantConfiguration](<#ProviantConfiguration>)
   - [func \(ec \*ProviantConfiguration\) ValidateDatabaseConfiguration\(\) error](<#ProviantConfiguration.ValidateDatabaseConfiguration>)
   - [func \(ec \*ProviantConfiguration\) ValidateNotificationConfiguration\(\) error](<#ProviantConfiguration.ValidateNotificationConfiguration>)
   - [func \(ec \*ProviantConfiguration\) ValidateOpenFoodFactsConfiguration\(\) error](<#ProviantConfiguration.ValidateOpenFoodFactsConfiguration>)
+  - [func \(ec \*ProviantConfiguration\) ValidateRecipeAPIConfiguration\(\) error](<#ProviantConfiguration.ValidateRecipeAPIConfiguration>)
+- [type RecipeAPIConfiguration](<#RecipeAPIConfiguration>)
 - [type SMTPConfiguration](<#SMTPConfiguration>)
 - [type SecurityHeadersConfiguration](<#SecurityHeadersConfiguration>)
 - [type ServerConfiguration](<#ServerConfiguration>)
@@ -4946,15 +6057,15 @@ AuthenticationConfiguration contains all properties regarding the JSON Web Token
 
 ```go
 type AuthenticationConfiguration struct {
-    TokenPassword            string
-    TokenLifetime            int
-    MaxLoginAttempts         int
-    LockoutDurationMins      int
-    PasswordMinLength        int
-    PasswordRequireUppercase bool
-    PasswordRequireDigit     bool
-    PasswordRequireSpecial   bool
-    PasswordCheckBreached    bool
+    TokenPassword            string `mapstructure:"tokenPassword"`
+    TokenLifetime            int    `mapstructure:"tokenLifetime"`
+    MaxLoginAttempts         int    `mapstructure:"max_login_attempts"`
+    LockoutDurationMins      int    `mapstructure:"lockout_duration_mins"`
+    PasswordMinLength        int    `mapstructure:"password_min_length"`
+    PasswordRequireUppercase bool   `mapstructure:"password_require_uppercase"`
+    PasswordRequireDigit     bool   `mapstructure:"password_require_digit"`
+    PasswordRequireSpecial   bool   `mapstructure:"password_require_special"`
+    PasswordCheckBreached    bool   `mapstructure:"password_check_breached"`
 }
 ```
 
@@ -5011,6 +6122,18 @@ type DatabaseSQLiteConfiguration struct {
 }
 ```
 
+<a name="ExpiryConfiguration"></a>
+## type ExpiryConfiguration
+
+ExpiryConfiguration controls the visual expiry\-status thresholds.
+
+```go
+type ExpiryConfiguration struct {
+    CriticalThresholdDays int `mapstructure:"critical_threshold_days"` // days before expiry to mark as critical (default: 3)
+    SoonThresholdDays     int `mapstructure:"soon_threshold_days"`     // days before expiry to mark as expiring soon (default: 7)
+}
+```
+
 <a name="LoggingConfiguration"></a>
 ## type LoggingConfiguration
 
@@ -5064,6 +6187,23 @@ type NtfyConfiguration struct {
 }
 ```
 
+<a name="OCRConfiguration"></a>
+## type OCRConfiguration
+
+OCRConfiguration contains settings for OCR expiry date detection
+
+```go
+type OCRConfiguration struct {
+    Enabled       bool   `mapstructure:"enabled"`       // master switch
+    Provider      string `mapstructure:"provider"`      // "tesseract" (local), "google", "openai"
+    APIKey        string `mapstructure:"apiKey"`        // for cloud providers
+    Endpoint      string `mapstructure:"endpoint"`      // custom endpoint (e.g., Tesseract HTTP server)
+    Timeout       int    `mapstructure:"timeout"`       // seconds per request
+    Languages     string `mapstructure:"languages"`     // Tesseract language codes, e.g. "deu+eng"
+    TesseractPath string `mapstructure:"tesseractPath"` // absolute path to tesseract binary
+}
+```
+
 <a name="OpenFoodFactsConfiguration"></a>
 ## type OpenFoodFactsConfiguration
 
@@ -5091,6 +6231,9 @@ type ProviantConfiguration struct {
     Logging       LoggingConfiguration
     Notification  NotificationConfiguration
     OpenFoodFacts OpenFoodFactsConfiguration
+    OCR           OCRConfiguration       `mapstructure:"ocr"`
+    RecipeAPI     RecipeAPIConfiguration `mapstructure:"recipe_api"`
+    Expiry        ExpiryConfiguration    `mapstructure:"expiry"`
     TemplateCache map[string]*template.Template
 }
 ```
@@ -5121,6 +6264,31 @@ func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error
 ```
 
 ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
+
+<a name="ProviantConfiguration.ValidateRecipeAPIConfiguration"></a>
+### func \(\*ProviantConfiguration\) ValidateRecipeAPIConfiguration
+
+```go
+func (ec *ProviantConfiguration) ValidateRecipeAPIConfiguration() error
+```
+
+ValidateRecipeAPIConfiguration validates the recipe API configuration
+
+<a name="RecipeAPIConfiguration"></a>
+## type RecipeAPIConfiguration
+
+RecipeAPIConfiguration contains settings for the recipe suggestions feature
+
+```go
+type RecipeAPIConfiguration struct {
+    Provider     string `mapstructure:"provider"` // "themealdb" or "spoonacular"
+    URL          string `mapstructure:"url"`
+    APIKey       string `mapstructure:"api_key"` // optional, for Spoonacular
+    Timeout      int    `mapstructure:"timeout"` // seconds
+    CacheEnabled bool   `mapstructure:"cache_enabled"`
+    CacheTTL     int    `mapstructure:"cache_ttl"` // hours, default 24
+}
+```
 
 <a name="SMTPConfiguration"></a>
 ## type SMTPConfiguration
@@ -5184,11 +6352,13 @@ import "codeberg.org/isotop7/proviant/models/database"
 ## Index
 
 - [Constants](<#constants>)
+- [func GenerateCacheKey\(provider string, productIDs \[\]uint\) string](<#GenerateCacheKey>)
 - [type Date](<#Date>)
   - [func \(d Date\) Format\(s string\) string](<#Date.Format>)
   - [func \(d Date\) MarshalJSON\(\) \(\[\]byte, error\)](<#Date.MarshalJSON>)
   - [func \(d \*Date\) UnmarshalJSON\(b \[\]byte\) error](<#Date.UnmarshalJSON>)
 - [type EmailVerification](<#EmailVerification>)
+- [type ExpiryScan](<#ExpiryScan>)
 - [type Household](<#Household>)
 - [type HouseholdApplication](<#HouseholdApplication>)
 - [type HouseholdInvitation](<#HouseholdInvitation>)
@@ -5200,6 +6370,8 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type ProductDTOBarcode](<#ProductDTOBarcode>)
 - [type ProductDTOExpire](<#ProductDTOExpire>)
 - [type ProductDTOPatch](<#ProductDTOPatch>)
+- [type RecipeCache](<#RecipeCache>)
+  - [func \(r \*RecipeCache\) IsExpired\(\) bool](<#RecipeCache.IsExpired>)
 - [type SavingsRecord](<#SavingsRecord>)
 - [type StorageLocation](<#StorageLocation>)
 - [type Timestamp](<#Timestamp>)
@@ -5240,6 +6412,15 @@ const (
     InvitationStatusCancelled = "cancelled"
 )
 ```
+
+<a name="GenerateCacheKey"></a>
+## func GenerateCacheKey
+
+```go
+func GenerateCacheKey(provider string, productIDs []uint) string
+```
+
+GenerateCacheKey creates a deterministic SHA256 hash from provider name and sorted product IDs.
 
 <a name="Date"></a>
 ## type Date
@@ -5292,6 +6473,25 @@ type EmailVerification struct {
 }
 ```
 
+<a name="ExpiryScan"></a>
+## type ExpiryScan
+
+ExpiryScan records a single OCR scan for expiry date detection
+
+```go
+type ExpiryScan struct {
+    gorm.Model
+    ProductID     *uint      `gorm:"index" json:"productId,omitempty"`
+    UserID        uint       `gorm:"index, not null" json:"userId"`
+    ScannedAt     time.Time  `json:"scannedAt"`
+    DetectedDate  time.Time  `json:"detectedDate"`
+    Confidence    float64    `json:"confidence"`
+    RawText       string     `json:"rawText"`                 // full OCR output
+    ImageHash     string     `gorm:"index" json:"imageHash"`  // SHA256 for dedup
+    CorrectedDate *time.Time `json:"correctedDate,omitempty"` // if user modified
+}
+```
+
 <a name="Household"></a>
 ## type Household
 
@@ -5314,8 +6514,8 @@ HouseholdApplication represents a user's request to join a household
 ```go
 type HouseholdApplication struct {
     gorm.Model
-    ApplicantID uint   `gorm:"index,not null" json:"applicantId"`
-    HouseholdID uint   `gorm:"index,not null" json:"householdId"`
+    ApplicantID uint   `gorm:"index;not null" json:"applicantId"`
+    HouseholdID uint   `gorm:"index;not null" json:"householdId"`
     Status      string `gorm:"not null;default:'pending'" json:"status"`
 }
 ```
@@ -5392,16 +6592,16 @@ Product is the database model of a product
 ```go
 type Product struct {
     gorm.Model
-    Barcode           string           `json:"barcode"`
+    Barcode           string           `gorm:"index:idx_products_barcode_household,priority:1" json:"barcode"`
     ProductName       string           `json:"productName"`
     Categories        string           `json:"categories"`
     Countries         string           `json:"countries"`
     ImageURL          string           `json:"imageUrl"`
-    ExpireAt          time.Time        `json:"expireAt"`
+    ExpireAt          time.Time        `gorm:"index" json:"expireAt"`
     ScannedAt         time.Time        `json:"scannedAt"`
     NotifiedAt        time.Time        `json:"notifiedAt"`
-    DeletedAt         gorm.DeletedAt   `gorm:"index"`
-    HouseholdID       uint             `gorm:"index, not null" json:"-"`
+    DeletedAt         gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
+    HouseholdID       uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;not null" json:"-"`
     Household         Household        `json:"-"`
     Amount            int              `json:"amount"`
     Unit              string           `json:"unit"`
@@ -5470,6 +6670,31 @@ type ProductDTOPatch struct {
     StorageLocationID *uint     `json:"storageLocationId"`
 }
 ```
+
+<a name="RecipeCache"></a>
+## type RecipeCache
+
+RecipeCache stores cached recipe suggestions globally. The cache key is a hash of the provider and the sorted product IDs.
+
+```go
+type RecipeCache struct {
+    gorm.Model
+    QueryHash    string    `gorm:"uniqueIndex;not null" json:"-"`
+    Provider     string    `json:"provider"`
+    ResponseJSON []byte    `json:"-"` // store raw JSON; not exposed via API
+    ExpiresAt    time.Time `json:"expires_at"`
+    HitCount     int       `gorm:"default:0" json:"-"`
+}
+```
+
+<a name="RecipeCache.IsExpired"></a>
+### func \(\*RecipeCache\) IsExpired
+
+```go
+func (r *RecipeCache) IsExpired() bool
+```
+
+IsExpired returns true if the cache entry has passed its expiry time.
 
 <a name="SavingsRecord"></a>
 ## type SavingsRecord
@@ -5540,7 +6765,7 @@ type WasteStreak struct {
 ```go
 type Webhook struct {
     gorm.Model
-    UserID uint   `gorm:"index, not null" json:"-"`
+    UserID uint   `gorm:"index;not null" json:"-"`
     URL    string `gorm:"not null" json:"url"`
     Secret string `gorm:"not null" json:"-"`
     Events string `gorm:"not null" json:"events"`
@@ -5556,7 +6781,7 @@ type Webhook struct {
 ```go
 type WebhookDeliveryLog struct {
     gorm.Model
-    WebhookID    uint      `gorm:"index, not null" json:"webhookId"`
+    WebhookID    uint      `gorm:"index;not null" json:"webhookId"`
     StatusCode   int       `json:"statusCode"`
     ResponseBody string    `json:"responseBody,omitempty"`
     Error        string    `json:"error,omitempty"`
@@ -5576,6 +6801,8 @@ external provides model definitions from external parties
 ## Index
 
 - [Variables](<#variables>)
+- [type AgribalyseData](<#AgribalyseData>)
+- [type EcoscoreData](<#EcoscoreData>)
 - [type OpenFoodFactsAPIDataset](<#OpenFoodFactsAPIDataset>)
 
 
@@ -5591,6 +6818,28 @@ var (
 )
 ```
 
+<a name="AgribalyseData"></a>
+## type AgribalyseData
+
+
+
+```go
+type AgribalyseData struct {
+    CO2Total float64 `json:"co2_total"`
+}
+```
+
+<a name="EcoscoreData"></a>
+## type EcoscoreData
+
+
+
+```go
+type EcoscoreData struct {
+    Agribalyse AgribalyseData `json:"agribalyse"`
+}
+```
+
 <a name="OpenFoodFactsAPIDataset"></a>
 ## type OpenFoodFactsAPIDataset
 
@@ -5601,20 +6850,1903 @@ type OpenFoodFactsAPIDataset struct {
     gorm.Model
     Barcode string `json:"code"`
     Product struct {
-        ID           string `json:"_id"`
-        ProductName  string `json:"product_name"`
-        Categories   string `json:"categories"`
-        Countries    string `json:"countries"`
-        GenericName  string `json:"generic_name"`
-        ImageURL     string `json:"image_url"`
-        EcoscoreData struct {
-            Agribalyse struct {
-                CO2Total float64 `json:"co2_total"`
-            } `json:"agribalyse"`
-        }   `json:"ecoscore_data"`
+        ID           string       `json:"_id"`
+        ProductName  string       `json:"product_name"`
+        Categories   string       `json:"categories"`
+        Countries    string       `json:"countries"`
+        GenericName  string       `json:"generic_name"`
+        ImageURL     string       `json:"image_url"`
+        EcoscoreData EcoscoreData `json:"ecoscore_data"`
     }   `json:"product"`
 }
 ```
+
+# mocks
+
+```go
+import "codeberg.org/isotop7/proviant/testutil/mocks"
+```
+
+Package mocks provides test utilities that import controllers/database. It is a subpackage of testutil to avoid an import cycle \(controllers/database tests → testutil → controllers/database\).
+
+## Index
+
+- [func SetupGinContextWithDB\(db \*gorm.DB\) \(\*gin.Context, \*httptest.ResponseRecorder\)](<#SetupGinContextWithDB>)
+- [func SetupGinContextWithMocks\(m \*MockRepositoryContainer\) \(\*gin.Context, \*httptest.ResponseRecorder\)](<#SetupGinContextWithMocks>)
+- [type MockCalendarTokenRepository](<#MockCalendarTokenRepository>)
+  - [func \(m \*MockCalendarTokenRepository\) Create\(ct \*authentication.CalendarToken\) error](<#MockCalendarTokenRepository.Create>)
+  - [func \(m \*MockCalendarTokenRepository\) DeleteByUserID\(userID uint\) error](<#MockCalendarTokenRepository.DeleteByUserID>)
+  - [func \(m \*MockCalendarTokenRepository\) GetByToken\(token string\) \(authentication.CalendarToken, error\)](<#MockCalendarTokenRepository.GetByToken>)
+  - [func \(m \*MockCalendarTokenRepository\) GetByUserID\(userID uint\) \(authentication.CalendarToken, error\)](<#MockCalendarTokenRepository.GetByUserID>)
+- [type MockExpiryScanRepository](<#MockExpiryScanRepository>)
+  - [func \(m \*MockExpiryScanRepository\) Create\(scan \*dbModel.ExpiryScan\) error](<#MockExpiryScanRepository.Create>)
+  - [func \(m \*MockExpiryScanRepository\) GetByUser\(userID uint, limit int\) \(\[\]dbModel.ExpiryScan, error\)](<#MockExpiryScanRepository.GetByUser>)
+- [type MockHouseholdRepository](<#MockHouseholdRepository>)
+  - [func \(m \*MockHouseholdRepository\) ApplyForHousehold\(applicantID, householdID uint\) error](<#MockHouseholdRepository.ApplyForHousehold>)
+  - [func \(m \*MockHouseholdRepository\) ApproveApplication\(applicationID, adminUserID uint\) error](<#MockHouseholdRepository.ApproveApplication>)
+  - [func \(m \*MockHouseholdRepository\) CancelApplication\(applicationID, applicantUserID uint\) error](<#MockHouseholdRepository.CancelApplication>)
+  - [func \(m \*MockHouseholdRepository\) CreateAndSwitchHousehold\(userID uint, name string\) error](<#MockHouseholdRepository.CreateAndSwitchHousehold>)
+  - [func \(m \*MockHouseholdRepository\) GetHouseholdByID\(householdID uint\) \(dbModel.Household, error\)](<#MockHouseholdRepository.GetHouseholdByID>)
+  - [func \(m \*MockHouseholdRepository\) GetHouseholdMemberCount\(householdID uint\) \(int64, error\)](<#MockHouseholdRepository.GetHouseholdMemberCount>)
+  - [func \(m \*MockHouseholdRepository\) GetHouseholdMembers\(householdID uint\) \(\[\]authentication.User, error\)](<#MockHouseholdRepository.GetHouseholdMembers>)
+  - [func \(m \*MockHouseholdRepository\) GetPendingApplicationsForAdmin\(adminUserID uint\) \(\[\]dbModel.HouseholdApplication, error\)](<#MockHouseholdRepository.GetPendingApplicationsForAdmin>)
+  - [func \(m \*MockHouseholdRepository\) GetPendingApplicationsForApplicant\(applicantUserID uint\) \(\[\]dbModel.HouseholdApplication, error\)](<#MockHouseholdRepository.GetPendingApplicationsForApplicant>)
+  - [func \(m \*MockHouseholdRepository\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]dbModel.HouseholdWithMemberCount, error\)](<#MockHouseholdRepository.GetPublicHouseholds>)
+  - [func \(m \*MockHouseholdRepository\) LeaveHousehold\(userID uint\) error](<#MockHouseholdRepository.LeaveHousehold>)
+  - [func \(m \*MockHouseholdRepository\) RejectApplication\(applicationID, adminUserID uint\) error](<#MockHouseholdRepository.RejectApplication>)
+  - [func \(m \*MockHouseholdRepository\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#MockHouseholdRepository.RemoveMemberFromHousehold>)
+  - [func \(m \*MockHouseholdRepository\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#MockHouseholdRepository.UpdateHouseholdName>)
+- [type MockInvitationRepository](<#MockInvitationRepository>)
+  - [func \(m \*MockInvitationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#MockInvitationRepository.AcceptInvitation>)
+  - [func \(m \*MockInvitationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#MockInvitationRepository.CancelInvitation>)
+  - [func \(m \*MockInvitationRepository\) CreateInvitation\(householdID, inviterID uint, email string\) \(dbModel.HouseholdInvitation, error\)](<#MockInvitationRepository.CreateInvitation>)
+  - [func \(m \*MockInvitationRepository\) GetInvitationByToken\(token string\) \(dbModel.HouseholdInvitation, error\)](<#MockInvitationRepository.GetInvitationByToken>)
+  - [func \(m \*MockInvitationRepository\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]dbModel.HouseholdInvitation, error\)](<#MockInvitationRepository.GetInvitationsForHousehold>)
+  - [func \(m \*MockInvitationRepository\) GetPendingInvitationsForHousehold\(householdID uint\) \(\[\]dbModel.HouseholdInvitation, error\)](<#MockInvitationRepository.GetPendingInvitationsForHousehold>)
+  - [func \(m \*MockInvitationRepository\) GetPendingInvitationsNotSent\(retryInterval time.Duration\) \(\[\]dbModel.HouseholdInvitation, error\)](<#MockInvitationRepository.GetPendingInvitationsNotSent>)
+  - [func \(m \*MockInvitationRepository\) MarkInvitationExpired\(invitationID uint\) error](<#MockInvitationRepository.MarkInvitationExpired>)
+  - [func \(m \*MockInvitationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#MockInvitationRepository.MarkInvitationSendFailed>)
+  - [func \(m \*MockInvitationRepository\) MarkInvitationSent\(invitationID uint\) error](<#MockInvitationRepository.MarkInvitationSent>)
+- [type MockNotificationRepository](<#MockNotificationRepository>)
+  - [func \(m \*MockNotificationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#MockNotificationRepository.AcceptInvitation>)
+  - [func \(m \*MockNotificationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#MockNotificationRepository.CancelInvitation>)
+  - [func \(m \*MockNotificationRepository\) CreateInvitation\(householdID, inviterID uint, email string\) \(dbModel.HouseholdInvitation, error\)](<#MockNotificationRepository.CreateInvitation>)
+  - [func \(m \*MockNotificationRepository\) FindUserByTelegramLinkToken\(token string\) \(authentication.User, error\)](<#MockNotificationRepository.FindUserByTelegramLinkToken>)
+  - [func \(m \*MockNotificationRepository\) GetAllUsersWithTelegramBotToken\(\) \(\[\]authentication.User, error\)](<#MockNotificationRepository.GetAllUsersWithTelegramBotToken>)
+  - [func \(m \*MockNotificationRepository\) GetHouseholdByID\(householdID uint\) \(dbModel.Household, error\)](<#MockNotificationRepository.GetHouseholdByID>)
+  - [func \(m \*MockNotificationRepository\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#MockNotificationRepository.GetHouseholdMembersMailAddressesByID>)
+  - [func \(m \*MockNotificationRepository\) GetHouseholdMembersNotificationPreferences\(householdID uint\) \(\[\]models.NotificationRecipientInfo, error\)](<#MockNotificationRepository.GetHouseholdMembersNotificationPreferences>)
+  - [func \(m \*MockNotificationRepository\) GetHouseholdsWithMonthlyWasteReportEnabled\(\) \(\[\]models.HouseholdReportTarget, error\)](<#MockNotificationRepository.GetHouseholdsWithMonthlyWasteReportEnabled>)
+  - [func \(m \*MockNotificationRepository\) GetInvitationByToken\(token string\) \(dbModel.HouseholdInvitation, error\)](<#MockNotificationRepository.GetInvitationByToken>)
+  - [func \(m \*MockNotificationRepository\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]dbModel.HouseholdInvitation, error\)](<#MockNotificationRepository.GetInvitationsForHousehold>)
+  - [func \(m \*MockNotificationRepository\) GetMaxNotificationThresholdDays\(\) int](<#MockNotificationRepository.GetMaxNotificationThresholdDays>)
+  - [func \(m \*MockNotificationRepository\) GetOnboardingState\(userID uint\) \(dbModel.OnboardingState, error\)](<#MockNotificationRepository.GetOnboardingState>)
+  - [func \(m \*MockNotificationRepository\) GetPendingInvitationsNotSent\(retryInterval time.Duration\) \(\[\]dbModel.HouseholdInvitation, error\)](<#MockNotificationRepository.GetPendingInvitationsNotSent>)
+  - [func \(m \*MockNotificationRepository\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration, maxLookAheadDays int\) \(\[\]dbModel.Product, error\)](<#MockNotificationRepository.GetProductsExpiredAndNotificationPending>)
+  - [func \(m \*MockNotificationRepository\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]dbModel.HouseholdWithMemberCount, error\)](<#MockNotificationRepository.GetPublicHouseholds>)
+  - [func \(m \*MockNotificationRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#MockNotificationRepository.GetUserByID>)
+  - [func \(m \*MockNotificationRepository\) GetWasteStatsForHousehold\(householdID uint, month time.Time\) \(models.WasteStats, error\)](<#MockNotificationRepository.GetWasteStatsForHousehold>)
+  - [func \(m \*MockNotificationRepository\) MarkHouseholdStepDone\(userID uint\) error](<#MockNotificationRepository.MarkHouseholdStepDone>)
+  - [func \(m \*MockNotificationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#MockNotificationRepository.MarkInvitationSendFailed>)
+  - [func \(m \*MockNotificationRepository\) MarkInvitationSent\(invitationID uint\) error](<#MockNotificationRepository.MarkInvitationSent>)
+  - [func \(m \*MockNotificationRepository\) MarkNotificationsSetup\(userID uint\) error](<#MockNotificationRepository.MarkNotificationsSetup>)
+  - [func \(m \*MockNotificationRepository\) MarkOnboardingComplete\(userID uint\) error](<#MockNotificationRepository.MarkOnboardingComplete>)
+  - [func \(m \*MockNotificationRepository\) SetProductNotifiedAt\(productID uint\) error](<#MockNotificationRepository.SetProductNotifiedAt>)
+  - [func \(m \*MockNotificationRepository\) SetTelegramBotUsername\(userID uint, username string\) error](<#MockNotificationRepository.SetTelegramBotUsername>)
+  - [func \(m \*MockNotificationRepository\) SetTelegramChatID\(userID uint, chatID string\) error](<#MockNotificationRepository.SetTelegramChatID>)
+  - [func \(m \*MockNotificationRepository\) SetTelegramLinkToken\(userID uint, token string\) error](<#MockNotificationRepository.SetTelegramLinkToken>)
+- [type MockPATRepository](<#MockPATRepository>)
+  - [func \(m \*MockPATRepository\) CreatePAT\(userID uint, name, tokenHash string, expiresAt \*time.Time, scopes string\) \(\*authentication.PersonalAccessToken, error\)](<#MockPATRepository.CreatePAT>)
+  - [func \(m \*MockPATRepository\) DeletePAT\(patID, userID uint\) error](<#MockPATRepository.DeletePAT>)
+  - [func \(m \*MockPATRepository\) GetPATByID\(patID uint\) \(\*authentication.PersonalAccessToken, error\)](<#MockPATRepository.GetPATByID>)
+  - [func \(m \*MockPATRepository\) GetPATByTokenHash\(tokenHash string\) \(\*authentication.PersonalAccessToken, error\)](<#MockPATRepository.GetPATByTokenHash>)
+  - [func \(m \*MockPATRepository\) GetPATsByUserID\(userID uint\) \(\[\]authentication.PersonalAccessToken, error\)](<#MockPATRepository.GetPATsByUserID>)
+  - [func \(m \*MockPATRepository\) UpdateLastUsed\(patID uint\) error](<#MockPATRepository.UpdateLastUsed>)
+- [type MockProductRepository](<#MockProductRepository>)
+  - [func \(m \*MockProductRepository\) BulkArchiveProducts\(productIDs \[\]uint, userID uint\) \[\]database.BulkOperationError](<#MockProductRepository.BulkArchiveProducts>)
+  - [func \(m \*MockProductRepository\) BulkDeleteProducts\(productIDs \[\]uint, userID uint\) \[\]database.BulkOperationError](<#MockProductRepository.BulkDeleteProducts>)
+  - [func \(m \*MockProductRepository\) BulkRestoreProducts\(productIDs \[\]uint, userID uint\) \[\]database.BulkOperationError](<#MockProductRepository.BulkRestoreProducts>)
+  - [func \(m \*MockProductRepository\) ConsumeProduct\(productID, userID uint\) error](<#MockProductRepository.ConsumeProduct>)
+  - [func \(m \*MockProductRepository\) CreateOpenFoodFactsCache\(entry \*dbModel.OpenFoodFactsCache\) error](<#MockProductRepository.CreateOpenFoodFactsCache>)
+  - [func \(m \*MockProductRepository\) CreateProduct\(userID uint, product \*dbModel.Product\) error](<#MockProductRepository.CreateProduct>)
+  - [func \(m \*MockProductRepository\) DeleteProduct\(productID uint, userID uint, archiveOnly bool\) error](<#MockProductRepository.DeleteProduct>)
+  - [func \(m \*MockProductRepository\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#MockProductRepository.GetActiveProductsCount>)
+  - [func \(m \*MockProductRepository\) GetArchivedProductByID\(productID, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetArchivedProductByID>)
+  - [func \(m \*MockProductRepository\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#MockProductRepository.GetArchivedProductsGroupedByBarcode>)
+  - [func \(m \*MockProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#MockProductRepository.GetExpiredProductsCount>)
+  - [func \(m \*MockProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetExpiringInDays>)
+  - [func \(m \*MockProductRepository\) GetExpiringProductsByHousehold\(householdID uint, daysAhead int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetExpiringProductsByHousehold>)
+  - [func \(m \*MockProductRepository\) GetExpiringSoonCount\(userID uint, days int\) \(int, error\)](<#MockProductRepository.GetExpiringSoonCount>)
+  - [func \(m \*MockProductRepository\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#MockProductRepository.GetExpiringSoonProducts>)
+  - [func \(m \*MockProductRepository\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#MockProductRepository.GetExpiryTrend>)
+  - [func \(m \*MockProductRepository\) GetHouseholdByID\(householdID uint\) \(dbModel.Household, error\)](<#MockProductRepository.GetHouseholdByID>)
+  - [func \(m \*MockProductRepository\) GetLastInsertedProduct\(householdID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetLastInsertedProduct>)
+  - [func \(m \*MockProductRepository\) GetLastNotifiedProduct\(householdID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetLastNotifiedProduct>)
+  - [func \(m \*MockProductRepository\) GetOpenFoodFactsCacheByBarcode\(barcode string\) \(dbModel.OpenFoodFactsCache, error\)](<#MockProductRepository.GetOpenFoodFactsCacheByBarcode>)
+  - [func \(m \*MockProductRepository\) GetProductByID\(productID, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetProductByID>)
+  - [func \(m \*MockProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#MockProductRepository.GetProductCategoryBreakdown>)
+  - [func \(m \*MockProductRepository\) GetProductsByHousehold\(householdID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetProductsByHousehold>)
+  - [func \(m \*MockProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*dbModel.Product, error\)](<#MockProductRepository.GetProductsExpired>)
+  - [func \(m \*MockProductRepository\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetTopArchivedProducts>)
+  - [func \(m \*MockProductRepository\) GetUserActiveProductsFiltered\(userID uint, from, to \*time.Time\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserActiveProductsFiltered>)
+  - [func \(m \*MockProductRepository\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserArchivedProductsBulk>)
+  - [func \(m \*MockProductRepository\) GetUserArchivedProductsFiltered\(userID uint, from, to \*time.Time\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserArchivedProductsFiltered>)
+  - [func \(m \*MockProductRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#MockProductRepository.GetUserByID>)
+  - [func \(m \*MockProductRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#MockProductRepository.GetUserHouseholdByID>)
+  - [func \(m \*MockProductRepository\) GetUserProductsBulk\(userID uint, limit int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserProductsBulk>)
+  - [func \(m \*MockProductRepository\) GetUserProductsBulkByBarcode\(userID uint, barcode int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserProductsBulkByBarcode>)
+  - [func \(m \*MockProductRepository\) GetUserProductsByLocation\(userID, locationID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserProductsByLocation>)
+  - [func \(m \*MockProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#MockProductRepository.GetUsersByHouseholdID>)
+  - [func \(m \*MockProductRepository\) GetWasteThisMonth\(userID uint\) \(int, error\)](<#MockProductRepository.GetWasteThisMonth>)
+  - [func \(m \*MockProductRepository\) RestoreProduct\(productID, userID uint\) error](<#MockProductRepository.RestoreProduct>)
+  - [func \(m \*MockProductRepository\) SearchProducts\(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.SearchProducts>)
+  - [func \(m \*MockProductRepository\) SetProductExpireAt\(productID uint, userID uint, expireAt dbModel.Timestamp\) error](<#MockProductRepository.SetProductExpireAt>)
+  - [func \(m \*MockProductRepository\) SetProductNotifiedAt\(productID uint\) error](<#MockProductRepository.SetProductNotifiedAt>)
+  - [func \(m \*MockProductRepository\) UpdateOpenFoodFactsCacheImageURL\(barcode, imageURL string\) error](<#MockProductRepository.UpdateOpenFoodFactsCacheImageURL>)
+  - [func \(m \*MockProductRepository\) UpdateProduct\(productID uint, userID uint, product \*dbModel.ProductDTOPatch\) error](<#MockProductRepository.UpdateProduct>)
+  - [func \(m \*MockProductRepository\) UpdateProductAmount\(productID uint, userID uint, delta int\) \(bool, error\)](<#MockProductRepository.UpdateProductAmount>)
+  - [func \(m \*MockProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#MockProductRepository.UserHasProductAccess>)
+  - [func \(m \*MockProductRepository\) WasteProduct\(productID, userID uint\) error](<#MockProductRepository.WasteProduct>)
+- [type MockRecipeRepository](<#MockRecipeRepository>)
+  - [func \(m \*MockRecipeRepository\) CleanupExpiredCaches\(\) error](<#MockRecipeRepository.CleanupExpiredCaches>)
+  - [func \(m \*MockRecipeRepository\) CreateCache\(cache \*dbModel.RecipeCache\) error](<#MockRecipeRepository.CreateCache>)
+  - [func \(m \*MockRecipeRepository\) GetCacheByQueryHash\(hash string\) \(dbModel.RecipeCache, error\)](<#MockRecipeRepository.GetCacheByQueryHash>)
+  - [func \(m \*MockRecipeRepository\) UpdateCacheHit\(hash string\) error](<#MockRecipeRepository.UpdateCacheHit>)
+- [type MockRepositoryContainer](<#MockRepositoryContainer>)
+  - [func NewMockRepositoryContainer\(\) \*MockRepositoryContainer](<#NewMockRepositoryContainer>)
+  - [func \(m \*MockRepositoryContainer\) ToRepositoryContainer\(\) \*database.RepositoryContainer](<#MockRepositoryContainer.ToRepositoryContainer>)
+- [type MockSavingsRepository](<#MockSavingsRepository>)
+  - [func \(m \*MockSavingsRepository\) GetSavingsStats\(householdID uint\) \(apiModel.SavingsStatsResponse, error\)](<#MockSavingsRepository.GetSavingsStats>)
+  - [func \(m \*MockSavingsRepository\) MatchCategory\(categories string\) \(\*dbModel.ProductCategoryPrice, error\)](<#MockSavingsRepository.MatchCategory>)
+  - [func \(m \*MockSavingsRepository\) RecordSavingsEvent\(householdID uint, product \*dbModel.Product, eventType string\) error](<#MockSavingsRepository.RecordSavingsEvent>)
+- [type MockStorageLocationRepository](<#MockStorageLocationRepository>)
+  - [func \(m \*MockStorageLocationRepository\) Create\(userID uint, name, icon string, sortOrder int\) \(dbModel.StorageLocation, error\)](<#MockStorageLocationRepository.Create>)
+  - [func \(m \*MockStorageLocationRepository\) Delete\(locationID, userID uint\) error](<#MockStorageLocationRepository.Delete>)
+  - [func \(m \*MockStorageLocationRepository\) GetByHousehold\(userID uint\) \(\[\]dbModel.StorageLocation, error\)](<#MockStorageLocationRepository.GetByHousehold>)
+  - [func \(m \*MockStorageLocationRepository\) GetByID\(locationID, userID uint\) \(dbModel.StorageLocation, error\)](<#MockStorageLocationRepository.GetByID>)
+  - [func \(m \*MockStorageLocationRepository\) Update\(locationID, userID uint, name, icon string, sortOrder int\) \(dbModel.StorageLocation, error\)](<#MockStorageLocationRepository.Update>)
+- [type MockStreakRepository](<#MockStreakRepository>)
+  - [func \(m \*MockStreakRepository\) GetAllStreaks\(\) \(\[\]dbModel.WasteStreak, error\)](<#MockStreakRepository.GetAllStreaks>)
+  - [func \(m \*MockStreakRepository\) GetOrCreateStreakForHousehold\(householdID uint\) \(\*dbModel.WasteStreak, error\)](<#MockStreakRepository.GetOrCreateStreakForHousehold>)
+  - [func \(m \*MockStreakRepository\) RecordWasteEvent\(householdID uint\) error](<#MockStreakRepository.RecordWasteEvent>)
+  - [func \(m \*MockStreakRepository\) UpdateStreak\(streak \*dbModel.WasteStreak\) error](<#MockStreakRepository.UpdateStreak>)
+- [type MockUserRepository](<#MockUserRepository>)
+  - [func \(m \*MockUserRepository\) CreateEmailVerification\(userID uint, token string, expiresAt time.Time\) error](<#MockUserRepository.CreateEmailVerification>)
+  - [func \(m \*MockUserRepository\) CreateUser\(user \*authentication.User\) error](<#MockUserRepository.CreateUser>)
+  - [func \(m \*MockUserRepository\) DeleteUser\(userID uint\) error](<#MockUserRepository.DeleteUser>)
+  - [func \(m \*MockUserRepository\) EnsureOnboardingState\(userID uint\) error](<#MockUserRepository.EnsureOnboardingState>)
+  - [func \(m \*MockUserRepository\) GetEmailVerificationByToken\(token string\) \(dbModel.EmailVerification, error\)](<#MockUserRepository.GetEmailVerificationByToken>)
+  - [func \(m \*MockUserRepository\) GetHouseholdByID\(householdID uint\) \(dbModel.Household, error\)](<#MockUserRepository.GetHouseholdByID>)
+  - [func \(m \*MockUserRepository\) GetOnboardingState\(userID uint\) \(dbModel.OnboardingState, error\)](<#MockUserRepository.GetOnboardingState>)
+  - [func \(m \*MockUserRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#MockUserRepository.GetUserByID>)
+  - [func \(m \*MockUserRepository\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#MockUserRepository.GetUserByUsername>)
+  - [func \(m \*MockUserRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#MockUserRepository.GetUserHouseholdByID>)
+  - [func \(m \*MockUserRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#MockUserRepository.GetUsersByHouseholdID>)
+  - [func \(m \*MockUserRepository\) IsAccountLocked\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) \(bool, time.Duration\)](<#MockUserRepository.IsAccountLocked>)
+  - [func \(m \*MockUserRepository\) MarkHouseholdStepDone\(userID uint\) error](<#MockUserRepository.MarkHouseholdStepDone>)
+  - [func \(m \*MockUserRepository\) MarkNotificationsSetup\(userID uint\) error](<#MockUserRepository.MarkNotificationsSetup>)
+  - [func \(m \*MockUserRepository\) MarkOnboardingComplete\(userID uint\) error](<#MockUserRepository.MarkOnboardingComplete>)
+  - [func \(m \*MockUserRepository\) MarkProfileStepDone\(userID uint\) error](<#MockUserRepository.MarkProfileStepDone>)
+  - [func \(m \*MockUserRepository\) RecordFailedLoginAttempt\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) error](<#MockUserRepository.RecordFailedLoginAttempt>)
+  - [func \(m \*MockUserRepository\) ResetFailedLoginAttempts\(userID uint\) error](<#MockUserRepository.ResetFailedLoginAttempts>)
+  - [func \(m \*MockUserRepository\) UpdateAdminUserFields\(userID uint, username, mailAddress string\) error](<#MockUserRepository.UpdateAdminUserFields>)
+  - [func \(m \*MockUserRepository\) UpdateDisplayName\(userID uint, displayName string\) error](<#MockUserRepository.UpdateDisplayName>)
+  - [func \(m \*MockUserRepository\) UpdateEmailVerificationStatus\(token, status string\) error](<#MockUserRepository.UpdateEmailVerificationStatus>)
+  - [func \(m \*MockUserRepository\) UpdateUser\(userID uint, user \*authentication.User\) error](<#MockUserRepository.UpdateUser>)
+  - [func \(m \*MockUserRepository\) UpdateUserEmailVerified\(userID uint, verifiedAt time.Time\) error](<#MockUserRepository.UpdateUserEmailVerified>)
+  - [func \(m \*MockUserRepository\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#MockUserRepository.UpdateUserPassword>)
+  - [func \(m \*MockUserRepository\) UpdateUsername\(userID uint, username string\) error](<#MockUserRepository.UpdateUsername>)
+  - [func \(m \*MockUserRepository\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#MockUserRepository.UserExistsByMailAddress>)
+  - [func \(m \*MockUserRepository\) UserExistsByUsername\(user \*authentication.User\) bool](<#MockUserRepository.UserExistsByUsername>)
+- [type MockWebhookRepository](<#MockWebhookRepository>)
+  - [func \(m \*MockWebhookRepository\) CheckOwnership\(webhookID, userID uint\) error](<#MockWebhookRepository.CheckOwnership>)
+  - [func \(m \*MockWebhookRepository\) CreateDeliveryLog\(log \*dbModel.WebhookDeliveryLog\) error](<#MockWebhookRepository.CreateDeliveryLog>)
+  - [func \(m \*MockWebhookRepository\) CreateWebhook\(webhook \*dbModel.Webhook\) error](<#MockWebhookRepository.CreateWebhook>)
+  - [func \(m \*MockWebhookRepository\) DeleteWebhook\(webhookID uint\) error](<#MockWebhookRepository.DeleteWebhook>)
+  - [func \(m \*MockWebhookRepository\) GetActiveWebhooksByEvent\(event string\) \(\[\]dbModel.Webhook, error\)](<#MockWebhookRepository.GetActiveWebhooksByEvent>)
+  - [func \(m \*MockWebhookRepository\) GetDeliveryLogs\(webhookID uint, limit int\) \(\[\]dbModel.WebhookDeliveryLog, error\)](<#MockWebhookRepository.GetDeliveryLogs>)
+  - [func \(m \*MockWebhookRepository\) GetWebhookByID\(webhookID uint\) \(dbModel.Webhook, error\)](<#MockWebhookRepository.GetWebhookByID>)
+  - [func \(m \*MockWebhookRepository\) GetWebhooksByUserID\(userID uint\) \(\[\]dbModel.Webhook, error\)](<#MockWebhookRepository.GetWebhooksByUserID>)
+  - [func \(m \*MockWebhookRepository\) TrimDeliveryLogs\(webhookID uint, keep int\) error](<#MockWebhookRepository.TrimDeliveryLogs>)
+  - [func \(m \*MockWebhookRepository\) UpdateWebhook\(webhook \*dbModel.Webhook\) error](<#MockWebhookRepository.UpdateWebhook>)
+
+
+<a name="SetupGinContextWithDB"></a>
+## func SetupGinContextWithDB
+
+```go
+func SetupGinContextWithDB(db *gorm.DB) (*gin.Context, *httptest.ResponseRecorder)
+```
+
+SetupGinContextWithDB creates a Gin test context with both dbHandle and a live RepositoryContainer backed by the provided GORM connection. Use this in handler integration tests instead of testutil.SetupGinContext when the handler under test reads from ctx.Get\(util.ContextKeyRepos\).
+
+<a name="SetupGinContextWithMocks"></a>
+## func SetupGinContextWithMocks
+
+```go
+func SetupGinContextWithMocks(m *MockRepositoryContainer) (*gin.Context, *httptest.ResponseRecorder)
+```
+
+SetupGinContextWithMocks creates a Gin test context backed by mock repositories. No database connection is needed; use this for handler unit tests.
+
+<a name="MockCalendarTokenRepository"></a>
+## type MockCalendarTokenRepository
+
+MockCalendarTokenRepository is a configurable in\-memory stub for CalendarTokenRepositoryInterface.
+
+```go
+type MockCalendarTokenRepository struct {
+    CalendarToken authentication.CalendarToken
+    Err           error
+}
+```
+
+<a name="MockCalendarTokenRepository.Create"></a>
+### func \(\*MockCalendarTokenRepository\) Create
+
+```go
+func (m *MockCalendarTokenRepository) Create(ct *authentication.CalendarToken) error
+```
+
+
+
+<a name="MockCalendarTokenRepository.DeleteByUserID"></a>
+### func \(\*MockCalendarTokenRepository\) DeleteByUserID
+
+```go
+func (m *MockCalendarTokenRepository) DeleteByUserID(userID uint) error
+```
+
+
+
+<a name="MockCalendarTokenRepository.GetByToken"></a>
+### func \(\*MockCalendarTokenRepository\) GetByToken
+
+```go
+func (m *MockCalendarTokenRepository) GetByToken(token string) (authentication.CalendarToken, error)
+```
+
+
+
+<a name="MockCalendarTokenRepository.GetByUserID"></a>
+### func \(\*MockCalendarTokenRepository\) GetByUserID
+
+```go
+func (m *MockCalendarTokenRepository) GetByUserID(userID uint) (authentication.CalendarToken, error)
+```
+
+
+
+<a name="MockExpiryScanRepository"></a>
+## type MockExpiryScanRepository
+
+MockExpiryScanRepository is a configurable in\-memory stub for ExpiryScanRepositoryInterface.
+
+```go
+type MockExpiryScanRepository struct {
+    Scans []dbModel.ExpiryScan
+    Err   error
+}
+```
+
+<a name="MockExpiryScanRepository.Create"></a>
+### func \(\*MockExpiryScanRepository\) Create
+
+```go
+func (m *MockExpiryScanRepository) Create(scan *dbModel.ExpiryScan) error
+```
+
+
+
+<a name="MockExpiryScanRepository.GetByUser"></a>
+### func \(\*MockExpiryScanRepository\) GetByUser
+
+```go
+func (m *MockExpiryScanRepository) GetByUser(userID uint, limit int) ([]dbModel.ExpiryScan, error)
+```
+
+
+
+<a name="MockHouseholdRepository"></a>
+## type MockHouseholdRepository
+
+MockHouseholdRepository is a configurable in\-memory stub for HouseholdRepositoryInterface.
+
+```go
+type MockHouseholdRepository struct {
+    Household    dbModel.Household
+    Households   []dbModel.HouseholdWithMemberCount
+    Users        []authentication.User
+    Applications []dbModel.HouseholdApplication
+    MemberCount  int64
+    Err          error
+}
+```
+
+<a name="MockHouseholdRepository.ApplyForHousehold"></a>
+### func \(\*MockHouseholdRepository\) ApplyForHousehold
+
+```go
+func (m *MockHouseholdRepository) ApplyForHousehold(applicantID, householdID uint) error
+```
+
+
+
+<a name="MockHouseholdRepository.ApproveApplication"></a>
+### func \(\*MockHouseholdRepository\) ApproveApplication
+
+```go
+func (m *MockHouseholdRepository) ApproveApplication(applicationID, adminUserID uint) error
+```
+
+
+
+<a name="MockHouseholdRepository.CancelApplication"></a>
+### func \(\*MockHouseholdRepository\) CancelApplication
+
+```go
+func (m *MockHouseholdRepository) CancelApplication(applicationID, applicantUserID uint) error
+```
+
+
+
+<a name="MockHouseholdRepository.CreateAndSwitchHousehold"></a>
+### func \(\*MockHouseholdRepository\) CreateAndSwitchHousehold
+
+```go
+func (m *MockHouseholdRepository) CreateAndSwitchHousehold(userID uint, name string) error
+```
+
+
+
+<a name="MockHouseholdRepository.GetHouseholdByID"></a>
+### func \(\*MockHouseholdRepository\) GetHouseholdByID
+
+```go
+func (m *MockHouseholdRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error)
+```
+
+
+
+<a name="MockHouseholdRepository.GetHouseholdMemberCount"></a>
+### func \(\*MockHouseholdRepository\) GetHouseholdMemberCount
+
+```go
+func (m *MockHouseholdRepository) GetHouseholdMemberCount(householdID uint) (int64, error)
+```
+
+
+
+<a name="MockHouseholdRepository.GetHouseholdMembers"></a>
+### func \(\*MockHouseholdRepository\) GetHouseholdMembers
+
+```go
+func (m *MockHouseholdRepository) GetHouseholdMembers(householdID uint) ([]authentication.User, error)
+```
+
+
+
+<a name="MockHouseholdRepository.GetPendingApplicationsForAdmin"></a>
+### func \(\*MockHouseholdRepository\) GetPendingApplicationsForAdmin
+
+```go
+func (m *MockHouseholdRepository) GetPendingApplicationsForAdmin(adminUserID uint) ([]dbModel.HouseholdApplication, error)
+```
+
+
+
+<a name="MockHouseholdRepository.GetPendingApplicationsForApplicant"></a>
+### func \(\*MockHouseholdRepository\) GetPendingApplicationsForApplicant
+
+```go
+func (m *MockHouseholdRepository) GetPendingApplicationsForApplicant(applicantUserID uint) ([]dbModel.HouseholdApplication, error)
+```
+
+
+
+<a name="MockHouseholdRepository.GetPublicHouseholds"></a>
+### func \(\*MockHouseholdRepository\) GetPublicHouseholds
+
+```go
+func (m *MockHouseholdRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]dbModel.HouseholdWithMemberCount, error)
+```
+
+
+
+<a name="MockHouseholdRepository.LeaveHousehold"></a>
+### func \(\*MockHouseholdRepository\) LeaveHousehold
+
+```go
+func (m *MockHouseholdRepository) LeaveHousehold(userID uint) error
+```
+
+
+
+<a name="MockHouseholdRepository.RejectApplication"></a>
+### func \(\*MockHouseholdRepository\) RejectApplication
+
+```go
+func (m *MockHouseholdRepository) RejectApplication(applicationID, adminUserID uint) error
+```
+
+
+
+<a name="MockHouseholdRepository.RemoveMemberFromHousehold"></a>
+### func \(\*MockHouseholdRepository\) RemoveMemberFromHousehold
+
+```go
+func (m *MockHouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
+```
+
+
+
+<a name="MockHouseholdRepository.UpdateHouseholdName"></a>
+### func \(\*MockHouseholdRepository\) UpdateHouseholdName
+
+```go
+func (m *MockHouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint, name string) error
+```
+
+
+
+<a name="MockInvitationRepository"></a>
+## type MockInvitationRepository
+
+MockInvitationRepository is a configurable in\-memory stub for InvitationRepositoryInterface.
+
+```go
+type MockInvitationRepository struct {
+    Invitation  dbModel.HouseholdInvitation
+    Invitations []dbModel.HouseholdInvitation
+    Err         error
+}
+```
+
+<a name="MockInvitationRepository.AcceptInvitation"></a>
+### func \(\*MockInvitationRepository\) AcceptInvitation
+
+```go
+func (m *MockInvitationRepository) AcceptInvitation(token, email string, userID uint) error
+```
+
+
+
+<a name="MockInvitationRepository.CancelInvitation"></a>
+### func \(\*MockInvitationRepository\) CancelInvitation
+
+```go
+func (m *MockInvitationRepository) CancelInvitation(invitationID, userID uint) error
+```
+
+
+
+<a name="MockInvitationRepository.CreateInvitation"></a>
+### func \(\*MockInvitationRepository\) CreateInvitation
+
+```go
+func (m *MockInvitationRepository) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error)
+```
+
+
+
+<a name="MockInvitationRepository.GetInvitationByToken"></a>
+### func \(\*MockInvitationRepository\) GetInvitationByToken
+
+```go
+func (m *MockInvitationRepository) GetInvitationByToken(token string) (dbModel.HouseholdInvitation, error)
+```
+
+
+
+<a name="MockInvitationRepository.GetInvitationsForHousehold"></a>
+### func \(\*MockInvitationRepository\) GetInvitationsForHousehold
+
+```go
+func (m *MockInvitationRepository) GetInvitationsForHousehold(householdID, inviterID uint) ([]dbModel.HouseholdInvitation, error)
+```
+
+
+
+<a name="MockInvitationRepository.GetPendingInvitationsForHousehold"></a>
+### func \(\*MockInvitationRepository\) GetPendingInvitationsForHousehold
+
+```go
+func (m *MockInvitationRepository) GetPendingInvitationsForHousehold(householdID uint) ([]dbModel.HouseholdInvitation, error)
+```
+
+
+
+<a name="MockInvitationRepository.GetPendingInvitationsNotSent"></a>
+### func \(\*MockInvitationRepository\) GetPendingInvitationsNotSent
+
+```go
+func (m *MockInvitationRepository) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]dbModel.HouseholdInvitation, error)
+```
+
+
+
+<a name="MockInvitationRepository.MarkInvitationExpired"></a>
+### func \(\*MockInvitationRepository\) MarkInvitationExpired
+
+```go
+func (m *MockInvitationRepository) MarkInvitationExpired(invitationID uint) error
+```
+
+
+
+<a name="MockInvitationRepository.MarkInvitationSendFailed"></a>
+### func \(\*MockInvitationRepository\) MarkInvitationSendFailed
+
+```go
+func (m *MockInvitationRepository) MarkInvitationSendFailed(invitationID uint) error
+```
+
+
+
+<a name="MockInvitationRepository.MarkInvitationSent"></a>
+### func \(\*MockInvitationRepository\) MarkInvitationSent
+
+```go
+func (m *MockInvitationRepository) MarkInvitationSent(invitationID uint) error
+```
+
+
+
+<a name="MockNotificationRepository"></a>
+## type MockNotificationRepository
+
+MockNotificationRepository is a configurable in\-memory stub for NotificationRepositoryInterface.
+
+```go
+type MockNotificationRepository struct {
+    Products            []dbModel.Product
+    User                authentication.User
+    Users               []authentication.User
+    Household           dbModel.Household
+    HouseholdTargets    []models.HouseholdReportTarget
+    NotifRecipients     []models.NotificationRecipientInfo
+    MailAddresses       []string
+    Invitation          dbModel.HouseholdInvitation
+    Invitations         []dbModel.HouseholdInvitation
+    OnboardingState     dbModel.OnboardingState
+    HouseholdsWithCount []dbModel.HouseholdWithMemberCount
+    WasteStats          models.WasteStats
+    MaxThresholdDays    int
+    Err                 error
+}
+```
+
+<a name="MockNotificationRepository.AcceptInvitation"></a>
+### func \(\*MockNotificationRepository\) AcceptInvitation
+
+```go
+func (m *MockNotificationRepository) AcceptInvitation(token, email string, userID uint) error
+```
+
+
+
+<a name="MockNotificationRepository.CancelInvitation"></a>
+### func \(\*MockNotificationRepository\) CancelInvitation
+
+```go
+func (m *MockNotificationRepository) CancelInvitation(invitationID, userID uint) error
+```
+
+
+
+<a name="MockNotificationRepository.CreateInvitation"></a>
+### func \(\*MockNotificationRepository\) CreateInvitation
+
+```go
+func (m *MockNotificationRepository) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error)
+```
+
+
+
+<a name="MockNotificationRepository.FindUserByTelegramLinkToken"></a>
+### func \(\*MockNotificationRepository\) FindUserByTelegramLinkToken
+
+```go
+func (m *MockNotificationRepository) FindUserByTelegramLinkToken(token string) (authentication.User, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetAllUsersWithTelegramBotToken"></a>
+### func \(\*MockNotificationRepository\) GetAllUsersWithTelegramBotToken
+
+```go
+func (m *MockNotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentication.User, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetHouseholdByID"></a>
+### func \(\*MockNotificationRepository\) GetHouseholdByID
+
+```go
+func (m *MockNotificationRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetHouseholdMembersMailAddressesByID"></a>
+### func \(\*MockNotificationRepository\) GetHouseholdMembersMailAddressesByID
+
+```go
+func (m *MockNotificationRepository) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetHouseholdMembersNotificationPreferences"></a>
+### func \(\*MockNotificationRepository\) GetHouseholdMembersNotificationPreferences
+
+```go
+func (m *MockNotificationRepository) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetHouseholdsWithMonthlyWasteReportEnabled"></a>
+### func \(\*MockNotificationRepository\) GetHouseholdsWithMonthlyWasteReportEnabled
+
+```go
+func (m *MockNotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetInvitationByToken"></a>
+### func \(\*MockNotificationRepository\) GetInvitationByToken
+
+```go
+func (m *MockNotificationRepository) GetInvitationByToken(token string) (dbModel.HouseholdInvitation, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetInvitationsForHousehold"></a>
+### func \(\*MockNotificationRepository\) GetInvitationsForHousehold
+
+```go
+func (m *MockNotificationRepository) GetInvitationsForHousehold(householdID, inviterID uint) ([]dbModel.HouseholdInvitation, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetMaxNotificationThresholdDays"></a>
+### func \(\*MockNotificationRepository\) GetMaxNotificationThresholdDays
+
+```go
+func (m *MockNotificationRepository) GetMaxNotificationThresholdDays() int
+```
+
+
+
+<a name="MockNotificationRepository.GetOnboardingState"></a>
+### func \(\*MockNotificationRepository\) GetOnboardingState
+
+```go
+func (m *MockNotificationRepository) GetOnboardingState(userID uint) (dbModel.OnboardingState, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetPendingInvitationsNotSent"></a>
+### func \(\*MockNotificationRepository\) GetPendingInvitationsNotSent
+
+```go
+func (m *MockNotificationRepository) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]dbModel.HouseholdInvitation, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetProductsExpiredAndNotificationPending"></a>
+### func \(\*MockNotificationRepository\) GetProductsExpiredAndNotificationPending
+
+```go
+func (m *MockNotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetPublicHouseholds"></a>
+### func \(\*MockNotificationRepository\) GetPublicHouseholds
+
+```go
+func (m *MockNotificationRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]dbModel.HouseholdWithMemberCount, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetUserByID"></a>
+### func \(\*MockNotificationRepository\) GetUserByID
+
+```go
+func (m *MockNotificationRepository) GetUserByID(userID uint) (authentication.User, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetWasteStatsForHousehold"></a>
+### func \(\*MockNotificationRepository\) GetWasteStatsForHousehold
+
+```go
+func (m *MockNotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error)
+```
+
+
+
+<a name="MockNotificationRepository.MarkHouseholdStepDone"></a>
+### func \(\*MockNotificationRepository\) MarkHouseholdStepDone
+
+```go
+func (m *MockNotificationRepository) MarkHouseholdStepDone(userID uint) error
+```
+
+
+
+<a name="MockNotificationRepository.MarkInvitationSendFailed"></a>
+### func \(\*MockNotificationRepository\) MarkInvitationSendFailed
+
+```go
+func (m *MockNotificationRepository) MarkInvitationSendFailed(invitationID uint) error
+```
+
+
+
+<a name="MockNotificationRepository.MarkInvitationSent"></a>
+### func \(\*MockNotificationRepository\) MarkInvitationSent
+
+```go
+func (m *MockNotificationRepository) MarkInvitationSent(invitationID uint) error
+```
+
+
+
+<a name="MockNotificationRepository.MarkNotificationsSetup"></a>
+### func \(\*MockNotificationRepository\) MarkNotificationsSetup
+
+```go
+func (m *MockNotificationRepository) MarkNotificationsSetup(userID uint) error
+```
+
+
+
+<a name="MockNotificationRepository.MarkOnboardingComplete"></a>
+### func \(\*MockNotificationRepository\) MarkOnboardingComplete
+
+```go
+func (m *MockNotificationRepository) MarkOnboardingComplete(userID uint) error
+```
+
+
+
+<a name="MockNotificationRepository.SetProductNotifiedAt"></a>
+### func \(\*MockNotificationRepository\) SetProductNotifiedAt
+
+```go
+func (m *MockNotificationRepository) SetProductNotifiedAt(productID uint) error
+```
+
+
+
+<a name="MockNotificationRepository.SetTelegramBotUsername"></a>
+### func \(\*MockNotificationRepository\) SetTelegramBotUsername
+
+```go
+func (m *MockNotificationRepository) SetTelegramBotUsername(userID uint, username string) error
+```
+
+
+
+<a name="MockNotificationRepository.SetTelegramChatID"></a>
+### func \(\*MockNotificationRepository\) SetTelegramChatID
+
+```go
+func (m *MockNotificationRepository) SetTelegramChatID(userID uint, chatID string) error
+```
+
+
+
+<a name="MockNotificationRepository.SetTelegramLinkToken"></a>
+### func \(\*MockNotificationRepository\) SetTelegramLinkToken
+
+```go
+func (m *MockNotificationRepository) SetTelegramLinkToken(userID uint, token string) error
+```
+
+
+
+<a name="MockPATRepository"></a>
+## type MockPATRepository
+
+MockPATRepository is a configurable in\-memory stub for PATRepositoryInterface.
+
+```go
+type MockPATRepository struct {
+    PAT  *authentication.PersonalAccessToken
+    PATs []authentication.PersonalAccessToken
+    Err  error
+}
+```
+
+<a name="MockPATRepository.CreatePAT"></a>
+### func \(\*MockPATRepository\) CreatePAT
+
+```go
+func (m *MockPATRepository) CreatePAT(userID uint, name, tokenHash string, expiresAt *time.Time, scopes string) (*authentication.PersonalAccessToken, error)
+```
+
+
+
+<a name="MockPATRepository.DeletePAT"></a>
+### func \(\*MockPATRepository\) DeletePAT
+
+```go
+func (m *MockPATRepository) DeletePAT(patID, userID uint) error
+```
+
+
+
+<a name="MockPATRepository.GetPATByID"></a>
+### func \(\*MockPATRepository\) GetPATByID
+
+```go
+func (m *MockPATRepository) GetPATByID(patID uint) (*authentication.PersonalAccessToken, error)
+```
+
+
+
+<a name="MockPATRepository.GetPATByTokenHash"></a>
+### func \(\*MockPATRepository\) GetPATByTokenHash
+
+```go
+func (m *MockPATRepository) GetPATByTokenHash(tokenHash string) (*authentication.PersonalAccessToken, error)
+```
+
+
+
+<a name="MockPATRepository.GetPATsByUserID"></a>
+### func \(\*MockPATRepository\) GetPATsByUserID
+
+```go
+func (m *MockPATRepository) GetPATsByUserID(userID uint) ([]authentication.PersonalAccessToken, error)
+```
+
+
+
+<a name="MockPATRepository.UpdateLastUsed"></a>
+### func \(\*MockPATRepository\) UpdateLastUsed
+
+```go
+func (m *MockPATRepository) UpdateLastUsed(patID uint) error
+```
+
+
+
+<a name="MockProductRepository"></a>
+## type MockProductRepository
+
+MockProductRepository is a configurable in\-memory stub for ProductRepositoryInterface.
+
+```go
+type MockProductRepository struct {
+    Products      []dbModel.Product
+    Product       dbModel.Product
+    OFFCache      dbModel.OpenFoodFactsCache
+    Household     dbModel.Household
+    User          authentication.User
+    Users         []authentication.User
+    StatsMonthly  []apiModel.StatsMonthlyCount
+    ExpiringProds []apiModel.StatsExpiringProduct
+    BoolResult    bool
+    IntResult     int
+    MapResult     map[string]int
+    Err           error
+}
+```
+
+<a name="MockProductRepository.BulkArchiveProducts"></a>
+### func \(\*MockProductRepository\) BulkArchiveProducts
+
+```go
+func (m *MockProductRepository) BulkArchiveProducts(productIDs []uint, userID uint) []database.BulkOperationError
+```
+
+
+
+<a name="MockProductRepository.BulkDeleteProducts"></a>
+### func \(\*MockProductRepository\) BulkDeleteProducts
+
+```go
+func (m *MockProductRepository) BulkDeleteProducts(productIDs []uint, userID uint) []database.BulkOperationError
+```
+
+
+
+<a name="MockProductRepository.BulkRestoreProducts"></a>
+### func \(\*MockProductRepository\) BulkRestoreProducts
+
+```go
+func (m *MockProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) []database.BulkOperationError
+```
+
+
+
+<a name="MockProductRepository.ConsumeProduct"></a>
+### func \(\*MockProductRepository\) ConsumeProduct
+
+```go
+func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error
+```
+
+
+
+<a name="MockProductRepository.CreateOpenFoodFactsCache"></a>
+### func \(\*MockProductRepository\) CreateOpenFoodFactsCache
+
+```go
+func (m *MockProductRepository) CreateOpenFoodFactsCache(entry *dbModel.OpenFoodFactsCache) error
+```
+
+
+
+<a name="MockProductRepository.CreateProduct"></a>
+### func \(\*MockProductRepository\) CreateProduct
+
+```go
+func (m *MockProductRepository) CreateProduct(userID uint, product *dbModel.Product) error
+```
+
+
+
+<a name="MockProductRepository.DeleteProduct"></a>
+### func \(\*MockProductRepository\) DeleteProduct
+
+```go
+func (m *MockProductRepository) DeleteProduct(productID uint, userID uint, archiveOnly bool) error
+```
+
+
+
+<a name="MockProductRepository.GetActiveProductsCount"></a>
+### func \(\*MockProductRepository\) GetActiveProductsCount
+
+```go
+func (m *MockProductRepository) GetActiveProductsCount(userID uint) (int, error)
+```
+
+
+
+<a name="MockProductRepository.GetArchivedProductByID"></a>
+### func \(\*MockProductRepository\) GetArchivedProductByID
+
+```go
+func (m *MockProductRepository) GetArchivedProductByID(productID, userID uint) (dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetArchivedProductsGroupedByBarcode"></a>
+### func \(\*MockProductRepository\) GetArchivedProductsGroupedByBarcode
+
+```go
+func (m *MockProductRepository) GetArchivedProductsGroupedByBarcode(userID uint) (map[string]int, error)
+```
+
+
+
+<a name="MockProductRepository.GetExpiredProductsCount"></a>
+### func \(\*MockProductRepository\) GetExpiredProductsCount
+
+```go
+func (m *MockProductRepository) GetExpiredProductsCount(userID uint) (int, error)
+```
+
+
+
+<a name="MockProductRepository.GetExpiringInDays"></a>
+### func \(\*MockProductRepository\) GetExpiringInDays
+
+```go
+func (m *MockProductRepository) GetExpiringInDays(userID uint, days int) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetExpiringProductsByHousehold"></a>
+### func \(\*MockProductRepository\) GetExpiringProductsByHousehold
+
+```go
+func (m *MockProductRepository) GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetExpiringSoonCount"></a>
+### func \(\*MockProductRepository\) GetExpiringSoonCount
+
+```go
+func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error)
+```
+
+
+
+<a name="MockProductRepository.GetExpiringSoonProducts"></a>
+### func \(\*MockProductRepository\) GetExpiringSoonProducts
+
+```go
+func (m *MockProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
+```
+
+
+
+<a name="MockProductRepository.GetExpiryTrend"></a>
+### func \(\*MockProductRepository\) GetExpiryTrend
+
+```go
+func (m *MockProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
+```
+
+
+
+<a name="MockProductRepository.GetHouseholdByID"></a>
+### func \(\*MockProductRepository\) GetHouseholdByID
+
+```go
+func (m *MockProductRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error)
+```
+
+
+
+<a name="MockProductRepository.GetLastInsertedProduct"></a>
+### func \(\*MockProductRepository\) GetLastInsertedProduct
+
+```go
+func (m *MockProductRepository) GetLastInsertedProduct(householdID uint) (dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetLastNotifiedProduct"></a>
+### func \(\*MockProductRepository\) GetLastNotifiedProduct
+
+```go
+func (m *MockProductRepository) GetLastNotifiedProduct(householdID uint) (dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetOpenFoodFactsCacheByBarcode"></a>
+### func \(\*MockProductRepository\) GetOpenFoodFactsCacheByBarcode
+
+```go
+func (m *MockProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (dbModel.OpenFoodFactsCache, error)
+```
+
+
+
+<a name="MockProductRepository.GetProductByID"></a>
+### func \(\*MockProductRepository\) GetProductByID
+
+```go
+func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetProductCategoryBreakdown"></a>
+### func \(\*MockProductRepository\) GetProductCategoryBreakdown
+
+```go
+func (m *MockProductRepository) GetProductCategoryBreakdown(userID uint) (map[string]int, error)
+```
+
+
+
+<a name="MockProductRepository.GetProductsByHousehold"></a>
+### func \(\*MockProductRepository\) GetProductsByHousehold
+
+```go
+func (m *MockProductRepository) GetProductsByHousehold(householdID uint) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetProductsExpired"></a>
+### func \(\*MockProductRepository\) GetProductsExpired
+
+```go
+func (m *MockProductRepository) GetProductsExpired(userID uint) ([]*dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetTopArchivedProducts"></a>
+### func \(\*MockProductRepository\) GetTopArchivedProducts
+
+```go
+func (m *MockProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetUserActiveProductsFiltered"></a>
+### func \(\*MockProductRepository\) GetUserActiveProductsFiltered
+
+```go
+func (m *MockProductRepository) GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetUserArchivedProductsBulk"></a>
+### func \(\*MockProductRepository\) GetUserArchivedProductsBulk
+
+```go
+func (m *MockProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetUserArchivedProductsFiltered"></a>
+### func \(\*MockProductRepository\) GetUserArchivedProductsFiltered
+
+```go
+func (m *MockProductRepository) GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetUserByID"></a>
+### func \(\*MockProductRepository\) GetUserByID
+
+```go
+func (m *MockProductRepository) GetUserByID(userID uint) (authentication.User, error)
+```
+
+
+
+<a name="MockProductRepository.GetUserHouseholdByID"></a>
+### func \(\*MockProductRepository\) GetUserHouseholdByID
+
+```go
+func (m *MockProductRepository) GetUserHouseholdByID(userID uint) (uint, error)
+```
+
+
+
+<a name="MockProductRepository.GetUserProductsBulk"></a>
+### func \(\*MockProductRepository\) GetUserProductsBulk
+
+```go
+func (m *MockProductRepository) GetUserProductsBulk(userID uint, limit int) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetUserProductsBulkByBarcode"></a>
+### func \(\*MockProductRepository\) GetUserProductsBulkByBarcode
+
+```go
+func (m *MockProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetUserProductsByLocation"></a>
+### func \(\*MockProductRepository\) GetUserProductsByLocation
+
+```go
+func (m *MockProductRepository) GetUserProductsByLocation(userID, locationID uint) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetUsersByHouseholdID"></a>
+### func \(\*MockProductRepository\) GetUsersByHouseholdID
+
+```go
+func (m *MockProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
+```
+
+
+
+<a name="MockProductRepository.GetWasteThisMonth"></a>
+### func \(\*MockProductRepository\) GetWasteThisMonth
+
+```go
+func (m *MockProductRepository) GetWasteThisMonth(userID uint) (int, error)
+```
+
+
+
+<a name="MockProductRepository.RestoreProduct"></a>
+### func \(\*MockProductRepository\) RestoreProduct
+
+```go
+func (m *MockProductRepository) RestoreProduct(productID, userID uint) error
+```
+
+
+
+<a name="MockProductRepository.SearchProducts"></a>
+### func \(\*MockProductRepository\) SearchProducts
+
+```go
+func (m *MockProductRepository) SearchProducts(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.SetProductExpireAt"></a>
+### func \(\*MockProductRepository\) SetProductExpireAt
+
+```go
+func (m *MockProductRepository) SetProductExpireAt(productID uint, userID uint, expireAt dbModel.Timestamp) error
+```
+
+
+
+<a name="MockProductRepository.SetProductNotifiedAt"></a>
+### func \(\*MockProductRepository\) SetProductNotifiedAt
+
+```go
+func (m *MockProductRepository) SetProductNotifiedAt(productID uint) error
+```
+
+
+
+<a name="MockProductRepository.UpdateOpenFoodFactsCacheImageURL"></a>
+### func \(\*MockProductRepository\) UpdateOpenFoodFactsCacheImageURL
+
+```go
+func (m *MockProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error
+```
+
+
+
+<a name="MockProductRepository.UpdateProduct"></a>
+### func \(\*MockProductRepository\) UpdateProduct
+
+```go
+func (m *MockProductRepository) UpdateProduct(productID uint, userID uint, product *dbModel.ProductDTOPatch) error
+```
+
+
+
+<a name="MockProductRepository.UpdateProductAmount"></a>
+### func \(\*MockProductRepository\) UpdateProductAmount
+
+```go
+func (m *MockProductRepository) UpdateProductAmount(productID uint, userID uint, delta int) (bool, error)
+```
+
+
+
+<a name="MockProductRepository.UserHasProductAccess"></a>
+### func \(\*MockProductRepository\) UserHasProductAccess
+
+```go
+func (m *MockProductRepository) UserHasProductAccess(userID uint, productID int) bool
+```
+
+
+
+<a name="MockProductRepository.WasteProduct"></a>
+### func \(\*MockProductRepository\) WasteProduct
+
+```go
+func (m *MockProductRepository) WasteProduct(productID, userID uint) error
+```
+
+
+
+<a name="MockRecipeRepository"></a>
+## type MockRecipeRepository
+
+MockRecipeRepository is a configurable in\-memory stub for RecipeRepositoryInterface.
+
+```go
+type MockRecipeRepository struct {
+    Cache dbModel.RecipeCache
+    Err   error
+}
+```
+
+<a name="MockRecipeRepository.CleanupExpiredCaches"></a>
+### func \(\*MockRecipeRepository\) CleanupExpiredCaches
+
+```go
+func (m *MockRecipeRepository) CleanupExpiredCaches() error
+```
+
+
+
+<a name="MockRecipeRepository.CreateCache"></a>
+### func \(\*MockRecipeRepository\) CreateCache
+
+```go
+func (m *MockRecipeRepository) CreateCache(cache *dbModel.RecipeCache) error
+```
+
+
+
+<a name="MockRecipeRepository.GetCacheByQueryHash"></a>
+### func \(\*MockRecipeRepository\) GetCacheByQueryHash
+
+```go
+func (m *MockRecipeRepository) GetCacheByQueryHash(hash string) (dbModel.RecipeCache, error)
+```
+
+
+
+<a name="MockRecipeRepository.UpdateCacheHit"></a>
+### func \(\*MockRecipeRepository\) UpdateCacheHit
+
+```go
+func (m *MockRecipeRepository) UpdateCacheHit(hash string) error
+```
+
+
+
+<a name="MockRepositoryContainer"></a>
+## type MockRepositoryContainer
+
+MockRepositoryContainer holds mock implementations of all repository interfaces.
+
+```go
+type MockRepositoryContainer struct {
+    Products         *MockProductRepository
+    Users            *MockUserRepository
+    Households       *MockHouseholdRepository
+    Invitations      *MockInvitationRepository
+    StorageLocations *MockStorageLocationRepository
+    Webhooks         *MockWebhookRepository
+    PATs             *MockPATRepository
+    Savings          *MockSavingsRepository
+    Recipes          *MockRecipeRepository
+    Notifications    *MockNotificationRepository
+    Streaks          *MockStreakRepository
+    ExpiryScan       *MockExpiryScanRepository
+    CalendarTokens   *MockCalendarTokenRepository
+}
+```
+
+<a name="NewMockRepositoryContainer"></a>
+### func NewMockRepositoryContainer
+
+```go
+func NewMockRepositoryContainer() *MockRepositoryContainer
+```
+
+NewMockRepositoryContainer creates a MockRepositoryContainer with all mocks initialised.
+
+<a name="MockRepositoryContainer.ToRepositoryContainer"></a>
+### func \(\*MockRepositoryContainer\) ToRepositoryContainer
+
+```go
+func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryContainer
+```
+
+ToRepositoryContainer converts the mock container to a database.RepositoryContainer suitable for injection into the Gin context via ctx.Set\(util.ContextKeyRepos, ...\).
+
+<a name="MockSavingsRepository"></a>
+## type MockSavingsRepository
+
+MockSavingsRepository is a configurable in\-memory stub for SavingsRepositoryInterface.
+
+```go
+type MockSavingsRepository struct {
+    CategoryPrice *dbModel.ProductCategoryPrice
+    SavingsStats  apiModel.SavingsStatsResponse
+    Err           error
+}
+```
+
+<a name="MockSavingsRepository.GetSavingsStats"></a>
+### func \(\*MockSavingsRepository\) GetSavingsStats
+
+```go
+func (m *MockSavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error)
+```
+
+
+
+<a name="MockSavingsRepository.MatchCategory"></a>
+### func \(\*MockSavingsRepository\) MatchCategory
+
+```go
+func (m *MockSavingsRepository) MatchCategory(categories string) (*dbModel.ProductCategoryPrice, error)
+```
+
+
+
+<a name="MockSavingsRepository.RecordSavingsEvent"></a>
+### func \(\*MockSavingsRepository\) RecordSavingsEvent
+
+```go
+func (m *MockSavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string) error
+```
+
+
+
+<a name="MockStorageLocationRepository"></a>
+## type MockStorageLocationRepository
+
+MockStorageLocationRepository is a configurable in\-memory stub for StorageLocationRepositoryInterface.
+
+```go
+type MockStorageLocationRepository struct {
+    Location  dbModel.StorageLocation
+    Locations []dbModel.StorageLocation
+    Err       error
+}
+```
+
+<a name="MockStorageLocationRepository.Create"></a>
+### func \(\*MockStorageLocationRepository\) Create
+
+```go
+func (m *MockStorageLocationRepository) Create(userID uint, name, icon string, sortOrder int) (dbModel.StorageLocation, error)
+```
+
+
+
+<a name="MockStorageLocationRepository.Delete"></a>
+### func \(\*MockStorageLocationRepository\) Delete
+
+```go
+func (m *MockStorageLocationRepository) Delete(locationID, userID uint) error
+```
+
+
+
+<a name="MockStorageLocationRepository.GetByHousehold"></a>
+### func \(\*MockStorageLocationRepository\) GetByHousehold
+
+```go
+func (m *MockStorageLocationRepository) GetByHousehold(userID uint) ([]dbModel.StorageLocation, error)
+```
+
+
+
+<a name="MockStorageLocationRepository.GetByID"></a>
+### func \(\*MockStorageLocationRepository\) GetByID
+
+```go
+func (m *MockStorageLocationRepository) GetByID(locationID, userID uint) (dbModel.StorageLocation, error)
+```
+
+
+
+<a name="MockStorageLocationRepository.Update"></a>
+### func \(\*MockStorageLocationRepository\) Update
+
+```go
+func (m *MockStorageLocationRepository) Update(locationID, userID uint, name, icon string, sortOrder int) (dbModel.StorageLocation, error)
+```
+
+
+
+<a name="MockStreakRepository"></a>
+## type MockStreakRepository
+
+MockStreakRepository is a configurable in\-memory stub for StreakRepositoryInterface.
+
+```go
+type MockStreakRepository struct {
+    Streak  *dbModel.WasteStreak
+    Streaks []dbModel.WasteStreak
+    Err     error
+}
+```
+
+<a name="MockStreakRepository.GetAllStreaks"></a>
+### func \(\*MockStreakRepository\) GetAllStreaks
+
+```go
+func (m *MockStreakRepository) GetAllStreaks() ([]dbModel.WasteStreak, error)
+```
+
+
+
+<a name="MockStreakRepository.GetOrCreateStreakForHousehold"></a>
+### func \(\*MockStreakRepository\) GetOrCreateStreakForHousehold
+
+```go
+func (m *MockStreakRepository) GetOrCreateStreakForHousehold(householdID uint) (*dbModel.WasteStreak, error)
+```
+
+
+
+<a name="MockStreakRepository.RecordWasteEvent"></a>
+### func \(\*MockStreakRepository\) RecordWasteEvent
+
+```go
+func (m *MockStreakRepository) RecordWasteEvent(householdID uint) error
+```
+
+
+
+<a name="MockStreakRepository.UpdateStreak"></a>
+### func \(\*MockStreakRepository\) UpdateStreak
+
+```go
+func (m *MockStreakRepository) UpdateStreak(streak *dbModel.WasteStreak) error
+```
+
+
+
+<a name="MockUserRepository"></a>
+## type MockUserRepository
+
+MockUserRepository is a configurable in\-memory stub for UserRepositoryInterface.
+
+```go
+type MockUserRepository struct {
+    User                    authentication.User
+    Users                   []authentication.User
+    Household               dbModel.Household
+    OnboardingState         dbModel.OnboardingState
+    EmailVerification       dbModel.EmailVerification
+    HouseholdID             uint
+    UsernameExistsResult    bool
+    MailAddressExistsResult bool
+    LockDuration            time.Duration
+    IsLocked                bool
+    Err                     error
+}
+```
+
+<a name="MockUserRepository.CreateEmailVerification"></a>
+### func \(\*MockUserRepository\) CreateEmailVerification
+
+```go
+func (m *MockUserRepository) CreateEmailVerification(userID uint, token string, expiresAt time.Time) error
+```
+
+
+
+<a name="MockUserRepository.CreateUser"></a>
+### func \(\*MockUserRepository\) CreateUser
+
+```go
+func (m *MockUserRepository) CreateUser(user *authentication.User) error
+```
+
+
+
+<a name="MockUserRepository.DeleteUser"></a>
+### func \(\*MockUserRepository\) DeleteUser
+
+```go
+func (m *MockUserRepository) DeleteUser(userID uint) error
+```
+
+
+
+<a name="MockUserRepository.EnsureOnboardingState"></a>
+### func \(\*MockUserRepository\) EnsureOnboardingState
+
+```go
+func (m *MockUserRepository) EnsureOnboardingState(userID uint) error
+```
+
+
+
+<a name="MockUserRepository.GetEmailVerificationByToken"></a>
+### func \(\*MockUserRepository\) GetEmailVerificationByToken
+
+```go
+func (m *MockUserRepository) GetEmailVerificationByToken(token string) (dbModel.EmailVerification, error)
+```
+
+
+
+<a name="MockUserRepository.GetHouseholdByID"></a>
+### func \(\*MockUserRepository\) GetHouseholdByID
+
+```go
+func (m *MockUserRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error)
+```
+
+
+
+<a name="MockUserRepository.GetOnboardingState"></a>
+### func \(\*MockUserRepository\) GetOnboardingState
+
+```go
+func (m *MockUserRepository) GetOnboardingState(userID uint) (dbModel.OnboardingState, error)
+```
+
+
+
+<a name="MockUserRepository.GetUserByID"></a>
+### func \(\*MockUserRepository\) GetUserByID
+
+```go
+func (m *MockUserRepository) GetUserByID(userID uint) (authentication.User, error)
+```
+
+
+
+<a name="MockUserRepository.GetUserByUsername"></a>
+### func \(\*MockUserRepository\) GetUserByUsername
+
+```go
+func (m *MockUserRepository) GetUserByUsername(username string) (authentication.User, error)
+```
+
+
+
+<a name="MockUserRepository.GetUserHouseholdByID"></a>
+### func \(\*MockUserRepository\) GetUserHouseholdByID
+
+```go
+func (m *MockUserRepository) GetUserHouseholdByID(userID uint) (uint, error)
+```
+
+
+
+<a name="MockUserRepository.GetUsersByHouseholdID"></a>
+### func \(\*MockUserRepository\) GetUsersByHouseholdID
+
+```go
+func (m *MockUserRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
+```
+
+
+
+<a name="MockUserRepository.IsAccountLocked"></a>
+### func \(\*MockUserRepository\) IsAccountLocked
+
+```go
+func (m *MockUserRepository) IsAccountLocked(userID uint, maxLoginAttempts int, lockoutDurationMins int) (bool, time.Duration)
+```
+
+
+
+<a name="MockUserRepository.MarkHouseholdStepDone"></a>
+### func \(\*MockUserRepository\) MarkHouseholdStepDone
+
+```go
+func (m *MockUserRepository) MarkHouseholdStepDone(userID uint) error
+```
+
+
+
+<a name="MockUserRepository.MarkNotificationsSetup"></a>
+### func \(\*MockUserRepository\) MarkNotificationsSetup
+
+```go
+func (m *MockUserRepository) MarkNotificationsSetup(userID uint) error
+```
+
+
+
+<a name="MockUserRepository.MarkOnboardingComplete"></a>
+### func \(\*MockUserRepository\) MarkOnboardingComplete
+
+```go
+func (m *MockUserRepository) MarkOnboardingComplete(userID uint) error
+```
+
+
+
+<a name="MockUserRepository.MarkProfileStepDone"></a>
+### func \(\*MockUserRepository\) MarkProfileStepDone
+
+```go
+func (m *MockUserRepository) MarkProfileStepDone(userID uint) error
+```
+
+
+
+<a name="MockUserRepository.RecordFailedLoginAttempt"></a>
+### func \(\*MockUserRepository\) RecordFailedLoginAttempt
+
+```go
+func (m *MockUserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttempts int, lockoutDurationMins int) error
+```
+
+
+
+<a name="MockUserRepository.ResetFailedLoginAttempts"></a>
+### func \(\*MockUserRepository\) ResetFailedLoginAttempts
+
+```go
+func (m *MockUserRepository) ResetFailedLoginAttempts(userID uint) error
+```
+
+
+
+<a name="MockUserRepository.UpdateAdminUserFields"></a>
+### func \(\*MockUserRepository\) UpdateAdminUserFields
+
+```go
+func (m *MockUserRepository) UpdateAdminUserFields(userID uint, username, mailAddress string) error
+```
+
+
+
+<a name="MockUserRepository.UpdateDisplayName"></a>
+### func \(\*MockUserRepository\) UpdateDisplayName
+
+```go
+func (m *MockUserRepository) UpdateDisplayName(userID uint, displayName string) error
+```
+
+
+
+<a name="MockUserRepository.UpdateEmailVerificationStatus"></a>
+### func \(\*MockUserRepository\) UpdateEmailVerificationStatus
+
+```go
+func (m *MockUserRepository) UpdateEmailVerificationStatus(token, status string) error
+```
+
+
+
+<a name="MockUserRepository.UpdateUser"></a>
+### func \(\*MockUserRepository\) UpdateUser
+
+```go
+func (m *MockUserRepository) UpdateUser(userID uint, user *authentication.User) error
+```
+
+
+
+<a name="MockUserRepository.UpdateUserEmailVerified"></a>
+### func \(\*MockUserRepository\) UpdateUserEmailVerified
+
+```go
+func (m *MockUserRepository) UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
+```
+
+
+
+<a name="MockUserRepository.UpdateUserPassword"></a>
+### func \(\*MockUserRepository\) UpdateUserPassword
+
+```go
+func (m *MockUserRepository) UpdateUserPassword(userID uint, login *authentication.Login) error
+```
+
+
+
+<a name="MockUserRepository.UpdateUsername"></a>
+### func \(\*MockUserRepository\) UpdateUsername
+
+```go
+func (m *MockUserRepository) UpdateUsername(userID uint, username string) error
+```
+
+
+
+<a name="MockUserRepository.UserExistsByMailAddress"></a>
+### func \(\*MockUserRepository\) UserExistsByMailAddress
+
+```go
+func (m *MockUserRepository) UserExistsByMailAddress(user *authentication.User) bool
+```
+
+
+
+<a name="MockUserRepository.UserExistsByUsername"></a>
+### func \(\*MockUserRepository\) UserExistsByUsername
+
+```go
+func (m *MockUserRepository) UserExistsByUsername(user *authentication.User) bool
+```
+
+
+
+<a name="MockWebhookRepository"></a>
+## type MockWebhookRepository
+
+MockWebhookRepository is a configurable in\-memory stub for WebhookRepositoryInterface.
+
+```go
+type MockWebhookRepository struct {
+    Webhook  dbModel.Webhook
+    Webhooks []dbModel.Webhook
+    Logs     []dbModel.WebhookDeliveryLog
+    Err      error
+}
+```
+
+<a name="MockWebhookRepository.CheckOwnership"></a>
+### func \(\*MockWebhookRepository\) CheckOwnership
+
+```go
+func (m *MockWebhookRepository) CheckOwnership(webhookID, userID uint) error
+```
+
+
+
+<a name="MockWebhookRepository.CreateDeliveryLog"></a>
+### func \(\*MockWebhookRepository\) CreateDeliveryLog
+
+```go
+func (m *MockWebhookRepository) CreateDeliveryLog(log *dbModel.WebhookDeliveryLog) error
+```
+
+
+
+<a name="MockWebhookRepository.CreateWebhook"></a>
+### func \(\*MockWebhookRepository\) CreateWebhook
+
+```go
+func (m *MockWebhookRepository) CreateWebhook(webhook *dbModel.Webhook) error
+```
+
+
+
+<a name="MockWebhookRepository.DeleteWebhook"></a>
+### func \(\*MockWebhookRepository\) DeleteWebhook
+
+```go
+func (m *MockWebhookRepository) DeleteWebhook(webhookID uint) error
+```
+
+
+
+<a name="MockWebhookRepository.GetActiveWebhooksByEvent"></a>
+### func \(\*MockWebhookRepository\) GetActiveWebhooksByEvent
+
+```go
+func (m *MockWebhookRepository) GetActiveWebhooksByEvent(event string) ([]dbModel.Webhook, error)
+```
+
+
+
+<a name="MockWebhookRepository.GetDeliveryLogs"></a>
+### func \(\*MockWebhookRepository\) GetDeliveryLogs
+
+```go
+func (m *MockWebhookRepository) GetDeliveryLogs(webhookID uint, limit int) ([]dbModel.WebhookDeliveryLog, error)
+```
+
+
+
+<a name="MockWebhookRepository.GetWebhookByID"></a>
+### func \(\*MockWebhookRepository\) GetWebhookByID
+
+```go
+func (m *MockWebhookRepository) GetWebhookByID(webhookID uint) (dbModel.Webhook, error)
+```
+
+
+
+<a name="MockWebhookRepository.GetWebhooksByUserID"></a>
+### func \(\*MockWebhookRepository\) GetWebhooksByUserID
+
+```go
+func (m *MockWebhookRepository) GetWebhooksByUserID(userID uint) ([]dbModel.Webhook, error)
+```
+
+
+
+<a name="MockWebhookRepository.TrimDeliveryLogs"></a>
+### func \(\*MockWebhookRepository\) TrimDeliveryLogs
+
+```go
+func (m *MockWebhookRepository) TrimDeliveryLogs(webhookID uint, keep int) error
+```
+
+
+
+<a name="MockWebhookRepository.UpdateWebhook"></a>
+### func \(\*MockWebhookRepository\) UpdateWebhook
+
+```go
+func (m *MockWebhookRepository) UpdateWebhook(webhook *dbModel.Webhook) error
+```
+
+
 
 # static
 
@@ -5626,35 +8758,38 @@ static implements "constants" used in proviant
 
 ## Index
 
-- [Variables](<#variables>)
+- [Constants](<#constants>)
 
 
-## Variables
+## Constants
 
 <a name="TokenRealm"></a>
 
 ```go
-var (
-    // Realm of tokens
+const (
+    // TokenRealm is the realm of tokens
     TokenRealm = "proviant"
 
-    // Name of identity key in tokens
+    // TokenIdentityKey is the name of identity key in tokens
     TokenIdentityKey = "id"
 
-    // Name of username key in tokens
+    // TokenUsernameKey is the name of username key in tokens
     TokenUsernameKey = "username"
 
-    // Name of JTI key in tokens
+    // TokenJTIKey is the name of JTI key in tokens
     TokenJTIKey = "jti"
 
-    // Name of authentication header in token
+    // TokenHeadName is the name of authentication header in token
     TokenHeadName = "Bearer"
 
-    // Configuration for value lookup in token
+    // TokenLookup is the configuration for value lookup in token
     TokenLookup = "header: Authorization, query: token, cookie: jwt"
 
-    // BarcodeDecodingTimeout is the timoeut of the decoding operation in seconds
-    BarcodeDecodingTimeout = time.Second * time.Duration(5)
+    // BarcodeDecodingTimeout is the timeout of the decoding operation
+    BarcodeDecodingTimeout = 5 * time.Second
+
+    // RequestIDHeader is the header name for request ID
+    RequestIDHeader = "X-Request-ID"
 )
 ```
 

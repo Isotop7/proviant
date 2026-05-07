@@ -2,6 +2,8 @@
 server:
   baseURL: "https://proviant.local.de"
   port: 5114
+  maxUploadSizeMB: 5
+  debug: false
   authentication:
     tokenPassword: "secret key"
     tokenLifetime: 8
@@ -17,8 +19,20 @@ server:
     allowedOrigins:
       - "http://localhost"
       - "http://myproviant.instance"
+  # If proviant runs behind a reverse proxy (nginx, traefik, caddy), list the
+  # proxy's IP CIDRs here so X-Forwarded-For / X-Real-IP headers are trusted
+  # for rate limiting. Otherwise leave empty (or omit) — headers are ignored
+  # and RemoteAddr is used instead.
+  # trustedProxies:
+  #   - "127.0.0.1/32"
+  #   - "10.0.0.0/8"
   securityHeaders:
     contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
+    csrf_token_max_age: 86400
+  rateLimit:
+    login_per_minute: 5
+    signup_per_minute: 3
+    export_per_minute: 1
 
 database:
   engine: mariadb

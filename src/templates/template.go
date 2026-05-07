@@ -16,6 +16,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
+
+	"codeberg.org/isotop7/proviant/util"
 )
 
 //go:embed "web" "notification"
@@ -46,11 +48,11 @@ func humanDate(t time.Time) string {
 }
 
 func inputDate(t time.Time) string {
-	return t.Format("2006-01-02")
+	return t.Format(util.DefaultDateFormatParseStr)
 }
 
 func today() string {
-	return time.Now().Format("2006-01-02")
+	return time.Now().Format(util.DefaultDateFormatParseStr)
 }
 
 func hasPassed(t time.Time) bool {
@@ -354,7 +356,7 @@ func NewTemplateCache() (map[string]*template.Template, error) {
 
 func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base, page string, data map[string]any) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	writer := ctx.Writer
 	ts, ok := tc[page]
@@ -363,6 +365,13 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 		logger.Error().Msg(mapErr.Error())
 		RenderError(ctx, tc, http.StatusInternalServerError, mapErr.Error())
 		return
+	}
+
+	// Inject CSP nonce if available and not already set
+	if _, exists := data["CSPNonce"]; !exists {
+		if nonce, ok := ctx.Get(util.ContextKeyCSPNonce); ok {
+			data["CSPNonce"] = nonce
+		}
 	}
 
 	// Write parsed template to temporary buffer
@@ -388,7 +397,7 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 
 func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, message string) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	writer := ctx.Writer
 	ts, ok := tc["error.tmpl"]
@@ -410,6 +419,11 @@ func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, m
 		"Title":   fmt.Sprintf("Error %d", code),
 		"Code":    code,
 		"Message": message,
+	}
+
+	// Inject CSP nonce if available
+	if nonce, ok := ctx.Get(util.ContextKeyCSPNonce); ok {
+		data["CSPNonce"] = nonce
 	}
 
 	// Check for errors

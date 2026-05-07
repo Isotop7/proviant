@@ -15,14 +15,37 @@ import (
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/templates"
+	"codeberg.org/isotop7/proviant/util"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 type Frontend struct {
 	TemplateCache map[string]*template.Template
+}
+
+const (
+	AcceptInviteFileName  = "acceptInvite.tmpl"
+	AcceptInvitationTitle = "Accept Invitation"
+)
+
+func (frontend *Frontend) mustGetPageContext(ctx *gin.Context) (*zerolog.Logger, *database.RepositoryContainer, uint, bool) {
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		return nil, nil, 0, false
+	}
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		return nil, nil, 0, false
+	}
+	return logger, repos, userID, true
 }
 
 // Root renders the home page for authenticated users
@@ -35,29 +58,13 @@ type Frontend struct {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web [get]
 func (frontend *Frontend) Root(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-
-	// Extract user id
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
-		return
-	}
-
-	// Get database instance from context
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	logger, repos, userID, ok := frontend.mustGetPageContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
 	var hasHousehold bool
-	userHouseholdID, userErr := userRepo.GetUserHouseholdByID(userID)
+	userHouseholdID, userErr := repos.Users.GetUserHouseholdByID(userID)
 	if userErr != nil {
 		logger.Error().Msg(userErr.Error())
 	}
@@ -83,9 +90,27 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 // @Success      200  {string}  html
 // @Router       /web/auth [get]
 func (frontend *Frontend) Auth(ctx *gin.Context) {
+	minLength := 12
+	requireUppercase := false
+	requireDigit := false
+	requireSpecial := false
+
+	if cfgVal, ok := ctx.Get(util.ContextKeyProviantConfig); ok {
+		if cfg, ok := cfgVal.(*configuration.ProviantConfiguration); ok {
+			minLength = cfg.Server.Authentication.PasswordMinLength
+			requireUppercase = cfg.Server.Authentication.PasswordRequireUppercase
+			requireDigit = cfg.Server.Authentication.PasswordRequireDigit
+			requireSpecial = cfg.Server.Authentication.PasswordRequireSpecial
+		}
+	}
+
 	pageData := map[string]any{
-		"InviteToken": ctx.Query("invite_token"),
-		"Title":       "Authentication",
+		"InviteToken":              ctx.Query("invite_token"),
+		"Title":                    "Authentication",
+		"PasswordMinLength":        minLength,
+		"PasswordRequireUppercase": requireUppercase,
+		"PasswordRequireDigit":     requireDigit,
+		"PasswordRequireSpecial":   requireSpecial,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "auth.tmpl", pageData)
 }
@@ -117,32 +142,12 @@ func (frontend *Frontend) User(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web/user/settings [get]
 func (frontend *Frontend) UserSettings(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-
-	// Extract user id
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
-		return
-	}
-
-	// Get database instance from context
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	logger, repos, userID, ok := frontend.mustGetPageContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-	invitationRepo := database.NewInvitationRepository(dbHandle)
-	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
-
-	user, userErr := userRepo.GetUserByID(userID)
+	user, userErr := repos.Users.GetUserByID(userID)
 	if userErr != nil {
 		logger.Error().Msg(api.ResponseErrInvalidUserData.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
@@ -155,7 +160,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 
 	telegramConfigured := user.NotificationPreferences.TelegramBotToken != ""
 
-	household, householdErr := householdRepo.GetHouseholdByID(user.HouseholdID)
+	household, householdErr := repos.Households.GetHouseholdByID(user.HouseholdID)
 	if householdErr != nil {
 		logger.Error().Msg(api.ResponseErrInvalidUserData.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
@@ -164,29 +169,47 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 
 	isAdmin := household.AdminID == userID
 
-	members, _ := householdRepo.GetHouseholdMembers(user.HouseholdID)
+	members, _ := repos.Households.GetHouseholdMembers(user.HouseholdID)
 
-	pendingApplications, _ := householdRepo.GetPendingApplicationsForAdmin(userID)
+	pendingApplications, _ := repos.Households.GetPendingApplicationsForAdmin(userID)
 
-	myApplications, _ := householdRepo.GetPendingApplicationsForApplicant(userID)
+	myApplications, _ := repos.Households.GetPendingApplicationsForApplicant(userID)
 
-	locations, _ := storageLocationRepo.GetByHousehold(userID)
+	locations, _ := repos.StorageLocations.GetByHousehold(userID)
+
+	minLength := 12
+	requireUppercase := false
+	requireDigit := false
+	requireSpecial := false
+
+	if cfgVal, ok := ctx.Get(util.ContextKeyProviantConfig); ok {
+		if cfg, ok := cfgVal.(*configuration.ProviantConfiguration); ok {
+			minLength = cfg.Server.Authentication.PasswordMinLength
+			requireUppercase = cfg.Server.Authentication.PasswordRequireUppercase
+			requireDigit = cfg.Server.Authentication.PasswordRequireDigit
+			requireSpecial = cfg.Server.Authentication.PasswordRequireSpecial
+		}
+	}
 
 	pageData := map[string]any{
-		"InviteToken":         ctx.Query("invite_token"),
-		"Title":               "User Settings",
-		"User":                user,
-		"Household":           household,
-		"IsAdmin":             isAdmin,
-		"Members":             members,
-		"PendingApplications": pendingApplications,
-		"MyApplications":      myApplications,
-		"TelegramConfigured":  telegramConfigured,
-		"Locations":           locations,
+		"InviteToken":              ctx.Query("invite_token"),
+		"Title":                    "User Settings",
+		"User":                     user,
+		"Household":                household,
+		"IsAdmin":                  isAdmin,
+		"Members":                  members,
+		"PendingApplications":      pendingApplications,
+		"MyApplications":           myApplications,
+		"TelegramConfigured":       telegramConfigured,
+		"Locations":                locations,
+		"PasswordMinLength":        minLength,
+		"PasswordRequireUppercase": requireUppercase,
+		"PasswordRequireDigit":     requireDigit,
+		"PasswordRequireSpecial":   requireSpecial,
 	}
 
 	if isAdmin {
-		invitations, _ := invitationRepo.GetInvitationsForHousehold(user.HouseholdID, userID)
+		invitations, _ := repos.Invitations.GetInvitationsForHousehold(user.HouseholdID, userID)
 		pageData["Invitations"] = invitations
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
@@ -201,30 +224,97 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web/products [get]
-func (frontend *Frontend) Products(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 
-	// Get database instance from context
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
+type productQueryParams struct {
+	statusFilter   string
+	locationFilter string
+	queryParam     string
+	queryValue     string
+	sort           string
+	order          string
+}
+
+func fetchProducts(
+	repos *database.RepositoryContainer,
+	userID uint,
+	params *productQueryParams,
+) ([]dbModel.Product, error) {
+	if params.statusFilter == "archived" {
+		return repos.Products.GetUserArchivedProductsBulk(userID, -1)
+	}
+	switch {
+	case params.locationFilter != "":
+		locationID, err := strconv.ParseUint(params.locationFilter, 10, 64)
+		if err != nil {
+			return nil, nil
+		}
+		return repos.Products.GetUserProductsByLocation(userID, uint(locationID)) //nolint:gosec
+	case params.queryParam != "" && params.queryValue != "":
+		enumParam := database.SearchParameterEnumFromString(params.queryParam)
+		if enumParam == database.InvalidParameter {
+			return nil, errors.ErrProductSearchInvalidQuery
+		}
+		return repos.Products.SearchProducts(enumParam, params.queryValue, params.sort, params.order, userID)
+	default:
+		return repos.Products.GetUserProductsBulk(userID, -1)
+	}
+}
+
+func productExpiryStatus(p *dbModel.Product, now time.Time, criticalDur, soonDur time.Duration) string {
+	switch {
+	case p.ExpireAt.IsZero():
+		return "nodate"
+	case p.ExpireAt.Before(now):
+		return "expired"
+	case p.ExpireAt.Before(now.Add(criticalDur)):
+		return "critical"
+	case p.ExpireAt.Before(now.Add(soonDur)):
+		return "soon"
+	default:
+		return "fresh"
+	}
+}
+
+func computeExpiryStats(products []dbModel.Product, now time.Time, criticalDur time.Duration) (expired, critical int) {
+	for i := range products {
+		p := &products[i]
+		if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now) {
+			expired++
+		} else if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now.Add(criticalDur)) {
+			critical++
+		}
+	}
+	return
+}
+
+func filterProductsByStatus(products []dbModel.Product, status string, now time.Time, criticalDur, soonDur time.Duration) []dbModel.Product {
+	filtered := make([]dbModel.Product, 0, len(products))
+	for i := range products {
+		p := &products[i]
+		if productExpiryStatus(p, now, criticalDur, soonDur) == status {
+			filtered = append(filtered, *p)
+		}
+	}
+	return filtered
+}
+
+func (frontend *Frontend) Products(ctx *gin.Context) {
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
 	}
 
-	// Extract JWT claims from context
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusUnauthorized, errors.ErrUserIDFromToken.Error())
 		return
 	}
-
-	// Get query parameters
-	productRepo := database.NewProductRepository(dbHandle)
-	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
 
 	queryParam := ctx.Query("queryParam")
 	queryValue := ctx.Query("queryValue")
@@ -234,46 +324,31 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	view := ctx.DefaultQuery("view", "list")
 	statusFilter := ctx.DefaultQuery("status", "all")
 
-	locations, _ := storageLocationRepo.GetByHousehold(userID)
+	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
-	var products []dbModel.Product
-	var productErr error
-
-	if statusFilter == "archived" {
-		// Fetch archived products directly
-		products, productErr = productRepo.GetUserArchivedProductsBulk(userID, -1)
-	} else {
-		// Normal active-product flow
-		switch {
-		case locationFilter != "":
-			if locationID, parseErr := strconv.ParseUint(locationFilter, 10, 64); parseErr == nil {
-				products, productErr = productRepo.GetUserProductsByLocation(userID, uint(locationID))
-			}
-		case queryParam != "" && queryValue != "":
-			enumParam := database.SearchParameterEnumFromString(queryParam)
-			if enumParam == database.InvalidParameter {
-				logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
-				templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrProductSearchInvalidQuery.Error())
-				return
-			}
-			products, productErr = productRepo.SearchProducts(enumParam, queryValue, sort, order, userID)
-		default:
-			products, productErr = productRepo.GetUserProductsBulk(userID, -1)
-		}
+	products, productErr := fetchProducts(repos, userID, &productQueryParams{
+		statusFilter:   statusFilter,
+		locationFilter: locationFilter,
+		queryParam:     queryParam,
+		queryValue:     queryValue,
+		sort:           sort,
+		order:          order,
+	})
+	if productErr == errors.ErrProductSearchInvalidQuery {
+		logger.Error().Msg(productErr.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, productErr.Error())
+		return
 	}
-
 	if productErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productErr)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
 		return
 	}
 
-	// Compute status counts on full product set before filtering
 	allProducts := products
-	expiredCount, criticalCount := 0, 0
 	now := time.Now()
 
-	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
 	criticalDays := proviantConfig.Expiry.CriticalThresholdDays
 	if criticalDays <= 0 {
 		criticalDays = 3
@@ -285,41 +360,12 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	criticalDuration := time.Duration(criticalDays) * 24 * time.Hour
 	soonDuration := time.Duration(soonDays) * 24 * time.Hour
 
-	for i := range allProducts {
-		p := &allProducts[i]
-		if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now) {
-			expiredCount++
-		} else if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now.Add(criticalDuration)) {
-			criticalCount++
-		}
-	}
+	expiredCount, criticalCount := computeExpiryStats(allProducts, now, criticalDuration)
 
-	// Filter products by status filter (skip for archived — already filtered)
 	if statusFilter != "all" && statusFilter != "archived" {
-		var filtered []dbModel.Product
-		for i := range allProducts {
-			p := &allProducts[i]
-			var status string
-			switch {
-			case p.ExpireAt.IsZero():
-				status = "nodate"
-			case p.ExpireAt.Before(now):
-				status = "expired"
-			case p.ExpireAt.Before(now.Add(criticalDuration)):
-				status = "critical"
-			case p.ExpireAt.Before(now.Add(soonDuration)):
-				status = "soon"
-			default:
-				status = "fresh"
-			}
-			if status == statusFilter {
-				filtered = append(filtered, *p)
-			}
-		}
-		products = filtered
+		products = filterProductsByStatus(allProducts, statusFilter, now, criticalDuration, soonDuration)
 	}
 
-	// Build url.Values from current request
 	params := url.Values{}
 	for k, v := range ctx.Request.URL.Query() {
 		params[k] = v
@@ -367,23 +413,23 @@ func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
 // @Router       /web/products/{id}/view [get]
 func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse parameter id
 	idParam := ctx.Param("id")
-	var productID int
-	var convErr error
-	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
+	var productIDRaw uint64
+	var err error
+	if productIDRaw, err = strconv.ParseUint(idParam, 10, 64); err != nil {
 		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, convErr.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Get database instance from context
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
 	}
 
@@ -392,15 +438,14 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusUnauthorized, errors.ErrUserIDFromToken.Error())
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	product, productErr := productRepo.GetArchivedProductByID(productID, userID)
+	product, productErr := repos.Products.GetArchivedProductByID(uint(productIDRaw), userID) //nolint:gosec
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusNotFound, errors.ErrUserNoProductsFound.Error())
 		return
 	}
 
@@ -425,23 +470,23 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 // @Router       /web/products/{id}/edit [get]
 func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get and parse parameter id
 	idParam := ctx.Param("id")
-	var productID int
-	var convErr error
-	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
+	var productIDRaw uint64
+	var err error
+	if productIDRaw, err = strconv.ParseUint(idParam, 10, 64); err != nil {
 		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, convErr.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Get database instance from context
-	dbHandle, dbErr := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !dbErr {
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrDatabaseContextNotFound.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
 	}
 
@@ -450,20 +495,18 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusUnauthorized, errors.ErrUserIDFromToken.Error())
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	product, productErr := productRepo.GetArchivedProductByID(productID, userID)
+	product, productErr := repos.Products.GetArchivedProductByID(uint(productIDRaw), userID) //nolint:gosec
 	if productErr != nil {
 		logger.Error().Msgf("Error getting product: %s", productErr)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusNotFound, errors.ErrUserNoProductsFound.Error())
 		return
 	}
 
-	storageLocationRepo := database.NewStorageLocationRepository(dbHandle)
-	locations, _ := storageLocationRepo.GetByHousehold(userID)
+	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
 	pageData := map[string]any{
 		"InviteToken": ctx.Query("invite_token"),
@@ -488,43 +531,39 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 // @Failure      500    {object}  api.APIResponse
 // @Router       /web/invite/accept [get]
 func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	token := ctx.Query("token")
 
 	if token == "" {
-		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "base", "acceptInvite.tmpl", map[string]any{
-			"Title": "Accept Invitation",
+		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "base", AcceptInviteFileName, map[string]any{
+			"Title": AcceptInvitationTitle,
 			"Error": "No invitation token provided.",
 		})
 		return
 	}
 
-	// Get database handle
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", "acceptInvite.tmpl", map[string]any{
-			"Title": "Accept Invitation",
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", AcceptInviteFileName, map[string]any{
+			"Title": AcceptInvitationTitle,
 			"Error": "Internal server error.",
 		})
 		return
 	}
 
-	invitationRepo := database.NewInvitationRepository(dbHandle)
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-
-	invitation, invErr := invitationRepo.GetInvitationByToken(token)
+	invitation, invErr := repos.Invitations.GetInvitationByToken(token)
 	if invErr != nil {
 		if invErr == errors.ErrInvitationNotFound {
-			templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "base", "acceptInvite.tmpl", map[string]any{
-				"Title": "Accept Invitation",
+			templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "base", AcceptInviteFileName, map[string]any{
+				"Title": AcceptInvitationTitle,
 				"Error": "This invitation does not exist or has been deleted.",
 			})
 			return
 		}
 		logger.Error().Msg(invErr.Error())
-		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", "acceptInvite.tmpl", map[string]any{
-			"Title": "Accept Invitation",
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", AcceptInviteFileName, map[string]any{
+			"Title": AcceptInvitationTitle,
 			"Error": "An error occurred while processing this invitation.",
 		})
 		return
@@ -540,23 +579,23 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		default:
 			msg = "This invitation has already been used."
 		}
-		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", "acceptInvite.tmpl", map[string]any{
-			"Title": "Accept Invitation",
+		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", AcceptInviteFileName, map[string]any{
+			"Title": AcceptInvitationTitle,
 			"Error": msg,
 		})
 		return
 	}
 
 	if time.Now().After(invitation.ExpiresAt) {
-		_ = dbHandle.Model(&dbModel.HouseholdInvitation{}).Where("id = ?", invitation.ID).Update("status", dbModel.InvitationStatusExpired)
-		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", "acceptInvite.tmpl", map[string]any{
-			"Title": "Accept Invitation",
+		_ = repos.Invitations.MarkInvitationExpired(invitation.ID)
+		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", AcceptInviteFileName, map[string]any{
+			"Title": AcceptInvitationTitle,
 			"Error": "This invitation has expired.",
 		})
 		return
 	}
 
-	household, householdErr := householdRepo.GetHouseholdByID(invitation.HouseholdID)
+	household, householdErr := repos.Households.GetHouseholdByID(invitation.HouseholdID)
 	householdName := fmt.Sprintf("Household #%d", invitation.HouseholdID)
 	if householdErr == nil {
 		householdName = household.Name
@@ -568,8 +607,8 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		userID, ok := claims[static.TokenIdentityKey].(float64)
 		if ok && uint(userID) > 0 {
 			// User is logged in — show confirmation
-			templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "acceptInvite.tmpl", map[string]any{
-				"Title":           "Accept Invitation",
+			templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", AcceptInviteFileName, map[string]any{
+				"Title":           AcceptInvitationTitle,
 				"ConfirmAccept":   true,
 				"Token":           token,
 				"HouseholdName":   householdName,
@@ -580,8 +619,8 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	}
 
 	// User is not logged in — redirect to auth with token
-	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "acceptInvite.tmpl", map[string]any{
-		"Title":           "Accept Invitation",
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", AcceptInviteFileName, map[string]any{
+		"Title":           AcceptInvitationTitle,
 		"NeedsAuth":       true,
 		"Token":           token,
 		"HouseholdName":   householdName,
@@ -626,25 +665,12 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web/onboarding [get]
 func (frontend *Frontend) Onboarding(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	logger, repos, userID, ok := frontend.mustGetPageContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
 	}
 
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
-		return
-	}
-
-	userRepo := database.NewUserRepository(dbHandle)
-	user, userErr := userRepo.GetUserByID(userID)
+	user, userErr := repos.Users.GetUserByID(userID)
 	if userErr != nil {
 		logger.Error().Msg(api.ResponseErrInvalidUserData.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
@@ -668,27 +694,12 @@ func (frontend *Frontend) Onboarding(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /web/recipes [get]
 func (frontend *Frontend) Recipes(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
-
-	claims := jwt.ExtractClaims(ctx)
-	userID64, ok := claims[static.TokenIdentityKey].(float64)
+	_, repos, userID, ok := frontend.mustGetPageContext(ctx)
 	if !ok {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserIDFromToken.Error())
-		return
-	}
-	userID := uint(userID64)
-
-	// Verify user has household (optional, page can show empty state if none)
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
-	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-	householdID, err := userRepo.GetUserHouseholdByID(userID)
+	householdID, err := repos.Users.GetUserHouseholdByID(userID)
 	if err != nil || householdID == 0 {
 		// No household, still render page with empty state (frontend will handle)
 		householdID = 0

@@ -1,7 +1,7 @@
 /* exported changeQty */
 
 async function bulkAction(action, productIDs) {
-    const fn = { delete: proviant.bulkDeleteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkArchiveProducts }[action];
+    const fn = { delete: proviant.bulkWasteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkConsumeProducts }[action];
     const response = await fn(productIDs);
     if (response.code !== 200) console.error(response.message);
 }
@@ -44,12 +44,12 @@ document.addEventListener("click", function (event) {
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
         const count = selectedProducts.length;
         proviant.showConfirm(
-            'Delete Products',
-            `Delete ${count} selected product${count !== 1 ? 's' : ''}? This cannot be undone.`,
+            'Mark as wasted',
+            `Mark ${count} selected product${count !== 1 ? 's' : ''} as wasted? This cannot be undone.`,
             function () {
                 bulkAction('delete', selectedProducts).then(() => location.reload());
             },
-            'Delete',
+            'Wasted',
             'danger'
         );
         return;
@@ -63,18 +63,18 @@ document.addEventListener("click", function (event) {
         return;
     }
 
-    // Archive product button
+    // Archive (Consumed) product button
     if (target.closest("#archive-product")) {
         event.preventDefault();
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
         const count = selectedProducts.length;
         proviant.showConfirm(
-            'Archive Products',
-            `Archive ${count} selected product${count !== 1 ? 's' : ''}?`,
+            'Mark as consumed',
+            `Mark ${count} selected product${count !== 1 ? 's' : ''} as consumed?`,
             function () {
                 bulkAction('archive', selectedProducts).then(() => location.reload());
             },
-            'Archive',
+            'Consumed',
             'warning'
         );
         return;
@@ -206,20 +206,59 @@ document.addEventListener("click", function (event) {
         proviant.exportFullJSON();
         return;
     }
+
+    // Bulk action buttons (data-bulk-action attribute)
+    var bulkBtn = target.closest('[data-bulk-action]');
+    if (bulkBtn) {
+        event.preventDefault();
+        bulkAction(bulkBtn.dataset.bulkAction);
+        return;
+    }
+
+    // List-view qty stepper buttons
+    var qtyBtn = target.closest('[data-qty-action]');
+    if (qtyBtn) {
+        event.preventDefault();
+        var id = parseInt(qtyBtn.dataset.productId, 10);
+        var delta = qtyBtn.dataset.qtyAction === 'inc' ? 1 : -1;
+        changeQty(id, delta);
+        return;
+    }
+
+    // Focus-target delegator (click wrapper div to focus input)
+    var focusDiv = target.closest('[data-focus-target]');
+    if (focusDiv) {
+        var targetEl = document.getElementById(focusDiv.dataset.focusTarget);
+        if (targetEl) targetEl.focus();
+    }
 });
 
 /* Event delegation for checkbox changes */
 document.addEventListener("change", function (event) {
-    const target = event.target;
-    if (target.matches('input[type="checkbox"]')) {
-        const cardId = `card-${target.id.split('-')[1]}`;
-        const card = document.getElementById(cardId);
-        const checkbox = document.getElementById(`checkbox-${target.id.split('-')[1]}`);
-        if (card) {
-            card.classList.toggle('border-info');
-            if (checkbox) {
-                checkbox.checked = !checkbox.checked;
-            }
+    var target = event.target;
+    if (!target.matches('input[type="checkbox"]')) return;
+
+    if (target.id === 'selectAll') {
+        var checked = target.checked;
+        document.querySelectorAll('.row-checkbox').forEach(function (cb) {
+            cb.checked = checked;
+        });
+        updateBulkSelection();
+        return;
+    }
+
+    if (target.matches('.row-checkbox')) {
+        updateBulkSelection();
+        return;
+    }
+
+    var cardId = 'card-' + target.id.split('-')[1];
+    var card = document.getElementById(cardId);
+    var checkbox = document.getElementById('checkbox-' + target.id.split('-')[1]);
+    if (card) {
+        card.classList.toggle('border-info');
+        if (checkbox) {
+            checkbox.checked = !checkbox.checked;
         }
     }
 });
@@ -251,7 +290,8 @@ function performSearch() {
         params.locationId = locationFilter.value;
     }
 
-    window.location.href = `/web/products?${new URLSearchParams(params).toString()}`;
+    showSkeleton();
+  window.location.href = `/web/products?${new URLSearchParams(params).toString()}`;
 }
 
 /* ── Add-product modal ───────────────────────────────────────────────────────
@@ -443,12 +483,12 @@ function bulkAction(action) {
     });
     if (!ids.length) return;
     if (action === 'delete') {
-        if (!confirm('Delete ' + ids.length + ' product(s)? This cannot be undone.')) return;
-        proviant.bulkDeleteProducts(ids).then(function () {
+        if (!confirm('Mark ' + ids.length + ' product(s) as wasted? This cannot be undone.')) return;
+        proviant.bulkWasteProducts(ids).then(function () {
             window.location.reload();
         });
     } else if (action === 'archive') {
-        proviant.bulkArchiveProducts(ids).then(function () {
+        proviant.bulkConsumeProducts(ids).then(function () {
             window.location.reload();
         });
     } else if (action === 'restore') {
@@ -459,7 +499,6 @@ function bulkAction(action) {
 }
 
 // ── List view: qty stepper ──────────────────────────────────────
-// Inline onclick handlers in list view call this function
 function changeQty(id, delta) {
     proviant.updateProductAmount(id, delta).then((response) => {
         if (response.code === 200) {
@@ -479,3 +518,45 @@ function changeQty(id, delta) {
         }
     });
 }
+
+// Skeleton loading functions for filter/search operations
+function showSkeleton() {
+  const productRows = document.getElementById('productRows');
+  const skeletonRows = document.getElementById('skeletonRows');
+  if (productRows) productRows.classList.add('d-none');
+  if (skeletonRows) skeletonRows.classList.remove('d-none');
+}
+
+// Show skeleton when navigating via filter, view toggle, or clear-all
+document.addEventListener('click', function(event) {
+  if (event.target.closest('.filter-pill') || event.target.closest('.btn-view') || event.target.closest('#show-all-btn')) {
+    showSkeleton();
+  }
+});
+
+// ── Image fallback handling ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    function findFallback(img) {
+        var listThumb = img.closest('.list-thumb');
+        if (listThumb) {
+            return listThumb.querySelector('.list-thumb-fallback');
+        }
+        var productImg = img.closest('.product-img');
+        if (productImg) {
+            return productImg.querySelector('.product-img-fallback');
+        }
+        return null;
+    }
+
+    document.querySelectorAll('.list-thumb-img, .product-card .product-img img').forEach(function (img) {
+        img.addEventListener('load', function () {
+            img.style.opacity = '1';
+            var fb = findFallback(img);
+            if (fb) fb.style.display = 'none';
+        });
+        img.addEventListener('error', function () {
+            var fb = findFallback(img);
+            if (fb) fb.style.display = 'flex';
+        });
+    });
+});

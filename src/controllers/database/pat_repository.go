@@ -4,8 +4,21 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/util"
+
 	"gorm.io/gorm"
 )
+
+type PATRepositoryInterface interface {
+	CreatePAT(userID uint, name, tokenHash string, expiresAt *time.Time, scopes string) (*authentication.PersonalAccessToken, error)
+	GetPATByTokenHash(tokenHash string) (*authentication.PersonalAccessToken, error)
+	GetPATsByUserID(userID uint) ([]authentication.PersonalAccessToken, error)
+	GetPATByID(patID uint) (*authentication.PersonalAccessToken, error)
+	DeletePAT(patID, userID uint) error
+	UpdateLastUsed(patID uint) error
+}
+
+var _ PATRepositoryInterface = (*PATRepository)(nil)
 
 type PATRepository struct {
 	DB *gorm.DB
@@ -39,7 +52,7 @@ func (r *PATRepository) GetPATByTokenHash(tokenHash string) (*authentication.Per
 
 func (r *PATRepository) GetPATsByUserID(userID uint) ([]authentication.PersonalAccessToken, error) {
 	var pats []authentication.PersonalAccessToken
-	if err := r.DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&pats).Error; err != nil {
+	if err := r.DB.Where(util.QueryUserId, userID).Order("created_at DESC").Find(&pats).Error; err != nil {
 		return nil, err
 	}
 	return pats, nil
@@ -53,7 +66,7 @@ func (r *PATRepository) GetPATByID(patID uint) (*authentication.PersonalAccessTo
 	return &pat, nil
 }
 
-func (r *PATRepository) DeletePAT(patID uint, userID uint) error {
+func (r *PATRepository) DeletePAT(patID, userID uint) error {
 	result := r.DB.Where("id = ? AND user_id = ?", patID, userID).Delete(&authentication.PersonalAccessToken{})
 	if result.Error != nil {
 		return result.Error
@@ -66,5 +79,5 @@ func (r *PATRepository) DeletePAT(patID uint, userID uint) error {
 
 func (r *PATRepository) UpdateLastUsed(patID uint) error {
 	now := time.Now()
-	return r.DB.Model(&authentication.PersonalAccessToken{}).Where("id = ?", patID).Update("last_used_at", &now).Error
+	return r.DB.Model(&authentication.PersonalAccessToken{}).Where(util.QueryId, patID).Update("last_used_at", &now).Error
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,6 +20,25 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// pollerState holds the polling state for a single user.
+type pollerState struct {
+	botToken string
+	offset   int64
+}
+
+// telegramPollerPool manages the worker pool for polling Telegram updates for all users.
+type telegramPollerPool struct {
+	mu           sync.RWMutex
+	users        map[uint]*pollerState
+	numWorkers   int
+	ctx          context.Context
+	cancel       context.CancelFunc
+	wg           sync.WaitGroup
+	ticker       *time.Ticker
+	nc           *NotificationController
+	pollInterval time.Duration
+}
+
 type NotificationController struct {
 	Logger           *zerolog.Logger
 	Configuration    *configuration.NotificationConfiguration
@@ -26,9 +46,31 @@ type NotificationController struct {
 	StreakRepo       dbController.StreakRepositoryInterface
 	Providers        []NotificationProvider
 	telegramClient   *http.Client
-	pollerCancels    sync.Map // userID(uint) → context.CancelFunc
+	telegramAPIBase  string
+	pollerPool       *telegramPollerPool
 	botUsernames     sync.Map // userID(uint) → resolved bot username(string)
 }
+
+type telegramResponse struct {
+	OK     bool             `json:"ok"`
+	Result []telegramUpdate `json:"result"`
+}
+
+type telegramUpdate struct {
+	UpdateID int64            `json:"update_id"`
+	Message  *telegramMessage `json:"message"`
+}
+
+type telegramMessage struct {
+	Chat telegramChat `json:"chat"`
+	Text string       `json:"text"`
+}
+
+type telegramChat struct {
+	ID int64 `json:"id"`
+}
+
+const MsgEmailProviderNotConfigured = "email provider not configured"
 
 func NewNotificationController(
 	logger *zerolog.Logger,
@@ -40,6 +82,7 @@ func NewNotificationController(
 		Configuration:    config,
 		NotificationRepo: notificationRepo,
 		telegramClient:   &http.Client{Timeout: time.Duration(telegramTimeout(config)) * time.Second},
+		telegramAPIBase:  "https://api.telegram.org",
 	}
 
 	// Initialize providers
@@ -55,6 +98,33 @@ func telegramTimeout(config *configuration.NotificationConfiguration) int {
 	return 15
 }
 
+func (nc *NotificationController) newEmailProvider() *EmailNotificationProvider {
+	return &EmailNotificationProvider{
+		Configuration: nc.Configuration.SMTP,
+		Logger:        nc.Logger,
+	}
+}
+
+func (nc *NotificationController) newNtfyProvider() *NtfyNotificationProvider {
+	timeout := time.Duration(nc.Configuration.Ntfy.Timeout) * time.Second
+	if timeout <= 0 {
+		timeout = 15 * time.Second
+	}
+	return &NtfyNotificationProvider{
+		Configuration: nc.Configuration.Ntfy,
+		Logger:        nc.Logger,
+		HTTPClient:    &http.Client{Timeout: timeout},
+	}
+}
+
+func (nc *NotificationController) newTelegramProvider(botToken string) *TelegramNotificationProvider {
+	return &TelegramNotificationProvider{
+		BotToken:   botToken,
+		Logger:     nc.Logger,
+		HTTPClient: nc.telegramClient,
+	}
+}
+
 // GetUserTelegramBotUsername returns the bot username resolved at poller start for a user.
 func (nc *NotificationController) GetUserTelegramBotUsername(userID uint) string {
 	if v, ok := nc.botUsernames.Load(userID); ok {
@@ -67,21 +137,13 @@ func (nc *NotificationController) GetUserTelegramBotUsername(userID uint) string
 
 func (nc *NotificationController) initializeProviders() {
 	// Add email provider if configured
-	emailProvider := &EmailNotificationProvider{
-		Configuration: nc.Configuration.SMTP,
-		Logger:        nc.Logger,
-	}
-
+	emailProvider := nc.newEmailProvider()
 	if emailProvider.IsConfigured() {
 		nc.Providers = append(nc.Providers, emailProvider)
 	}
 
 	// Add ntfy provider if configured
-	ntfyProvider := &NtfyNotificationProvider{
-		Configuration: nc.Configuration.Ntfy,
-		Logger:        nc.Logger,
-		HTTPClient:    &http.Client{Timeout: time.Duration(nc.Configuration.Ntfy.Timeout) * time.Second},
-	}
+	ntfyProvider := nc.newNtfyProvider()
 	if ntfyProvider.IsConfigured() {
 		nc.Providers = append(nc.Providers, ntfyProvider)
 	}
@@ -174,84 +236,86 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 }
 
 func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) {
-	// Skip if the product's expiry date is still beyond this user's threshold window.
-	// A threshold of 0 means notify on/after expiry (current behaviour).
-	cutoff := time.Now().AddDate(0, 0, recipientInfo.NotificationThresholdDays)
-	if product.ExpireAt.After(cutoff) {
-		nc.Logger.Debug().Msgf("Product '%s' (ID: %d) not yet within threshold for recipient, skipping",
-			product.ProductName, product.ID)
+	if !nc.isWithinNotificationThreshold(product, recipientInfo) {
 		return
 	}
 
-	notifiedAtUpdated := false
+	notified := false
 
 	for _, provider := range nc.Providers {
-		providerType := provider.GetProviderType()
-
-		var sendError error
-		switch providerType {
-		case "email":
-			if recipientInfo.EmailEnabled && recipientInfo.EmailAddress != "" {
-				nc.Logger.Info().Msgf("Attempting email notification for product '%s' (ID: %d)", product.ProductName, product.ID)
-				sendError = provider.SendNotification(product, recipientInfo.EmailAddress)
-			}
-		case "ntfy":
-			if recipientInfo.NtfyEnabled {
-				nc.Logger.Info().Msgf("Attempting ntfy notification for product '%s' (ID: %d)", product.ProductName, product.ID)
-				sendError = provider.SendNotification(product, recipientInfo)
-			}
-		}
-
-		if sendError != nil {
-			nc.Logger.Error().Msgf("Failed to send %s notification: %s", providerType, sendError.Error())
+		if err := nc.sendViaProvider(provider, product, recipientInfo); err != nil {
+			nc.Logger.Error().Msgf("Failed to send %s notification: %s", provider.GetProviderType(), err.Error())
 			continue
 		}
-
-		nc.Logger.Info().Msgf("Successfully sent %s notification", providerType)
-
-		if !notifiedAtUpdated {
-			updateErr := nc.NotificationRepo.SetProductNotifiedAt(product.ID)
-			if updateErr != nil {
-				nc.Logger.Error().Msg(updateErr.Error())
-			} else {
-				nc.Logger.Info().Msg("Property NotifiedAt was updated")
-				notifiedAtUpdated = true
-			}
+		nc.Logger.Info().Msgf("Successfully sent %s notification", provider.GetProviderType())
+		if !notified {
+			notified = nc.markNotified(product.ID)
 		}
 	}
 
-	// Telegram is per-user; use recipient's own bot token.
-	if recipientInfo.TelegramEnabled && recipientInfo.TelegramChatID != "" && recipientInfo.TelegramBotToken != "" {
-		nc.Logger.Info().Msgf("Attempting telegram notification for product '%s' (ID: %d)", product.ProductName, product.ID)
-		telegramProvider := &TelegramNotificationProvider{BotToken: recipientInfo.TelegramBotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
-		if err := telegramProvider.SendNotification(product, recipientInfo.TelegramChatID); err != nil {
-			nc.Logger.Error().Msgf("Failed to send telegram notification: %s", err)
-		} else {
-			nc.Logger.Info().Msg("Successfully sent telegram notification")
-			if !notifiedAtUpdated {
-				if updateErr := nc.NotificationRepo.SetProductNotifiedAt(product.ID); updateErr != nil {
-					nc.Logger.Error().Msg(updateErr.Error())
-				} else {
-					nc.Logger.Info().Msg("Property NotifiedAt was updated")
-					notifiedAtUpdated = true
-				}
-			}
-		}
+	if nc.sendTelegram(product, recipientInfo) && !notified {
+		notified = nc.markNotified(product.ID)
 	}
 
-	if !notifiedAtUpdated {
+	if !notified {
 		nc.Logger.Warn().Msgf("Failed to send any notifications for product '%s' (ID: %d)",
 			product.ProductName, product.ID)
 	}
 }
 
+func (nc *NotificationController) isWithinNotificationThreshold(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) bool {
+	cutoff := time.Now().AddDate(0, 0, recipientInfo.NotificationThresholdDays)
+	if product.ExpireAt.After(cutoff) {
+		nc.Logger.Debug().Msgf("Product '%s' (ID: %d) not yet within threshold for recipient, skipping",
+			product.ProductName, product.ID)
+		return false
+	}
+	return true
+}
+
+func (nc *NotificationController) sendViaProvider(provider NotificationProvider, product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) error {
+	switch provider.GetProviderType() {
+	case "email":
+		if recipientInfo.EmailEnabled && recipientInfo.EmailAddress != "" {
+			nc.Logger.Info().Msgf("Attempting email notification for product '%s' (ID: %d)", product.ProductName, product.ID)
+			return provider.SendNotification(product, recipientInfo.EmailAddress)
+		}
+	case "ntfy":
+		if recipientInfo.NtfyEnabled {
+			nc.Logger.Info().Msgf("Attempting ntfy notification for product '%s' (ID: %d)", product.ProductName, product.ID)
+			return provider.SendNotification(product, recipientInfo)
+		}
+	}
+	return nil
+}
+
+func (nc *NotificationController) sendTelegram(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) bool {
+	if recipientInfo.TelegramEnabled && recipientInfo.TelegramChatID != "" && recipientInfo.TelegramBotToken != "" {
+		nc.Logger.Info().Msgf("Attempting telegram notification for product '%s' (ID: %d)", product.ProductName, product.ID)
+		telegramProvider := nc.newTelegramProvider(recipientInfo.TelegramBotToken)
+		if err := telegramProvider.SendNotification(product, recipientInfo.TelegramChatID); err != nil {
+			nc.Logger.Error().Msgf("Failed to send telegram notification: %s", err)
+			return false
+		}
+		nc.Logger.Info().Msg("Successfully sent telegram notification")
+		return true
+	}
+	return false
+}
+
+func (nc *NotificationController) markNotified(productID uint) bool {
+	if err := nc.NotificationRepo.SetProductNotifiedAt(productID); err != nil {
+		nc.Logger.Error().Msg(err.Error())
+		return false
+	}
+	nc.Logger.Info().Msg("Property NotifiedAt was updated")
+	return true
+}
+
 // DispatchInvitations starts a background goroutine that periodically retries sending pending invitation emails.
 // It runs once immediately on startup, then every Interval hours (reusing the same config as product notifications).
 func (nc *NotificationController) DispatchInvitations(baseURL string) {
-	emailProvider := &EmailNotificationProvider{
-		Configuration: nc.Configuration.SMTP,
-		Logger:        nc.Logger,
-	}
+	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
 		nc.Logger.Info().Msg("Invitation dispatch: email provider not configured, skipping")
@@ -273,13 +337,10 @@ func (nc *NotificationController) DispatchInvitations(baseURL string) {
 
 // SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database.
 func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
-	emailProvider := &EmailNotificationProvider{
-		Configuration: nc.Configuration.SMTP,
-		Logger:        nc.Logger,
-	}
+	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
-		return fmt.Errorf("email provider not configured")
+		return errors.New(MsgEmailProviderNotConfigured)
 	}
 
 	if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
@@ -301,13 +362,10 @@ func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.Househ
 
 // SendVerificationEmail sends an email verification link using the invitation email system.
 func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.HouseholdInvitation, username, baseURL string) error {
-	emailProvider := &EmailNotificationProvider{
-		Configuration: nc.Configuration.SMTP,
-		Logger:        nc.Logger,
-	}
+	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
-		return fmt.Errorf("email provider not configured")
+		return errors.New(MsgEmailProviderNotConfigured)
 	}
 
 	if err := emailProvider.SendInvitationEmail(invitation, username, "your household", baseURL); err != nil {
@@ -329,13 +387,10 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 
 // SendEmailVerification sends a verification email directly to the user with a verification token.
 func (nc *NotificationController) SendEmailVerification(email, username, token, baseURL string, expiresAt time.Time) error {
-	emailProvider := &EmailNotificationProvider{
-		Configuration: nc.Configuration.SMTP,
-		Logger:        nc.Logger,
-	}
+	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
-		return fmt.Errorf("email provider not configured")
+		return errors.New(MsgEmailProviderNotConfigured)
 	}
 
 	if err := emailProvider.SendEmailVerificationEmail(email, username, token, baseURL, expiresAt); err != nil {
@@ -350,7 +405,7 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 // DispatchMonthlyWasteReports starts a goroutine that sends household waste reports
 // on the configured day/hour (UTC) of each month to opted-in members via all enabled providers.
 func (nc *NotificationController) DispatchMonthlyWasteReports() {
-	emailProvider := &EmailNotificationProvider{Configuration: nc.Configuration.SMTP, Logger: nc.Logger}
+	emailProvider := nc.newEmailProvider()
 
 	notificationConfig := nc.Configuration.MonthlyWasteReport
 	go func() {
@@ -382,23 +437,40 @@ func (nc *NotificationController) processMonthlyWasteReports(emailProvider *Emai
 		}
 		stats.HouseholdName = target.HouseholdName
 
-		if emailProvider.IsConfigured() {
-			for _, recipient := range target.Recipients {
-				if sendErr := emailProvider.SendMonthlyWasteReport(recipient, &stats); sendErr != nil {
-					nc.Logger.Error().Msgf("Monthly waste report: email send failed to %s: %s", recipient, sendErr)
-				} else {
-					nc.Logger.Info().Msgf("Monthly waste report: email sent to %s (household %d)", recipient, target.HouseholdID)
-				}
-			}
-		}
+		nc.sendMonthlyWasteReportToEmailRecipients(emailProvider, target.Recipients, &stats, target.HouseholdID)
+		nc.sendMonthlyWasteReportToTelegramRecipients(target.TelegramRecipients, &stats, target.HouseholdID)
+	}
+}
 
-		for _, tr := range target.TelegramRecipients {
-			telegramProvider := &TelegramNotificationProvider{BotToken: tr.BotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
-			if sendErr := telegramProvider.SendMonthlyWasteReport(tr.ChatID, &stats); sendErr != nil {
-				nc.Logger.Error().Msgf("Monthly waste report: telegram send failed to chat %s: %s", tr.ChatID, sendErr)
-			} else {
-				nc.Logger.Info().Msgf("Monthly waste report: telegram sent to chat %s (household %d)", tr.ChatID, target.HouseholdID)
-			}
+func (nc *NotificationController) sendMonthlyWasteReportToEmailRecipients(
+	provider *EmailNotificationProvider,
+	recipients []string,
+	stats *models.WasteStats,
+	householdID uint,
+) {
+	if !provider.IsConfigured() {
+		return
+	}
+	for _, recipient := range recipients {
+		if sendErr := provider.SendMonthlyWasteReport(recipient, stats); sendErr != nil {
+			nc.Logger.Error().Msgf("Monthly waste report: email send failed to %s: %s", recipient, sendErr)
+		} else {
+			nc.Logger.Info().Msgf("Monthly waste report: email sent to %s (household %d)", recipient, householdID)
+		}
+	}
+}
+
+func (nc *NotificationController) sendMonthlyWasteReportToTelegramRecipients(
+	recipients []models.TelegramRecipient,
+	stats *models.WasteStats,
+	householdID uint,
+) {
+	for _, tr := range recipients {
+		telegramProvider := &TelegramNotificationProvider{BotToken: tr.BotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
+		if sendErr := telegramProvider.SendMonthlyWasteReport(tr.ChatID, stats); sendErr != nil {
+			nc.Logger.Error().Msgf("Monthly waste report: telegram send failed to chat %s: %s", tr.ChatID, sendErr)
+		} else {
+			nc.Logger.Info().Msgf("Monthly waste report: telegram sent to chat %s (household %d)", tr.ChatID, householdID)
 		}
 	}
 }
@@ -422,6 +494,10 @@ func (nc *NotificationController) DispatchStreakUpdates() {
 }
 
 func (nc *NotificationController) processStreakUpdates() {
+	if nc.StreakRepo == nil {
+		nc.Logger.Warn().Msg("StreakRepo not set, skipping streak updates")
+		return
+	}
 	streaks, err := nc.StreakRepo.GetAllStreaks()
 	if err != nil {
 		nc.Logger.Error().Msgf("Streak updater: failed to fetch streaks: %s", err)
@@ -434,30 +510,31 @@ func (nc *NotificationController) processStreakUpdates() {
 
 	for i := range streaks {
 		streak := &streaks[i]
-
-		// Waste happened since last check → reset streak
-		if streak.LastWastedDate != nil && !streak.LastWastedDate.Before(streak.LastCheckedDate) {
-			streak.CurrentStreak = 0
-			streak.LastWastedDate = nil
-		} else {
-			streak.CurrentStreak++
-			if streak.CurrentStreak > streak.LongestStreak {
-				streak.LongestStreak = streak.CurrentStreak
-			}
-			for _, m := range milestones {
-				if streak.CurrentStreak == m {
-					nc.sendStreakMilestoneNotifications(streak.HouseholdID, m)
-				}
-			}
-		}
-		streak.LastCheckedDate = now
-
+		nc.processHouseholdStreak(streak, now, milestones)
 		if updateErr := nc.StreakRepo.UpdateStreak(streak); updateErr != nil {
 			nc.Logger.Error().Msgf("Streak updater: failed to save streak for household %d: %s", streak.HouseholdID, updateErr)
 		} else {
 			nc.Logger.Info().Msgf("Streak updater: household %d streak = %d", streak.HouseholdID, streak.CurrentStreak)
 		}
 	}
+}
+
+func (nc *NotificationController) processHouseholdStreak(streak *dbModel.WasteStreak, now time.Time, milestones []int) {
+	if streak.LastWastedDate != nil && !streak.LastWastedDate.Before(streak.LastCheckedDate) {
+		streak.CurrentStreak = 0
+		streak.LastWastedDate = nil
+	} else {
+		streak.CurrentStreak++
+		if streak.CurrentStreak > streak.LongestStreak {
+			streak.LongestStreak = streak.CurrentStreak
+		}
+		for _, m := range milestones {
+			if streak.CurrentStreak == m {
+				nc.sendStreakMilestoneNotifications(streak.HouseholdID, m)
+			}
+		}
+	}
+	streak.LastCheckedDate = now
 }
 
 func (nc *NotificationController) sendStreakMilestoneNotifications(householdID uint, milestone int) {
@@ -467,190 +544,272 @@ func (nc *NotificationController) sendStreakMilestoneNotifications(householdID u
 		return
 	}
 
-	emailProvider := &EmailNotificationProvider{Configuration: nc.Configuration.SMTP, Logger: nc.Logger}
-	ntfyTimeout := time.Duration(nc.Configuration.Ntfy.Timeout) * time.Second
-	if ntfyTimeout <= 0 {
-		ntfyTimeout = 15 * time.Second
-	}
-	ntfyProvider := &NtfyNotificationProvider{
-		Configuration: nc.Configuration.Ntfy,
-		Logger:        nc.Logger,
-		HTTPClient:    &http.Client{Timeout: ntfyTimeout},
-	}
+	emailProvider := nc.newEmailProvider()
+	ntfyProvider := nc.newNtfyProvider()
 
-	for _, pref := range preferences {
-		if pref.EmailEnabled && pref.EmailAddress != "" && emailProvider.IsConfigured() {
-			if sendErr := emailProvider.SendStreakMilestone(milestone, pref.EmailAddress); sendErr != nil {
-				nc.Logger.Error().Msgf("Streak milestone: email failed: %s", sendErr)
-			}
+	for i := range preferences {
+		nc.sendStreakEmailIfEnabled(milestone, &preferences[i], emailProvider)
+		nc.sendStreakNtfyIfEnabled(milestone, &preferences[i], ntfyProvider)
+		nc.sendStreakTelegramIfEnabled(milestone, &preferences[i])
+	}
+}
+
+func (nc *NotificationController) sendStreakEmailIfEnabled(
+	milestone int,
+	pref *models.NotificationRecipientInfo,
+	provider *EmailNotificationProvider,
+) {
+	if pref.EmailEnabled && pref.EmailAddress != "" && provider.IsConfigured() {
+		if sendErr := provider.SendStreakMilestone(milestone, pref.EmailAddress); sendErr != nil {
+			nc.Logger.Error().Msgf("Streak milestone: email failed: %s", sendErr)
 		}
-		if pref.NtfyEnabled && ntfyProvider.IsConfigured() {
-			if sendErr := ntfyProvider.SendStreakMilestone(milestone, &pref); sendErr != nil {
-				nc.Logger.Error().Msgf("Streak milestone: ntfy failed: %s", sendErr)
-			}
+	}
+}
+
+func (nc *NotificationController) sendStreakNtfyIfEnabled(
+	milestone int,
+	pref *models.NotificationRecipientInfo,
+	provider *NtfyNotificationProvider,
+) {
+	if pref.NtfyEnabled && provider.IsConfigured() {
+		if sendErr := provider.SendStreakMilestone(milestone, pref); sendErr != nil {
+			nc.Logger.Error().Msgf("Streak milestone: ntfy failed: %s", sendErr)
 		}
-		if pref.TelegramEnabled && pref.TelegramChatID != "" && pref.TelegramBotToken != "" {
-			telegramProvider := &TelegramNotificationProvider{BotToken: pref.TelegramBotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
-			if sendErr := telegramProvider.SendStreakMilestone(milestone, pref.TelegramChatID); sendErr != nil {
-				nc.Logger.Error().Msgf("Streak milestone: telegram failed: %s", sendErr)
-			}
+	}
+}
+
+func (nc *NotificationController) sendStreakTelegramIfEnabled(
+	milestone int,
+	pref *models.NotificationRecipientInfo,
+) {
+	if pref.TelegramEnabled && pref.TelegramChatID != "" && pref.TelegramBotToken != "" {
+		telegramProvider := nc.newTelegramProvider(pref.TelegramBotToken)
+		if sendErr := telegramProvider.SendStreakMilestone(milestone, pref.TelegramChatID); sendErr != nil {
+			nc.Logger.Error().Msgf("Streak milestone: telegram failed: %s", sendErr)
 		}
 	}
 }
 
 // StartAllUserTelegramPollers queries all users with a configured bot token and starts
-// a long-poll goroutine for each. Called once at startup.
+// the worker pool for Telegram polling. Called once at startup.
 func (nc *NotificationController) StartAllUserTelegramPollers() {
+	nc.StartTelegramPollerPool()
+}
+
+// StartTelegramPollerPool initializes the worker pool and registers all users with bot tokens.
+func (nc *NotificationController) StartTelegramPollerPool() {
 	users, err := nc.NotificationRepo.GetAllUsersWithTelegramBotToken()
 	if err != nil {
 		nc.Logger.Error().Msgf("Telegram: failed to load users with bot tokens: %s", err)
 		return
 	}
-	nc.Logger.Info().Msgf("Telegram: starting pollers for %d user(s)", len(users))
-	for i := range users {
-		user := &users[i]
-		nc.StartUserTelegramPoller(user.ID, user.NotificationPreferences.TelegramBotToken)
-	}
-}
 
-// StartUserTelegramPoller cancels any existing poller for userID, then starts a new goroutine
-// that long-polls the Telegram API using botToken and handles /start <token> link commands.
-func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken string) {
-	nc.StopUserTelegramPoller(userID)
+	numWorkers := nc.Configuration.Telegram.PollerWorkers
+	if numWorkers <= 0 {
+		numWorkers = 10
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	nc.pollerCancels.Store(userID, cancel)
+	nc.pollerPool = &telegramPollerPool{
+		users:        make(map[uint]*pollerState),
+		numWorkers:   numWorkers,
+		ctx:          ctx,
+		cancel:       cancel,
+		nc:           nc,
+		pollInterval: 2 * time.Second,
+		ticker:       time.NewTicker(2 * time.Second),
+	}
 
-	pollClient := &http.Client{Timeout: 15 * time.Second}
-	baseURL := fmt.Sprintf("https://api.telegram.org/bot%s", botToken)
+	nc.Logger.Info().Msgf("Telegram: starting poller pool with %d worker(s) for %d user(s)", numWorkers, len(users))
 
-	go func() {
-		defer nc.pollerCancels.Delete(userID)
+	for i := range users {
+		user := &users[i]
+		nc.registerUserInPool(user.ID, user.NotificationPreferences.TelegramBotToken)
+	}
 
-		var offset int64
-
-		// Resolve bot username via getMe and persist it.
-		getMeURL := fmt.Sprintf("%s/getMe", baseURL)
-		if resp, err := pollClient.Get(getMeURL); err == nil {
-			var result struct {
-				OK     bool `json:"ok"`
-				Result struct {
-					Username string `json:"username"`
-				} `json:"result"`
-			}
-			if body, readErr := io.ReadAll(resp.Body); readErr == nil {
-				if jsonErr := json.Unmarshal(body, &result); jsonErr == nil && result.OK && result.Result.Username != "" {
-					nc.botUsernames.Store(userID, result.Result.Username)
-					if dbErr := nc.NotificationRepo.SetTelegramBotUsername(userID, result.Result.Username); dbErr != nil {
-						nc.Logger.Warn().Msgf("Telegram poller (user %d): failed to persist bot username: %s", userID, dbErr)
-					}
-					nc.Logger.Info().Msgf("Telegram poller (user %d): resolved bot username @%s", userID, result.Result.Username)
-				}
-			}
-			_ = resp.Body.Close()
-		}
-
-		nc.Logger.Info().Msgf("Telegram poller (user %d): started", userID)
-
-		for {
-			select {
-			case <-ctx.Done():
-				nc.Logger.Info().Msgf("Telegram poller (user %d): stopped", userID)
-				return
-			default:
-			}
-
-			url := fmt.Sprintf("%s/getUpdates?timeout=10&offset=%d", baseURL, offset)
-			resp, err := pollClient.Get(url)
-			if err != nil {
-				nc.Logger.Error().Msgf("Telegram poller (user %d): getUpdates error: %s", userID, err)
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(5 * time.Second):
-				}
-				continue
-			}
-
-			body, readErr := io.ReadAll(resp.Body)
-			_ = resp.Body.Close()
-			if readErr != nil {
-				nc.Logger.Error().Msgf("Telegram poller (user %d): read error: %s", userID, readErr)
-				continue
-			}
-
-			var result struct {
-				OK     bool `json:"ok"`
-				Result []struct {
-					UpdateID int64 `json:"update_id"`
-					Message  *struct {
-						Chat struct {
-							ID int64 `json:"id"`
-						} `json:"chat"`
-						Text string `json:"text"`
-					} `json:"message"`
-				} `json:"result"`
-			}
-
-			if jsonErr := json.Unmarshal(body, &result); jsonErr != nil {
-				nc.Logger.Error().Msgf("Telegram poller (user %d): parse error: %s", userID, jsonErr)
-				continue
-			}
-
-			for _, update := range result.Result {
-				offset = update.UpdateID + 1
-
-				if update.Message == nil {
-					continue
-				}
-
-				text := strings.TrimSpace(update.Message.Text)
-				chatID := fmt.Sprintf("%d", update.Message.Chat.ID)
-
-				if !strings.HasPrefix(text, "/start") {
-					continue
-				}
-
-				parts := strings.Fields(text)
-				if len(parts) < 2 {
-					nc.sendTelegramText(pollClient, baseURL, chatID,
-						"Send `/start <token>` with the token from your Proviant notification settings to link this chat.")
-					continue
-				}
-
-				token := parts[1]
-				user, findErr := nc.NotificationRepo.FindUserByTelegramLinkToken(token)
-				if findErr != nil || user.ID != userID {
-					nc.Logger.Warn().Msgf("Telegram poller (user %d): invalid link token from chat %s", userID, chatID)
-					nc.sendTelegramText(pollClient, baseURL, chatID,
-						"Invalid or expired token. Please generate a new one in Proviant settings.")
-					continue
-				}
-
-				if setErr := nc.NotificationRepo.SetTelegramChatID(userID, chatID); setErr != nil {
-					nc.Logger.Error().Msgf("Telegram poller (user %d): failed to save chat ID: %s", userID, setErr)
-					nc.sendTelegramText(pollClient, baseURL, chatID,
-						"Something went wrong. Please try again.")
-					continue
-				}
-
-				nc.Logger.Info().Msgf("Telegram poller (user %d): linked chat %s", userID, chatID)
-				nc.sendTelegramText(pollClient, baseURL, chatID,
-					"✅ Linked! You will now receive Proviant notifications here.")
-			}
-		}
-	}()
+	nc.pollerPool.wg.Add(numWorkers)
+	for workerID := 0; workerID < numWorkers; workerID++ {
+		go nc.poolWorker(workerID)
+	}
 }
 
-// StopUserTelegramPoller cancels the long-poll goroutine for the given user, if running.
-func (nc *NotificationController) StopUserTelegramPoller(userID uint) {
-	if v, ok := nc.pollerCancels.Load(userID); ok {
-		if cancel, ok := v.(context.CancelFunc); ok {
-			cancel()
-		}
-		nc.pollerCancels.Delete(userID)
+// StartUserTelegramPoller registers or updates a user in the pool and resolves the bot username.
+func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken string) {
+	if nc.pollerPool == nil {
+		nc.StartTelegramPollerPool()
 	}
+	nc.registerUserInPool(userID, botToken)
+}
+
+// registerUserInPool adds or updates a user in the pool and resolves their bot username.
+func (nc *NotificationController) registerUserInPool(userID uint, botToken string) {
+	baseURL := fmt.Sprintf("%s/bot%s", nc.telegramAPIBase, botToken)
+	nc.resolveTelegramBotUsername(baseURL, userID)
+
+	nc.pollerPool.mu.Lock()
+	defer nc.pollerPool.mu.Unlock()
+	nc.pollerPool.users[userID] = &pollerState{botToken: botToken}
+}
+
+// StopUserTelegramPoller removes a user from the pool.
+func (nc *NotificationController) StopUserTelegramPoller(userID uint) {
+	if nc.pollerPool == nil {
+		return
+	}
+	nc.pollerPool.mu.Lock()
+	delete(nc.pollerPool.users, userID)
+	nc.pollerPool.mu.Unlock()
 	nc.botUsernames.Delete(userID)
+}
+
+// StopTelegramPollerPool stops all workers and cleans up.
+func (nc *NotificationController) StopTelegramPollerPool() {
+	if nc.pollerPool == nil {
+		return
+	}
+	nc.pollerPool.cancel()
+	nc.pollerPool.ticker.Stop()
+	nc.pollerPool.wg.Wait()
+	nc.pollerPool = nil
+}
+
+// poolWorker runs as a single worker goroutine, polling assigned users on each tick.
+func (nc *NotificationController) poolWorker(workerID int) {
+	defer nc.pollerPool.wg.Done()
+	nc.Logger.Info().Msgf("Telegram: worker %d started", workerID)
+
+	for {
+		select {
+		case <-nc.pollerPool.ctx.Done():
+			nc.Logger.Info().Msgf("Telegram: worker %d stopped", workerID)
+			return
+		case <-nc.pollerPool.ticker.C:
+			nc.processPoolUsers(workerID)
+		}
+	}
+}
+
+// processPoolUsers iterates the pool and processes users assigned to this worker.
+func (nc *NotificationController) processPoolUsers(workerID int) {
+	nc.pollerPool.mu.RLock()
+	users := make([]uint, 0, len(nc.pollerPool.users))
+	for userID := range nc.pollerPool.users {
+		if int(userID)%nc.pollerPool.numWorkers == workerID {
+			users = append(users, userID)
+		}
+	}
+	nc.pollerPool.mu.RUnlock()
+
+	for _, userID := range users {
+		nc.pollerPool.mu.RLock()
+		state, exists := nc.pollerPool.users[userID]
+		nc.pollerPool.mu.RUnlock()
+
+		if !exists {
+			continue
+		}
+
+		baseURL := fmt.Sprintf("%s/bot%s", nc.telegramAPIBase, state.botToken)
+		nc.pollUser(userID, baseURL, state)
+	}
+}
+
+// pollUser performs a single getUpdates call for a user and handles any updates.
+func (nc *NotificationController) pollUser(userID uint, baseURL string, state *pollerState) {
+	nc.pollerPool.mu.RLock()
+	currentOffset := state.offset
+	nc.pollerPool.mu.RUnlock()
+
+	url := fmt.Sprintf("%s/getUpdates?timeout=1&offset=%d", baseURL, currentOffset)
+	resp, err := nc.telegramClient.Get(url)
+	if err != nil {
+		nc.Logger.Error().Msgf("Telegram poller (user %d): getUpdates error: %s", userID, err)
+		return
+	}
+
+	body, readErr := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if readErr != nil {
+		nc.Logger.Error().Msgf("Telegram poller (user %d): read error: %s", userID, readErr)
+		return
+	}
+
+	var result telegramResponse
+	if jsonErr := json.Unmarshal(body, &result); jsonErr != nil {
+		nc.Logger.Error().Msgf("Telegram poller (user %d): parse error: %s", userID, jsonErr)
+		return
+	}
+
+	for _, update := range result.Result {
+		nc.pollerPool.mu.Lock()
+		state.offset = update.UpdateID + 1
+		nc.pollerPool.mu.Unlock()
+
+		if update.Message == nil {
+			continue
+		}
+
+		text := strings.TrimSpace(update.Message.Text)
+		chatID := fmt.Sprintf("%d", update.Message.Chat.ID)
+		nc.handleTelegramStartCommand(text, chatID, baseURL, userID)
+	}
+}
+
+// resolveTelegramBotUsername resolves and caches the bot username for a user.
+func (nc *NotificationController) resolveTelegramBotUsername(baseURL string, userID uint) {
+	getMeURL := fmt.Sprintf("%s/getMe", baseURL)
+	if resp, err := nc.telegramClient.Get(getMeURL); err == nil {
+		var result struct {
+			OK     bool `json:"ok"`
+			Result struct {
+				Username string `json:"username"`
+			} `json:"result"`
+		}
+		if body, readErr := io.ReadAll(resp.Body); readErr == nil {
+			if jsonErr := json.Unmarshal(body, &result); jsonErr == nil && result.OK && result.Result.Username != "" {
+				nc.botUsernames.Store(userID, result.Result.Username)
+				if err := nc.NotificationRepo.SetTelegramBotUsername(userID, result.Result.Username); err != nil {
+					nc.Logger.Warn().Msgf("Telegram poller (user %d): failed to persist bot username: %s", userID, err)
+				}
+				nc.Logger.Info().Msgf("Telegram poller (user %d): resolved bot username @%s", userID, result.Result.Username)
+			}
+		}
+		_ = resp.Body.Close()
+	}
+}
+
+func (nc *NotificationController) handleTelegramStartCommand(text, chatID, baseURL string, userID uint) bool {
+	if !strings.HasPrefix(text, "/start") {
+		return false
+	}
+
+	parts := strings.Fields(text)
+	if len(parts) < 2 {
+		nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
+			"Send `/start <token>` with the token from your Proviant notification settings to link this chat.")
+		return true
+	}
+
+	token := parts[1]
+	user, findErr := nc.NotificationRepo.FindUserByTelegramLinkToken(token)
+	if findErr != nil || user.ID != userID {
+		nc.Logger.Warn().Msgf("Telegram poller (user %d): invalid link token from chat %s", userID, chatID)
+		nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
+			"Invalid or expired token. Please generate a new one in Proviant settings.")
+		return true
+	}
+
+	if setErr := nc.NotificationRepo.SetTelegramChatID(userID, chatID); setErr != nil {
+		nc.Logger.Error().Msgf("Telegram poller (user %d): failed to save chat ID: %s", userID, setErr)
+		nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
+			"Something went wrong. Please try again.")
+		return true
+	}
+
+	nc.Logger.Info().Msgf("Telegram poller (user %d): linked chat %s", userID, chatID)
+	nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
+		"✅ Linked! You will now receive Proviant notifications here.")
+	return true
 }
 
 func (nc *NotificationController) sendTelegramText(client *http.Client, baseURL, chatID, text string) {
@@ -691,29 +850,43 @@ func (nc *NotificationController) processPendingInvitations(emailProvider *Email
 
 	for i := range invitations {
 		invitation := &invitations[i]
-		user, userErr := nc.NotificationRepo.GetUserByID(invitation.InviterID)
-		inviterName := "A household member"
-		if userErr == nil {
-			inviterName = user.EffectiveName()
-		}
+		inviterName := nc.resolveInviterName(invitation.InviterID)
+		householdName := nc.resolveHouseholdName(invitation.HouseholdID)
+		nc.dispatchPendingInvitation(emailProvider, invitation, inviterName, householdName, baseURL)
+	}
+}
 
-		household, householdErr := nc.NotificationRepo.GetHouseholdByID(invitation.HouseholdID)
-		householdName := fmt.Sprintf("Household #%d", invitation.HouseholdID)
-		if householdErr == nil {
-			householdName = household.Name
-		}
+func (nc *NotificationController) resolveInviterName(inviterID uint) string {
+	user, err := nc.NotificationRepo.GetUserByID(inviterID)
+	if err != nil {
+		return "A household member"
+	}
+	return user.EffectiveName()
+}
 
-		if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
-			nc.Logger.Error().Msgf("Failed to send invitation %d to %s: %s", invitation.ID, invitation.Email, err)
-			if markErr := nc.NotificationRepo.MarkInvitationSendFailed(invitation.ID); markErr != nil {
-				nc.Logger.Error().Msgf("Failed to mark invitation %d as send-failed: %s", invitation.ID, markErr)
-			}
+func (nc *NotificationController) resolveHouseholdName(householdID uint) string {
+	household, err := nc.NotificationRepo.GetHouseholdByID(householdID)
+	if err != nil {
+		return fmt.Sprintf("Household #%d", householdID)
+	}
+	return household.Name
+}
+
+func (nc *NotificationController) dispatchPendingInvitation(
+	emailProvider *EmailNotificationProvider,
+	invitation *dbModel.HouseholdInvitation,
+	inviterName, householdName, baseURL string,
+) {
+	if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
+		nc.Logger.Error().Msgf("Failed to send invitation %d to %s: %s", invitation.ID, invitation.Email, err)
+		if markErr := nc.NotificationRepo.MarkInvitationSendFailed(invitation.ID); markErr != nil {
+			nc.Logger.Error().Msgf("Failed to mark invitation %d as send-failed: %s", invitation.ID, markErr)
+		}
+	} else {
+		if markErr := nc.NotificationRepo.MarkInvitationSent(invitation.ID); markErr != nil {
+			nc.Logger.Error().Msgf("Failed to mark invitation %d as sent: %s", invitation.ID, markErr)
 		} else {
-			if markErr := nc.NotificationRepo.MarkInvitationSent(invitation.ID); markErr != nil {
-				nc.Logger.Error().Msgf("Failed to mark invitation %d as sent: %s", invitation.ID, markErr)
-			} else {
-				nc.Logger.Info().Msgf("Invitation email sent successfully to %s", invitation.Email)
-			}
+			nc.Logger.Info().Msgf("Invitation email sent successfully to %s", invitation.Email)
 		}
 	}
 }

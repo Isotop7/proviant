@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -44,13 +44,13 @@ type CalendarTokenResponse struct {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/calendar/token [post]
 func CreateCalendarToken(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	if !loggerOk {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -67,8 +67,7 @@ func CreateCalendarToken(ctx *gin.Context) {
 		return
 	}
 
-	calendarTokenRepo := database.NewCalendarTokenRepository(dbHandle)
-	delErr := calendarTokenRepo.DeleteByUserID(userID)
+	delErr := repos.CalendarTokens.DeleteByUserID(userID)
 	if delErr != nil {
 		logger.Error().Msgf("DeleteByUserID: %s", delErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to regenerate calendar token"})
@@ -79,14 +78,14 @@ func CreateCalendarToken(ctx *gin.Context) {
 		UserID: userID,
 		Token:  rawToken,
 	}
-	createErr := calendarTokenRepo.Create(calendarToken)
+	createErr := repos.CalendarTokens.Create(calendarToken)
 	if createErr != nil {
 		logger.Error().Msgf("Create: %s", createErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to create calendar token"})
 		return
 	}
 
-	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
 	baseURL := ""
 	if proviantConfig != nil {
 		baseURL = proviantConfig.Server.BaseURL
@@ -119,13 +118,13 @@ func CreateCalendarToken(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/calendar/token [delete]
 func DeleteCalendarToken(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	if !loggerOk {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -135,8 +134,7 @@ func DeleteCalendarToken(ctx *gin.Context) {
 		return
 	}
 
-	calendarTokenRepo := database.NewCalendarTokenRepository(dbHandle)
-	delErr := calendarTokenRepo.DeleteByUserID(userID)
+	delErr := repos.CalendarTokens.DeleteByUserID(userID)
 	if delErr != nil {
 		logger.Error().Msgf("DeleteByUserID: %s", delErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to delete calendar token"})
@@ -159,13 +157,13 @@ func DeleteCalendarToken(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/calendar/token [get]
 func GetCalendarTokenStatus(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	if !loggerOk {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -175,8 +173,7 @@ func GetCalendarTokenStatus(ctx *gin.Context) {
 		return
 	}
 
-	calendarTokenRepo := database.NewCalendarTokenRepository(dbHandle)
-	calendarToken, err := calendarTokenRepo.GetByUserID(userID)
+	calendarToken, err := repos.CalendarTokens.GetByUserID(userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusOK, gin.H{"hasToken": false})
@@ -187,7 +184,7 @@ func GetCalendarTokenStatus(ctx *gin.Context) {
 		return
 	}
 
-	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
 	baseURL := ""
 	if proviantConfig != nil {
 		baseURL = proviantConfig.Server.BaseURL

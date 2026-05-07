@@ -12,6 +12,7 @@ import (
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	"codeberg.org/isotop7/proviant/templates"
+	"codeberg.org/isotop7/proviant/util"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -20,7 +21,60 @@ import (
 	"gorm.io/gorm"
 )
 
+const MsgInvalidCredentials = "Invalid credentials"
+
 var errEmailNotVerified = errors.New("email not verified")
+
+// parseRequestID validates if the string is a valid UUID, returns empty string if not
+func parseRequestID(s string) string {
+	if s == "" {
+		return ""
+	}
+	if _, err := uuid.Parse(s); err == nil {
+		return s
+	}
+	return ""
+}
+
+// RequestIDMiddleware mints a UUID per request, stashes it in gin.Context,
+// sets the response header, and replaces the context logger with a child logger
+func RequestIDMiddleware(baseLogger *zerolog.Logger) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		// Honor incoming X-Request-ID if present and valid; else mint
+		reqID := parseRequestID(ctx.GetHeader(static.RequestIDHeader))
+		if reqID == "" {
+			reqID = uuid.New().String()
+		}
+		ctx.Set(util.ContextKeyRequestID, reqID)
+		ctx.Header(static.RequestIDHeader, reqID)
+
+		// Replace context logger with child carrying request_id
+		l := baseLogger.With().Str("request_id", reqID).Logger()
+		ctx.Set(util.ContextKeyLogger, &l)
+
+		ctx.Next()
+	}
+}
+
+// UserContextLoggerMiddleware enriches the context logger with user_id after JWT/PAT auth
+func UserContextLoggerMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		claims := jwt.ExtractClaims(ctx)
+		if raw, ok := claims[static.TokenIdentityKey]; ok {
+			if f, ok := raw.(float64); ok {
+				uid := uint(f)
+				ctx.Set(util.ContextKeyUserID, uid)
+
+				// Enrich ctx logger with user_id
+				if existing, ok := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger); ok {
+					enriched := existing.With().Uint("user_id", uid).Logger()
+					ctx.Set(util.ContextKeyLogger, &enriched)
+				}
+			}
+		}
+		ctx.Next()
+	}
+}
 
 // ZerologMiddleware implements a gin.HandlerFunc and logs the output from gin
 func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
@@ -31,14 +85,24 @@ func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
 		// Process the request
 		ctx.Next()
 
+		// Read request_id and user_id from context
+		reqID, _ := ctx.Get(util.ContextKeyRequestID)
+		userID, _ := ctx.Get(util.ContextKeyUserID)
+
 		// Log the request details
-		logger.Info().
+		evt := logger.Info().
 			Str("remote", ctx.Request.RemoteAddr).
 			Str("method", ctx.Request.Method).
 			Str("path", ctx.Request.URL.Path).
 			Int("status", ctx.Writer.Status()).
-			Dur("duration", time.Since(start)).
-			Msg("Request handled")
+			Dur("duration", time.Since(start))
+		if reqID != nil {
+			evt = evt.Str("request_id", reqID.(string))
+		}
+		if userID != nil {
+			evt = evt.Uint("user_id", userID.(uint))
+		}
+		evt.Msg("Request handled")
 	}
 }
 
@@ -53,33 +117,24 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 
 	failedUserID, failedUserIDExists := ctx.Get("failedUserID")
 	if !failedUserIDExists {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": MsgInvalidCredentials})
 		return
 	}
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": MsgInvalidCredentials})
 		return
 	}
 
 	userRepo := database.NewUserRepository(dbHandle)
 
-	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
-	maxLoginAttempts := database.DefaultMaxLoginAttempts
-	lockoutDurationMins := database.DefaultLockoutDurationMins
-	if proviantConfig != nil {
-		if proviantConfig.Server.Authentication.MaxLoginAttempts > 0 {
-			maxLoginAttempts = proviantConfig.Server.Authentication.MaxLoginAttempts
-		}
-		if proviantConfig.Server.Authentication.LockoutDurationMins > 0 {
-			lockoutDurationMins = proviantConfig.Server.Authentication.LockoutDurationMins
-		}
-	}
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	maxLoginAttempts, lockoutDurationMins := lockoutConfig(proviantConfig)
 
 	locked, remaining := userRepo.IsAccountLocked(failedUserID.(uint), maxLoginAttempts, lockoutDurationMins)
 	if !locked {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": MsgInvalidCredentials})
 		return
 	}
 
@@ -121,14 +176,14 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
 
 	// Get and convert parameter 'id' from request
 	idParam := ctx.Param("id")
-	var convErr error
+	var err error
 	var productID int
-	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
+	if productID, err = strconv.Atoi(idParam); err != nil {
 		return false
 	}
 
 	// Get database instance from context and fail if not found
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
 		return false
 	}
@@ -151,7 +206,7 @@ func isTokenRevoked(ctx *gin.Context) bool {
 		return false
 	}
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
 		return false
 	}
@@ -187,6 +242,21 @@ func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool {
 	return true
 }
 
+func lockoutConfig(cfg *configuration.ProviantConfiguration) (maxAttempts, lockoutMins int) {
+	maxAttempts = database.DefaultMaxLoginAttempts
+	lockoutMins = database.DefaultLockoutDurationMins
+	if cfg == nil {
+		return
+	}
+	if cfg.Server.Authentication.MaxLoginAttempts > 0 {
+		maxAttempts = cfg.Server.Authentication.MaxLoginAttempts
+	}
+	if cfg.Server.Authentication.LockoutDurationMins > 0 {
+		lockoutMins = cfg.Server.Authentication.LockoutDurationMins
+	}
+	return
+}
+
 // JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization (optional)
 func JWTMiddleware(
 	proviantConfiguration *configuration.ProviantConfiguration,
@@ -195,15 +265,17 @@ func JWTMiddleware(
 	unauthorizedFunc func(ctx *gin.Context, code int, message string)) (*jwt.GinJWTMiddleware, error) {
 	return jwt.New(&jwt.GinJWTMiddleware{
 		// JWT configuration and timeouts
-		Realm:         static.TokenRealm,
-		Key:           []byte(proviantConfiguration.Server.Authentication.TokenPassword),
-		Timeout:       (time.Duration(proviantConfiguration.Server.Authentication.TokenLifetime) * time.Hour),
-		MaxRefresh:    (time.Duration(proviantConfiguration.Server.Authentication.TokenLifetime) * time.Hour),
-		IdentityKey:   static.TokenIdentityKey,
-		TokenLookup:   static.TokenLookup,
-		TokenHeadName: static.TokenHeadName,
-		TimeFunc:      time.Now,
-		SendCookie:    true,
+		Realm:          static.TokenRealm,
+		Key:            []byte(proviantConfiguration.Server.Authentication.TokenPassword),
+		Timeout:        (time.Duration(proviantConfiguration.Server.Authentication.TokenLifetime) * time.Hour),
+		MaxRefresh:     (time.Duration(proviantConfiguration.Server.Authentication.TokenLifetime) * time.Hour),
+		IdentityKey:    static.TokenIdentityKey,
+		TokenLookup:    static.TokenLookup,
+		TokenHeadName:  static.TokenHeadName,
+		TimeFunc:       time.Now,
+		SendCookie:     true,
+		CookieHTTPOnly: true,
+		CookieSameSite: http.SameSiteStrictMode,
 		// Generate claims and return it to payload
 		PayloadFunc: func(data any) jwt.MapClaims {
 			if userData, ok := data.(authentication.User); ok {
@@ -233,16 +305,7 @@ func JWTMiddleware(
 
 			userRepo := database.NewUserRepository(dbHandle)
 
-			maxLoginAttempts := database.DefaultMaxLoginAttempts
-			lockoutDurationMins := database.DefaultLockoutDurationMins
-			if proviantConfiguration != nil {
-				if proviantConfiguration.Server.Authentication.MaxLoginAttempts > 0 {
-					maxLoginAttempts = proviantConfiguration.Server.Authentication.MaxLoginAttempts
-				}
-				if proviantConfiguration.Server.Authentication.LockoutDurationMins > 0 {
-					lockoutDurationMins = proviantConfiguration.Server.Authentication.LockoutDurationMins
-				}
-			}
+			maxLoginAttempts, lockoutDurationMins := lockoutConfig(proviantConfiguration)
 
 			user, err := userRepo.GetUserByUsername(loginVals.Username)
 			if err != nil {
@@ -254,8 +317,8 @@ func JWTMiddleware(
 				return nil, jwt.ErrFailedAuthentication
 			}
 
-			authErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginVals.Password))
-			if authErr != nil {
+			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginVals.Password))
+			if err != nil {
 				_ = userRepo.RecordFailedLoginAttempt(user.ID, maxLoginAttempts, lockoutDurationMins)
 				ctx.Set("failedUserID", user.ID)
 				return nil, jwt.ErrFailedAuthentication

@@ -4,7 +4,43 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"codeberg.org/isotop7/proviant/util"
 )
+
+func assertDateUnmarshalResult(t *testing.T, err error, wantErr bool, got, want Date) {
+	t.Helper()
+	if wantErr {
+		if err == nil {
+			t.Error("expected error but got none")
+		}
+		return
+	}
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func assertTimestampUnmarshalResult(t *testing.T, err error, wantErr bool, got, want string) {
+	t.Helper()
+	if wantErr {
+		if err == nil {
+			t.Error("expected error but got none")
+		}
+		return
+	}
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
 
 func TestDateUnmarshalJSON(t *testing.T) {
 	tests := []struct {
@@ -28,49 +64,18 @@ func TestDateUnmarshalJSON(t *testing.T) {
 			input: `"2023-12-31"`,
 			want:  Date(time.Date(2023, 12, 31, 0, 0, 0, 0, time.UTC)),
 		},
-		{
-			name:    "invalid format - no quotes",
-			input:   `2023-12-25`,
-			wantErr: true,
-		},
-		{
-			name:    "invalid format - wrong date format",
-			input:   `"12/25/2023"`,
-			wantErr: true,
-		},
-		{
-			name:    "invalid format - incomplete date",
-			input:   `"2023-12"`,
-			wantErr: true,
-		},
-		{
-			name:    "invalid format - garbage",
-			input:   `"not-a-date"`,
-			wantErr: true,
-		},
-		{
-			name:    "empty string",
-			input:   `""`,
-			wantErr: true,
-		},
+		{name: "invalid format - no quotes", input: `2023-12-25`, wantErr: true},
+		{name: "invalid format - wrong date format", input: `"12/25/2023"`, wantErr: true},
+		{name: "invalid format - incomplete date", input: `"2023-12"`, wantErr: true},
+		{name: "invalid format - garbage", input: `"not-a-date"`, wantErr: true},
+		{name: "empty string", input: `""`, wantErr: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var d Date
 			err := json.Unmarshal([]byte(tt.input), &d)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
-				if d != tt.want {
-					t.Errorf("got %v, want %v", d, tt.want)
-				}
-			}
+			assertDateUnmarshalResult(t, err, tt.wantErr, d, tt.want)
 		})
 	}
 }
@@ -104,7 +109,7 @@ func TestDateFormat(t *testing.T) {
 		{
 			name: "default format",
 			date: Date(time.Date(2023, 12, 25, 14, 30, 0, 0, time.UTC)),
-			fmt:  "2006-01-02",
+			fmt:  util.DefaultDateFormatParseStr,
 			want: "2023-12-25",
 		},
 		{
@@ -138,46 +143,18 @@ func TestTimestampUnmarshalJSON(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{
-			name:  "valid timestamp",
-			input: `{"timestamp":"2023-12-25"}`,
-			want:  "2023-12-25",
-		},
-		{
-			name:    "invalid JSON",
-			input:   `{invalid}`,
-			wantErr: true,
-		},
-		{
-			name:    "missing timestamp field (succeeds with zero Date)",
-			input:   `{}`,
-			wantErr: false,
-			want:    "0001-01-01",
-		},
-		{
-			name:    "invalid date format",
-			input:   `{"timestamp":"12/25/2023"}`,
-			wantErr: true,
-		},
+		{name: "valid timestamp", input: `{"timestamp":"2023-12-25"}`, want: "2023-12-25"},
+		{name: "invalid JSON", input: `{invalid}`, wantErr: true},
+		{name: "missing timestamp field (succeeds with zero Date)", input: `{}`, want: "0001-01-01"},
+		{name: "invalid date format", input: `{"timestamp":"12/25/2023"}`, wantErr: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var ts Timestamp
 			err := json.Unmarshal([]byte(tt.input), &ts)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
-				got := time.Time(ts.Timestamp).Format("2006-01-02")
-				if got != tt.want {
-					t.Errorf("got %v, want %v", got, tt.want)
-				}
-			}
+			got := time.Time(ts.Timestamp).Format(util.DefaultDateFormatParseStr)
+			assertTimestampUnmarshalResult(t, err, tt.wantErr, got, tt.want)
 		})
 	}
 }

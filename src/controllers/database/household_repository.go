@@ -6,9 +6,29 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"gorm.io/gorm"
 )
+
+type HouseholdRepositoryInterface interface {
+	GetHouseholdByID(householdID uint) (database.Household, error)
+	GetHouseholdMemberCount(householdID uint) (int64, error)
+	GetHouseholdMembers(householdID uint) ([]authentication.User, error)
+	LeaveHousehold(userID uint) error
+	CreateAndSwitchHousehold(userID uint, name string) error
+	ApplyForHousehold(applicantID, householdID uint) error
+	GetPendingApplicationsForAdmin(adminUserID uint) ([]database.HouseholdApplication, error)
+	ApproveApplication(applicationID, adminUserID uint) error
+	RejectApplication(applicationID, adminUserID uint) error
+	GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error)
+	CancelApplication(applicationID, applicantUserID uint) error
+	UpdateHouseholdName(householdID, adminUserID uint, name string) error
+	RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
+	GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
+}
+
+var _ HouseholdRepositoryInterface = (*HouseholdRepository)(nil)
 
 type HouseholdRepository struct {
 	DB *gorm.DB
@@ -26,14 +46,43 @@ func (r *HouseholdRepository) GetHouseholdByID(householdID uint) (database.House
 
 func (r *HouseholdRepository) GetHouseholdMemberCount(householdID uint) (int64, error) {
 	var count int64
-	result := r.DB.Model(&authentication.User{}).Where("household_id = ?", householdID).Count(&count)
+	result := r.DB.Model(&authentication.User{}).Where(util.QueryHouseholdId, householdID).Count(&count)
 	return count, result.Error
 }
 
 func (r *HouseholdRepository) GetHouseholdMembers(householdID uint) ([]authentication.User, error) {
 	var users []authentication.User
-	err := r.DB.Where("household_id = ?", householdID).Find(&users).Error
+	err := r.DB.Where(util.QueryHouseholdId, householdID).Find(&users).Error
 	return users, err
+}
+
+// createSoloHousehold creates a new household named after the user, sets adminID,
+// moves products if the user was the sole member of the old household, then moves the user.
+func createSoloHousehold(tx *gorm.DB, user authentication.User, oldHouseholdID uint, newName string) error {
+	newHousehold := database.Household{Name: newName}
+	if err := tx.Create(&newHousehold).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Model(&newHousehold).Update("admin_id", user.ID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var memberCount int64
+	tx.Model(&authentication.User{}).Where(util.QueryHouseholdId, oldHouseholdID).Count(&memberCount)
+	if memberCount == 1 {
+		if err := tx.Model(&database.Product{}).Where(util.QueryHouseholdId, oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Model(&user).Update("household_id", newHousehold.ID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	return nil
 }
 
 func (r *HouseholdRepository) LeaveHousehold(userID uint) error {
@@ -46,30 +95,7 @@ func (r *HouseholdRepository) LeaveHousehold(userID uint) error {
 	}
 
 	oldHouseholdID := user.HouseholdID
-
-	newHousehold := database.Household{
-		Name: fmt.Sprintf("%s's Household", user.Username),
-	}
-	if err := tx.Create(&newHousehold).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err := tx.Model(&newHousehold).Update("admin_id", userID).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	var memberCount int64
-	tx.Model(&authentication.User{}).Where("household_id = ?", oldHouseholdID).Count(&memberCount)
-	if memberCount == 1 {
-		if err := tx.Model(&database.Product{}).Where("household_id = ?", oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-
-	if err := tx.Model(&user).Update("household_id", newHousehold.ID).Error; err != nil {
-		tx.Rollback()
+	if err := createSoloHousehold(tx, user, oldHouseholdID, fmt.Sprintf("%s's Household", user.Username)); err != nil {
 		return err
 	}
 
@@ -86,35 +112,19 @@ func (r *HouseholdRepository) CreateAndSwitchHousehold(userID uint, name string)
 	}
 
 	oldHouseholdID := user.HouseholdID
-
-	newHousehold := database.Household{Name: name}
-	if err := tx.Create(&newHousehold).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err := tx.Model(&newHousehold).Update("admin_id", userID).Error; err != nil {
-		tx.Rollback()
+	if err := createSoloHousehold(tx, user, oldHouseholdID, name); err != nil {
 		return err
 	}
 
-	var memberCount int64
-	tx.Model(&authentication.User{}).Where("household_id = ?", oldHouseholdID).Count(&memberCount)
-	if memberCount == 1 {
-		if err := tx.Model(&database.Product{}).Where("household_id = ?", oldHouseholdID).Update("household_id", newHousehold.ID).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-
-	if err := tx.Model(&user).Update("household_id", newHousehold.ID).Error; err != nil {
+	if err := tx.First(&user, userID).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	defaultLocations := []database.StorageLocation{
-		{HouseholdID: newHousehold.ID, Name: "Fridge", Icon: "🧊", SortOrder: 0},
-		{HouseholdID: newHousehold.ID, Name: "Freezer", Icon: "❄️", SortOrder: 1},
-		{HouseholdID: newHousehold.ID, Name: "Pantry", Icon: "🗄️", SortOrder: 2},
+		{HouseholdID: user.HouseholdID, Name: "Fridge", Icon: "🧊", SortOrder: 0},
+		{HouseholdID: user.HouseholdID, Name: "Freezer", Icon: "❄️", SortOrder: 1},
+		{HouseholdID: user.HouseholdID, Name: "Pantry", Icon: "🗄️", SortOrder: 2},
 	}
 	for i := range defaultLocations {
 		if err := tx.Create(&defaultLocations[i]).Error; err != nil {
@@ -171,68 +181,54 @@ func (r *HouseholdRepository) GetPendingApplicationsForAdmin(adminUserID uint) (
 	return applications, err
 }
 
-func (r *HouseholdRepository) ApproveApplication(applicationID, adminUserID uint) error {
-	tx := r.DB.Begin()
-
+func (r *HouseholdRepository) fetchAndAuthorizeApplication(tx *gorm.DB, applicationID, adminUserID uint) (database.HouseholdApplication, error) {
 	var application database.HouseholdApplication
 	if err := tx.First(&application, applicationID).Error; err != nil {
 		tx.Rollback()
 		if err == gorm.ErrRecordNotFound {
-			return errors.ErrApplicationNotFound
+			return application, errors.ErrApplicationNotFound
 		}
-		return err
+		return application, err
 	}
-
 	var household database.Household
 	if err := tx.First(&household, application.HouseholdID).Error; err != nil {
 		tx.Rollback()
-		return err
+		return application, err
 	}
 	if household.AdminID != adminUserID {
 		tx.Rollback()
-		return errors.ErrNotHouseholdAdmin
+		return application, errors.ErrNotHouseholdAdmin
 	}
+	return application, nil
+}
 
-	if err := tx.Model(&authentication.User{}).Where("id = ?", application.ApplicantID).Update("household_id", application.HouseholdID).Error; err != nil {
+func (r *HouseholdRepository) ApproveApplication(applicationID, adminUserID uint) error {
+	tx := r.DB.Begin()
+	application, err := r.fetchAndAuthorizeApplication(tx, applicationID, adminUserID)
+	if err != nil {
+		return err
+	}
+	if err := tx.Model(&authentication.User{}).Where(util.QueryId, application.ApplicantID).Update("household_id", application.HouseholdID).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
-
 	if err := tx.Model(&application).Update("status", database.ApplicationStatusApproved).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
-
 	return tx.Commit().Error
 }
 
 func (r *HouseholdRepository) RejectApplication(applicationID, adminUserID uint) error {
 	tx := r.DB.Begin()
-
-	var application database.HouseholdApplication
-	if err := tx.First(&application, applicationID).Error; err != nil {
-		tx.Rollback()
-		if err == gorm.ErrRecordNotFound {
-			return errors.ErrApplicationNotFound
-		}
+	application, err := r.fetchAndAuthorizeApplication(tx, applicationID, adminUserID)
+	if err != nil {
 		return err
 	}
-
-	var household database.Household
-	if err := tx.First(&household, application.HouseholdID).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-	if household.AdminID != adminUserID {
-		tx.Rollback()
-		return errors.ErrNotHouseholdAdmin
-	}
-
 	if err := tx.Model(&application).Update("status", database.ApplicationStatusRejected).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
-
 	return tx.Commit().Error
 }
 
@@ -311,29 +307,7 @@ func (r *HouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserI
 		return errors.ErrCannotRemoveAdmin
 	}
 
-	newHousehold := database.Household{
-		Name: fmt.Sprintf("%s's Household", memberUser.Username),
-	}
-	if err := tx.Create(&newHousehold).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err := tx.Model(&newHousehold).Update("admin_id", memberUserID).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	var memberCount int64
-	tx.Model(&authentication.User{}).Where("household_id = ?", household.ID).Count(&memberCount)
-	if memberCount == 1 {
-		if err := tx.Model(&database.Product{}).Where("household_id = ?", household.ID).Update("household_id", newHousehold.ID).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-
-	if err := tx.Model(&memberUser).Update("household_id", newHousehold.ID).Error; err != nil {
-		tx.Rollback()
+	if err := createSoloHousehold(tx, memberUser, household.ID, fmt.Sprintf("%s's Household", memberUser.Username)); err != nil {
 		return err
 	}
 

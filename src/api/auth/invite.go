@@ -7,13 +7,12 @@ import (
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
+	"codeberg.org/isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 // AcceptInvitation accepts a household invitation for the authenticated user.
@@ -30,9 +29,9 @@ import (
 // @Failure 500 {object} api.APIResponse
 // @Router /auth/invite/accept [post]
 func AcceptInvitation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := ctx.MustGet("dbHandle").(*gorm.DB)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
@@ -50,25 +49,18 @@ func AcceptInvitation(ctx *gin.Context) {
 	var req acceptInvitationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
-	invitationRepo := database.NewInvitationRepository(dbHandle)
-
-	var user authentication.User
-	if err := dbHandle.First(&user, userID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			logger.Error().Msgf("User with ID %d not found", userID)
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
-			return
-		}
-		logger.Error().Msgf("Error fetching user: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+	user, err := repos.Users.GetUserByID(userID)
+	if err != nil {
+		logger.Error().Msgf(errors.ErrInvalidUserIDWrapper, userID, err)
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
-	if err := invitationRepo.AcceptInvitation(req.Token, user.MailAddress, userID); err != nil {
+	if err := repos.Invitations.AcceptInvitation(req.Token, user.MailAddress, userID); err != nil {
 		switch err {
 		case errors.ErrInvitationNotFound:
 			logger.Error().Msgf("Invitation not found: %s", err)
@@ -87,7 +79,7 @@ func AcceptInvitation(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, api.Error(err))
 		default:
 			logger.Error().Msgf("Error accepting invitation: %s", err)
-			ctx.JSON(http.StatusInternalServerError, api.Error(err))
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		}
 		return
 	}

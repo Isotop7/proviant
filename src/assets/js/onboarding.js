@@ -131,7 +131,7 @@
         if (!listEl) return;
 
         if (households.length === 0) {
-            listEl.innerHTML = '<div class="list-group-item text-muted">No households available to join.</div>';
+            listEl.innerHTML = '<div class="list-group-item text-secondary-custom">No households available to join.</div>';
             listEl.classList.remove("d-none");
             return;
         }
@@ -141,10 +141,10 @@
             html += '<button class="list-group-item list-group-item-action household-join-btn" data-household-id="' + h.id + '">';
             html += '<div class="d-flex w-100 justify-content-between">';
             html += '<h6 class="mb-1">' + escapeHtml(h.name) + '</h6>';
-            html += '<small class="text-muted">' + h.memberCount + ' member' + (h.memberCount !== 1 ? 's' : '') + '</small>';
+            html += '<small class="text-secondary-custom">' + h.memberCount + ' member' + (h.memberCount !== 1 ? 's' : '') + '</small>';
             html += '</div>';
             if (h.description) {
-                html += '<p class="mb-1 small text-muted">' + escapeHtml(h.description) + '</p>';
+                html += '<p class="mb-1 small text-secondary-custom">' + escapeHtml(h.description) + '</p>';
             }
             html += '<small class="text-primary"><i class="bi bi-box-arrow-in-right me-1"></i>Request to Join</small>';
             html += '</button>';

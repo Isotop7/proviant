@@ -6,8 +6,18 @@ import (
 
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
+
 	"gorm.io/gorm"
 )
+
+type SavingsRepositoryInterface interface {
+	MatchCategory(categories string) (*dbModel.ProductCategoryPrice, error)
+	RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string) error
+	GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error)
+}
+
+var _ SavingsRepositoryInterface = (*SavingsRepository)(nil)
 
 // SavingsRepository handles savings event recording and statistics queries.
 type SavingsRepository struct {
@@ -100,7 +110,7 @@ func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsS
 	}
 
 	var allRecords []dbModel.SavingsRecord
-	if err := r.DB.Where("household_id = ?", householdID).Find(&allRecords).Error; err != nil {
+	if err := r.DB.Where(util.QueryHouseholdId, householdID).Find(&allRecords).Error; err != nil {
 		return apiModel.SavingsStatsResponse{}, err
 	}
 

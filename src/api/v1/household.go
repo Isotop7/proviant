@@ -5,11 +5,16 @@ import (
 	"strconv"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+)
+
+const (
+	MsgInvalidApplicationId = "invalid application id"
+	MsgHouseholdNameEmpty   = "household name cannot be empty"
 )
 
 // LeaveHousehold removes the calling user from their current household and assigns them a new personal one.
@@ -22,9 +27,9 @@ import (
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/user/household/leave [post]
 func LeaveHousehold(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -34,8 +39,7 @@ func LeaveHousehold(ctx *gin.Context) {
 		return
 	}
 
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-	if err := householdRepo.LeaveHousehold(userID); err != nil {
+	if err := repos.Households.LeaveHousehold(userID); err != nil {
 		logger.Error().Msgf("Error leaving household: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 		return
@@ -56,9 +60,9 @@ func LeaveHousehold(ctx *gin.Context) {
 // @Failure      500        {object}  api.APIResponse
 // @Router       /api/v1/user/household/create [post]
 func CreateHousehold(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -75,12 +79,11 @@ func CreateHousehold(ctx *gin.Context) {
 		return
 	}
 	if req.Name == "" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "household name cannot be empty"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: MsgHouseholdNameEmpty})
 		return
 	}
 
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-	if err := householdRepo.CreateAndSwitchHousehold(userID, req.Name); err != nil {
+	if err := repos.Households.CreateAndSwitchHousehold(userID, req.Name); err != nil {
 		logger.Error().Msgf("Error creating household: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 		return
@@ -102,9 +105,9 @@ func CreateHousehold(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/{id}/apply [post]
 func ApplyForHousehold(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -119,8 +122,7 @@ func ApplyForHousehold(ctx *gin.Context) {
 		return
 	}
 
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-	applyErr := householdRepo.ApplyForHousehold(userID, householdID)
+	applyErr := repos.Households.ApplyForHousehold(userID, householdID)
 	switch applyErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application submitted"})
@@ -145,9 +147,9 @@ func ApplyForHousehold(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/applications [get]
 func GetHouseholdApplications(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -157,8 +159,7 @@ func GetHouseholdApplications(ctx *gin.Context) {
 		return
 	}
 
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-	applications, err := householdRepo.GetPendingApplicationsForAdmin(userID)
+	applications, err := repos.Households.GetPendingApplicationsForAdmin(userID)
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, applications)
@@ -183,9 +184,9 @@ func GetHouseholdApplications(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/applications/{id}/approve [post]
 func ApproveHouseholdApplication(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -195,13 +196,12 @@ func ApproveHouseholdApplication(ctx *gin.Context) {
 		return
 	}
 
-	applicationID, ok := parseUintParam(ctx, logger, "id", "invalid application id")
+	applicationID, ok := parseUintParam(ctx, logger, "id", MsgInvalidApplicationId)
 	if !ok {
 		return
 	}
 
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-	approveErr := householdRepo.ApproveApplication(applicationID, userID)
+	approveErr := repos.Households.ApproveApplication(applicationID, userID)
 	switch approveErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application approved"})
@@ -228,9 +228,9 @@ func ApproveHouseholdApplication(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/applications/{id}/reject [post]
 func RejectHouseholdApplication(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -240,13 +240,12 @@ func RejectHouseholdApplication(ctx *gin.Context) {
 		return
 	}
 
-	applicationID, ok := parseUintParam(ctx, logger, "id", "invalid application id")
+	applicationID, ok := parseUintParam(ctx, logger, "id", MsgInvalidApplicationId)
 	if !ok {
 		return
 	}
 
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-	rejectErr := householdRepo.RejectApplication(applicationID, userID)
+	rejectErr := repos.Households.RejectApplication(applicationID, userID)
 	switch rejectErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application rejected"})
@@ -273,9 +272,9 @@ func RejectHouseholdApplication(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/name [patch]
 func UpdateHouseholdName(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -292,19 +291,17 @@ func UpdateHouseholdName(ctx *gin.Context) {
 		return
 	}
 	if req.Name == "" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "household name cannot be empty"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: MsgHouseholdNameEmpty})
 		return
 	}
 
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-	userRepo := database.NewUserRepository(dbHandle)
-	user, userErr := userRepo.GetUserByID(userID)
+	user, userErr := repos.Users.GetUserByID(userID)
 	if userErr != nil {
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
 		return
 	}
 
-	updateErr := householdRepo.UpdateHouseholdName(user.HouseholdID, userID, req.Name)
+	updateErr := repos.Households.UpdateHouseholdName(user.HouseholdID, userID, req.Name)
 	switch updateErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Household name updated"})
@@ -330,9 +327,9 @@ func UpdateHouseholdName(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/applications/{id} [delete]
 func CancelHouseholdApplication(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -342,13 +339,12 @@ func CancelHouseholdApplication(ctx *gin.Context) {
 		return
 	}
 
-	applicationID, ok := parseUintParam(ctx, logger, "id", "invalid application id")
+	applicationID, ok := parseUintParam(ctx, logger, "id", MsgInvalidApplicationId)
 	if !ok {
 		return
 	}
 
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-	cancelErr := householdRepo.CancelApplication(applicationID, userID)
+	cancelErr := repos.Households.CancelApplication(applicationID, userID)
 	switch cancelErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application cancelled"})
@@ -374,9 +370,9 @@ func CancelHouseholdApplication(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/members/{userId} [delete]
 func RemoveHouseholdMember(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -386,13 +382,12 @@ func RemoveHouseholdMember(ctx *gin.Context) {
 		return
 	}
 
-	memberID, ok := parseUintParam(ctx, logger, "userId", "invalid user id")
+	memberID, ok := parseUintParam(ctx, logger, "userId", errors.ErrInvalidUserID.Error())
 	if !ok {
 		return
 	}
 
-	householdRepo := database.NewHouseholdRepository(dbHandle)
-	removeErr := householdRepo.RemoveMemberFromHousehold(memberID, userID)
+	removeErr := repos.Households.RemoveMemberFromHousehold(memberID, userID)
 	switch removeErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Member removed from household"})

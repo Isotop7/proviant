@@ -15,6 +15,36 @@ function ShowSuccessModal(message, btnFunction) {
   proviant.showFeedback('success', 'Done', message, btnFunction);
 }
 
+function validatePasswordRequirements(password) {
+    const pwInput = document.getElementById("inputPassword");
+    const minLen = pwInput ? parseInt(pwInput.dataset.minLength || "12", 10) : 12;
+    const requirements = {
+        length: password.length >= minLen,
+        upper: /[A-Z]/.test(password),
+        digit: /[0-9]/.test(password),
+        special: /[^A-Za-z0-9]/.test(password)
+    };
+
+    const elements = {
+        length: document.getElementById("req-length"),
+        upper: document.getElementById("req-upper"),
+        digit: document.getElementById("req-digit"),
+        special: document.getElementById("req-special")
+    };
+
+    for (const [key, satisfied] of Object.entries(requirements)) {
+        const el = elements[key];
+        if (!el) continue;
+        const icon = el.querySelector("i");
+        if (!icon) continue;
+        icon.className = satisfied
+            ? "bi bi-check-circle text-success me-1"
+            : "bi bi-x-circle text-danger me-1";
+        el.classList.toggle("text-success", satisfied);
+        el.classList.toggle("text-danger", !satisfied);
+    }
+}
+
 /* ── Update personal details ─────────────────────────────────────── */
 function UpdateSettings() {
   let formIsValid = true;
@@ -69,11 +99,12 @@ function UpdatePassword() {
     inputUsername.classList.add("is-invalid");
     formIsValid = false;
   }
+  const minLength = parseInt(inputPassword.dataset.minLength || "12", 10);
   if (!password) {
     inputPassword.classList.add("is-invalid");
     formIsValid = false;
   }
-  if (password && password.length < 12) {
+  if (password && password.length < minLength) {
     inputPassword.classList.add("is-invalid");
     formIsValid = false;
   }
@@ -290,15 +321,6 @@ function UpdateNotificationSettings() {
 }
 
 /* ── Household management helpers ────────────────────────────────── */
-function showHouseholdAlert(elementId, message, isSuccess) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
-  const span = el.querySelector("span") || el;
-  span.textContent = message;
-  el.classList.remove("d-none");
-  el.classList.add("show");
-}
 
 /* Leave household */
 function handleLeaveHousehold() {
@@ -313,7 +335,7 @@ function handleLeaveHousehold() {
             location.reload();
           });
         } else {
-          showHouseholdAlert("leaveHouseholdAlert", `Error: ${response.message}`, false);
+          proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
         }
       });
     },
@@ -331,14 +353,14 @@ function handleCreateHousehold() {
     return;
   }
   if (nameInput) nameInput.classList.remove("is-invalid");
-  proviant.createHousehold(name).then((response) => {
+    proviant.createHousehold(name).then((response) => {
     if (response.code === 200) {
       ShowSuccessModal("Household created. Reloading page.", function (e) {
         e.preventDefault();
         location.reload();
       });
     } else {
-      showHouseholdAlert("createHouseholdAlert", `Error: ${response.message}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
     }
   });
 }
@@ -356,11 +378,11 @@ function handleApplyHousehold() {
     if (response.code === 200) {
       location.reload();
     } else if (response.code === 409) {
-      showHouseholdAlert("applyHouseholdAlert", "You already have a pending application for this household.", false);
+      proviant.showFeedback('warning', 'Already Applied', "You already have a pending application for this household.");
     } else if (response.code === 404) {
-      showHouseholdAlert("applyHouseholdAlert", "Household not found.", false);
+      proviant.showFeedback('error', 'Not Found', "Household not found.");
     } else {
-      showHouseholdAlert("applyHouseholdAlert", `Error: ${response.message}`, false);
+      proviant.showFeedback('error', 'Apply Failed', `Error: ${response.message}`);
     }
   });
 }
@@ -369,12 +391,12 @@ function handleApplyHousehold() {
 function handleApproveApplication(btn) {
   const applicationID = btn.dataset.id;
   proviant.approveApplication(applicationID).then((response) => {
-    if (response.code === 200) {
-      const row = document.getElementById(`application-${applicationID}`);
-      if (row) row.remove();
-    } else {
-      showHouseholdAlert("applicationsAlert", `Error: ${response.message}`, false);
-    }
+     if (response.code === 200) {
+       const row = document.getElementById(`application-${applicationID}`);
+       if (row) row.remove();
+     } else {
+       proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+     }
   });
 }
 
@@ -382,12 +404,12 @@ function handleApproveApplication(btn) {
 function handleRejectApplication(btn) {
   const applicationID = btn.dataset.id;
   proviant.rejectApplication(applicationID).then((response) => {
-    if (response.code === 200) {
-      const row = document.getElementById(`application-${applicationID}`);
-      if (row) row.remove();
-    } else {
-      showHouseholdAlert("applicationsAlert", `Error: ${response.message}`, false);
-    }
+     if (response.code === 200) {
+       const row = document.getElementById(`application-${applicationID}`);
+       if (row) row.remove();
+     } else {
+       proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+     }
   });
 }
 
@@ -404,7 +426,7 @@ function handleUpdateHouseholdName() {
     if (response.code === 200) {
       location.reload();
     } else {
-      showHouseholdAlert("updateNameAlert", `Error: ${response.message}`, false);
+      proviant.showFeedback('error', 'Rename Failed', `Error: ${response.message}`);
     }
   });
 }
@@ -414,12 +436,12 @@ function handleCancelApplication(btn) {
   const applicationID = btn.dataset.id;
   proviant.showConfirm('Cancel Application', 'Cancel this pending application to join the household?', function () {
     proviant.cancelApplication(applicationID).then((response) => {
-      if (response.code === 200) {
-        const row = document.getElementById(`my-application-${applicationID}`);
-        if (row) row.remove();
-      } else {
-        proviant.showFeedback('error', 'Error', response.message || 'Could not cancel application.');
-      }
+    if (response.code === 200) {
+      const row = document.getElementById(`application-${applicationID}`);
+      if (row) row.remove();
+    } else {
+      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+    }
     });
   });
 }
@@ -440,15 +462,6 @@ function handleRemoveMember(btn) {
 }
 
 /* ── Invitation helpers ───────────────────────────────────────────── */
-function showInviteAlert(elementId, message, isSuccess) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
-  const span = el.querySelector("span") || el;
-  span.textContent = message;
-  el.classList.remove("d-none");
-  el.classList.add("show");
-}
 
 /* Send invitation */
 function handleSendInvitation() {
@@ -466,25 +479,16 @@ function handleSendInvitation() {
         location.reload();
       });
     } else if (response.code === 409) {
-      showInviteAlert("sendInviteAlert", response.message, false);
+      proviant.showFeedback('warning', 'Already Invited', response.message, false);
     } else if (response.code === 400) {
-      showInviteAlert("sendInviteAlert", response.message, false);
+      proviant.showFeedback('error', 'Invalid Email', response.message, false);
     } else {
-      showInviteAlert("sendInviteAlert", `Error: ${response.message}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
     }
   });
 }
 
 /* ── Admin User Management ─────────────────────────────────────── */
-function showAdminUserAlert(message, isSuccess) {
-  const el = document.getElementById("adminUserAlert");
-  if (!el) return;
-  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
-  const span = el.querySelector("span") || el;
-  span.textContent = message;
-  el.classList.remove("d-none");
-  el.classList.add("show");
-}
 
 function renderAdminUserRow(user, currentUserID) {
   if (!user || !user.username) return "";
@@ -493,7 +497,7 @@ function renderAdminUserRow(user, currentUserID) {
     <li class="list-group-item d-flex justify-content-between align-items-center" id="admin-user-${user.id}">
       <span>
         <i class="bi bi-person me-2"></i>${user.username}
-        <span class="text-muted ms-1">&lt;${user.mailAddress || ""}&gt;</span>
+        <span class="text-secondary-custom ms-1">&lt;${user.mailAddress || ""}&gt;</span>
         ${isSelf ? '<span class="badge bg-secondary ms-1">You</span>' : ""}
       </span>
       <div class="btn-group btn-group-sm">
@@ -524,20 +528,20 @@ function loadAdminUsers() {
     if (response.code === 200) {
       const users = response.message;
       if (!users || !Array.isArray(users) || users.length === 0) {
-        list.innerHTML = '<li class="list-group-item text-center text-muted py-3">No users in household.</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">No users in household.</li>';
         return;
       }
       const currentUserID = parseInt(document.querySelector('span.badge.bg-primary[ID]')?.textContent?.replace("#", "") || "0", 10);
       const rendered = users.map((u) => renderAdminUserRow(u, currentUserID)).join("");
       if (!rendered) {
-        list.innerHTML = '<li class="list-group-item text-center text-muted py-3">No users in household.</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">No users in household.</li>';
         return;
       }
       list.innerHTML = rendered;
     } else if (response.code === 403) {
       list.innerHTML = '<li class="list-group-item text-danger py-3">Access denied.</li>';
     } else {
-      showAdminUserAlert(`Error: ${response.message || "Unknown error"}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Unknown error"}`);
     }
   });
 }
@@ -594,7 +598,7 @@ function handleSaveUserEdit() {
       }
       loadAdminUsers();
     } else {
-      showAdminUserAlert(`Error: ${response.message}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
     }
   });
 }
@@ -629,7 +633,7 @@ function handleDeleteUser(btn) {
           const row = document.getElementById(`admin-user-${userID}`);
           if (row) row.remove();
         } else {
-          showAdminUserAlert(`Error: ${response.message}`, false);
+          proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
         }
       });
     },
@@ -639,15 +643,6 @@ function handleDeleteUser(btn) {
 }
 
 /* ── PAT (Personal Access Token) helpers ──────────────────────── */
-function showPATAlert(message, isSuccess) {
-  const el = document.getElementById("patAlert");
-  if (!el) return;
-  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
-  const span = el.querySelector("span") || el;
-  span.textContent = message;
-  el.classList.remove("d-none");
-  el.classList.add("show");
-}
 
 function renderPATRow(pat) {
   const expiresText = pat.expiresAt ? `Expires: ${new Date(pat.expiresAt).toLocaleDateString()}` : "No expiry";
@@ -656,7 +651,7 @@ function renderPATRow(pat) {
     <li class="list-group-item d-flex justify-content-between align-items-center" id="pat-${pat.id}">
       <span>
         <i class="bi bi-key me-2"></i>${pat.name}
-        <small class="text-muted d-block">${lastUsedText} · ${expiresText}</small>
+        <small class="text-secondary-custom d-block">${lastUsedText} · ${expiresText}</small>
       </span>
       <button type="button" class="btn btn-sm btn-outline-danger btn-delete-pat" data-id="${pat.id}" title="Delete token">
         <i class="bi bi-trash"></i>
@@ -677,12 +672,12 @@ function loadPATs() {
     if (response.code === 200) {
       const pats = response.message;
       if (!pats || !Array.isArray(pats) || pats.length === 0) {
-        list.innerHTML = '<li class="list-group-item text-center text-muted py-3">No tokens created yet.</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">No tokens created yet.</li>';
         return;
       }
       list.innerHTML = pats.map((p) => renderPATRow(p)).join("");
     } else {
-      showPATAlert(`Error: ${response.message || "Unknown error"}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Unknown error"}`);
     }
   });
 }
@@ -734,7 +729,7 @@ function handleSavePAT() {
       tokenDisplay.classList.remove("d-none");
       loadPATs();
     } else {
-      showPATAlert(`Error: ${response.message || "Failed to create token"}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to create token"}`);
     }
   });
 }
@@ -750,7 +745,7 @@ function handleDeletePAT(btn) {
           const row = document.getElementById(`pat-${patID}`);
           if (row) row.remove();
         } else {
-          showPATAlert(`Error: ${response.message || "Could not delete token"}`, false);
+          proviant.showFeedback('error', 'Error', `Error: ${response.message || "Could not delete token"}`);
         }
       });
     },
@@ -778,7 +773,7 @@ function RenderWebhookList() {
   if (!container) return;
 
   if (currentWebhooks.length === 0) {
-    container.innerHTML = '<div class="text-center text-muted py-4">No webhooks configured. Create one below.</div>';
+    container.innerHTML = '<div class="text-center text-secondary-custom py-4">No webhooks configured. Create one below.</div>';
     return;
   }
 
@@ -792,7 +787,7 @@ function RenderWebhookList() {
           <div class="d-flex justify-content-between align-items-start mb-2">
             <div>
               <h6 class="mb-1">${escapeHtml(wh.url)}</h6>
-              <small class="text-muted">Events: ${escapeHtml(eventsList)}</small>
+              <small class="text-secondary-custom">Events: ${escapeHtml(eventsList)}</small>
             </div>
             <div class="form-check form-switch">
               <input class="form-check-input webhook-toggle-active" type="checkbox" ${toggleChecked} data-id="${wh.id}">
@@ -874,7 +869,7 @@ function ShowDeliveriesModal(deliveries) {
   let html = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Time</th><th>Attempt</th><th>Status</th><th>Response</th><th>Error</th></tr></thead><tbody>';
   
   if (deliveries.length === 0) {
-    html += '<tr><td colspan="5" class="text-center text-muted">No delivery attempts yet</td></tr>';
+    html += '<tr><td colspan="5" class="text-center text-secondary-custom">No delivery attempts yet</td></tr>';
   } else {
     for (const d of deliveries) {
       const statusClass = d.statusCode >= 200 && d.statusCode < 300 ? 'text-success' : 'text-danger';
@@ -1247,13 +1242,46 @@ document.addEventListener("input", function (event) {
 
   switch (target.id) {
     case "inputDisplayName":
+      clearInvalid(target);
+      break;
     case "inputMailAddress":
-      clearInvalid(target);
+      if (target.dataset.touched) {
+        const valid = target.validity.valid && target.value.trim() !== "";
+        target.classList.toggle("is-invalid", !valid);
+        target.classList.toggle("is-valid", valid);
+      } else {
+        clearInvalid(target);
+      }
       break;
-    case "inputPassword":
-    case "inputPasswordVerification":
-      clearInvalid(target);
+    case "inputPassword": {
+      if (target.dataset.touched) {
+        const minLen = parseInt(target.dataset.minLength || "12", 10);
+        const valid = target.value.length >= minLen;
+        target.classList.toggle("is-invalid", !valid);
+        target.classList.toggle("is-valid", valid);
+      } else {
+        clearInvalid(target);
+      }
+      validatePasswordRequirements(target.value);
+      const inputPasswordVerification = document.getElementById("inputPasswordVerification");
+      if (inputPasswordVerification && inputPasswordVerification.dataset.touched) {
+        const match = inputPasswordVerification.value === target.value && inputPasswordVerification.value !== "";
+        inputPasswordVerification.classList.toggle("is-invalid", !match);
+        inputPasswordVerification.classList.toggle("is-valid", match);
+      }
       break;
+    }
+    case "inputPasswordVerification": {
+      if (target.dataset.touched) {
+        const inputPassword = document.getElementById("inputPassword");
+        const match = inputPassword && target.value === inputPassword.value && target.value !== "";
+        target.classList.toggle("is-invalid", !match);
+        target.classList.toggle("is-valid", match);
+      } else {
+        clearInvalid(target);
+      }
+      break;
+    }
     case "inputNtfyUrl":
     case "inputNtfyTopic":
     case "inputNotificationThreshold":
@@ -1298,19 +1326,37 @@ document.addEventListener("DOMContentLoaded", function () {
   LoadWebhooks();
 });
 
+/* ── Blur validation ─────────────────────────────────────────────── */
+document.addEventListener("focusout", function (event) {
+  const target = event.target;
+  switch (target.id) {
+    case "inputMailAddress": {
+      const valid = target.validity.valid && target.value.trim() !== "";
+      target.dataset.touched = "1";
+      target.classList.toggle("is-invalid", !valid);
+      target.classList.toggle("is-valid", valid);
+      break;
+    }
+    case "inputPassword": {
+      const minLen = parseInt(target.dataset.minLength || "12", 10);
+      const valid = target.value.length >= minLen;
+      target.dataset.touched = "1";
+      target.classList.toggle("is-invalid", !valid);
+      target.classList.toggle("is-valid", valid);
+      break;
+    }
+    case "inputPasswordVerification": {
+      const inputPassword = document.getElementById("inputPassword");
+      const match = inputPassword && target.value === inputPassword.value && target.value !== "";
+      target.dataset.touched = "1";
+      target.classList.toggle("is-invalid", !match);
+      target.classList.toggle("is-valid", match);
+      break;
+    }
+  }
+});
+
 /* ── Calendar Token Management ──────────────────────────────────── */
-function showCalendarAlert(message, isSuccess) {
-  const el = document.getElementById("calendarAlert");
-  if (!el) return;
-  el.className = `alert fade mt-3 ${isSuccess ? "alert-success" : "alert-danger"}`;
-  const span = el.querySelector("span") || el;
-  span.textContent = message;
-  el.classList.remove("d-none");
-  el.classList.add("show");
-  setTimeout(() => {
-    el.classList.remove("show");
-  }, 5000);
-}
 
 function loadCalendarTokenStatus() {
   proviant.getCalendarTokenStatus().then((response) => {
@@ -1352,9 +1398,9 @@ function handleCalendarCreate() {
       hasTokenEl.classList.remove("d-none");
       urlInput.value = url;
 
-      showCalendarAlert("Calendar token created. Subscribe using the URL above.", true);
+      proviant.showFeedback('success', 'Calendar Token Created', 'Calendar token created. Subscribe using the URL above.');
     } else {
-      showCalendarAlert(`Error: ${response.message || "Failed to create calendar token"}`, false);
+      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to create calendar token"}`);
     }
   });
 }
@@ -1373,9 +1419,9 @@ function handleCalendarRegenerate() {
           const url = response.message.url;
           const urlInput = document.getElementById("calendarUrl");
           urlInput.value = url;
-          showCalendarAlert("Calendar token regenerated with new URL.", true);
+          proviant.showFeedback('success', 'Token Regenerated', 'Calendar token regenerated with new URL.');
         } else {
-          showCalendarAlert(`Error: ${response.message || "Failed to regenerate calendar token"}`, false);
+          proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to regenerate calendar token"}`);
         }
       });
     },
@@ -1427,9 +1473,9 @@ function handleCalendarRemove() {
           hasTokenEl.classList.add("d-none");
           urlInput.value = "";
 
-          showCalendarAlert("Calendar token removed.", true);
+          proviant.showFeedback('success', 'Calendar Sync Removed', 'Calendar token removed.');
         } else {
-          showCalendarAlert(`Error: ${response.message || "Failed to remove calendar token"}`, false);
+          proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to remove calendar token"}`);
         }
       });
     },

@@ -14,6 +14,8 @@ import (
 
 	"codeberg.org/isotop7/proviant/controllers/database"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
+
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
@@ -100,7 +102,7 @@ func (s *WebhookService) doDelivery(url string, payload []byte, signature string
 		return 0, "", err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(util.RequestHeaderContentType, "application/json")
 	req.Header.Set("X-Proviant-Signature", "sha256="+signature)
 
 	resp, err := s.HTTPClient.Do(req)
@@ -145,7 +147,7 @@ func ParseWebhookEvents(eventsJSON string) []string {
 	var events []string
 	parts := strings.Split(eventsJSON, ",")
 	for _, part := range parts {
-		event := strings.Trim(strings.Trim(part, `"`), ` `)
+		event := strings.Trim(strings.Trim(part, ` `), `"`)
 		if event != "" {
 			events = append(events, event)
 		}

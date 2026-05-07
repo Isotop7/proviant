@@ -1,6 +1,6 @@
 ![Proviant](./res/icons/proviant_hero.png)
 
-![Golang version](https://img.shields.io/badge/Go-1.25.9-green)
+![Golang version](https://img.shields.io/badge/Go-1.26.2-green)
 ![CI status](https://codeberg.org/isotop7/proviant/badges/workflows/ci.yml/badge.svg)
 ![Release state](https://codeberg.org/isotop7/proviant/badges/release.svg)
 ![Open issues](https://codeberg.org/isotop7/proviant/badges/issues/open.svg)
@@ -134,7 +134,7 @@ Configuration is set via environment variables. The complete list of available o
 | `PROVIANT_NOTIFICATION_NTFY_URL` | `https://ntfy.sh` | Ntfy server URL |
 | `PROVIANT_NOTIFICATION_NTFY_TOPIC` | `default_topic` | Default Ntfy topic/channel |
 | `PROVIANT_NOTIFICATION_NTFY_TIMEOUT` | `60` | Ntfy message timeout in seconds |
-| `PROVIANT_NOTIFICATION_TELEGRAM_TIMEOUT` | `10` | Telegram API request timeout in seconds |
+| `PROVIANT_NOTIFICATION_TELEGRAM_TIMEOUT` | `15` | Telegram API request timeout in seconds |
 | `PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_DAY` | `1` | Day of month to send monthly waste report (1–28) |
 | `PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_HOUR` | `8` | UTC hour to send monthly waste report (0–23) |
 
@@ -158,6 +158,7 @@ Configuration is set via environment variables. The complete list of available o
 | `PROVIANT_OCR_ENDPOINT` | *(empty)* | Custom OCR server endpoint (for local Tesseract HTTP) |
 | `PROVIANT_OCR_TIMEOUT` | `10` | OCR request timeout in seconds |
 | `PROVIANT_OCR_LANGUAGES` | `deu+eng` | Tesseract language codes (e.g., `deu+eng`) |
+| `PROVIANT_OCR_TESSERACTPATH` | `/usr/bin/tesseract` | Absolute path to the Tesseract binary |
 
 #### Recipe suggestions
 

@@ -46,7 +46,7 @@
                 <a href="?{{ queryWith $.Params "status" $s }}"
                    class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
                     {{ if and (ne $s "all") (ne $s "archived") }}<span class="filter-dot dot-{{ $s }}"></span>{{ end }}
-                    {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Archived{{ else }}No date{{ end }}
+                    {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Consumed{{ else }}No date{{ end }}
                 </a>
                 {{ end }}
 
@@ -70,16 +70,16 @@
             <div id="bulkActions" class="bulk-actions-bar">
                 <span id="bulkCount" class="bulk-count"></span>
                 {{ if eq $.StatusFilter "archived" }}
-                <button onclick="bulkAction('restore')" class="btn-bulk">
+                <button data-bulk-action="restore" class="btn-bulk">
                     <i class="bi bi-arrow-counterclockwise"></i> Restore
                 </button>
                 {{ else }}
-                <button onclick="bulkAction('archive')" class="btn-bulk">
-                    <i class="bi bi-archive"></i> Archive
+                <button data-bulk-action="archive" class="btn-bulk">
+                    <i class="bi bi-check-circle"></i> Consumed
                 </button>
                 {{ end }}
-                <button onclick="bulkAction('delete')" class="btn-bulk danger">
-                    <i class="bi bi-trash3"></i> Delete
+                <button data-bulk-action="delete" class="btn-bulk danger">
+                    <i class="bi bi-trash3"></i> Wasted
                 </button>
             </div>
 
@@ -95,7 +95,7 @@
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#" id="mobile-export-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Products CSV</a></li>
                         <li><a class="dropdown-item" href="#" id="mobile-export-json"><i class="bi bi-filetype-json me-2"></i>Products JSON</a></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-archive-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Archive CSV</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-archive-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Consumption History (CSV)</a></li>
                         <li><a class="dropdown-item" href="#" id="mobile-export-full"><i class="bi bi-files me-2"></i>Full JSON</a></li>
                         {{ end }}
                     </ul>
@@ -117,27 +117,158 @@
 <div id="productList">
     <div class="list-header">
         <div class="list-checkbox-col">
-            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" class="list-checkbox">
+            <input type="checkbox" id="selectAll" class="list-checkbox">
         </div>
         <div class="col-product">Product</div>
         <div class="col-status">Status</div>
-        <div class="col-expiry">Expiry</div>
+        <div class="col-expiry">Expiry Date</div>
         <div class="col-location">Location</div>
         <div class="col-qty">Qty</div>
     </div>
+    <div id="skeletonRows" class="d-none">
+        <div class="list-row skeleton-row">
+          <div class="list-checkbox-col">
+            <div class="skeleton-block" style="width:15px;height:15px;"></div>
+          </div>
+          <div class="col-product">
+            <div class="d-flex align-items-center gap-2">
+              <div class="skeleton-block" style="width:32px;height:32px;border-radius:6px;flex-shrink:0;"></div>
+              <div class="flex-grow-1">
+                <div class="skeleton-block mb-1" style="height:14px;width:70%"></div>
+                <div class="skeleton-block" style="height:10px;width:40%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-status">
+            <div class="skeleton-block" style="height:20px;width:70px;border-radius:10px;"></div>
+          </div>
+          <div class="col-expiry">
+            <div class="skeleton-block" style="height:13px;width:50px;"></div>
+          </div>
+          <div class="col-location">
+            <div class="skeleton-block" style="height:13px;width:70px;"></div>
+          </div>
+          <div class="col-qty">
+            <div class="skeleton-block" style="height:26px;width:40px;border-radius:4px;"></div>
+          </div>
+        </div>
+        <div class="list-row skeleton-row">
+          <div class="list-checkbox-col">
+            <div class="skeleton-block" style="width:15px;height:15px;"></div>
+          </div>
+          <div class="col-product">
+            <div class="d-flex align-items-center gap-2">
+              <div class="skeleton-block" style="width:32px;height:32px;border-radius:6px;flex-shrink:0;"></div>
+              <div class="flex-grow-1">
+                <div class="skeleton-block mb-1" style="height:14px;width:70%"></div>
+                <div class="skeleton-block" style="height:10px;width:40%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-status">
+            <div class="skeleton-block" style="height:20px;width:70px;border-radius:10px;"></div>
+          </div>
+          <div class="col-expiry">
+            <div class="skeleton-block" style="height:13px;width:50px;"></div>
+          </div>
+          <div class="col-location">
+            <div class="skeleton-block" style="height:13px;width:70px;"></div>
+          </div>
+          <div class="col-qty">
+            <div class="skeleton-block" style="height:26px;width:40px;border-radius:4px;"></div>
+          </div>
+        </div>
+        <div class="list-row skeleton-row">
+          <div class="list-checkbox-col">
+            <div class="skeleton-block" style="width:15px;height:15px;"></div>
+          </div>
+          <div class="col-product">
+            <div class="d-flex align-items-center gap-2">
+              <div class="skeleton-block" style="width:32px;height:32px;border-radius:6px;flex-shrink:0;"></div>
+              <div class="flex-grow-1">
+                <div class="skeleton-block mb-1" style="height:14px;width:70%"></div>
+                <div class="skeleton-block" style="height:10px;width:40%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-status">
+            <div class="skeleton-block" style="height:20px;width:70px;border-radius:10px;"></div>
+          </div>
+          <div class="col-expiry">
+            <div class="skeleton-block" style="height:13px;width:50px;"></div>
+          </div>
+          <div class="col-location">
+            <div class="skeleton-block" style="height:13px;width:70px;"></div>
+          </div>
+          <div class="col-qty">
+            <div class="skeleton-block" style="height:26px;width:40px;border-radius:4px;"></div>
+          </div>
+        </div>
+        <div class="list-row skeleton-row">
+          <div class="list-checkbox-col">
+            <div class="skeleton-block" style="width:15px;height:15px;"></div>
+          </div>
+          <div class="col-product">
+            <div class="d-flex align-items-center gap-2">
+              <div class="skeleton-block" style="width:32px;height:32px;border-radius:6px;flex-shrink:0;"></div>
+              <div class="flex-grow-1">
+                <div class="skeleton-block mb-1" style="height:14px;width:70%"></div>
+                <div class="skeleton-block" style="height:10px;width:40%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-status">
+            <div class="skeleton-block" style="height:20px;width:70px;border-radius:10px;"></div>
+          </div>
+          <div class="col-expiry">
+            <div class="skeleton-block" style="height:13px;width:50px;"></div>
+          </div>
+          <div class="col-location">
+            <div class="skeleton-block" style="height:13px;width:70px;"></div>
+          </div>
+          <div class="col-qty">
+            <div class="skeleton-block" style="height:26px;width:40px;border-radius:4px;"></div>
+          </div>
+        </div>
+        <div class="list-row skeleton-row">
+          <div class="list-checkbox-col">
+            <div class="skeleton-block" style="width:15px;height:15px;"></div>
+          </div>
+          <div class="col-product">
+            <div class="d-flex align-items-center gap-2">
+              <div class="skeleton-block" style="width:32px;height:32px;border-radius:6px;flex-shrink:0;"></div>
+              <div class="flex-grow-1">
+                <div class="skeleton-block mb-1" style="height:14px;width:70%"></div>
+                <div class="skeleton-block" style="height:10px;width:40%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-status">
+            <div class="skeleton-block" style="height:20px;width:70px;border-radius:10px;"></div>
+          </div>
+          <div class="col-expiry">
+            <div class="skeleton-block" style="height:13px;width:50px;"></div>
+          </div>
+          <div class="col-location">
+            <div class="skeleton-block" style="height:13px;width:70px;"></div>
+          </div>
+          <div class="col-qty">
+            <div class="skeleton-block" style="height:26px;width:40px;border-radius:4px;"></div>
+          </div>
+        </div>
+    </div>
+    <div id="productRows">
     {{ range .Products }}
     <div class="list-row" data-id="{{ .Model.ID }}">
         <div class="list-checkbox-col">
-            <input type="checkbox" class="row-checkbox list-checkbox" value="{{ .Model.ID }}"
-                onchange="updateBulkSelection()">
+            <input type="checkbox" class="row-checkbox list-checkbox" value="{{ .Model.ID }}">
         </div>
         <div class="col-product">
             <a href="/web/products/{{ .Model.ID }}/edit" class="list-thumb">
                 {{ if .ImageURL }}
-                <img src="{{ .ImageURL }}" alt="{{ .ProductName }}" class="list-thumb-img"
-                     onerror="this.style.display='none'; this.closest('.list-thumb').querySelector('.list-thumb-fallback').style.display='flex';">
+                <img src="{{ .ImageURL }}" alt="{{ .ProductName }}" class="list-thumb-img" loading="lazy">
                 {{ end }}
-                <div class="list-thumb-fallback" {{ if not .ImageURL }}style="display:flex;"{{ else }}style="display:none;"{{ end }}>
+                <div class="list-thumb-fallback">
                     <i class="bi bi-box-seam list-thumb-icon"></i>
                 </div>
                 <div class="list-status-dot status-{{ expiryStatusClass .ExpireAt }}"></div>
@@ -174,9 +305,9 @@
             <span class="qty-static">{{ .Amount }}</span>
             {{ else }}
             <div class="qty-stepper">
-                <button type="button" onclick="changeQty({{ .Model.ID }}, -1)">−</button>
+                <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}">−</button>
                 <span id="qty-{{ .Model.ID }}">{{ .Amount }}</span>
-                <button type="button" onclick="changeQty({{ .Model.ID }}, 1)">+</button>
+                <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}">+</button>
             </div>
             {{ end }}
         </div>
@@ -208,7 +339,7 @@
         <a href="?{{ queryWith $.Params "status" $s }}"
            class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
           {{ if and (ne $s "all") (ne $s "archived") }}<span class="filter-dot dot-{{ $s }}"></span>{{ end }}
-          {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Archived{{ else }}No date{{ end }}
+          {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Consumed{{ else }}No date{{ end }}
         </a>
         {{ end }}
       </div>
@@ -236,16 +367,16 @@
     <span id="mobileBulkCount" class="bulk-count"></span>
     <div class="d-flex gap-2">
       {{ if eq $.StatusFilter "archived" }}
-      <button onclick="bulkAction('restore')" class="btn-bulk">
+      <button data-bulk-action="restore" class="btn-bulk">
         <i class="bi bi-arrow-counterclockwise"></i> Restore
       </button>
       {{ else }}
-      <button onclick="bulkAction('archive')" class="btn-bulk">
-        <i class="bi bi-archive"></i> Archive
+      <button data-bulk-action="archive" class="btn-bulk">
+        <i class="bi bi-check-circle"></i> Consumed
       </button>
       {{ end }}
-      <button onclick="bulkAction('delete')" class="btn-bulk danger">
-        <i class="bi bi-trash3"></i> Delete
+      <button data-bulk-action="delete" class="btn-bulk danger">
+        <i class="bi bi-trash3"></i> Wasted
       </button>
     </div>
   </div>
@@ -284,17 +415,21 @@
                 <!-- Manual input section -->
                 <div id="manualInputSection">
                     <div class="field-label">Barcode</div>
-                    <div class="barcode-input-wrap" onclick="document.getElementById('barcode').focus()">
+                    <div class="barcode-input-wrap" data-focus-target="barcode">
                         <i class="bi bi-upc-scan barcode-scan-icon"></i>
-                        <input id="barcode" type="number" placeholder="Scan or type EAN barcode…"
-                            min="1000000000000" max="9999999999999"
-                            autocomplete="off" spellcheck="false">
+<input id="barcode" type="text" inputmode="numeric" pattern="[0-9]{13}"
+			placeholder="Scan or type EAN barcode…"
+			autocomplete="off" spellcheck="false">
                         <span class="kbd-hint">↵</span>
                     </div>
-                    <div class="input-hint">
-                        <i class="bi bi-keyboard"></i> USB/BT scanner or type and press Enter
-                    </div>
-                </div>
+    <div class="input-hint">
+        <i class="bi bi-keyboard"></i> USB/BT scanner or type and press Enter
+    </div>
+    <div id="barcodeLookupLoading" class="d-none mt-2">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span class="ms-1">Searching...</span>
+    </div>
+</div>
 
                  <!-- Camera section -->
                  <div id="cameraSection">
@@ -326,7 +461,7 @@
                                   <div class="camera-preview-wrapper">
                                       <video id="ocrVideoPreview" autoplay playsinline class="camera-preview"></video>
                                   </div>
-                                  <p class="text-body-secondary small mt-2">Hold steady and tap Capture</p>
+                                  <p class="text-secondary-custom small mt-2">Hold steady and tap Capture</p>
                               </div>
                               <div class="modal-footer">
                                   <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -360,7 +495,7 @@
                         </div>
                         <div class="flex-grow-1">
                             <div id="productInfoName" class="fw-semibold"></div>
-                            <div id="productInfoGenericName" class="text-body-secondary small"></div>
+                            <div id="productInfoGenericName" class="text-secondary-custom small"></div>
                         </div>
                     </div>
 
@@ -389,12 +524,13 @@
                         </div>
                         {{ if .Locations }}
                         <label for="modalStorageLocation" class="form-label mt-2">Storage Location</label>
-                        <select class="form-select mb-2" id="modalStorageLocation">
+                        <select class="form-select" id="modalStorageLocation">
                             <option value="">— None —</option>
                             {{ range .Locations }}
                             <option value="{{ .ID }}">{{ .Icon }} {{ .Name }}</option>
                             {{ end }}
                         </select>
+                        <small id="storageHint" class="text-muted d-none mb-2"></small>
                         {{ end }}
                     </form>
 
@@ -415,7 +551,7 @@
 
                     <div class="d-flex gap-2">
                         <button id="btnArchiveProductModal" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
-                            <i class="bi bi-archive me-1" aria-hidden="true"></i>Archive
+                            <i class="bi bi-check-circle me-1" aria-hidden="true"></i>Consumed
                         </button>
                         <button id="btnDeleteProductModal" type="button" class="btn btn-sm btn-proviant-danger flex-fill" disabled>
                             <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
@@ -450,7 +586,8 @@
                         <i class="bi bi-arrow-left"></i> Back
                     </button>
                     <button type="button" class="btn btn-proviant-primary" id="btnAddProduct">
-                        <i class="bi bi-plus-lg me-1"></i>Add to pantry
+                        <span class="btn-text"><i class="bi bi-plus-lg me-1"></i>Add to pantry</span>
+                        <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Adding...</span>
                     </button>
                 </div>
                 <div id="modalFooterSuccess"></div>
@@ -487,7 +624,7 @@
                 <div class="progress mb-2" style="height: 8px;">
                     <div id="ocrConfidenceBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
                 </div>
-                <small class="text-body-secondary" id="ocrConfidenceLabel">Confidence: 0%</small>
+                <small class="text-secondary-custom" id="ocrConfidenceLabel">Confidence: 0%</small>
 
                 <!-- Raw text fallback -->
                 <div id="ocrRawTextWrapper" class="mt-3 d-none">

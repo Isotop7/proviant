@@ -4,6 +4,7 @@ import (
 	"time"
 
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"gorm.io/gorm"
 )
@@ -27,7 +28,7 @@ func NewStreakRepository(db *gorm.DB) *StreakRepository {
 
 func (r *StreakRepository) GetOrCreateStreakForHousehold(householdID uint) (*dbModel.WasteStreak, error) {
 	var streak dbModel.WasteStreak
-	err := r.DB.Where("household_id = ?", householdID).First(&streak).Error
+	err := r.DB.Where(util.QueryHouseholdId, householdID).First(&streak).Error
 	if err == gorm.ErrRecordNotFound {
 		streak = dbModel.WasteStreak{
 			HouseholdID:     householdID,

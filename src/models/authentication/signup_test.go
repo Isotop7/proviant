@@ -21,7 +21,7 @@ func TestSignupIsValid(t *testing.T) {
 			name: "valid signup with longer password",
 			signup: Signup{
 				Username:    "testuser",
-				Password:    "verylongpassword123supersafe",
+				Password:    "VeryLongPassword123safe",
 				MailAddress: "test@example.com",
 			},
 			wantErr: false,

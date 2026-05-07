@@ -176,6 +176,40 @@ tasks:
     desc: Scan all dependencies for vulnerabilities
     deps: [vuln-go, vuln-npm]
 
+  sonar-issues:
+    desc: Export SonarQube issues to JSON for agent consumption (requires SONAR_TOKEN)
+    preconditions:
+      - sh: '[ -n "$SONAR_TOKEN" ]'
+        msg: "SONAR_TOKEN env var is not set."
+    cmds:
+      - ./scripts/sonarqube-export.sh
+
+  sonar-duplications:
+    desc: Export SonarQube code duplications to JSON for agent consumption (requires SONAR_TOKEN)
+    preconditions:
+      - sh: '[ -n "$SONAR_TOKEN" ]'
+        msg: "SONAR_TOKEN env var is not set."
+    cmds:
+      - ./scripts/sonarqube-export.sh --duplications
+
+  sonar-scan:
+    desc: Run SonarCloud scan locally and save output to sonar-report.txt (requires SONAR_TOKEN)
+    preconditions:
+      - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
+        msg: "No container runtime found. Please install podman or docker."
+      - sh: '[ -n "$SONAR_TOKEN" ]'
+        msg: "SONAR_TOKEN env var is not set."
+    vars:
+      BRANCH: 'develop'
+    cmds:
+      - |
+        {{.CONTAINER_RUNTIME}} run --rm \
+          -e SONAR_TOKEN="$SONAR_TOKEN" \
+          -v ./:/usr/src:Z \
+          docker.io/sonarsource/sonar-scanner-cli \
+          -Dsonar.branch.name="{{.BRANCH}}" \
+          2>&1 | tee sonar-report.txt
+
   seed:
     desc: "Seed demo products from seed-products.csv into SQLite. Usage: task seed -- <username>"
     dir: src

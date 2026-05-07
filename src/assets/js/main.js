@@ -44,8 +44,14 @@ window.addEventListener('online', function () {
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
+        var firstActivation = !navigator.serviceWorker.controller;
         navigator.serviceWorker.register('/sw.js').catch(function (err) {
             console.warn('Service worker registration failed:', err);
+        });
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+            if (firstActivation) { firstActivation = false; return; }
+            var banner = document.getElementById('swUpdateBanner');
+            if (banner) banner.classList.remove('d-none');
         });
     });
 }

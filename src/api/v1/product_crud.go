@@ -9,14 +9,20 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
+)
+
+const (
+	MsgCheckProductIdTryAgain           = "Check the product ID and try again"
+	FmtProductNotFoundOrNoAccess        = "Product with ID '%d' was not found or you do not have access"
+	MsgFailedToGetControllerFromContext = "Failed to get controller from context"
 )
 
 // GetProducts returns the products of a user
@@ -30,30 +36,19 @@ import (
 // @Router       /api/v1/products [get]
 func GetProducts(ctx *gin.Context) {
 	// Get logger instance from context
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	if !loggerOk {
 		logger.Error().Msg(api.ResponseErrLoggerContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return
 	}
 
-	// Get and parse parameter limit
-	limitParam := ctx.Query("limit")
-	var limit int
-	// Check if limit was found in query
-	if limitParam != "" {
-		var parseError error
-		if limit, parseError = strconv.Atoi(limitParam); parseError != nil {
-			logger.Warn().Msgf("Invalid limit '%d' was specified", limit)
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%d' is invalid", limit)})
-			return
-		}
-	} else {
-		// Set default limit
-		limit = 0
+	limit, ok := parseLimitParam(ctx, logger)
+	if !ok {
+		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -63,16 +58,20 @@ func GetProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	products, productBulkErr := productRepo.GetUserProductsBulk(userID, limit)
+	products, productBulkErr := repos.Products.GetUserProductsBulk(userID, limit)
 	if productBulkErr != nil {
 		logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Error getting products of user"})
-		return
-	} else {
-		ctx.JSON(http.StatusOK, products)
+		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{
+				Message: "Unable to retrieve products. Please check your account.",
+				Action:  "Ensure you are logged in with a valid household",
+			})
+		} else {
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		}
 		return
 	}
+	ctx.JSON(http.StatusOK, products)
 }
 
 // GetProduct return a single product of a user
@@ -83,18 +82,19 @@ func GetProducts(ctx *gin.Context) {
 // @Param        id   path      int  true  "Product ID"
 // @Success      200  {object}  database.Product
 // @Failure      400  {object}  api.APIResponse
+// @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/product/{id} [get]
 func GetProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -104,8 +104,7 @@ func GetProduct(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	product, getError := productRepo.GetProductByID(productID, userID)
+	product, getError := repos.Products.GetProductByID(productID, userID)
 
 	switch getError {
 	// No error: return product
@@ -114,13 +113,19 @@ func GetProduct(ctx *gin.Context) {
 		return
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
-		logger.Error().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductForUserNotFound, productID)})
+		logger.Warn().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
+			Message: fmt.Sprintf(FmtProductNotFoundOrNoAccess, productID),
+			Action:  MsgCheckProductIdTryAgain,
+		})
 		return
 	// Unspecified error
 	default:
-		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductNotFound, productID)})
+		logger.Warn().Msgf(errors.FormatProductNotFound, productID)
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+			Action:  MsgCheckProductIdTryAgain,
+		})
 		return
 	}
 }
@@ -138,9 +143,9 @@ func GetProduct(ctx *gin.Context) {
 // @Router       	/api/v1/products [post]
 func CreateProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -152,24 +157,22 @@ func CreateProduct(ctx *gin.Context) {
 
 	// Get and parse body to product
 	var product dbModel.Product
-	if err := ctx.ShouldBindJSON(&product); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+	if !bindJSON(ctx, logger, &product) {
 		return
 	}
 
 	// Check for required parameters
 	if product.Barcode == "" {
-		logger.Error().Msgf("Body is missing barcode")
+		logger.Warn().Msgf("Body is missing barcode")
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
 		return
 	}
 
 	// Get OpenFoodFacts API controller from context
-	offacntrl, offaErr := ctx.MustGet("offacntrl").(controllers.OpenFoodFactsAPIControllerInterface)
+	offacntrl, offaErr := ctx.MustGet("offacntrl").(controllers.DatasetGetter)
 	if !offaErr {
-		logger.Error().Msg("Failed to get controller from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get controller from context"})
+		logger.Error().Msg(MsgFailedToGetControllerFromContext)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: MsgFailedToGetControllerFromContext})
 		return
 	}
 	// Get product data from API
@@ -183,11 +186,10 @@ func CreateProduct(ctx *gin.Context) {
 		product = apiProduct
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	createResult := productRepo.CreateProduct(userID, &product)
+	createResult := repos.Products.CreateProduct(userID, &product)
 	if createResult != nil {
 		logger.Error().Msgf("Error creating product: %s", createResult)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: createResult.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
 		return
 	}
 
@@ -218,18 +220,19 @@ func CreateProduct(ctx *gin.Context) {
 // @Param			product	body	database.Product	true	"Product"
 // @Success      	200  {object}  database.Product
 // @Failure      	400  {object}  api.APIResponse
+// @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/product/{id} [patch]
 func UpdateProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -241,14 +244,11 @@ func UpdateProduct(ctx *gin.Context) {
 
 	// Get and parse body to product
 	var product dbModel.ProductDTOPatch
-	if err := ctx.ShouldBindJSON(&product); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+	if !bindJSON(ctx, logger, &product) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	updateErr := productRepo.UpdateProduct(productID, userID, &product)
+	updateErr := repos.Products.UpdateProduct(productID, userID, &product)
 
 	switch updateErr {
 	// No error => product was updated
@@ -257,13 +257,16 @@ func UpdateProduct(ctx *gin.Context) {
 		return
 	// Requested product was not found
 	case gorm.ErrRecordNotFound:
-		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
+		logger.Warn().Msgf(errors.FormatProductNotFound, productID)
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+			Action:  MsgCheckProductIdTryAgain,
+		})
 		return
 	// Unspecified error
 	default:
 		logger.Error().Msgf("Error saving product: %s", updateErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: updateErr.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
 		return
 	}
 }
@@ -279,18 +282,19 @@ func UpdateProduct(ctx *gin.Context) {
 // @Param        	delta	body	api.ProductAmountDTO		true	"Amount delta"
 // @Success      	200  {object}  database.Product
 // @Failure      	400  {object}  api.APIResponse
+// @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/{id}/amount [patch]
 func UpdateProductAmount(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -302,14 +306,11 @@ func UpdateProductAmount(ctx *gin.Context) {
 
 	// Get and parse body
 	var amountDTO apiModel.ProductAmountDTO
-	if err := ctx.ShouldBindJSON(&amountDTO); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+	if !bindJSON(ctx, logger, &amountDTO) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	deleted, updateErr := productRepo.UpdateProductAmount(productID, userID, amountDTO.Delta)
+	deleted, updateErr := repos.Products.UpdateProductAmount(productID, userID, amountDTO.Delta)
 
 	switch updateErr {
 	case nil:
@@ -327,12 +328,15 @@ func UpdateProductAmount(ctx *gin.Context) {
 		}
 		return
 	case gorm.ErrRecordNotFound:
-		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
+		logger.Warn().Msgf(errors.FormatProductNotFound, productID)
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+			Action:  MsgCheckProductIdTryAgain,
+		})
 		return
 	default:
 		logger.Error().Msgf("Error updating product amount: %s", updateErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: updateErr.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
 		return
 	}
 }
@@ -351,15 +355,15 @@ func UpdateProductAmount(ctx *gin.Context) {
 // @Router       	/api/v1/product/{id} [delete]
 func DeleteProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
 	var archiveOnly bool
-	var parseError error
+	var err error
 	// Get and parse parameter archiveOnly
 	archiveOnlyParam, archiveOnlyParamExists := ctx.GetQuery("archiveOnly")
 	// Check if archiveOnlyParam is supplied
@@ -368,14 +372,14 @@ func DeleteProduct(ctx *gin.Context) {
 		archiveOnly = false
 	} else {
 		// Try to parse archiveOnlyParam as a boolean
-		if archiveOnly, parseError = strconv.ParseBool(archiveOnlyParam); parseError != nil {
+		if archiveOnly, err = strconv.ParseBool(archiveOnlyParam); err != nil {
 			logger.Warn().Msgf("Invalid archiveOnly '%s' was specified", archiveOnlyParam)
 			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("archiveOnly '%s' is invalid", archiveOnlyParam)})
 			return
 		}
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -385,11 +389,10 @@ func DeleteProduct(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	deleteResult := productRepo.DeleteProduct(productID, userID, archiveOnly)
+	deleteResult := repos.Products.DeleteProduct(productID, userID, archiveOnly)
 	if deleteResult != nil {
 		logger.Error().Msgf("Error deleting product: %s", deleteResult)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: deleteResult.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.DeleteFailedError())
 		return
 	} else {
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was deleted", productID)})
@@ -407,18 +410,19 @@ func DeleteProduct(ctx *gin.Context) {
 // @Param			timestamp	body	database.Timestamp	true	"Timestamp"
 // @Success      	200  {object}  database.ProductDTOExpire
 // @Failure      	400  {object}  api.APIResponse
+// @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/product/{id}/expire [post]
 func SetExpireAt(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	productID, ok := parseIntParam(ctx, logger, "id")
+	productID, ok := parseUintPathParam(ctx, logger, "id")
 	if !ok {
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -430,22 +434,24 @@ func SetExpireAt(ctx *gin.Context) {
 
 	// Get and parse body to timestamp
 	var expireAt dbModel.Timestamp
-	var bindErr error
-	if bindErr = ctx.ShouldBindJSON(&expireAt); bindErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: bindErr.Error()})
+	var err error
+	if err = ctx.ShouldBindJSON(&expireAt); err != nil {
+		logger.Warn().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	product, getErr := productRepo.GetProductByID(productID, userID)
+	product, getErr := repos.Products.GetProductByID(productID, userID)
 	if getErr != nil {
-		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
+		logger.Warn().Msgf(errors.FormatProductNotFound, productID)
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+			Action:  MsgCheckProductIdTryAgain,
+		})
 		return
 	}
 
-	updateErr := productRepo.SetProductExpireAt(productID, userID, expireAt)
+	updateErr := repos.Products.SetProductExpireAt(productID, userID, expireAt)
 
 	switch updateErr {
 	// No error => product was updated and dto is returned
@@ -459,18 +465,24 @@ func SetExpireAt(ctx *gin.Context) {
 		return
 	// Product was not found
 	case gorm.ErrRecordNotFound:
-		logger.Error().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID)})
+		logger.Warn().Msgf(errors.FormatProductNotFound, productID)
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
+			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+			Action:  MsgCheckProductIdTryAgain,
+		})
 		return
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
-		logger.Error().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Product with id '%d' for user was not found", productID)})
+		logger.Warn().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
+		ctx.JSON(http.StatusNotFound, api.APIResponse{
+			Message: fmt.Sprintf(FmtProductNotFoundOrNoAccess, productID),
+			Action:  MsgCheckProductIdTryAgain,
+		})
 		return
 	// Unspecified error
 	default:
 		logger.Error().Msgf("Error saving product: %s", updateErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: updateErr.Error()})
+		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
 		return
 	}
 }

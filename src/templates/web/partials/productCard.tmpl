@@ -13,6 +13,13 @@
         <div class="product-img">
             {{ if .ImageURL }}
             <img src="{{ .ImageURL }}" alt="{{ .ProductName }}" loading="lazy">
+            <div class="product-img-fallback">
+                <i class="bi bi-box-seam"></i>
+            </div>
+            {{ else }}
+            <div class="product-img-fallback">
+                <i class="bi bi-box-seam"></i>
+            </div>
             {{ end }}
         </div>
         <div class="card-body p-3">
@@ -38,30 +45,30 @@
         <ul class="list-group list-group-flush">
             {{ if .StorageLocation }}
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-muted small">
+                <span class="text-secondary-custom small">
                     <i class="bi bi-geo-alt me-2" aria-hidden="true"></i>Location
                 </span>
                 <span class="badge bg-light text-dark border">{{ .StorageLocation.Icon }} {{ .StorageLocation.Name }}</span>
             </li>
             {{ end }}
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-muted small">
+                <span class="text-secondary-custom small">
                     <i class="bi bi-stack me-2" aria-hidden="true"></i>Amount
                 </span>
                 <span class="d-flex align-items-center gap-1">
-                    <button class="btn btn-sm btn-proviant-secondary btn-amount-dec py-0 px-1" data-product-id="{{ .Model.ID }}" aria-label="Decrease amount">−</button>
+                    <button class="btn btn-sm btn-proviant-secondary btn-amount-dec" data-product-id="{{ .Model.ID }}" aria-label="Decrease amount">-</button>
                     <span id="amount-{{ .Model.ID }}" class="mx-1">{{ .Amount }}</span>
-                    <button class="btn btn-sm btn-proviant-secondary btn-amount-inc py-0 px-1" data-product-id="{{ .Model.ID }}" aria-label="Increase amount">+</button>
+                    <button class="btn btn-sm btn-proviant-secondary btn-amount-inc" data-product-id="{{ .Model.ID }}" aria-label="Increase amount">+</button>
                 </span>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-muted small">
+                <span class="text-secondary-custom small">
                     <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>Scanned
                 </span>
                 <span class="product-meta">{{ .ScannedAt | humanDateTime }}</span>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-muted small">
+                <span class="text-secondary-custom small">
                     <i class="bi bi-bell me-2" aria-hidden="true"></i>Notified
                 </span>
                 <span class="product-meta">{{ .NotifiedAt | humanDateTime }}</span>

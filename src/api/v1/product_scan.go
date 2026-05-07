@@ -4,7 +4,10 @@ package v1
 import (
 	"context"
 	"image"
+
+	// Import for image decoding
 	_ "image/jpeg"
+	// Import for image decoding
 	_ "image/png"
 	"net/http"
 
@@ -14,8 +17,10 @@ import (
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/makiuchi-d/gozxing"
@@ -36,7 +41,7 @@ import (
 // @Router       	/api/v1/products/scan [post]
 func ScanProduct(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Create variables
 	var decodedBarcode string
@@ -54,7 +59,14 @@ func ScanProduct(ctx *gin.Context) {
 		file, formErr := ctx.FormFile("image")
 		if formErr != nil {
 			logger.Error().Msgf("Error reading image from body: %s", formErr.Error())
-			ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrNoBarcodeFoundInImage))
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			decodingProcessChannel <- false
+			return
+		}
+
+		proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+		if file.Size > int64(proviantConfig.Server.MaxUploadSizeMB)*1024*1024 {
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrFileTooLarge))
 			decodingProcessChannel <- false
 			return
 		}
@@ -87,7 +99,7 @@ func ScanProduct(ctx *gin.Context) {
 		bmp, bmpErr := gozxing.NewBinaryBitmapFromImage(convertedImage)
 		if bmpErr != nil {
 			logger.Error().Msgf("Error converting image to bitmap: %s", bmpErr.Error())
-			ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrNoBarcodeFoundInImage))
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
 			decodingProcessChannel <- false
 			return
 		}
@@ -104,7 +116,7 @@ func ScanProduct(ctx *gin.Context) {
 		code, scanErr := scanner.Decode(bmp, hints)
 		if scanErr != nil {
 			logger.Error().Msgf("Error decoding image when finding barcode: %s", scanErr.Error())
-			ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrNoBarcodeFoundInImage))
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
 			return
 		} else {
 			// If barcode is found, return it
@@ -146,7 +158,7 @@ func ScanProduct(ctx *gin.Context) {
 // @Failure      502  {object}  api.APIResponse
 // @Router       /api/v1/products/openfoodfacts/{barcode} [get]
 func GetOpenFoodFactsData(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	barcode := ctx.Param("barcode")
 	if barcode == "" {
@@ -194,23 +206,31 @@ func GetOpenFoodFactsData(ctx *gin.Context) {
 		Countries:   product.Countries,
 		ImageURL:    product.ImageURL,
 		CO2KgPerKg:  product.CO2KgPerKg,
+		StorageHint: product.StorageHint,
 	}
 
 	if offacntrl.Configuration.CacheEnabled {
-		if storeErr := productRepo.CreateOpenFoodFactsCache(&entry); storeErr != nil {
-			logger.Warn().Msgf("Failed to store cache entry for barcode '%s': %s", barcode, storeErr)
-		} else if offacntrl.Configuration.ImageCacheEnabled && entry.ImageURL != "" {
-			localPath, imgErr := offacntrl.DownloadImage(entry.ImageURL, barcode)
-			if imgErr != nil {
-				logger.Warn().Msgf("Failed to cache image for barcode '%s': %s", barcode, imgErr)
-			} else {
-				entry.ImageURL = localPath
-				if updateErr := productRepo.UpdateOpenFoodFactsCacheImageURL(barcode, localPath); updateErr != nil {
-					logger.Warn().Msgf("Failed to update cached image URL for barcode '%s': %s", barcode, updateErr)
-				}
-			}
-		}
+		storeCacheEntry(productRepo, offacntrl, logger, barcode, &entry)
 	}
 
 	ctx.JSON(http.StatusOK, entry)
+}
+
+func storeCacheEntry(productRepo *database.ProductRepository, offacntrl *controllers.OpenFoodFactsAPIController, logger *zerolog.Logger, barcode string, entry *dbModel.OpenFoodFactsCache) {
+	if storeErr := productRepo.CreateOpenFoodFactsCache(entry); storeErr != nil {
+		logger.Warn().Msgf("Failed to store cache entry for barcode '%s': %s", barcode, storeErr)
+		return
+	}
+	if !offacntrl.Configuration.ImageCacheEnabled || entry.ImageURL == "" {
+		return
+	}
+	localPath, imgErr := offacntrl.DownloadImage(entry.ImageURL, barcode)
+	if imgErr != nil {
+		logger.Warn().Msgf("Failed to cache image for barcode '%s': %s", barcode, imgErr)
+		return
+	}
+	entry.ImageURL = localPath
+	if updateErr := productRepo.UpdateOpenFoodFactsCacheImageURL(barcode, localPath); updateErr != nil {
+		logger.Warn().Msgf("Failed to update cached image URL for barcode '%s': %s", barcode, updateErr)
+	}
 }

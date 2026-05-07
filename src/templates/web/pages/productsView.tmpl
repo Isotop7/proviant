@@ -42,20 +42,22 @@
                     {{- flagReplace .Product.Countries -}}
                 </div>
             </div>
-            <div class="row mt-4 my-2">
-                <div class="col-12 col-md-4 mb-2">
-                    <span class="badge-status badge-{{ expiryStatusClass .Product.ExpireAt }}">
-                        <i class="bi bi-{{ expiryStatusIcon .Product.ExpireAt }}" aria-hidden="true"></i>
-                        {{ expiryStatusLabel .Product.ExpireAt }} — {{- .Product.ExpireAt | humanDate -}}
-                    </span>
+            <details class="mt-3">
+                <summary class="text-secondary-custom" style="cursor:pointer;list-style:none;">
+                    <i class="bi bi-clock-history me-1"></i>Metadata
+                </summary>
+                <div class="row mt-2">
+                    <div class="col-12 col-md-4 mb-1 text-secondary-custom small">
+                        <i class="bi bi-upc-scan me-1"></i>Scanned: {{- .Product.ScannedAt | humanDateTime -}}
+                    </div>
+                    <div class="col-12 col-md-4 mb-1 text-secondary-custom small">
+                        <i class="bi bi-pencil me-1"></i>Updated: {{- .Product.UpdatedAt | humanDateTime -}}
+                    </div>
+                    <div class="col-12 col-md-4 mb-1 text-secondary-custom small">
+                        <i class="bi bi-bell me-1"></i>Notified: {{- .Product.NotifiedAt | humanDateTime -}}
+                    </div>
                 </div>
-                <div class="col-12 col-md-4 mb-2 text-muted">
-                    <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>{{- .Product.ScannedAt | humanDateTime -}}
-                </div>
-                <div class="col-12 col-md-4 mb-2 text-muted">
-                    <i class="bi bi-bell me-2" aria-hidden="true"></i>{{- .Product.NotifiedAt | humanDateTime -}}
-                </div>
-            </div>
+            </details>
         </div>
     </div>
     <div class="d-flex justify-content-end mt-3">

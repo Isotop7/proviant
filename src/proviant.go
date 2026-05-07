@@ -29,7 +29,7 @@ import (
 // SetupDatabase initializes the database connection and returns a gorm.DB instance.
 func setupDatabase(logger *zerolog.Logger, databaseConfiguration *configuration.DatabaseConfiguration) (*gorm.DB, error) {
 	// Generate gorm config
-	var dbErr error
+	var err error
 	var dbHandle *gorm.DB
 	gormConfig := gorm.Config{}
 	// Create Zerolog adapter and pass it to gorm config
@@ -46,21 +46,21 @@ func setupDatabase(logger *zerolog.Logger, databaseConfiguration *configuration.
 			databaseConfiguration.MariaDB.Port,
 			databaseConfiguration.MariaDB.Name)
 		// Open database handle
-		dbHandle, dbErr = gorm.Open(mysql.Open(databaseURI), &gormConfig)
+		dbHandle, err = gorm.Open(mysql.Open(databaseURI), &gormConfig)
 
 		// Check if database can be accessed
-		if dbErr != nil {
+		if err != nil {
 			logger.Warn().Msgf("Database '%s' on server '%s' could not be reached", databaseConfiguration.MariaDB.Name, databaseConfiguration.MariaDB.Host)
-			return nil, dbErr
+			return nil, err
 		}
 	case dbController.SQLite:
 		// Create file and handle
-		dbHandle, dbErr = gorm.Open(sqlite.Open(databaseConfiguration.SQLite.Filepath), &gormConfig)
+		dbHandle, err = gorm.Open(sqlite.Open(databaseConfiguration.SQLite.Filepath), &gormConfig)
 
 		// Check if database can be accessed
-		if dbErr != nil {
+		if err != nil {
 			logger.Warn().Msgf("Database on path '%s' could not be opened", databaseConfiguration.SQLite.Filepath)
-			return nil, dbErr
+			return nil, err
 		}
 	case dbController.InvalidEngine:
 		return nil, errors.ErrDatabaseInvalidEngine
@@ -106,6 +106,9 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetDefault("notification.monthlyWasteReport.day", 1)
 	viper.SetDefault("notification.monthlyWasteReport.hour", 8)
 
+	// Set defaults for Telegram poller pool
+	viper.SetDefault("notification.telegram.pollerWorkers", 10)
+
 	// Set defaults for recipe API
 	viper.SetDefault("recipe_api.provider", "themealdb")
 	viper.SetDefault("recipe_api.url", "https://www.themealdb.com/api/json/v1/1")
@@ -115,10 +118,14 @@ func setupConfig() *configuration.ProviantConfiguration {
 
 	// Set default password policy
 	viper.SetDefault("server.authentication.passwordMinLength", 12)
-	viper.SetDefault("server.authentication.passwordRequireUppercase", false)
-	viper.SetDefault("server.authentication.passwordRequireDigit", false)
+	viper.SetDefault("server.authentication.passwordRequireUppercase", true)
+	viper.SetDefault("server.authentication.passwordRequireDigit", true)
 	viper.SetDefault("server.authentication.passwordRequireSpecial", false)
 	viper.SetDefault("server.authentication.passwordCheckBreached", true)
+	viper.SetDefault("server.maxUploadSizeMB", 5)
+	viper.SetDefault("server.rateLimit.login_per_minute", 5)
+	viper.SetDefault("server.rateLimit.signup_per_minute", 3)
+	viper.SetDefault("server.rateLimit.export_per_minute", 1)
 
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
@@ -194,6 +201,7 @@ func main() {
 	// Setup logging
 	logger := setupLogging(proviantConfiguration)
 	logger.Info().Msg("Logging initialized")
+	logger.Info().Msgf("Configuration loaded from: %s", viper.ConfigFileUsed())
 	stdlog.SetOutput(logger)
 	stdlog.SetFlags(0)
 
@@ -203,6 +211,12 @@ func main() {
 		panic(dbValidErr)
 	} else {
 		logger.Info().Msg("Database configuration is valid")
+	}
+
+	// Validate server configuration
+	if err := proviantConfiguration.ValidateServerConfiguration(); err != nil {
+		logger.Error().Msg(err.Error())
+		panic(err)
 	}
 
 	// Setup database connection handle
@@ -293,6 +307,11 @@ func main() {
 	// Start background cleanup of expired recipe caches
 	go startRecipeCacheCleanup(logger, dbHandle)
 
+	// Backfill storage hints and images for existing cache entries
+	if proviantConfiguration.OpenFoodFacts.CacheEnabled {
+		go backfillOpenFoodFactsCache(logger, dbHandle, offacntrl)
+	}
+
 	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl, notificationController, ocrController)
 }
 
@@ -310,7 +329,7 @@ func startRevokedTokenCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
 func cleanupExpiredRevokedTokens(logger *zerolog.Logger, dbHandle *gorm.DB) {
 	result := dbHandle.Where("expires_at < ?", time.Now()).Delete(&authentication.RevokedToken{})
 	if result.Error != nil {
-		logger.Error().Msgf("Failed to cleanup expired revoked tokens: %s", result.Error.Error())
+		logger.Warn().Msgf("Failed to cleanup expired revoked tokens: %s", result.Error.Error())
 		return
 	}
 	if result.RowsAffected > 0 {
@@ -332,10 +351,91 @@ func startRecipeCacheCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
 func cleanupExpiredRecipeCaches(logger *zerolog.Logger, dbHandle *gorm.DB) {
 	result := dbHandle.Where("expires_at < ?", time.Now()).Delete(&dbModel.RecipeCache{})
 	if result.Error != nil {
-		logger.Error().Msgf("Failed to cleanup expired recipe caches: %s", result.Error.Error())
+		logger.Warn().Msgf("Failed to cleanup expired recipe caches: %s", result.Error.Error())
 		return
 	}
 	if result.RowsAffected > 0 {
 		logger.Info().Msgf("Cleaned up %d expired recipe caches", result.RowsAffected)
 	}
+}
+
+// backfillOpenFoodFactsCache fetches missing storage hints and downloads remote product images
+// for cache entries created before these features were added. Runs once at startup.
+func backfillOpenFoodFactsCache(logger *zerolog.Logger, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController) {
+	productRepo := dbController.NewProductRepository(dbHandle)
+
+	// Pass 1: entries missing storage hint — requires an OFF API call.
+	// Also download the image while we have the entry, if image caching is enabled.
+	hintEntries, err := productRepo.GetOpenFoodFactsCacheWithoutStorageHint()
+	if err != nil {
+		logger.Warn().Msgf("Cache backfill: failed to query entries missing storage hint: %s", err)
+	}
+
+	processedBarcodes := make(map[string]bool, len(hintEntries))
+	hintsUpdated := 0
+
+	for _, entry := range hintEntries {
+		processedBarcodes[entry.Barcode] = true
+
+		product, apiErr := offacntrl.GetDataset(entry.Barcode)
+		if apiErr != nil {
+			logger.Warn().Msgf("Cache backfill: OFF API error for %s: %s", entry.Barcode, apiErr)
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+
+		if product.StorageHint != "" {
+			if updateErr := productRepo.UpdateOpenFoodFactsCacheStorageHint(entry.Barcode, product.StorageHint); updateErr != nil {
+				logger.Warn().Msgf("Cache backfill: failed to update storage hint for %s: %s", entry.Barcode, updateErr)
+			} else {
+				hintsUpdated++
+			}
+		}
+
+		// Download image if caching is enabled and image is not yet local
+		if offacntrl.Configuration.ImageCacheEnabled {
+			imageURL := entry.ImageURL
+			if imageURL == "" {
+				imageURL = product.ImageURL
+			}
+			if imageURL != "" && !strings.HasPrefix(imageURL, "/product-images/") {
+				localPath, imgErr := offacntrl.DownloadImage(imageURL, entry.Barcode)
+				if imgErr != nil {
+					logger.Warn().Msgf("Cache backfill: failed to download image for %s: %s", entry.Barcode, imgErr)
+				} else if updateErr := productRepo.UpdateOpenFoodFactsCacheImageURL(entry.Barcode, localPath); updateErr != nil {
+					logger.Warn().Msgf("Cache backfill: failed to update image URL for %s: %s", entry.Barcode, updateErr)
+				}
+			}
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	// Pass 2: entries that already have a storage hint but still have a remote image URL.
+	// No API call needed — just download the image directly.
+	imagesDownloaded := 0
+	if offacntrl.Configuration.ImageCacheEnabled {
+		imageEntries, imgQueryErr := productRepo.GetOpenFoodFactsCacheWithRemoteImageURL()
+		if imgQueryErr != nil {
+			logger.Warn().Msgf("Cache backfill: failed to query entries with remote images: %s", imgQueryErr)
+		}
+
+		for _, entry := range imageEntries {
+			if processedBarcodes[entry.Barcode] {
+				continue
+			}
+			localPath, imgErr := offacntrl.DownloadImage(entry.ImageURL, entry.Barcode)
+			if imgErr != nil {
+				logger.Warn().Msgf("Cache backfill: failed to download image for %s: %s", entry.Barcode, imgErr)
+			} else if updateErr := productRepo.UpdateOpenFoodFactsCacheImageURL(entry.Barcode, localPath); updateErr != nil {
+				logger.Warn().Msgf("Cache backfill: failed to update image URL for %s: %s", entry.Barcode, updateErr)
+			} else {
+				imagesDownloaded++
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+
+	logger.Info().Msgf("Cache backfill: complete — storage hints: %d, images downloaded: %d",
+		hintsUpdated, imagesDownloaded)
 }

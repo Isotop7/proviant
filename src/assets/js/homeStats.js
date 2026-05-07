@@ -23,7 +23,7 @@ function showEmptyChart(canvasId, message) {
   canvas.style.display = 'none';
   canvas.insertAdjacentHTML(
     'afterend',
-    `<p class="text-body-secondary small text-center my-auto py-4">${message}</p>`,
+    `<p class="text-secondary-custom small text-center my-auto py-4">${message}</p>`,
   );
 }
 
@@ -65,14 +65,14 @@ function renderListTile(title, items, days) {
 
   let listHtml;
   if (items.length === 0) {
-    listHtml = `<li class="list-group-item text-body-secondary small py-2">No products expiring in the next ${days} day${days !== 1 ? 's' : ''}</li>`;
+    listHtml = `<li class="list-group-item text-secondary-custom small py-2">No products expiring in the next ${days} day${days !== 1 ? 's' : ''}</li>`;
   } else {
     listHtml = items.map((item) => {
       const date = new Date(item.expireAt + 'T00:00:00');
       const dateLabel = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       return `<li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
         <span class="text-truncate me-2 small">${item.productName}</span>
-        <span class="text-nowrap text-body-secondary small">${dateLabel}</span>
+        <span class="text-nowrap text-secondary-custom small">${dateLabel}</span>
       </li>`;
     }).join('');
   }
@@ -97,153 +97,163 @@ function renderListTile(title, items, days) {
 document.addEventListener('DOMContentLoaded', async function () {
   renderSkeletons(7);
 
-  const [response, streakResponse, savingsResponse] = await Promise.all([
-    proviant.getProductStats(),
-    proviant.getStreak(),
-    proviant.getSavingsStats(),
-  ]);
-  clearSkeletons();
+  try {
+    const [response, streakResponse, savingsResponse] = await Promise.all([
+      proviant.getProductStats(),
+      proviant.getStreak(),
+      proviant.getSavingsStats(),
+    ]);
+    clearSkeletons();
 
-  if (response.code !== 200) return;
-  const s = response.message;
+    if (response.code !== 200) {
+      const status = document.getElementById('dashboard-status');
+      if (status) status.textContent = 'Dashboard failed to load. Please refresh.';
+      return;
+    }
+    const s = response.message;
 
-  const dashboard = document.getElementById('dashboard');
-  if (dashboard) {
-    const tiles = [
-      {
-        title: 'Active Products',
-        hero: s.totalActive,
-      },
-      {
-        title: 'Expired (not archived)',
-        hero: `${s.wastePercent.toFixed(1)}%`,
-        variant: s.wasteCount > 0 ? 'danger' : null,
-      },
-      {
-        title: 'Total Archived',
-        hero: s.totalArchived,
-      },
-      {
-        title: 'Last Added Product',
-        hero: s.lastInsertedProduct || '—',
-        heroClass: 'metric-value text-truncate',
-      },
-    ];
+    const dashboard = document.getElementById('dashboard');
+    if (dashboard) {
+      const tiles = [
+        {
+          title: 'Active Products',
+          hero: s.totalActive,
+        },
+        {
+          title: 'Expired (not consumed)',
+          hero: `${s.wastePercent.toFixed(1)}%`,
+          variant: s.wasteCount > 0 ? 'danger' : null,
+        },
+        {
+          title: 'Total Consumed',
+          hero: s.totalArchived,
+        },
+        {
+          title: 'Last Added Product',
+          hero: s.lastInsertedProduct || '—',
+          heroClass: 'metric-value text-truncate',
+        },
+      ];
 
-    tiles.forEach(({ title, hero, variant, heroClass }) => {
-      dashboard.appendChild(renderTile(title, hero, variant, heroClass));
-    });
+      tiles.forEach(({ title, hero, variant, heroClass }) => {
+        dashboard.appendChild(renderTile(title, hero, variant, heroClass));
+      });
 
-    // Streak tile
-    const streak = (streakResponse.code === 200 && streakResponse.message) ? streakResponse.message : null;
-    const currentStreak = streak ? streak.currentStreak : 0;
-    const longestStreak = streak ? streak.longestStreak : 0;
-    const streakHero = `${currentStreak} day${currentStreak !== 1 ? 's' : ''}`;
-    const streakHeroClass = currentStreak > 0 ? 'metric-value' : 'metric-value text-body-secondary';
-    const streakSub = longestStreak > 0 ? `Best: ${longestStreak} day${longestStreak !== 1 ? 's' : ''}` : null;
-    const streakCol = renderTile('<i class="bi bi-fire"></i> Waste-free streak', streakHero, null, streakHeroClass);
-    if (streakSub) {
-      const tile = streakCol.querySelector('.metric-tile');
-      if (tile) {
-        const sub = document.createElement('div');
-        sub.style.cssText = 'font-size:var(--text-xs);color:var(--fg-3);margin-top:var(--space-1)';
-        sub.textContent = streakSub;
-        tile.appendChild(sub);
+      // Streak tile
+      const streak = (streakResponse.code === 200 && streakResponse.message) ? streakResponse.message : null;
+      const currentStreak = streak ? streak.currentStreak : 0;
+      const longestStreak = streak ? streak.longestStreak : 0;
+      const streakHero = `${currentStreak} day${currentStreak !== 1 ? 's' : ''}`;
+      const streakHeroClass = currentStreak > 0 ? 'metric-value' : 'metric-value text-secondary-custom';
+      const streakSub = longestStreak > 0 ? `Best: ${longestStreak} day${longestStreak !== 1 ? 's' : ''}` : null;
+      const streakCol = renderTile('<i class="bi bi-fire"></i> Waste-free streak', streakHero, null, streakHeroClass);
+      if (streakSub) {
+        const tile = streakCol.querySelector('.metric-tile');
+        if (tile) {
+          const sub = document.createElement('div');
+          sub.style.cssText = 'font-size:var(--text-xs);color:var(--fg-3);margin-top:var(--space-1)';
+          sub.textContent = streakSub;
+          tile.appendChild(sub);
+        }
+      }
+      dashboard.appendChild(streakCol);
+
+      // Savings tiles
+      const savings = (savingsResponse.code === 200 && savingsResponse.message) ? savingsResponse.message : null;
+      if (savings) {
+        dashboard.appendChild(renderTile(
+          'Saved This Month',
+          `€${(savings.savedEurThisMonth ?? 0).toFixed(2)}`,
+          savings.savedEurThisMonth > 0 ? 'success' : null,
+          null,
+        ));
+        dashboard.appendChild(renderTile(
+          'CO₂ Avoided This Month',
+          `${(savings.savedCo2KgThisMonth ?? 0).toFixed(2)} kg`,
+          savings.savedCo2KgThisMonth > 0 ? 'success' : null,
+          null,
+        ));
       }
     }
-    dashboard.appendChild(streakCol);
 
-    // Savings tiles
-    const savings = (savingsResponse.code === 200 && savingsResponse.message) ? savingsResponse.message : null;
-    if (savings) {
-      dashboard.appendChild(renderTile(
-        'Saved This Month',
-        `€${(savings.savedEurThisMonth ?? 0).toFixed(2)}`,
-        savings.savedEurThisMonth > 0 ? 'success' : null,
-        null,
-      ));
-      dashboard.appendChild(renderTile(
-        'CO₂ Avoided This Month',
-        `${(savings.savedCo2KgThisMonth ?? 0).toFixed(2)} kg`,
-        savings.savedCo2KgThisMonth > 0 ? 'success' : null,
-        null,
-      ));
+    const dashboardList = document.getElementById('dashboard-list');
+    if (dashboardList) {
+      const days = s.expiringSoonDays ?? 7;
+      const listTile = renderListTile(`Expiring within next ${days} Day${days !== 1 ? 's' : ''}`, s.expiringSoon ?? [], days);
+      dashboardList.appendChild(listTile);
+
+      const infoIcon = listTile.querySelector('.tile-threshold-info');
+      if (infoIcon) {
+        const tooltip = new bootstrap.Tooltip(infoIcon, {
+          title: `Shows products expiring within your notification threshold (${days} day${days !== 1 ? 's' : ''}). Change this in User Settings.`,
+          placement: 'left',
+          trigger: 'manual',
+        });
+        infoIcon.addEventListener('mouseenter', () => tooltip.show());
+        document.addEventListener('click', () => tooltip.hide(), { once: false, capture: true });
+      }
     }
-  }
 
-  const dashboardList = document.getElementById('dashboard-list');
-  if (dashboardList) {
-    const days = s.expiringSoonDays ?? 7;
-    const listTile = renderListTile(`Expiring within next ${days} Day${days !== 1 ? 's' : ''}`, s.expiringSoon ?? [], days);
-    dashboardList.appendChild(listTile);
+    const status = document.getElementById('dashboard-status');
+    if (status) status.textContent = 'Dashboard loaded';
 
-    const infoIcon = listTile.querySelector('.tile-threshold-info');
-    if (infoIcon) {
-      const tooltip = new bootstrap.Tooltip(infoIcon, {
-        title: `Shows products expiring within your notification threshold (${days} day${days !== 1 ? 's' : ''}). Change this in User Settings.`,
-        placement: 'left',
-        trigger: 'manual',
+    // Chart 1 — Waste donut (expired vs fresh)
+    if (!s.totalActive) {
+      showEmptyChart('chartWaste', 'No active products yet');
+    } else {
+      new Chart(document.getElementById('chartWaste'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Expired', 'Fresh'],
+          datasets: [{
+            data: [s.wasteCount, s.totalActive - s.wasteCount],
+            backgroundColor: ['#DC2626', '#3D7A5C'],
+          }],
+        },
+        options: { plugins: { legend: { position: 'bottom' } } },
       });
-      infoIcon.addEventListener('mouseenter', () => tooltip.show());
-      document.addEventListener('click', () => tooltip.hide(), { once: false, capture: true });
     }
-  }
 
-  const status = document.getElementById('dashboard-status');
-  if (status) status.textContent = 'Dashboard loaded';
+    // Chart 2 — Category breakdown (pie)
+    if (!Object.keys(s.categories).length) {
+      showEmptyChart('chartCategories', 'No category data yet');
+    } else {
+      new Chart(document.getElementById('chartCategories'), {
+        type: 'pie',
+        data: {
+          labels: Object.keys(s.categories),
+          datasets: [{
+            data: Object.values(s.categories),
+            backgroundColor: ['#3D7A5C', '#5B7FA6', '#7BC67E', '#E8914E', '#9DB5A8', '#DC2626'],
+          }],
+        },
+        options: { plugins: { legend: { position: 'bottom' } } },
+      });
+    }
 
-  // Chart 1 — Waste donut (expired vs fresh)
-  if (!s.totalActive) {
-    showEmptyChart('chartWaste', 'No active products yet');
-  } else {
-    new Chart(document.getElementById('chartWaste'), {
-      type: 'doughnut',
-      data: {
-        labels: ['Expired', 'Fresh'],
-        datasets: [{
-          data: [s.wasteCount, s.totalActive - s.wasteCount],
-          backgroundColor: ['#DC2626', '#3D7A5C'],
-        }],
-      },
-      options: { plugins: { legend: { position: 'bottom' } } },
-    });
-  }
-
-  // Chart 2 — Category breakdown (pie)
-  if (!Object.keys(s.categories).length) {
-    showEmptyChart('chartCategories', 'No category data yet');
-  } else {
-    new Chart(document.getElementById('chartCategories'), {
-      type: 'pie',
-      data: {
-        labels: Object.keys(s.categories),
-        datasets: [{
-          data: Object.values(s.categories),
-          backgroundColor: ['#3D7A5C', '#5B7FA6', '#7BC67E', '#E8914E', '#9DB5A8', '#DC2626'],
-        }],
-      },
-      options: { plugins: { legend: { position: 'bottom' } } },
-    });
-  }
-
-  // Chart 3 — Expiry trend (line)
-  if (!s.expiryTrend.length) {
-    showEmptyChart('chartExpiryTrend', 'No expiry trend data yet');
-  } else {
-    new Chart(document.getElementById('chartExpiryTrend'), {
-      type: 'line',
-      data: {
-        labels: s.expiryTrend.map((m) => m.month),
-        datasets: [{
-          label: 'Products expiring',
-          data: s.expiryTrend.map((m) => m.count),
-          borderColor: '#3D7A5C',
-          pointBackgroundColor: '#3D7A5C',
-          tension: 0.3,
-          fill: false,
-        }],
-      },
-      options: { plugins: { legend: { display: false } } },
-    });
+    // Chart 3 — Expiry trend (line)
+    if (!s.expiryTrend.length) {
+      showEmptyChart('chartExpiryTrend', 'No expiry trend data yet');
+    } else {
+      new Chart(document.getElementById('chartExpiryTrend'), {
+        type: 'line',
+        data: {
+          labels: s.expiryTrend.map((m) => m.month),
+          datasets: [{
+            label: 'Products expiring',
+            data: s.expiryTrend.map((m) => m.count),
+            borderColor: '#3D7A5C',
+            pointBackgroundColor: '#3D7A5C',
+            tension: 0.3,
+            fill: false,
+          }],
+        },
+        options: { plugins: { legend: { display: false } } },
+      });
+    }
+  } catch {
+    clearSkeletons();
+    const status = document.getElementById('dashboard-status');
+    if (status) status.textContent = 'Dashboard failed to load. Please refresh.';
   }
 });

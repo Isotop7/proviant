@@ -2,6 +2,8 @@ basePath: /
 definitions:
   api.APIResponse:
     properties:
+      action:
+        type: string
       message:
         type: string
     type: object
@@ -46,6 +48,21 @@ definitions:
       statusCode:
         type: integer
     type: object
+  api.ExpiryScanResponse:
+    properties:
+      confidence:
+        description: 0.0–1.0
+        type: number
+      detectedDate:
+        description: ISO 8601 (YYYY-MM-DD) if parsed, else empty
+        type: string
+      language:
+        description: detected language if available
+        type: string
+      rawText:
+        description: full OCR text for manual correction
+        type: string
+    type: object
   api.HouseholdListItem:
     properties:
       description:
@@ -54,6 +71,13 @@ definitions:
         type: integer
       memberCount:
         type: integer
+      name:
+        type: string
+    type: object
+  api.IngredientMatch:
+    properties:
+      matched:
+        type: boolean
       name:
         type: string
     type: object
@@ -133,6 +157,33 @@ definitions:
       totalActive:
         type: integer
       wasteThisMonth:
+        type: integer
+    type: object
+  api.RecipeSuggestionResponse:
+    properties:
+      id:
+        type: string
+      imageUrl:
+        type: string
+      ingredients:
+        items:
+          $ref: '#/definitions/api.IngredientMatch'
+        type: array
+      matchPercent:
+        description: 0-100
+        type: number
+      matchedProducts:
+        description: deprecated, kept for compatibility
+        items:
+          type: string
+        type: array
+      missingCount:
+        type: integer
+      sourceUrl:
+        type: string
+      title:
+        type: string
+      totalIngredients:
         type: integer
     type: object
   api.SavingsStatsResponse:
@@ -2137,6 +2188,36 @@ paths:
       summary: Scan product
       tags:
       - product
+  /api/v1/products/scan-date:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload an image of product packaging; returns detected expiry date
+        with confidence score
+      parameters:
+      - description: Product packaging image
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ExpiryScanResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Scan expiry date from product photo
+      tags:
+      - product
   /api/v1/products/search:
     get:
       description: Returns a list of products based on a query
@@ -2254,6 +2335,35 @@ paths:
       summary: Returns a list of products
       tags:
       - product
+  /api/v1/recipes/suggestions:
+    get:
+      description: Returns up to 6 recipe suggestions matching products expiring within
+        7 days
+      parameters:
+      - description: Number of suggestions (default 6, max 10)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.RecipeSuggestionResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Recipe suggestions
+      tags:
+      - recipes
   /api/v1/savings/stats:
     get:
       description: |-
@@ -2850,27 +2960,6 @@ paths:
       summary: Onboarding page
       tags:
       - web
-  /web/products:
-    get:
-      description: Renders the products list page with optional search
-      produces:
-      - text/html
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Products page
-      tags:
-      - web
   /web/products/{id}/edit:
     get:
       description: Renders the page for editing a product
@@ -2925,9 +3014,9 @@ paths:
       summary: Product view page
       tags:
       - web
-  /web/products/archived:
+  /web/recipes:
     get:
-      description: Renders the archived products list page
+      description: Shows recipe suggestions for expiring products
       produces:
       - text/html
       responses:
@@ -2943,7 +3032,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/api.APIResponse'
-      summary: Archived products page
+      summary: Recipes page
       tags:
       - web
   /web/user:

@@ -7,10 +7,10 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -26,12 +26,13 @@ import (
 // @Produce       	json
 // @Success       	200  {object}  api.APIResponse
 // @Failure       	400  {object}  api.APIResponse
+// @Failure       	404  {object}  api.APIResponse
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user [patch]
 func UpdateUser(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -45,25 +46,23 @@ func UpdateUser(ctx *gin.Context) {
 		DisplayName string `json:"displayName"`
 		MailAddress string `json:"mailAddress" binding:"required,email"`
 	}
-	if bindErr := ctx.ShouldBindJSON(&req); bindErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-
-	user, fetchErr := userRepo.GetUserByID(userID)
-	if fetchErr != nil {
-		logger.Error().Msgf("User with ID '%d' not found: %s", userID, fetchErr)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("User with id '%d' was not found", userID)})
+	user, err := repos.Users.GetUserByID(userID)
+	if err != nil {
+		logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
+		ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
 		return
 	}
 
 	user.DisplayName = req.DisplayName
 	user.MailAddress = req.MailAddress
 
-	updateErr := userRepo.UpdateUser(user.ID, &user)
+	updateErr := repos.Users.UpdateUser(user.ID, &user)
 	if updateErr != nil {
 		logger.Error().Msgf("Error saving user: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
@@ -82,13 +81,14 @@ func UpdateUser(ctx *gin.Context) {
 // @Param         	login   body    authentication.Login  true  "Login"
 // @Success       	200  {object}  api.APIResponse
 // @Failure       	400  {object}  api.APIResponse
+// @Failure       	404  {object}  api.APIResponse
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user/password [post]
 func UpdateUserPassword(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -100,13 +100,13 @@ func UpdateUserPassword(ctx *gin.Context) {
 
 	// Get and parse body to user
 	var login authentication.Login
-	if bindErr := ctx.ShouldBindJSON(&login); bindErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+	if err := ctx.ShouldBindJSON(&login); err != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
 
-	proviantConfigInterface, pcOk := ctx.Get("proviantConfig")
+	proviantConfigInterface, pcOk := ctx.Get(util.ContextKeyProviantConfig)
 	var passwordValidator *authentication.PasswordValidator
 	if pcOk {
 		proviantConfig, ok := proviantConfigInterface.(*configuration.ProviantConfiguration)
@@ -132,9 +132,7 @@ func UpdateUserPassword(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-
-	updateErr := userRepo.UpdateUserPassword(userID, &login)
+	updateErr := repos.Users.UpdateUserPassword(userID, &login)
 
 	switch updateErr {
 	// No error => password was updated
@@ -144,7 +142,7 @@ func UpdateUserPassword(ctx *gin.Context) {
 	// Requested user was not found
 	case gorm.ErrRecordNotFound:
 		logger.Error().Msgf("User with ID '%d' was not found in database", userID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("User with id '%d' was not found", userID)})
+		ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
 		return
 	// Unspecified error
 	default:
@@ -166,9 +164,9 @@ func UpdateUserPassword(ctx *gin.Context) {
 // @Router        	/api/v1/user/notification-preferences [get]
 func GetUserNotificationPreferences(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -178,9 +176,7 @@ func GetUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	userRepo := database.NewUserRepository(dbHandle)
-
-	user, getErr := userRepo.GetUserByID(userID)
+	user, getErr := repos.Users.GetUserByID(userID)
 	if getErr != nil {
 		logger.Error().Msgf("Error getting user: %s", getErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(getErr))
@@ -206,9 +202,9 @@ func GetUserNotificationPreferences(ctx *gin.Context) {
 // @Router        	/api/v1/user/notification-preferences [post]
 func UpdateUserNotificationPreferences(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -219,9 +215,9 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 	}
 
 	var preferences authentication.NotificationPreferences
-	if bindErr := ctx.ShouldBindJSON(&preferences); bindErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+	if err := ctx.ShouldBindJSON(&preferences); err != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
 
@@ -231,22 +227,12 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	// Validate ntfy configuration if enabled
-	if preferences.NtfyEnabled {
-		if preferences.NtfyTopic == "" {
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "ntfy topic is required when ntfy is enabled"})
-			return
-		}
-		if preferences.NtfyURL == "" {
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "ntfy URL is required when ntfy is enabled"})
-			return
-		}
+	if err := validateNtfyPreferences(&preferences); err != nil {
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		return
 	}
 
-	// Create database controller
-	userRepo := database.NewUserRepository(dbHandle)
-
-	user, getErr := userRepo.GetUserByID(userID)
+	user, getErr := repos.Users.GetUserByID(userID)
 	if getErr != nil {
 		logger.Error().Msgf("Error getting user: %s", getErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(getErr))
@@ -259,52 +245,19 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	// Handle bot token lifecycle: start/stop poller when token changes.
-	oldToken := user.NotificationPreferences.TelegramBotToken
-	newToken := preferences.TelegramBotToken
-	if newToken == "" {
-		// Preserve existing token if not provided (allows partial updates)
-		newToken = oldToken
-	}
-
-	tokenChanged := newToken != oldToken
-
-	if tokenChanged && newToken == "" {
-		// Token cleared — disable Telegram and wipe linked state.
-		preferences.TelegramEnabled = false
-		preferences.TelegramChatID = ""
-		preferences.TelegramBotUsername = ""
-	} else {
-		// Preserve linking fields — managed by the dedicated link-token endpoint.
-		preferences.TelegramChatID = user.NotificationPreferences.TelegramChatID
-		preferences.TelegramLinkToken = user.NotificationPreferences.TelegramLinkToken
-		if !tokenChanged {
-			preferences.TelegramBotUsername = user.NotificationPreferences.TelegramBotUsername
-		}
-	}
-	preferences.TelegramBotToken = newToken
+	newToken, tokenChanged := resolveTelegramTokenUpdate(&user, &preferences)
 
 	user.NotificationPreferences = preferences
 
-	updateErr := userRepo.UpdateUser(user.ID, &user)
+	updateErr := repos.Users.UpdateUser(user.ID, &user)
 	if updateErr != nil {
 		logger.Error().Msgf("Error updating notification preferences: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
 		return
 	}
 
-	// Manage per-user Telegram poller when token changed.
-	if tokenChanged {
-		if notificationController, ok := getNotificationController(ctx); ok {
-			if newToken == "" {
-				notificationController.StopUserTelegramPoller(userID)
-			} else {
-				notificationController.StartUserTelegramPoller(userID, newToken)
-			}
-		}
-	}
+	manageUserTelegramPoller(ctx, userID, tokenChanged, newToken)
 
-	// Return success
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Notification preferences updated successfully"})
 }
 
@@ -317,9 +270,9 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user/telegram-link-token [post]
 func GenerateTelegramLinkToken(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -337,8 +290,7 @@ func GenerateTelegramLinkToken(ctx *gin.Context) {
 	}
 	token := hex.EncodeToString(tokenBytes)
 
-	notificationRepo := database.NewNotificationRepository(dbHandle)
-	if err := notificationRepo.SetTelegramLinkToken(userID, token); err != nil {
+	if err := repos.Notifications.SetTelegramLinkToken(userID, token); err != nil {
 		logger.Error().Msgf("Failed to save telegram link token: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 		return
@@ -353,4 +305,58 @@ func GenerateTelegramLinkToken(ctx *gin.Context) {
 		"token":       token,
 		"botUsername": botUsername,
 	})
+}
+
+func validateNtfyPreferences(prefs *authentication.NotificationPreferences) error {
+	if !prefs.NtfyEnabled {
+		return nil
+	}
+	if prefs.NtfyTopic == "" {
+		return fmt.Errorf("ntfy topic is required when ntfy is enabled")
+	}
+	if prefs.NtfyURL == "" {
+		return fmt.Errorf("ntfy URL is required when ntfy is enabled")
+	}
+	return nil
+}
+
+// resolveTelegramTokenUpdate reconciles the incoming bot token with the stored one,
+// mutates prefs in place, and returns the resolved token and whether it changed.
+func resolveTelegramTokenUpdate(user *authentication.User, prefs *authentication.NotificationPreferences) (newToken string, tokenChanged bool) {
+	oldToken := user.NotificationPreferences.TelegramBotToken
+	newToken = prefs.TelegramBotToken
+	if newToken == "" {
+		newToken = oldToken
+	}
+	tokenChanged = newToken != oldToken
+	if tokenChanged && newToken == "" {
+		// Token cleared — disable Telegram and wipe linked state.
+		prefs.TelegramEnabled = false
+		prefs.TelegramChatID = ""
+		prefs.TelegramBotUsername = ""
+	} else {
+		// Preserve linking fields — managed by the dedicated link-token endpoint.
+		prefs.TelegramChatID = user.NotificationPreferences.TelegramChatID
+		prefs.TelegramLinkToken = user.NotificationPreferences.TelegramLinkToken
+		if !tokenChanged {
+			prefs.TelegramBotUsername = user.NotificationPreferences.TelegramBotUsername
+		}
+	}
+	prefs.TelegramBotToken = newToken
+	return
+}
+
+func manageUserTelegramPoller(ctx *gin.Context, userID uint, tokenChanged bool, newToken string) {
+	if !tokenChanged {
+		return
+	}
+	notificationController, ok := getNotificationController(ctx)
+	if !ok {
+		return
+	}
+	if newToken == "" {
+		notificationController.StopUserTelegramPoller(userID)
+	} else {
+		notificationController.StartUserTelegramPoller(userID, newToken)
+	}
 }

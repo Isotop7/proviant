@@ -9,6 +9,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -26,26 +27,30 @@ import (
 // @Router       /api/v1/productsByBarcode [get]
 func GetProductsByBarcode(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	// Get and parse parameter barcode
 	barcodeParam := ctx.Param("barcode")
-	var barcode int
-	var convErr error
-	if barcode, convErr = strconv.Atoi(barcodeParam); convErr != nil {
+
+	if len(barcodeParam) != 13 || !validEAN13Format(barcodeParam) {
+		logger.Warn().Msgf("Requested barcode '%s' is invalid EAN-13 code", barcodeParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%s' is an invalid EAN-13 code", barcodeParam)})
+		return
+	}
+
+	if !validEAN13Checksum(barcodeParam) {
+		logger.Warn().Msgf("Requested barcode '%s' has invalid EAN-13 checksum", barcodeParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%s' is an invalid EAN-13 code", barcodeParam)})
+		return
+	}
+
+	barcode, err := strconv.Atoi(barcodeParam)
+	if err != nil {
 		logger.Warn().Msgf("Requested barcode '%s' is invalid", barcodeParam)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%s' is invalid", barcodeParam)})
 		return
 	}
 
-	// Check for valid EAN-13
-	if barcode < 1000000000000 || barcode > 10000000000000 {
-		logger.Warn().Msgf("Requested barcode '%d' is invalid EAN-13 code", barcode)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%d' is an invalid EAN-13 code", barcode)})
-		return
-	}
-
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -55,8 +60,7 @@ func GetProductsByBarcode(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	products, getError := productRepo.GetUserProductsBulkByBarcode(userID, barcode)
+	products, getError := repos.Products.GetUserProductsBulkByBarcode(userID, barcode)
 
 	switch getError {
 	// No error: return product
@@ -65,12 +69,12 @@ func GetProductsByBarcode(ctx *gin.Context) {
 		return
 	// User id from claims not matching user id of product in database
 	case errors.ErrMismatcherUserID:
-		logger.Error().Msgf("Products with barcode '%d' for user were not found in database (mismatched userID in JWT <> DB)", barcode)
+		logger.Warn().Msgf("Products with barcode '%d' for user were not found in database (mismatched userID in JWT <> DB)", barcode)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Products with barcode '%d' for user were not found", barcode)})
 		return
 	// Unspecified error
 	default:
-		logger.Error().Msgf("Products with barcode '%d' were not found in database", barcode)
+		logger.Warn().Msgf("Products with barcode '%d' were not found in database", barcode)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Products with barcode '%d' were not found", barcode)})
 		return
 	}
@@ -91,7 +95,7 @@ func GetProductsByBarcode(ctx *gin.Context) {
 // @Router       	/api/v1/products/search [GET]
 func SearchProducts(ctx *gin.Context) {
 	// Get zerolog instance from context
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get search parameters
 	var queryParam = ctx.DefaultQuery("queryParam", "product_name")
@@ -102,12 +106,12 @@ func SearchProducts(ctx *gin.Context) {
 	enumParam := database.SearchParameterEnumFromString(queryParam)
 	if enumParam == database.InvalidParameter {
 		// If no supported parameter was found, exit
-		logger.Error().Msg(errors.ErrProductSearchInvalidQuery.Error())
+		logger.Warn().Msg(errors.ErrProductSearchInvalidQuery.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "No valid search parameters found"})
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -117,13 +121,34 @@ func SearchProducts(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
-	products, productErr := productRepo.SearchProducts(enumParam, queryValue, sort, order, userID)
+	products, productErr := repos.Products.SearchProducts(enumParam, queryValue, sort, order, userID)
 	if productErr != nil {
-		logger.Error().Msgf("Error getting products: %s", productErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting products"})
+		logger.Error().Msgf("%s: %s", errors.MsgErrGettingProducts, productErr)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})
 		return
 	}
 
 	ctx.JSON(http.StatusOK, products)
+}
+
+func validEAN13Format(barcode string) bool {
+	for _, c := range barcode {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func validEAN13Checksum(barcode string) bool {
+	sum := 0
+	for i, c := range barcode {
+		digit := int(c - '0')
+		if i%2 == 0 {
+			sum += digit * 3
+		} else {
+			sum += digit
+		}
+	}
+	return sum%10 == 0
 }

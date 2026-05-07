@@ -6,10 +6,16 @@ import (
 	"sync"
 	"time"
 
+	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
+)
+
+const (
+	codeRateLimitExceeded = "RATE_LIMIT_EXCEEDED"
+	headerRetryAfter      = "Retry-After"
 )
 
 type clientLimiter struct {
@@ -27,15 +33,10 @@ var (
 	exportRate = rate.Limit(1.0 / 60.0)
 )
 
-func getClientIP(ctx *gin.Context) string {
-	clientIP := ctx.GetHeader("X-Forwarded-For")
-	if clientIP == "" {
-		clientIP = ctx.GetHeader("X-Real-IP")
-	}
-	if clientIP == "" {
-		clientIP = ctx.ClientIP()
-	}
-	return clientIP
+func InitRateLimits(cfg configuration.RateLimitConfiguration) {
+	loginRate = rate.Limit(float64(cfg.LoginPerMinute) / 60.0)
+	signupRate = rate.Limit(float64(cfg.SignupPerMinute) / 60.0)
+	exportRate = rate.Limit(float64(cfg.ExportPerMinute) / 60.0)
 }
 
 func getLimiter(store *sync.Map, key string, limit rate.Limit) *rate.Limiter {
@@ -51,14 +52,14 @@ func getLimiter(store *sync.Map, key string, limit rate.Limit) *rate.Limiter {
 }
 
 func loginRateLimitMiddleware(ctx *gin.Context) {
-	clientIP := getClientIP(ctx)
+	clientIP := ctx.ClientIP()
 	limiter := getLimiter(loginLimiters, clientIP, loginRate)
 	reservation := limiter.Reserve()
 	if delay := reservation.Delay(); delay > 0 {
 		reservation.Cancel()
-		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-			"code":    "RATE_LIMIT_EXCEEDED",
+			"code":    codeRateLimitExceeded,
 			"message": "Too many login attempts. Please try again later.",
 		})
 		return
@@ -67,14 +68,14 @@ func loginRateLimitMiddleware(ctx *gin.Context) {
 }
 
 func signupRateLimitMiddleware(ctx *gin.Context) {
-	clientIP := getClientIP(ctx)
+	clientIP := ctx.ClientIP()
 	limiter := getLimiter(signupLimiters, clientIP, signupRate)
 	reservation := limiter.Reserve()
 	if delay := reservation.Delay(); delay > 0 {
 		reservation.Cancel()
-		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-			"code":    "RATE_LIMIT_EXCEEDED",
+			"code":    codeRateLimitExceeded,
 			"message": "Too many signup attempts. Please try again later.",
 		})
 		return
@@ -98,9 +99,9 @@ func exportRateLimitMiddleware(ctx *gin.Context) {
 	reservation := limiter.Reserve()
 	if delay := reservation.Delay(); delay > 0 {
 		reservation.Cancel()
-		ctx.Header("Retry-After", strconv.Itoa(int(delay.Seconds())))
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-			"code":    "RATE_LIMIT_EXCEEDED",
+			"code":    codeRateLimitExceeded,
 			"message": "Too many export requests. Please try again later.",
 		})
 		return

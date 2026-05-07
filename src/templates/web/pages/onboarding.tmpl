@@ -6,7 +6,7 @@
         <div class="text-center mb-4">
             <img src="/assets/icons/hero.png" class="img-fluid mb-3 onboarding-hero" alt="proviant">
             <h2 class="fw-bold">Welcome to Proviant, {{.Username}}!</h2>
-            <p class="text-muted">Let's get you set up in just a few steps.</p>
+            <p class="text-secondary-custom">Let's get you set up in just a few steps.</p>
         </div>
 
         <!-- Progress Steps -->
@@ -31,9 +31,9 @@
         <div class="onboarding-step" id="step1">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <p class="text-muted small mb-2">Step 1 of 3</p>
+                    <p class="text-secondary-custom small mb-2">Step 1 of 3</p>
                     <h5 class="card-title"><i class="bi bi-person me-2"></i>Your Profile</h5>
-                    <p class="card-text text-muted">Choose a display name. You can change this later in settings.</p>
+                    <p class="card-text text-secondary-custom">Choose a display name. You can change this later in settings.</p>
                     <div class="mb-3">
                         <input type="text" id="inputDisplayName" class="form-control" placeholder="Display name" maxlength="64" value="{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}">
                     </div>
@@ -51,9 +51,9 @@
         <div class="onboarding-step d-none" id="step2">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <p class="text-muted small mb-2">Step 2 of 3</p>
+                    <p class="text-secondary-custom small mb-2">Step 2 of 3</p>
                     <h5 class="card-title"><i class="bi bi-people me-2"></i>Your Household</h5>
-                    <p class="card-text text-muted">Households let you share your pantry with family and roommates. Choose one of the options below.</p>
+                    <p class="card-text text-secondary-custom">Households let you share your pantry with family and roommates. Choose one of the options below.</p>
 
                     <!-- Mode switcher -->
                     <div class="btn-group w-100 mb-3" role="group" aria-label="Household options">
@@ -70,7 +70,7 @@
 
                     <!-- Browse sub-mode -->
                     <div id="householdModeBrowse" class="d-none">
-                        <div id="householdListLoading" class="text-center text-muted d-none">
+                        <div id="householdListLoading" class="text-center text-secondary-custom d-none">
                             <div class="spinner-border spinner-border-sm" role="status"></div>
                             <span class="ms-2">Loading households...</span>
                         </div>
@@ -104,9 +104,9 @@
         <div class="onboarding-step d-none" id="step3">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <p class="text-muted small mb-2">Step 3 of 3</p>
+                    <p class="text-secondary-custom small mb-2">Step 3 of 3</p>
                     <h5 class="card-title"><i class="bi bi-bell me-2"></i>Stay Notified</h5>
-                    <p class="card-text text-muted">Get notified when products in your household are about to expire. You can configure this later in settings.</p>
+                    <p class="card-text text-secondary-custom">Get notified when products in your household are about to expire. You can configure this later in settings.</p>
                     <button id="btnConfigureNotifications" class="btn btn-proviant-primary">
                         <i class="bi bi-gear me-1"></i>Configure Notifications
                     </button>
@@ -123,7 +123,7 @@
                         <i class="bi bi-check-lg" aria-hidden="true"></i>
                     </div>
                     <h5 class="card-title mt-3">You're All Set!</h5>
-                    <p class="card-text text-muted">Start adding products to your pantry and tracking expiration dates.</p>
+                    <p class="card-text text-secondary-custom">Start adding products to your pantry and tracking expiration dates.</p>
                     <button id="btnFinishOnboarding" class="btn btn-proviant-primary">
                         <i class="bi bi-arrow-right me-1"></i>Go to Proviant
                     </button>
@@ -135,7 +135,7 @@
         <div class="card shadow-sm mt-4">
             <div class="card-body">
                 <h6 class="card-title"><i class="bi bi-lightbulb me-2"></i>Quick Start Guide</h6>
-                <ul class="mb-0 small text-muted">
+                <ul class="mb-0 small text-secondary-custom">
                     <li><strong>Add products</strong> — Scan barcodes or search the Open Food Facts database</li>
                     <li><strong>Track expiration</strong> — Set expiry dates to avoid food waste</li>
                     <li><strong>Share with household</strong> — Invite family members to manage the pantry together</li>

@@ -7,6 +7,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
@@ -24,21 +25,19 @@ import (
 // @Failure      500    {object}  api.APIResponse
 // @Router       /auth/verify-email [post]
 func VerifyEmail(ctx *gin.Context) {
-	loggerValue, loggerOk := ctx.Get("logger")
+	loggerValue, loggerOk := ctx.Get(util.ContextKeyLogger)
 	if !loggerOk {
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
 		return
 	}
 	logger := loggerValue.(*zerolog.Logger)
 
-	dbHandle, ok := ctx.Get("dbHandle")
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
 		return
 	}
-
-	userRepo := database.NewUserRepository(dbHandle.(*gorm.DB))
 
 	token := ctx.Query("token")
 	if token == "" {
@@ -46,10 +45,10 @@ func VerifyEmail(ctx *gin.Context) {
 		return
 	}
 
-	verification, err := userRepo.GetEmailVerificationByToken(token)
+	verification, err := repos.Users.GetEmailVerificationByToken(token)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusBadRequest, gin.H{"code": "INVALID_TOKEN", "message": "Invalid verification token"})
+			ctx.JSON(http.StatusNotFound, gin.H{"code": "INVALID_TOKEN", "message": "Invalid verification token"})
 			return
 		}
 		logger.Error().Msgf("Error looking up email verification token: %s", err.Error())
@@ -63,19 +62,19 @@ func VerifyEmail(ctx *gin.Context) {
 	}
 
 	if verification.Status == dbModel.EmailVerificationStatusExpired || time.Now().After(verification.ExpiresAt) {
-		_ = userRepo.UpdateEmailVerificationStatus(token, dbModel.EmailVerificationStatusExpired)
+		_ = repos.Users.UpdateEmailVerificationStatus(token, dbModel.EmailVerificationStatusExpired)
 		ctx.JSON(http.StatusBadRequest, gin.H{"code": "TOKEN_EXPIRED", "message": "Verification token has expired"})
 		return
 	}
 
 	now := time.Now()
-	if err := userRepo.UpdateUserEmailVerified(verification.UserID, now); err != nil {
+	if err := repos.Users.UpdateUserEmailVerified(verification.UserID, now); err != nil {
 		logger.Error().Msgf("Error updating user email verified status: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Internal error"})
 		return
 	}
 
-	if err := userRepo.UpdateEmailVerificationStatus(token, dbModel.EmailVerificationStatusVerified); err != nil {
+	if err := repos.Users.UpdateEmailVerificationStatus(token, dbModel.EmailVerificationStatusVerified); err != nil {
 		logger.Error().Msgf("Error updating email verification status: %s", err.Error())
 	}
 

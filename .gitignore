@@ -11,6 +11,10 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# Sonar scan
+sonar-report.txt
+sonar-export.json
+
 # Go workspace file
 go.work
 
@@ -23,6 +27,7 @@ node_modules/
 # assets
 src/assets/css/main.css*
 src/assets/css/fonts.css*
+src/assets/css/login.css*
 src/assets/js/bootstrap*
 src/assets/js/html5-qrcode.min.js
 src/assets/js/chart*
@@ -40,7 +45,7 @@ src/data
 .claude/
 
 # Kilo
-.kilo/plans
+.kilo/
 
 # Issue sync
 issues/

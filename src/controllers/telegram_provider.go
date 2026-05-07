@@ -9,6 +9,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/models"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 )
@@ -90,7 +91,7 @@ func (t *TelegramNotificationProvider) sendMessage(chatID, text string) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	resp, err := t.HTTPClient.Do(req)
 	if err != nil {

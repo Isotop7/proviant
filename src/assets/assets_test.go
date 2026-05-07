@@ -25,36 +25,15 @@ func TestAssetFilesRead(t *testing.T) {
 		}
 
 		// Check if expected directories exist
-		hasCSS := false
-		hasJS := false
-		hasIcons := false
-		hasFonts := false
-
+		found := map[string]bool{}
 		for _, entry := range entries {
-			name := entry.Name()
-			switch name {
-			case "css":
-				hasCSS = true
-			case "js":
-				hasJS = true
-			case "icons":
-				hasIcons = true
-			case "fonts":
-				hasFonts = true
-			}
+			found[entry.Name()] = true
 		}
 
-		if !hasCSS {
-			t.Error("Expected to find 'css' directory in embedded files")
-		}
-		if !hasJS {
-			t.Error("Expected to find 'js' directory in embedded files")
-		}
-		if !hasIcons {
-			t.Error("Expected to find 'icons' directory in embedded files")
-		}
-		if !hasFonts {
-			t.Error("Expected to find 'fonts' directory in embedded files")
+		for _, dir := range []string{"css", "js", "icons", "fonts"} {
+			if !found[dir] {
+				t.Errorf("Expected to find '%s' directory in embedded files", dir)
+			}
 		}
 	})
 }

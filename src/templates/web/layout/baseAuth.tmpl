@@ -1,6 +1,6 @@
 {{define "baseAuth"}}
 <!doctype html>
-<html lang="de" data-bs-theme="light" class="h-100">
+<html lang="en" data-bs-theme="light" class="h-100">
 
 <head>
     <meta charset="utf-8">
@@ -21,7 +21,7 @@
     <script src="/assets/js/proviant.js"></script>
 </head>
 
-<body class="d-flex bg-body-tertiary">
+<body>
     {{template "content" .}}
     <!-- Shared feedback modal -->
     <div id="proviantFeedbackModal" class="modal fade" tabindex="-1"
@@ -34,7 +34,7 @@
                 <div class="modal-body text-center px-4 pb-2">
                     <i id="proviantFeedbackIcon" class="bi fs-1 mb-3 d-block" aria-hidden="true"></i>
                     <h5 id="proviantFeedbackTitle" class="mb-2"></h5>
-                    <p id="proviantFeedbackMessage" class="text-body-secondary mb-0 small"></p>
+                    <p id="proviantFeedbackMessage" class="text-secondary-custom mb-0 small"></p>
                 </div>
                 <div class="modal-footer border-0 justify-content-center pt-2 pb-4">
                     <button type="button" class="btn btn-proviant-primary px-4"

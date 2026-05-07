@@ -7,14 +7,12 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 // CreateInvitation creates a new household invitation and sends an email to the recipient.
@@ -31,9 +29,9 @@ import (
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/household/invitations [post]
 func CreateInvitation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -45,34 +43,26 @@ func CreateInvitation(ctx *gin.Context) {
 
 	var req createInvitationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		logger.Warn().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
-	invitationRepo := database.NewInvitationRepository(dbHandle)
-	userRepo := database.NewUserRepository(dbHandle)
-
 	// Get user's household
-	var user authentication.User
-	if err := dbHandle.First(&user, userID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			logger.Error().Msgf("User with ID %d not found", userID)
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
-			return
-		}
-		logger.Error().Msgf("Error fetching user: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+	user, err := repos.Users.GetUserByID(userID)
+	if err != nil {
+		logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
 	if user.HouseholdID == 0 {
-		logger.Error().Msgf("User %d has no household", userID)
+		logger.Warn().Msgf("User %d has no household", userID)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "user has no household"})
 		return
 	}
 
-	invitation, err := invitationRepo.CreateInvitation(user.HouseholdID, userID, req.Email)
+	invitation, err := repos.Invitations.CreateInvitation(user.HouseholdID, userID, req.Email)
 	if err != nil {
 		switch err {
 		case errors.ErrDuplicateInvitation:
@@ -91,11 +81,11 @@ func CreateInvitation(ctx *gin.Context) {
 	}
 
 	// Send invitation email via NotificationController
-	proviantConfig, _ := ctx.MustGet("proviantConfig").(*configuration.ProviantConfiguration)
-	notificationController, _ := ctx.MustGet("notificationController").(*controllers.NotificationController)
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	notificationController, _ := ctx.MustGet(util.ContextKeyNotificationController).(*controllers.NotificationController)
 	if notificationController != nil {
 		inviterName := user.EffectiveName()
-		household, householdErr := userRepo.GetHouseholdByID(user.HouseholdID)
+		household, householdErr := repos.Users.GetHouseholdByID(user.HouseholdID)
 		householdName := fmt.Sprintf("Household #%d", user.HouseholdID)
 		if householdErr == nil {
 			householdName = household.Name
@@ -125,9 +115,9 @@ func CreateInvitation(ctx *gin.Context) {
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/household/invitations [get]
 func GetInvitations(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -137,17 +127,10 @@ func GetInvitations(ctx *gin.Context) {
 		return
 	}
 
-	invitationRepo := database.NewInvitationRepository(dbHandle)
-
-	var user authentication.User
-	if err := dbHandle.First(&user, userID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			logger.Error().Msgf("User with ID %d not found", userID)
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserID.Error()})
-			return
-		}
-		logger.Error().Msgf("Error fetching user: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+	user, err := repos.Users.GetUserByID(userID)
+	if err != nil {
+		logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
+		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
 		return
 	}
 
@@ -157,10 +140,10 @@ func GetInvitations(ctx *gin.Context) {
 		return
 	}
 
-	invitations, err := invitationRepo.GetInvitationsForHousehold(user.HouseholdID, userID)
+	invitations, err := repos.Invitations.GetInvitationsForHousehold(user.HouseholdID, userID)
 	if err != nil {
 		logger.Error().Msgf("Error fetching invitations: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -180,9 +163,9 @@ func GetInvitations(ctx *gin.Context) {
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/household/invitations/{id} [delete]
 func CancelInvitation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -195,13 +178,12 @@ func CancelInvitation(ctx *gin.Context) {
 	invitationIDStr := ctx.Param("id")
 	invitationID, err := strconv.ParseUint(invitationIDStr, 10, 64)
 	if err != nil {
-		logger.Error().Msgf("Invalid invitation ID '%s': %s", invitationIDStr, err)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid invitation ID"})
+		logger.Warn().Msgf("Invalid invitation ID '%s': %s", invitationIDStr, err)
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("invitation ID must be a valid unsigned integer"))
 		return
 	}
 
-	invitationRepo := database.NewInvitationRepository(dbHandle)
-	if err := invitationRepo.CancelInvitation(uint(invitationID), userID); err != nil {
+	if err := repos.Invitations.CancelInvitation(uint(invitationID), userID); err != nil {
 		switch err {
 		case errors.ErrInvitationNotFound:
 			logger.Error().Msgf("Invitation %d not found: %s", invitationID, err)
@@ -213,7 +195,7 @@ func CancelInvitation(ctx *gin.Context) {
 			return
 		default:
 			logger.Error().Msgf("Error cancelling invitation: %s", err)
-			ctx.JSON(http.StatusInternalServerError, api.Error(err))
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
 			return
 		}
 	}

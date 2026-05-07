@@ -1,6 +1,6 @@
 {{define "base"}}
 <!doctype html>
-<html lang="de" data-bs-theme="light" class="h-100">
+<html lang="en" data-bs-theme="light" class="h-100">
 
 <head>
   <meta charset="utf-8">
@@ -57,6 +57,13 @@
     You're offline — showing cached data. Changes will sync when reconnected.
     <span id="offlineQueueCount" class="ms-1 fw-semibold d-none"></span>
   </div>
+  <!-- Update banner — shown by JS when new service worker activates -->
+  <div id="swUpdateBanner" class="sw-update-banner d-none" role="status" aria-live="polite">
+    <i class="bi bi-arrow-repeat me-2" aria-hidden="true"></i>
+    Update available —
+    <button class="btn btn-link btn-sm p-0 fw-semibold sw-update-reload" onclick="location.reload()">Reload</button>
+    to get the latest version.
+  </div>
 
   <main>
     <div id="content-wrapper">
@@ -78,7 +85,7 @@
           <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <p id="proviantConfirmMessage" class="text-body-secondary small mb-0"></p>
+          <p id="proviantConfirmMessage" class="text-secondary-custom small mb-0"></p>
         </div>
         <div class="modal-footer justify-content-end gap-2">
           <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -103,7 +110,7 @@
           <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <p id="proviantFeedbackMessage" class="text-body-secondary small mb-0"></p>
+          <p id="proviantFeedbackMessage" class="text-secondary-custom small mb-0"></p>
         </div>
         <div class="modal-footer justify-content-end">
           <button type="button" class="btn btn-proviant-primary"

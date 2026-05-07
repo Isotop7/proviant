@@ -6,10 +6,26 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+type InvitationRepositoryInterface interface {
+	CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
+	GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
+	GetPendingInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
+	GetInvitationByToken(token string) (database.HouseholdInvitation, error)
+	AcceptInvitation(token, email string, userID uint) error
+	CancelInvitation(invitationID, userID uint) error
+	GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
+	MarkInvitationSent(invitationID uint) error
+	MarkInvitationSendFailed(invitationID uint) error
+	MarkInvitationExpired(invitationID uint) error
+}
+
+var _ InvitationRepositoryInterface = (*InvitationRepository)(nil)
 
 type InvitationRepository struct {
 	DB *gorm.DB
@@ -108,7 +124,7 @@ func (r *InvitationRepository) AcceptInvitation(token, email string, userID uint
 	}
 
 	tx := r.DB.Begin()
-	if err := tx.Model(&authentication.User{}).Where("id = ?", userID).Update("household_id", invitation.HouseholdID).Error; err != nil {
+	if err := tx.Model(&authentication.User{}).Where(util.QueryId, userID).Update("household_id", invitation.HouseholdID).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -156,7 +172,7 @@ func (r *InvitationRepository) GetPendingInvitationsNotSent(retryInterval time.D
 func (r *InvitationRepository) MarkInvitationSent(invitationID uint) error {
 	now := time.Now()
 	return r.DB.Model(&database.HouseholdInvitation{}).
-		Where("id = ?", invitationID).
+		Where(util.QueryId, invitationID).
 		Updates(map[string]any{
 			"sent_at":       now,
 			"send_attempts": gorm.Expr("send_attempts + 1"),
@@ -165,8 +181,12 @@ func (r *InvitationRepository) MarkInvitationSent(invitationID uint) error {
 
 func (r *InvitationRepository) MarkInvitationSendFailed(invitationID uint) error {
 	return r.DB.Model(&database.HouseholdInvitation{}).
-		Where("id = ?", invitationID).
+		Where(util.QueryId, invitationID).
 		Update("send_attempts", gorm.Expr("send_attempts + 1")).Error
 }
 
-var _ = (*InvitationRepository)(nil)
+func (r *InvitationRepository) MarkInvitationExpired(invitationID uint) error {
+	return r.DB.Model(&database.HouseholdInvitation{}).
+		Where(util.QueryId, invitationID).
+		Update("status", database.InvitationStatusExpired).Error
+}

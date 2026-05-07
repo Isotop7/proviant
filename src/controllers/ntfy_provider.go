@@ -12,6 +12,7 @@ import (
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/templates"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 )
@@ -86,7 +87,7 @@ func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, re
 	}
 
 	// Set headers
-	req.Header.Set("Content-Type", "text/plain")
+	req.Header.Set(util.RequestHeaderContentType, "text/plain")
 	req.Header.Set("Title", fmt.Sprintf("proviant - Product '%s' expired", product.ProductName))
 	req.Header.Set("Priority", "high")
 	req.Header.Set("Tags", "warning")
@@ -137,7 +138,7 @@ func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient 
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "text/plain")
+	req.Header.Set(util.RequestHeaderContentType, "text/plain")
 	req.Header.Set("Title", fmt.Sprintf("proviant - %d-day waste-free streak", milestone))
 	req.Header.Set("Tags", "tada")
 	if recipient.NtfyToken != "" {

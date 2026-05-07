@@ -9,6 +9,8 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	dbRepo "codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
+
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
@@ -16,6 +18,7 @@ import (
 const (
 	CalendarExpireDays = 30
 	CalendarProdID     = "-//Proviant//ProductExpiry//EN"
+	mimeTypeCalendar   = "text/calendar; charset=utf-8"
 )
 
 func escapeICalText(s string) string {
@@ -82,7 +85,7 @@ func formatProductDescription(product *database.Product) string {
 // @Failure      500   {object} api.APIResponse
 // @Router       /api/v1/calendar/export.ics [get]
 func ExportICalendar(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 	if !loggerOk {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -128,7 +131,7 @@ func ExportICalendar(ctx *gin.Context) {
 
 	sb.WriteString("END:VCALENDAR\r\n")
 
-	ctx.Header("Content-Type", "text/calendar; charset=utf-8")
-	ctx.Header("Content-Disposition", "inline")
-	ctx.Data(http.StatusOK, "text/calendar; charset=utf-8", []byte(sb.String()))
+	ctx.Header(util.RequestHeaderContentType, mimeTypeCalendar)
+	ctx.Header(util.RequestHeaderContentDisposition, "inline")
+	ctx.Data(http.StatusOK, mimeTypeCalendar, []byte(sb.String()))
 }

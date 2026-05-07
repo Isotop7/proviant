@@ -19,8 +19,8 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// OpenFoodFactsAPIControllerInterface defines the contract for interacting with OpenFoodFacts
-type OpenFoodFactsAPIControllerInterface interface {
+// DatasetGetter defines the contract for getting OpenFoodFacts dataset by barcode
+type DatasetGetter interface {
 	GetDataset(barcode string) (database.Product, error)
 }
 
@@ -97,6 +97,7 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 				Countries:   dataset.Product.Countries,
 				ImageURL:    dataset.Product.ImageURL,
 				CO2KgPerKg:  co2,
+				StorageHint: dataset.Product.ConservationConditions,
 			}, nil
 		}
 	}

@@ -13,13 +13,14 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 // ScanExpiryDate scans an uploaded image for expiry date
@@ -34,7 +35,7 @@ import (
 // @Failure       500  {object}  api.APIResponse
 // @Router        /api/v1/products/scan-date [post]
 func ScanExpiryDate(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	// Get uploaded image file
 	file, err := ctx.FormFile("image")
@@ -44,8 +45,9 @@ func ScanExpiryDate(ctx *gin.Context) {
 		return
 	}
 
-	// Validate size (max 5MB)
-	if file.Size > 5*1024*1024 {
+	// Validate size (configured via config)
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	if file.Size > int64(proviantConfig.Server.MaxUploadSizeMB)*1024*1024 {
 		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrFileTooLarge))
 		return
 	}
@@ -103,39 +105,37 @@ func ScanExpiryDate(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrOCRProcessing))
 		return
 	case resp := <-resultChan:
-		// Optionally log the scan to database
 		if userID, ok := getCurrentUserID(ctx, logger); ok {
-			storeScan := func() {
-				dbHandle, dbOk := ctx.MustGet("dbHandle").(*gorm.DB)
-				if !dbOk {
-					logger.Warn().Msg("dbHandle not available for expiry scan logging")
-					return
-				}
-				scan := &dbModel.ExpiryScan{
-					UserID:       userID,
-					ScannedAt:    time.Now(),
-					DetectedDate: mustParseDate(resp.DetectedDate),
-					Confidence:   resp.Confidence,
-					RawText:      resp.RawText,
-					ImageHash:    hashImage(imgBytes),
-				}
-				repo := database.NewExpiryScanRepository(dbHandle)
-				if dbErr := repo.Create(scan); dbErr != nil {
-					logger.Warn().Msgf("Failed to store expiry scan: %s", dbErr.Error())
-				}
-			}
-			// Fire-and-forget in background to avoid slowing response
-			go storeScan()
+			go logExpiryScan(ctx, logger, userID, resp, imgBytes)
 		}
 		ctx.JSON(http.StatusOK, resp)
 		return
 	}
 }
 
+func logExpiryScan(ctx *gin.Context, logger *zerolog.Logger, userID uint, resp *apiModel.ExpiryScanResponse, imgBytes []byte) {
+	repos, dbOk := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !dbOk {
+		logger.Warn().Msg("repos not available for expiry scan logging")
+		return
+	}
+	scan := &dbModel.ExpiryScan{
+		UserID:       userID,
+		ScannedAt:    time.Now(),
+		DetectedDate: mustParseDate(resp.DetectedDate),
+		Confidence:   resp.Confidence,
+		RawText:      resp.RawText,
+		ImageHash:    hashImage(imgBytes),
+	}
+	if err := repos.ExpiryScan.Create(scan); err != nil {
+		logger.Warn().Msgf("Failed to store expiry scan: %s", err.Error())
+	}
+}
+
 // getCurrentUserID extracts user ID from JWT claims or PAT context
 func getCurrentUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
 	// PAT path: PAT middleware injects userID directly into context
-	if id, exists := ctx.Get("userID"); exists {
+	if id, exists := ctx.Get(util.ContextKeyUserID); exists {
 		if userID, ok := id.(uint); ok && userID > 0 {
 			return userID, true
 		}
@@ -148,7 +148,12 @@ func getCurrentUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
 		return 0, false
 	}
-	userID := uint(idClaim.(float64))
+	idFloat, ok := idClaim.(float64)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		return 0, false
+	}
+	userID := uint(idFloat)
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
 		return 0, false
@@ -164,7 +169,7 @@ func hashImage(img []byte) string {
 
 // mustParseDate converts ISO string to time.Time; returns zero time on failure
 func mustParseDate(s string) time.Time {
-	if t, err := time.Parse("2006-01-02", s); err == nil {
+	if t, err := time.Parse(util.DefaultDateFormatParseStr, s); err == nil {
 		return t
 	}
 	return time.Time{}

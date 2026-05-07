@@ -43,14 +43,42 @@ function showAlert(isSuccess, message) {
 }
 function clearProductInfo() {
     document.getElementById('productInfoImage').src = '';
+    document.getElementById('productInfoImage').alt = '';
     document.getElementById('productInfoName').innerText = '';
     document.getElementById('productInfoGenericName').innerText = '';
+    const hintEl = document.getElementById('storageHint');
+    if (hintEl) {
+        hintEl.textContent = '';
+        hintEl.classList.add('d-none');
+    }
+}
+
+// Loading state helper for barcode lookup
+function setBarcodeLoading(loading) {
+  const el = document.getElementById('barcodeLookupLoading');
+  if (el) {
+    if (loading) {
+      el.classList.remove('d-none');
+    } else {
+      el.classList.add('d-none');
+    }
+  }
 }
 function showProductData(product) {
     document.getElementById('productInfoImage').src = product.imageUrl;
+    document.getElementById('productInfoImage').alt = product.productName || 'Product image';
     document.getElementById('productInfoName').innerText = product.productName;
     if (product.categories != 'undefined' && product.categories != null) {
         document.getElementById('productInfoGenericName').innerText = product.categories;
+    }
+    const hintEl = document.getElementById('storageHint');
+    if (hintEl) {
+        if (product.storageHint) {
+            hintEl.textContent = product.storageHint;
+            hintEl.classList.remove('d-none');
+        } else {
+            hintEl.classList.add('d-none');
+        }
     }
     document.getElementById('productData').classList.remove('d-none');
 }
@@ -198,7 +226,9 @@ async function queryProductInfoRequest(barcode) {
 // Function handlers
 function queryProductInfo(barcode) {
     clearProductInfo();
+    setBarcodeLoading(true);
     queryProductInfoRequest(barcode).then((response) => {
+        setBarcodeLoading(false);
         if (response && response.code === 200) {
             showProductData(response.message);
         } else {
@@ -206,6 +236,7 @@ function queryProductInfo(barcode) {
             clearProductInfo();
         }
     }).catch((error) => {
+        setBarcodeLoading(false);
         showError('Error: ' + error);
         clearProductInfo();
     });
@@ -284,39 +315,44 @@ function handleBtnAddProduct() {
         return;
     }
 
-
-    try {
-        const barcode = document.getElementById('barcode').value;
-        if (barcode === '') {
-            throw new Error('Barcode cannot be empty');
-        }
-        const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
-        const amountEl = document.getElementById('amount');
-        const amount = amountEl ? parseInt(amountEl.value, 10) || 1 : 1;
-        const locationEl = document.getElementById('modalStorageLocation');
-        const storageLocationId = locationEl && locationEl.value ? parseInt(locationEl.value, 10) : null;
-        proviant.createProduct(barcode, expireAt, amount, storageLocationId).then((response) => {
-            switch (response.code) {
-                case 201:
-                    showAlert(true, `Product with barcode '${barcode}' was created successfully`);
-                    break;
-                case 400:
-                    showAlert(false, 'Request contained invalid data');
-                    break;
-                case 500:
-                    showAlert(false, 'Backend server error');
-                    break;
-                default:
-                    showAlert(false, `Undefined error: ${response.message}`);
-                    break;
-            }
-        }).catch(error => {
-            showAlert(false, error);
-        });
-    } catch (error) {
-        showAlert(false, error);
+    const barcode = document.getElementById('barcode').value;
+    if (barcode === '') {
+        showAlert(false, 'Barcode cannot be empty');
+        return;
     }
-};
+    const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
+    const amountEl = document.getElementById('amount');
+    const amount = amountEl ? parseInt(amountEl.value, 10) || 1 : 1;
+    const locationEl = document.getElementById('modalStorageLocation');
+    const storageLocationId = locationEl && locationEl.value ? parseInt(locationEl.value, 10) : null;
+
+    const btn = document.getElementById('btnAddProduct');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    proviant.createProduct(barcode, expireAt, amount, storageLocationId).then((response) => {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        switch (response.code) {
+            case 201:
+                showAlert(true, `Product with barcode '${barcode}' was created successfully`);
+                break;
+            case 400:
+                showAlert(false, 'Request contained invalid data');
+                break;
+            case 500:
+                showAlert(false, 'Backend server error');
+                break;
+            default:
+                showAlert(false, `Undefined error: ${response.message}`);
+                break;
+        }
+    }).catch((error) => {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        showAlert(false, error);
+    });
+}
 function handleBtnShowProduct() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
@@ -327,38 +363,39 @@ function handleBtnDeleteProductModal() {
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
     const productName = getSelectedProductName();
     proviant.showConfirm(
-        'Delete Product',
-        `Delete "${productName}"? This cannot be undone.`,
+        'Mark as wasted',
+        `Mark "${productName}" as wasted? This cannot be undone.`,
         function () {
             proviant.deleteProduct(productId, false).then((response) => {
                 if (response.code == 200) {
                     globalThis.location.reload();
                 } else {
-                    proviant.showFeedback('error', 'Delete Failed', `Error deleting product: ${response.message}`);
+                    proviant.showFeedback('error', 'Wasted Failed', `Error marking product as wasted: ${response.message}`);
                 }
             });
         },
-        'Delete',
+        'Wasted',
         'danger'
     );
 }
+
 function handleBtnArchiveProductModal() {
     const instanceDropdown = document.getElementById('instanceDropdown');
     const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
     const productName = getSelectedProductName();
     proviant.showConfirm(
-        'Archive Product',
-        `Archive "${productName}"?`,
+        'Mark as consumed',
+        `Mark "${productName}" as consumed?`,
         function () {
             proviant.deleteProduct(productId, true).then((response) => {
                 if (response.code == 200) {
                     globalThis.location.reload();
                 } else {
-                    proviant.showFeedback('error', 'Archive Failed', `Error archiving product: ${response.message}`);
+                    proviant.showFeedback('error', 'Consume Failed', `Error marking product as consumed: ${response.message}`);
                 }
             });
         },
-        'Archive',
+        'Consumed',
         'warning'
     );
 }
@@ -492,5 +529,3 @@ document.addEventListener('input', function (event) {
         handleChangedBarcode();
     }
 });
-
-

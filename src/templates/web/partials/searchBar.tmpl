@@ -47,7 +47,7 @@
                 <label for="sort-param" class="filter-label">Order by</label>
                 <select id="sort-param" class="filter-select">
                     <option value="created_at" {{ if eq .Sort "created_at" }}selected{{ end }}>Created At</option>
-                    <option value="expire_at" {{ if eq .Sort "expire_at" }}selected{{ end }}>Expire At</option>
+                    <option value="expire_at" {{ if eq .Sort "expire_at" }}selected{{ end }}>Expiry Date</option>
                     <option value="scanned_at" {{ if eq .Sort "scanned_at" }}selected{{ end }}>Scanned At</option>
                     <option value="notified_at" {{ if eq .Sort "notified_at" }}selected{{ end }}>Notified At</option>
                 </select>

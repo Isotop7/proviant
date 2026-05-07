@@ -3,15 +3,14 @@ package v1
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -30,9 +29,9 @@ import (
 // @Router       /api/v1/webhooks [post]
 // @Security     BearerAuth
 func CreateWebhook(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -43,14 +42,19 @@ func CreateWebhook(ctx *gin.Context) {
 	}
 
 	var req apiModel.CreateWebhookRequest
-	if bindErr := ctx.ShouldBindJSON(&req); bindErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+	if ctx.ShouldBindJSON(&req) != nil {
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
+		return
+	}
+
+	if err := validateWebhookURL(req.URL); err != nil {
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
 
 	for _, event := range req.Events {
 		if !isValidWebhookEvent(event) {
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrWebhookInvalidEvent.Error()})
+			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrWebhookInvalidEvent))
 			return
 		}
 	}
@@ -69,10 +73,9 @@ func CreateWebhook(ctx *gin.Context) {
 		Active: active,
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	if createErr := repo.CreateWebhook(&webhook); createErr != nil {
+	if createErr := repos.Webhooks.CreateWebhook(&webhook); createErr != nil {
 		logger.Error().Msgf("Error creating webhook: %v", createErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(createErr))
+		ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
 		return
 	}
 
@@ -89,9 +92,9 @@ func CreateWebhook(ctx *gin.Context) {
 // @Router       /api/v1/webhooks [get]
 // @Security     BearerAuth
 func ListWebhooks(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -101,11 +104,10 @@ func ListWebhooks(ctx *gin.Context) {
 		return
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	webhooks, err := repo.GetWebhooksByUserID(userID)
+	webhooks, err := repos.Webhooks.GetWebhooksByUserID(userID)
 	if err != nil {
 		logger.Error().Msgf("Error listing webhooks: %v", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -129,9 +131,9 @@ func ListWebhooks(ctx *gin.Context) {
 // @Router       /api/v1/webhooks/{id} [get]
 // @Security     BearerAuth
 func GetWebhook(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -141,23 +143,12 @@ func GetWebhook(ctx *gin.Context) {
 		return
 	}
 
-	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid webhook ID"})
+	webhookID, ok := mustGetOwnedWebhookID(ctx, repos, logger, userID)
+	if !ok {
 		return
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	if err := repo.CheckOwnership(uint(webhookID), userID); err != nil {
-		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
-		return
-	}
-
-	webhook, err := repo.GetWebhookByID(uint(webhookID))
+	webhook, err := repos.Webhooks.GetWebhookByID(webhookID)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, api.Error(errors.ErrWebhookNotFound))
 		return
@@ -181,9 +172,9 @@ func GetWebhook(ctx *gin.Context) {
 // @Router       /api/v1/webhooks/{id} [patch]
 // @Security     BearerAuth
 func UpdateWebhook(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -193,47 +184,38 @@ func UpdateWebhook(ctx *gin.Context) {
 		return
 	}
 
-	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid webhook ID"})
+	webhookID, ok := mustGetOwnedWebhookID(ctx, repos, logger, userID)
+	if !ok {
 		return
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	if err := repo.CheckOwnership(uint(webhookID), userID); err != nil {
-		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
-		return
-	}
-
-	webhook, err := repo.GetWebhookByID(uint(webhookID))
+	webhook, err := repos.Webhooks.GetWebhookByID(webhookID)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, api.Error(errors.ErrWebhookNotFound))
 		return
 	}
 
 	var req apiModel.UpdateWebhookRequest
-	if bindErr := ctx.ShouldBindJSON(&req); bindErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+	if ctx.ShouldBindJSON(&req) != nil {
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
 	if req.URL != "" {
+		if err := validateWebhookURL(req.URL); err != nil {
+			ctx.JSON(http.StatusBadRequest, api.Error(err))
+			return
+		}
 		webhook.URL = req.URL
 	}
 	if req.Secret != "" {
 		webhook.Secret = req.Secret
 	}
+	if err := validateWebhookEvents(req.Events); err != nil {
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		return
+	}
 	if req.Events != nil {
-		for _, event := range req.Events {
-			if !isValidWebhookEvent(event) {
-				ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrWebhookInvalidEvent.Error()})
-				return
-			}
-		}
 		eventsJSON, _ := json.Marshal(req.Events)
 		webhook.Events = string(eventsJSON)
 	}
@@ -241,9 +223,9 @@ func UpdateWebhook(ctx *gin.Context) {
 		webhook.Active = *req.Active
 	}
 
-	if err := repo.UpdateWebhook(&webhook); err != nil {
+	if err := repos.Webhooks.UpdateWebhook(&webhook); err != nil {
 		logger.Error().Msgf("Error updating webhook: %v", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -262,9 +244,9 @@ func UpdateWebhook(ctx *gin.Context) {
 // @Router       /api/v1/webhooks/{id} [delete]
 // @Security     BearerAuth
 func DeleteWebhook(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -274,25 +256,14 @@ func DeleteWebhook(ctx *gin.Context) {
 		return
 	}
 
-	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid webhook ID"})
+	webhookID, ok := mustGetOwnedWebhookID(ctx, repos, logger, userID)
+	if !ok {
 		return
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	if err := repo.CheckOwnership(uint(webhookID), userID); err != nil {
-		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
-		return
-	}
-
-	if err := repo.DeleteWebhook(uint(webhookID)); err != nil {
+	if err := repos.Webhooks.DeleteWebhook(webhookID); err != nil {
 		logger.Error().Msgf("Error deleting webhook: %v", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -311,9 +282,9 @@ func DeleteWebhook(ctx *gin.Context) {
 // @Router       /api/v1/webhooks/{id}/deliveries [get]
 // @Security     BearerAuth
 func GetWebhookDeliveries(ctx *gin.Context) {
-	logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	dbHandle, ok := mustGetDB(ctx, logger)
+	repos, ok := mustGetRepos(ctx, logger)
 	if !ok {
 		return
 	}
@@ -323,26 +294,15 @@ func GetWebhookDeliveries(ctx *gin.Context) {
 		return
 	}
 
-	webhookID, parseErr := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if parseErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Invalid webhook ID"})
+	webhookID, ok := mustGetOwnedWebhookID(ctx, repos, logger, userID)
+	if !ok {
 		return
 	}
 
-	repo := database.NewWebhookRepository(dbHandle)
-	if err := repo.CheckOwnership(uint(webhookID), userID); err != nil {
-		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
-		return
-	}
-
-	logs, err := repo.GetDeliveryLogs(uint(webhookID), 50)
+	logs, err := repos.Webhooks.GetDeliveryLogs(webhookID, 50)
 	if err != nil {
 		logger.Error().Msgf("Error getting delivery logs: %v", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -371,6 +331,15 @@ func toWebhookResponse(webhook *dbModel.Webhook) apiModel.WebhookResponse {
 		CreatedAt: webhook.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: webhook.UpdatedAt.Format(time.RFC3339),
 	}
+}
+
+func validateWebhookEvents(events []string) error {
+	for _, event := range events {
+		if !isValidWebhookEvent(event) {
+			return errors.ErrWebhookInvalidEvent
+		}
+	}
+	return nil
 }
 
 func isValidWebhookEvent(event string) bool {

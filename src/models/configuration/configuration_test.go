@@ -99,6 +99,26 @@ func TestCorsConfigurationStruct(t *testing.T) {
 	})
 }
 
+func TestRateLimitConfigurationStruct(t *testing.T) {
+	t.Run("can create RateLimitConfiguration", func(t *testing.T) {
+		config := RateLimitConfiguration{
+			LoginPerMinute:  5,
+			SignupPerMinute: 3,
+			ExportPerMinute: 1,
+		}
+
+		if config.LoginPerMinute != 5 {
+			t.Errorf("LoginPerMinute = %v, want 5", config.LoginPerMinute)
+		}
+		if config.SignupPerMinute != 3 {
+			t.Errorf("SignupPerMinute = %v, want 3", config.SignupPerMinute)
+		}
+		if config.ExportPerMinute != 1 {
+			t.Errorf("ExportPerMinute = %v, want 1", config.ExportPerMinute)
+		}
+	})
+}
+
 func TestServerConfigurationStruct(t *testing.T) {
 	t.Run("can create ServerConfiguration", func(t *testing.T) {
 		config := ServerConfiguration{
@@ -212,60 +232,77 @@ func TestOpenFoodFactsConfigurationStruct(t *testing.T) {
 }
 
 func TestProviantConfigurationStruct(t *testing.T) {
-	t.Run("can create ProviantConfiguration", func(t *testing.T) {
-		config := ProviantConfiguration{
-			Database: DatabaseConfiguration{
-				Engine: "sqlite",
-				SQLite: DatabaseSQLiteConfiguration{
-					Filepath: "/path/to/database.db",
-				},
+	config := ProviantConfiguration{
+		Database: DatabaseConfiguration{
+			Engine: "sqlite",
+			SQLite: DatabaseSQLiteConfiguration{
+				Filepath: "/path/to/database.db",
 			},
-			Server: ServerConfiguration{
-				Port: 5114,
-			},
-			Logging: LoggingConfiguration{
-				Enabled: true,
-			},
-			Notification: NotificationConfiguration{
-				Enabled: true,
-			},
-			OpenFoodFacts: OpenFoodFactsConfiguration{
-				URL: "https://world.openfoodfacts.org",
-			},
-			TemplateCache: make(map[string]*template.Template),
-		}
+		},
+		Server: ServerConfiguration{
+			Port: 5114,
+		},
+		Logging: LoggingConfiguration{
+			Enabled: true,
+		},
+		Notification: NotificationConfiguration{
+			Enabled: true,
+		},
+		OpenFoodFacts: OpenFoodFactsConfiguration{
+			URL: "https://world.openfoodfacts.org",
+		},
+		TemplateCache: make(map[string]*template.Template),
+	}
 
+	t.Run("database engine", func(t *testing.T) {
 		if config.Database.Engine != "sqlite" {
 			t.Errorf("Database.Engine = %v, want sqlite", config.Database.Engine)
 		}
+	})
+	t.Run("server port", func(t *testing.T) {
 		if config.Server.Port != 5114 {
 			t.Errorf("Server.Port = %v, want 5114", config.Server.Port)
 		}
+	})
+	t.Run("logging enabled", func(t *testing.T) {
 		if !config.Logging.Enabled {
 			t.Errorf("Logging.Enabled = %v, want true", config.Logging.Enabled)
 		}
+	})
+	t.Run("notification enabled", func(t *testing.T) {
 		if !config.Notification.Enabled {
 			t.Errorf("Notification.Enabled = %v, want true", config.Notification.Enabled)
 		}
-		if config.OpenFoodFacts.URL != "https://world.openfoodfacts.org" {
-			t.Errorf("OpenFoodFacts.URL = %v, want https://world.openfoodfacts.org", config.OpenFoodFacts.URL)
-		}
-		if config.Database.Engine != "sqlite" {
-			t.Errorf("Database.Engine = %v, want sqlite", config.Database.Engine)
-		}
-		if config.Server.Port != 5114 {
-			t.Errorf("Server.Port = %v, want 5114", config.Server.Port)
-		}
-		if !config.Logging.Enabled {
-			t.Errorf("Logging.Enabled = %v, want true", config.Logging.Enabled)
-		}
-		if !config.Notification.Enabled {
-			t.Errorf("Notification.Enabled = %v, want true", config.Notification.Enabled)
-		}
+	})
+	t.Run("openfoodfacts url", func(t *testing.T) {
 		if config.OpenFoodFacts.URL != "https://world.openfoodfacts.org" {
 			t.Errorf("OpenFoodFacts.URL = %v, want https://world.openfoodfacts.org", config.OpenFoodFacts.URL)
 		}
 	})
+}
+
+func assertValidationError(t *testing.T, err error, want error) {
+	t.Helper()
+	if want == nil {
+		if err != nil {
+			t.Errorf("expected no error but got: %v", err)
+		}
+		return
+	}
+	if err == nil {
+		t.Errorf("expected error but got none")
+		return
+	}
+	if err.Error() != want.Error() {
+		t.Errorf("error = %v, want %v", err.Error(), want.Error())
+	}
+}
+
+func assertEngineSet(t *testing.T, config *ProviantConfiguration) {
+	t.Helper()
+	if config.Database.SelectedEngine != database.MariaDB && config.Database.SelectedEngine != database.SQLite {
+		t.Errorf("SelectedEngine not set correctly")
+	}
 }
 
 func TestValidateOpenFoodFactsConfiguration(t *testing.T) {
@@ -329,18 +366,7 @@ func TestValidateOpenFoodFactsConfiguration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.ValidateOpenFoodFactsConfiguration()
-
-			if tt.wantErr == nil {
-				if err != nil {
-					t.Errorf("expected no error but got: %v", err)
-				}
-			} else {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				} else if err.Error() != tt.wantErr.Error() {
-					t.Errorf("error = %v, want %v", err.Error(), tt.wantErr.Error())
-				}
-			}
+			assertValidationError(t, err, tt.wantErr)
 		})
 	}
 }
@@ -526,21 +552,147 @@ func TestValidateDatabaseConfiguration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.ValidateDatabaseConfiguration()
-
+			assertValidationError(t, err, tt.wantErr)
 			if tt.wantErr == nil {
-				if err != nil {
-					t.Errorf("expected no error but got: %v", err)
-				}
-				if tt.config.Database.SelectedEngine != database.MariaDB && tt.config.Database.SelectedEngine != database.SQLite {
-					t.Errorf("SelectedEngine not set correctly")
-				}
-			} else {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				} else if err.Error() != tt.wantErr.Error() {
-					t.Errorf("error = %v, want %v", err.Error(), tt.wantErr.Error())
-				}
+				assertEngineSet(t, tt.config)
 			}
+		})
+	}
+}
+
+func TestValidateServerConfiguration(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  *ProviantConfiguration
+		wantErr error
+	}{
+		{
+			name: "valid configuration",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 24,
+					},
+					RateLimit: RateLimitConfiguration{
+						LoginPerMinute:  5,
+						SignupPerMinute: 3,
+						ExportPerMinute: 1,
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "zero login rate limit",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 24,
+					},
+					RateLimit: RateLimitConfiguration{
+						LoginPerMinute:  0,
+						SignupPerMinute: 3,
+						ExportPerMinute: 1,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrRateLimitInvalidValue,
+		},
+		{
+			name: "zero signup rate limit",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 24,
+					},
+					RateLimit: RateLimitConfiguration{
+						LoginPerMinute:  5,
+						SignupPerMinute: 0,
+						ExportPerMinute: 1,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrRateLimitInvalidValue,
+		},
+		{
+			name: "zero export rate limit",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 24,
+					},
+					RateLimit: RateLimitConfiguration{
+						LoginPerMinute:  5,
+						SignupPerMinute: 3,
+						ExportPerMinute: 0,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrRateLimitInvalidValue,
+		},
+		{
+			name: "negative rate limit value",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 24,
+					},
+					RateLimit: RateLimitConfiguration{
+						LoginPerMinute:  -1,
+						SignupPerMinute: 3,
+						ExportPerMinute: 1,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrRateLimitInvalidValue,
+		},
+		{
+			name: "empty token password",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "",
+						TokenLifetime: 24,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrServerEmptyTokenPassword,
+		},
+		{
+			name: "zero token lifetime",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 0,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrServerInvalidTokenLifetime,
+		},
+		{
+			name: "negative token lifetime",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: -1,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrServerInvalidTokenLifetime,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.ValidateServerConfiguration()
+			assertValidationError(t, err, tt.wantErr)
 		})
 	}
 }

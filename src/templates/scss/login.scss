@@ -1,0 +1,508 @@
+// ── Login page — split-panel layout ──────────────────────────────────────────
+
+@keyframes auth-spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin-icon {
+  display: inline-block;
+  animation: auth-spin .7s linear infinite;
+}
+
+// ── Layout ──────────────────────────────────────────────────────────────────
+.login-root {
+  display: flex;
+  min-height: 100vh;
+}
+
+// ── Brand panel ─────────────────────────────────────────────────────────────
+.login-brand {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 440px;
+  padding: 48px 48px 44px;
+  overflow: hidden;
+  background: var(--accent);
+
+  &::before {
+    position: absolute;
+    top: -80px;
+    right: -100px;
+    width: 340px;
+    height: 340px;
+    content: "";
+    background: rgba(255, 255, 255, .07);
+    border-radius: 50%;
+  }
+
+  &::after {
+    position: absolute;
+    bottom: 40px;
+    left: -60px;
+    width: 220px;
+    height: 220px;
+    content: "";
+    background: rgba(255, 255, 255, .05);
+    border-radius: 50%;
+  }
+}
+
+.brand-circle-sm {
+  position: absolute;
+  right: 30px;
+  bottom: 160px;
+  width: 120px;
+  height: 120px;
+  background: rgba(255, 255, 255, .06);
+  border-radius: 50%;
+}
+
+.brand-top {
+  position: relative;
+  z-index: 1;
+}
+
+.brand-logo {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 52px;
+}
+
+.brand-logo-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -.5px;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 12px;
+}
+
+.brand-logo-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -.5px;
+}
+
+.brand-headline {
+  margin-bottom: 16px;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #fff;
+  letter-spacing: -.8px;
+}
+
+.brand-sub {
+  max-width: 320px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, .72);
+}
+
+.brand-features {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.brand-feature {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.brand-feature-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 10px;
+}
+
+.brand-feature-text {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, .85);
+  text-decoration: none;
+}
+
+.brand-bottom {
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  color: rgba(255, 255, 255, .45);
+  letter-spacing: .2px;
+}
+
+// ── Form panel ──────────────────────────────────────────────────────────────
+.login-form-panel {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.login-form-inner {
+  width: 100%;
+  max-width: 380px;
+}
+
+// ── Invite banner ────────────────────────────────────────────────────────────
+.invite-banner {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-2);
+  background: var(--accent-subtle);
+  border: 1px solid oklch(78% .08 162deg);
+  border-radius: 10px;
+
+  i {
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-size: 15px;
+    color: var(--accent);
+  }
+
+  strong {
+    color: var(--fg);
+  }
+}
+
+// ── Tab switcher ─────────────────────────────────────────────────────────────
+.auth-tabs {
+  display: flex;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.auth-tab {
+  padding: 10px 20px;
+  margin-bottom: -1px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg-3);
+  text-decoration: none;
+  letter-spacing: -.1px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  transition: color 150ms ease, border-color 150ms ease;
+
+  &:hover {
+    color: var(--fg-2);
+  }
+
+  &.active {
+    font-weight: 600;
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+}
+
+// ── Form heading ─────────────────────────────────────────────────────────────
+.form-heading {
+  margin-bottom: 28px;
+}
+
+.form-heading-title {
+  margin-bottom: 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -.5px;
+}
+
+.form-heading-sub {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+
+// ── Fields ───────────────────────────────────────────────────────────────────
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+// Override Bootstrap's .field-label in main.scss (too generic) for auth context
+.login-form-inner .field-label {
+  margin-bottom: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.field-input-wrap {
+  position: relative;
+}
+
+.field-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  font-size: 15px;
+  color: var(--fg-3);
+  pointer-events: none;
+  transition: color 150ms ease;
+  transform: translateY(-50%);
+}
+
+.field-input-wrap:focus-within .field-icon {
+  color: var(--accent);
+}
+
+.field-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px 0 38px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+
+  &::placeholder {
+    color: var(--fg-3);
+  }
+
+  &:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px oklch(50% .12 162deg / .12);
+  }
+
+  &.error {
+    border-color: var(--status-expired);
+    box-shadow: 0 0 0 3px oklch(55% .2 25deg / .1);
+  }
+}
+
+.field-error {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--status-expired);
+}
+
+// ── Password toggle ───────────────────────────────────────────────────────────
+.pwd-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  font-size: 15px;
+  color: var(--fg-3);
+  cursor: pointer;
+  background: none;
+  border: none;
+  transition: color 150ms;
+  transform: translateY(-50%);
+
+  &:hover {
+    color: var(--fg-2);
+  }
+}
+
+// ── Password strength meter ───────────────────────────────────────────────────
+.strength-meter {
+  display: flex;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.strength-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  transition: background 300ms ease;
+}
+
+.strength-label {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+// ── Password requirements list ────────────────────────────────────────────────
+.password-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+  margin: 6px 0 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--fg-3);
+    transition: color 150ms;
+
+    i {
+      font-size: 10px;
+    }
+
+    &.req-met {
+      color: var(--status-fresh);
+    }
+  }
+}
+
+// ── Forgot password ───────────────────────────────────────────────────────────
+.forgot-link {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -10px;
+  margin-bottom: 16px;
+
+  a {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// ── Submit button ─────────────────────────────────────────────────────────────
+.btn-submit {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 44px;
+  margin-top: 8px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  letter-spacing: -.1px;
+  cursor: pointer;
+  background: var(--accent);
+  border: 1px solid var(--accent-active);
+  border-radius: 10px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .12), inset 0 1px 0 rgba(255, 255, 255, .12);
+  transition: background 150ms ease, box-shadow 150ms ease, transform 120ms ease;
+
+  &:hover:not(:disabled) {
+    background: var(--accent-hover);
+    box-shadow: 0 3px 10px oklch(50% .12 162deg / .35), 0 1px 0 rgba(0, 0, 0, .12);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    box-shadow: none;
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: .7;
+  }
+}
+
+// ── Terms note ────────────────────────────────────────────────────────────────
+.terms-note {
+  margin-top: 16px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--fg-3);
+  text-align: center;
+
+  a {
+    color: var(--fg-2);
+    text-decoration: underline;
+  }
+}
+
+// ── Mobile logo ───────────────────────────────────────────────────────────────
+.mobile-logo {
+  display: none;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.mobile-logo-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  background: var(--accent);
+  border-radius: 10px;
+}
+
+.mobile-logo-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -.4px;
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 768px) {
+  .login-brand {
+    display: none;
+  }
+
+  .mobile-logo {
+    display: flex;
+  }
+
+  .login-form-panel {
+    align-items: flex-start;
+    padding: 40px 24px;
+  }
+
+  .login-form-inner {
+    max-width: 100%;
+  }
+}

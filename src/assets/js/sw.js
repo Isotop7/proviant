@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v51';
+const CACHE_NAME = 'proviant-v65';
 
 // Static shell to pre-cache on install
 const PRECACHE_URLS = [
@@ -19,7 +19,7 @@ const PRECACHE_URLS = [
 
 // Minimal offline fallback page (no asset dependencies)
 const OFFLINE_PAGE = `<!doctype html>
-<html lang="de" data-bs-theme="light">
+<html lang="en" data-bs-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -107,8 +107,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for other static assets — they are versioned via cache name
-  if (url.pathname.startsWith('/assets/') || url.pathname === '/manifest.json') {
+  // Cache-first for other static assets — they are versioned via cache name.
+  // Product images are barcode-keyed and effectively immutable per barcode.
+  if (
+    url.pathname.startsWith('/assets/') ||
+    url.pathname.startsWith('/product-images/') ||
+    url.pathname === '/manifest.json'
+  ) {
     event.respondWith(
       caches.match(request).then(
         (cached) =>

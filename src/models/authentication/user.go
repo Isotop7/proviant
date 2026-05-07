@@ -33,9 +33,9 @@ type NotificationPreferences struct {
 type User struct {
 	gorm.Model
 	ID                      uint       `gorm:"primaryKey,unique"`
-	Username                string     `json:"username"`
+	Username                string     `gorm:"index" json:"username"`
 	DisplayName             string     `json:"displayName"`
-	MailAddress             string     `json:"mailAddress"`
+	MailAddress             string     `gorm:"index" json:"mailAddress"`
 	Password                string     `json:"-"`
 	EmailVerifiedAt         *time.Time `json:"emailVerifiedAt,omitempty"`
 	HouseholdID             uint       `gorm:"index"`

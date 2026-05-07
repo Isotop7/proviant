@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/models/configuration"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	"github.com/rs/zerolog"
 )
@@ -20,6 +21,36 @@ type MockHTTPClient struct {
 
 func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	return m.DoFunc(req)
+}
+
+func newTestOFFController(serverURL string, timeout int) OpenFoodFactsAPIController {
+	logger := zerolog.New(io.Discard)
+	return OpenFoodFactsAPIController{
+		Logger: &logger,
+		Configuration: configuration.OpenFoodFactsConfiguration{
+			URL:     serverURL,
+			Timeout: timeout,
+		},
+	}
+}
+
+func assertOFFProductFields(t *testing.T, p *dbModel.Product, barcode, name, categories, countries, imageURL string) {
+	t.Helper()
+	if p.Barcode != barcode {
+		t.Errorf("Barcode = %v, want %v", p.Barcode, barcode)
+	}
+	if p.ProductName != name {
+		t.Errorf("ProductName = %v, want %v", p.ProductName, name)
+	}
+	if p.Categories != categories {
+		t.Errorf("Categories = %v, want %v", p.Categories, categories)
+	}
+	if p.Countries != countries {
+		t.Errorf("Countries = %v, want %v", p.Countries, countries)
+	}
+	if p.ImageURL != imageURL {
+		t.Errorf("ImageURL = %v, want %v", p.ImageURL, imageURL)
+	}
 }
 
 // TestOpenFoodFactsAPIController_Struct tests the OpenFoodFactsAPIController struct
@@ -46,208 +77,98 @@ func TestOpenFoodFactsAPIController_Struct(t *testing.T) {
 	})
 }
 
-// TestOpenFoodFactsAPIController_GetDataset tests the GetDataset method
-func TestOpenFoodFactsAPIController_GetDataset(t *testing.T) {
-	t.Run("can get dataset successfully", func(t *testing.T) {
-		logger := zerolog.New(io.Discard)
-		config := configuration.OpenFoodFactsConfiguration{
-			URL:     "https://world.openfoodfacts.org",
-			Timeout: 10,
+func TestGetDataset_Success(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "1234567890123") {
+			t.Errorf("Request path = %v, want to contain 1234567890123", r.URL.Path)
 		}
-
-		controller := OpenFoodFactsAPIController{
-			Logger:        &logger,
-			Configuration: config,
-		}
-
-		// Create a test server
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Verify the request path contains the expected barcode
-			if !strings.Contains(r.URL.Path, "1234567890123") {
-				t.Errorf("Request path = %v, want to contain 1234567890123", r.URL.Path)
+		mockResponse := `{
+			"code": "1234567890123",
+			"product": {
+				"_id": "1234567890123",
+				"product_name": "Test Product",
+				"categories": "en:test",
+				"countries": "en:Germany",
+				"image_url": "http://example.com/image.jpg"
 			}
+		}`
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(mockResponse))
+	}))
+	defer server.Close()
 
-			// Send a mock response
-			mockResponse := `{
-				"code": "1234567890123",
-				"product": {
-					"_id": "1234567890123",
-					"product_name": "Test Product",
-					"categories": "en:test",
-					"countries": "en:Germany",
-					"image_url": "http://example.com/image.jpg"
-				}
-			}`
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(mockResponse))
-		}))
-		defer server.Close()
+	controller := newTestOFFController(server.URL, 10)
+	product, err := controller.GetDataset("1234567890123")
+	if err != nil {
+		t.Errorf("GetDataset() error = %v, want nil", err)
+	}
+	assertOFFProductFields(t, &product, "1234567890123", "Test Product", "en:test", "en:Germany", "http://example.com/image.jpg")
+}
 
-		// Update the controller URL to use the test server
-		controller.Configuration.URL = server.URL
+func TestGetDataset_Timeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(2 * time.Second)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"code": "1234567890123"}`))
+	}))
+	defer server.Close()
 
-		// Call GetDataset
-		product, err := controller.GetDataset("1234567890123")
-		if err != nil {
-			t.Errorf("GetDataset() error = %v, want nil", err)
-		}
+	controller := newTestOFFController(server.URL, 1)
+	_, err := controller.GetDataset("1234567890123")
+	if err == nil {
+		t.Errorf("GetDataset() error = nil, want timeout error")
+		return
+	}
+	if err.Error() != "timeout occured" {
+		t.Errorf("GetDataset() error = %v, want timeout occured", err.Error())
+	}
+}
 
-		// Verify the product data
-		if product.Barcode != "1234567890123" {
-			t.Errorf("Barcode = %v, want 1234567890123", product.Barcode)
-		}
+func TestGetDataset_HTTPError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"error": "internal server error"}`))
+	}))
+	defer server.Close()
 
-		if product.ProductName != "Test Product" {
-			t.Errorf("ProductName = %v, want Test Product", product.ProductName)
-		}
+	controller := newTestOFFController(server.URL, 10)
+	product, err := controller.GetDataset("1234567890123")
+	if err != nil {
+		t.Errorf("GetDataset() error = %v, want nil", err)
+	}
+	if product.Barcode != "" {
+		t.Errorf("Barcode = %v, want empty string", product.Barcode)
+	}
+}
 
-		if product.Categories != "en:test" {
-			t.Errorf("Categories = %v, want en:test", product.Categories)
-		}
+func TestGetDataset_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`invalid json`))
+	}))
+	defer server.Close()
 
-		if product.Countries != "en:Germany" {
-			t.Errorf("Countries = %v, want en:Germany", product.Countries)
-		}
-
-		if product.ImageURL != "http://example.com/image.jpg" {
-			t.Errorf("ImageURL = %v, want http://example.com/image.jpg", product.ImageURL)
-		}
-	})
-
-	t.Run("handles timeout correctly", func(t *testing.T) {
-		logger := zerolog.New(io.Discard)
-		config := configuration.OpenFoodFactsConfiguration{
-			URL:     "https://world.openfoodfacts.org",
-			Timeout: 1, // 1 second timeout
-		}
-
-		controller := OpenFoodFactsAPIController{
-			Logger:        &logger,
-			Configuration: config,
-		}
-
-		// Create a test server that delays responses
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			time.Sleep(2 * time.Second) // Delay longer than timeout
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"code": "1234567890123"}`))
-		}))
-		defer server.Close()
-
-		// Update the controller URL to use the test server
-		controller.Configuration.URL = server.URL
-
-		// Call GetDataset - should timeout
-		_, err := controller.GetDataset("1234567890123")
-		if err == nil {
-			t.Errorf("GetDataset() error = nil, want timeout error")
-		}
-
-		if err.Error() != "timeout occured" {
-			t.Errorf("GetDataset() error = %v, want timeout occured", err.Error())
-		}
-	})
-
-	t.Run("handles HTTP errors", func(t *testing.T) {
-		logger := zerolog.New(io.Discard)
-		config := configuration.OpenFoodFactsConfiguration{
-			URL:     "https://world.openfoodfacts.org",
-			Timeout: 10,
-		}
-
-		controller := OpenFoodFactsAPIController{
-			Logger:        &logger,
-			Configuration: config,
-		}
-
-		// Create a test server that returns an error
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = w.Write([]byte(`{"error": "internal server error"}`))
-		}))
-		defer server.Close()
-
-		// Update the controller URL to use the test server
-		controller.Configuration.URL = server.URL
-
-		// Call GetDataset - should handle HTTP error
-		product, err := controller.GetDataset("1234567890123")
-		if err != nil {
-			t.Errorf("GetDataset() error = %v, want nil", err)
-		}
-
-		// Should return empty product on HTTP error
-		if product.Barcode != "" {
-			t.Errorf("Barcode = %v, want empty string", product.Barcode)
-		}
-	})
-
-	t.Run("handles invalid JSON response", func(t *testing.T) {
-		logger := zerolog.New(io.Discard)
-		config := configuration.OpenFoodFactsConfiguration{
-			URL:     "https://world.openfoodfacts.org",
-			Timeout: 10,
-		}
-
-		controller := OpenFoodFactsAPIController{
-			Logger:        &logger,
-			Configuration: config,
-		}
-
-		// Create a test server that returns invalid JSON
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`invalid json`))
-		}))
-		defer server.Close()
-
-		// Update the controller URL to use the test server
-		controller.Configuration.URL = server.URL
-
-		// Call GetDataset - should handle invalid JSON
-		product, err := controller.GetDataset("1234567890123")
-		if err != nil {
-			t.Errorf("GetDataset() error = %v, want nil", err)
-		}
-
-		// Should return empty product on JSON error
-		if product.Barcode != "" {
-			t.Errorf("Barcode = %v, want empty string", product.Barcode)
-		}
-	})
+	controller := newTestOFFController(server.URL, 10)
+	product, err := controller.GetDataset("1234567890123")
+	if err != nil {
+		t.Errorf("GetDataset() error = %v, want nil", err)
+	}
+	if product.Barcode != "" {
+		t.Errorf("Barcode = %v, want empty string", product.Barcode)
+	}
 }
 
 // TestOpenFoodFactsAPIController_Configuration tests different configuration scenarios
 func TestOpenFoodFactsAPIController_Configuration(t *testing.T) {
 	t.Run("can create controller with minimum timeout", func(t *testing.T) {
-		logger := zerolog.New(io.Discard)
-		config := configuration.OpenFoodFactsConfiguration{
-			URL:     "https://world.openfoodfacts.org",
-			Timeout: 1, // Minimum timeout
-		}
-
-		controller := OpenFoodFactsAPIController{
-			Logger:        &logger,
-			Configuration: config,
-		}
-
+		controller := newTestOFFController("https://world.openfoodfacts.org", 1)
 		if controller.Configuration.Timeout != 1 {
 			t.Errorf("Timeout = %v, want 1", controller.Configuration.Timeout)
 		}
 	})
 
 	t.Run("can create controller with large timeout", func(t *testing.T) {
-		logger := zerolog.New(io.Discard)
-		config := configuration.OpenFoodFactsConfiguration{
-			URL:     "https://world.openfoodfacts.org",
-			Timeout: 60, // Large timeout
-		}
-
-		controller := OpenFoodFactsAPIController{
-			Logger:        &logger,
-			Configuration: config,
-		}
-
+		controller := newTestOFFController("https://world.openfoodfacts.org", 60)
 		if controller.Configuration.Timeout != 60 {
 			t.Errorf("Timeout = %v, want 60", controller.Configuration.Timeout)
 		}
@@ -256,34 +177,17 @@ func TestOpenFoodFactsAPIController_Configuration(t *testing.T) {
 
 // TestOpenFoodFactsAPIController_EmptyResponse tests handling of empty responses
 func TestOpenFoodFactsAPIController_EmptyResponse(t *testing.T) {
-	logger := zerolog.New(io.Discard)
-	config := configuration.OpenFoodFactsConfiguration{
-		URL:     "https://world.openfoodfacts.org",
-		Timeout: 10,
-	}
-
-	controller := OpenFoodFactsAPIController{
-		Logger:        &logger,
-		Configuration: config,
-	}
-
-	// Create a test server that returns empty response
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer server.Close()
 
-	// Update the controller URL to use the test server
-	controller.Configuration.URL = server.URL
-
-	// Call GetDataset - should handle empty response
+	controller := newTestOFFController(server.URL, 10)
 	product, err := controller.GetDataset("1234567890123")
 	if err != nil {
 		t.Errorf("GetDataset() error = %v, want nil", err)
 	}
-
-	// Should return empty product on empty response
 	if product.Barcode != "" {
 		t.Errorf("Barcode = %v, want empty string", product.Barcode)
 	}
@@ -291,18 +195,6 @@ func TestOpenFoodFactsAPIController_EmptyResponse(t *testing.T) {
 
 // TestOpenFoodFactsAPIController_MissingFields tests handling of missing fields in response
 func TestOpenFoodFactsAPIController_MissingFields(t *testing.T) {
-	logger := zerolog.New(io.Discard)
-	config := configuration.OpenFoodFactsConfiguration{
-		URL:     "https://world.openfoodfacts.org",
-		Timeout: 10,
-	}
-
-	controller := OpenFoodFactsAPIController{
-		Logger:        &logger,
-		Configuration: config,
-	}
-
-	// Create a test server that returns response with missing fields
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{
@@ -314,20 +206,14 @@ func TestOpenFoodFactsAPIController_MissingFields(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Update the controller URL to use the test server
-	controller.Configuration.URL = server.URL
-
-	// Call GetDataset - should handle missing fields
+	controller := newTestOFFController(server.URL, 10)
 	product, err := controller.GetDataset("1234567890123")
 	if err != nil {
 		t.Errorf("GetDataset() error = %v, want nil", err)
 	}
-
-	// Should return product with barcode from response, but empty fields for missing data
 	if product.Barcode != "1234567890123" {
 		t.Errorf("Barcode = %v, want 1234567890123", product.Barcode)
 	}
-
 	if product.ProductName != "" {
 		t.Errorf("ProductName = %v, want empty string", product.ProductName)
 	}

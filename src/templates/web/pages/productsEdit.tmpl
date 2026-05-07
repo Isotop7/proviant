@@ -3,7 +3,7 @@
 
   <!-- ── Mobile: topbar (hidden on desktop) ── -->
   <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-white d-md-none">
-    <a href="/products/{{ .Product.ID }}" style="color:var(--fg-2);font-size:20px;">
+    <a href="/web/products" style="color:var(--fg-2);font-size:20px;">
       <i class="bi bi-arrow-left"></i>
     </a>
     <div class="flex-grow-1">
@@ -17,19 +17,17 @@
 
   <!-- ── Mobile: image strip (hidden on desktop) ── -->
   <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-white d-md-none">
-    <div style="width:52px;height:52px;border-radius:8px;background:var(--bg-subtle);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+    <div class="pv-mobile-thumb">
       {{ if .Product.ImageURL }}
-      <img src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}" class="pv-img-product" style="width:100%;height:100%;object-fit:contain;padding:4px;">
-      {{ else }}
-      <i class="bi bi-image" style="font-size:22px;color:var(--fg-3);"></i>
+       <img src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}">
       {{ end }}
+      <i class="bi bi-image pv-mobile-thumb-icon"></i>
     </div>
     <div class="flex-grow-1" style="min-width:0;">
       <div style="font-size:13px;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ .Product.ProductName }}</div>
       <div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-3);margin-top:2px;">{{ .Product.Barcode }}</div>
     </div>
-    <button type="button" class="btn" style="background:var(--accent-subtle);border:1px solid oklch(0.78 0.08 162);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--accent);font-weight:600;"
-      onclick="document.getElementById('inputImageURL').focus();">
+    <button type="button" id="btnMobilePhotoFocus" class="btn" style="background:var(--accent-subtle);border:1px solid oklch(0.78 0.08 162);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--accent);font-weight:600;">
       <i class="bi bi-image"></i> Photo
     </button>
   </div>
@@ -115,6 +113,11 @@
                 <div class="d-flex align-items-center gap-2">
                   <input type="date" class="pv-field-input mono" id="inputExpireAt"
                     value="{{ .Product.ExpireAt | inputDate }}" required style="flex:1;">
+                  {{ if .Product.ExpireAt.IsZero }}
+                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTodayExpiry" title="Set to today">
+                    <i class="bi bi-calendar-check"></i>
+                  </button>
+                  {{ end }}
                   <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="Scan expiry date">
                     <i class="bi bi-camera"></i>
                   </button>
@@ -123,9 +126,9 @@
               <div class="pv-field">
                 <label class="pv-field-label">Amount</label>
                 <div class="pv-stepper">
-                  <button type="button" onclick="let i=this.nextElementSibling;i.value=Math.max(0,+i.value-1)">−</button>
+                  <button type="button" data-amount-step="-1">−</button>
                   <input type="number" id="inputAmount" value="{{ .Product.Amount }}" min="0">
-                  <button type="button" onclick="let i=this.previousElementSibling;i.value=+i.value+1">+</button>
+                  <button type="button" data-amount-step="1">+</button>
                 </div>
               </div>
             </div>
@@ -143,46 +146,26 @@
           </div>
         </div>
 
-        <!-- Timestamps card -->
-        <div class="pv-card">
-          <div class="pv-card-header">
-            <div class="pv-card-header-icon"><i class="bi bi-clock-history"></i></div>
-            <div class="pv-card-header-title">Timestamps</div>
-            <span style="font-size:11px;color:var(--fg-3);margin-left:auto;">Read-only</span>
-          </div>
-          <div class="pv-card-body">
-            <div class="pv-meta-grid">
-              <div>
-                <div class="pv-meta-label">Scanned at</div>
-                <div class="pv-meta-value">{{ .Product.ScannedAt | humanDateTime }}</div>
-              </div>
-              <div>
-                <div class="pv-meta-label">Updated at</div>
-                <div class="pv-meta-value">{{ .Product.UpdatedAt | humanDateTime }}</div>
-              </div>
-              <div>
-                <div class="pv-meta-label">Notified at</div>
-                <div class="pv-meta-value">{{ .Product.NotifiedAt | humanDateTime }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Desktop form actions (hidden on mobile) -->
         <div class="pv-form-actions d-none d-md-flex">
           <button class="pv-btn-primary" type="submit">
             <i class="bi bi-check2"></i> Update product
           </button>
-          <a href="/products/{{ .Product.ID }}" class="pv-btn-secondary">Cancel</a>
+          <a href="/web/products" class="pv-btn-secondary">Cancel</a>
           <div class="spacer"></div>
           {{ if $.IsArchived }}
           <button class="pv-btn-restore" type="button" id="btnRestoreProduct">
             <i class="bi bi-arrow-counterclockwise"></i> Restore
           </button>
           {{ end }}
+          {{ if not $.IsArchived }}
+          <button class="pv-btn-secondary" type="button" id="btnConsumeProduct">
+            <i class="bi bi-check-circle"></i> Consumed
+          </button>
+          {{ end }}
           <button class="pv-btn-danger-ghost" type="button"
             data-bs-toggle="modal" data-bs-target="#deleteModal">
-            <i class="bi bi-trash3"></i> Delete
+            <i class="bi bi-trash3"></i> Wasted
           </button>
         </div>
 
@@ -196,14 +179,13 @@
           <div class="pv-product-image-area">
             {{ if .Product.ImageURL }}
             <img id="imgProduct" src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}" class="pv-img-product">
-            {{ else }}
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;height:100%;padding:24px;">
-              <i class="bi bi-image" style="font-size:40px;color:var(--fg-3);"></i>
-              <span style="font-size:11px;color:var(--fg-3);">No image</span>
-            </div>
             {{ end }}
+            <div id="imgProductFallback" class="pv-product-image-fallback">
+              <i class="bi bi-image"></i>
+              <span>No image</span>
+            </div>
             <div class="pv-product-image-overlay">
-              <button type="button" onclick="document.getElementById('inputImageURL').focus()">
+              <button type="button" id="btnDesktopChangeImage">
                 <i class="bi bi-image"></i> Change image
               </button>
             </div>
@@ -252,7 +234,7 @@
               <span style="font-weight:600;color:var(--fg);font-family:var(--font-mono);">{{ .Product.Amount }}</span>
             </div>
             <div style="border-top:1px solid var(--border-subtle);padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
-              <span style="color:var(--fg-3);">Expires</span>
+              <span style="color:var(--fg-3);">Expiry Date</span>
               <span style="font-weight:600;font-family:var(--font-mono);">{{ .Product.ExpireAt | humanDate }}</span>
             </div>
           </div>
@@ -268,10 +250,15 @@
     <button type="submit" form="editProductForm" class="pv-btn-primary flex-grow-1">
       <i class="bi bi-check2"></i> Update product
     </button>
-    <a href="/products/{{ .Product.ID }}" class="pv-btn-secondary">Cancel</a>
+    <a href="/web/products" class="pv-btn-secondary">Cancel</a>
     {{ if $.IsArchived }}
     <button type="button" class="pv-btn-restore" id="btnRestoreProductMobile">
       <i class="bi bi-arrow-counterclockwise"></i> Restore
+    </button>
+    {{ end }}
+    {{ if not $.IsArchived }}
+    <button type="button" class="pv-btn-secondary" id="btnConsumeProductMobile">
+      <i class="bi bi-check-circle"></i> Consumed
     </button>
     {{ end }}
     <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#deleteModal"
@@ -291,18 +278,18 @@
           <i class="bi bi-trash3-fill"></i>
         </div>
         <div class="flex-grow-1">
-          <h5 class="modal-title" style="font-size:15px;font-weight:700;">Delete {{ .Product.ProductName }}?</h5>
+          <h5 class="modal-title" style="font-size:15px;font-weight:700;">Mark {{ .Product.ProductName }} as wasted?</h5>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body" style="font-size:13px;color:var(--fg-2);line-height:1.6;padding:16px 20px;">
-        This product will be permanently deleted. Consider archiving instead if you want to keep the record.
+          This product will be permanently marked as wasted. Consider marking as consumed instead if you want to keep the record.
       </div>
       <div class="modal-footer" style="border-top:1px solid var(--border-subtle);padding:12px 20px;">
         <button class="pv-btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button id="btnConfirmDelete" class="pv-btn-danger-ghost" type="button"
           style="background:oklch(0.55 0.20 25);color:white;border:none;border-radius:8px;padding:10px 18px;">
-          <i class="bi bi-trash3"></i> Delete permanently
+          <i class="bi bi-trash3"></i> Wasted
         </button>
       </div>
     </div>
@@ -329,7 +316,7 @@
         <div class="camera-preview-wrapper">
           <video id="ocrVideoPreview" autoplay playsinline class="camera-preview"></video>
         </div>
-        <p class="text-body-secondary small mt-2">Hold steady and tap Capture</p>
+        <p class="text-secondary-custom small mt-2">Hold steady and tap Capture</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -363,7 +350,7 @@
         <div class="progress mb-2" style="height:8px;">
           <div id="ocrConfidenceBar" class="progress-bar" role="progressbar" style="width:0%"></div>
         </div>
-        <small class="text-body-secondary" id="ocrConfidenceLabel">Confidence: 0%</small>
+        <small class="text-secondary-custom" id="ocrConfidenceLabel">Confidence: 0%</small>
         <div id="ocrRawTextWrapper" class="mt-3 d-none">
           <label class="form-label">Raw OCR text</label>
           <textarea id="ocrRawText" class="form-control" rows="3" readonly></textarea>

@@ -9,7 +9,7 @@ import (
 func SecurityHeadersMiddleware(proviantConfig *configuration.ProviantConfiguration) gin.HandlerFunc {
 	contentSecurityPolicy := proviantConfig.Server.SecurityHeaders.ContentSecurityPolicy
 	if contentSecurityPolicy == "" {
-		contentSecurityPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
+		contentSecurityPolicy = "default-src 'self'; script-src 'self' $NONCE; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
 	}
 
 	secureMiddleware := secure.New(secure.Options{
@@ -24,7 +24,12 @@ func SecurityHeadersMiddleware(proviantConfig *configuration.ProviantConfigurati
 	})
 
 	return func(c *gin.Context) {
-		_ = secureMiddleware.Process(c.Writer, c.Request)
+		nonce, err := secureMiddleware.ProcessAndReturnNonce(c.Writer, c.Request)
+		if err != nil {
+			c.Next()
+			return
+		}
+		c.Set("cspNonce", nonce)
 		c.Next()
 	}
 }

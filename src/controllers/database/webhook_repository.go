@@ -3,9 +3,26 @@ package database
 import (
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/util"
+
 	"encoding/json"
 	"gorm.io/gorm"
 )
+
+type WebhookRepositoryInterface interface {
+	CreateWebhook(webhook *database.Webhook) error
+	GetWebhooksByUserID(userID uint) ([]database.Webhook, error)
+	GetWebhookByID(webhookID uint) (database.Webhook, error)
+	GetActiveWebhooksByEvent(event string) ([]database.Webhook, error)
+	UpdateWebhook(webhook *database.Webhook) error
+	DeleteWebhook(webhookID uint) error
+	CreateDeliveryLog(log *database.WebhookDeliveryLog) error
+	GetDeliveryLogs(webhookID uint, limit int) ([]database.WebhookDeliveryLog, error)
+	TrimDeliveryLogs(webhookID uint, keep int) error
+	CheckOwnership(webhookID, userID uint) error
+}
+
+var _ WebhookRepositoryInterface = (*WebhookRepository)(nil)
 
 type WebhookRepository struct {
 	DB *gorm.DB
@@ -21,7 +38,7 @@ func (r *WebhookRepository) CreateWebhook(webhook *database.Webhook) error {
 
 func (r *WebhookRepository) GetWebhooksByUserID(userID uint) ([]database.Webhook, error) {
 	var webhooks []database.Webhook
-	err := r.DB.Where("user_id = ?", userID).Find(&webhooks).Error
+	err := r.DB.Where(util.QueryUserId, userID).Find(&webhooks).Error
 	return webhooks, err
 }
 
@@ -52,7 +69,7 @@ func (r *WebhookRepository) UpdateWebhook(webhook *database.Webhook) error {
 
 func (r *WebhookRepository) DeleteWebhook(webhookID uint) error {
 	tx := r.DB.Begin()
-	if err := tx.Where("webhook_id = ?", webhookID).Delete(&database.WebhookDeliveryLog{}).Error; err != nil {
+	if err := tx.Where(util.QueryWebhookId, webhookID).Delete(&database.WebhookDeliveryLog{}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -72,7 +89,7 @@ func (r *WebhookRepository) CreateDeliveryLog(log *database.WebhookDeliveryLog) 
 
 func (r *WebhookRepository) GetDeliveryLogs(webhookID uint, limit int) ([]database.WebhookDeliveryLog, error) {
 	var logs []database.WebhookDeliveryLog
-	query := r.DB.Where("webhook_id = ?", webhookID).Order("created_at DESC")
+	query := r.DB.Where(util.QueryWebhookId, webhookID).Order("created_at DESC")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -82,7 +99,7 @@ func (r *WebhookRepository) GetDeliveryLogs(webhookID uint, limit int) ([]databa
 
 func (r *WebhookRepository) TrimDeliveryLogs(webhookID uint, keep int) error {
 	var logs []database.WebhookDeliveryLog
-	if err := r.DB.Where("webhook_id = ?", webhookID).Order("created_at DESC").Limit(keep).Find(&logs).Error; err != nil {
+	if err := r.DB.Where(util.QueryWebhookId, webhookID).Order("created_at DESC").Limit(keep).Find(&logs).Error; err != nil {
 		return err
 	}
 	if len(logs) == 0 {
