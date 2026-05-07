@@ -253,6 +253,17 @@ func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error {
 	return nil
 }
 
+// ValidateServerConfiguration validates the server authentication configuration
+func (ec *ProviantConfiguration) ValidateServerConfiguration() error {
+	if ec.Server.Authentication.TokenPassword == "" {
+		return errors.ErrServerEmptyTokenPassword
+	}
+	if ec.Server.Authentication.TokenLifetime <= 0 {
+		return errors.ErrServerInvalidTokenLifetime
+	}
+	return nil
+}
+
 // ValidateRecipeAPIConfiguration validates the recipe API configuration
 func (ec *ProviantConfiguration) ValidateRecipeAPIConfiguration() error {
 	if ec.RecipeAPI.Provider == "" {

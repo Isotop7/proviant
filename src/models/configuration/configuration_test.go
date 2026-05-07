@@ -539,3 +539,67 @@ func TestValidateDatabaseConfiguration(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateServerConfiguration(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  *ProviantConfiguration
+		wantErr error
+	}{
+		{
+			name: "valid configuration",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 24,
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "empty token password",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "",
+						TokenLifetime: 24,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrServerEmptyTokenPassword,
+		},
+		{
+			name: "zero token lifetime",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: 0,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrServerInvalidTokenLifetime,
+		},
+		{
+			name: "negative token lifetime",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: "secret-key-12345",
+						TokenLifetime: -1,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrServerInvalidTokenLifetime,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.ValidateServerConfiguration()
+			assertValidationError(t, err, tt.wantErr)
+		})
+	}
+}

@@ -267,6 +267,15 @@ var (
 	ErrWebhookNotOwner = errors.New("webhook does not belong to user")
 
 	/*
+	 * Server configuration related errors
+	 */
+	// ErrServerEmptyTokenPassword is thrown if no JWT token password was specified
+	ErrServerEmptyTokenPassword = errors.New("JWT token password cannot be empty")
+
+	// ErrServerInvalidTokenLifetime is thrown if an invalid JWT token lifetime was specified
+	ErrServerInvalidTokenLifetime = errors.New("JWT token lifetime must be greater than 0")
+
+	/*
 	 * CSRF related errors
 	 */
 	// ErrCSRFTokenInvalid is thrown when a CSRF token is missing or does not match the expected value

@@ -207,6 +207,12 @@ func main() {
 		logger.Info().Msg("Database configuration is valid")
 	}
 
+	// Validate server configuration
+	if err := proviantConfiguration.ValidateServerConfiguration(); err != nil {
+		logger.Error().Msg(err.Error())
+		panic(err)
+	}
+
 	// Setup database connection handle
 	dbHandle, setupErr := setupDatabase(logger, &proviantConfiguration.Database)
 	if setupErr != nil {
