@@ -46,6 +46,11 @@ function clearProductInfo() {
     document.getElementById('productInfoImage').alt = '';
     document.getElementById('productInfoName').innerText = '';
     document.getElementById('productInfoGenericName').innerText = '';
+    const hintEl = document.getElementById('storageHint');
+    if (hintEl) {
+        hintEl.textContent = '';
+        hintEl.classList.add('d-none');
+    }
 }
 
 // Loading state helper for barcode lookup
@@ -65,6 +70,15 @@ function showProductData(product) {
     document.getElementById('productInfoName').innerText = product.productName;
     if (product.categories != 'undefined' && product.categories != null) {
         document.getElementById('productInfoGenericName').innerText = product.categories;
+    }
+    const hintEl = document.getElementById('storageHint');
+    if (hintEl) {
+        if (product.storageHint) {
+            hintEl.textContent = product.storageHint;
+            hintEl.classList.remove('d-none');
+        } else {
+            hintEl.classList.add('d-none');
+        }
     }
     document.getElementById('productData').classList.remove('d-none');
 }

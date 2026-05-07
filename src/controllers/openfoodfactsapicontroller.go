@@ -97,6 +97,7 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 				Countries:   dataset.Product.Countries,
 				ImageURL:    dataset.Product.ImageURL,
 				CO2KgPerKg:  co2,
+				StorageHint: dataset.Product.ConservationConditions,
 			}, nil
 		}
 	}

@@ -10,20 +10,22 @@ func TestOpenFoodFactsAPIDatasetStruct(t *testing.T) {
 		dataset := OpenFoodFactsAPIDataset{
 			Barcode: "1234567890123",
 			Product: struct {
-				ID           string       `json:"_id"`
-				ProductName  string       `json:"product_name"`
-				Categories   string       `json:"categories"`
-				Countries    string       `json:"countries"`
-				GenericName  string       `json:"generic_name"`
-				ImageURL     string       `json:"image_url"`
-				EcoscoreData EcoscoreData `json:"ecoscore_data"`
+				ID                     string       `json:"_id"`
+				ProductName            string       `json:"product_name"`
+				Categories             string       `json:"categories"`
+				Countries              string       `json:"countries"`
+				GenericName            string       `json:"generic_name"`
+				ImageURL               string       `json:"image_url"`
+				EcoscoreData           EcoscoreData `json:"ecoscore_data"`
+				ConservationConditions string       `json:"conservation_conditions"`
 			}{
-				ID:          "product123",
-				ProductName: "Test Product",
-				Categories:  "en:test",
-				Countries:   "en:France",
-				GenericName: "Generic test product",
-				ImageURL:    "http://example.com/image.jpg",
+				ID:                     "product123",
+				ProductName:            "Test Product",
+				Categories:             "en:test",
+				Countries:              "en:France",
+				GenericName:            "Generic test product",
+				ImageURL:               "http://example.com/image.jpg",
+				ConservationConditions: "Store in a cool, dry place",
 			},
 		}
 
@@ -48,6 +50,9 @@ func TestOpenFoodFactsAPIDatasetStruct(t *testing.T) {
 		if dataset.Product.ImageURL != "http://example.com/image.jpg" {
 			t.Errorf("Product.ImageURL = %v, want http://example.com/image.jpg", dataset.Product.ImageURL)
 		}
+		if dataset.Product.ConservationConditions != "Store in a cool, dry place" {
+			t.Errorf("Product.ConservationConditions = %v, want 'Store in a cool, dry place'", dataset.Product.ConservationConditions)
+		}
 	})
 }
 
@@ -60,7 +65,8 @@ func TestOpenFoodFactsAPIDatasetJSONUnmarshal(t *testing.T) {
 			"categories": "en:test",
 			"countries": "en:France",
 			"generic_name": "Generic test product",
-			"image_url": "http://example.com/image.jpg"
+			"image_url": "http://example.com/image.jpg",
+			"conservation_conditions": "Store in a cool, dry place"
 		}
 	}`
 
@@ -91,6 +97,9 @@ func TestOpenFoodFactsAPIDatasetJSONUnmarshal(t *testing.T) {
 	if dataset.Product.ImageURL != "http://example.com/image.jpg" {
 		t.Errorf("Product.ImageURL = %v, want http://example.com/image.jpg", dataset.Product.ImageURL)
 	}
+	if dataset.Product.ConservationConditions != "Store in a cool, dry place" {
+		t.Errorf("Product.ConservationConditions = %v, want 'Store in a cool, dry place'", dataset.Product.ConservationConditions)
+	}
 }
 
 func TestOpenFoodFactsAPIDatasetWithPartialData(t *testing.T) {
@@ -98,13 +107,14 @@ func TestOpenFoodFactsAPIDatasetWithPartialData(t *testing.T) {
 		dataset := OpenFoodFactsAPIDataset{
 			Barcode: "1234567890123",
 			Product: struct {
-				ID           string       `json:"_id"`
-				ProductName  string       `json:"product_name"`
-				Categories   string       `json:"categories"`
-				Countries    string       `json:"countries"`
-				GenericName  string       `json:"generic_name"`
-				ImageURL     string       `json:"image_url"`
-				EcoscoreData EcoscoreData `json:"ecoscore_data"`
+				ID                     string       `json:"_id"`
+				ProductName            string       `json:"product_name"`
+				Categories             string       `json:"categories"`
+				Countries              string       `json:"countries"`
+				GenericName            string       `json:"generic_name"`
+				ImageURL               string       `json:"image_url"`
+				EcoscoreData           EcoscoreData `json:"ecoscore_data"`
+				ConservationConditions string       `json:"conservation_conditions"`
 			}{
 				ProductName: "Only Name",
 			},
@@ -160,6 +170,9 @@ func TestOpenFoodFactsAPIDatasetConstant(t *testing.T) {
 		}
 		if !contains(OpenFoodFactsAPIDatasetDefinition, "image_url") {
 			t.Errorf("OpenFoodFactsAPIDatasetDefinition does not contain 'image_url'")
+		}
+		if !contains(OpenFoodFactsAPIDatasetDefinition, "conservation_conditions") {
+			t.Errorf("OpenFoodFactsAPIDatasetDefinition does not contain 'conservation_conditions'")
 		}
 	})
 }

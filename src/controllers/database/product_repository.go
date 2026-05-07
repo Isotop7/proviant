@@ -48,6 +48,9 @@ type ProductRepositoryInterface interface {
 	GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error)
 	CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error
 	UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error
+	GetOpenFoodFactsCacheWithoutStorageHint() ([]database.OpenFoodFactsCache, error)
+	UpdateOpenFoodFactsCacheStorageHint(barcode, storageHint string) error
+	GetOpenFoodFactsCacheWithRemoteImageURL() ([]database.OpenFoodFactsCache, error)
 	GetUserByID(userID uint) (authentication.User, error)
 	GetUserHouseholdByID(userID uint) (uint, error)
 	GetHouseholdByID(householdID uint) (database.Household, error)
@@ -775,6 +778,22 @@ func (r *ProductRepository) CreateOpenFoodFactsCache(entry *database.OpenFoodFac
 
 func (r *ProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error {
 	return r.DB.Model(&database.OpenFoodFactsCache{}).Where("barcode = ?", barcode).Update("image_url", imageURL).Error
+}
+
+func (r *ProductRepository) GetOpenFoodFactsCacheWithoutStorageHint() ([]database.OpenFoodFactsCache, error) {
+	var entries []database.OpenFoodFactsCache
+	err := r.DB.Where("storage_hint = '' OR storage_hint IS NULL").Find(&entries).Error
+	return entries, err
+}
+
+func (r *ProductRepository) UpdateOpenFoodFactsCacheStorageHint(barcode, storageHint string) error {
+	return r.DB.Model(&database.OpenFoodFactsCache{}).Where("barcode = ?", barcode).Update("storage_hint", storageHint).Error
+}
+
+func (r *ProductRepository) GetOpenFoodFactsCacheWithRemoteImageURL() ([]database.OpenFoodFactsCache, error) {
+	var entries []database.OpenFoodFactsCache
+	err := r.DB.Where("image_url != '' AND image_url NOT LIKE '/product-images/%'").Find(&entries).Error
+	return entries, err
 }
 
 func (r *ProductRepository) GetUserByID(userID uint) (authentication.User, error) {

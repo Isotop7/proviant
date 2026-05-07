@@ -524,12 +524,13 @@
                         </div>
                         {{ if .Locations }}
                         <label for="modalStorageLocation" class="form-label mt-2">Storage Location</label>
-                        <select class="form-select mb-2" id="modalStorageLocation">
+                        <select class="form-select" id="modalStorageLocation">
                             <option value="">— None —</option>
                             {{ range .Locations }}
                             <option value="{{ .ID }}">{{ .Icon }} {{ .Name }}</option>
                             {{ end }}
                         </select>
+                        <small id="storageHint" class="text-muted d-none mb-2"></small>
                         {{ end }}
                     </form>
 

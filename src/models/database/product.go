@@ -32,6 +32,7 @@ type Product struct {
 	PriceOverride     *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
 	CO2KgPerKg        *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`
 	RemovalReason     string           `gorm:"default:''"                   json:"removalReason"`
+	StorageHint       string           `gorm:"-"                            json:"-"`
 }
 
 // ProductDTOExpire is a simplified DTO for product expiration

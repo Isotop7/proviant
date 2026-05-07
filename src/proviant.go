@@ -307,6 +307,11 @@ func main() {
 	// Start background cleanup of expired recipe caches
 	go startRecipeCacheCleanup(logger, dbHandle)
 
+	// Backfill storage hints and images for existing cache entries
+	if proviantConfiguration.OpenFoodFacts.CacheEnabled {
+		go backfillOpenFoodFactsCache(logger, dbHandle, offacntrl)
+	}
+
 	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl, notificationController, ocrController)
 }
 
@@ -352,4 +357,85 @@ func cleanupExpiredRecipeCaches(logger *zerolog.Logger, dbHandle *gorm.DB) {
 	if result.RowsAffected > 0 {
 		logger.Info().Msgf("Cleaned up %d expired recipe caches", result.RowsAffected)
 	}
+}
+
+// backfillOpenFoodFactsCache fetches missing storage hints and downloads remote product images
+// for cache entries created before these features were added. Runs once at startup.
+func backfillOpenFoodFactsCache(logger *zerolog.Logger, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController) {
+	productRepo := dbController.NewProductRepository(dbHandle)
+
+	// Pass 1: entries missing storage hint — requires an OFF API call.
+	// Also download the image while we have the entry, if image caching is enabled.
+	hintEntries, err := productRepo.GetOpenFoodFactsCacheWithoutStorageHint()
+	if err != nil {
+		logger.Warn().Msgf("Cache backfill: failed to query entries missing storage hint: %s", err)
+	}
+
+	processedBarcodes := make(map[string]bool, len(hintEntries))
+	hintsUpdated := 0
+
+	for _, entry := range hintEntries {
+		processedBarcodes[entry.Barcode] = true
+
+		product, apiErr := offacntrl.GetDataset(entry.Barcode)
+		if apiErr != nil {
+			logger.Warn().Msgf("Cache backfill: OFF API error for %s: %s", entry.Barcode, apiErr)
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+
+		if product.StorageHint != "" {
+			if updateErr := productRepo.UpdateOpenFoodFactsCacheStorageHint(entry.Barcode, product.StorageHint); updateErr != nil {
+				logger.Warn().Msgf("Cache backfill: failed to update storage hint for %s: %s", entry.Barcode, updateErr)
+			} else {
+				hintsUpdated++
+			}
+		}
+
+		// Download image if caching is enabled and image is not yet local
+		if offacntrl.Configuration.ImageCacheEnabled {
+			imageURL := entry.ImageURL
+			if imageURL == "" {
+				imageURL = product.ImageURL
+			}
+			if imageURL != "" && !strings.HasPrefix(imageURL, "/product-images/") {
+				localPath, imgErr := offacntrl.DownloadImage(imageURL, entry.Barcode)
+				if imgErr != nil {
+					logger.Warn().Msgf("Cache backfill: failed to download image for %s: %s", entry.Barcode, imgErr)
+				} else if updateErr := productRepo.UpdateOpenFoodFactsCacheImageURL(entry.Barcode, localPath); updateErr != nil {
+					logger.Warn().Msgf("Cache backfill: failed to update image URL for %s: %s", entry.Barcode, updateErr)
+				}
+			}
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	// Pass 2: entries that already have a storage hint but still have a remote image URL.
+	// No API call needed — just download the image directly.
+	imagesDownloaded := 0
+	if offacntrl.Configuration.ImageCacheEnabled {
+		imageEntries, imgQueryErr := productRepo.GetOpenFoodFactsCacheWithRemoteImageURL()
+		if imgQueryErr != nil {
+			logger.Warn().Msgf("Cache backfill: failed to query entries with remote images: %s", imgQueryErr)
+		}
+
+		for _, entry := range imageEntries {
+			if processedBarcodes[entry.Barcode] {
+				continue
+			}
+			localPath, imgErr := offacntrl.DownloadImage(entry.ImageURL, entry.Barcode)
+			if imgErr != nil {
+				logger.Warn().Msgf("Cache backfill: failed to download image for %s: %s", entry.Barcode, imgErr)
+			} else if updateErr := productRepo.UpdateOpenFoodFactsCacheImageURL(entry.Barcode, localPath); updateErr != nil {
+				logger.Warn().Msgf("Cache backfill: failed to update image URL for %s: %s", entry.Barcode, updateErr)
+			} else {
+				imagesDownloaded++
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+
+	logger.Info().Msgf("Cache backfill: complete — storage hints: %d, images downloaded: %d",
+		hintsUpdated, imagesDownloaded)
 }

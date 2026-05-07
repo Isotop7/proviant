@@ -122,6 +122,15 @@ func (m *MockProductRepository) CreateOpenFoodFactsCache(entry *dbModel.OpenFood
 func (m *MockProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error {
 	return m.Err
 }
+func (m *MockProductRepository) GetOpenFoodFactsCacheWithoutStorageHint() ([]dbModel.OpenFoodFactsCache, error) {
+	return nil, m.Err
+}
+func (m *MockProductRepository) UpdateOpenFoodFactsCacheStorageHint(barcode, storageHint string) error {
+	return m.Err
+}
+func (m *MockProductRepository) GetOpenFoodFactsCacheWithRemoteImageURL() ([]dbModel.OpenFoodFactsCache, error) {
+	return nil, m.Err
+}
 func (m *MockProductRepository) GetUserByID(userID uint) (authentication.User, error) {
 	return m.User, m.Err
 }
