@@ -6,6 +6,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	RemovalReasonConsumed = "consumed"
+	RemovalReasonWasted   = "wasted"
+)
+
 // Product is the database model of a product
 type Product struct {
 	gorm.Model
@@ -26,6 +31,7 @@ type Product struct {
 	StorageLocation   *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
 	PriceOverride     *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
 	CO2KgPerKg        *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`
+	RemovalReason     string           `gorm:"default:''"                   json:"removalReason"`
 }
 
 // ProductDTOExpire is a simplified DTO for product expiration

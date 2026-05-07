@@ -191,6 +191,27 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 		return err
 	}
 
+	// Backfill removal_reason for existing consumed products
+	logger.Debug().Msg("Backfill removal_reason for consumed products")
+	if err := BackfillRemovalReason(logger, db); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// BackfillRemovalReason sets removal_reason = "consumed" for all existing soft-deleted products
+// that have no removal reason set. These predate the RemovalReason field and were all consumed
+// (wasted products were hard-deleted at the time and therefore absent from the table).
+func BackfillRemovalReason(logger *zerolog.Logger, db *gorm.DB) error {
+	result := db.Unscoped().Exec(
+		"UPDATE products SET removal_reason = ? WHERE deleted_at IS NOT NULL AND (removal_reason IS NULL OR removal_reason = '')",
+		database.RemovalReasonConsumed,
+	)
+	if result.Error != nil {
+		return result.Error
+	}
+	logger.Info().Int64("count", result.RowsAffected).Msg("Backfilled removal_reason for consumed products")
 	return nil
 }
 

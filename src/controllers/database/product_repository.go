@@ -429,6 +429,7 @@ func (r *ProductRepository) RestoreProduct(productID, userID uint) error {
 	}
 
 	product.DeletedAt = gorm.DeletedAt{}
+	product.RemovalReason = ""
 
 	saveResult := r.DB.Save(&product)
 	return saveResult.Error
@@ -442,6 +443,7 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) 
 			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
 		}
 		product.DeletedAt = gorm.DeletedAt{}
+		product.RemovalReason = ""
 		saveResult := r.DB.Save(&product)
 		if saveResult.Error != nil {
 			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
@@ -884,6 +886,7 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 		Where(util.WhereDeletedIsNotNull).
 		Where("deleted_at >= ?", monthStart).
 		Where("deleted_at <= ?", monthEnd).
+		Where("removal_reason = ?", database.RemovalReasonWasted).
 		Count(&count).Error
 	if err != nil {
 		return 0, err
@@ -909,17 +912,27 @@ func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database
 }
 
 func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
-	if _, err := r.GetProductByID(productID, userID); err != nil {
+	product, err := r.GetProductByID(productID, userID)
+	if err != nil {
+		return err
+	}
+	product.RemovalReason = database.RemovalReasonConsumed
+	if err := r.DB.Save(&product).Error; err != nil {
 		return err
 	}
 	return r.DB.Delete(&database.Product{}, productID).Error
 }
 
 func (r *ProductRepository) WasteProduct(productID, userID uint) error {
-	if _, err := r.GetProductByID(productID, userID); err != nil {
+	product, err := r.GetProductByID(productID, userID)
+	if err != nil {
 		return err
 	}
-	return r.DB.Unscoped().Delete(&database.Product{}, productID).Error
+	product.RemovalReason = database.RemovalReasonWasted
+	if err := r.DB.Save(&product).Error; err != nil {
+		return err
+	}
+	return r.DB.Delete(&database.Product{}, productID).Error
 }
 
 func (r *ProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError {

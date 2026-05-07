@@ -352,6 +352,89 @@ func TestProductRepository_RestoreProduct(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Product not found after restore: %v", err)
 	}
+	if restored.RemovalReason != "" {
+		t.Errorf("RestoreProduct() RemovalReason = %q, want empty string", restored.RemovalReason)
+	}
+}
+
+func TestProductRepository_ConsumeProduct(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewProductRepository(db)
+
+	household := dbModel.Household{Name: "Test Household"}
+	db.Create(&household)
+
+	user := authentication.User{
+		Username:    "testuser",
+		Password:    "password",
+		MailAddress: "test@example.com",
+		HouseholdID: household.ID,
+	}
+	db.Create(&user)
+
+	product := dbModel.Product{
+		ProductName: "To Consume",
+		Barcode:     "1234567890123",
+		HouseholdID: household.ID,
+	}
+	db.Create(&product)
+
+	err := repo.ConsumeProduct(product.ID, user.ID)
+	if err != nil {
+		t.Fatalf("ConsumeProduct() error = %v", err)
+	}
+
+	var consumed dbModel.Product
+	err = db.Unscoped().First(&consumed, product.ID).Error
+	if err != nil {
+		t.Fatalf("Product not found after consume: %v", err)
+	}
+	if !consumed.DeletedAt.Valid {
+		t.Error("ConsumeProduct() did not soft-delete the product")
+	}
+	if consumed.RemovalReason != dbModel.RemovalReasonConsumed {
+		t.Errorf("ConsumeProduct() RemovalReason = %q, want %q", consumed.RemovalReason, dbModel.RemovalReasonConsumed)
+	}
+}
+
+func TestProductRepository_WasteProduct(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewProductRepository(db)
+
+	household := dbModel.Household{Name: "Test Household"}
+	db.Create(&household)
+
+	user := authentication.User{
+		Username:    "testuser",
+		Password:    "password",
+		MailAddress: "test@example.com",
+		HouseholdID: household.ID,
+	}
+	db.Create(&user)
+
+	product := dbModel.Product{
+		ProductName: "To Waste",
+		Barcode:     "1234567890123",
+		HouseholdID: household.ID,
+	}
+	db.Create(&product)
+
+	err := repo.WasteProduct(product.ID, user.ID)
+	if err != nil {
+		t.Fatalf("WasteProduct() error = %v", err)
+	}
+
+	var wasted dbModel.Product
+	err = db.Unscoped().First(&wasted, product.ID).Error
+	if err != nil {
+		t.Fatalf("WasteProduct() hard-deleted the product — record must be retained for reporting")
+	}
+	if !wasted.DeletedAt.Valid {
+		t.Error("WasteProduct() did not soft-delete the product")
+	}
+	if wasted.RemovalReason != dbModel.RemovalReasonWasted {
+		t.Errorf("WasteProduct() RemovalReason = %q, want %q", wasted.RemovalReason, dbModel.RemovalReasonWasted)
+	}
 }
 
 func TestProductRepository_GetActiveProductsCount(t *testing.T) {
