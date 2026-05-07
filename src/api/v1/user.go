@@ -46,15 +46,15 @@ func UpdateUser(ctx *gin.Context) {
 		DisplayName string `json:"displayName"`
 		MailAddress string `json:"mailAddress" binding:"required,email"`
 	}
-	if bindErr := ctx.ShouldBindJSON(&req); bindErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
 
-	user, fetchErr := repos.Users.GetUserByID(userID)
-	if fetchErr != nil {
-	logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, fetchErr)
+	user, err := repos.Users.GetUserByID(userID)
+	if err != nil {
+	logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
 	ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
 		return
 	}
@@ -100,9 +100,9 @@ func UpdateUserPassword(ctx *gin.Context) {
 
 	// Get and parse body to user
 	var login authentication.Login
-	if bindErr := ctx.ShouldBindJSON(&login); bindErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+	if err := ctx.ShouldBindJSON(&login); err != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
 
@@ -215,9 +215,9 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 	}
 
 	var preferences authentication.NotificationPreferences
-	if bindErr := ctx.ShouldBindJSON(&preferences); bindErr != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(bindErr))
+	if err := ctx.ShouldBindJSON(&preferences); err != nil {
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
 

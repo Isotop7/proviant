@@ -46,8 +46,8 @@ func CreateUserToken(ctx *gin.Context) {
 
 	var expiresAt *time.Time
 	if req.ExpiresAt != nil && *req.ExpiresAt != "" {
-		parsed, parseErr := time.Parse(time.RFC3339, *req.ExpiresAt)
-		if parseErr != nil {
+		parsed, err := time.Parse(time.RFC3339, *req.ExpiresAt)
+		if err != nil {
 			ctx.JSON(http.StatusBadRequest, v1api.InvalidInputErrorWithDetail("expires_at must be in RFC3339 format"))
 			return
 		}
@@ -130,15 +130,14 @@ func DeleteUserToken(ctx *gin.Context) {
 	}
 
 	patIDStr := ctx.Param("id")
-	patIDRaw, parseErr := strconv.ParseUint(patIDStr, 10, 64)
-	if parseErr != nil {
+	patIDRaw, err := strconv.ParseUint(patIDStr, 10, 64)
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, v1api.InvalidInputErrorWithDetail("token ID must be a valid unsigned integer"))
 		return
 	}
 	patID := uint(patIDRaw)
 
-	err := repos.PATs.DeletePAT(patID, userID)
-	if err != nil {
+	if err := repos.PATs.DeletePAT(patID, userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, v1api.Error(errors.ErrPATNotFound))
 			return

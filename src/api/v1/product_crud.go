@@ -363,7 +363,7 @@ func DeleteProduct(ctx *gin.Context) {
 	}
 
 	var archiveOnly bool
-	var parseError error
+	var err error
 	// Get and parse parameter archiveOnly
 	archiveOnlyParam, archiveOnlyParamExists := ctx.GetQuery("archiveOnly")
 	// Check if archiveOnlyParam is supplied
@@ -372,7 +372,7 @@ func DeleteProduct(ctx *gin.Context) {
 		archiveOnly = false
 	} else {
 		// Try to parse archiveOnlyParam as a boolean
-		if archiveOnly, parseError = strconv.ParseBool(archiveOnlyParam); parseError != nil {
+		if archiveOnly, err = strconv.ParseBool(archiveOnlyParam); err != nil {
 			logger.Warn().Msgf("Invalid archiveOnly '%s' was specified", archiveOnlyParam)
 			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("archiveOnly '%s' is invalid", archiveOnlyParam)})
 			return
@@ -434,9 +434,9 @@ func SetExpireAt(ctx *gin.Context) {
 
 	// Get and parse body to timestamp
 	var expireAt dbModel.Timestamp
-	var bindErr error
-	if bindErr = ctx.ShouldBindJSON(&expireAt); bindErr != nil {
-		logger.Warn().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
+	var err error
+	if err = ctx.ShouldBindJSON(&expireAt); err != nil {
+		logger.Warn().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}

@@ -176,9 +176,9 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
 
 	// Get and convert parameter 'id' from request
 	idParam := ctx.Param("id")
-	var convErr error
+	var err error
 	var productID int
-	if productID, convErr = strconv.Atoi(idParam); convErr != nil {
+	if productID, err = strconv.Atoi(idParam); err != nil {
 		return false
 	}
 
@@ -317,8 +317,8 @@ func JWTMiddleware(
 				return nil, jwt.ErrFailedAuthentication
 			}
 
-			authErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginVals.Password))
-			if authErr != nil {
+			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginVals.Password))
+			if err != nil {
 				_ = userRepo.RecordFailedLoginAttempt(user.ID, maxLoginAttempts, lockoutDurationMins)
 				ctx.Set("failedUserID", user.ID)
 				return nil, jwt.ErrFailedAuthentication

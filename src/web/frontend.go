@@ -244,8 +244,8 @@ func fetchProducts(
 	}
 	switch {
 	case params.locationFilter != "":
-		locationID, parseErr := strconv.ParseUint(params.locationFilter, 10, 64)
-		if parseErr != nil {
+		locationID, err := strconv.ParseUint(params.locationFilter, 10, 64)
+		if err != nil {
 			return nil, nil
 		}
 		return repos.Products.GetUserProductsByLocation(userID, uint(locationID)) //nolint:gosec
@@ -301,8 +301,8 @@ func filterProductsByStatus(products []dbModel.Product, status string, now time.
 func (frontend *Frontend) Products(ctx *gin.Context) {
 	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	repos, dbErr := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
-	if !dbErr {
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
@@ -418,16 +418,16 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context) {
 	// Get and parse parameter id
 	idParam := ctx.Param("id")
 	var productIDRaw uint64
-	var convErr error
-	if productIDRaw, convErr = strconv.ParseUint(idParam, 10, 64); convErr != nil {
+	var err error
+	if productIDRaw, err = strconv.ParseUint(idParam, 10, 64); err != nil {
 		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, convErr.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Get database instance from context
-	repos, dbErr := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
-	if !dbErr {
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return
@@ -475,16 +475,16 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	// Get and parse parameter id
 	idParam := ctx.Param("id")
 	var productIDRaw uint64
-	var convErr error
-	if productIDRaw, convErr = strconv.ParseUint(idParam, 10, 64); convErr != nil {
+	var err error
+	if productIDRaw, err = strconv.ParseUint(idParam, 10, 64); err != nil {
 		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, convErr.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Get database instance from context
-	repos, dbErr := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
-	if !dbErr {
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
 		return

@@ -127,8 +127,8 @@ func logExpiryScan(ctx *gin.Context, logger *zerolog.Logger, userID uint, resp *
 		RawText:      resp.RawText,
 		ImageHash:    hashImage(imgBytes),
 	}
-	if dbErr := repos.ExpiryScan.Create(scan); dbErr != nil {
-		logger.Warn().Msgf("Failed to store expiry scan: %s", dbErr.Error())
+	if err := repos.ExpiryScan.Create(scan); err != nil {
+		logger.Warn().Msgf("Failed to store expiry scan: %s", err.Error())
 	}
 }
 

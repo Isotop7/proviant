@@ -29,7 +29,7 @@ import (
 // SetupDatabase initializes the database connection and returns a gorm.DB instance.
 func setupDatabase(logger *zerolog.Logger, databaseConfiguration *configuration.DatabaseConfiguration) (*gorm.DB, error) {
 	// Generate gorm config
-	var dbErr error
+	var err error
 	var dbHandle *gorm.DB
 	gormConfig := gorm.Config{}
 	// Create Zerolog adapter and pass it to gorm config
@@ -46,21 +46,21 @@ func setupDatabase(logger *zerolog.Logger, databaseConfiguration *configuration.
 			databaseConfiguration.MariaDB.Port,
 			databaseConfiguration.MariaDB.Name)
 		// Open database handle
-		dbHandle, dbErr = gorm.Open(mysql.Open(databaseURI), &gormConfig)
+		dbHandle, err = gorm.Open(mysql.Open(databaseURI), &gormConfig)
 
 		// Check if database can be accessed
-		if dbErr != nil {
+		if err != nil {
 			logger.Warn().Msgf("Database '%s' on server '%s' could not be reached", databaseConfiguration.MariaDB.Name, databaseConfiguration.MariaDB.Host)
-			return nil, dbErr
+			return nil, err
 		}
 	case dbController.SQLite:
 		// Create file and handle
-		dbHandle, dbErr = gorm.Open(sqlite.Open(databaseConfiguration.SQLite.Filepath), &gormConfig)
+		dbHandle, err = gorm.Open(sqlite.Open(databaseConfiguration.SQLite.Filepath), &gormConfig)
 
 		// Check if database can be accessed
-		if dbErr != nil {
+		if err != nil {
 			logger.Warn().Msgf("Database on path '%s' could not be opened", databaseConfiguration.SQLite.Filepath)
-			return nil, dbErr
+			return nil, err
 		}
 	case dbController.InvalidEngine:
 		return nil, errors.ErrDatabaseInvalidEngine

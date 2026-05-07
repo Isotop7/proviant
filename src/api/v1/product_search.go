@@ -43,8 +43,8 @@ func GetProductsByBarcode(ctx *gin.Context) {
 		return
 	}
 
-	barcode, convErr := strconv.Atoi(barcodeParam)
-	if convErr != nil {
+	barcode, err := strconv.Atoi(barcodeParam)
+	if err != nil {
 		logger.Warn().Msgf("Requested barcode '%s' is invalid", barcodeParam)
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%s' is invalid", barcodeParam)})
 		return

@@ -53,7 +53,7 @@ func ConsumeProduct(ctx *gin.Context) {
 		return
 	}
 
-	product, fetchErr := repos.Products.GetProductByID(productID, userID)
+	product, err := repos.Products.GetProductByID(productID, userID)
 
 	if err := repos.Products.ConsumeProduct(productID, userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -65,7 +65,7 @@ func ConsumeProduct(ctx *gin.Context) {
 		return
 	}
 
-	if fetchErr == nil {
+	if err == nil {
 		go recordHouseholdSavingsEvent(repos, logger, userID, &product, "consumed")
 	}
 
@@ -113,7 +113,7 @@ func WasteProduct(ctx *gin.Context) {
 		return
 	}
 
-	product, fetchErr := repos.Products.GetProductByID(productID, userID)
+	product, err := repos.Products.GetProductByID(productID, userID)
 
 	if err := repos.Products.WasteProduct(productID, userID); err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -140,7 +140,7 @@ func WasteProduct(ctx *gin.Context) {
 		}
 	}()
 
-	if fetchErr == nil {
+	if err == nil {
 		go recordHouseholdSavingsEvent(repos, logger, userID, &product, "wasted")
 	}
 

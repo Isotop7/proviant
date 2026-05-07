@@ -49,7 +49,7 @@ func BulkConsumeProducts(ctx *gin.Context) {
 	}
 
 	for _, productID := range products.ProductIDs {
-		product, fetchErr := repos.Products.GetProductByID(productID, userID)
+		product, err := repos.Products.GetProductByID(productID, userID)
 
 		if err := repos.Products.ConsumeProduct(productID, userID); err != nil {
 			if err == gorm.ErrRecordNotFound {
@@ -60,7 +60,7 @@ func BulkConsumeProducts(ctx *gin.Context) {
 			continue
 		}
 
-		if fetchErr == nil {
+		if err == nil {
 			go recordHouseholdSavingsEvent(repos, logger, userID, &product, "consumed")
 		}
 	}
@@ -104,7 +104,7 @@ func BulkWasteProducts(ctx *gin.Context) {
 	householdID, householdErr := repos.Users.GetUserHouseholdByID(userID)
 
 	for _, productID := range products.ProductIDs {
-		product, fetchErr := repos.Products.GetProductByID(productID, userID)
+		product, err := repos.Products.GetProductByID(productID, userID)
 
 		if err := repos.Products.WasteProduct(productID, userID); err != nil {
 			if err == gorm.ErrRecordNotFound {
@@ -129,7 +129,7 @@ func BulkWasteProducts(ctx *gin.Context) {
 			}
 		}(productID)
 
-		if fetchErr == nil {
+		if err == nil {
 			go recordHouseholdSavingsEvent(repos, logger, userID, &product, "wasted")
 		}
 	}

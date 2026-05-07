@@ -616,8 +616,8 @@ func (nc *NotificationController) resolveTelegramBotUsername(baseURL string, use
 		if body, readErr := io.ReadAll(resp.Body); readErr == nil {
 			if jsonErr := json.Unmarshal(body, &result); jsonErr == nil && result.OK && result.Result.Username != "" {
 				nc.botUsernames.Store(userID, result.Result.Username)
-				if dbErr := nc.NotificationRepo.SetTelegramBotUsername(userID, result.Result.Username); dbErr != nil {
-					nc.Logger.Warn().Msgf("Telegram poller (user %d): failed to persist bot username: %s", userID, dbErr)
+				if err := nc.NotificationRepo.SetTelegramBotUsername(userID, result.Result.Username); err != nil {
+					nc.Logger.Warn().Msgf("Telegram poller (user %d): failed to persist bot username: %s", userID, err)
 				}
 				nc.Logger.Info().Msgf("Telegram poller (user %d): resolved bot username @%s", userID, result.Result.Username)
 			}
