@@ -106,7 +106,8 @@ type MonthlyWasteReportConfiguration struct {
 
 // TelegramConfiguration holds per-instance Telegram settings (no global bot token).
 type TelegramConfiguration struct {
-	Timeout int // HTTP client timeout in seconds (default: 15)
+	Timeout       int // HTTP client timeout in seconds (default: 15)
+	PollerWorkers int // Number of worker goroutines for polling all users (default: 10)
 }
 
 // NotificationConfiguration contains all properties regarding the notification handler

@@ -106,6 +106,9 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetDefault("notification.monthlyWasteReport.day", 1)
 	viper.SetDefault("notification.monthlyWasteReport.hour", 8)
 
+	// Set defaults for Telegram poller pool
+	viper.SetDefault("notification.telegram.pollerWorkers", 10)
+
 	// Set defaults for recipe API
 	viper.SetDefault("recipe_api.provider", "themealdb")
 	viper.SetDefault("recipe_api.url", "https://www.themealdb.com/api/json/v1/1")

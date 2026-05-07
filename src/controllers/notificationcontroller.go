@@ -20,6 +20,25 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// pollerState holds the polling state for a single user.
+type pollerState struct {
+	botToken string
+	offset   int64
+}
+
+// telegramPollerPool manages the worker pool for polling Telegram updates for all users.
+type telegramPollerPool struct {
+	mu           sync.RWMutex
+	users        map[uint]*pollerState
+	numWorkers   int
+	ctx          context.Context
+	cancel       context.CancelFunc
+	wg           sync.WaitGroup
+	ticker       *time.Ticker
+	nc           *NotificationController
+	pollInterval time.Duration
+}
+
 type NotificationController struct {
 	Logger           *zerolog.Logger
 	Configuration    *configuration.NotificationConfiguration
@@ -28,7 +47,7 @@ type NotificationController struct {
 	Providers        []NotificationProvider
 	telegramClient   *http.Client
 	telegramAPIBase  string
-	pollerCancels    sync.Map // userID(uint) → context.CancelFunc
+	pollerPool       *telegramPollerPool
 	botUsernames     sync.Map // userID(uint) → resolved bot username(string)
 }
 
@@ -572,38 +591,171 @@ func (nc *NotificationController) sendStreakTelegramIfEnabled(
 }
 
 // StartAllUserTelegramPollers queries all users with a configured bot token and starts
-// a long-poll goroutine for each. Called once at startup.
+// the worker pool for Telegram polling. Called once at startup.
 func (nc *NotificationController) StartAllUserTelegramPollers() {
+	nc.StartTelegramPollerPool()
+}
+
+// StartTelegramPollerPool initializes the worker pool and registers all users with bot tokens.
+func (nc *NotificationController) StartTelegramPollerPool() {
 	users, err := nc.NotificationRepo.GetAllUsersWithTelegramBotToken()
 	if err != nil {
 		nc.Logger.Error().Msgf("Telegram: failed to load users with bot tokens: %s", err)
 		return
 	}
-	nc.Logger.Info().Msgf("Telegram: starting pollers for %d user(s)", len(users))
+
+	numWorkers := nc.Configuration.Telegram.PollerWorkers
+	if numWorkers <= 0 {
+		numWorkers = 10
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	nc.pollerPool = &telegramPollerPool{
+		users:        make(map[uint]*pollerState),
+		numWorkers:   numWorkers,
+		ctx:          ctx,
+		cancel:       cancel,
+		nc:           nc,
+		pollInterval: 2 * time.Second,
+		ticker:       time.NewTicker(2 * time.Second),
+	}
+
+	nc.Logger.Info().Msgf("Telegram: starting poller pool with %d worker(s) for %d user(s)", numWorkers, len(users))
+
 	for i := range users {
 		user := &users[i]
-		nc.StartUserTelegramPoller(user.ID, user.NotificationPreferences.TelegramBotToken)
+		nc.registerUserInPool(user.ID, user.NotificationPreferences.TelegramBotToken)
+	}
+
+	nc.pollerPool.wg.Add(numWorkers)
+	for workerID := 0; workerID < numWorkers; workerID++ {
+		go nc.poolWorker(workerID)
 	}
 }
 
-// StartUserTelegramPoller cancels any existing poller for userID, then starts a new goroutine
-// that long-polls the Telegram API using botToken and handles /start <token> link commands.
+// StartUserTelegramPoller registers or updates a user in the pool and resolves the bot username.
 func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken string) {
-	nc.StopUserTelegramPoller(userID)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	nc.pollerCancels.Store(userID, cancel)
-
-	baseURL := fmt.Sprintf("%s/bot%s", nc.telegramAPIBase, botToken)
-
-	go func() {
-		defer nc.pollerCancels.Delete(userID)
-		nc.resolveTelegramBotUsername(baseURL, userID)
-		nc.Logger.Info().Msgf("Telegram poller (user %d): started", userID)
-		nc.runTelegramPollerLoop(ctx, baseURL, userID)
-	}()
+	if nc.pollerPool == nil {
+		nc.StartTelegramPollerPool()
+	}
+	nc.registerUserInPool(userID, botToken)
 }
 
+// registerUserInPool adds or updates a user in the pool and resolves their bot username.
+func (nc *NotificationController) registerUserInPool(userID uint, botToken string) {
+	baseURL := fmt.Sprintf("%s/bot%s", nc.telegramAPIBase, botToken)
+	nc.resolveTelegramBotUsername(baseURL, userID)
+
+	nc.pollerPool.mu.Lock()
+	defer nc.pollerPool.mu.Unlock()
+	nc.pollerPool.users[userID] = &pollerState{botToken: botToken}
+}
+
+// StopUserTelegramPoller removes a user from the pool.
+func (nc *NotificationController) StopUserTelegramPoller(userID uint) {
+	if nc.pollerPool == nil {
+		return
+	}
+	nc.pollerPool.mu.Lock()
+	delete(nc.pollerPool.users, userID)
+	nc.pollerPool.mu.Unlock()
+	nc.botUsernames.Delete(userID)
+}
+
+// StopTelegramPollerPool stops all workers and cleans up.
+func (nc *NotificationController) StopTelegramPollerPool() {
+	if nc.pollerPool == nil {
+		return
+	}
+	nc.pollerPool.cancel()
+	nc.pollerPool.ticker.Stop()
+	nc.pollerPool.wg.Wait()
+	nc.pollerPool = nil
+}
+
+// poolWorker runs as a single worker goroutine, polling assigned users on each tick.
+func (nc *NotificationController) poolWorker(workerID int) {
+	defer nc.pollerPool.wg.Done()
+	nc.Logger.Info().Msgf("Telegram: worker %d started", workerID)
+
+	for {
+		select {
+		case <-nc.pollerPool.ctx.Done():
+			nc.Logger.Info().Msgf("Telegram: worker %d stopped", workerID)
+			return
+		case <-nc.pollerPool.ticker.C:
+			nc.processPoolUsers(workerID)
+		}
+	}
+}
+
+// processPoolUsers iterates the pool and processes users assigned to this worker.
+func (nc *NotificationController) processPoolUsers(workerID int) {
+	nc.pollerPool.mu.RLock()
+	users := make([]uint, 0, len(nc.pollerPool.users))
+	for userID := range nc.pollerPool.users {
+		if int(userID)%nc.pollerPool.numWorkers == workerID {
+			users = append(users, userID)
+		}
+	}
+	nc.pollerPool.mu.RUnlock()
+
+	for _, userID := range users {
+		nc.pollerPool.mu.RLock()
+		state, exists := nc.pollerPool.users[userID]
+		nc.pollerPool.mu.RUnlock()
+
+		if !exists {
+			continue
+		}
+
+		baseURL := fmt.Sprintf("%s/bot%s", nc.telegramAPIBase, state.botToken)
+		nc.pollUser(userID, baseURL, state)
+	}
+}
+
+// pollUser performs a single getUpdates call for a user and handles any updates.
+func (nc *NotificationController) pollUser(userID uint, baseURL string, state *pollerState) {
+	nc.pollerPool.mu.RLock()
+	currentOffset := state.offset
+	nc.pollerPool.mu.RUnlock()
+
+	url := fmt.Sprintf("%s/getUpdates?timeout=1&offset=%d", baseURL, currentOffset)
+	resp, err := nc.telegramClient.Get(url)
+	if err != nil {
+		nc.Logger.Error().Msgf("Telegram poller (user %d): getUpdates error: %s", userID, err)
+		return
+	}
+
+	body, readErr := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if readErr != nil {
+		nc.Logger.Error().Msgf("Telegram poller (user %d): read error: %s", userID, readErr)
+		return
+	}
+
+	var result telegramResponse
+	if jsonErr := json.Unmarshal(body, &result); jsonErr != nil {
+		nc.Logger.Error().Msgf("Telegram poller (user %d): parse error: %s", userID, jsonErr)
+		return
+	}
+
+	for _, update := range result.Result {
+		nc.pollerPool.mu.Lock()
+		state.offset = update.UpdateID + 1
+		nc.pollerPool.mu.Unlock()
+
+		if update.Message == nil {
+			continue
+		}
+
+		text := strings.TrimSpace(update.Message.Text)
+		chatID := fmt.Sprintf("%d", update.Message.Chat.ID)
+		nc.handleTelegramStartCommand(text, chatID, baseURL, userID)
+	}
+}
+
+// resolveTelegramBotUsername resolves and caches the bot username for a user.
 func (nc *NotificationController) resolveTelegramBotUsername(baseURL string, userID uint) {
 	getMeURL := fmt.Sprintf("%s/getMe", baseURL)
 	if resp, err := nc.telegramClient.Get(getMeURL); err == nil {
@@ -658,68 +810,6 @@ func (nc *NotificationController) handleTelegramStartCommand(text, chatID, baseU
 	nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
 		"✅ Linked! You will now receive Proviant notifications here.")
 	return true
-}
-
-func (nc *NotificationController) runTelegramPollerLoop(ctx context.Context, baseURL string, userID uint) {
-	var offset int64
-
-	for {
-		select {
-		case <-ctx.Done():
-			nc.Logger.Info().Msgf("Telegram poller (user %d): stopped", userID)
-			return
-		default:
-		}
-
-		url := fmt.Sprintf("%s/getUpdates?timeout=10&offset=%d", baseURL, offset)
-		resp, err := nc.telegramClient.Get(url)
-		if err != nil {
-			nc.Logger.Error().Msgf("Telegram poller (user %d): getUpdates error: %s", userID, err)
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(5 * time.Second):
-			}
-			continue
-		}
-
-		body, readErr := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		if readErr != nil {
-			nc.Logger.Error().Msgf("Telegram poller (user %d): read error: %s", userID, readErr)
-			continue
-		}
-
-		var result telegramResponse
-
-		if jsonErr := json.Unmarshal(body, &result); jsonErr != nil {
-			nc.Logger.Error().Msgf("Telegram poller (user %d): parse error: %s", userID, jsonErr)
-			continue
-		}
-
-		for _, update := range result.Result {
-			offset = update.UpdateID + 1
-
-			if update.Message == nil {
-				continue
-			}
-
-			text := strings.TrimSpace(update.Message.Text)
-			chatID := fmt.Sprintf("%d", update.Message.Chat.ID)
-			nc.handleTelegramStartCommand(text, chatID, baseURL, userID)
-		}
-	}
-}
-
-// StopUserTelegramPoller cancels the long-poll goroutine for the given user, if running.
-func (nc *NotificationController) StopUserTelegramPoller(userID uint) {
-	if v, ok := nc.pollerCancels.Load(userID); ok {
-		if cancel, ok := v.(context.CancelFunc); ok {
-			cancel()
-		}
-		nc.pollerCancels.Delete(userID)
-	}
-	nc.botUsernames.Delete(userID)
 }
 
 func (nc *NotificationController) sendTelegramText(client *http.Client, baseURL, chatID, text string) {

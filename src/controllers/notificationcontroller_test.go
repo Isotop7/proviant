@@ -396,18 +396,38 @@ func TestDispatchStreakUpdatesEarlyReturn(t *testing.T) {
 func TestStartAllUserTelegramPollers(t *testing.T) {
 	logger := zerolog.Nop()
 	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
-	nc := &NotificationController{
-		Logger:           &logger,
-		Configuration:    &configuration.NotificationConfiguration{},
-		NotificationRepo: mockRepo,
-		telegramClient:   &http.Client{Timeout: 5 * time.Second},
-		telegramAPIBase:  "https://api.telegram.org",
-	}
 
-	t.Run("no users returns early", func(t *testing.T) {
+	t.Run("no users initializes pool", func(t *testing.T) {
 		mockRepo.Users = []authentication.User{}
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{Telegram: configuration.TelegramConfiguration{PollerWorkers: 2}},
+			NotificationRepo: mockRepo,
+			telegramClient:   &http.Client{Timeout: 5 * time.Second},
+			telegramAPIBase:  "https://api.telegram.org",
+		}
 		nc.StartAllUserTelegramPollers()
-		// Should return without starting any pollers
+		assert.NotNil(t, nc.pollerPool)
+		assert.Equal(t, 0, len(nc.pollerPool.users))
+		nc.StopTelegramPollerPool()
+	})
+
+	t.Run("pool starts with workers", func(t *testing.T) {
+		mockRepo.Users = []authentication.User{
+			{Model: gorm.Model{ID: 1}, NotificationPreferences: authentication.NotificationPreferences{TelegramBotToken: "test-token"}},
+		}
+		nc := &NotificationController{
+			Logger:           &logger,
+			Configuration:    &configuration.NotificationConfiguration{Telegram: configuration.TelegramConfiguration{PollerWorkers: 2}},
+			NotificationRepo: mockRepo,
+			telegramClient:   &http.Client{Timeout: 5 * time.Second},
+			telegramAPIBase:  "https://api.telegram.org",
+		}
+		nc.StartAllUserTelegramPollers()
+		assert.NotNil(t, nc.pollerPool)
+		assert.Equal(t, 1, len(nc.pollerPool.users))
+		assert.Equal(t, 2, nc.pollerPool.numWorkers)
+		nc.StopTelegramPollerPool()
 	})
 }
 
