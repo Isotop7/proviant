@@ -312,3 +312,95 @@ func TestSearchProducts(t *testing.T) {
 		}
 	})
 }
+
+// TestGetProductsByBarcode tests the GetProductsByBarcode endpoint
+func TestGetProductsByBarcode(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("valid EAN-13 barcode returns 200", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Products = []dbModel.Product{
+			{ProductName: "Nutella", Barcode: "4001724814405"},
+		}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "barcode", Value: "4001724814405"}}
+
+		GetProductsByBarcode(ctx)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
+		}
+	})
+
+	t.Run("barcode too short returns 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "barcode", Value: "123456789012"}}
+
+		GetProductsByBarcode(ctx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("barcode too long returns 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "barcode", Value: "12345678901234"}}
+
+		GetProductsByBarcode(ctx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("non-numeric barcode returns 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "barcode", Value: "1234abcdefghi"}}
+
+		GetProductsByBarcode(ctx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("valid length with invalid checksum returns 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "barcode", Value: "4001724814400"}}
+
+		GetProductsByBarcode(ctx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("non-integer barcode returns 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "barcode", Value: "abc"}}
+
+		GetProductsByBarcode(ctx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+	})
+}

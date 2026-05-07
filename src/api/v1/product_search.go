@@ -29,20 +29,24 @@ func GetProductsByBarcode(ctx *gin.Context) {
 	// Get zerolog instance from context
 	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
-	// Get and parse parameter barcode
 	barcodeParam := ctx.Param("barcode")
-	var barcode int
-	var convErr error
-	if barcode, convErr = strconv.Atoi(barcodeParam); convErr != nil {
-		logger.Warn().Msgf("Requested barcode '%s' is invalid", barcodeParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%s' is invalid", barcodeParam)})
+
+	if len(barcodeParam) != 13 || !validEAN13Format(barcodeParam) {
+		logger.Warn().Msgf("Requested barcode '%s' is invalid EAN-13 code", barcodeParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%s' is an invalid EAN-13 code", barcodeParam)})
 		return
 	}
 
-	// Check for valid EAN-13
-	if barcode < 1000000000000 || barcode > 10000000000000 {
-		logger.Warn().Msgf("Requested barcode '%d' is invalid EAN-13 code", barcode)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%d' is an invalid EAN-13 code", barcode)})
+	if !validEAN13Checksum(barcodeParam) {
+		logger.Warn().Msgf("Requested barcode '%s' has invalid EAN-13 checksum", barcodeParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%s' is an invalid EAN-13 code", barcodeParam)})
+		return
+	}
+
+	barcode, convErr := strconv.Atoi(barcodeParam)
+	if convErr != nil {
+		logger.Warn().Msgf("Requested barcode '%s' is invalid", barcodeParam)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%s' is invalid", barcodeParam)})
 		return
 	}
 
@@ -125,4 +129,26 @@ func SearchProducts(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, products)
+}
+
+func validEAN13Format(barcode string) bool {
+	for _, c := range barcode {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func validEAN13Checksum(barcode string) bool {
+	sum := 0
+	for i, c := range barcode {
+		digit := int(c - '0')
+		if i%2 == 0 {
+			sum += digit * 3
+		} else {
+			sum += digit
+		}
+	}
+	return sum%10 == 0
 }
