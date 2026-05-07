@@ -154,5 +154,10 @@ func Logout(ctx *gin.Context) {
 	}
 
 	logger.Info().Msgf("Token revoked: JTI %s", jtiStr)
+
+	// Expire the HttpOnly JWT cookie so the browser discards it immediately.
+	ctx.SetSameSite(http.SameSiteStrictMode)
+	ctx.SetCookie("jwt", "", -1, "/", "", false, true)
+
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Logged out successfully"})
 }

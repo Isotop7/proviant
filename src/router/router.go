@@ -109,6 +109,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Setup security headers
 	engine.Use(SecurityHeadersMiddleware(proviantConfiguration))
 
+	// CSRF protection: double-submit cookie pattern for browser clients
+	engine.Use(CSRFMiddleware(proviantConfiguration))
+
 	// RequestID middleware - must run before other context injectors
 	engine.Use(RequestIDMiddleware(logger))
 

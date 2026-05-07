@@ -26,6 +26,7 @@ server:
   #   - "10.0.0.0/8"
   securityHeaders:
     contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
+    csrf_token_max_age: 86400
 
 database:
   engine: sqlite

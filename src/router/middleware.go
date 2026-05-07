@@ -265,15 +265,17 @@ func JWTMiddleware(
 	unauthorizedFunc func(ctx *gin.Context, code int, message string)) (*jwt.GinJWTMiddleware, error) {
 	return jwt.New(&jwt.GinJWTMiddleware{
 		// JWT configuration and timeouts
-		Realm:         static.TokenRealm,
-		Key:           []byte(proviantConfiguration.Server.Authentication.TokenPassword),
-		Timeout:       (time.Duration(proviantConfiguration.Server.Authentication.TokenLifetime) * time.Hour),
-		MaxRefresh:    (time.Duration(proviantConfiguration.Server.Authentication.TokenLifetime) * time.Hour),
-		IdentityKey:   static.TokenIdentityKey,
-		TokenLookup:   static.TokenLookup,
-		TokenHeadName: static.TokenHeadName,
-		TimeFunc:      time.Now,
-		SendCookie:    true,
+		Realm:          static.TokenRealm,
+		Key:            []byte(proviantConfiguration.Server.Authentication.TokenPassword),
+		Timeout:        (time.Duration(proviantConfiguration.Server.Authentication.TokenLifetime) * time.Hour),
+		MaxRefresh:     (time.Duration(proviantConfiguration.Server.Authentication.TokenLifetime) * time.Hour),
+		IdentityKey:    static.TokenIdentityKey,
+		TokenLookup:    static.TokenLookup,
+		TokenHeadName:  static.TokenHeadName,
+		TimeFunc:       time.Now,
+		SendCookie:     true,
+		CookieHTTPOnly: true,
+		CookieSameSite: http.SameSiteStrictMode,
 		// Generate claims and return it to payload
 		PayloadFunc: func(data any) jwt.MapClaims {
 			if userData, ok := data.(authentication.User); ok {

@@ -267,6 +267,12 @@ var (
 	ErrWebhookNotOwner = errors.New("webhook does not belong to user")
 
 	/*
+	 * CSRF related errors
+	 */
+	// ErrCSRFTokenInvalid is thrown when a CSRF token is missing or does not match the expected value
+	ErrCSRFTokenInvalid = errors.New("CSRF token validation failed")
+
+	/*
 	 * Savings related errors
 	 */
 	// ErrSavingsRecordFailed is thrown when a savings record cannot be written

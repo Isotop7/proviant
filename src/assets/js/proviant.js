@@ -1,5 +1,30 @@
 const proviant = {};
 
+// Read the csrf_token cookie set by the server's CSRF middleware.
+proviant._getCsrfToken = function () {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
+// Intercept all fetch calls to inject X-CSRF-Token on state-mutating requests.
+// This covers every fetch() call in the application — including direct calls in
+// individual JS files — without requiring per-call changes.
+(function () {
+  const _originalFetch = window.fetch;
+  const mutatingMethods = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+  window.fetch = function (resource, options) {
+    options = options || {};
+    const method = ((options.method) || "GET").toUpperCase();
+    if (mutatingMethods.has(method)) {
+      const csrfToken = proviant._getCsrfToken();
+      if (csrfToken) {
+        options.headers = Object.assign({}, options.headers, { "X-CSRF-Token": csrfToken });
+      }
+    }
+    return _originalFetch.call(this, resource, options);
+  };
+})();
+
 // Define a public method
 proviant.debug = function () {
   console.log("Proviant loaded");
@@ -543,22 +568,15 @@ proviant.getToken = function () {
 };
 
 proviant.logoutUser = async function () {
-  // Get the current JWT token from cookie
-  const token = proviant.getToken();
-  if (token) {
-    try {
-      // Call logout endpoint to revoke the token
-      await fetch('/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-    } catch (error) {
-      console.error('Logout request failed:', error);
-      // Continue with cookie expiration even if API call fails
-    }
+  try {
+    // Revoke the token server-side; the server also clears the HttpOnly jwt cookie.
+    await fetch('/auth/logout', {
+      method: 'POST',
+      credentials: 'include'
+    });
+  } catch (error) {
+    console.error('Logout request failed:', error);
   }
-  // Expire the JWT cookie
-  document.cookie = "jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
 };
 
 proviant.formatDate = function (timestamp) {

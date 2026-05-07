@@ -52,6 +52,7 @@ type CorsConfiguration struct {
 // SecurityHeadersConfiguration contains all properties for HTTP security headers
 type SecurityHeadersConfiguration struct {
 	ContentSecurityPolicy string
+	CSRFTokenMaxAge       int `mapstructure:"csrf_token_max_age"` // seconds; default 86400 (24h)
 }
 
 // ServerConfiguration contains all properties regarding the proviant server
