@@ -126,6 +126,7 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetDefault("server.rateLimit.login_per_minute", 5)
 	viper.SetDefault("server.rateLimit.signup_per_minute", 3)
 	viper.SetDefault("server.rateLimit.export_per_minute", 1)
+	viper.SetDefault("server.demoMode", false)
 
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {

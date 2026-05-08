@@ -328,7 +328,7 @@ func JWTMiddleware(
 			}
 
 			// Check email verification
-			if user.EmailVerifiedAt == nil {
+			if user.EmailVerifiedAt == nil && !proviantConfiguration.Server.Authentication.SkipEmailVerification {
 				return nil, errEmailNotVerified
 			}
 

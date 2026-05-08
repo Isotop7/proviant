@@ -91,6 +91,9 @@ func trySendEmailVerification(ctx *gin.Context, repos *database.RepositoryContai
 	if !ok {
 		return
 	}
+	if proviantConfig.Server.Authentication.SkipEmailVerification {
+		return
+	}
 	token, expiresAt, tokenErr := controllers.GenerateEmailVerificationToken()
 	if tokenErr != nil {
 		logger.Error().Msgf("Failed to generate email verification token: %s", tokenErr.Error())

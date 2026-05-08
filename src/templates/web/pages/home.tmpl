@@ -1,5 +1,12 @@
 {{ define "content" }}
 
+{{ if .DemoMode }}
+<div class="alert alert-info text-center mb-0 py-2" role="alert">
+    <i class="bi bi-info-circle-fill me-1"></i>
+    <strong>Demo Mode</strong> — This is a public demo instance. Data resets frequently.
+</div>
+{{ end }}
+
 {{ if .HasHousehold }}
 
 <div aria-live="polite" aria-atomic="true" class="visually-hidden" id="dashboard-status"></div>

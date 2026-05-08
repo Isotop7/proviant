@@ -223,6 +223,9 @@ func (m *MockUserRepository) GetEmailVerificationByToken(token string) (dbModel.
 func (m *MockUserRepository) UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error {
 	return m.Err
 }
+func (m *MockUserRepository) UpdateEmailVerification(userID uint, verifiedAt *time.Time) error {
+	return m.Err
+}
 func (m *MockUserRepository) UpdateEmailVerificationStatus(token, status string) error {
 	return m.Err
 }

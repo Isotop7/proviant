@@ -110,6 +110,14 @@ jobs:
             ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:latest
             ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:${{ forgejo.ref_name }}
             ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:latest
+      - name: Build and push Demo Docker image
+        uses: docker/build-push-action@v6
+        with:
+          file: ./Dockerfile.demo
+          push: true
+          tags: |
+            ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:demo
+            ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:demo
   sonarcloud-scan:
     needs: check
     if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'

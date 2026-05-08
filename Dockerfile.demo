@@ -23,18 +23,31 @@ RUN npm ci && \
     cd src && \
     CGO_ENABLED=1 GOOS=linux CGO_CFLAGS="-D_LARGEFILE64_SOURCE" go build -v -o ../proviant
 
+FROM golang:1.26.2-alpine AS seeder
+WORKDIR /app
+RUN apk add --no-cache gcc g++ musl-dev
+COPY --from=buildenv /app/src /app/src
+COPY --from=buildenv /app/seed.go /app/seed.go
+WORKDIR /app/src
+RUN CGO_ENABLED=1 go run ../seed.go && \
+    mv demo_seed.db /app/demo_seed.db
+
 FROM docker.io/alpine:3.23
 WORKDIR /app
 
 COPY --from=buildenv /app/proviant /app/proviant
+COPY --from=seeder /app/demo_seed.db /seed/demo_seed.db
 RUN addgroup -S proviant && \
     adduser -S -G proviant proviant && \
-    mkdir /app/data && \
+    mkdir -p /app/data /seed && \
     apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng && \
     chown -R proviant:proviant /app
 COPY --chown=proviant:proviant ./src/config.yaml.sqlite.tmpl /app/config.yaml
+COPY --chown=proviant:proviant ./demo_entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 ENV GIN_MODE=release
+ENV PROVIANT_DEMO_MODE=true
 EXPOSE 5114
 
 USER proviant
-ENTRYPOINT [ "/app/proviant" ]
+ENTRYPOINT [ "/entrypoint.sh" ]

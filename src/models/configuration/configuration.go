@@ -41,6 +41,7 @@ type AuthenticationConfiguration struct {
 	PasswordRequireDigit     bool   `mapstructure:"password_require_digit"`
 	PasswordRequireSpecial   bool   `mapstructure:"password_require_special"`
 	PasswordCheckBreached    bool   `mapstructure:"password_check_breached"`
+	SkipEmailVerification    bool   `mapstructure:"skip_email_verification"`
 }
 
 // CorsConfiguration contains all properties for the CORS configuration of the proviant server
@@ -73,6 +74,7 @@ type ServerConfiguration struct {
 	TrustedProxies  []string               `mapstructure:"trustedProxies"`
 	MaxUploadSizeMB int                    `mapstructure:"maxUploadSizeMB"`
 	Debug           bool                   `mapstructure:"debug"`
+	DemoMode        bool                   `mapstructure:"demoMode"`
 }
 
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog

@@ -109,6 +109,14 @@ tasks:
     cmds:
       - '{{.CONTAINER_RUNTIME}} build --no-cache --tag=proviant ./'
 
+  demo-containerimage:
+    desc: Build demo container image (requires podman or docker)
+    preconditions:
+      - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
+        msg: "No container runtime found. Please install podman or docker."
+    cmds:
+      - '{{.CONTAINER_RUNTIME}} build --no-cache --tag=proviant ./ -f ./Dockerfile.demo'
+
   run:
     desc: Start development server
     dir: src
