@@ -867,7 +867,7 @@ function ShowWebhookDeliveries(id) {
 
 function ShowDeliveriesModal(deliveries) {
   let html = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Time</th><th>Attempt</th><th>Status</th><th>Response</th><th>Error</th></tr></thead><tbody>';
-  
+
   if (deliveries.length === 0) {
     html += '<tr><td colspan="5" class="text-center text-secondary-custom">No delivery attempts yet</td></tr>';
   } else {
@@ -921,7 +921,7 @@ function CreateWebhook() {
   const url = document.getElementById('inputWebhookUrl').value.trim();
   const secret = document.getElementById('inputWebhookSecret').value;
   const events = getSelectedWebhookEvents();
-  
+
   if (!url) {
     document.getElementById('inputWebhookUrl').classList.add('is-invalid');
     return;
@@ -1030,7 +1030,6 @@ function renderAuditLogRow(log) {
 }
 
 function renderAuditLog(logs) {
-  const container = document.getElementById("auditLogContainer");
   const list = document.getElementById("auditLogList");
   const loading = document.getElementById("auditLogLoading");
   const meta = document.getElementById("auditLogMeta");
