@@ -27,6 +27,9 @@ linters:
         - commentedOutCode
 
   exclusions:
+    paths:
+      - vendor
+      - .git
     rules:
       # G107: URL comes from trusted config, not user input
       - path: openfoodfactsapicontroller\.go
@@ -70,6 +73,10 @@ linters:
 
 formatters:
   enable: []
+  exclusions:
+    paths:
+      - vendor
+      - .git
 
 output:
   formats:
@@ -86,6 +93,3 @@ run:
   concurrency: 0
   allow-parallel-runners: true
   tests: false
-  skip-dirs:
-    - vendor
-    - .git
