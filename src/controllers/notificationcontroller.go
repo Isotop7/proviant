@@ -609,16 +609,14 @@ func (nc *NotificationController) StartTelegramPollerPool() {
 		numWorkers = 10
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
 	nc.pollerPool = &telegramPollerPool{
 		users:        make(map[uint]*pollerState),
 		numWorkers:   numWorkers,
-		ctx:          ctx,
-		cancel:       cancel,
 		nc:           nc,
 		pollInterval: 2 * time.Second,
 		ticker:       time.NewTicker(2 * time.Second),
 	}
+	nc.pollerPool.ctx, nc.pollerPool.cancel = context.WithCancel(context.Background()) //nolint:gosec // cancel stored and called in StopTelegramPollerPool
 
 	nc.Logger.Info().Msgf("Telegram: starting poller pool with %d worker(s) for %d user(s)", numWorkers, len(users))
 
@@ -694,7 +692,7 @@ func (nc *NotificationController) processPoolUsers(workerID int) {
 	nc.pollerPool.mu.RLock()
 	users := make([]uint, 0, len(nc.pollerPool.users))
 	for userID := range nc.pollerPool.users {
-		if int(userID)%nc.pollerPool.numWorkers == workerID {
+		if userID%uint(nc.pollerPool.numWorkers) == uint(workerID) { //nolint:gosec // numWorkers validated >0 above, workerID >=0 from loop
 			users = append(users, userID)
 		}
 	}

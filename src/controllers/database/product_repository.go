@@ -27,8 +27,6 @@ type ProductRepositoryInterface interface {
 	UpdateProduct(productID uint, userID uint, product *database.ProductDTOPatch) error
 	UpdateProductAmount(productID uint, userID uint, delta int) (bool, error)
 	DeleteProduct(productID uint, userID uint, archiveOnly bool) error
-	BulkDeleteProducts(productIDs []uint, userID uint) []BulkOperationError
-	BulkArchiveProducts(productIDs []uint, userID uint) []BulkOperationError
 	RestoreProduct(productID, userID uint) error
 	BulkRestoreProducts(productIDs []uint, userID uint) []BulkOperationError
 	SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error
@@ -393,36 +391,6 @@ func (r *ProductRepository) DeleteProduct(productID uint, userID uint, archiveOn
 		deleteResult = r.DB.Unscoped().Delete(&database.Product{}, productID)
 	}
 	return deleteResult.Error
-}
-
-func (r *ProductRepository) BulkDeleteProducts(productIDs []uint, userID uint) []BulkOperationError {
-	bulkErrors := []BulkOperationError{}
-	for _, productID := range productIDs {
-		_, getError := r.GetArchivedProductByID(productID, userID)
-		if getError != nil {
-			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
-		}
-		deleteResult := r.DB.Unscoped().Delete(&database.Product{}, productID)
-		if deleteResult.Error != nil {
-			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
-		}
-	}
-	return bulkErrors
-}
-
-func (r *ProductRepository) BulkArchiveProducts(productIDs []uint, userID uint) []BulkOperationError {
-	bulkErrors := []BulkOperationError{}
-	for _, productID := range productIDs {
-		_, getError := r.GetArchivedProductByID(productID, userID)
-		if getError != nil {
-			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
-		}
-		deleteResult := r.DB.Delete(&database.Product{}, productID)
-		if deleteResult.Error != nil {
-			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
-		}
-	}
-	return bulkErrors
 }
 
 func (r *ProductRepository) RestoreProduct(productID, userID uint) error {

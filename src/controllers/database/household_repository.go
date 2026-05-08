@@ -58,7 +58,7 @@ func (r *HouseholdRepository) GetHouseholdMembers(householdID uint) ([]authentic
 
 // createSoloHousehold creates a new household named after the user, sets adminID,
 // moves products if the user was the sole member of the old household, then moves the user.
-func createSoloHousehold(tx *gorm.DB, user authentication.User, oldHouseholdID uint, newName string) error {
+func createSoloHousehold(tx *gorm.DB, user *authentication.User, oldHouseholdID uint, newName string) error {
 	newHousehold := database.Household{Name: newName}
 	if err := tx.Create(&newHousehold).Error; err != nil {
 		tx.Rollback()
@@ -78,7 +78,7 @@ func createSoloHousehold(tx *gorm.DB, user authentication.User, oldHouseholdID u
 		}
 	}
 
-	if err := tx.Model(&user).Update("household_id", newHousehold.ID).Error; err != nil {
+	if err := tx.Model(user).Update("household_id", newHousehold.ID).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -95,7 +95,7 @@ func (r *HouseholdRepository) LeaveHousehold(userID uint) error {
 	}
 
 	oldHouseholdID := user.HouseholdID
-	if err := createSoloHousehold(tx, user, oldHouseholdID, fmt.Sprintf("%s's Household", user.Username)); err != nil {
+	if err := createSoloHousehold(tx, &user, oldHouseholdID, fmt.Sprintf("%s's Household", user.Username)); err != nil {
 		return err
 	}
 
@@ -112,7 +112,7 @@ func (r *HouseholdRepository) CreateAndSwitchHousehold(userID uint, name string)
 	}
 
 	oldHouseholdID := user.HouseholdID
-	if err := createSoloHousehold(tx, user, oldHouseholdID, name); err != nil {
+	if err := createSoloHousehold(tx, &user, oldHouseholdID, name); err != nil {
 		return err
 	}
 
@@ -307,7 +307,7 @@ func (r *HouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserI
 		return errors.ErrCannotRemoveAdmin
 	}
 
-	if err := createSoloHousehold(tx, memberUser, household.ID, fmt.Sprintf("%s's Household", memberUser.Username)); err != nil {
+	if err := createSoloHousehold(tx, &memberUser, household.ID, fmt.Sprintf("%s's Household", memberUser.Username)); err != nil {
 		return err
 	}
 

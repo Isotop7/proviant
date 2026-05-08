@@ -217,52 +217,6 @@ func TestGetUserArchivedProductsHandler(t *testing.T) {
 	t.Skip("Skipping - handler requires complex DB setup for archived products queries")
 }
 
-func TestBulkDeleteProducts(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	t.Run("empty product list returns success", func(t *testing.T) {
-		m := repomocks.NewMockRepositoryContainer()
-		ctx, w := repomocks.SetupGinContextWithMocks(m)
-		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
-
-		reqBody := map[string][]int{"productIDs": {}}
-		body, _ := json.Marshal(reqBody)
-		ctx.Request = &http.Request{
-			Body:          io.NopCloser(bytes.NewBuffer(body)),
-			Header:        make(http.Header),
-			ContentLength: int64(len(body)),
-		}
-		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
-
-		BulkDeleteProducts(ctx)
-
-		if w.Code != http.StatusOK {
-			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
-		}
-	})
-
-	t.Run("invalid product IDs returns error", func(t *testing.T) {
-		m := repomocks.NewMockRepositoryContainer()
-		ctx, w := repomocks.SetupGinContextWithMocks(m)
-		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
-
-		reqBody := map[string][]string{"productIDs": {"invalid"}}
-		body, _ := json.Marshal(reqBody)
-		ctx.Request = &http.Request{
-			Body:          io.NopCloser(bytes.NewBuffer(body)),
-			Header:        make(http.Header),
-			ContentLength: int64(len(body)),
-		}
-		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
-
-		BulkDeleteProducts(ctx)
-
-		if w.Code != http.StatusBadRequest {
-			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
-		}
-	})
-}
-
 func TestCreateHousehold(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

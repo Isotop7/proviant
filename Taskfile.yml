@@ -56,10 +56,34 @@ tasks:
         {{.CONTAINER_RUNTIME}} run -t --rm \
         -v ./:/app:Z -v ../.golangci.yml:/tmp/.golangci.yml:Z \
         -v ../.cache/golangci-lint:/root/.cache/golangci-lint:Z \
+        -v ../.cache/go:/root/go/pkg/mod:Z \
+        -v ../.cache/go-build:/root/.cache/go-build:Z \
         -e GOLANGCI_LINT_CACHE=/root/.cache/golangci-lint \
+        -e GOMODCACHE=/root/go/pkg/mod \
+        -e GOCACHE=/root/.cache/go-build \
         -w /app golangci/golangci-lint:{{.GOLANGCI_VERSION}} \
         golangci-lint run \
         -v -c /tmp/.golangci.yml
+
+  check-changed:
+    desc: Run quality control checks on changed files only (requires podman or docker)
+    preconditions:
+      - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
+        msg: "No container runtime found. Please install podman or docker."
+    dir: src
+    cmds:
+      - |
+        {{.CONTAINER_RUNTIME}} run -t --rm \
+        -v ./:/app:Z -v ../.golangci.yml:/tmp/.golangci.yml:Z \
+        -v ../.cache/golangci-lint:/root/.cache/golangci-lint:Z \
+        -v ../.cache/go:/root/go/pkg/mod:Z \
+        -v ../.cache/go-build:/root/.cache/go-build:Z \
+        -e GOLANGCI_LINT_CACHE=/root/.cache/golangci-lint \
+        -e GOMODCACHE=/root/go/pkg/mod \
+        -e GOCACHE=/root/.cache/go-build \
+        -w /app golangci/golangci-lint:{{.GOLANGCI_VERSION}} \
+        golangci-lint run \
+        -v -c /tmp/.golangci.yml --new-from-rev HEAD~1
 
   packagedoc:
     desc: Generate package documentation as markdown

@@ -84,10 +84,8 @@ func TestValidateWebhookURL(t *testing.T) {
 				if err != tt.wantError {
 					t.Errorf("validateWebhookURL(%q) error = %v, want %v", tt.url, err, tt.wantError)
 				}
-			} else {
-				if err != nil {
-					t.Errorf("validateWebhookURL(%q) = %v, want nil", tt.url, err)
-				}
+			} else if err != nil {
+				t.Errorf("validateWebhookURL(%q) = %v, want nil", tt.url, err)
 			}
 		})
 	}

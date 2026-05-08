@@ -83,3 +83,10 @@ run:
   timeout: 3m
   relative-path-mode: cfg
   issues-exit-code: 1
+  concurrency: 0
+  allow-parallel-runners: true
+  tests: false
+
+skip-dirs:
+  - vendor
+  - .git

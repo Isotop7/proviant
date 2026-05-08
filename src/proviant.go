@@ -374,7 +374,8 @@ func backfillOpenFoodFactsCache(logger *zerolog.Logger, dbHandle *gorm.DB, offac
 	processedBarcodes := make(map[string]bool, len(hintEntries))
 	hintsUpdated := 0
 
-	for _, entry := range hintEntries {
+	for i := range hintEntries {
+		entry := &hintEntries[i]
 		processedBarcodes[entry.Barcode] = true
 
 		product, apiErr := offacntrl.GetDataset(entry.Barcode)
@@ -420,7 +421,8 @@ func backfillOpenFoodFactsCache(logger *zerolog.Logger, dbHandle *gorm.DB, offac
 			logger.Warn().Msgf("Cache backfill: failed to query entries with remote images: %s", imgQueryErr)
 		}
 
-		for _, entry := range imageEntries {
+		for i := range imageEntries {
+			entry := &imageEntries[i]
 			if processedBarcodes[entry.Barcode] {
 				continue
 			}
