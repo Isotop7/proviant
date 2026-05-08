@@ -197,6 +197,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"User":                     user,
 		"Household":                household,
 		"IsAdmin":                  isAdmin,
+		"ShowAuditLog":             isAdmin,
 		"Members":                  members,
 		"PendingApplications":      pendingApplications,
 		"MyApplications":           myApplications,

@@ -19,6 +19,7 @@ type RepositoryContainer struct {
 	Streaks          StreakRepositoryInterface
 	ExpiryScan       ExpiryScanRepositoryInterface
 	CalendarTokens   CalendarTokenRepositoryInterface
+	AuditLogs        AuditLogRepositoryInterface
 }
 
 // NewRepositoryContainer creates a RepositoryContainer backed by GORM implementations.
@@ -37,5 +38,6 @@ func NewRepositoryContainer(db *gorm.DB) *RepositoryContainer {
 		Streaks:          NewStreakRepository(db),
 		ExpiryScan:       NewExpiryScanRepository(db),
 		CalendarTokens:   NewCalendarTokenRepository(db),
+		AuditLogs:        NewAuditLogRepository(db),
 	}
 }

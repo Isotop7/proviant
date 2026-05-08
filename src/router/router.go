@@ -314,6 +314,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	adminAPI.DELETE("/:id", v1.DeleteHouseholdUser)
 	adminAPI.POST("/:id/reset-password", v1.AdminResetUserPassword)
 
+	// Admin audit log route
+	engine.GET("/api/v1/admin/audit-log", jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.GetAuditLogs)
+
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")
 	protectedProductAPI.Use(jwtAPIUserAwareMiddlewareWithPAT, UserContextLoggerMiddleware())

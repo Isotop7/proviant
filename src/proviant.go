@@ -248,6 +248,7 @@ func main() {
 		&dbModel.ProductCategoryPrice{},
 		&dbModel.SavingsRecord{},
 		&dbModel.ExpiryScan{},
+		&dbModel.AuditLog{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
