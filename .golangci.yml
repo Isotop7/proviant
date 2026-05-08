@@ -86,7 +86,6 @@ run:
   concurrency: 0
   allow-parallel-runners: true
   tests: false
-
-skip-dirs:
-  - vendor
-  - .git
+  skip-dirs:
+    - vendor
+    - .git
