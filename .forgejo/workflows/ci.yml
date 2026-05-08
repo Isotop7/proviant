@@ -33,7 +33,49 @@ jobs:
       - name: Scan for vulnerabilities
         run: |
           cd ./src
-          go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+          go run golang.org/x/vuln/cmd/govulncheck@latest -json ./... > govulncheck.json
+
+      - name: Create vulnerability issues
+        if: failure()
+        env:
+          VULN_JSON: ${{ github.workspace }}/src/govulncheck.json
+        run: |
+          OWNER="${{ forgejo.repository_owner }}"
+          REPO="${{ forgejo.repository_name }}"
+          TOKEN="${{ secrets.RELEASE_TOKEN }}"
+          WORKSPACE="${{ github.workspace }}"
+
+          ISSUES=$(jq -c '.problems[]' "$WORKSPACE/src/govulncheck.json" 2>/dev/null || echo "")
+
+          if [ -n "$ISSUES" ]; then
+            for ISSUE in $ISSUES; do
+              ID=$(echo "$ISSUE" | jq -r '.issueID')
+              PKG=$(echo "$ISSUE" | jq -r '.pkgPath')
+              DESC=$(echo "$ISSUE" | jq -r '.description')
+              FIXED=$(echo "$ISSUE" | jq -r '.fixedVersion // "unknown"')
+
+              BODY="## Vulnerability Detected
+
+              **ID:** \`$ID\`
+              **Package:** \`$PKG\`
+              **Fixed Version:** \`$FIXED\`
+
+              $DESC
+
+              ---
+              *This issue was automatically created by the CI vulnerability scanner.*"
+
+              curl -s -X POST \
+                "https://codeberg.org/api/v1/repos/$OWNER/$REPO/issues" \
+                -H "Authorization: token $TOKEN" \
+                -H "Content-Type: application/json" \
+                -d "$(jq -n --arg title "Vulnerability: $ID" --arg body "$BODY" '{title: $title, body: $body, labels: ["security", "vulnerability"]}')"
+
+              echo "Created issue for $ID"
+            done
+          else
+            echo "No vulnerabilities found"
+          fi
       - name: Test code
         run: |
           cd ./src
