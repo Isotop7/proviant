@@ -38,44 +38,53 @@ jobs:
       - name: Create vulnerability issues
         if: failure()
         env:
-          VULN_JSON: ${{ github.workspace }}/src/govulncheck.json
+          WORKSPACE: ${{ github.workspace }}
         run: |
           OWNER="${{ forgejo.repository_owner }}"
           REPO="${{ forgejo.repository_name }}"
           TOKEN="${{ secrets.RELEASE_TOKEN }}"
-          WORKSPACE="${{ github.workspace }}"
 
-          ISSUES=$(jq -c '.problems[]' "$WORKSPACE/src/govulncheck.json" 2>/dev/null || echo "")
+          RESPONSE=$(curl -s -X GET \
+            "https://codeberg.org/api/v1/repos/$OWNER/$REPO/issues?state=open&labels=security" \
+            -H "Authorization: token $TOKEN")
 
-          if [ -n "$ISSUES" ]; then
-            for ISSUE in $ISSUES; do
-              ID=$(echo "$ISSUE" | jq -r '.issueID')
-              PKG=$(echo "$ISSUE" | jq -r '.pkgPath')
-              DESC=$(echo "$ISSUE" | jq -r '.description')
-              FIXED=$(echo "$ISSUE" | jq -r '.fixedVersion // "unknown"')
+          EXISTING_IDS=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[] | select(.labels[].name == "vulnerability") | .title | split(": ")[1] // empty | split(" ")[0] else empty end' 2>/dev/null || echo "")
 
-              BODY="## Vulnerability Detected
+          while IFS= read -r existing; do
+            KNOWN_VULNS="$KNOWN_VULNS $existing"
+          done <<< "$EXISTING_IDS"
 
-              **ID:** \`$ID\`
-              **Package:** \`$PKG\`
-              **Fixed Version:** \`$FIXED\`
+          jq -c '.problems[]' "$WORKSPACE/src/govulncheck.json" 2>/dev/null | while read ISSUE; do
+            ID=$(echo "$ISSUE" | jq -r '.issueID')
 
-              $DESC
+            if echo "$KNOWN_VULNS" | grep -qF "$ID"; then
+              echo "Issue for $ID already exists, skipping"
+              continue
+            fi
 
-              ---
-              *This issue was automatically created by the CI vulnerability scanner.*"
+            PKG=$(echo "$ISSUE" | jq -r '.pkgPath')
+            DESC=$(echo "$ISSUE" | jq -r '.description')
+            FIXED=$(echo "$ISSUE" | jq -r '.fixedVersion // "unknown"')
 
-              curl -s -X POST \
-                "https://codeberg.org/api/v1/repos/$OWNER/$REPO/issues" \
-                -H "Authorization: token $TOKEN" \
-                -H "Content-Type: application/json" \
-                -d "$(jq -n --arg title "Vulnerability: $ID" --arg body "$BODY" '{title: $title, body: $body, labels: ["security", "vulnerability"]}')"
+            BODY="## Vulnerability Detected
 
-              echo "Created issue for $ID"
-            done
-          else
-            echo "No vulnerabilities found"
-          fi
+            **ID:** \`$ID\`
+            **Package:** \`$PKG\`
+            **Fixed Version:** \`$FIXED\`
+
+            $DESC
+
+            ---
+            *This issue was automatically created by the CI vulnerability scanner.*"
+
+            curl -s -X POST \
+              "https://codeberg.org/api/v1/repos/$OWNER/$REPO/issues" \
+              -H "Authorization: token $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg title "Vulnerability: $ID" --arg body "$BODY" '{title: $title, body: $body, labels: ["security", "vulnerability"]}')"
+
+            echo "Created issue for $ID"
+          done
       - name: Test code
         run: |
           cd ./src
