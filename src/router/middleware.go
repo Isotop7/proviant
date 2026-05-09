@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"errors"
 	"html/template"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/templates"
 	"codeberg.org/isotop7/proviant/util"
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -321,15 +323,17 @@ func JWTMiddleware(
 			if err != nil {
 				_ = userRepo.RecordFailedLoginAttempt(user.ID, maxLoginAttempts, lockoutDurationMins)
 				ctx.Set("failedUserID", user.ID)
+				go recordLoginFailure(ctx, user.ID)
 				return nil, jwt.ErrFailedAuthentication
 			}
 
 			// Check email verification
-			if user.EmailVerifiedAt == nil {
+			if user.EmailVerifiedAt == nil && !proviantConfiguration.Server.Authentication.SkipEmailVerification {
 				return nil, errEmailNotVerified
 			}
 
 			_ = userRepo.ResetFailedLoginAttempts(user.ID)
+			go recordLoginSuccess(ctx, user.ID, loginVals.Username)
 			return user, nil
 		},
 		// Authorizator checks if user is authorized to emit operation
@@ -337,4 +341,46 @@ func JWTMiddleware(
 		// Unauthorized implements the return function if user is not authorized
 		Unauthorized: unauthorizedFunc,
 	})
+}
+
+func recordLoginSuccess(ctx *gin.Context, userID uint, username string) {
+	reposVal, exists := ctx.Get(util.ContextKeyRepos)
+	if !exists {
+		return
+	}
+	repos, ok := reposVal.(*database.RepositoryContainer)
+	if !ok {
+		return
+	}
+	requestID, _ := ctx.Get(util.ContextKeyRequestID)
+	auditLog := &dbModel.AuditLog{
+		Timestamp: time.Now(),
+		UserID:    &userID,
+		Action:    dbModel.AuditActionLoginSuccess,
+		IPAddress: ctx.Request.RemoteAddr,
+		RequestID: requestID.(string),
+		Details:   `{"username": "` + username + `"}`,
+	}
+	_ = repos.AuditLogs.Create(context.Background(), auditLog)
+}
+
+func recordLoginFailure(ctx *gin.Context, userID uint) {
+	reposVal, exists := ctx.Get(util.ContextKeyRepos)
+	if !exists {
+		return
+	}
+	repos, ok := reposVal.(*database.RepositoryContainer)
+	if !ok {
+		return
+	}
+	requestID, _ := ctx.Get(util.ContextKeyRequestID)
+	auditLog := &dbModel.AuditLog{
+		Timestamp: time.Now(),
+		UserID:    &userID,
+		Action:    dbModel.AuditActionLoginFailure,
+		IPAddress: ctx.Request.RemoteAddr,
+		RequestID: requestID.(string),
+		Details:   `{"reason": "invalid_credentials"}`,
+	}
+	_ = repos.AuditLogs.Create(context.Background(), auditLog)
 }

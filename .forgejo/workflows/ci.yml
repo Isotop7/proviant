@@ -33,7 +33,58 @@ jobs:
       - name: Scan for vulnerabilities
         run: |
           cd ./src
-          go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+          go run golang.org/x/vuln/cmd/govulncheck@latest -json ./... > govulncheck.json
+
+      - name: Create vulnerability issues
+        if: failure()
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        run: |
+          OWNER="${{ forgejo.repository_owner }}"
+          REPO="${{ forgejo.repository_name }}"
+          TOKEN="${{ secrets.RELEASE_TOKEN }}"
+
+          RESPONSE=$(curl -s -X GET \
+            "https://codeberg.org/api/v1/repos/$OWNER/$REPO/issues?state=open&labels=security" \
+            -H "Authorization: token $TOKEN")
+
+          EXISTING_IDS=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[] | select(.labels[].name == "vulnerability") | .title | split(": ")[1] // empty | split(" ")[0] else empty end' 2>/dev/null || echo "")
+
+          while IFS= read -r existing; do
+            KNOWN_VULNS="$KNOWN_VULNS $existing"
+          done <<< "$EXISTING_IDS"
+
+          jq -c '.problems[]' "$WORKSPACE/src/govulncheck.json" 2>/dev/null | while read ISSUE; do
+            ID=$(echo "$ISSUE" | jq -r '.issueID')
+
+            if echo "$KNOWN_VULNS" | grep -qF "$ID"; then
+              echo "Issue for $ID already exists, skipping"
+              continue
+            fi
+
+            PKG=$(echo "$ISSUE" | jq -r '.pkgPath')
+            DESC=$(echo "$ISSUE" | jq -r '.description')
+            FIXED=$(echo "$ISSUE" | jq -r '.fixedVersion // "unknown"')
+
+            BODY="## Vulnerability Detected
+
+            **ID:** \`$ID\`
+            **Package:** \`$PKG\`
+            **Fixed Version:** \`$FIXED\`
+
+            $DESC
+
+            ---
+            *This issue was automatically created by the CI vulnerability scanner.*"
+
+            curl -s -X POST \
+              "https://codeberg.org/api/v1/repos/$OWNER/$REPO/issues" \
+              -H "Authorization: token $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg title "Vulnerability: $ID" --arg body "$BODY" '{title: $title, body: $body, labels: ["security", "vulnerability"]}')"
+
+            echo "Created issue for $ID"
+          done
       - name: Test code
         run: |
           cd ./src
@@ -110,6 +161,14 @@ jobs:
             ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:latest
             ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:${{ forgejo.ref_name }}
             ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:latest
+      - name: Build and push Demo Docker image
+        uses: docker/build-push-action@v6
+        with:
+          file: ./Dockerfile.demo
+          push: true
+          tags: |
+            ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:demo
+            ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:demo
   sonarcloud-scan:
     needs: check
     if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'

@@ -1,11 +1,15 @@
 package v1
 
 import (
+	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
@@ -39,12 +43,21 @@ func LeaveHousehold(ctx *gin.Context) {
 		return
 	}
 
+	user, err := repos.Users.GetUserByID(userID)
+	if err != nil {
+		logger.Error().Msgf("Error getting user: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		return
+	}
+	oldHouseholdID := user.HouseholdID
+
 	if err := repos.Households.LeaveHousehold(userID); err != nil {
 		logger.Error().Msgf("Error leaving household: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 		return
 	}
 
+	go recordMemberLeft(ctx, userID, oldHouseholdID)
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Successfully left household"})
 }
 
@@ -204,6 +217,7 @@ func ApproveHouseholdApplication(ctx *gin.Context) {
 	approveErr := repos.Households.ApproveApplication(applicationID, userID)
 	switch approveErr {
 	case nil:
+		go recordMemberAdded(ctx, userID, applicationID)
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application approved"})
 	case errors.ErrApplicationNotFound:
 		ctx.JSON(http.StatusNotFound, api.Error(approveErr))
@@ -390,6 +404,7 @@ func RemoveHouseholdMember(ctx *gin.Context) {
 	removeErr := repos.Households.RemoveMemberFromHousehold(memberID, userID)
 	switch removeErr {
 	case nil:
+		go recordMemberRemoved(ctx, userID, memberID)
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Member removed from household"})
 	case errors.ErrNotHouseholdAdmin:
 		ctx.JSON(http.StatusForbidden, api.Error(removeErr))
@@ -420,4 +435,97 @@ type createHouseholdRequest struct {
 
 type updateHouseholdNameRequest struct {
 	Name string `json:"name"`
+}
+
+func recordMemberLeft(ctx *gin.Context, userID uint, householdID uint) {
+	reposVal, exists := ctx.Get(util.ContextKeyRepos)
+	if !exists {
+		return
+	}
+	repos, ok := reposVal.(*database.RepositoryContainer)
+	if !ok {
+		return
+	}
+	ipAddress := ""
+	if ctx.Request != nil {
+		ipAddress = ctx.Request.RemoteAddr
+	}
+	var requestIDStr string
+	if requestID, ok := ctx.Get(util.ContextKeyRequestID); ok {
+		requestIDStr, _ = requestID.(string)
+	}
+	auditLog := &dbModel.AuditLog{
+		Timestamp: time.Now(),
+		UserID:    &userID,
+		Action:    dbModel.AuditActionMemberLeft,
+		IPAddress: ipAddress,
+		RequestID: requestIDStr,
+		Details:   `{"household_id": ` + strconv.FormatUint(uint64(householdID), 10) + `}`,
+	}
+	if repos.AuditLogs == nil {
+		return
+	}
+	_ = repos.AuditLogs.Create(context.Background(), auditLog)
+}
+
+func recordMemberAdded(ctx *gin.Context, adminID uint, applicationID uint) {
+	reposVal, exists := ctx.Get(util.ContextKeyRepos)
+	if !exists {
+		return
+	}
+	repos, ok := reposVal.(*database.RepositoryContainer)
+	if !ok {
+		return
+	}
+	ipAddress := ""
+	if ctx.Request != nil {
+		ipAddress = ctx.Request.RemoteAddr
+	}
+	var requestIDStr string
+	if requestID, ok := ctx.Get(util.ContextKeyRequestID); ok {
+		requestIDStr, _ = requestID.(string)
+	}
+	auditLog := &dbModel.AuditLog{
+		Timestamp: time.Now(),
+		UserID:    &adminID,
+		Action:    dbModel.AuditActionMemberAdded,
+		IPAddress: ipAddress,
+		RequestID: requestIDStr,
+		Details:   `{"application_id": ` + strconv.FormatUint(uint64(applicationID), 10) + `}`,
+	}
+	if repos.AuditLogs == nil {
+		return
+	}
+	_ = repos.AuditLogs.Create(context.Background(), auditLog)
+}
+
+func recordMemberRemoved(ctx *gin.Context, adminID uint, removedUserID uint) {
+	reposVal, exists := ctx.Get(util.ContextKeyRepos)
+	if !exists {
+		return
+	}
+	repos, ok := reposVal.(*database.RepositoryContainer)
+	if !ok {
+		return
+	}
+	ipAddress := ""
+	if ctx.Request != nil {
+		ipAddress = ctx.Request.RemoteAddr
+	}
+	var requestIDStr string
+	if requestID, ok := ctx.Get(util.ContextKeyRequestID); ok {
+		requestIDStr, _ = requestID.(string)
+	}
+	auditLog := &dbModel.AuditLog{
+		Timestamp: time.Now(),
+		UserID:    &adminID,
+		Action:    dbModel.AuditActionMemberRemoved,
+		IPAddress: ipAddress,
+		RequestID: requestIDStr,
+		Details:   `{"removed_user_id": ` + strconv.FormatUint(uint64(removedUserID), 10) + `}`,
+	}
+	if repos.AuditLogs == nil {
+		return
+	}
+	_ = repos.AuditLogs.Create(context.Background(), auditLog)
 }

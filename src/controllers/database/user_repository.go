@@ -30,6 +30,7 @@ type UserRepositoryInterface interface {
 	CreateEmailVerification(userID uint, token string, expiresAt time.Time) error
 	GetEmailVerificationByToken(token string) (database.EmailVerification, error)
 	UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
+	UpdateEmailVerification(userID uint, verifiedAt *time.Time) error
 	UpdateEmailVerificationStatus(token, status string) error
 	GetOnboardingState(userID uint) (database.OnboardingState, error)
 	MarkNotificationsSetup(userID uint) error
@@ -268,6 +269,10 @@ func (r *UserRepository) GetEmailVerificationByToken(token string) (database.Ema
 }
 
 func (r *UserRepository) UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error {
+	return r.DB.Model(&authentication.User{}).Where(util.QueryId, userID).Update("email_verified_at", verifiedAt).Error
+}
+
+func (r *UserRepository) UpdateEmailVerification(userID uint, verifiedAt *time.Time) error {
 	return r.DB.Model(&authentication.User{}).Where(util.QueryId, userID).Update("email_verified_at", verifiedAt).Error
 }
 

@@ -481,8 +481,40 @@
         </div>
     </div>
 
-    {{/* ── Household ────────────────────────────────────────────── */}}
-    <div class="card card-section mb-4" id="household">
+{{/* ── Activity Log (admin only) ──────────────────────────── */}}
+            {{ if .IsAdmin }}
+            <div class="card card-section mb-4" id="auditLogSection">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="icon-chip" aria-hidden="true">
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+                        <h2 class="h5 mb-0 fw-semibold">Activity Log</h2>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnRefreshAuditLog"
+                            aria-label="Refresh activity log" title="Refresh">
+                        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <p class="text-secondary-custom small px-4 pt-3 mb-0">Security-relevant actions from the last 7 days. Auto-refreshes every 30 seconds.</p>
+                    <div class="audit-log-container" style="max-height: 280px; overflow-y: auto;" aria-live="polite" id="auditLogContainer">
+                        <ul class="list-group list-group-flush" id="auditLogList">
+                            <li class="list-group-item text-center text-secondary-custom py-4" id="auditLogLoading">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span>Loading…</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="px-4 py-2 border-top" style="background: var(--bg-subtle);">
+                        <small class="text-secondary-custom" id="auditLogMeta" style="font-size: var(--text-xs);"></small>
+                    </div>
+                </div>
+            </div>
+            {{ end }}
+
+            {{/* ── Household ────────────────────────────────────────────── */}}
+            <div class="card card-section mb-4" id="household">
         <div class="card-header bg-white d-flex align-items-center gap-2 py-3 px-4">
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-house"></i>
@@ -675,10 +707,10 @@
             {{ end }}
             {{ end }}
 
-            {{/* Admin: User Management */}}
+            {{/* Admin: User Management ──────────────────────────────── */}}
             {{ if .IsAdmin }}
             <div class="mt-4 pt-4 border-top">
-                <h3 class="h6 fw-semibold mb-2"><i class="bi bi-person-gear me-1"></i>User Management</h3>
+                <h3 class="h6 fw-semibold mb-1"><i class="bi bi-person-gear me-1"></i>User Management</h3>
                 <p class="text-secondary-custom small mb-3">Manage household members. Click edit to update username or email, reset password to send a password reset link, or remove to delete the user.</p>
 
                 <div class="mb-3">

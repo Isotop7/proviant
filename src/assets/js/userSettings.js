@@ -867,7 +867,7 @@ function ShowWebhookDeliveries(id) {
 
 function ShowDeliveriesModal(deliveries) {
   let html = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Time</th><th>Attempt</th><th>Status</th><th>Response</th><th>Error</th></tr></thead><tbody>';
-  
+
   if (deliveries.length === 0) {
     html += '<tr><td colspan="5" class="text-center text-secondary-custom">No delivery attempts yet</td></tr>';
   } else {
@@ -921,7 +921,7 @@ function CreateWebhook() {
   const url = document.getElementById('inputWebhookUrl').value.trim();
   const secret = document.getElementById('inputWebhookSecret').value;
   const events = getSelectedWebhookEvents();
-  
+
   if (!url) {
     document.getElementById('inputWebhookUrl').classList.add('is-invalid');
     return;
@@ -974,6 +974,115 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+/* ── Audit Log (Admin) ───────────────────────────────────────────── */
+
+const AUDIT_ACTION_ICONS = {
+  login_success: "bi bi-check-circle text-success",
+  login_failure: "bi bi-x-circle text-danger",
+  password_change: "bi bi-key text-primary",
+  password_change_failed: "bi bi-x-octagon text-danger",
+  member_added: "bi bi-person-plus text-success",
+  member_removed: "bi bi-person-dash text-warning",
+  member_left: "bi bi-box-arrow-left text-muted",
+  admin_changed: "bi bi-shield-check text-primary",
+  account_deleted: "bi bi-trash text-danger",
+};
+
+const AUDIT_ACTION_LABELS = {
+  login_success: "Login successful",
+  login_failure: "Login failed",
+  password_change: "Password changed",
+  password_change_failed: "Password change failed",
+  member_added: "Member joined",
+  member_removed: "Member removed",
+  member_left: "Member left",
+  admin_changed: "Admin changed",
+  account_deleted: "Account deleted",
+};
+
+function renderAuditLogRow(log) {
+  const iconClass = AUDIT_ACTION_ICONS[log.action] || "bi bi-shield text-secondary";
+  const label = AUDIT_ACTION_LABELS[log.action] || log.action || "Unknown";
+  const time = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : "";
+  const userText = log.userId ? `#${log.userId}` : "System";
+  const details = log.details ? escapeHtml(log.details) : "";
+
+  return `
+    <li class="list-group-item px-4 py-2">
+      <div class="d-flex align-items-start gap-2">
+        <i class="${iconClass}" aria-hidden="true" style="margin-top: 2px;"></i>
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <span class="fw-medium small">${label}</span>
+            <small class="text-secondary-custom flex-shrink-0" style="font-size: var(--text-xs);">${time}</small>
+          </div>
+          <div class="d-flex gap-2 mt-1">
+            <small class="text-secondary-custom" style="font-size: var(--text-xs);">User ${userText}</small>
+            ${log.ipAddress ? `<small class="text-secondary-custom" style="font-size: var(--text-xs);">· ${escapeHtml(log.ipAddress)}</small>` : ""}
+          </div>
+          ${details ? `<small class="text-secondary-custom d-block mt-1" style="font-size: var(--text-xs);">${details}</small>` : ""}
+        </div>
+      </div>
+    </li>
+  `;
+}
+
+function renderAuditLog(logs) {
+  const list = document.getElementById("auditLogList");
+  const loading = document.getElementById("auditLogLoading");
+  const meta = document.getElementById("auditLogMeta");
+  if (!list) return;
+
+  if (loading) loading.remove();
+
+  if (!logs || logs.length === 0) {
+    list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-4">No activity logged today.</li>';
+    if (meta) meta.textContent = "";
+    return;
+  }
+
+  const rows = logs.map((log) => renderAuditLogRow(log)).join("");
+  list.innerHTML = rows;
+  if (meta) meta.textContent = `${logs.length} event${logs.length !== 1 ? "s" : ""} · Auto-refreshes every 30s`;
+}
+
+function loadAuditLog(date) {
+  const list = document.getElementById("auditLogList");
+  const loading = document.getElementById("auditLogLoading");
+  if (!list) return;
+
+  if (loading) {
+    list.innerHTML = `<li class="list-group-item text-center text-secondary-custom py-4" id="auditLogLoading">
+      <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+      <span>Loading…</span>
+    </li>`;
+  }
+
+  proviant.getAuditLogs(date).then((response) => {
+    if (response.code === 200) {
+      renderAuditLog(response.message);
+    } else {
+      list.innerHTML = `<li class="list-group-item text-danger text-center py-4">Failed to load activity log.</li>`;
+      if (document.getElementById("auditLogMeta")) {
+        document.getElementById("auditLogMeta").textContent = `Error: ${response.message || "Unknown"}`;
+      }
+    }
+  }).catch(() => {
+    list.innerHTML = `<li class="list-group-item text-danger text-center py-4">Network error.</li>`;
+  });
+}
+
+let auditLogRefreshTimer = null;
+
+function handleRefreshAuditLog() {
+  const today = new Date().toISOString().split("T")[0];
+  loadAuditLog(today);
+  if (auditLogRefreshTimer) clearInterval(auditLogRefreshTimer);
+  auditLogRefreshTimer = setInterval(() => {
+    loadAuditLog(today);
+  }, 30000);
 }
 
 /* ── Event delegation — clicks ───────────────────────────────────── */
@@ -1189,6 +1298,12 @@ document.addEventListener("click", function (event) {
     return;
   }
 
+  if (target.closest("#btnRefreshAuditLog")) {
+    event.preventDefault();
+    handleRefreshAuditLog();
+    return;
+  }
+
   // Storage location — add
   if (target.closest("#btnAddStorageLocation")) {
     event.preventDefault();
@@ -1324,6 +1439,11 @@ document.addEventListener("DOMContentLoaded", function () {
   loadPATs();
   loadCalendarTokenStatus();
   LoadWebhooks();
+
+  const auditLogSection = document.getElementById("auditLogSection");
+  if (auditLogSection) {
+    handleRefreshAuditLog();
+  }
 });
 
 /* ── Blur validation ─────────────────────────────────────────────── */

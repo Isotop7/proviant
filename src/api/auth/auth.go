@@ -7,6 +7,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
+	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -80,6 +81,15 @@ func Signup(ctx *gin.Context) {
 	logger.Info().Msgf("New User '%s' with ID '%d' created", user.Username, user.ID)
 
 	handleInviteAcceptance(repos, &signup, &user, logger)
+
+	if proviantConfigVal, pcOk := ctx.Get(util.ContextKeyProviantConfig); pcOk {
+		if proviantConfig, ok := proviantConfigVal.(*configuration.ProviantConfiguration); ok && proviantConfig.Server.Authentication.SkipEmailVerification {
+			now := time.Now()
+			user.EmailVerifiedAt = &now
+			_ = repos.Users.UpdateEmailVerification(user.ID, &now)
+		}
+	}
+
 	trySendEmailVerification(ctx, repos, &user, logger)
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: UserWasCreated})

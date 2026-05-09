@@ -126,6 +126,7 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetDefault("server.rateLimit.login_per_minute", 5)
 	viper.SetDefault("server.rateLimit.signup_per_minute", 3)
 	viper.SetDefault("server.rateLimit.export_per_minute", 1)
+	viper.SetDefault("server.demoMode", false)
 
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
@@ -248,6 +249,7 @@ func main() {
 		&dbModel.ProductCategoryPrice{},
 		&dbModel.SavingsRecord{},
 		&dbModel.ExpiryScan{},
+		&dbModel.AuditLog{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
@@ -374,7 +376,8 @@ func backfillOpenFoodFactsCache(logger *zerolog.Logger, dbHandle *gorm.DB, offac
 	processedBarcodes := make(map[string]bool, len(hintEntries))
 	hintsUpdated := 0
 
-	for _, entry := range hintEntries {
+	for i := range hintEntries {
+		entry := &hintEntries[i]
 		processedBarcodes[entry.Barcode] = true
 
 		product, apiErr := offacntrl.GetDataset(entry.Barcode)
@@ -420,7 +423,8 @@ func backfillOpenFoodFactsCache(logger *zerolog.Logger, dbHandle *gorm.DB, offac
 			logger.Warn().Msgf("Cache backfill: failed to query entries with remote images: %s", imgQueryErr)
 		}
 
-		for _, entry := range imageEntries {
+		for i := range imageEntries {
+			entry := &imageEntries[i]
 			if processedBarcodes[entry.Barcode] {
 				continue
 			}

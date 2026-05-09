@@ -504,34 +504,6 @@ func TestProductRepository_UserHasProductAccess(t *testing.T) {
 	}
 }
 
-func TestProductRepository_BulkDeleteProducts(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product1 := dbModel.Product{ProductName: "P1", HouseholdID: household.ID}
-	product2 := dbModel.Product{ProductName: "P2", HouseholdID: household.ID}
-	db.Create(&product1)
-	db.Create(&product2)
-	db.Delete(&product1)
-	db.Delete(&product2)
-
-	errors := repo.BulkDeleteProducts([]uint{product1.ID, product2.ID}, user.ID)
-	if len(errors) != 0 {
-		t.Errorf("BulkDeleteProducts() returned %d errors", len(errors))
-	}
-}
-
 func TestProductRepository_GetProductCategoryBreakdown(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewProductRepository(db)

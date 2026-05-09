@@ -229,8 +229,6 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.GET("/byBarcode/:barcode", v1.GetProductsByBarcode)
 	publicProductAPI.GET("/openfoodfacts/:barcode", v1.GetOpenFoodFactsData)
 	publicProductAPI.GET("/search", v1.SearchProducts)
-	publicProductAPI.DELETE("/bulkDelete", v1.BulkDeleteProducts)   // Deprecated: use /bulkWaste instead
-	publicProductAPI.DELETE("/bulkArchive", v1.BulkArchiveProducts) // Deprecated: use /bulkConsume instead
 	publicProductAPI.POST("/bulkRestore", v1.BulkRestoreProducts)
 	publicProductAPI.POST("/bulkConsume", v1.BulkConsumeProducts)
 	publicProductAPI.POST("/bulkWaste", v1.BulkWasteProducts)
@@ -315,6 +313,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	adminAPI.PATCH("/:id", v1.UpdateHouseholdUser)
 	adminAPI.DELETE("/:id", v1.DeleteHouseholdUser)
 	adminAPI.POST("/:id/reset-password", v1.AdminResetUserPassword)
+
+	// Admin audit log route
+	engine.GET("/api/v1/admin/audit-log", jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.GetAuditLogs)
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")

@@ -939,3 +939,11 @@ proviant.getWebhookDeliveries = async function (id) {
   const body = await apiCall.json();
   return { code: apiCall.status, deliveries: body.deliveries };
 };
+
+proviant.getAuditLogs = async function (date) {
+  const params = date ? `?date=${encodeURIComponent(date)}` : "";
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/audit-log${params}`;
+  const apiCall = await fetch(url, { method: "GET" });
+  const body = await apiCall.json();
+  return { code: apiCall.status, message: body };
+};

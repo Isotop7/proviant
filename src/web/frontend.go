@@ -70,12 +70,20 @@ func (frontend *Frontend) Root(ctx *gin.Context) {
 	}
 	hasHousehold = userHouseholdID > 0
 
+	demoMode := false
+	if cfgVal, ok := ctx.Get(util.ContextKeyProviantConfig); ok {
+		if cfg, ok := cfgVal.(*configuration.ProviantConfiguration); ok {
+			demoMode = cfg.Server.DemoMode
+		}
+	}
+
 	// Setup page data
 	pageData := map[string]any{
 		"InviteToken":  ctx.Query("invite_token"),
 		"Title":        "Home",
 		"HasHousehold": hasHousehold,
 		"Household":    userHouseholdID,
+		"DemoMode":     demoMode,
 	}
 
 	// Render website
@@ -197,6 +205,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"User":                     user,
 		"Household":                household,
 		"IsAdmin":                  isAdmin,
+		"ShowAuditLog":             isAdmin,
 		"Members":                  members,
 		"PendingApplications":      pendingApplications,
 		"MyApplications":           myApplications,

@@ -59,12 +59,6 @@ func (m *MockProductRepository) UpdateProductAmount(productID uint, userID uint,
 func (m *MockProductRepository) DeleteProduct(productID uint, userID uint, archiveOnly bool) error {
 	return m.Err
 }
-func (m *MockProductRepository) BulkDeleteProducts(productIDs []uint, userID uint) []database.BulkOperationError {
-	return nil
-}
-func (m *MockProductRepository) BulkArchiveProducts(productIDs []uint, userID uint) []database.BulkOperationError {
-	return nil
-}
 func (m *MockProductRepository) RestoreProduct(productID, userID uint) error { return m.Err }
 func (m *MockProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) []database.BulkOperationError {
 	return nil
@@ -227,6 +221,9 @@ func (m *MockUserRepository) GetEmailVerificationByToken(token string) (dbModel.
 	return m.EmailVerification, m.Err
 }
 func (m *MockUserRepository) UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error {
+	return m.Err
+}
+func (m *MockUserRepository) UpdateEmailVerification(userID uint, verifiedAt *time.Time) error {
 	return m.Err
 }
 func (m *MockUserRepository) UpdateEmailVerificationStatus(token, status string) error {
