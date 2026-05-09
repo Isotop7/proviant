@@ -192,6 +192,9 @@ func GetCalendarTokenStatus(ctx *gin.Context) {
 	if baseURL == "" {
 		baseURL = "/"
 	}
+	if !strings.HasSuffix(baseURL, "/") {
+		baseURL += "/"
+	}
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"hasToken": true,
