@@ -38,18 +38,16 @@
 
 ## Features
 
-- 📝 Track and log products with expiration dates.
-- 📷 Scan product barcodes via camera to auto-fill data from [OpenFoodFacts](https://world.openfoodfacts.org/), with optional local caching for offline use.
-- 📅 **OCR expiry date scanning** — use your camera to capture and extract expiry dates (Tesseract/Google/OpenAI).
-- 🗄️ **Archive, consume, or waste products** — soft-delete (archive/consume) to retain history and restore later; hard-delete (waste) to record disposal with webhook events.
-- 🔍 **Advanced filtering** — filter by status (All, Expired, Critical, Expiring soon, Fresh, No date, Archived), storage location, or search by product name/barcode.
-- 📊 **Dashboard** — live metric tiles (active products, waste rate, archived counts, last added product, products expiring within 7 days) and charts (waste rate donut, category breakdown pie, 12-month expiry trend line).
-- ⏰ Expiration reminders via email (SMTP), push notifications ([Ntfy](https://ntfy.sh/)), or [Telegram](https://telegram.org/) bot.
-- 🔔 Per-user notification preferences.
-- 👥 Multi-user support with household scoping.
-- 🌙 Dark theme.
-- 📥 **Export** — download products and archive data as CSV or JSON.
-- 🍽️ **Recipe suggestions** — get recipe ideas based on your products (TheMealDB / Spoonacular).
+- 📝 **Product tracking** - Track and log products with expiration dates.
+- 📷 **Code scan** - Scan product barcodes via camera to auto-fill data from [OpenFoodFacts](https://world.openfoodfacts.org/), with optional local caching for offline use.
+- 📅 **OCR expiry date scanning** - use your camera to capture and extract expiry dates (Tesseract/Google/OpenAI).
+- 🗄️ **Archive, consume, or waste products** - soft-delete (archive/consume) to retain history and restore later; hard-delete (waste) to record disposal with webhook events.
+- 🔍 **Advanced filtering** - filter by status (All, Expired, Critical, Expiring soon, Fresh, No date, Archived), storage location, or search by product name/barcode.
+- 📊 **Dashboard** - live metric tiles (active products, waste rate, archived counts, last added product, products expiring within 7 days) and charts (waste rate donut, category breakdown pie, 12-month expiry trend line).
+- ⏰ **Notifications** - Expiration reminders via email (SMTP), push notifications ([Ntfy](https://ntfy.sh/)), or [Telegram](https://telegram.org/) bot, per-user notification preferences.
+- 👥 **Combined Household** - Multi-user support with household scoping.
+- 📥 **Export** - download products and archive data as CSV or JSON.
+- 🍽️ **Recipe suggestions** - get recipe ideas based on your products (TheMealDB / Spoonacular).
 
 ## Quick Start
 
@@ -90,7 +88,7 @@ Then open http://localhost:5114
 #### Executable
 
 1. Clone the repository: `git clone https://codeberg.org/isotop7/proviant.git`
-2. Setup node_modules and assets: `task init`
+2. Setup node_modules and assets (needs [Taskfile](https://taskfile.dev/)): `task init`
 3. Navigate to the project directory: `cd proviant/src`
 4. Build the application: `go build -o proviant`
 5. Copy the desired config file `config.yaml.[mariadb|sqlite].tmpl`, rename it to `config.yaml` and adjust it
