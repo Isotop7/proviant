@@ -48,6 +48,16 @@ docker compose up -d
 
 Then open http://localhost:5114
 
+## Demo
+
+[Access the demo](https://proviant-demo.hr94.de)
+
+| Username | Password | Email Verified |
+|----------|----------|----------------|
+| `demo` | `demo` | Yes |
+| `alice` | `AliceDemo123!` | Yes |
+| `bob` | `BobDemo123!` | Yes |
+
 ## Technologies and Tools
 
 - **Web:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html), [Bootstrap](https://getbootstrap.com/)
