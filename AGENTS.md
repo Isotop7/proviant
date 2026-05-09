@@ -6,17 +6,17 @@ This document provides guidelines for agentic coding assistants working on the P
 
 Use `semble search` to find code by describing what it does or naming a symbol/identifier, instead of grep:
 
-​```bash
+```bash
 semble search "authentication flow" ./my-project
 semble search "save_pretrained" ./my-project
 semble search "save model to disk" ./my-project --top-k 10
-​```
+```
 
 Use `semble find-related` to discover code similar to a known location (pass `file_path` and `line` from a prior search result):
 
-​```bash
+```bash
 semble find-related src/auth.py 42 ./my-project
-​```
+```
 
 `path` defaults to the current directory when omitted; git URLs are accepted.
 
@@ -83,7 +83,7 @@ npm test
 
 ### Imports
 - Group imports in order: stdlib → internal packages (codeberg.org) → external packages
-- Use blank identifier `_` for side-effect imports (e.g., `image/jpeg`)
+- Use blank identifier `_` for side-effect imports (e.g., `image/jpeg`), add a comment on why they are imported
 - Example:
 ```go
 import (
@@ -373,10 +373,6 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) f
 
 ## Important Notes
 - **Always use Context7 MCP** for code generation, setup/configuration steps, and library/API documentation — automatically call `resolve-library-id` and `query-docs` without waiting to be asked explicitly.
-- Project uses embedded filesystems (embed) for templates and assets
-- Supports both SQLite and MariaDB backends
-- Uses JWT tokens for API authentication
-- CORS is configurable (allow all or specific origins)
 - Run `task check` before committing - golangci-lint must pass
 - **Database migrations**: When creating a new database model or modifying an existing one, always add it to the `AutoMigrate` call in `src/proviant.go` (around line 188). Forgetting this will cause "no such table" errors at runtime. Example:
   ```go
