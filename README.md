@@ -75,6 +75,12 @@ Then open http://localhost:5114
 - [External MariaDB database](./docker-compose.mariadb.yaml)
 - [Internal SQLite database](./docker-compose.sqlite.yaml)
 
+**IMPORTANT:** The mounted directories need to be chowned by the proviant app user.
+
+```bash
+chown -R 100:101 <path>
+```
+
 ### Configuration
 
 Configuration is set via environment variables. The complete list of available options and their default values is below. Template configuration files are available in `src/config.yaml.sqlite.tmpl` and `src/config.yaml.mariadb.tmpl`.
