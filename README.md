@@ -40,8 +40,8 @@
 
 - 📝 Track and log products with expiration dates.
 - 📷 Scan product barcodes via camera to auto-fill data from [OpenFoodFacts](https://world.openfoodfacts.org/), with optional local caching for offline use.
-- **OCR expiry date scanning** — use your camera to capture and extract expiry dates (Tesseract/Google/OpenAI).
-- 🗄️ **Archive and restore products** — view archived products separately; bulk archive, restore, or delete.
+- 📅 **OCR expiry date scanning** — use your camera to capture and extract expiry dates (Tesseract/Google/OpenAI).
+- 🗄️ **Archive, consume, or waste products** — soft-delete (archive/consume) to retain history and restore later; hard-delete (waste) to record disposal with webhook events.
 - 🔍 **Advanced filtering** — filter by status (All, Expired, Critical, Expiring soon, Fresh, No date, Archived), storage location, or search by product name/barcode.
 - 📊 **Dashboard** — live metric tiles (active products, waste rate, archived counts, last added product, products expiring within 7 days) and charts (waste rate donut, category breakdown pie, 12-month expiry trend line).
 - ⏰ Expiration reminders via email (SMTP), push notifications ([Ntfy](https://ntfy.sh/)), or [Telegram](https://telegram.org/) bot.
