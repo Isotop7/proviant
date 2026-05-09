@@ -351,6 +351,29 @@ definitions:
       username:
         type: string
     type: object
+  database.AuditLog:
+    properties:
+      action:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      details:
+        type: string
+      id:
+        type: integer
+      ipAddress:
+        type: string
+      requestId:
+        type: string
+      timestamp:
+        type: string
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
   database.Household:
     properties:
       adminID:
@@ -430,6 +453,8 @@ definitions:
         type: string
       productName:
         type: string
+      storageHint:
+        type: string
       updatedAt:
         type: string
     type: object
@@ -460,6 +485,8 @@ definitions:
       priceOverride:
         type: number
       productName:
+        type: string
+      removalReason:
         type: string
       scannedAt:
         type: string
@@ -634,6 +661,38 @@ paths:
       summary: Gets health
       tags:
       - common
+  /api/v1/admin/audit-log:
+    get:
+      description: Returns paginated audit log entries (admin only)
+      parameters:
+      - description: Maximum number of logs to return (default 100, max 1000)
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by date (YYYY-MM-DD format)
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/database.AuditLog'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get audit logs
+      tags:
+      - admin
   /api/v1/calendar/export.ics:
     get:
       description: Returns an iCalendar (RFC 5545) feed with VEVENTs for products
@@ -1622,6 +1681,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -1654,6 +1717,10 @@ paths:
             $ref: '#/definitions/database.Product'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/api.APIResponse'
         "500":
@@ -1691,6 +1758,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -1725,70 +1796,6 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Restores a product
-      tags:
-      - product
-  /api/v1/product/bulkArchive:
-    delete:
-      consumes:
-      - application/json
-      description: Archives a list of products of a user
-      parameters:
-      - description: Product IDs
-        in: body
-        name: productIDs
-        required: true
-        schema:
-          items:
-            type: integer
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Archives a list of products
-      tags:
-      - product
-  /api/v1/product/bulkDelete:
-    delete:
-      consumes:
-      - application/json
-      description: Deletes a list of products of a user
-      parameters:
-      - description: Product IDs
-        in: body
-        name: productIDs
-        required: true
-        schema:
-          items:
-            type: integer
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Deletes a list of products
       tags:
       - product
   /api/v1/product/bulkRestore:
@@ -1904,6 +1911,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -1995,6 +2006,72 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Return a list of archived products
+      tags:
+      - product
+  /api/v1/products/bulkConsume:
+    post:
+      consumes:
+      - application/json
+      description: Soft-deletes (archives) multiple products without firing product.wasted
+        webhook events
+      parameters:
+      - description: Product IDs
+        in: body
+        name: productIDs
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Mark products as consumed
+      tags:
+      - product
+  /api/v1/products/bulkWaste:
+    post:
+      consumes:
+      - application/json
+      description: Hard-deletes multiple products and fires the product.wasted webhook
+        event per product
+      parameters:
+      - description: Product IDs
+        in: body
+        name: productIDs
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Mark products as wasted
       tags:
       - product
   /api/v1/products/expired:
@@ -2417,6 +2494,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -2543,6 +2624,10 @@ paths:
             $ref: '#/definitions/api.APIResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/api.APIResponse'
         "500":
