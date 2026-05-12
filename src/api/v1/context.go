@@ -19,6 +19,93 @@ import (
 	"gorm.io/gorm"
 )
 
+type AppContext struct {
+	Logger *zerolog.Logger
+	DB     *gorm.DB
+	Repos  *database.RepositoryContainer
+	UserID uint
+}
+
+func mustGetAppContext(ctx *gin.Context, logger *zerolog.Logger) *AppContext {
+	db, ok := mustGetDB(ctx, logger)
+	if !ok {
+		return nil
+	}
+	repos, ok := mustGetRepos(ctx, logger)
+	if !ok {
+		return nil
+	}
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return nil
+	}
+	return &AppContext{
+		Logger: logger,
+		DB:     db,
+		Repos:  repos,
+		UserID: userID,
+	}
+}
+
+type APIHandler func(*gin.Context, *AppContext)
+
+func AppContextMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		loggerVal, loggerOk := ctx.Get(util.ContextKeyLogger)
+		logger, _ := loggerVal.(*zerolog.Logger)
+		if !loggerOk || logger == nil {
+			ctx.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+		appCtx := mustGetAppContext(ctx, logger)
+		if appCtx == nil {
+			ctx.Abort()
+			return
+		}
+		ctx.Set("appContext", appCtx)
+		ctx.Next()
+	}
+}
+
+func WrapHandler(fn APIHandler) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		appCtxVal, exists := ctx.Get("appContext")
+		if !exists {
+			loggerVal, _ := ctx.Get(util.ContextKeyLogger)
+			logger, _ := loggerVal.(*zerolog.Logger)
+			if logger != nil {
+				logger.Error().Msg("appContext not found in context")
+			}
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+			return
+		}
+		appCtx, ok := appCtxVal.(*AppContext)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+			return
+		}
+		fn(ctx, appCtx)
+	}
+}
+
+func SetupTestAppContext(ctx *gin.Context, userID uint) *AppContext {
+	loggerVal, _ := ctx.Get(util.ContextKeyLogger)
+	logger, _ := loggerVal.(*zerolog.Logger)
+	reposVal, _ := ctx.Get(util.ContextKeyRepos)
+	repos, _ := reposVal.(*database.RepositoryContainer)
+	dbVal, _ := ctx.Get(util.ContextKeyDBHandle)
+	db, _ := dbVal.(*gorm.DB)
+
+	appCtx := &AppContext{
+		Logger: logger,
+		DB:     db,
+		Repos:  repos,
+		UserID: userID,
+	}
+	ctx.Set("appContext", appCtx)
+	return appCtx
+}
+
 func mustGetRepos(ctx *gin.Context, logger *zerolog.Logger) (*database.RepositoryContainer, bool) {
 	reposVal, exists := ctx.Get(util.ContextKeyRepos)
 	repos, ok := reposVal.(*database.RepositoryContainer)

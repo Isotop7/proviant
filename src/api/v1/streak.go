@@ -6,10 +6,8 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 )
 
 // GetStreak returns the current waste-free streak for the user's household
@@ -20,32 +18,16 @@ import (
 // @Success      200  {object}  apiModel.StreakResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/streak [get]
-func GetStreak(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
-		return
-	}
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	householdID, err := repos.Users.GetUserHouseholdByID(userID)
+func GetStreak(ctx *gin.Context, appCtx *AppContext) {
+	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil || householdID == 0 {
 		ctx.JSON(http.StatusOK, apiModel.StreakResponse{CurrentStreak: 0, LongestStreak: 0})
 		return
 	}
 
-	streak, err := repos.Streaks.GetOrCreateStreakForHousehold(householdID)
+	streak, err := appCtx.Repos.Streaks.GetOrCreateStreakForHousehold(householdID)
 	if err != nil {
-		logger.Error().Msgf("GetStreak: %s", err)
+		appCtx.Logger.Error().Msgf("GetStreak: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}

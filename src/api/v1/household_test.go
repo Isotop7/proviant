@@ -18,9 +18,10 @@ func TestApplyForHousehold(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-		ApplyForHousehold(ctx)
+		ApplyForHousehold(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -32,9 +33,10 @@ func TestApplyForHousehold(t *testing.T) {
 		m.Households.Err = proviantErrors.ErrHouseholdNotFound
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 		ctx.Params = []gin.Param{{Key: "id", Value: "999"}}
 
-		ApplyForHousehold(ctx)
+		ApplyForHousehold(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
@@ -50,9 +52,10 @@ func TestApproveHouseholdApplication(t *testing.T) {
 		m.Households.Err = proviantErrors.ErrApplicationNotFound
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 		ctx.Params = []gin.Param{{Key: "id", Value: "999"}}
 
-		ApproveHouseholdApplication(ctx)
+		ApproveHouseholdApplication(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
@@ -64,9 +67,10 @@ func TestApproveHouseholdApplication(t *testing.T) {
 		m.Households.Err = proviantErrors.ErrNotHouseholdAdmin
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-		ApproveHouseholdApplication(ctx)
+		ApproveHouseholdApplication(ctx, appCtx)
 
 		if w.Code != http.StatusForbidden {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusForbidden)
@@ -82,9 +86,10 @@ func TestRejectHouseholdApplication(t *testing.T) {
 		m.Households.Err = proviantErrors.ErrApplicationNotFound
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 		ctx.Params = []gin.Param{{Key: "id", Value: "999"}}
 
-		RejectHouseholdApplication(ctx)
+		RejectHouseholdApplication(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
@@ -100,9 +105,10 @@ func TestCancelHouseholdApplication(t *testing.T) {
 		m.Households.Err = proviantErrors.ErrApplicationNotFound
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 		ctx.Params = []gin.Param{{Key: "id", Value: "999"}}
 
-		CancelHouseholdApplication(ctx)
+		CancelHouseholdApplication(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
@@ -118,9 +124,10 @@ func TestRemoveHouseholdMember(t *testing.T) {
 		m.Households.Err = proviantErrors.ErrNotHouseholdAdmin
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 		ctx.Params = []gin.Param{{Key: "userId", Value: "999"}}
 
-		RemoveHouseholdMember(ctx)
+		RemoveHouseholdMember(ctx, appCtx)
 
 		if w.Code != http.StatusForbidden {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusForbidden)
@@ -132,9 +139,10 @@ func TestRemoveHouseholdMember(t *testing.T) {
 		m.Households.Err = proviantErrors.ErrNotHouseholdAdmin
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 		ctx.Params = []gin.Param{{Key: "userId", Value: "2"}}
 
-		RemoveHouseholdMember(ctx)
+		RemoveHouseholdMember(ctx, appCtx)
 
 		if w.Code != http.StatusForbidden {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusForbidden)

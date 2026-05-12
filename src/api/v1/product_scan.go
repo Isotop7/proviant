@@ -39,9 +39,8 @@ import (
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/scan [post]
-func ScanProduct(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
+	logger := appCtx.Logger
 
 	// Create variables
 	var decodedBarcode string
@@ -157,44 +156,37 @@ func ScanProduct(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Failure      502  {object}  api.APIResponse
 // @Router       /api/v1/products/openfoodfacts/{barcode} [get]
-func GetOpenFoodFactsData(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
+func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 	barcode := ctx.Param("barcode")
 	if barcode == "" {
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
 		return
 	}
 
-	dbHandle, ok := mustGetDB(ctx, logger)
-	if !ok {
-		return
-	}
-
 	offacntrl, offaOk := ctx.MustGet("offacntrl").(*controllers.OpenFoodFactsAPIController)
 	if !offaOk {
-		logger.Error().Msg("Failed to get OpenFoodFacts controller from context")
+		appCtx.Logger.Error().Msg("Failed to get OpenFoodFacts controller from context")
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get controller from context"})
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
+	productRepo := database.NewProductRepository(appCtx.DB)
 
 	if offacntrl.Configuration.CacheEnabled {
 		cached, cacheErr := productRepo.GetOpenFoodFactsCacheByBarcode(barcode)
 		if cacheErr == nil {
-			logger.Info().Msgf("Cache hit for barcode '%s'", barcode)
+			appCtx.Logger.Info().Msgf("Cache hit for barcode '%s'", barcode)
 			ctx.JSON(http.StatusOK, cached)
 			return
 		}
 		if cacheErr != gorm.ErrRecordNotFound {
-			logger.Warn().Msgf("Cache lookup error for barcode '%s': %s", barcode, cacheErr)
+			appCtx.Logger.Warn().Msgf("Cache lookup error for barcode '%s': %s", barcode, cacheErr)
 		}
 	}
 
 	product, apiErr := offacntrl.GetDataset(barcode)
 	if apiErr != nil {
-		logger.Error().Msgf("OpenFoodFacts API error for barcode '%s': %s", barcode, apiErr)
+		appCtx.Logger.Error().Msgf("OpenFoodFacts API error for barcode '%s': %s", barcode, apiErr)
 		ctx.JSON(http.StatusBadGateway, api.APIResponse{Message: "Error fetching product data from OpenFoodFacts"})
 		return
 	}
@@ -210,7 +202,7 @@ func GetOpenFoodFactsData(ctx *gin.Context) {
 	}
 
 	if offacntrl.Configuration.CacheEnabled {
-		storeCacheEntry(productRepo, offacntrl, logger, barcode, &entry)
+		storeCacheEntry(productRepo, offacntrl, appCtx.Logger, barcode, &entry)
 	}
 
 	ctx.JSON(http.StatusOK, entry)

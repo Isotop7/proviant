@@ -27,8 +27,9 @@ func TestGetSavingsStats(t *testing.T) {
 		m.Users.HouseholdID = 0
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
-		GetSavingsStats(ctx)
+		GetSavingsStats(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -41,8 +42,9 @@ func TestGetSavingsStats(t *testing.T) {
 		m.Savings.SavingsStats = apiModel.SavingsStatsResponse{CO2Source: "test"}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
-		GetSavingsStats(ctx)
+		GetSavingsStats(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -57,8 +59,9 @@ func TestListStorageLocations(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
-		ListStorageLocations(ctx)
+		ListStorageLocations(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -70,8 +73,9 @@ func TestListStorageLocations(t *testing.T) {
 		m.StorageLocations.Locations = []dbModel.StorageLocation{{Name: "Freezer"}}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
-		ListStorageLocations(ctx)
+		ListStorageLocations(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -95,6 +99,7 @@ func TestCreateStorageLocation(t *testing.T) {
 		m.StorageLocations.Location = dbModel.StorageLocation{Name: "Freezer"}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
 		reqBody := storageLocationRequest{Name: "Freezer", Icon: "🧊", SortOrder: 2}
 		body, _ := json.Marshal(reqBody)
@@ -105,7 +110,7 @@ func TestCreateStorageLocation(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		CreateStorageLocation(ctx)
+		CreateStorageLocation(ctx, appCtx)
 
 		if w.Code != http.StatusCreated {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusCreated)
@@ -116,6 +121,7 @@ func TestCreateStorageLocation(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
 		reqBody := storageLocationRequest{Name: "", Icon: "🧊", SortOrder: 2}
 		body, _ := json.Marshal(reqBody)
@@ -126,7 +132,7 @@ func TestCreateStorageLocation(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		CreateStorageLocation(ctx)
+		CreateStorageLocation(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -142,8 +148,9 @@ func TestGetInvitations(t *testing.T) {
 		m.Users.User = authentication.User{HouseholdID: 0}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
-		GetInvitations(ctx)
+		GetInvitations(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
@@ -158,8 +165,9 @@ func TestGetInvitations(t *testing.T) {
 		}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
-		GetInvitations(ctx)
+		GetInvitations(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -175,8 +183,9 @@ func TestGetNotifications(t *testing.T) {
 		m.Users.User = authentication.User{HouseholdID: 0}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
-		GetNotifications(ctx)
+		GetNotifications(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -192,8 +201,9 @@ func TestGetNotifications(t *testing.T) {
 		m.Households.Household = dbModel.Household{AdminID: 99}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
-		GetNotifications(ctx)
+		GetNotifications(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -224,6 +234,7 @@ func TestCreateHousehold(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
 		reqBody := createHouseholdRequest{Name: "My New Household"}
 		body, _ := json.Marshal(reqBody)
@@ -234,7 +245,7 @@ func TestCreateHousehold(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		CreateHousehold(ctx)
+		CreateHousehold(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -245,6 +256,7 @@ func TestCreateHousehold(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
 		reqBody := createHouseholdRequest{Name: ""}
 		body, _ := json.Marshal(reqBody)
@@ -255,7 +267,7 @@ func TestCreateHousehold(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		CreateHousehold(ctx)
+		CreateHousehold(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -270,8 +282,9 @@ func TestLeaveHousehold(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
-		LeaveHousehold(ctx)
+		LeaveHousehold(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -288,6 +301,7 @@ func TestUpdateHouseholdName(t *testing.T) {
 		m.Households.Err = proviantErrors.ErrHouseholdNotFound
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
 		reqBody := updateHouseholdNameRequest{Name: "New Name"}
 		body, _ := json.Marshal(reqBody)
@@ -298,7 +312,7 @@ func TestUpdateHouseholdName(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		UpdateHouseholdName(ctx)
+		UpdateHouseholdName(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
@@ -309,6 +323,7 @@ func TestUpdateHouseholdName(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
 		reqBody := updateHouseholdNameRequest{Name: ""}
 		body, _ := json.Marshal(reqBody)
@@ -319,7 +334,7 @@ func TestUpdateHouseholdName(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		UpdateHouseholdName(ctx)
+		UpdateHouseholdName(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -334,8 +349,9 @@ func TestListWebhooks(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
-		ListWebhooks(ctx)
+		ListWebhooks(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)

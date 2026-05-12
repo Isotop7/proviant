@@ -6,10 +6,8 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 )
 
 // GetSavingsStats returns money and CO2 savings for the authenticated user's household
@@ -21,24 +19,8 @@ import (
 // @Success      200  {object}  apiModel.SavingsStatsResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/savings/stats [get]
-func GetSavingsStats(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
-		return
-	}
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	householdID, err := repos.Users.GetUserHouseholdByID(userID)
+func GetSavingsStats(ctx *gin.Context, appCtx *AppContext) {
+	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil || householdID == 0 {
 		ctx.JSON(http.StatusOK, apiModel.SavingsStatsResponse{
 			CO2Source: "Agribalyse LCA database via Open Food Facts ecoscore_data",
@@ -46,9 +28,9 @@ func GetSavingsStats(ctx *gin.Context) {
 		return
 	}
 
-	stats, err := repos.Savings.GetSavingsStats(householdID)
+	stats, err := appCtx.Repos.Savings.GetSavingsStats(householdID)
 	if err != nil {
-		logger.Error().Msgf("GetSavingsStats: %s", err)
+		appCtx.Logger.Error().Msgf("GetSavingsStats: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing savings statistics"})
 		return
 	}

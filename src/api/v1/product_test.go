@@ -14,6 +14,7 @@ import (
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
@@ -41,7 +42,12 @@ func TestGetProducts(t *testing.T) {
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		ctx.Request = &http.Request{Header: make(http.Header)}
 
-		GetProducts(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProducts(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -55,7 +61,12 @@ func TestGetProducts(t *testing.T) {
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		ctx.Request = &http.Request{Header: make(http.Header)}
 
-		GetProducts(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProducts(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -77,7 +88,12 @@ func TestGetArchivedProducts(t *testing.T) {
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		ctx.Request = &http.Request{Header: make(http.Header)}
 
-		GetArchivedProducts(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetArchivedProducts(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -97,7 +113,12 @@ func TestGetProduct(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-		GetProduct(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProduct(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -112,7 +133,12 @@ func TestGetProduct(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Params = []gin.Param{{Key: "id", Value: "999"}}
 
-		GetProduct(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProduct(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
@@ -153,7 +179,12 @@ func TestCreateProduct(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		CreateProduct(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		CreateProduct(ctx, appCtx)
 
 		if w.Code != http.StatusCreated {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusCreated)
@@ -191,7 +222,12 @@ func TestUpdateProduct(t *testing.T) {
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-		UpdateProduct(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		UpdateProduct(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -214,7 +250,12 @@ func TestUpdateProduct(t *testing.T) {
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 		ctx.Params = []gin.Param{{Key: "id", Value: "999"}}
 
-		UpdateProduct(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		UpdateProduct(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
@@ -235,7 +276,12 @@ func TestDeleteProduct(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 		ctx.Request.URL = &url.URL{RawQuery: "archiveOnly=true"}
 
-		DeleteProduct(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		DeleteProduct(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -252,7 +298,12 @@ func TestDeleteProduct(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 		ctx.Request.URL = &url.URL{}
 
-		DeleteProduct(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		DeleteProduct(ctx, appCtx)
 
 		if w.Code != http.StatusInternalServerError {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusInternalServerError)
@@ -274,7 +325,12 @@ func TestSearchProducts(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Request.URL = &url.URL{RawQuery: "queryParam=product_name&queryValue=Apple"}
 
-		SearchProducts(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		SearchProducts(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -291,7 +347,12 @@ func TestSearchProducts(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Request.URL = &url.URL{RawQuery: "queryParam=barcode&queryValue=1234567890123"}
 
-		SearchProducts(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		SearchProducts(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -305,7 +366,12 @@ func TestSearchProducts(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Request.URL = &url.URL{RawQuery: "queryParam=test&queryValue=test"}
 
-		SearchProducts(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		SearchProducts(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -327,7 +393,12 @@ func TestGetProductsByBarcode(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Params = []gin.Param{{Key: "barcode", Value: "4001724814405"}}
 
-		GetProductsByBarcode(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProductsByBarcode(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -341,7 +412,12 @@ func TestGetProductsByBarcode(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Params = []gin.Param{{Key: "barcode", Value: "123456789012"}}
 
-		GetProductsByBarcode(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProductsByBarcode(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -355,7 +431,12 @@ func TestGetProductsByBarcode(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Params = []gin.Param{{Key: "barcode", Value: "12345678901234"}}
 
-		GetProductsByBarcode(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProductsByBarcode(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -369,7 +450,12 @@ func TestGetProductsByBarcode(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Params = []gin.Param{{Key: "barcode", Value: "1234abcdefghi"}}
 
-		GetProductsByBarcode(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProductsByBarcode(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -383,7 +469,12 @@ func TestGetProductsByBarcode(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Params = []gin.Param{{Key: "barcode", Value: "4001724814400"}}
 
-		GetProductsByBarcode(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProductsByBarcode(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -397,7 +488,12 @@ func TestGetProductsByBarcode(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Params = []gin.Param{{Key: "barcode", Value: "abc"}}
 
-		GetProductsByBarcode(ctx)
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProductsByBarcode(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)

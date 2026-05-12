@@ -30,34 +30,22 @@ const (
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/user/household/leave [post]
-func LeaveHousehold(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	user, err := repos.Users.GetUserByID(userID)
+func LeaveHousehold(ctx *gin.Context, appCtx *AppContext) {
+	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
-		logger.Error().Msgf("Error getting user: %s", err)
+		appCtx.Logger.Error().Msgf("Error getting user: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 		return
 	}
 	oldHouseholdID := user.HouseholdID
 
-	if err := repos.Households.LeaveHousehold(userID); err != nil {
-		logger.Error().Msgf("Error leaving household: %s", err)
+	if err := appCtx.Repos.Households.LeaveHousehold(appCtx.UserID); err != nil {
+		appCtx.Logger.Error().Msgf("Error leaving household: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 		return
 	}
 
-	go recordMemberLeft(ctx, userID, oldHouseholdID)
+	go recordMemberLeft(ctx, appCtx.UserID, oldHouseholdID)
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Successfully left household"})
 }
 
@@ -72,22 +60,10 @@ func LeaveHousehold(ctx *gin.Context) {
 // @Failure      400        {object}  api.APIResponse
 // @Failure      500        {object}  api.APIResponse
 // @Router       /api/v1/user/household/create [post]
-func CreateHousehold(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func CreateHousehold(ctx *gin.Context, appCtx *AppContext) {
 	var req createHouseholdRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		appCtx.Logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
@@ -96,8 +72,8 @@ func CreateHousehold(ctx *gin.Context) {
 		return
 	}
 
-	if err := repos.Households.CreateAndSwitchHousehold(userID, req.Name); err != nil {
-		logger.Error().Msgf("Error creating household: %s", err)
+	if err := appCtx.Repos.Households.CreateAndSwitchHousehold(appCtx.UserID, req.Name); err != nil {
+		appCtx.Logger.Error().Msgf("Error creating household: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 		return
 	}
@@ -117,25 +93,13 @@ func CreateHousehold(ctx *gin.Context) {
 // @Failure      409  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/{id}/apply [post]
-func ApplyForHousehold(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
+func ApplyForHousehold(ctx *gin.Context, appCtx *AppContext) {
+	householdID, ok := parseUintParam(ctx, appCtx.Logger, "id", "invalid household id")
 	if !ok {
 		return
 	}
 
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	householdID, ok := parseUintParam(ctx, logger, "id", "invalid household id")
-	if !ok {
-		return
-	}
-
-	applyErr := repos.Households.ApplyForHousehold(userID, householdID)
+	applyErr := appCtx.Repos.Households.ApplyForHousehold(appCtx.UserID, householdID)
 	switch applyErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application submitted"})
@@ -144,7 +108,7 @@ func ApplyForHousehold(ctx *gin.Context) {
 	case errors.ErrApplicationAlreadyPending:
 		ctx.JSON(http.StatusConflict, api.Error(applyErr))
 	default:
-		logger.Error().Msgf("Error applying for household: %s", applyErr)
+		appCtx.Logger.Error().Msgf("Error applying for household: %s", applyErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(applyErr))
 	}
 }
@@ -159,27 +123,15 @@ func ApplyForHousehold(ctx *gin.Context) {
 // @Failure      403  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/applications [get]
-func GetHouseholdApplications(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	applications, err := repos.Households.GetPendingApplicationsForAdmin(userID)
+func GetHouseholdApplications(ctx *gin.Context, appCtx *AppContext) {
+	applications, err := appCtx.Repos.Households.GetPendingApplicationsForAdmin(appCtx.UserID)
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, applications)
 	case errors.ErrNotHouseholdAdmin:
 		ctx.JSON(http.StatusForbidden, api.Error(err))
 	default:
-		logger.Error().Msgf("Error fetching applications: %s", err)
+		appCtx.Logger.Error().Msgf("Error fetching applications: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.Error(err))
 	}
 }
@@ -196,35 +148,23 @@ func GetHouseholdApplications(ctx *gin.Context) {
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/applications/{id}/approve [post]
-func ApproveHouseholdApplication(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
+func ApproveHouseholdApplication(ctx *gin.Context, appCtx *AppContext) {
+	applicationID, ok := parseUintParam(ctx, appCtx.Logger, "id", MsgInvalidApplicationId)
 	if !ok {
 		return
 	}
 
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	applicationID, ok := parseUintParam(ctx, logger, "id", MsgInvalidApplicationId)
-	if !ok {
-		return
-	}
-
-	approveErr := repos.Households.ApproveApplication(applicationID, userID)
+	approveErr := appCtx.Repos.Households.ApproveApplication(applicationID, appCtx.UserID)
 	switch approveErr {
 	case nil:
-		go recordMemberAdded(ctx, userID, applicationID)
+		go recordMemberAdded(ctx, appCtx.UserID, applicationID)
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application approved"})
 	case errors.ErrApplicationNotFound:
 		ctx.JSON(http.StatusNotFound, api.Error(approveErr))
 	case errors.ErrNotHouseholdAdmin:
 		ctx.JSON(http.StatusForbidden, api.Error(approveErr))
 	default:
-		logger.Error().Msgf("Error approving application: %s", approveErr)
+		appCtx.Logger.Error().Msgf("Error approving application: %s", approveErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(approveErr))
 	}
 }
@@ -241,25 +181,13 @@ func ApproveHouseholdApplication(ctx *gin.Context) {
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/applications/{id}/reject [post]
-func RejectHouseholdApplication(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
+func RejectHouseholdApplication(ctx *gin.Context, appCtx *AppContext) {
+	applicationID, ok := parseUintParam(ctx, appCtx.Logger, "id", MsgInvalidApplicationId)
 	if !ok {
 		return
 	}
 
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	applicationID, ok := parseUintParam(ctx, logger, "id", MsgInvalidApplicationId)
-	if !ok {
-		return
-	}
-
-	rejectErr := repos.Households.RejectApplication(applicationID, userID)
+	rejectErr := appCtx.Repos.Households.RejectApplication(applicationID, appCtx.UserID)
 	switch rejectErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application rejected"})
@@ -268,7 +196,7 @@ func RejectHouseholdApplication(ctx *gin.Context) {
 	case errors.ErrNotHouseholdAdmin:
 		ctx.JSON(http.StatusForbidden, api.Error(rejectErr))
 	default:
-		logger.Error().Msgf("Error rejecting application: %s", rejectErr)
+		appCtx.Logger.Error().Msgf("Error rejecting application: %s", rejectErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(rejectErr))
 	}
 }
@@ -285,22 +213,10 @@ func RejectHouseholdApplication(ctx *gin.Context) {
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/name [patch]
-func UpdateHouseholdName(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext) {
 	var req updateHouseholdNameRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		appCtx.Logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.Error(err))
 		return
 	}
@@ -309,13 +225,13 @@ func UpdateHouseholdName(ctx *gin.Context) {
 		return
 	}
 
-	user, userErr := repos.Users.GetUserByID(userID)
+	user, userErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if userErr != nil {
 		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
 		return
 	}
 
-	updateErr := repos.Households.UpdateHouseholdName(user.HouseholdID, userID, req.Name)
+	updateErr := appCtx.Repos.Households.UpdateHouseholdName(user.HouseholdID, appCtx.UserID, req.Name)
 	switch updateErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Household name updated"})
@@ -324,7 +240,7 @@ func UpdateHouseholdName(ctx *gin.Context) {
 	case errors.ErrNotHouseholdAdmin:
 		ctx.JSON(http.StatusForbidden, api.Error(updateErr))
 	default:
-		logger.Error().Msgf("Error updating household name: %s", updateErr)
+		appCtx.Logger.Error().Msgf("Error updating household name: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
 	}
 }
@@ -340,25 +256,13 @@ func UpdateHouseholdName(ctx *gin.Context) {
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/applications/{id} [delete]
-func CancelHouseholdApplication(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
+func CancelHouseholdApplication(ctx *gin.Context, appCtx *AppContext) {
+	applicationID, ok := parseUintParam(ctx, appCtx.Logger, "id", MsgInvalidApplicationId)
 	if !ok {
 		return
 	}
 
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	applicationID, ok := parseUintParam(ctx, logger, "id", MsgInvalidApplicationId)
-	if !ok {
-		return
-	}
-
-	cancelErr := repos.Households.CancelApplication(applicationID, userID)
+	cancelErr := appCtx.Repos.Households.CancelApplication(applicationID, appCtx.UserID)
 	switch cancelErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application cancelled"})
@@ -367,7 +271,7 @@ func CancelHouseholdApplication(ctx *gin.Context) {
 	case errors.ErrNotApplicationApplicant:
 		ctx.JSON(http.StatusForbidden, api.Error(cancelErr))
 	default:
-		logger.Error().Msgf("Error cancelling application: %s", cancelErr)
+		appCtx.Logger.Error().Msgf("Error cancelling application: %s", cancelErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(cancelErr))
 	}
 }
@@ -383,28 +287,16 @@ func CancelHouseholdApplication(ctx *gin.Context) {
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/members/{userId} [delete]
-func RemoveHouseholdMember(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
+func RemoveHouseholdMember(ctx *gin.Context, appCtx *AppContext) {
+	memberID, ok := parseUintParam(ctx, appCtx.Logger, "userId", errors.ErrInvalidUserID.Error())
 	if !ok {
 		return
 	}
 
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	memberID, ok := parseUintParam(ctx, logger, "userId", errors.ErrInvalidUserID.Error())
-	if !ok {
-		return
-	}
-
-	removeErr := repos.Households.RemoveMemberFromHousehold(memberID, userID)
+	removeErr := appCtx.Repos.Households.RemoveMemberFromHousehold(memberID, appCtx.UserID)
 	switch removeErr {
 	case nil:
-		go recordMemberRemoved(ctx, userID, memberID)
+		go recordMemberRemoved(ctx, appCtx.UserID, memberID)
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Member removed from household"})
 	case errors.ErrNotHouseholdAdmin:
 		ctx.JSON(http.StatusForbidden, api.Error(removeErr))
@@ -413,7 +305,7 @@ func RemoveHouseholdMember(ctx *gin.Context) {
 	case errors.ErrCannotRemoveAdmin:
 		ctx.JSON(http.StatusBadRequest, api.Error(removeErr))
 	default:
-		logger.Error().Msgf("Error removing member: %s", removeErr)
+		appCtx.Logger.Error().Msgf("Error removing member: %s", removeErr)
 		ctx.JSON(http.StatusInternalServerError, api.Error(removeErr))
 	}
 }

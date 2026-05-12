@@ -34,8 +34,8 @@ import (
 // @Failure       400  {object}  api.APIResponse
 // @Failure       500  {object}  api.APIResponse
 // @Router        /api/v1/products/scan-date [post]
-func ScanExpiryDate(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+func ScanExpiryDate(ctx *gin.Context, appCtx *AppContext) {
+	logger := appCtx.Logger
 
 	// Get uploaded image file
 	file, err := ctx.FormFile("image")

@@ -9,26 +9,12 @@ import (
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
-func CreateUserToken(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func CreateUserToken(ctx *gin.Context, appCtx *AppContext) {
 	var req api.CreateTokenRequest
 	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, v1api.InvalidInputErrorWithDetail(err.Error()))
@@ -37,7 +23,7 @@ func CreateUserToken(ctx *gin.Context) {
 
 	rawToken, err := controllers.GeneratePAT()
 	if err != nil {
-		logger.Error().Msg(err.Error())
+		appCtx.Logger.Error().Msg(err.Error())
 		ctx.JSON(http.StatusInternalServerError, v1api.InternalError())
 		return
 	}
@@ -54,9 +40,9 @@ func CreateUserToken(ctx *gin.Context) {
 		expiresAt = &parsed
 	}
 
-	pat, err := repos.PATs.CreatePAT(userID, req.Name, tokenHash, expiresAt, req.Scopes)
+	pat, err := appCtx.Repos.PATs.CreatePAT(appCtx.UserID, req.Name, tokenHash, expiresAt, req.Scopes)
 	if err != nil {
-		logger.Error().Msg(err.Error())
+		appCtx.Logger.Error().Msg(err.Error())
 		ctx.JSON(http.StatusInternalServerError, v1api.InternalError())
 		return
 	}
@@ -74,20 +60,8 @@ func CreateUserToken(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, resp)
 }
 
-func ListUserTokens(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	pats, err := repos.PATs.GetPATsByUserID(userID)
+func ListUserTokens(ctx *gin.Context, appCtx *AppContext) {
+	pats, err := appCtx.Repos.PATs.GetPATsByUserID(appCtx.UserID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, v1api.InternalError())
 		return
@@ -116,19 +90,7 @@ func ListUserTokens(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, tokens)
 }
 
-func DeleteUserToken(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func DeleteUserToken(ctx *gin.Context, appCtx *AppContext) {
 	patIDStr := ctx.Param("id")
 	patIDRaw, err := strconv.ParseUint(patIDStr, 10, 64)
 	if err != nil {
@@ -137,12 +99,12 @@ func DeleteUserToken(ctx *gin.Context) {
 	}
 	patID := uint(patIDRaw)
 
-	if err := repos.PATs.DeletePAT(patID, userID); err != nil {
+	if err := appCtx.Repos.PATs.DeletePAT(patID, appCtx.UserID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, v1api.Error(errors.ErrPATNotFound))
 			return
 		}
-		logger.Error().Msg(err.Error())
+		appCtx.Logger.Error().Msg(err.Error())
 		ctx.JSON(http.StatusInternalServerError, v1api.DeleteFailedError())
 		return
 	}

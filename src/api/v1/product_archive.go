@@ -11,10 +11,8 @@ import (
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
@@ -43,28 +41,15 @@ func formatProductIDs(ids []uint) string {
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/archived [get]
-func GetArchivedProducts(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	limit, ok := parseLimitParam(ctx, logger)
+func GetArchivedProducts(ctx *gin.Context, appCtx *AppContext) {
+	limit, ok := parseLimitParam(ctx, appCtx.Logger)
 	if !ok {
 		return
 	}
 
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	products, productBulkErr := repos.Products.GetUserArchivedProductsBulk(userID, limit)
+	products, productBulkErr := appCtx.Repos.Products.GetUserArchivedProductsBulk(appCtx.UserID, limit)
 	if productBulkErr != nil {
-		logger.Warn().Msgf("Error getting products of user: %s", productBulkErr)
+		appCtx.Logger.Warn().Msgf("Error getting products of user: %s", productBulkErr)
 		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusBadRequest, api.APIResponse{
 				Message: "Unable to retrieve archived products. Please check your account.",
@@ -89,34 +74,19 @@ func GetArchivedProducts(ctx *gin.Context) {
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/product/{id}/restore [post]
-func RestoreProduct(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	productID, ok := parseUintPathParam(ctx, logger, "id")
+func RestoreProduct(ctx *gin.Context, appCtx *AppContext) {
+	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
 		return
 	}
 
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	restoreResult := repos.Products.RestoreProduct(productID, userID)
+	restoreResult := appCtx.Repos.Products.RestoreProduct(productID, appCtx.UserID)
 	if restoreResult != nil {
-		logger.Error().Msgf("Error restoring product: %s", restoreResult)
+		appCtx.Logger.Error().Msgf("Error restoring product: %s", restoreResult)
 		ctx.JSON(http.StatusInternalServerError, api.RestoreFailedError())
 		return
-	} else {
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was restored", productID)})
-		return
 	}
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was restored", productID)})
 }
 
 // BulkRestoreProducts restores a list of products of a user
@@ -130,30 +100,16 @@ func RestoreProduct(ctx *gin.Context) {
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/product/bulkRestore [post]
-func BulkRestoreProducts(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	// Get and parse body to list of product IDs
+func BulkRestoreProducts(ctx *gin.Context, appCtx *AppContext) {
 	var products apiModel.BulkProductsAPIModel
-	if !bindJSON(ctx, logger, &products) {
+	if !bindJSON(ctx, appCtx.Logger, &products) {
 		return
 	}
 
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	bulkRestoreError := repos.Products.BulkRestoreProducts(products.ProductIDs, userID)
+	bulkRestoreError := appCtx.Repos.Products.BulkRestoreProducts(products.ProductIDs, appCtx.UserID)
 	if len(bulkRestoreError) > 0 {
 		msg := joinErrors(bulkRestoreError)
-		logger.Error().Msg(msg)
+		appCtx.Logger.Error().Msg(msg)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
