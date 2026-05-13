@@ -1,8 +1,8 @@
 package v1
 
 import (
-	"errors"
 	apperrors "codeberg.org/isotop7/proviant/errors"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"

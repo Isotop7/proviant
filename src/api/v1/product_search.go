@@ -76,19 +76,19 @@ func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/search [GET]
 func SearchProducts(ctx *gin.Context, appCtx *AppContext) {
-	var queryParam = ctx.DefaultQuery("queryParam", "product_name")
-	var queryValue = ctx.DefaultQuery("queryValue", "")
-	var sort = ctx.DefaultQuery("sort", "product_name")
-	var order = ctx.DefaultQuery("order", "asc")
+	q, ok := ParseProductSearchQuery(ctx)
+	if !ok {
+		return
+	}
 
-	enumParam := database.SearchParameterEnumFromString(queryParam)
+	enumParam := database.SearchParameterEnumFromString(q.QueryParam)
 	if enumParam == database.InvalidParameter {
 		appCtx.Logger.Warn().Msg(errors.ErrProductSearchInvalidQuery.Error())
 		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "No valid search parameters found"})
 		return
 	}
 
-	products, productErr := appCtx.Repos.Products.SearchProducts(enumParam, queryValue, sort, order, appCtx.UserID)
+	products, productErr := appCtx.Repos.Products.SearchProducts(enumParam, q.QueryValue, q.Sort, q.Order, appCtx.UserID)
 	if productErr != nil {
 		appCtx.Logger.Error().Msgf("%s: %s", errors.MsgErrGettingProducts, productErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})

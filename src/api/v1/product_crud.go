@@ -4,7 +4,6 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
@@ -33,10 +32,11 @@ const (
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products [get]
 func GetProducts(ctx *gin.Context, appCtx *AppContext) {
-	limit, ok := parseLimitParam(ctx, appCtx.Logger)
+	q, ok := ParseProductListQuery(ctx)
 	if !ok {
 		return
 	}
+	limit := q.Limit
 
 	products, productBulkErr := appCtx.Repos.Products.GetUserProductsBulk(appCtx.UserID, limit)
 	if productBulkErr != nil {

@@ -42,10 +42,11 @@ func formatProductIDs(ids []uint) string {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/archived [get]
 func GetArchivedProducts(ctx *gin.Context, appCtx *AppContext) {
-	limit, ok := parseLimitParam(ctx, appCtx.Logger)
+	q, ok := ParseProductListQuery(ctx)
 	if !ok {
 		return
 	}
+	limit := q.Limit
 
 	products, productBulkErr := appCtx.Repos.Products.GetUserArchivedProductsBulk(appCtx.UserID, limit)
 	if productBulkErr != nil {

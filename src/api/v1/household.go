@@ -1,9 +1,9 @@
 package v1
 
 import (
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"context"
 	"errors"
-	apperrors "codeberg.org/isotop7/proviant/errors"
 	"net/http"
 	"strconv"
 	"time"
