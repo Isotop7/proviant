@@ -12,6 +12,7 @@ import (
 	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
+	"codeberg.org/isotop7/proviant/services"
 	"codeberg.org/isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -21,10 +22,11 @@ import (
 )
 
 type AppContext struct {
-	Logger *zerolog.Logger
-	DB     *gorm.DB
-	Repos  *database.RepositoryContainer
-	UserID uint
+	Logger    *zerolog.Logger
+	DB        *gorm.DB
+	Repos     *database.RepositoryContainer
+	UserID    uint
+	Products  *services.ProductService
 }
 
 func mustGetAppContext(ctx *gin.Context, logger *zerolog.Logger) *AppContext {
@@ -41,10 +43,11 @@ func mustGetAppContext(ctx *gin.Context, logger *zerolog.Logger) *AppContext {
 		return nil
 	}
 	return &AppContext{
-		Logger: logger,
-		DB:     db,
-		Repos:  repos,
-		UserID: userID,
+		Logger:   logger,
+		DB:       db,
+		Repos:    repos,
+		UserID:   userID,
+		Products: services.NewProductService(repos, logger),
 	}
 }
 

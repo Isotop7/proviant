@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"codeberg.org/isotop7/proviant/services"
 	"codeberg.org/isotop7/proviant/testutil"
 	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
 	"codeberg.org/isotop7/proviant/util"
@@ -28,6 +29,16 @@ func (m *MockOpenFoodFactsAPIController) GetDataset(barcode string) (dbModel.Pro
 	return m.MockGetDataset(barcode)
 }
 
+func newTestAppContext(m *repomocks.MockRepositoryContainer, userID uint) *AppContext {
+	logger := zerolog.Nop()
+	return &AppContext{
+		Logger:   &logger,
+		Repos:    m.ToRepositoryContainer(),
+		UserID:   userID,
+		Products: services.NewProductService(m.ToRepositoryContainer(), &logger),
+	}
+}
+
 // TestGetProducts tests the GetProducts endpoint
 func TestGetProducts(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -42,11 +53,7 @@ func TestGetProducts(t *testing.T) {
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		ctx.Request = &http.Request{Header: make(http.Header)}
 
-		appCtx := &AppContext{
-			Logger: &zerolog.Logger{},
-			Repos:  m.ToRepositoryContainer(),
-			UserID: 1,
-		}
+		appCtx := newTestAppContext(m, 1)
 		GetProducts(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
@@ -61,11 +68,7 @@ func TestGetProducts(t *testing.T) {
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		ctx.Request = &http.Request{Header: make(http.Header)}
 
-		appCtx := &AppContext{
-			Logger: &zerolog.Logger{},
-			Repos:  m.ToRepositoryContainer(),
-			UserID: 1,
-		}
+		appCtx := newTestAppContext(m, 1)
 		GetProducts(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
@@ -113,11 +116,7 @@ func TestGetProduct(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-		appCtx := &AppContext{
-			Logger: &zerolog.Logger{},
-			Repos:  m.ToRepositoryContainer(),
-			UserID: 1,
-		}
+		appCtx := newTestAppContext(m, 1)
 		GetProduct(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
@@ -133,11 +132,7 @@ func TestGetProduct(t *testing.T) {
 		ctx.Request = &http.Request{Header: make(http.Header)}
 		ctx.Params = []gin.Param{{Key: "id", Value: "999"}}
 
-		appCtx := &AppContext{
-			Logger: &zerolog.Logger{},
-			Repos:  m.ToRepositoryContainer(),
-			UserID: 1,
-		}
+		appCtx := newTestAppContext(m, 1)
 		GetProduct(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
@@ -276,11 +271,7 @@ func TestDeleteProduct(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 		ctx.Request.URL = &url.URL{RawQuery: "archiveOnly=true"}
 
-		appCtx := &AppContext{
-			Logger: &zerolog.Logger{},
-			Repos:  m.ToRepositoryContainer(),
-			UserID: 1,
-		}
+		appCtx := newTestAppContext(m, 1)
 		DeleteProduct(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
@@ -298,11 +289,7 @@ func TestDeleteProduct(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 		ctx.Request.URL = &url.URL{}
 
-		appCtx := &AppContext{
-			Logger: &zerolog.Logger{},
-			Repos:  m.ToRepositoryContainer(),
-			UserID: 1,
-		}
+		appCtx := newTestAppContext(m, 1)
 		DeleteProduct(ctx, appCtx)
 
 		if w.Code != http.StatusInternalServerError {

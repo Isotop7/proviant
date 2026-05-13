@@ -292,9 +292,8 @@ func DeleteProduct(ctx *gin.Context, appCtx *AppContext) {
 		}
 	}
 
-	deleteResult := appCtx.Repos.Products.DeleteProduct(productID, appCtx.UserID, archiveOnly)
-	if deleteResult != nil {
-		appCtx.Logger.Error().Msgf("Error deleting product: %s", deleteResult)
+	if err := appCtx.Products.DeleteProduct(productID, appCtx.UserID, archiveOnly); err != nil {
+		appCtx.Logger.Error().Msgf("Error deleting product: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.DeleteFailedError())
 		return
 	}

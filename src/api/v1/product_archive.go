@@ -8,21 +8,12 @@ import (
 	"strings"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
-
-func joinErrors(errs []database.BulkOperationError) string {
-	var b strings.Builder
-	for i := range errs {
-		b.WriteString(errs[i].Error())
-	}
-	return b.String()
-}
 
 func formatProductIDs(ids []uint) string {
 	parts := make([]string, len(ids))
@@ -81,9 +72,8 @@ func RestoreProduct(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	restoreResult := appCtx.Repos.Products.RestoreProduct(productID, appCtx.UserID)
-	if restoreResult != nil {
-		appCtx.Logger.Error().Msgf("Error restoring product: %s", restoreResult)
+	if err := appCtx.Products.RestoreProduct(productID, appCtx.UserID); err != nil {
+		appCtx.Logger.Error().Msgf("Error restoring product: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.RestoreFailedError())
 		return
 	}
@@ -107,10 +97,8 @@ func BulkRestoreProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	bulkRestoreError := appCtx.Repos.Products.BulkRestoreProducts(products.ProductIDs, appCtx.UserID)
-	if len(bulkRestoreError) > 0 {
-		msg := joinErrors(bulkRestoreError)
-		appCtx.Logger.Error().Msg(msg)
+	if err := appCtx.Products.BulkRestoreProducts(products.ProductIDs, appCtx.UserID); err != nil {
+		appCtx.Logger.Error().Msg(err.Error())
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}

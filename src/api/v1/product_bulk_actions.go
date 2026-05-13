@@ -6,11 +6,9 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // BulkConsumeProducts marks multiple products as consumed (soft-delete, no product.wasted event)
@@ -30,22 +28,8 @@ func BulkConsumeProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	for _, productID := range products.ProductIDs {
-		product, err := appCtx.Repos.Products.GetProductByID(productID, appCtx.UserID)
-		if err != nil {
-			continue
-		}
-
-		if consumeErr := appCtx.Repos.Products.ConsumeProduct(productID, appCtx.UserID); consumeErr != nil {
-			if consumeErr == gorm.ErrRecordNotFound {
-				appCtx.Logger.Warn().Msgf("BulkConsumeProducts: product %d not found", productID)
-			} else {
-				appCtx.Logger.Error().Msgf("BulkConsumeProducts: %s", consumeErr)
-			}
-			continue
-		}
-
-		go recordHouseholdSavingsEvent(appCtx, &product, "consumed")
+	if err := appCtx.Products.BulkConsumeProducts(products.ProductIDs, appCtx.UserID); err != nil {
+		appCtx.Logger.Error().Msgf("BulkConsumeProducts: %s", err)
 	}
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("%d products marked as consumed", len(products.ProductIDs))})
@@ -68,38 +52,8 @@ func BulkWasteProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	householdID, householdErr := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
-
-	for _, productID := range products.ProductIDs {
-		product, err := appCtx.Repos.Products.GetProductByID(productID, appCtx.UserID)
-		if err != nil {
-			continue
-		}
-
-		if wasteErr := appCtx.Repos.Products.WasteProduct(productID, appCtx.UserID); wasteErr != nil {
-			if wasteErr == gorm.ErrRecordNotFound {
-				appCtx.Logger.Warn().Msgf("BulkWasteProducts: product %d not found", productID)
-			} else {
-				appCtx.Logger.Error().Msgf("BulkWasteProducts: %s", wasteErr)
-			}
-			continue
-		}
-
-		if householdErr == nil && householdID > 0 {
-			if err := appCtx.Repos.Streaks.RecordWasteEvent(householdID); err != nil {
-				appCtx.Logger.Error().Msgf("BulkWasteProducts: failed to record waste event for streak: %s", err)
-			}
-		}
-
-		go func(pid uint) {
-			if ws := controllers.GetWebhookService(); ws != nil {
-				ws.FireEvent("product.wasted", map[string]any{
-					"productId": pid,
-				})
-			}
-		}(productID)
-
-		go recordHouseholdSavingsEvent(appCtx, &product, "wasted")
+	if err := appCtx.Products.BulkWasteProducts(products.ProductIDs, appCtx.UserID); err != nil {
+		appCtx.Logger.Error().Msgf("BulkWasteProducts: %s", err)
 	}
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("%d products marked as wasted", len(products.ProductIDs))})
