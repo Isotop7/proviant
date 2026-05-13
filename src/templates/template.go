@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 
+	"codeberg.org/isotop7/proviant/models/configuration/static"
 	"codeberg.org/isotop7/proviant/util"
 )
 
@@ -373,6 +374,9 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 			data["CSPNonce"] = nonce
 		}
 	}
+
+	// Inject Version for navbar link
+	data["Version"] = static.Version
 
 	// Write parsed template to temporary buffer
 	buf := new(bytes.Buffer)

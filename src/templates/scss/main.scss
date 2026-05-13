@@ -1934,6 +1934,21 @@ th a {
   border-top: 1px solid var(--border-subtle);
 }
 
+.nav-version {
+  display: flex;
+  justify-content: center;
+  padding: 4px 8px;
+}
+
+.nav-version-link {
+  font-size: 11px;
+  color: var(--fg-3);
+  text-decoration: none;
+  &:hover {
+    color: var(--fg-1);
+  }
+}
+
 .nav-source-link {
   display: flex;
   gap: 6px;
