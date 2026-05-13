@@ -20,7 +20,7 @@ import (
 	"codeberg.org/isotop7/proviant/util"
 )
 
-//go:embed "web" "notification"
+//go:embed all:web "notification"
 var TemplateFiles embed.FS
 
 var (
