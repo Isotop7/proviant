@@ -2,8 +2,10 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
@@ -113,8 +115,10 @@ func WasteProduct(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		if ws := controllers.GetWebhookService(); ws != nil {
-			ws.FireEvent("product.wasted", map[string]any{
+			ws.FireEventContext(ctx, "product.wasted", map[string]any{
 				"productId": productID,
 			})
 		}

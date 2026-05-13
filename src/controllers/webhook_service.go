@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -56,6 +57,31 @@ func (s *WebhookService) FireEvent(event string, payload map[string]any) {
 
 	for i := range webhooks {
 		go s.deliverWebhook(&webhooks[i], event, payload)
+	}
+}
+
+func (s *WebhookService) FireEventContext(ctx context.Context, event string, payload map[string]any) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	webhooks, err := s.Repo.GetActiveWebhooksByEvent(event)
+	if err != nil {
+		s.Logger.Error().Msgf("Error fetching webhooks for event %s: %v", event, err)
+		return
+	}
+
+	for i := range webhooks {
+		go s.deliverWebhookWithContext(ctx, &webhooks[i], event, payload)
+	}
+}
+
+func (s *WebhookService) deliverWebhookWithContext(ctx context.Context, webhook *dbModel.Webhook, event string, payload map[string]any) {
+	select {
+	case <-ctx.Done():
+		s.Logger.Warn().Msgf("Webhook delivery timed out for event %s to URL %s", event, webhook.URL)
+		return
+	default:
+		s.deliverWebhook(webhook, event, payload)
 	}
 }
 
