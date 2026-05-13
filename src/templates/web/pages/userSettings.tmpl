@@ -7,10 +7,10 @@
         <span class="badge bg-primary">ID: #{{ .User.ID }}</span>
     </div>
 
-    {{ template "_settings_profile.tmpl" . }}
-    {{ template "_settings_notifications.tmpl" . }}
-    {{ template "_settings_security.tmpl" . }}
-    {{ template "_settings_household.tmpl" . }}
+    {{ template "_settings_profile" . }}
+    {{ template "_settings_notifications" . }}
+    {{ template "_settings_security" . }}
+    {{ template "_settings_household" . }}
 
 <script src="/assets/js/userSettings.js"></script>
 {{ end }}

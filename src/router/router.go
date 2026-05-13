@@ -316,7 +316,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	adminAPI.POST("/:id/reset-password", v1.WrapHandler(v1.AdminResetUserPassword))
 
 	// Admin audit log route
-	engine.GET("/api/v1/admin/audit-log", jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.WrapHandler(v1.GetAuditLogs))
+	engine.GET("/api/v1/admin/audit-log", jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware(), v1.WrapHandler(v1.GetAuditLogs))
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")
@@ -342,7 +342,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Calendar routes (export uses token query param, token management uses JWT)
 	calendarAPI := engine.Group("/api/v1/calendar")
-	calendarAPI.GET("/export.ics", v1.WrapHandler(v1.ExportICalendar))
+	calendarAPI.GET("/export.ics", v1.ExportICalendar)
 	calendarAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	calendarAPI.POST("/token", v1.WrapHandler(v1.CreateCalendarToken))
 	calendarAPI.DELETE("/token", v1.WrapHandler(v1.DeleteCalendarToken))

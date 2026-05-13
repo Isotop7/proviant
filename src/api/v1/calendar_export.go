@@ -13,6 +13,8 @@ import (
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
 const (
@@ -84,25 +86,34 @@ func formatProductDescription(product *database.Product) string {
 // @Failure      401   {object} api.APIResponse
 // @Failure      500   {object} api.APIResponse
 // @Router       /api/v1/calendar/export.ics [get]
-func ExportICalendar(ctx *gin.Context, appCtx *AppContext) {
+func ExportICalendar(ctx *gin.Context) {
+	loggerVal, _ := ctx.Get(util.ContextKeyLogger)
+	logger, _ := loggerVal.(*zerolog.Logger)
+	db, _ := ctx.Get(util.ContextKeyDBHandle)
+	dbHandle, _ := db.(*gorm.DB)
+
 	token := ctx.Query("token")
 	if token == "" {
 		api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrInvalidRequest)
 		return
 	}
 
-	calendarTokenRepo := dbRepo.NewCalendarTokenRepository(appCtx.DB)
+	calendarTokenRepo := dbRepo.NewCalendarTokenRepository(dbHandle)
 	ct, err := calendarTokenRepo.GetByToken(token)
 	if err != nil {
-		appCtx.Logger.Debug().Msgf("Invalid calendar token: %s", err)
+		if logger != nil {
+			logger.Debug().Msgf("Invalid calendar token: %s", err)
+		}
 		api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrInvalidRequest)
 		return
 	}
 
-	productRepo := dbRepo.NewProductRepository(appCtx.DB)
+	productRepo := dbRepo.NewProductRepository(dbHandle)
 	products, err := productRepo.GetExpiringInDays(ct.UserID, CalendarExpireDays)
 	if err != nil {
-		appCtx.Logger.Error().Msgf("GetExpiringInDays: %s", err)
+		if logger != nil {
+			logger.Error().Msgf("GetExpiringInDays: %s", err)
+		}
 		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		return
 	}

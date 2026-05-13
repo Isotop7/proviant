@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v67';
+const CACHE_NAME = 'proviant-v68';
 
 const PRECACHE_URLS = [
   '/manifest.json',
@@ -51,7 +51,7 @@ const OFFLINE_PAGE = `<!doctype html>
     </div>
     <h1>You're offline</h1>
     <p>Proviant needs a connection to load your products.<br>Check your network and try again.</p>
-    <button onclick="location.reload()">Try again</button>
+    <a href="/" class="button">Try again</a>
   </div>
 </body>
 </html>`;
