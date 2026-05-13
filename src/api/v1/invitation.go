@@ -2,6 +2,7 @@ package v1
 
 import (
 	apperrors "codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/database"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // CreateInvitation creates a new household invitation and sends an email to the recipient.
@@ -49,7 +51,28 @@ func CreateInvitation(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	invitation, err := appCtx.Repos.Invitations.CreateInvitation(user.HouseholdID, appCtx.UserID, req.Email)
+	var invitation database.HouseholdInvitation
+	err = appCtx.DB.Transaction(func(tx *gorm.DB) error {
+		createErr := error(nil)
+		invitation, createErr = appCtx.Repos.Invitations.CreateInvitationTx(tx, user.HouseholdID, appCtx.UserID, req.Email)
+		if createErr != nil {
+			return createErr
+		}
+
+		proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+		notificationController, _ := ctx.MustGet(util.ContextKeyNotificationController).(*controllers.NotificationController)
+		if notificationController != nil {
+			inviterName := user.EffectiveName()
+			householdName := fmt.Sprintf("Household #%d", user.HouseholdID)
+			if household, householdErr := appCtx.Repos.Users.GetHouseholdByID(user.HouseholdID); householdErr == nil {
+				householdName = household.Name
+			}
+			if emailErr := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL); emailErr != nil {
+				return emailErr
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		switch err {
 		case apperrors.ErrDuplicateInvitation:
@@ -65,25 +88,6 @@ func CreateInvitation(ctx *gin.Context, appCtx *AppContext) {
 			api.RespondError(ctx, http.StatusInternalServerError, err)
 			return
 		}
-	}
-
-	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
-	notificationController, _ := ctx.MustGet(util.ContextKeyNotificationController).(*controllers.NotificationController)
-	if notificationController != nil {
-		inviterName := user.EffectiveName()
-		household, householdErr := appCtx.Repos.Users.GetHouseholdByID(user.HouseholdID)
-		householdName := fmt.Sprintf("Household #%d", user.HouseholdID)
-		if householdErr == nil {
-			householdName = household.Name
-		}
-
-		if err := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL); err != nil {
-			appCtx.Logger.Error().Msgf("Failed to send invitation email to %s: %s", req.Email, err)
-		} else {
-			appCtx.Logger.Info().Msgf("Invitation email sent to %s", req.Email)
-		}
-	} else {
-		appCtx.Logger.Warn().Msg("InvitationController not available, email will be sent by retry dispatcher")
 	}
 
 	ctx.JSON(http.StatusCreated, api.APIResponse{Message: "Invitation created successfully"})

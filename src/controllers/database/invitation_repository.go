@@ -14,6 +14,7 @@ import (
 
 type InvitationRepositoryInterface interface {
 	CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
+	CreateInvitationTx(tx *gorm.DB, householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
 	GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
 	GetPendingInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
 	GetInvitationByToken(token string) (database.HouseholdInvitation, error)
@@ -66,6 +67,43 @@ func (r *InvitationRepository) CreateInvitation(householdID, inviterID uint, ema
 	}
 
 	if err := r.DB.Create(&invitation).Error; err != nil {
+		return database.HouseholdInvitation{}, err
+	}
+
+	return invitation, nil
+}
+
+func (r *InvitationRepository) CreateInvitationTx(tx *gorm.DB, householdID, inviterID uint, email string) (database.HouseholdInvitation, error) {
+	var user authentication.User
+	if err := tx.Where("id = ? AND household_id = ?", inviterID, householdID).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return database.HouseholdInvitation{}, errors.ErrInvitationNotAuthorized
+		}
+		return database.HouseholdInvitation{}, err
+	}
+
+	var existingInvitation database.HouseholdInvitation
+	err := tx.Where("household_id = ? AND email = ? AND status = ?", householdID, email, database.InvitationStatusPending).First(&existingInvitation).Error
+	if err == nil {
+		return database.HouseholdInvitation{}, errors.ErrDuplicateInvitation
+	}
+	if err != gorm.ErrRecordNotFound {
+		return database.HouseholdInvitation{}, err
+	}
+
+	token := uuid.New().String()
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+
+	invitation := database.HouseholdInvitation{
+		HouseholdID: householdID,
+		InviterID:   inviterID,
+		Email:       email,
+		Token:       token,
+		Status:      database.InvitationStatusPending,
+		ExpiresAt:   expiresAt,
+	}
+
+	if err := tx.Create(&invitation).Error; err != nil {
 		return database.HouseholdInvitation{}, err
 	}
 

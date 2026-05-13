@@ -294,7 +294,7 @@ func RemoveHouseholdMember(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-removeErr := appCtx.Repos.Households.RemoveMemberFromHousehold(memberID, appCtx.UserID)
+	removeErr := appCtx.Repos.Households.RemoveMemberFromHousehold(memberID, appCtx.UserID)
 	switch removeErr {
 	case nil:
 		go recordMemberRemoved(ctx, appCtx.UserID, memberID)

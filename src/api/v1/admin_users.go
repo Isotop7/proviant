@@ -47,7 +47,7 @@ func GetHouseholdUsers(ctx *gin.Context, appCtx *AppContext) {
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-if household.AdminID != appCtx.UserID {
+	if household.AdminID != appCtx.UserID {
 		api.RespondError(ctx, http.StatusForbidden, errors.ErrNotHouseholdAdmin)
 		return
 	}
@@ -136,7 +136,7 @@ func DeleteHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-if targetUserID == appCtx.UserID {
+	if targetUserID == appCtx.UserID {
 		api.RespondError(ctx, http.StatusBadRequest, errors.ErrCannotRemoveAdmin)
 		return
 	}
