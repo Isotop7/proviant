@@ -18,9 +18,10 @@ func TestCancelInvitation(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-		CancelInvitation(ctx)
+		CancelInvitation(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -32,9 +33,10 @@ func TestCancelInvitation(t *testing.T) {
 		m.Invitations.Err = proviantErrors.ErrInvitationNotFound
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 		ctx.Params = []gin.Param{{Key: "id", Value: "999"}}
 
-		CancelInvitation(ctx)
+		CancelInvitation(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
@@ -45,9 +47,10 @@ func TestCancelInvitation(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 		ctx.Params = []gin.Param{{Key: "id", Value: "invalid"}}
 
-		CancelInvitation(ctx)
+		CancelInvitation(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -59,9 +62,10 @@ func TestCancelInvitation(t *testing.T) {
 		m.Invitations.Err = proviantErrors.ErrInvitationNotAuthorized
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 2, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 2)
 		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-		CancelInvitation(ctx)
+		CancelInvitation(ctx, appCtx)
 
 		if w.Code != http.StatusForbidden {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusForbidden)

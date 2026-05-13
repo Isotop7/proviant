@@ -25,27 +25,15 @@ import (
 // @Failure 400 {object} api.APIResponse
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/notifications [get]
-func GetNotifications(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	user, err := repos.Users.GetUserByID(userID)
+func GetNotifications(ctx *gin.Context, appCtx *AppContext) {
+	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
-		logger.Error().Msgf("Error fetching user %d: %s", userID, err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		appCtx.Logger.Error().Msgf("Error fetching user %d: %s", appCtx.UserID, err)
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
-	items := buildNotificationItems(repos, logger, &user, userID)
+	items := buildNotificationItems(appCtx.Repos, appCtx.Logger, &user, appCtx.UserID)
 
 	ctx.JSON(http.StatusOK, apiModel.NotificationsResponse{
 		Total: len(items),

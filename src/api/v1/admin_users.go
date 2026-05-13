@@ -16,7 +16,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog"
 )
 
 const (
@@ -34,40 +33,28 @@ const (
 // @Failure      403  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/users [get]
-func GetHouseholdUsers(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	user, err := repos.Users.GetUserByID(userID)
+func GetHouseholdUsers(ctx *gin.Context, appCtx *AppContext) {
+	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
-		logger.Error().Msgf("Error fetching user: %s", err)
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
+		appCtx.Logger.Error().Msgf("Error fetching user: %s", err)
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrInvalidUserID)
 		return
 	}
 
-	household, hhErr := repos.Users.GetHouseholdByID(user.HouseholdID)
+	household, hhErr := appCtx.Repos.Users.GetHouseholdByID(user.HouseholdID)
 	if hhErr != nil {
-		logger.Error().Msgf(MsgErrFetchingHousehold, hhErr)
+		appCtx.Logger.Error().Msgf(MsgErrFetchingHousehold, hhErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-	if household.AdminID != userID {
-		ctx.JSON(http.StatusForbidden, api.Error(errors.ErrNotHouseholdAdmin))
+	if household.AdminID != appCtx.UserID {
+		api.RespondError(ctx, http.StatusForbidden, errors.ErrNotHouseholdAdmin)
 		return
 	}
 
-	users, err := repos.Users.GetUsersByHouseholdID(user.HouseholdID)
+	users, err := appCtx.Repos.Users.GetUsersByHouseholdID(user.HouseholdID)
 	if err != nil {
-		logger.Error().Msgf("Error fetching household users: %s", err)
+		appCtx.Logger.Error().Msgf("Error fetching household users: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
@@ -89,35 +76,23 @@ func GetHouseholdUsers(ctx *gin.Context) {
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/users/{id} [patch]
-func UpdateHouseholdUser(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	adminID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	targetUserID, ok := parseUintPathParam(ctx, logger, "id")
+func UpdateHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
+	targetUserID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
 		return
 	}
 
 	var req updateAdminUserRequest
-	if !bindJSON(ctx, logger, &req) {
+	if !bindJSON(ctx, appCtx.Logger, &req) {
 		return
 	}
 
-	householdID, ok := authorizeHouseholdAdmin(ctx, repos, logger, adminID)
+	householdID, ok := authorizeHouseholdAdmin(ctx, appCtx.Repos, appCtx.Logger, appCtx.UserID)
 	if !ok {
 		return
 	}
 
-	targetUser, ok := fetchHouseholdMember(ctx, repos, logger, targetUserID, householdID)
+	targetUser, ok := fetchHouseholdMember(ctx, appCtx.Repos, appCtx.Logger, targetUserID, householdID)
 	if !ok {
 		return
 	}
@@ -131,9 +106,9 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 		newMailAddress = req.MailAddress
 	}
 
-	updateErr := repos.Users.UpdateAdminUserFields(targetUser.ID, newUsername, newMailAddress)
+	updateErr := appCtx.Repos.Users.UpdateAdminUserFields(targetUser.ID, newUsername, newMailAddress)
 	if updateErr != nil {
-		logger.Error().Msgf("Error updating user: %s", updateErr)
+		appCtx.Logger.Error().Msgf("Error updating user: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
@@ -155,47 +130,35 @@ func UpdateHouseholdUser(ctx *gin.Context) {
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/users/{id} [delete]
-func DeleteHouseholdUser(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
+func DeleteHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
+	targetUserID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
 		return
 	}
 
-	adminID, ok := mustGetUserID(ctx, logger)
+	if targetUserID == appCtx.UserID {
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrCannotRemoveAdmin)
+		return
+	}
+
+	householdID, ok := authorizeHouseholdAdmin(ctx, appCtx.Repos, appCtx.Logger, appCtx.UserID)
 	if !ok {
 		return
 	}
 
-	targetUserID, ok := parseUintPathParam(ctx, logger, "id")
+	_, ok = fetchHouseholdMember(ctx, appCtx.Repos, appCtx.Logger, targetUserID, householdID)
 	if !ok {
 		return
 	}
 
-	if targetUserID == adminID {
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrCannotRemoveAdmin))
-		return
-	}
-
-	householdID, ok := authorizeHouseholdAdmin(ctx, repos, logger, adminID)
-	if !ok {
-		return
-	}
-
-	_, ok = fetchHouseholdMember(ctx, repos, logger, targetUserID, householdID)
-	if !ok {
-		return
-	}
-
-	deleteErr := repos.Users.DeleteUser(targetUserID)
+	deleteErr := appCtx.Repos.Users.DeleteUser(targetUserID)
 	if deleteErr != nil {
-		logger.Error().Msgf("Error deleting user: %s", deleteErr)
+		appCtx.Logger.Error().Msgf("Error deleting user: %s", deleteErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	go recordAccountDeleted(ctx, adminID, targetUserID, householdID)
+	go recordAccountDeleted(ctx, appCtx.UserID, targetUserID, householdID)
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "User deleted"})
 }
 
@@ -211,44 +174,32 @@ func DeleteHouseholdUser(ctx *gin.Context) {
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/users/{id}/reset-password [post]
-func AdminResetUserPassword(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
+func AdminResetUserPassword(ctx *gin.Context, appCtx *AppContext) {
+	targetUserID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
 		return
 	}
 
-	adminID, ok := mustGetUserID(ctx, logger)
+	householdID, ok := authorizeHouseholdAdmin(ctx, appCtx.Repos, appCtx.Logger, appCtx.UserID)
 	if !ok {
 		return
 	}
 
-	targetUserID, ok := parseUintPathParam(ctx, logger, "id")
-	if !ok {
-		return
-	}
-
-	householdID, ok := authorizeHouseholdAdmin(ctx, repos, logger, adminID)
-	if !ok {
-		return
-	}
-
-	targetUser, ok := fetchHouseholdMember(ctx, repos, logger, targetUserID, householdID)
+	targetUser, ok := fetchHouseholdMember(ctx, appCtx.Repos, appCtx.Logger, targetUserID, householdID)
 	if !ok {
 		return
 	}
 
 	token, tokErr := uuid.NewUUID()
 	if tokErr != nil {
-		logger.Error().Msgf("Error generating reset token: %s", tokErr)
+		appCtx.Logger.Error().Msgf("Error generating reset token: %s", tokErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	expiresAt := time.Now().Add(24 * time.Hour)
-	if createErr := repos.Users.CreateEmailVerification(targetUser.ID, token.String(), expiresAt); createErr != nil {
-		logger.Error().Msgf("Error creating reset token: %s", createErr)
+	if createErr := appCtx.Repos.Users.CreateEmailVerification(targetUser.ID, token.String(), expiresAt); createErr != nil {
+		appCtx.Logger.Error().Msgf("Error creating reset token: %s", createErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
@@ -261,7 +212,7 @@ func AdminResetUserPassword(ctx *gin.Context) {
 			baseURL = proviantConfig.Server.BaseURL
 		}
 		if sendErr := notificationController.SendEmailVerification(targetUser.MailAddress, targetUser.Username, token.String(), baseURL, expiresAt); sendErr != nil {
-			logger.Error().Msgf("Error sending reset email: %s", sendErr)
+			appCtx.Logger.Error().Msgf("Error sending reset email: %s", sendErr)
 			ctx.JSON(http.StatusInternalServerError, api.InternalError())
 			return
 		}

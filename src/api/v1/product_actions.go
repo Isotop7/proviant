@@ -6,13 +6,8 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
@@ -31,53 +26,23 @@ const (
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/{id}/consume [post]
-func ConsumeProduct(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
-		return
-	}
-
-	productID, ok := parseUintPathParam(ctx, logger, "id")
+func ConsumeProduct(ctx *gin.Context, appCtx *AppContext) {
+	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
 		return
 	}
 
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	product, err := repos.Products.GetProductByID(productID, userID)
-
-	if err := repos.Products.ConsumeProduct(productID, userID); err != nil {
+	if err := appCtx.Products.ConsumeProduct(productID, appCtx.UserID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: MsgProductNotFound})
 			return
 		}
-		logger.Error().Msgf("ConsumeProduct: %s", err)
+		appCtx.Logger.Error().Msgf("ConsumeProduct: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	if err == nil {
-		go recordHouseholdSavingsEvent(repos, logger, userID, &product, "consumed")
-	}
-
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d marked as consumed", productID)})
-}
-
-func recordHouseholdSavingsEvent(repos *database.RepositoryContainer, logger *zerolog.Logger, userID uint, product *dbModel.Product, eventType string) {
-	if householdID, err := repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
-		if err := repos.Savings.RecordSavingsEvent(householdID, product, eventType); err != nil {
-			logger.Error().Msgf("RecordSavingsEvent (%s): %s", eventType, err)
-		}
-	}
 }
 
 // WasteProduct marks a product as wasted (hard-delete, fires product.wasted webhook event)
@@ -91,57 +56,20 @@ func recordHouseholdSavingsEvent(repos *database.RepositoryContainer, logger *ze
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/{id}/waste [post]
-func WasteProduct(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
-		return
-	}
-
-	productID, ok := parseUintPathParam(ctx, logger, "id")
+func WasteProduct(ctx *gin.Context, appCtx *AppContext) {
+	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
 		return
 	}
 
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	product, err := repos.Products.GetProductByID(productID, userID)
-
-	if err := repos.Products.WasteProduct(productID, userID); err != nil {
+	if err := appCtx.Products.WasteProduct(productID, appCtx.UserID); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: MsgProductNotFound})
 			return
 		}
-		logger.Error().Msgf("WasteProduct: %s", err)
+		appCtx.Logger.Error().Msgf("WasteProduct: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
-	}
-
-	// Record waste event for household streak tracking
-	if householdID, err := repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
-		if err := repos.Streaks.RecordWasteEvent(householdID); err != nil {
-			logger.Error().Msgf("WasteProduct: failed to record waste event for streak: %s", err)
-		}
-	}
-
-	go func() {
-		if ws := controllers.GetWebhookService(); ws != nil {
-			ws.FireEvent("product.wasted", map[string]any{
-				"productId": productID,
-			})
-		}
-	}()
-
-	if err == nil {
-		go recordHouseholdSavingsEvent(repos, logger, userID, &product, "wasted")
 	}
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d marked as wasted", productID)})

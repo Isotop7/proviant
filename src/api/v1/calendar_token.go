@@ -12,7 +12,6 @@ import (
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
@@ -43,44 +42,28 @@ type CalendarTokenResponse struct {
 // @Failure      401  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/calendar/token [post]
-func CreateCalendarToken(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
-		return
-	}
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func CreateCalendarToken(ctx *gin.Context, appCtx *AppContext) {
 	rawToken, genErr := generateCalendarToken()
 	if genErr != nil {
-		logger.Error().Msgf("generateCalendarToken: %s", genErr)
+		appCtx.Logger.Error().Msgf("generateCalendarToken: %s", genErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to generate calendar token"})
 		return
 	}
 
-	delErr := repos.CalendarTokens.DeleteByUserID(userID)
+	delErr := appCtx.Repos.CalendarTokens.DeleteByUserID(appCtx.UserID)
 	if delErr != nil {
-		logger.Error().Msgf("DeleteByUserID: %s", delErr)
+		appCtx.Logger.Error().Msgf("DeleteByUserID: %s", delErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to regenerate calendar token"})
 		return
 	}
 
 	calendarToken := &authentication.CalendarToken{
-		UserID: userID,
+		UserID: appCtx.UserID,
 		Token:  rawToken,
 	}
-	createErr := repos.CalendarTokens.Create(calendarToken)
+	createErr := appCtx.Repos.CalendarTokens.Create(calendarToken)
 	if createErr != nil {
-		logger.Error().Msgf("Create: %s", createErr)
+		appCtx.Logger.Error().Msgf("Create: %s", createErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to create calendar token"})
 		return
 	}
@@ -117,26 +100,10 @@ func CreateCalendarToken(ctx *gin.Context) {
 // @Failure      401  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/calendar/token [delete]
-func DeleteCalendarToken(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
-		return
-	}
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	delErr := repos.CalendarTokens.DeleteByUserID(userID)
+func DeleteCalendarToken(ctx *gin.Context, appCtx *AppContext) {
+	delErr := appCtx.Repos.CalendarTokens.DeleteByUserID(appCtx.UserID)
 	if delErr != nil {
-		logger.Error().Msgf("DeleteByUserID: %s", delErr)
+		appCtx.Logger.Error().Msgf("DeleteByUserID: %s", delErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to delete calendar token"})
 		return
 	}
@@ -156,30 +123,14 @@ func DeleteCalendarToken(ctx *gin.Context) {
 // @Failure      401  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/calendar/token [get]
-func GetCalendarTokenStatus(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
-		return
-	}
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	calendarToken, err := repos.CalendarTokens.GetByUserID(userID)
+func GetCalendarTokenStatus(ctx *gin.Context, appCtx *AppContext) {
+	calendarToken, err := appCtx.Repos.CalendarTokens.GetByUserID(appCtx.UserID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusOK, gin.H{"hasToken": false})
 			return
 		}
-		logger.Error().Msgf("GetByUserID: %s", err)
+		appCtx.Logger.Error().Msgf("GetByUserID: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to check calendar token status"})
 		return
 	}
@@ -191,6 +142,9 @@ func GetCalendarTokenStatus(ctx *gin.Context) {
 	}
 	if baseURL == "" {
 		baseURL = "/"
+	}
+	if !strings.HasSuffix(baseURL, "/") {
+		baseURL += "/"
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{

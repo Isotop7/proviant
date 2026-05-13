@@ -1,14 +1,14 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) working in this repo.
 
 ## Overview
 
-Proviant is a food expiration tracking web app built with Go (Gin, GORM) on the backend and Bootstrap 5 on the frontend. It supports SQLite and MariaDB, JWT authentication, and notifications via SMTP and Ntfy.sh.
+Proviant: food expiration tracking web app. Go (Gin, GORM) backend, Bootstrap 5 frontend. Supports SQLite/MariaDB, JWT auth, notifications via SMTP and Ntfy.sh.
 
 ## Agent handling
 
-Before editing any file, read it first. Before modifying a function, grep for all callers. Research before you edit. 
+Read file before editing. Grep all callers before modifying function. Research before edit.
 
 ## Commands
 
@@ -30,7 +30,7 @@ cd src && go test -race -vet=off ./path/to/package -run TestFunctionName
 
 **Must pass before committing:** `task tidy` (formatting) and `task check` (linting).
 **After API changes:** run `task doc` to regenerate Swagger docs.
-**After CSS changes:** bump `CACHE_NAME` in `src/assets/js/sw.js` — CSS uses cache-first in the service worker. JS files use network-first and do NOT require a version bump.
+**After CSS changes:** bump `CACHE_NAME` in `src/assets/js/sw.js` — CSS uses cache-first in service worker. JS files use network-first, no version bump needed.
 
 ## Architecture
 
@@ -46,7 +46,7 @@ cd src && go test -race -vet=off ./path/to/package -run TestFunctionName
 - `src/errors/errors.go` — All custom error variables (define new ones here)
 - `src/templates/` — Embedded HTML templates and SCSS; `src/assets/` — compiled static files
 
-**Context injection:** Middleware puts logger, DB handle, and controllers into Gin context. Handlers extract them:
+**Context injection:** Middleware puts logger, DB handle, controllers into Gin context. Handlers extract:
 ```go
 logger, _ := ctx.MustGet("logger").(*zerolog.Logger)
 dbHandle, _ := ctx.MustGet("dbHandle").(*gorm.DB)
@@ -59,14 +59,10 @@ claims := jwt.ExtractClaims(ctx)
 
 **Error handling:** Use predefined errors from `src/errors/errors.go`; never `panic` in normal flow.
 
-**Database:** Use GORM transactions for multi-step operations; soft delete via `DeletedAt` (`.Unscoped()` for hard delete).
+**Database:** GORM transactions for multi-step ops; soft delete via `DeletedAt` (`.Unscoped()` for hard delete).
 
 **Logging:** Always use zerolog from Gin context — never create new loggers.
 
 **Models:** Embed `gorm.Model` for standard fields; use `gorm:"index,not null"` and `json:"fieldName"` tags; `json:"-"` to exclude sensitive fields.
 
-**Frontend:** SCSS lives in `src/templates/scss/`; compiled to `src/assets/css/`. Use Bootstrap for styling and Bootstrap Icons for icons.
-
-## Documentation
-
-Always use the Context7 MCP tools automatically (without being asked) when you need library/API documentation, code generation help, or configuration steps for any library used in this project.
+**Frontend:** SCSS in `src/templates/scss/`; compiled to `src/assets/css/`. Bootstrap for styling, Bootstrap Icons for icons.

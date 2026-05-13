@@ -1,11 +1,5 @@
 /* exported changeQty */
 
-async function bulkAction(action, productIDs) {
-    const fn = { delete: proviant.bulkWasteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkConsumeProducts }[action];
-    const response = await fn(productIDs);
-    if (response.code !== 200) console.error(response.message);
-}
-
 function handleCardClickEffect(cardId) {
     const card = document.getElementById(cardId);
     if (card) {
@@ -43,15 +37,11 @@ document.addEventListener("click", function (event) {
         event.preventDefault();
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
         const count = selectedProducts.length;
-        proviant.showConfirm(
-            'Mark as wasted',
-            `Mark ${count} selected product${count !== 1 ? 's' : ''} as wasted? This cannot be undone.`,
-            function () {
-                bulkAction('delete', selectedProducts).then(() => location.reload());
-            },
-            'Wasted',
-            'danger'
-        );
+        proviant.bulkAction('delete', selectedProducts, {
+            confirmTitle: 'Mark as wasted',
+            confirmMsg: `Mark ${count} selected product${count !== 1 ? 's' : ''} as wasted? This cannot be undone.`,
+            confirm: true
+        });
         return;
     }
 
@@ -59,7 +49,7 @@ document.addEventListener("click", function (event) {
     if (target.closest("#restore-product")) {
         event.preventDefault();
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        bulkAction('restore', selectedProducts).then(() => location.reload());
+        proviant.bulkAction('restore', selectedProducts);
         return;
     }
 
@@ -68,15 +58,10 @@ document.addEventListener("click", function (event) {
         event.preventDefault();
         const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
         const count = selectedProducts.length;
-        proviant.showConfirm(
-            'Mark as consumed',
-            `Mark ${count} selected product${count !== 1 ? 's' : ''} as consumed?`,
-            function () {
-                bulkAction('archive', selectedProducts).then(() => location.reload());
-            },
-            'Consumed',
-            'warning'
-        );
+        proviant.bulkAction('archive', selectedProducts, {
+            confirmTitle: 'Mark as consumed',
+            confirmMsg: `Mark ${count} selected product${count !== 1 ? 's' : ''} as consumed?`
+        });
         return;
     }
 
@@ -211,7 +196,11 @@ document.addEventListener("click", function (event) {
     var bulkBtn = target.closest('[data-bulk-action]');
     if (bulkBtn) {
         event.preventDefault();
-        bulkAction(bulkBtn.dataset.bulkAction);
+        var ids = getSelectedIDs();
+        if (!ids.length) return;
+        var action = bulkBtn.dataset.bulkAction;
+        var opts = action === 'delete' ? { confirm: true, confirmTitle: 'Mark as wasted', confirmMsg: 'Mark ' + ids.length + ' product(s) as wasted? This cannot be undone.' } : {};
+        proviant.bulkAction(action, ids, opts);
         return;
     }
 
@@ -477,25 +466,8 @@ function updateBulkSelection() {
     }
 }
 
-function bulkAction(action) {
-    const ids = [...document.querySelectorAll('.row-checkbox:checked')].map(function (c) {
-        return +c.value;
-    });
-    if (!ids.length) return;
-    if (action === 'delete') {
-        if (!confirm('Mark ' + ids.length + ' product(s) as wasted? This cannot be undone.')) return;
-        proviant.bulkWasteProducts(ids).then(function () {
-            window.location.reload();
-        });
-    } else if (action === 'archive') {
-        proviant.bulkConsumeProducts(ids).then(function () {
-            window.location.reload();
-        });
-    } else if (action === 'restore') {
-        proviant.bulkRestoreProducts(ids).then(function () {
-            window.location.reload();
-        });
-    }
+function getSelectedIDs() {
+    return [...document.querySelectorAll('.row-checkbox:checked')].map(function (c) { return +c.value; });
 }
 
 // ── List view: qty stepper ──────────────────────────────────────

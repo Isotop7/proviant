@@ -1,0 +1,244 @@
+{{ define "_settings_notifications" }}
+<div class="card card-section mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+        <div class="d-flex align-items-center gap-2">
+            <div class="icon-chip" aria-hidden="true">
+                <i class="bi bi-bell"></i>
+            </div>
+            <h2 class="h5 mb-0 fw-semibold">Notification Settings</h2>
+        </div>
+        <button type="button" class="btn btn-proviant-primary" id="btnUpdateNotificationSettings">
+            Update
+        </button>
+    </div>
+    <div class="card-body px-4 py-4">
+        <form id="notificationSettings" novalidate>
+
+            {{/* ── Delivery Channels ─────────────────────────────── */}}
+            <div class="mb-4">
+                <h3 class="h6 fw-semibold mb-1">Delivery Channels</h3>
+                <p class="text-secondary-custom small mb-3">How you receive product expiry alerts.</p>
+
+                <div class="list-group list-group-flush border rounded-3">
+                    <div class="list-group-item px-3 py-3">
+                        <div class="d-flex align-items-center justify-content-between gap-3">
+                            <div>
+                                <div class="fw-medium small">Email</div>
+                                <div class="text-secondary-custom small">Expiry alerts sent to your registered email address.</div>
+                            </div>
+                            <div class="form-check form-switch mb-0 flex-shrink-0">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="toggleEmailNotifications"
+                                       {{if .User.NotificationPreferences.EmailEnabled}}checked{{end}}>
+                                <label class="visually-hidden" for="toggleEmailNotifications">Email Notifications</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="emailSettings" class="list-group-item px-3 py-3 bg-body-tertiary{{if not .User.NotificationPreferences.EmailEnabled}} d-none{{end}}">
+                        <p class="small mb-3 text-secondary-custom">
+                            <i class="bi bi-envelope me-1" aria-hidden="true"></i>
+                            Alerts will be sent to <strong class="text-body">{{ .User.MailAddress }}</strong>.
+                            Update your address in <a href="#inputMailAddress" class="text-decoration-none">Personal Details</a>.
+                        </p>
+                        <label for="inputNotificationThreshold" class="form-label fw-medium small">Expiry Threshold</label>
+                        <p class="text-secondary-custom small mb-2">Notify this many days <strong>before</strong> a product expires. Set to 0 to only notify on or after the expiry date.</p>
+                        <div class="input-group input-width-260">
+                            <span class="input-group-text"><i class="bi bi-alarm"></i></span>
+                            <input type="number" class="form-control" id="inputNotificationThreshold"
+                                   min="0" step="1"
+                                   value="{{ .User.NotificationPreferences.NotificationThresholdDays }}"
+                                   aria-required="true">
+                            <span class="input-group-text">days</span>
+                        </div>
+                        <div class="invalid-feedback" id="thresholdFeedback"></div>
+                    </div>
+                    <div class="list-group-item px-3 py-3">
+                        <div class="d-flex align-items-center justify-content-between gap-3">
+                            <div>
+                                <div class="fw-medium small">ntfy.sh</div>
+                                <div class="text-secondary-custom small">Push alerts via ntfy.sh to any subscribed device.</div>
+                            </div>
+                            <div class="form-check form-switch mb-0 flex-shrink-0">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="toggleNtfyNotifications"
+                                       {{if .User.NotificationPreferences.NtfyEnabled}}checked{{end}}>
+                                <label class="visually-hidden" for="toggleNtfyNotifications">ntfy.sh Notifications</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="ntfySettings" class="list-group-item px-3 py-3 bg-body-tertiary{{if not .User.NotificationPreferences.NtfyEnabled}} d-none{{end}}">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="inputNtfyUrl" class="form-label fw-medium">
+                                    ntfy.sh URL <span class="text-danger" aria-hidden="true">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="inputNtfyUrl"
+                                       placeholder="https://ntfy.sh" value="{{.User.NotificationPreferences.NtfyURL}}"
+                                       autocomplete="off">
+                                <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>ntfy.sh URL is required when ntfy notifications are enabled.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="inputNtfyTopic" class="form-label fw-medium">
+                                    Topic <span class="text-danger" aria-hidden="true">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="inputNtfyTopic"
+                                       placeholder="your_topic" value="{{.User.NotificationPreferences.NtfyTopic}}"
+                                       autocomplete="off">
+                                <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Topic is required when ntfy notifications are enabled.</div>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="inputNtfyToken" class="form-label fw-medium">
+                                Access Token <span class="text-secondary-custom fw-normal">(optional)</span>
+                            </label>
+                            <input type="password" class="form-control input-width-360" id="inputNtfyToken"
+                                   placeholder="Optional access token" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <div class="list-group-item px-3 py-3">
+                        <div class="d-flex align-items-center justify-content-between gap-3">
+                            <div>
+                                <div class="fw-medium small">Telegram</div>
+                                <div class="text-secondary-custom small">Push alerts via your own Telegram bot to any device.</div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTelegramHelp"
+                                        data-bs-toggle="modal" data-bs-target="#telegramHelpModal"
+                                        aria-label="How to set up Telegram">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </button>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           id="toggleTelegramNotifications"
+                                           {{if .User.NotificationPreferences.TelegramEnabled}}checked{{end}}>
+                                    <label class="visually-hidden" for="toggleTelegramNotifications">Telegram Notifications</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="telegramSettings" class="list-group-item px-3 py-3 bg-body-tertiary{{if not .User.NotificationPreferences.TelegramEnabled}} d-none{{end}}">
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium mb-1" for="inputTelegramBotToken">Bot Token</label>
+                            <input type="text" class="form-control form-control-sm input-width-360" id="inputTelegramBotToken"
+                                   placeholder="123456:ABC-DEF..." autocomplete="off"
+                                   value="{{.User.NotificationPreferences.TelegramBotToken}}">
+                            <div class="form-text">
+                                {{if .TelegramConfigured}}
+                                <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Bot configured.</span>
+                                Enter a new token to replace it.
+                                {{else}}
+                                Create a bot via <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a> and paste the token here.
+                                {{end}}
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            {{if .User.NotificationPreferences.TelegramLinked}}
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Linked</span>
+                            <span class="text-secondary-custom small">Your Telegram account is connected.</span>
+                            {{else}}
+                            <span class="badge bg-secondary">Not linked</span>
+                            <span class="text-secondary-custom small">Save your bot token, then link your account.</span>
+                            {{end}}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTelegramLink"
+                                data-bs-toggle="modal" data-bs-target="#telegramLinkModal"
+                                {{if not .TelegramConfigured}}disabled{{end}}>
+                            <i class="bi bi-telegram me-1" aria-hidden="true"></i>
+                            {{if .User.NotificationPreferences.TelegramLinked}}Relink Account{{else}}Link Account{{end}}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {{/* ── Scheduled Reports ──────────────────────────────── */}}
+            <div>
+                <h3 class="h6 fw-semibold mb-1">Scheduled Reports</h3>
+                <p class="text-secondary-custom small mb-3">Periodic email summaries sent to all opted-in household members.</p>
+
+                <div class="list-group list-group-flush border rounded-3">
+                    <div class="list-group-item px-3 py-3">
+                        <div class="d-flex align-items-center justify-content-between gap-3">
+                            <div>
+                                <div class="fw-medium small">Monthly Waste Report</div>
+                                <div class="text-secondary-custom small">
+                                    <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>Sent on the 1st of each month &middot; items removed and expired per household
+                                </div>
+                            </div>
+                            <div class="form-check form-switch mb-0 flex-shrink-0">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="toggleMonthlyWasteReport"
+                                       {{if .User.NotificationPreferences.MonthlyWasteReportEnabled}}checked{{end}}>
+                                <label class="visually-hidden" for="toggleMonthlyWasteReport">Monthly Waste Report</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="monthlyWasteReportSettings" class="list-group-item px-3 py-3 bg-body-tertiary{{if not .User.NotificationPreferences.MonthlyWasteReportEnabled}} d-none{{end}}">
+                        <ul class="small text-secondary-custom mb-0 ps-3">
+                            <li>Covers products <strong class="text-body">deleted from pantry</strong> and <strong class="text-body">past best-before date</strong> during the month</li>
+                            <li>Includes waste rate and month-over-month comparison</li>
+                            <li>Sent to every household member with this option enabled</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<div class="card card-section mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+        <div class="d-flex align-items-center gap-2">
+            <div class="icon-chip" aria-hidden="true">
+                <i class="bi bi-calendar"></i>
+            </div>
+            <h2 class="h5 mb-0 fw-semibold">Calendar Sync</h2>
+        </div>
+        <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnCalendarRegenerate">
+            Regenerate Token
+        </button>
+    </div>
+    <div class="card-body px-4 py-4">
+        <p class="text-secondary-custom small mb-3">Subscribe to your product expiry dates in Google Calendar, Apple Calendar, or Thunderbird using the iCal feed URL below.</p>
+
+        <div id="calendarNoToken">
+            <i class="bi bi-calendar-x text-secondary-custom fs-1 mb-3 d-block"></i>
+            <p class="text-secondary-custom mb-3">No calendar token configured.</p>
+            <button type="button" class="btn btn-proviant-primary" id="btnCalendarCreate">
+                <i class="bi bi-plus-lg me-1"></i>Generate Calendar Token
+            </button>
+        </div>
+
+        <div id="calendarHasToken" class="d-none">
+            <div class="mb-3">
+                <label class="form-label fw-medium">iCal Subscription URL</label>
+                <div class="input-group">
+                    <input type="text" class="form-control font-monospace small" id="calendarUrl" readonly
+                           value="">
+                    <button type="button" class="btn btn-proviant-secondary" id="btnCalendarCopy" title="Copy URL" aria-label="Copy URL">
+                        <i class="bi bi-clipboard" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="btn btn-proviant-secondary" id="btnCalendarDownload" title="Download .ics" aria-label="Download .ics file">
+                        <i class="bi bi-download" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div id="calendarUrlCopied" class="form-text text-success d-none">
+                    <i class="bi bi-check-circle me-1"></i>URL copied to clipboard!
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-medium">Instructions</label>
+                <ol class="text-secondary-custom small mb-0">
+                    <li>Copy the subscription URL above</li>
+                    <li>Open your calendar app (Google Calendar, Apple Calendar, Thunderbird)</li>
+                    <li>Add a new calendar subscription with that URL</li>
+                    <li>Calendar events will appear for products expiring in the next 30 days</li>
+                </ol>
+            </div>
+            <button type="button" class="btn btn-proviant-danger btn-sm" id="btnCalendarRemove">
+                <i class="bi bi-trash me-1"></i>Remove Calendar Sync
+            </button>
+        </div>
+    </div>
+</div>
+{{ end }}

@@ -103,28 +103,12 @@ type FullExportProducts struct {
 // @Failure      400    {object}  api.APIResponse
 // @Failure      500    {object}  api.APIResponse
 // @Router       /api/v1/products/export/products.csv [get]
-func ExportProductsCSV(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
-		return
-	}
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func ExportProductsCSV(ctx *gin.Context, appCtx *AppContext) {
 	from, to := parseDateRange(ctx)
 
-	products, err := repos.Products.GetUserActiveProductsFiltered(userID, from, to)
+	products, err := appCtx.Repos.Products.GetUserActiveProductsFiltered(appCtx.UserID, from, to)
 	if err != nil {
-		logger.Error().Msgf(GetUserActiveProductsFiltered, err)
+		appCtx.Logger.Error().Msgf(GetUserActiveProductsFiltered, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})
 		return
 	}
@@ -134,13 +118,13 @@ func ExportProductsCSV(ctx *gin.Context) {
 
 	writer := csv.NewWriter(ctx.Writer)
 	if err := writer.Write([]string{"name", "barcode", "quantity", "unit", "category", "storage_location", "expiry_date", "added_at"}); err != nil {
-		logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
+		appCtx.Logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
 		return
 	}
 
 	for i := range products {
 		if err := writer.Write(productToExportRow(&products[i])); err != nil {
-			logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
+			appCtx.Logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
 			return
 		}
 	}
@@ -158,28 +142,12 @@ func ExportProductsCSV(ctx *gin.Context) {
 // @Failure      400    {object}  api.APIResponse
 // @Failure      500    {object}  api.APIResponse
 // @Router       /api/v1/products/export/products.json [get]
-func ExportProductsJSON(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
-		return
-	}
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func ExportProductsJSON(ctx *gin.Context, appCtx *AppContext) {
 	from, to := parseDateRange(ctx)
 
-	products, err := repos.Products.GetUserActiveProductsFiltered(userID, from, to)
+	products, err := appCtx.Repos.Products.GetUserActiveProductsFiltered(appCtx.UserID, from, to)
 	if err != nil {
-		logger.Error().Msgf(GetUserActiveProductsFiltered, err)
+		appCtx.Logger.Error().Msgf(GetUserActiveProductsFiltered, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})
 		return
 	}
@@ -200,28 +168,12 @@ func ExportProductsJSON(ctx *gin.Context) {
 // @Failure      400    {object}  api.APIResponse
 // @Failure      500    {object}  api.APIResponse
 // @Router       /api/v1/products/export/archive.csv [get]
-func ExportArchiveCSV(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
-		return
-	}
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func ExportArchiveCSV(ctx *gin.Context, appCtx *AppContext) {
 	from, to := parseDateRange(ctx)
 
-	products, err := repos.Products.GetUserArchivedProductsFiltered(userID, from, to)
+	products, err := appCtx.Repos.Products.GetUserArchivedProductsFiltered(appCtx.UserID, from, to)
 	if err != nil {
-		logger.Error().Msgf(fmtGetUserArchivedProductsFilter, err)
+		appCtx.Logger.Error().Msgf(fmtGetUserArchivedProductsFilter, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting archived products"})
 		return
 	}
@@ -231,7 +183,7 @@ func ExportArchiveCSV(ctx *gin.Context) {
 
 	writer := csv.NewWriter(ctx.Writer)
 	if err := writer.Write([]string{"name", "barcode", "quantity", "unit", "category", "storage_location", "expiry_date", "added_at", "archived_at"}); err != nil {
-		logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
+		appCtx.Logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
 		return
 	}
 
@@ -244,7 +196,7 @@ func ExportArchiveCSV(ctx *gin.Context) {
 			row = append(row, product.DeletedAt.Time.Format(util.DefaultDateFormatParseStr))
 		}
 		if err := writer.Write(row); err != nil {
-			logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
+			appCtx.Logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
 			return
 		}
 	}
@@ -260,59 +212,43 @@ func ExportArchiveCSV(ctx *gin.Context) {
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/export/full.json [get]
-func ExportFullJSON(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
-		return
-	}
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	user, err := repos.Products.GetUserByID(userID)
+func ExportFullJSON(ctx *gin.Context, appCtx *AppContext) {
+	user, err := appCtx.Repos.Products.GetUserByID(appCtx.UserID)
 	if err != nil {
-		logger.Error().Msgf("GetUserByID: %s", err)
+		appCtx.Logger.Error().Msgf("GetUserByID: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting user"})
 		return
 	}
 
-	household, err := repos.Products.GetHouseholdByID(user.HouseholdID)
+	household, err := appCtx.Repos.Products.GetHouseholdByID(user.HouseholdID)
 	if err != nil {
-		logger.Error().Msgf("GetHouseholdByID: %s", err)
+		appCtx.Logger.Error().Msgf("GetHouseholdByID: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting household"})
 		return
 	}
 
-	members, err := repos.Products.GetUsersByHouseholdID(user.HouseholdID)
+	members, err := appCtx.Repos.Products.GetUsersByHouseholdID(user.HouseholdID)
 	if err != nil {
-		logger.Error().Msgf("GetUsersByHouseholdID: %s", err)
+		appCtx.Logger.Error().Msgf("GetUsersByHouseholdID: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting household members"})
 		return
 	}
 
-	activeProducts, err := repos.Products.GetUserActiveProductsFiltered(userID, nil, nil)
+	activeProducts, err := appCtx.Repos.Products.GetUserActiveProductsFiltered(appCtx.UserID, nil, nil)
 	if err != nil {
-		logger.Error().Msgf(GetUserActiveProductsFiltered, err)
+		appCtx.Logger.Error().Msgf(GetUserActiveProductsFiltered, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting active products"})
 		return
 	}
 
-	archivedProducts, err := repos.Products.GetUserArchivedProductsFiltered(userID, nil, nil)
+	archivedProducts, err := appCtx.Repos.Products.GetUserArchivedProductsFiltered(appCtx.UserID, nil, nil)
 	if err != nil {
-		logger.Error().Msgf(fmtGetUserArchivedProductsFilter, err)
+		appCtx.Logger.Error().Msgf(fmtGetUserArchivedProductsFilter, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting archived products"})
 		return
 	}
 
-	stats, ok := buildExportStats(ctx, repos, userID, user.HouseholdID, user.NotificationPreferences.NotificationThresholdDays, len(archivedProducts), logger)
+	stats, ok := buildExportStats(ctx, appCtx.Repos, appCtx.UserID, user.HouseholdID, user.NotificationPreferences.NotificationThresholdDays, len(archivedProducts), appCtx.Logger)
 	if !ok {
 		return
 	}

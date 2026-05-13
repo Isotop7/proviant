@@ -8,12 +8,8 @@ import (
 	db "codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	"codeberg.org/isotop7/proviant/util"
-	jwt "github.com/appleboy/gin-jwt/v2"
+
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 // GetRecipeSuggestions returns recipe suggestions based on expiring products
@@ -26,55 +22,33 @@ import (
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/recipes/suggestions [get]
-func GetRecipeSuggestions(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
-	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(500, api.Error(errors.ErrDatabaseContextNotFound))
-		return
-	}
-
-	// Get user ID from JWT
-	claims := jwt.ExtractClaims(ctx)
-	userID64, ok := claims[static.TokenIdentityKey].(float64)
-	if !ok {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(400, api.Error(errors.ErrUserIDFromToken))
-		return
-	}
-	userID := uint(userID64)
-
-	// Get household ID for user
-	userRepo := db.NewUserRepository(dbHandle)
-	householdID, err := userRepo.GetUserHouseholdByID(userID)
+func GetRecipeSuggestions(ctx *gin.Context, appCtx *AppContext) {
+	userRepo := db.NewUserRepository(appCtx.DB)
+	householdID, err := userRepo.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil || householdID == 0 {
-		ctx.JSON(400, api.Error(errors.ErrUserHasNoHousehold))
+		api.RespondError(ctx, 400, errors.ErrUserHasNoHousehold)
 		return
 	}
 
-	// Parse limit
 	limitStr := ctx.DefaultQuery("limit", "6")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit < 1 || limit > 10 {
-		ctx.JSON(400, api.Error(errors.ErrInvalidQueryParameter))
+		api.RespondError(ctx, 400, errors.ErrInvalidQueryParameter)
 		return
 	}
 
-	// Get expiring products (within 7 days)
-	productRepo := db.NewProductRepository(dbHandle)
+	productRepo := db.NewProductRepository(appCtx.DB)
 	expiringProducts, err := productRepo.GetExpiringProductsByHousehold(householdID, 7)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to get expiring products")
-		ctx.JSON(500, api.Error(errors.ErrDatabaseOperationFailed))
+		appCtx.Logger.Error().Err(err).Msg("failed to get expiring products")
+		api.RespondError(ctx, 500, errors.ErrDatabaseOperationFailed)
 		return
 	}
 
-	// Get ALL household products for missing ingredient calculation
 	allProducts, err := productRepo.GetProductsByHousehold(householdID)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to get household products")
-		ctx.JSON(500, api.Error(errors.ErrDatabaseOperationFailed))
+		appCtx.Logger.Error().Err(err).Msg("failed to get household products")
+		api.RespondError(ctx, 500, errors.ErrDatabaseOperationFailed)
 		return
 	}
 
@@ -83,23 +57,20 @@ func GetRecipeSuggestions(ctx *gin.Context) {
 		return
 	}
 
-	// Get recipe controller from context
 	recipeCtrl, ok := ctx.MustGet("recipeController").(*controllers.RecipeController)
 	if !ok {
-		logger.Error().Msg("recipe controller not available in context")
-		ctx.JSON(500, api.Error(errors.ErrRecipeAPIUnavailable))
+		appCtx.Logger.Error().Msg("recipe controller not available in context")
+		api.RespondError(ctx, 500, errors.ErrRecipeAPIUnavailable)
 		return
 	}
 
-	// Get suggestions
 	suggestions, err := recipeCtrl.GetSuggestions(expiringProducts, allProducts, limit)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to get recipe suggestions")
-		ctx.JSON(500, api.Error(errors.ErrRecipeAPIUnavailable))
+		appCtx.Logger.Error().Err(err).Msg("failed to get recipe suggestions")
+		api.RespondError(ctx, 500, errors.ErrRecipeAPIUnavailable)
 		return
 	}
 
-	// Map to API response
 	response := make([]apiModel.RecipeSuggestionResponse, len(suggestions))
 	for i := range suggestions {
 		s := &suggestions[i]

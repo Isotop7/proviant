@@ -8,11 +8,11 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	dbRepo "codeberg.org/isotop7/proviant/controllers/database"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 )
 
 const (
@@ -84,37 +84,26 @@ func formatProductDescription(product *database.Product) string {
 // @Failure      401   {object} api.APIResponse
 // @Failure      500   {object} api.APIResponse
 // @Router       /api/v1/calendar/export.ics [get]
-func ExportICalendar(ctx *gin.Context) {
-	logger, loggerOk := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-	if !loggerOk {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	dbHandle, ok := mustGetDB(ctx, logger)
-	if !ok {
-		return
-	}
-
+func ExportICalendar(ctx *gin.Context, appCtx *AppContext) {
 	token := ctx.Query("token")
 	if token == "" {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, api.APIResponse{Message: "Calendar token required"})
+		api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrInvalidRequest)
 		return
 	}
 
-	calendarTokenRepo := dbRepo.NewCalendarTokenRepository(dbHandle)
+	calendarTokenRepo := dbRepo.NewCalendarTokenRepository(appCtx.DB)
 	ct, err := calendarTokenRepo.GetByToken(token)
 	if err != nil {
-		logger.Debug().Msgf("Invalid calendar token: %s", err)
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, api.APIResponse{Message: "Invalid calendar token"})
+		appCtx.Logger.Debug().Msgf("Invalid calendar token: %s", err)
+		api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrInvalidRequest)
 		return
 	}
 
-	productRepo := dbRepo.NewProductRepository(dbHandle)
+	productRepo := dbRepo.NewProductRepository(appCtx.DB)
 	products, err := productRepo.GetExpiringInDays(ct.UserID, CalendarExpireDays)
 	if err != nil {
-		logger.Error().Msgf("GetExpiringInDays: %s", err)
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, api.APIResponse{Message: "Error fetching products"})
+		appCtx.Logger.Error().Msgf("GetExpiringInDays: %s", err)
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		return
 	}
 

@@ -8,6 +8,8 @@ import (
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
+
+	"gorm.io/gorm"
 )
 
 // MockProductRepository is a configurable in-memory stub for ProductRepositoryInterface.
@@ -309,6 +311,9 @@ type MockInvitationRepository struct {
 }
 
 func (m *MockInvitationRepository) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error) {
+	return m.Invitation, m.Err
+}
+func (m *MockInvitationRepository) CreateInvitationTx(tx *gorm.DB, householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error) {
 	return m.Invitation, m.Err
 }
 func (m *MockInvitationRepository) GetInvitationsForHousehold(householdID, inviterID uint) ([]dbModel.HouseholdInvitation, error) {

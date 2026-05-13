@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -8,9 +9,10 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
+	"codeberg.org/isotop7/proviant/services"
 	"codeberg.org/isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -19,12 +21,101 @@ import (
 	"gorm.io/gorm"
 )
 
+type AppContext struct {
+	Logger    *zerolog.Logger
+	DB        *gorm.DB
+	Repos     *database.RepositoryContainer
+	UserID    uint
+	Products  *services.ProductService
+}
+
+func mustGetAppContext(ctx *gin.Context, logger *zerolog.Logger) *AppContext {
+	db, ok := mustGetDB(ctx, logger)
+	if !ok {
+		return nil
+	}
+	repos, ok := mustGetRepos(ctx, logger)
+	if !ok {
+		return nil
+	}
+	userID, ok := mustGetUserID(ctx, logger)
+	if !ok {
+		return nil
+	}
+	return &AppContext{
+		Logger:   logger,
+		DB:       db,
+		Repos:    repos,
+		UserID:   userID,
+		Products: services.NewProductService(repos, logger),
+	}
+}
+
+type APIHandler func(*gin.Context, *AppContext)
+
+func AppContextMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		loggerVal, loggerOk := ctx.Get(util.ContextKeyLogger)
+		logger, _ := loggerVal.(*zerolog.Logger)
+		if !loggerOk || logger == nil {
+			ctx.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+		appCtx := mustGetAppContext(ctx, logger)
+		if appCtx == nil {
+			ctx.Abort()
+			return
+		}
+		ctx.Set("appContext", appCtx)
+		ctx.Next()
+	}
+}
+
+func WrapHandler(fn APIHandler) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		appCtxVal, exists := ctx.Get("appContext")
+		if !exists {
+			loggerVal, _ := ctx.Get(util.ContextKeyLogger)
+			logger, _ := loggerVal.(*zerolog.Logger)
+			if logger != nil {
+				logger.Error().Msg("appContext not found in context")
+			}
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+			return
+		}
+		appCtx, ok := appCtxVal.(*AppContext)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+			return
+		}
+		fn(ctx, appCtx)
+	}
+}
+
+func SetupTestAppContext(ctx *gin.Context, userID uint) *AppContext {
+	loggerVal, _ := ctx.Get(util.ContextKeyLogger)
+	logger, _ := loggerVal.(*zerolog.Logger)
+	reposVal, _ := ctx.Get(util.ContextKeyRepos)
+	repos, _ := reposVal.(*database.RepositoryContainer)
+	dbVal, _ := ctx.Get(util.ContextKeyDBHandle)
+	db, _ := dbVal.(*gorm.DB)
+
+	appCtx := &AppContext{
+		Logger: logger,
+		DB:     db,
+		Repos:  repos,
+		UserID: userID,
+	}
+	ctx.Set("appContext", appCtx)
+	return appCtx
+}
+
 func mustGetRepos(ctx *gin.Context, logger *zerolog.Logger) (*database.RepositoryContainer, bool) {
 	reposVal, exists := ctx.Get(util.ContextKeyRepos)
 	repos, ok := reposVal.(*database.RepositoryContainer)
 	if !exists || !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrDatabaseContextNotFound)
 		return nil, false
 	}
 	return repos, true
@@ -34,7 +125,7 @@ func mustGetDB(ctx *gin.Context, logger *zerolog.Logger) (*gorm.DB, bool) {
 	db, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrDatabaseContextNotFound)
 	}
 	return db, ok
 }
@@ -52,19 +143,19 @@ func mustGetUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
 	idClaim, ok := claims[static.TokenIdentityKey]
 	if !ok {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrUserIDFromToken)
 		return 0, false
 	}
 	idFloat, ok := idClaim.(float64)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrUserIDFromToken)
 		return 0, false
 	}
 	userID := uint(idFloat)
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrUserIDFromToken)
 		return 0, false
 	}
 	return userID, true
@@ -83,12 +174,12 @@ func parseLimitParam(ctx *gin.Context, logger *zerolog.Logger) (int, bool) {
 	limit, err := strconv.Atoi(limitParam)
 	if err != nil {
 		logger.Warn().Msgf("Invalid limit '%s' was specified", limitParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Limit '%s' is invalid", limitParam)})
+		api.RespondError(ctx, http.StatusBadRequest, fmt.Errorf("limit '%s' is invalid", limitParam))
 		return 0, false
 	}
 	if limit < 1 {
 		logger.Warn().Msgf("Limit must be at least 1, got %d", limit)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Limit must be at least 1"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("limit must be at least 1"))
 		return 0, false
 	}
 	if limit > 1000 {
@@ -99,7 +190,7 @@ func parseLimitParam(ctx *gin.Context, logger *zerolog.Logger) (int, bool) {
 
 func bindJSON(ctx *gin.Context, logger *zerolog.Logger, v any) bool {
 	if err := ctx.ShouldBindJSON(v); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return false
 	}
@@ -110,8 +201,8 @@ func parseUintPathParam(ctx *gin.Context, logger *zerolog.Logger, paramName stri
 	raw := ctx.Param(paramName)
 	id, err := strconv.ParseUint(raw, 10, 64)
 	if err != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, raw)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf(errors.FormatInvalidRequestId, raw)})
+		logger.Warn().Msgf(apperrors.FormatInvalidRequestId, raw)
+		api.RespondError(ctx, http.StatusBadRequest, fmt.Errorf(apperrors.FormatInvalidRequestId, raw))
 		return 0, false
 	}
 	return uint(id), true //nolint:gosec
@@ -124,11 +215,11 @@ func mustGetOwnedWebhookID(ctx *gin.Context, repos *database.RepositoryContainer
 		return 0, false
 	}
 	if err := repos.Webhooks.CheckOwnership(webhookID, userID); err != nil {
-		if err == errors.ErrWebhookNotFound || err == errors.ErrWebhookNotOwner {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
+		if err == apperrors.ErrWebhookNotFound || err == apperrors.ErrWebhookNotOwner {
+			api.RespondError(ctx, http.StatusNotFound, err)
 			return 0, false
 		}
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		return 0, false
 	}
 	return webhookID, true
@@ -139,17 +230,17 @@ func mustGetOwnedWebhookID(ctx *gin.Context, repos *database.RepositoryContainer
 func authorizeHouseholdAdmin(ctx *gin.Context, repos *database.RepositoryContainer, logger *zerolog.Logger, adminID uint) (uint, bool) {
 	admin, err := repos.Users.GetUserByID(adminID)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserID)
 		return 0, false
 	}
 	household, err := repos.Users.GetHouseholdByID(admin.HouseholdID)
 	if err != nil {
 		logger.Error().Msgf(MsgErrFetchingHousehold, err)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		return 0, false
 	}
 	if household.AdminID != adminID {
-		ctx.JSON(http.StatusForbidden, api.Error(errors.ErrNotHouseholdAdmin))
+		api.RespondError(ctx, http.StatusForbidden, apperrors.ErrNotHouseholdAdmin)
 		return 0, false
 	}
 	return household.ID, true
@@ -161,15 +252,15 @@ func fetchHouseholdMember(ctx *gin.Context, repos *database.RepositoryContainer,
 	targetUser, err := repos.Users.GetUserByID(targetUserID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, targetUserID)})
+			api.RespondError(ctx, http.StatusNotFound, fmt.Errorf(apperrors.ErrInvalidUserIDWrapper, targetUserID))
 			return authentication.User{}, false
 		}
 		logger.Error().Msgf(MsgErrFetchingTargetUser, err)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		return authentication.User{}, false
 	}
 	if targetUser.HouseholdID != householdID {
-		ctx.JSON(http.StatusForbidden, api.Error(errors.ErrUserNotInHousehold))
+		api.RespondError(ctx, http.StatusForbidden, apperrors.ErrUserNotInHousehold)
 		return authentication.User{}, false
 	}
 	return targetUser, true

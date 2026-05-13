@@ -5,10 +5,8 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 )
 
 type storageLocationRequest struct {
@@ -25,22 +23,10 @@ type storageLocationRequest struct {
 // @Success      200  {array}   database.StorageLocation
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/storage-locations [get]
-func ListStorageLocations(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	locs, err := repos.StorageLocations.GetByHousehold(userID)
+func ListStorageLocations(ctx *gin.Context, appCtx *AppContext) {
+	locs, err := appCtx.Repos.StorageLocations.GetByHousehold(appCtx.UserID)
 	if err != nil {
-		logger.Error().Msgf("Error listing storage locations: %s", err)
+		appCtx.Logger.Error().Msgf("Error listing storage locations: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
@@ -59,22 +45,10 @@ func ListStorageLocations(ctx *gin.Context) {
 // @Failure      400   {object}  api.APIResponse
 // @Failure      500   {object}  api.APIResponse
 // @Router       /api/v1/household/storage-locations [post]
-func CreateStorageLocation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func CreateStorageLocation(ctx *gin.Context, appCtx *AppContext) {
 	var req storageLocationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
+		appCtx.Logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
@@ -84,9 +58,9 @@ func CreateStorageLocation(ctx *gin.Context) {
 		icon = "📦"
 	}
 
-	loc, err := repos.StorageLocations.Create(userID, req.Name, icon, req.SortOrder)
+	loc, err := appCtx.Repos.StorageLocations.Create(appCtx.UserID, req.Name, icon, req.SortOrder)
 	if err != nil {
-		logger.Error().Msgf("Error creating storage location: %s", err)
+		appCtx.Logger.Error().Msgf("Error creating storage location: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
 		return
 	}
@@ -107,27 +81,15 @@ func CreateStorageLocation(ctx *gin.Context) {
 // @Failure      404   {object}  api.APIResponse
 // @Failure      500   {object}  api.APIResponse
 // @Router       /api/v1/household/storage-locations/:id [patch]
-func UpdateStorageLocation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	locationID, ok := parseUintParam(ctx, logger, "id", "location ID")
-	if !ok {
-		return
-	}
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
+func UpdateStorageLocation(ctx *gin.Context, appCtx *AppContext) {
+	locationID, ok := parseUintParam(ctx, appCtx.Logger, "id", "location ID")
 	if !ok {
 		return
 	}
 
 	var req storageLocationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
+		appCtx.Logger.Error().Msgf("%s: %s", errors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
@@ -137,18 +99,18 @@ func UpdateStorageLocation(ctx *gin.Context) {
 		icon = "📦"
 	}
 
-	loc, err := repos.StorageLocations.Update(locationID, userID, req.Name, icon, req.SortOrder)
+	loc, err := appCtx.Repos.StorageLocations.Update(locationID, appCtx.UserID, req.Name, icon, req.SortOrder)
 	if err != nil {
 		if err == errors.ErrStorageLocationNotFound {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
+			api.RespondError(ctx, http.StatusNotFound, err)
 			return
 		}
 		if err == errors.ErrStorageLocationNotOwned {
-			ctx.JSON(http.StatusForbidden, api.Error(err))
+			api.RespondError(ctx, http.StatusForbidden, err)
 			return
 		}
-		logger.Error().Msgf("Error updating storage location: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
+		appCtx.Logger.Error().Msgf("Error updating storage location: %s", err)
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -165,35 +127,23 @@ func UpdateStorageLocation(ctx *gin.Context) {
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/storage-locations/:id [delete]
-func DeleteStorageLocation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	locationID, ok := parseUintParam(ctx, logger, "id", "location ID")
+func DeleteStorageLocation(ctx *gin.Context, appCtx *AppContext) {
+	locationID, ok := parseUintParam(ctx, appCtx.Logger, "id", "location ID")
 	if !ok {
 		return
 	}
 
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	if err := repos.StorageLocations.Delete(locationID, userID); err != nil {
+	if err := appCtx.Repos.StorageLocations.Delete(locationID, appCtx.UserID); err != nil {
 		if err == errors.ErrStorageLocationNotFound {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
+			api.RespondError(ctx, http.StatusNotFound, err)
 			return
 		}
 		if err == errors.ErrStorageLocationNotOwned {
-			ctx.JSON(http.StatusForbidden, api.Error(err))
+			api.RespondError(ctx, http.StatusForbidden, err)
 			return
 		}
-		logger.Error().Msgf("Error deleting storage location: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		appCtx.Logger.Error().Msgf("Error deleting storage location: %s", err)
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 

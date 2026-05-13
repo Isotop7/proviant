@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
@@ -110,22 +111,19 @@ func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
 
 func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 	if message == errEmailNotVerified.Error() {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-			"code":    "EMAIL_NOT_VERIFIED",
-			"message": "Please verify your email address before logging in.",
-		})
+		api.RespondError(ctx, http.StatusForbidden, errEmailNotVerified)
 		return
 	}
 
 	failedUserID, failedUserIDExists := ctx.Get("failedUserID")
 	if !failedUserIDExists {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": MsgInvalidCredentials})
+		api.RespondError(ctx, http.StatusUnauthorized, errors.New("invalid credentials"))
 		return
 	}
 
 	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": MsgInvalidCredentials})
+		api.RespondError(ctx, http.StatusUnauthorized, errors.New("invalid credentials"))
 		return
 	}
 
@@ -136,16 +134,13 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 
 	locked, remaining := userRepo.IsAccountLocked(failedUserID.(uint), maxLoginAttempts, lockoutDurationMins)
 	if !locked {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": MsgInvalidCredentials})
+		api.RespondError(ctx, http.StatusUnauthorized, errors.New("invalid credentials"))
 		return
 	}
 
 	retryAfter := int(remaining.Seconds())
 	ctx.Header("Retry-After", strconv.Itoa(retryAfter))
-	ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-		"code":    "ACCOUNT_LOCKED",
-		"message": "Too many failed login attempts. Account is temporarily locked.",
-	})
+	api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many failed login attempts, account is temporarily locked"))
 }
 
 func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string) {

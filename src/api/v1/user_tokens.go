@@ -1,44 +1,31 @@
 package v1
 
 import (
+	stderrors "errors"
 	"net/http"
 	"strconv"
 	"time"
 
-	v1api "codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/util"
+	apperrors "codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
-func CreateUserToken(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	var req api.CreateTokenRequest
+func CreateUserToken(ctx *gin.Context, appCtx *AppContext) {
+	var req apiModel.CreateTokenRequest
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, v1api.InvalidInputErrorWithDetail(err.Error()))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(err.Error()))
 		return
 	}
 
 	rawToken, err := controllers.GeneratePAT()
 	if err != nil {
-		logger.Error().Msg(err.Error())
-		ctx.JSON(http.StatusInternalServerError, v1api.InternalError())
+		appCtx.Logger.Error().Msg(err.Error())
+		api.RespondError(ctx, http.StatusInternalServerError, stderrors.New("failed to generate token"))
 		return
 	}
 
@@ -48,20 +35,20 @@ func CreateUserToken(ctx *gin.Context) {
 	if req.ExpiresAt != nil && *req.ExpiresAt != "" {
 		parsed, err := time.Parse(time.RFC3339, *req.ExpiresAt)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, v1api.InvalidInputErrorWithDetail("expires_at must be in RFC3339 format"))
+			ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("expires_at must be in RFC3339 format"))
 			return
 		}
 		expiresAt = &parsed
 	}
 
-	pat, err := repos.PATs.CreatePAT(userID, req.Name, tokenHash, expiresAt, req.Scopes)
+	pat, err := appCtx.Repos.PATs.CreatePAT(appCtx.UserID, req.Name, tokenHash, expiresAt, req.Scopes)
 	if err != nil {
-		logger.Error().Msg(err.Error())
-		ctx.JSON(http.StatusInternalServerError, v1api.InternalError())
+		appCtx.Logger.Error().Msg(err.Error())
+		api.RespondError(ctx, http.StatusInternalServerError, stderrors.New("failed to create token"))
 		return
 	}
 
-	resp := api.CreateTokenResponse{
+	resp := apiModel.CreateTokenResponse{
 		Token:  rawToken,
 		Name:   pat.Name,
 		Scopes: pat.Scopes,
@@ -74,29 +61,17 @@ func CreateUserToken(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, resp)
 }
 
-func ListUserTokens(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	pats, err := repos.PATs.GetPATsByUserID(userID)
+func ListUserTokens(ctx *gin.Context, appCtx *AppContext) {
+	pats, err := appCtx.Repos.PATs.GetPATsByUserID(appCtx.UserID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, v1api.InternalError())
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	tokens := make([]api.TokenResponse, 0, len(pats))
+	tokens := make([]apiModel.TokenResponse, 0, len(pats))
 	for i := range pats {
 		pat := &pats[i]
-		token := api.TokenResponse{
+		token := apiModel.TokenResponse{
 			ID:     pat.ID,
 			Name:   pat.Name,
 			Scopes: pat.Scopes,
@@ -116,36 +91,24 @@ func ListUserTokens(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, tokens)
 }
 
-func DeleteUserToken(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func DeleteUserToken(ctx *gin.Context, appCtx *AppContext) {
 	patIDStr := ctx.Param("id")
 	patIDRaw, err := strconv.ParseUint(patIDStr, 10, 64)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, v1api.InvalidInputErrorWithDetail("token ID must be a valid unsigned integer"))
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("token ID must be a valid unsigned integer"))
 		return
 	}
 	patID := uint(patIDRaw)
 
-	if err := repos.PATs.DeletePAT(patID, userID); err != nil {
+	if err := appCtx.Repos.PATs.DeletePAT(patID, appCtx.UserID); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, v1api.Error(errors.ErrPATNotFound))
+			api.RespondError(ctx, http.StatusNotFound, apperrors.ErrPATNotFound)
 			return
 		}
-		logger.Error().Msg(err.Error())
-		ctx.JSON(http.StatusInternalServerError, v1api.DeleteFailedError())
+		appCtx.Logger.Error().Msg(err.Error())
+		api.RespondError(ctx, http.StatusInternalServerError, stderrors.New("failed to delete token"))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, v1api.APIResponse{Message: "token deleted"})
+	ctx.JSON(http.StatusOK, api.APIResponse{Message: "token deleted"})
 }

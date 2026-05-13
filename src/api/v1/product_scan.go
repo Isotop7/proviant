@@ -1,8 +1,8 @@
-// v1 implements version 1 of the proviant API
 package v1
 
 import (
 	"context"
+	"errors"
 	"image"
 
 	// Import for image decoding
@@ -16,7 +16,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -39,9 +39,8 @@ import (
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/scan [post]
-func ScanProduct(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
+	logger := appCtx.Logger
 
 	// Create variables
 	var decodedBarcode string
@@ -59,14 +58,14 @@ func ScanProduct(ctx *gin.Context) {
 		file, formErr := ctx.FormFile("image")
 		if formErr != nil {
 			logger.Error().Msgf("Error reading image from body: %s", formErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 			decodingProcessChannel <- false
 			return
 		}
 
 		proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
 		if file.Size > int64(proviantConfig.Server.MaxUploadSizeMB)*1024*1024 {
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrFileTooLarge))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrFileTooLarge)
 			decodingProcessChannel <- false
 			return
 		}
@@ -75,7 +74,7 @@ func ScanProduct(ctx *gin.Context) {
 		src, openErr := file.Open()
 		if openErr != nil {
 			logger.Error().Msgf("Error opening file: %s", openErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 			decodingProcessChannel <- false
 			return
 		}
@@ -84,7 +83,7 @@ func ScanProduct(ctx *gin.Context) {
 		img, format, decodeErr := image.Decode(src)
 		if decodeErr != nil {
 			logger.Error().Msgf("Error decoding image as type %s: %s", format, decodeErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 			decodingProcessChannel <- false
 			return
 		} else {
@@ -99,7 +98,7 @@ func ScanProduct(ctx *gin.Context) {
 		bmp, bmpErr := gozxing.NewBinaryBitmapFromImage(convertedImage)
 		if bmpErr != nil {
 			logger.Error().Msgf("Error converting image to bitmap: %s", bmpErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 			decodingProcessChannel <- false
 			return
 		}
@@ -116,7 +115,7 @@ func ScanProduct(ctx *gin.Context) {
 		code, scanErr := scanner.Decode(bmp, hints)
 		if scanErr != nil {
 			logger.Error().Msgf("Error decoding image when finding barcode: %s", scanErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 			return
 		} else {
 			// If barcode is found, return it
@@ -130,7 +129,7 @@ func ScanProduct(ctx *gin.Context) {
 	select {
 	case <-decodingContext.Done():
 		// Timeout was reached, error is returned
-		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrBarcodeDecodeTimeoutExceeded))
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrBarcodeDecodeTimeoutExceeded)
 		return
 	case success := <-decodingProcessChannel:
 		// Timeout was not reached and channel signaled success on decoding barcode
@@ -141,7 +140,7 @@ func ScanProduct(ctx *gin.Context) {
 	}
 
 	// Return if timeout was not reached but channel did not signal success
-	ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+	api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 }
 
 // GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode,
@@ -157,45 +156,38 @@ func ScanProduct(ctx *gin.Context) {
 // @Failure      500  {object}  api.APIResponse
 // @Failure      502  {object}  api.APIResponse
 // @Router       /api/v1/products/openfoodfacts/{barcode} [get]
-func GetOpenFoodFactsData(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
+func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 	barcode := ctx.Param("barcode")
 	if barcode == "" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
-		return
-	}
-
-	dbHandle, ok := mustGetDB(ctx, logger)
-	if !ok {
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("barcode missing"))
 		return
 	}
 
 	offacntrl, offaOk := ctx.MustGet("offacntrl").(*controllers.OpenFoodFactsAPIController)
 	if !offaOk {
-		logger.Error().Msg("Failed to get OpenFoodFacts controller from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get controller from context"})
+		appCtx.Logger.Error().Msg("Failed to get OpenFoodFacts controller from context")
+		api.RespondError(ctx, http.StatusInternalServerError, errors.New("failed to get controller from context"))
 		return
 	}
 
-	productRepo := database.NewProductRepository(dbHandle)
+	productRepo := database.NewProductRepository(appCtx.DB)
 
 	if offacntrl.Configuration.CacheEnabled {
 		cached, cacheErr := productRepo.GetOpenFoodFactsCacheByBarcode(barcode)
 		if cacheErr == nil {
-			logger.Info().Msgf("Cache hit for barcode '%s'", barcode)
+			appCtx.Logger.Info().Msgf("Cache hit for barcode '%s'", barcode)
 			ctx.JSON(http.StatusOK, cached)
 			return
 		}
 		if cacheErr != gorm.ErrRecordNotFound {
-			logger.Warn().Msgf("Cache lookup error for barcode '%s': %s", barcode, cacheErr)
+			appCtx.Logger.Warn().Msgf("Cache lookup error for barcode '%s': %s", barcode, cacheErr)
 		}
 	}
 
 	product, apiErr := offacntrl.GetDataset(barcode)
 	if apiErr != nil {
-		logger.Error().Msgf("OpenFoodFacts API error for barcode '%s': %s", barcode, apiErr)
-		ctx.JSON(http.StatusBadGateway, api.APIResponse{Message: "Error fetching product data from OpenFoodFacts"})
+		appCtx.Logger.Error().Msgf("OpenFoodFacts API error for barcode '%s': %s", barcode, apiErr)
+		api.RespondError(ctx, http.StatusBadGateway, errors.New("error fetching product data from OpenFoodFacts"))
 		return
 	}
 
@@ -210,7 +202,7 @@ func GetOpenFoodFactsData(ctx *gin.Context) {
 	}
 
 	if offacntrl.Configuration.CacheEnabled {
-		storeCacheEntry(productRepo, offacntrl, logger, barcode, &entry)
+		storeCacheEntry(productRepo, offacntrl, appCtx.Logger, barcode, &entry)
 	}
 
 	ctx.JSON(http.StatusOK, entry)

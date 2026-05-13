@@ -4,20 +4,20 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
@@ -33,43 +33,31 @@ import (
 // @Failure       	404  {object}  api.APIResponse
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user [patch]
-func UpdateUser(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func UpdateUser(ctx *gin.Context, appCtx *AppContext) {
 	var req struct {
 		DisplayName string `json:"displayName"`
 		MailAddress string `json:"mailAddress" binding:"required,email"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		appCtx.Logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
-	user, err := repos.Users.GetUserByID(userID)
+	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
-		logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
-		ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
+		appCtx.Logger.Warn().Msgf(apperrors.ErrInvalidUserIDWrapperWithMessage, appCtx.UserID, err)
+		api.RespondError(ctx, http.StatusNotFound, fmt.Errorf(apperrors.ErrInvalidUserIDWrapper, appCtx.UserID))
 		return
 	}
 
 	user.DisplayName = req.DisplayName
 	user.MailAddress = req.MailAddress
 
-	updateErr := repos.Users.UpdateUser(user.ID, &user)
+	updateErr := appCtx.Repos.Users.UpdateUser(user.ID, &user)
 	if updateErr != nil {
-		logger.Error().Msgf("Error saving user: %s", updateErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
+		appCtx.Logger.Error().Msgf("Error saving user: %s", updateErr)
+		api.RespondError(ctx, http.StatusInternalServerError, updateErr)
 		return
 	}
 
@@ -88,25 +76,11 @@ func UpdateUser(ctx *gin.Context) {
 // @Failure       	404  {object}  api.APIResponse
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user/password [post]
-func UpdateUserPassword(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	// Get and parse body to user
+func UpdateUserPassword(ctx *gin.Context, appCtx *AppContext) {
 	var login authentication.Login
 	if err := ctx.ShouldBindJSON(&login); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		appCtx.Logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
@@ -128,34 +102,30 @@ func UpdateUserPassword(ctx *gin.Context) {
 		passwordValidator = authentication.DefaultPasswordValidator()
 	}
 
-	// Check for valid login credentials
 	validationErr := login.IsValidWithValidator(passwordValidator)
 	if validationErr != nil {
-		logger.Error().Msg(validationErr.Error())
-		go recordPasswordChangeFailed(ctx, userID, validationErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(validationErr))
+		appCtx.Logger.Error().Msg(validationErr.Error())
+		go recordPasswordChangeFailed(ctx, appCtx.UserID, validationErr.Error())
+		api.RespondError(ctx, http.StatusBadRequest, validationErr)
 		return
 	}
 
-	updateErr := repos.Users.UpdateUserPassword(userID, &login)
+	updateErr := appCtx.Repos.Users.UpdateUserPassword(appCtx.UserID, &login)
 
 	switch updateErr {
-	// No error => password was updated
 	case nil:
-		go recordPasswordChangeSuccess(ctx, userID)
+		go recordPasswordChangeSuccess(ctx, appCtx.UserID)
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Password updated"})
 		return
-	// Requested user was not found
 	case gorm.ErrRecordNotFound:
-		logger.Error().Msgf("User with ID '%d' was not found in database", userID)
-		go recordPasswordChangeFailed(ctx, userID, "user_not_found")
-		ctx.JSON(http.StatusNotFound, api.APIResponse{Message: fmt.Sprintf(errors.ErrInvalidUserIDWrapper, userID)})
+		appCtx.Logger.Error().Msgf("User with ID '%d' was not found in database", appCtx.UserID)
+		go recordPasswordChangeFailed(ctx, appCtx.UserID, "user_not_found")
+		api.RespondError(ctx, http.StatusNotFound, fmt.Errorf(apperrors.ErrInvalidUserIDWrapper, appCtx.UserID))
 		return
-	// Unspecified error
 	default:
-		logger.Error().Msgf("Error updating password: %s", updateErr)
-		go recordPasswordChangeFailed(ctx, userID, updateErr.Error())
-		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
+		appCtx.Logger.Error().Msgf("Error updating password: %s", updateErr)
+		go recordPasswordChangeFailed(ctx, appCtx.UserID, updateErr.Error())
+		api.RespondError(ctx, http.StatusInternalServerError, updateErr)
 		return
 	}
 }
@@ -170,31 +140,18 @@ func UpdateUserPassword(ctx *gin.Context) {
 // @Failure       	400  {object}  api.APIResponse
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user/notification-preferences [get]
-func GetUserNotificationPreferences(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	user, getErr := repos.Users.GetUserByID(userID)
+func GetUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext) {
+	user, getErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if getErr != nil {
-		logger.Error().Msgf("Error getting user: %s", getErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(getErr))
+		appCtx.Logger.Error().Msgf("Error getting user: %s", getErr)
+		api.RespondError(ctx, http.StatusInternalServerError, getErr)
 		return
 	}
 
 	prefs := user.NotificationPreferences
 	prefs.TelegramLinked = prefs.TelegramChatID != ""
 	prefs.TelegramBotConfigured = prefs.TelegramBotToken != ""
-	prefs.TelegramBotToken = "" // never expose raw token via API
+	prefs.TelegramBotToken = ""
 	ctx.JSON(http.StatusOK, prefs)
 }
 
@@ -208,48 +165,33 @@ func GetUserNotificationPreferences(ctx *gin.Context) {
 // @Failure       	400  {object}  api.APIResponse
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user/notification-preferences [post]
-func UpdateUserNotificationPreferences(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func UpdateUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext) {
 	var preferences authentication.NotificationPreferences
 	if err := ctx.ShouldBindJSON(&preferences); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		appCtx.Logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
-	// Validate threshold
 	if preferences.NotificationThresholdDays < 0 {
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNotificationInvalidThreshold))
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNotificationInvalidThreshold)
 		return
 	}
 
 	if err := validateNtfyPreferences(&preferences); err != nil {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: err.Error()})
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
-	user, getErr := repos.Users.GetUserByID(userID)
+	user, getErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if getErr != nil {
-		logger.Error().Msgf("Error getting user: %s", getErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(getErr))
+		appCtx.Logger.Error().Msgf("Error getting user: %s", getErr)
+		api.RespondError(ctx, http.StatusInternalServerError, getErr)
 		return
 	}
 
-	// Validate Telegram: can only enable if already linked
 	if preferences.TelegramEnabled && user.NotificationPreferences.TelegramChatID == "" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "link your Telegram account first before enabling Telegram notifications"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("link your Telegram account first before enabling Telegram notifications"))
 		return
 	}
 
@@ -257,14 +199,14 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 
 	user.NotificationPreferences = preferences
 
-	updateErr := repos.Users.UpdateUser(user.ID, &user)
+	updateErr := appCtx.Repos.Users.UpdateUser(user.ID, &user)
 	if updateErr != nil {
-		logger.Error().Msgf("Error updating notification preferences: %s", updateErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
+		appCtx.Logger.Error().Msgf("Error updating notification preferences: %s", updateErr)
+		api.RespondError(ctx, http.StatusInternalServerError, updateErr)
 		return
 	}
 
-	manageUserTelegramPoller(ctx, userID, tokenChanged, newToken)
+	manageUserTelegramPoller(ctx, appCtx.UserID, tokenChanged, newToken)
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Notification preferences updated successfully"})
 }
@@ -277,36 +219,24 @@ func UpdateUserNotificationPreferences(ctx *gin.Context) {
 // @Success       	200  {object}  map[string]string
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user/telegram-link-token [post]
-func GenerateTelegramLinkToken(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func GenerateTelegramLinkToken(ctx *gin.Context, appCtx *AppContext) {
 	tokenBytes := make([]byte, 16)
 	if _, err := rand.Read(tokenBytes); err != nil {
-		logger.Error().Msgf("Failed to generate telegram link token: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		appCtx.Logger.Error().Msgf("Failed to generate telegram link token: %s", err)
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 	token := hex.EncodeToString(tokenBytes)
 
-	if err := repos.Notifications.SetTelegramLinkToken(userID, token); err != nil {
-		logger.Error().Msgf("Failed to save telegram link token: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+	if err := appCtx.Repos.Notifications.SetTelegramLinkToken(appCtx.UserID, token); err != nil {
+		appCtx.Logger.Error().Msgf("Failed to save telegram link token: %s", err)
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
 	botUsername := ""
 	if notificationController, ok := getNotificationController(ctx); ok {
-		botUsername = notificationController.GetUserTelegramBotUsername(userID)
+		botUsername = notificationController.GetUserTelegramBotUsername(appCtx.UserID)
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{

@@ -25,6 +25,7 @@ func TestUpdateUser(t *testing.T) {
 		m.Users.User = authentication.User{Username: "testuser", MailAddress: "test@example.com"}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
 		reqBody := map[string]string{
 			"displayName": "Updated Name",
@@ -38,7 +39,7 @@ func TestUpdateUser(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		UpdateUser(ctx)
+		UpdateUser(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -49,6 +50,7 @@ func TestUpdateUser(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
 		reqBody := map[string]string{"mailAddress": "invalid-email"}
 		body, _ := json.Marshal(reqBody)
@@ -59,7 +61,7 @@ func TestUpdateUser(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		UpdateUser(ctx)
+		UpdateUser(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -71,6 +73,7 @@ func TestUpdateUser(t *testing.T) {
 		m.Users.Err = gorm.ErrRecordNotFound
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 999, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 999)
 
 		reqBody := map[string]string{"mailAddress": "test@example.com"}
 		body, _ := json.Marshal(reqBody)
@@ -81,7 +84,7 @@ func TestUpdateUser(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		UpdateUser(ctx)
+		UpdateUser(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
@@ -97,6 +100,7 @@ func TestUpdateUserPassword(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
 		loginData := authentication.Login{
 			Username: "testuser",
@@ -110,7 +114,7 @@ func TestUpdateUserPassword(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		UpdateUserPassword(ctx)
+		UpdateUserPassword(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
@@ -121,6 +125,7 @@ func TestUpdateUserPassword(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
 
 		loginData := authentication.Login{
 			Username: "",
@@ -134,7 +139,7 @@ func TestUpdateUserPassword(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		UpdateUserPassword(ctx)
+		UpdateUserPassword(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
@@ -146,6 +151,7 @@ func TestUpdateUserPassword(t *testing.T) {
 		m.Users.Err = gorm.ErrRecordNotFound
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 999, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 999)
 
 		loginData := authentication.Login{
 			Username: "testuser",
@@ -159,7 +165,7 @@ func TestUpdateUserPassword(t *testing.T) {
 		}
 		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
-		UpdateUserPassword(ctx)
+		UpdateUserPassword(ctx, appCtx)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)

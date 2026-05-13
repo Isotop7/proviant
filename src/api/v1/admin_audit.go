@@ -5,10 +5,8 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 )
 
 // GetAuditLogs returns the audit log entries.
@@ -22,15 +20,8 @@ import (
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/admin/audit-log [get]
-func GetAuditLogs(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	limit, ok := parseLimitParam(ctx, logger)
+func GetAuditLogs(ctx *gin.Context, appCtx *AppContext) {
+	limit, ok := parseLimitParam(ctx, appCtx.Logger)
 	if !ok {
 		return
 	}
@@ -40,13 +31,13 @@ func GetAuditLogs(ctx *gin.Context) {
 	var err error
 
 	if dateParam != "" {
-		logs, err = repos.AuditLogs.GetAuditLogsByDate(ctx.Request.Context(), limit, dateParam)
+		logs, err = appCtx.Repos.AuditLogs.GetAuditLogsByDate(ctx.Request.Context(), limit, dateParam)
 	} else {
-		logs, err = repos.AuditLogs.GetAuditLogs(ctx.Request.Context(), limit)
+		logs, err = appCtx.Repos.AuditLogs.GetAuditLogs(ctx.Request.Context(), limit)
 	}
 
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to fetch audit logs")
+		appCtx.Logger.Error().Err(err).Msg("failed to fetch audit logs")
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to fetch audit logs"})
 		return
 	}

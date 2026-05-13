@@ -1,0 +1,94 @@
+{{ define "_settings_profile" }}
+<div class="card card-section mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+        <div class="d-flex align-items-center gap-2">
+            <div class="icon-chip" aria-hidden="true">
+                <i class="bi bi-person"></i>
+            </div>
+            <h2 class="h5 mb-0 fw-semibold">Personal Details</h2>
+        </div>
+        <button type="button" class="btn btn-proviant-primary" id="btnUpdatePersonalDetails">
+            Update
+        </button>
+    </div>
+    <div class="card-body px-4 py-4">
+        <form id="userSettings" novalidate>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="inputDisplayName" class="form-label fw-medium">Display Name</label>
+                    <input type="text" class="form-control" id="inputDisplayName"
+                           value="{{ .User.DisplayName }}" autocomplete="nickname"
+                           placeholder="Leave blank to use your mail address">
+                    <div class="form-text">Shown instead of your mail address throughout the app.</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="inputMailAddress" class="form-label fw-medium">
+                        Email Address <span class="text-danger" aria-hidden="true">*</span>
+                    </label>
+                    <input type="email" class="form-control" id="inputMailAddress"
+                           value="{{ .User.MailAddress }}" aria-required="true" autocomplete="email">
+                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please enter an email address.</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="inputUsername" class="form-label fw-medium">Username</label>
+                    <input type="text" class="form-control" id="inputUsername"
+                           value="{{ .User.Username }}" readonly autocomplete="username">
+                    <div class="form-text text-secondary-custom">Login credential — cannot be changed here.</div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card card-section mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+        <div class="d-flex align-items-center gap-2">
+            <div class="icon-chip" aria-hidden="true">
+                <i class="bi bi-lock"></i>
+            </div>
+            <h2 class="h5 mb-0 fw-semibold">Password</h2>
+        </div>
+        <button class="btn btn-proviant-primary" type="button" id="btnUpdatePassword">
+            Update
+        </button>
+    </div>
+    <div class="card-body px-4 py-4">
+        <form id="passwordUpdate" novalidate>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="inputPassword" class="form-label fw-medium">
+                        New Password <span class="text-danger" aria-hidden="true">*</span>
+                    </label>
+                    <input id="inputPassword" type="password" class="form-control"
+                           aria-required="true" autocomplete="new-password"
+                           data-min-length="{{ .PasswordMinLength }}"
+                           data-require-uppercase="{{ .PasswordRequireUppercase }}"
+                           data-require-digit="{{ .PasswordRequireDigit }}"
+                           data-require-special="{{ .PasswordRequireSpecial }}">
+                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please enter a new password.</div>
+                    <ul class="list-unstyled small mt-1">
+                        <li id="req-length"><i class="bi bi-circle me-1"></i>At least {{ .PasswordMinLength }} characters</li>
+                        {{ if .PasswordRequireUppercase }}
+                        <li id="req-upper"><i class="bi bi-circle me-1"></i>At least one uppercase letter</li>
+                        {{ end }}
+                        {{ if .PasswordRequireDigit }}
+                        <li id="req-digit"><i class="bi bi-circle me-1"></i>At least one number</li>
+                        {{ end }}
+                        {{ if .PasswordRequireSpecial }}
+                        <li id="req-special"><i class="bi bi-circle me-1"></i>At least one special character</li>
+                        {{ end }}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <label for="inputPasswordVerification" class="form-label fw-medium">
+                        Confirm Password <span class="text-danger" aria-hidden="true">*</span>
+                    </label>
+                    <input id="inputPasswordVerification" type="password" class="form-control"
+                           aria-required="true" autocomplete="new-password">
+                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Passwords must match.</div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{{ end }}

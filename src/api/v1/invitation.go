@@ -1,18 +1,20 @@
 package v1
 
 import (
+	apperrors "codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/database"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
 // CreateInvitation creates a new household invitation and sends an email to the recipient.
@@ -28,77 +30,64 @@ import (
 // @Failure 409 {object} api.APIResponse
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/household/invitations [post]
-func CreateInvitation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func CreateInvitation(ctx *gin.Context, appCtx *AppContext) {
 	var req createInvitationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Warn().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		appCtx.Logger.Warn().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
-	// Get user's household
-	user, err := repos.Users.GetUserByID(userID)
+	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
-		logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
+		appCtx.Logger.Warn().Msgf(apperrors.ErrInvalidUserIDWrapperWithMessage, appCtx.UserID, err)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserID)
 		return
 	}
 
 	if user.HouseholdID == 0 {
-		logger.Warn().Msgf("User %d has no household", userID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "user has no household"})
+		appCtx.Logger.Warn().Msgf("User %d has no household", appCtx.UserID)
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("user has no household"))
 		return
 	}
 
-	invitation, err := repos.Invitations.CreateInvitation(user.HouseholdID, userID, req.Email)
+	var invitation database.HouseholdInvitation
+	err = appCtx.DB.Transaction(func(tx *gorm.DB) error {
+		createErr := error(nil)
+		invitation, createErr = appCtx.Repos.Invitations.CreateInvitationTx(tx, user.HouseholdID, appCtx.UserID, req.Email)
+		if createErr != nil {
+			return createErr
+		}
+
+		proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+		notificationController, _ := ctx.MustGet(util.ContextKeyNotificationController).(*controllers.NotificationController)
+		if notificationController != nil {
+			inviterName := user.EffectiveName()
+			householdName := fmt.Sprintf("Household #%d", user.HouseholdID)
+			if household, householdErr := appCtx.Repos.Users.GetHouseholdByID(user.HouseholdID); householdErr == nil {
+				householdName = household.Name
+			}
+			if emailErr := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL); emailErr != nil {
+				return emailErr
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		switch err {
-		case errors.ErrDuplicateInvitation:
-			logger.Error().Msgf("Duplicate invitation for email %s: %s", req.Email, err)
-			ctx.JSON(http.StatusConflict, api.Error(err))
+		case apperrors.ErrDuplicateInvitation:
+			appCtx.Logger.Error().Msgf("Duplicate invitation for email %s: %s", req.Email, err)
+			api.RespondError(ctx, http.StatusConflict, err)
 			return
-		case errors.ErrInvitationNotAuthorized:
-			logger.Error().Msgf("User %d not authorized to invite to household %d: %s", userID, user.HouseholdID, err)
-			ctx.JSON(http.StatusForbidden, api.Error(err))
+		case apperrors.ErrInvitationNotAuthorized:
+			appCtx.Logger.Error().Msgf("User %d not authorized to invite to household %d: %s", appCtx.UserID, user.HouseholdID, err)
+			api.RespondError(ctx, http.StatusForbidden, err)
 			return
 		default:
-			logger.Error().Msgf("Error creating invitation: %s", err)
-			ctx.JSON(http.StatusInternalServerError, api.Error(err))
+			appCtx.Logger.Error().Msgf("Error creating invitation: %s", err)
+			api.RespondError(ctx, http.StatusInternalServerError, err)
 			return
 		}
-	}
-
-	// Send invitation email via NotificationController
-	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
-	notificationController, _ := ctx.MustGet(util.ContextKeyNotificationController).(*controllers.NotificationController)
-	if notificationController != nil {
-		inviterName := user.EffectiveName()
-		household, householdErr := repos.Users.GetHouseholdByID(user.HouseholdID)
-		householdName := fmt.Sprintf("Household #%d", user.HouseholdID)
-		if householdErr == nil {
-			householdName = household.Name
-		}
-
-		if err := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL); err != nil {
-			logger.Error().Msgf("Failed to send invitation email to %s: %s", req.Email, err)
-			// Don't fail the request, invitation is still created; retry handled by dispatcher
-		} else {
-			logger.Info().Msgf("Invitation email sent to %s", req.Email)
-		}
-	} else {
-		logger.Warn().Msg("InvitationController not available, email will be sent by retry dispatcher")
 	}
 
 	ctx.JSON(http.StatusCreated, api.APIResponse{Message: "Invitation created successfully"})
@@ -114,35 +103,23 @@ func CreateInvitation(ctx *gin.Context) {
 // @Failure 404 {object} api.APIResponse
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/household/invitations [get]
-func GetInvitations(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
-	user, err := repos.Users.GetUserByID(userID)
+func GetInvitations(ctx *gin.Context, appCtx *AppContext) {
+	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
-		logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, userID, err)
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
+		appCtx.Logger.Warn().Msgf(apperrors.ErrInvalidUserIDWrapperWithMessage, appCtx.UserID, err)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserID)
 		return
 	}
 
 	if user.HouseholdID == 0 {
-		logger.Error().Msgf("User %d has no household", userID)
-		ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "user has no household"})
+		appCtx.Logger.Error().Msgf("User %d has no household", appCtx.UserID)
+		api.RespondError(ctx, http.StatusNotFound, errors.New("user has no household"))
 		return
 	}
 
-	invitations, err := repos.Invitations.GetInvitationsForHousehold(user.HouseholdID, userID)
+	invitations, err := appCtx.Repos.Invitations.GetInvitationsForHousehold(user.HouseholdID, appCtx.UserID)
 	if err != nil {
-		logger.Error().Msgf("Error fetching invitations: %s", err)
+		appCtx.Logger.Error().Msgf("Error fetching invitations: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
@@ -162,40 +139,28 @@ func GetInvitations(ctx *gin.Context) {
 // @Failure 404 {object} api.APIResponse
 // @Failure 500 {object} api.APIResponse
 // @Router /api/v1/household/invitations/{id} [delete]
-func CancelInvitation(ctx *gin.Context) {
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	repos, ok := mustGetRepos(ctx, logger)
-	if !ok {
-		return
-	}
-
-	userID, ok := mustGetUserID(ctx, logger)
-	if !ok {
-		return
-	}
-
+func CancelInvitation(ctx *gin.Context, appCtx *AppContext) {
 	invitationIDStr := ctx.Param("id")
 	invitationID, err := strconv.ParseUint(invitationIDStr, 10, 64)
 	if err != nil {
-		logger.Warn().Msgf("Invalid invitation ID '%s': %s", invitationIDStr, err)
+		appCtx.Logger.Warn().Msgf("Invalid invitation ID '%s': %s", invitationIDStr, err)
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail("invitation ID must be a valid unsigned integer"))
 		return
 	}
 
-	if err := repos.Invitations.CancelInvitation(uint(invitationID), userID); err != nil {
+	if err := appCtx.Repos.Invitations.CancelInvitation(uint(invitationID), appCtx.UserID); err != nil {
 		switch err {
-		case errors.ErrInvitationNotFound:
-			logger.Error().Msgf("Invitation %d not found: %s", invitationID, err)
-			ctx.JSON(http.StatusNotFound, api.Error(err))
+		case apperrors.ErrInvitationNotFound:
+			appCtx.Logger.Error().Msgf("Invitation %d not found: %s", invitationID, err)
+			api.RespondError(ctx, http.StatusNotFound, err)
 			return
-		case errors.ErrInvitationNotAuthorized:
-			logger.Error().Msgf("User %d not authorized to cancel invitation %d: %s", userID, invitationID, err)
-			ctx.JSON(http.StatusForbidden, api.Error(err))
+		case apperrors.ErrInvitationNotAuthorized:
+			appCtx.Logger.Error().Msgf("User %d not authorized to cancel invitation %d: %s", appCtx.UserID, invitationID, err)
+			api.RespondError(ctx, http.StatusForbidden, err)
 			return
 		default:
-			logger.Error().Msgf("Error cancelling invitation: %s", err)
-			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+			appCtx.Logger.Error().Msgf("Error cancelling invitation: %s", err)
+			api.RespondError(ctx, http.StatusInternalServerError, err)
 			return
 		}
 	}

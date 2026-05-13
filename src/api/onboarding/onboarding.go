@@ -2,12 +2,13 @@
 package onboarding
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	modelsAPI "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/util"
 
@@ -30,14 +31,14 @@ func mustGetOnboardingContext(ctx *gin.Context) (*zerolog.Logger, *database.Repo
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID == 0 {
 		logger.Error().Msg(MsgFailedToExtract)
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Unauthorized"})
+		api.RespondError(ctx, http.StatusUnauthorized, errors.New("Unauthorized"))
 		return nil, nil, 0, false
 	}
 
 	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrDatabaseContextNotFound)
 		return nil, nil, 0, false
 	}
 
@@ -104,8 +105,8 @@ func UpdateOnboardingProfile(ctx *gin.Context) {
 		DisplayName string `json:"displayName"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf(errors.ErrParseBodyWrapper, err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		logger.Error().Msgf(apperrors.ErrParseBodyWrapper, err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
@@ -113,7 +114,7 @@ func UpdateOnboardingProfile(ctx *gin.Context) {
 	if displayName != "" {
 		if err := repos.Users.UpdateDisplayName(userID, displayName); err != nil {
 			logger.Error().Msgf("Failed to update display name: %s", err.Error())
-			ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to update display name"})
+			api.RespondError(ctx, http.StatusInternalServerError, errors.New("failed to update display name"))
 			return
 		}
 	}
@@ -148,20 +149,20 @@ func CreateOnboardingHousehold(ctx *gin.Context) {
 		Name string `json:"name" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Warn().Msgf(errors.ErrParseBodyWrapper, err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		logger.Warn().Msgf(apperrors.ErrParseBodyWrapper, err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Household name cannot be empty"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("household name cannot be empty"))
 		return
 	}
 
 	if err := repos.Households.CreateAndSwitchHousehold(userID, name); err != nil {
 		logger.Error().Msgf("Failed to create household: %s", err.Error())
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to create household"})
+		api.RespondError(ctx, http.StatusInternalServerError, errors.New("failed to create household"))
 		return
 	}
 
@@ -195,29 +196,29 @@ func JoinOnboardingByInvite(ctx *gin.Context) {
 		Token string `json:"token" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Warn().Msgf(errors.ErrParseBodyWrapper, err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		logger.Warn().Msgf(apperrors.ErrParseBodyWrapper, err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
 	user, err := repos.Users.GetUserByID(userID)
 	if err != nil {
 		logger.Error().Msgf("Failed to get user: %s", err.Error())
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		return
 	}
 
 	if err := repos.Invitations.AcceptInvitation(req.Token, user.MailAddress, userID); err != nil {
 		logger.Error().Msgf("Failed to accept invitation: %s", err.Error())
 		switch err {
-		case errors.ErrInvitationNotFound:
-			ctx.JSON(http.StatusNotFound, api.Error(err))
-		case errors.ErrInvitationExpired, errors.ErrInvitationAlreadyUsed, errors.ErrInvitationCancelled:
-			ctx.JSON(http.StatusConflict, api.Error(err))
-		case errors.ErrInvitationEmailMismatch:
-			ctx.JSON(http.StatusBadRequest, api.Error(err))
+		case apperrors.ErrInvitationNotFound:
+			api.RespondError(ctx, http.StatusNotFound, err)
+		case apperrors.ErrInvitationExpired, apperrors.ErrInvitationAlreadyUsed, apperrors.ErrInvitationCancelled:
+			api.RespondError(ctx, http.StatusConflict, err)
+		case apperrors.ErrInvitationEmailMismatch:
+			api.RespondError(ctx, http.StatusBadRequest, err)
 		default:
-			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+			api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		}
 		return
 	}
@@ -248,14 +249,14 @@ func GetAvailableHouseholds(ctx *gin.Context) {
 	user, userErr := repos.Users.GetUserByID(userID)
 	if userErr != nil {
 		logger.Error().Msgf("Failed to get user: %s", userErr.Error())
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get user"})
+		api.RespondError(ctx, http.StatusInternalServerError, errors.New("failed to get user"))
 		return
 	}
 
 	households, err := repos.Households.GetPublicHouseholds(user.HouseholdID)
 	if err != nil {
 		logger.Error().Msgf("Failed to get households: %s", err.Error())
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get households"})
+		api.RespondError(ctx, http.StatusInternalServerError, errors.New("failed to get households"))
 		return
 	}
 
@@ -293,14 +294,14 @@ func ApplyForHousehold(ctx *gin.Context) {
 		HouseholdID uint `json:"householdId" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf(errors.ErrParseBodyWrapper, err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		logger.Error().Msgf(apperrors.ErrParseBodyWrapper, err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
 	if req.HouseholdID == 0 {
 		logger.Error().Msg("Household ID is required")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Household ID is required"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("household ID is required"))
 		return
 	}
 
@@ -308,12 +309,12 @@ func ApplyForHousehold(ctx *gin.Context) {
 	if err != nil {
 		logger.Error().Msgf("Failed to apply for household: %s", err.Error())
 		switch err {
-		case errors.ErrHouseholdNotFound:
-			ctx.JSON(http.StatusNotFound, api.Error(err))
-		case errors.ErrApplicationAlreadyPending:
-			ctx.JSON(http.StatusConflict, api.Error(err))
+		case apperrors.ErrHouseholdNotFound:
+			api.RespondError(ctx, http.StatusNotFound, err)
+		case apperrors.ErrApplicationAlreadyPending:
+			api.RespondError(ctx, http.StatusConflict, err)
 		default:
-			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+			api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		}
 		return
 	}
@@ -345,7 +346,7 @@ func CompleteOnboarding(ctx *gin.Context) {
 	err := repos.Users.MarkOnboardingComplete(userID)
 	if err != nil {
 		logger.Error().Msgf("Failed to complete onboarding: %s", err.Error())
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to complete onboarding"})
+		api.RespondError(ctx, http.StatusInternalServerError, errors.New("failed to complete onboarding"))
 		return
 	}
 

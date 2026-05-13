@@ -8,7 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	proerrors "codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/api"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/util"
 )
@@ -61,9 +62,7 @@ func CSRFMiddleware(cfg *configuration.ProviantConfiguration) gin.HandlerFunc {
 		if isStateMutatingMethod(ctx.Request.Method) {
 			headerToken := ctx.GetHeader(csrfHeaderName)
 			if cookieErr != nil || headerToken == "" || !hmac.Equal([]byte(headerToken), []byte(cookieToken)) {
-				ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-					"message": proerrors.ErrCSRFTokenInvalid.Error(),
-				})
+				api.RespondError(ctx, http.StatusForbidden, apperrors.ErrCSRFTokenInvalid)
 				return
 			}
 		}
