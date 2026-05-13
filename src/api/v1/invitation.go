@@ -1,13 +1,14 @@
 package v1
 
 import (
+	"errors"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/util"
 
@@ -30,38 +31,38 @@ import (
 func CreateInvitation(ctx *gin.Context, appCtx *AppContext) {
 	var req createInvitationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		appCtx.Logger.Warn().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
+		appCtx.Logger.Warn().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
 		return
 	}
 
 	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
-		appCtx.Logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, appCtx.UserID, err)
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
+		appCtx.Logger.Warn().Msgf(apperrors.ErrInvalidUserIDWrapperWithMessage, appCtx.UserID, err)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserID)
 		return
 	}
 
 	if user.HouseholdID == 0 {
 		appCtx.Logger.Warn().Msgf("User %d has no household", appCtx.UserID)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "user has no household"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("user has no household"))
 		return
 	}
 
 	invitation, err := appCtx.Repos.Invitations.CreateInvitation(user.HouseholdID, appCtx.UserID, req.Email)
 	if err != nil {
 		switch err {
-		case errors.ErrDuplicateInvitation:
+		case apperrors.ErrDuplicateInvitation:
 			appCtx.Logger.Error().Msgf("Duplicate invitation for email %s: %s", req.Email, err)
-			ctx.JSON(http.StatusConflict, api.Error(err))
+			api.RespondError(ctx, http.StatusConflict, err)
 			return
-		case errors.ErrInvitationNotAuthorized:
+		case apperrors.ErrInvitationNotAuthorized:
 			appCtx.Logger.Error().Msgf("User %d not authorized to invite to household %d: %s", appCtx.UserID, user.HouseholdID, err)
-			ctx.JSON(http.StatusForbidden, api.Error(err))
+			api.RespondError(ctx, http.StatusForbidden, err)
 			return
 		default:
 			appCtx.Logger.Error().Msgf("Error creating invitation: %s", err)
-			ctx.JSON(http.StatusInternalServerError, api.Error(err))
+			api.RespondError(ctx, http.StatusInternalServerError, err)
 			return
 		}
 	}
@@ -101,14 +102,14 @@ func CreateInvitation(ctx *gin.Context, appCtx *AppContext) {
 func GetInvitations(ctx *gin.Context, appCtx *AppContext) {
 	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
-		appCtx.Logger.Warn().Msgf(errors.ErrInvalidUserIDWrapperWithMessage, appCtx.UserID, err)
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
+		appCtx.Logger.Warn().Msgf(apperrors.ErrInvalidUserIDWrapperWithMessage, appCtx.UserID, err)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserID)
 		return
 	}
 
 	if user.HouseholdID == 0 {
 		appCtx.Logger.Error().Msgf("User %d has no household", appCtx.UserID)
-		ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "user has no household"})
+		api.RespondError(ctx, http.StatusNotFound, errors.New("user has no household"))
 		return
 	}
 
@@ -145,17 +146,17 @@ func CancelInvitation(ctx *gin.Context, appCtx *AppContext) {
 
 	if err := appCtx.Repos.Invitations.CancelInvitation(uint(invitationID), appCtx.UserID); err != nil {
 		switch err {
-		case errors.ErrInvitationNotFound:
+		case apperrors.ErrInvitationNotFound:
 			appCtx.Logger.Error().Msgf("Invitation %d not found: %s", invitationID, err)
-			ctx.JSON(http.StatusNotFound, api.Error(err))
+			api.RespondError(ctx, http.StatusNotFound, err)
 			return
-		case errors.ErrInvitationNotAuthorized:
+		case apperrors.ErrInvitationNotAuthorized:
 			appCtx.Logger.Error().Msgf("User %d not authorized to cancel invitation %d: %s", appCtx.UserID, invitationID, err)
-			ctx.JSON(http.StatusForbidden, api.Error(err))
+			api.RespondError(ctx, http.StatusForbidden, err)
 			return
 		default:
 			appCtx.Logger.Error().Msgf("Error cancelling invitation: %s", err)
-			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+			api.RespondError(ctx, http.StatusInternalServerError, err)
 			return
 		}
 	}

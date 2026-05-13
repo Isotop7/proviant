@@ -19,7 +19,11 @@
 // @externalDocs.url          https://swagger.io/resources/open-api/
 package api
 
-import "codeberg.org/isotop7/proviant/errors"
+import (
+	"github.com/gin-gonic/gin"
+
+	"codeberg.org/isotop7/proviant/errors"
+)
 
 var (
 	ResponseErrInvalidUserData           = APIResponse{Message: errors.ErrInvalidUserData.Error()}
@@ -91,4 +95,8 @@ func RestoreFailedError() APIResponse {
 		Message: "Failed to restore. Please try again.",
 		Action:  ActionTryAgain,
 	}
+}
+
+func RespondError(ctx *gin.Context, status int, err error) {
+	ctx.JSON(status, APIResponse{Message: err.Error()})
 }

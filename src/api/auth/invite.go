@@ -6,7 +6,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	"codeberg.org/isotop7/proviant/util"
 
@@ -34,7 +34,7 @@ func AcceptInvitation(ctx *gin.Context) {
 	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrDatabaseContextNotFound)
 		return
 	}
 
@@ -42,44 +42,44 @@ func AcceptInvitation(ctx *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserIDFromToken)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrUserIDFromToken)
 		return
 	}
 
 	var req acceptInvitationRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
+		logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
 	user, err := repos.Users.GetUserByID(userID)
 	if err != nil {
-		logger.Error().Msgf(errors.ErrInvalidUserIDWrapper, userID, err)
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidUserID))
+		logger.Error().Msgf(apperrors.ErrInvalidUserIDWrapper, userID, err)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserID)
 		return
 	}
 
 	if err := repos.Invitations.AcceptInvitation(req.Token, user.MailAddress, userID); err != nil {
 		switch err {
-		case errors.ErrInvitationNotFound:
+		case apperrors.ErrInvitationNotFound:
 			logger.Error().Msgf("Invitation not found: %s", err)
-			ctx.JSON(http.StatusNotFound, api.Error(err))
-		case errors.ErrInvitationExpired:
+			api.RespondError(ctx, http.StatusNotFound, err)
+		case apperrors.ErrInvitationExpired:
 			logger.Error().Msgf("Invitation expired: %s", err)
-			ctx.JSON(http.StatusConflict, api.Error(err))
-		case errors.ErrInvitationAlreadyUsed:
+			api.RespondError(ctx, http.StatusConflict, err)
+		case apperrors.ErrInvitationAlreadyUsed:
 			logger.Error().Msgf("Invitation already used: %s", err)
-			ctx.JSON(http.StatusConflict, api.Error(err))
-		case errors.ErrInvitationCancelled:
+			api.RespondError(ctx, http.StatusConflict, err)
+		case apperrors.ErrInvitationCancelled:
 			logger.Error().Msgf("Invitation cancelled: %s", err)
-			ctx.JSON(http.StatusConflict, api.Error(err))
-		case errors.ErrInvitationEmailMismatch:
+			api.RespondError(ctx, http.StatusConflict, err)
+		case apperrors.ErrInvitationEmailMismatch:
 			logger.Error().Msgf("Email mismatch: %s", err)
-			ctx.JSON(http.StatusBadRequest, api.Error(err))
+			api.RespondError(ctx, http.StatusBadRequest, err)
 		default:
 			logger.Error().Msgf("Error accepting invitation: %s", err)
-			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+			api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		}
 		return
 	}

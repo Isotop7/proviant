@@ -41,14 +41,14 @@ func ScanExpiryDate(ctx *gin.Context, appCtx *AppContext) {
 	file, err := ctx.FormFile("image")
 	if err != nil {
 		logger.Error().Msgf("Form file error: %s", err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrInvalidRequest))
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrInvalidRequest)
 		return
 	}
 
 	// Validate size (configured via config)
 	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
 	if file.Size > int64(proviantConfig.Server.MaxUploadSizeMB)*1024*1024 {
-		ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrFileTooLarge))
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrFileTooLarge)
 		return
 	}
 
@@ -56,7 +56,7 @@ func ScanExpiryDate(ctx *gin.Context, appCtx *AppContext) {
 	src, openErr := file.Open()
 	if openErr != nil {
 		logger.Error().Msgf("File open error: %s", openErr.Error())
-		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrInternalServer))
+		api.RespondError(ctx, http.StatusInternalServerError, errors.ErrInternalServer)
 		return
 	}
 	defer func() {
@@ -68,7 +68,7 @@ func ScanExpiryDate(ctx *gin.Context, appCtx *AppContext) {
 	imgBytes, readErr := io.ReadAll(src)
 	if readErr != nil {
 		logger.Error().Msgf("File read error: %s", readErr.Error())
-		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrInternalServer))
+		api.RespondError(ctx, http.StatusInternalServerError, errors.ErrInternalServer)
 		return
 	}
 
@@ -76,7 +76,7 @@ func ScanExpiryDate(ctx *gin.Context, appCtx *AppContext) {
 	ocrController, ok := ctx.MustGet("ocrController").(*controllers.OCRControllerImpl)
 	if !ok {
 		logger.Error().Msg("OCR controller not found in context")
-		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrInternalServer))
+		api.RespondError(ctx, http.StatusInternalServerError, errors.ErrInternalServer)
 		return
 	}
 
@@ -98,11 +98,11 @@ func ScanExpiryDate(ctx *gin.Context, appCtx *AppContext) {
 
 	select {
 	case <-ctxTimeout.Done():
-		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrOCRTimeout))
+		api.RespondError(ctx, http.StatusInternalServerError, errors.ErrOCRTimeout)
 		return
 	case err := <-errChan:
 		logger.Error().Msgf("OCR error: %s", err.Error())
-		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrOCRProcessing))
+		api.RespondError(ctx, http.StatusInternalServerError, errors.ErrOCRProcessing)
 		return
 	case resp := <-resultChan:
 		if userID, ok := getCurrentUserID(ctx, logger); ok {

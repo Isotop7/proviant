@@ -29,7 +29,7 @@ func GetNotifications(ctx *gin.Context, appCtx *AppContext) {
 	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error fetching user %d: %s", appCtx.UserID, err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 

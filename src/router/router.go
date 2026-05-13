@@ -2,11 +2,12 @@
 package router
 
 import (
+	"errors"
 	"net/http"
 	"strings"
-
 	"time"
 
+	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/api/auth"
 	"codeberg.org/isotop7/proviant/api/common"
 	"codeberg.org/isotop7/proviant/api/onboarding"
@@ -416,7 +417,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		if strings.HasPrefix(ctx.Request.URL.Path, "/web") {
 			templates.RenderError(ctx, webFrontendHandler.TemplateCache, http.StatusNotFound, "Page not found")
 		} else {
-			ctx.JSON(http.StatusNotFound, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
+			api.RespondError(ctx, http.StatusNotFound, errors.New("page not found"))
 		}
 	})
 

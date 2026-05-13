@@ -8,6 +8,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	dbRepo "codeberg.org/isotop7/proviant/controllers/database"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 
@@ -86,7 +87,7 @@ func formatProductDescription(product *database.Product) string {
 func ExportICalendar(ctx *gin.Context, appCtx *AppContext) {
 	token := ctx.Query("token")
 	if token == "" {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, api.APIResponse{Message: "Calendar token required"})
+		api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrInvalidRequest)
 		return
 	}
 
@@ -94,7 +95,7 @@ func ExportICalendar(ctx *gin.Context, appCtx *AppContext) {
 	ct, err := calendarTokenRepo.GetByToken(token)
 	if err != nil {
 		appCtx.Logger.Debug().Msgf("Invalid calendar token: %s", err)
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, api.APIResponse{Message: "Invalid calendar token"})
+		api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrInvalidRequest)
 		return
 	}
 
@@ -102,7 +103,7 @@ func ExportICalendar(ctx *gin.Context, appCtx *AppContext) {
 	products, err := productRepo.GetExpiringInDays(ct.UserID, CalendarExpireDays)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetExpiringInDays: %s", err)
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, api.APIResponse{Message: "Error fetching products"})
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		return
 	}
 

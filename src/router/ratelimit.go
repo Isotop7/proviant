@@ -1,11 +1,13 @@
 package router
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
+	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -58,10 +60,7 @@ func loginRateLimitMiddleware(ctx *gin.Context) {
 	if delay := reservation.Delay(); delay > 0 {
 		reservation.Cancel()
 		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
-		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-			"code":    codeRateLimitExceeded,
-			"message": "Too many login attempts. Please try again later.",
-		})
+		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many login attempts, please try again later"))
 		return
 	}
 	ctx.Next()
@@ -74,10 +73,7 @@ func signupRateLimitMiddleware(ctx *gin.Context) {
 	if delay := reservation.Delay(); delay > 0 {
 		reservation.Cancel()
 		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
-		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-			"code":    codeRateLimitExceeded,
-			"message": "Too many signup attempts. Please try again later.",
-		})
+		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many signup attempts, please try again later"))
 		return
 	}
 	ctx.Next()
@@ -87,10 +83,7 @@ func exportRateLimitMiddleware(ctx *gin.Context) {
 	claims := jwt.ExtractClaims(ctx)
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"code":    "UNAUTHORIZED",
-			"message": "Unauthorized",
-		})
+		api.RespondError(ctx, http.StatusUnauthorized, errors.New("Unauthorized"))
 		return
 	}
 
@@ -100,10 +93,7 @@ func exportRateLimitMiddleware(ctx *gin.Context) {
 	if delay := reservation.Delay(); delay > 0 {
 		reservation.Cancel()
 		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
-		ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-			"code":    codeRateLimitExceeded,
-			"message": "Too many export requests. Please try again later.",
-		})
+		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many export requests, please try again later"))
 		return
 	}
 	ctx.Next()

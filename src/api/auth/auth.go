@@ -2,10 +2,12 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/util"
@@ -43,14 +45,14 @@ func Signup(ctx *gin.Context) {
 	var signup authentication.Signup
 	if err := ctx.ShouldBindJSON(&signup); err != nil {
 		logger.Warn().Msgf("Error parsing body: %s", err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
 	passwordValidator := passwordValidatorFromContext(ctx)
 	if validationErr := signup.IsValidWithValidator(passwordValidator); validationErr != nil {
 		logger.Warn().Msgf("User data was invalid: '%s'", validationErr.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(validationErr))
+		api.RespondError(ctx, http.StatusBadRequest, validationErr)
 		return
 	}
 
@@ -62,19 +64,19 @@ func Signup(ctx *gin.Context) {
 
 	if repos.Users.UserExistsByUsername(&user) {
 		logger.Warn().Msgf("User '%s' already exists", user.Username)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithUsernameExists)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrUserWithUsernameExists)
 		return
 	}
 
 	if repos.Users.UserExistsByMailAddress(&user) {
 		logger.Warn().Msgf("User with mail address '%s' already exists", user.MailAddress)
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrUserWithMailAddressExists)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrUserWithMailAddressExists)
 		return
 	}
 
 	if err := repos.Users.CreateUser(&user); err != nil {
 		logger.Error().Msgf("User '%s' with ID '%d' could not be created. Error: %s", user.Username, user.ID, err.Error())
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserData)
 		return
 	}
 
@@ -109,7 +111,7 @@ func Signup(ctx *gin.Context) {
 func Logout(ctx *gin.Context) {
 	loggerValue, loggerOk := ctx.Get(util.ContextKeyLogger)
 	if !loggerOk {
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrLoggerContextNotFound)
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrLoggerContextNotFound)
 		return
 	}
 	logger := loggerValue.(*zerolog.Logger)
@@ -117,7 +119,7 @@ func Logout(ctx *gin.Context) {
 	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		ctx.JSON(http.StatusInternalServerError, api.ResponseErrDatabaseContextNotFound)
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrDatabaseContextNotFound)
 		return
 	}
 
@@ -125,28 +127,28 @@ func Logout(ctx *gin.Context) {
 	jti, exists := claims["jti"]
 	if !exists {
 		logger.Error().Msg("No JTI found in token claims")
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Invalid token: no JTI"})
+		api.RespondError(ctx, http.StatusUnauthorized, errors.New("invalid token: no JTI"))
 		return
 	}
 
 	jtiStr, ok := jti.(string)
 	if !ok {
 		logger.Error().Msg("JTI claim is not a string")
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Invalid token: JTI not string"})
+		api.RespondError(ctx, http.StatusUnauthorized, errors.New("invalid token: JTI not string"))
 		return
 	}
 
 	exp, exists := claims["exp"]
 	if !exists {
 		logger.Error().Msg("No exp found in token claims")
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Invalid token: no expiry"})
+		api.RespondError(ctx, http.StatusUnauthorized, errors.New("invalid token: no expiry"))
 		return
 	}
 
 	expFloat, ok := exp.(float64)
 	if !ok {
 		logger.Error().Msg("exp claim is not a number")
-		ctx.JSON(http.StatusUnauthorized, api.APIResponse{Message: "Invalid token: expiry not number"})
+		api.RespondError(ctx, http.StatusUnauthorized, errors.New("invalid token: expiry not number"))
 		return
 	}
 
@@ -159,7 +161,7 @@ func Logout(ctx *gin.Context) {
 
 	if err := dbHandle.Create(&revokedToken).Error; err != nil {
 		logger.Error().Msgf("Failed to revoke token: %s", err.Error())
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to logout"})
+		api.RespondError(ctx, http.StatusInternalServerError, errors.New("failed to logout"))
 		return
 	}
 

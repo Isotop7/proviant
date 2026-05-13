@@ -2,13 +2,14 @@ package v1
 
 import (
 	"context"
+	"errors"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 
@@ -34,14 +35,14 @@ func LeaveHousehold(ctx *gin.Context, appCtx *AppContext) {
 	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error getting user: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 	oldHouseholdID := user.HouseholdID
 
 	if err := appCtx.Repos.Households.LeaveHousehold(appCtx.UserID); err != nil {
 		appCtx.Logger.Error().Msgf("Error leaving household: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -63,18 +64,18 @@ func LeaveHousehold(ctx *gin.Context, appCtx *AppContext) {
 func CreateHousehold(ctx *gin.Context, appCtx *AppContext) {
 	var req createHouseholdRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		appCtx.Logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		appCtx.Logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 	if req.Name == "" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: MsgHouseholdNameEmpty})
+		api.RespondError(ctx, http.StatusBadRequest, errors.New(MsgHouseholdNameEmpty))
 		return
 	}
 
 	if err := appCtx.Repos.Households.CreateAndSwitchHousehold(appCtx.UserID, req.Name); err != nil {
 		appCtx.Logger.Error().Msgf("Error creating household: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -103,13 +104,13 @@ func ApplyForHousehold(ctx *gin.Context, appCtx *AppContext) {
 	switch applyErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application submitted"})
-	case errors.ErrHouseholdNotFound:
-		ctx.JSON(http.StatusNotFound, api.Error(applyErr))
-	case errors.ErrApplicationAlreadyPending:
-		ctx.JSON(http.StatusConflict, api.Error(applyErr))
+	case apperrors.ErrHouseholdNotFound:
+		api.RespondError(ctx, http.StatusNotFound, applyErr)
+	case apperrors.ErrApplicationAlreadyPending:
+		api.RespondError(ctx, http.StatusConflict, applyErr)
 	default:
 		appCtx.Logger.Error().Msgf("Error applying for household: %s", applyErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(applyErr))
+		api.RespondError(ctx, http.StatusInternalServerError, applyErr)
 	}
 }
 
@@ -128,11 +129,11 @@ func GetHouseholdApplications(ctx *gin.Context, appCtx *AppContext) {
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, applications)
-	case errors.ErrNotHouseholdAdmin:
-		ctx.JSON(http.StatusForbidden, api.Error(err))
+	case apperrors.ErrNotHouseholdAdmin:
+		api.RespondError(ctx, http.StatusForbidden, err)
 	default:
 		appCtx.Logger.Error().Msgf("Error fetching applications: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.Error(err))
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 	}
 }
 
@@ -159,13 +160,13 @@ func ApproveHouseholdApplication(ctx *gin.Context, appCtx *AppContext) {
 	case nil:
 		go recordMemberAdded(ctx, appCtx.UserID, applicationID)
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application approved"})
-	case errors.ErrApplicationNotFound:
-		ctx.JSON(http.StatusNotFound, api.Error(approveErr))
-	case errors.ErrNotHouseholdAdmin:
-		ctx.JSON(http.StatusForbidden, api.Error(approveErr))
+	case apperrors.ErrApplicationNotFound:
+		api.RespondError(ctx, http.StatusNotFound, approveErr)
+	case apperrors.ErrNotHouseholdAdmin:
+		api.RespondError(ctx, http.StatusForbidden, approveErr)
 	default:
 		appCtx.Logger.Error().Msgf("Error approving application: %s", approveErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(approveErr))
+		api.RespondError(ctx, http.StatusInternalServerError, approveErr)
 	}
 }
 
@@ -191,13 +192,13 @@ func RejectHouseholdApplication(ctx *gin.Context, appCtx *AppContext) {
 	switch rejectErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application rejected"})
-	case errors.ErrApplicationNotFound:
-		ctx.JSON(http.StatusNotFound, api.Error(rejectErr))
-	case errors.ErrNotHouseholdAdmin:
-		ctx.JSON(http.StatusForbidden, api.Error(rejectErr))
+	case apperrors.ErrApplicationNotFound:
+		api.RespondError(ctx, http.StatusNotFound, rejectErr)
+	case apperrors.ErrNotHouseholdAdmin:
+		api.RespondError(ctx, http.StatusForbidden, rejectErr)
 	default:
 		appCtx.Logger.Error().Msgf("Error rejecting application: %s", rejectErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(rejectErr))
+		api.RespondError(ctx, http.StatusInternalServerError, rejectErr)
 	}
 }
 
@@ -216,18 +217,18 @@ func RejectHouseholdApplication(ctx *gin.Context, appCtx *AppContext) {
 func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext) {
 	var req updateHouseholdNameRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		appCtx.Logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), err.Error())
-		ctx.JSON(http.StatusBadRequest, api.Error(err))
+		appCtx.Logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 	if req.Name == "" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: MsgHouseholdNameEmpty})
+		api.RespondError(ctx, http.StatusBadRequest, errors.New(MsgHouseholdNameEmpty))
 		return
 	}
 
 	user, userErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if userErr != nil {
-		ctx.JSON(http.StatusBadRequest, api.ResponseErrInvalidUserData)
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserData)
 		return
 	}
 
@@ -235,13 +236,13 @@ func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext) {
 	switch updateErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Household name updated"})
-	case errors.ErrHouseholdNotFound:
-		ctx.JSON(http.StatusNotFound, api.Error(updateErr))
-	case errors.ErrNotHouseholdAdmin:
-		ctx.JSON(http.StatusForbidden, api.Error(updateErr))
+	case apperrors.ErrHouseholdNotFound:
+		api.RespondError(ctx, http.StatusNotFound, updateErr)
+	case apperrors.ErrNotHouseholdAdmin:
+		api.RespondError(ctx, http.StatusForbidden, updateErr)
 	default:
 		appCtx.Logger.Error().Msgf("Error updating household name: %s", updateErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(updateErr))
+		api.RespondError(ctx, http.StatusInternalServerError, updateErr)
 	}
 }
 
@@ -266,13 +267,13 @@ func CancelHouseholdApplication(ctx *gin.Context, appCtx *AppContext) {
 	switch cancelErr {
 	case nil:
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Application cancelled"})
-	case errors.ErrApplicationNotFound:
-		ctx.JSON(http.StatusNotFound, api.Error(cancelErr))
-	case errors.ErrNotApplicationApplicant:
-		ctx.JSON(http.StatusForbidden, api.Error(cancelErr))
+	case apperrors.ErrApplicationNotFound:
+		api.RespondError(ctx, http.StatusNotFound, cancelErr)
+	case apperrors.ErrNotApplicationApplicant:
+		api.RespondError(ctx, http.StatusForbidden, cancelErr)
 	default:
 		appCtx.Logger.Error().Msgf("Error cancelling application: %s", cancelErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(cancelErr))
+		api.RespondError(ctx, http.StatusInternalServerError, cancelErr)
 	}
 }
 
@@ -288,25 +289,25 @@ func CancelHouseholdApplication(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/members/{userId} [delete]
 func RemoveHouseholdMember(ctx *gin.Context, appCtx *AppContext) {
-	memberID, ok := parseUintParam(ctx, appCtx.Logger, "userId", errors.ErrInvalidUserID.Error())
+	memberID, ok := parseUintParam(ctx, appCtx.Logger, "userId", apperrors.ErrInvalidUserID.Error())
 	if !ok {
 		return
 	}
 
-	removeErr := appCtx.Repos.Households.RemoveMemberFromHousehold(memberID, appCtx.UserID)
+removeErr := appCtx.Repos.Households.RemoveMemberFromHousehold(memberID, appCtx.UserID)
 	switch removeErr {
 	case nil:
 		go recordMemberRemoved(ctx, appCtx.UserID, memberID)
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Member removed from household"})
-	case errors.ErrNotHouseholdAdmin:
-		ctx.JSON(http.StatusForbidden, api.Error(removeErr))
-	case errors.ErrMemberNotInHousehold:
-		ctx.JSON(http.StatusNotFound, api.Error(removeErr))
-	case errors.ErrCannotRemoveAdmin:
-		ctx.JSON(http.StatusBadRequest, api.Error(removeErr))
+	case apperrors.ErrNotHouseholdAdmin:
+		api.RespondError(ctx, http.StatusForbidden, removeErr)
+	case apperrors.ErrMemberNotInHousehold:
+		api.RespondError(ctx, http.StatusNotFound, removeErr)
+	case apperrors.ErrCannotRemoveAdmin:
+		api.RespondError(ctx, http.StatusBadRequest, removeErr)
 	default:
 		appCtx.Logger.Error().Msgf("Error removing member: %s", removeErr)
-		ctx.JSON(http.StatusInternalServerError, api.Error(removeErr))
+		api.RespondError(ctx, http.StatusInternalServerError, removeErr)
 	}
 }
 
@@ -314,8 +315,8 @@ func parseUintParam(ctx *gin.Context, logger *zerolog.Logger, paramName, invalid
 	param := ctx.Param(paramName)
 	val, err := strconv.ParseUint(param, 10, 64)
 	if err != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, param)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: invalidMsg})
+		logger.Warn().Msgf(apperrors.FormatInvalidRequestId, param)
+		api.RespondError(ctx, http.StatusBadRequest, errors.New(invalidMsg))
 		return 0, false
 	}
 	return uint(val), true

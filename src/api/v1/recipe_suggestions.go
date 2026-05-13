@@ -26,14 +26,14 @@ func GetRecipeSuggestions(ctx *gin.Context, appCtx *AppContext) {
 	userRepo := db.NewUserRepository(appCtx.DB)
 	householdID, err := userRepo.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil || householdID == 0 {
-		ctx.JSON(400, api.Error(errors.ErrUserHasNoHousehold))
+		api.RespondError(ctx, 400, errors.ErrUserHasNoHousehold)
 		return
 	}
 
 	limitStr := ctx.DefaultQuery("limit", "6")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit < 1 || limit > 10 {
-		ctx.JSON(400, api.Error(errors.ErrInvalidQueryParameter))
+		api.RespondError(ctx, 400, errors.ErrInvalidQueryParameter)
 		return
 	}
 
@@ -41,14 +41,14 @@ func GetRecipeSuggestions(ctx *gin.Context, appCtx *AppContext) {
 	expiringProducts, err := productRepo.GetExpiringProductsByHousehold(householdID, 7)
 	if err != nil {
 		appCtx.Logger.Error().Err(err).Msg("failed to get expiring products")
-		ctx.JSON(500, api.Error(errors.ErrDatabaseOperationFailed))
+		api.RespondError(ctx, 500, errors.ErrDatabaseOperationFailed)
 		return
 	}
 
 	allProducts, err := productRepo.GetProductsByHousehold(householdID)
 	if err != nil {
 		appCtx.Logger.Error().Err(err).Msg("failed to get household products")
-		ctx.JSON(500, api.Error(errors.ErrDatabaseOperationFailed))
+		api.RespondError(ctx, 500, errors.ErrDatabaseOperationFailed)
 		return
 	}
 
@@ -60,14 +60,14 @@ func GetRecipeSuggestions(ctx *gin.Context, appCtx *AppContext) {
 	recipeCtrl, ok := ctx.MustGet("recipeController").(*controllers.RecipeController)
 	if !ok {
 		appCtx.Logger.Error().Msg("recipe controller not available in context")
-		ctx.JSON(500, api.Error(errors.ErrRecipeAPIUnavailable))
+		api.RespondError(ctx, 500, errors.ErrRecipeAPIUnavailable)
 		return
 	}
 
 	suggestions, err := recipeCtrl.GetSuggestions(expiringProducts, allProducts, limit)
 	if err != nil {
 		appCtx.Logger.Error().Err(err).Msg("failed to get recipe suggestions")
-		ctx.JSON(500, api.Error(errors.ErrRecipeAPIUnavailable))
+		api.RespondError(ctx, 500, errors.ErrRecipeAPIUnavailable)
 		return
 	}
 

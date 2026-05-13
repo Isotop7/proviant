@@ -1,11 +1,13 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 	"github.com/gin-gonic/gin"
@@ -41,36 +43,36 @@ func VerifyEmail(ctx *gin.Context) {
 
 	token := ctx.Query("token")
 	if token == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": "MISSING_TOKEN", "message": "Token is required"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("token is required"))
 		return
 	}
 
 	verification, err := repos.Users.GetEmailVerificationByToken(token)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, gin.H{"code": "INVALID_TOKEN", "message": "Invalid verification token"})
+			api.RespondError(ctx, http.StatusNotFound, errors.New("invalid verification token"))
 			return
 		}
 		logger.Error().Msgf("Error looking up email verification token: %s", err.Error())
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Internal error"})
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		return
 	}
 
 	if verification.Status == dbModel.EmailVerificationStatusVerified {
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": "ALREADY_VERIFIED", "message": "Email address already verified"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("email address already verified"))
 		return
 	}
 
 	if verification.Status == dbModel.EmailVerificationStatusExpired || time.Now().After(verification.ExpiresAt) {
 		_ = repos.Users.UpdateEmailVerificationStatus(token, dbModel.EmailVerificationStatusExpired)
-		ctx.JSON(http.StatusBadRequest, gin.H{"code": "TOKEN_EXPIRED", "message": "Verification token has expired"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("verification token has expired"))
 		return
 	}
 
 	now := time.Now()
 	if err := repos.Users.UpdateUserEmailVerified(verification.UserID, now); err != nil {
 		logger.Error().Msgf("Error updating user email verified status: %s", err.Error())
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Internal error"})
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		return
 	}
 

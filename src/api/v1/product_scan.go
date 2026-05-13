@@ -1,8 +1,8 @@
-// v1 implements version 1 of the proviant API
 package v1
 
 import (
 	"context"
+	"errors"
 	"image"
 
 	// Import for image decoding
@@ -14,9 +14,9 @@ import (
 	"image/draw"
 
 	"codeberg.org/isotop7/proviant/api"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -58,14 +58,14 @@ func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
 		file, formErr := ctx.FormFile("image")
 		if formErr != nil {
 			logger.Error().Msgf("Error reading image from body: %s", formErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 			decodingProcessChannel <- false
 			return
 		}
 
 		proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
 		if file.Size > int64(proviantConfig.Server.MaxUploadSizeMB)*1024*1024 {
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrFileTooLarge))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrFileTooLarge)
 			decodingProcessChannel <- false
 			return
 		}
@@ -74,7 +74,7 @@ func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
 		src, openErr := file.Open()
 		if openErr != nil {
 			logger.Error().Msgf("Error opening file: %s", openErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 			decodingProcessChannel <- false
 			return
 		}
@@ -83,7 +83,7 @@ func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
 		img, format, decodeErr := image.Decode(src)
 		if decodeErr != nil {
 			logger.Error().Msgf("Error decoding image as type %s: %s", format, decodeErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 			decodingProcessChannel <- false
 			return
 		} else {
@@ -98,7 +98,7 @@ func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
 		bmp, bmpErr := gozxing.NewBinaryBitmapFromImage(convertedImage)
 		if bmpErr != nil {
 			logger.Error().Msgf("Error converting image to bitmap: %s", bmpErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 			decodingProcessChannel <- false
 			return
 		}
@@ -115,7 +115,7 @@ func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
 		code, scanErr := scanner.Decode(bmp, hints)
 		if scanErr != nil {
 			logger.Error().Msgf("Error decoding image when finding barcode: %s", scanErr.Error())
-			ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 			return
 		} else {
 			// If barcode is found, return it
@@ -129,7 +129,7 @@ func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
 	select {
 	case <-decodingContext.Done():
 		// Timeout was reached, error is returned
-		ctx.JSON(http.StatusInternalServerError, api.Error(errors.ErrBarcodeDecodeTimeoutExceeded))
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrBarcodeDecodeTimeoutExceeded)
 		return
 	case success := <-decodingProcessChannel:
 		// Timeout was not reached and channel signaled success on decoding barcode
@@ -140,7 +140,7 @@ func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	// Return if timeout was not reached but channel did not signal success
-	ctx.JSON(http.StatusBadRequest, api.Error(errors.ErrNoBarcodeFoundInImage))
+	api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 }
 
 // GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode,
@@ -159,14 +159,14 @@ func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
 func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 	barcode := ctx.Param("barcode")
 	if barcode == "" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("barcode missing"))
 		return
 	}
 
 	offacntrl, offaOk := ctx.MustGet("offacntrl").(*controllers.OpenFoodFactsAPIController)
 	if !offaOk {
 		appCtx.Logger.Error().Msg("Failed to get OpenFoodFacts controller from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to get controller from context"})
+		api.RespondError(ctx, http.StatusInternalServerError, errors.New("failed to get controller from context"))
 		return
 	}
 
@@ -187,7 +187,7 @@ func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 	product, apiErr := offacntrl.GetDataset(barcode)
 	if apiErr != nil {
 		appCtx.Logger.Error().Msgf("OpenFoodFacts API error for barcode '%s': %s", barcode, apiErr)
-		ctx.JSON(http.StatusBadGateway, api.APIResponse{Message: "Error fetching product data from OpenFoodFacts"})
+		api.RespondError(ctx, http.StatusBadGateway, errors.New("error fetching product data from OpenFoodFacts"))
 		return
 	}
 

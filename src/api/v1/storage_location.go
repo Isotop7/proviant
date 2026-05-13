@@ -102,15 +102,15 @@ func UpdateStorageLocation(ctx *gin.Context, appCtx *AppContext) {
 	loc, err := appCtx.Repos.StorageLocations.Update(locationID, appCtx.UserID, req.Name, icon, req.SortOrder)
 	if err != nil {
 		if err == errors.ErrStorageLocationNotFound {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
+			api.RespondError(ctx, http.StatusNotFound, err)
 			return
 		}
 		if err == errors.ErrStorageLocationNotOwned {
-			ctx.JSON(http.StatusForbidden, api.Error(err))
+			api.RespondError(ctx, http.StatusForbidden, err)
 			return
 		}
 		appCtx.Logger.Error().Msgf("Error updating storage location: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -135,15 +135,15 @@ func DeleteStorageLocation(ctx *gin.Context, appCtx *AppContext) {
 
 	if err := appCtx.Repos.StorageLocations.Delete(locationID, appCtx.UserID); err != nil {
 		if err == errors.ErrStorageLocationNotFound {
-			ctx.JSON(http.StatusNotFound, api.Error(err))
+			api.RespondError(ctx, http.StatusNotFound, err)
 			return
 		}
 		if err == errors.ErrStorageLocationNotOwned {
-			ctx.JSON(http.StatusForbidden, api.Error(err))
+			api.RespondError(ctx, http.StatusForbidden, err)
 			return
 		}
 		appCtx.Logger.Error().Msgf("Error deleting storage location: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		api.RespondError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
