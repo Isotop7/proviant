@@ -7,8 +7,6 @@ proviant._getCsrfToken = function () {
 };
 
 // Intercept all fetch calls to inject X-CSRF-Token on state-mutating requests.
-// This covers every fetch() call in the application — including direct calls in
-// individual JS files — without requiring per-call changes.
 (function () {
   const _originalFetch = window.fetch;
   const mutatingMethods = new Set(["POST", "PATCH", "PUT", "DELETE"]);
@@ -25,21 +23,18 @@ proviant._getCsrfToken = function () {
   };
 })();
 
-// Define a public method
 proviant.debug = function () {
   console.log("Proviant loaded");
 };
 
-/* Unified feedback modal — use for all page-level async success/error results */
+/* ── UI helpers ──────────────────────────────────────────────────────────────── */
 proviant.showFeedback = function (type, title, message, onClose) {
   const modal = document.getElementById("proviantFeedbackModal");
   if (!modal) return;
-
   const iconEl = document.getElementById("proviantFeedbackIcon");
   const titleEl = document.getElementById("proviantFeedbackTitle");
   const msgEl = document.getElementById("proviantFeedbackMessage");
   const btnEl = document.getElementById("proviantFeedbackBtn");
-
   const configs = {
     success: { icon: "bi-check-circle-fill",       boxBg: "oklch(0.94 0.04 145)", boxColor: "oklch(0.40 0.10 145)" },
     error:   { icon: "bi-x-circle-fill",           boxBg: "oklch(0.95 0.05 25)",  boxColor: "oklch(0.45 0.20 25)"  },
@@ -48,108 +43,62 @@ proviant.showFeedback = function (type, title, message, onClose) {
   };
   const cfg = configs[type] || configs.info;
   const boxEl = document.getElementById("proviantFeedbackIconBox");
-
-  if (iconEl) { iconEl.className = "bi " + cfg.icon; }
+  if (iconEl) iconEl.className = "bi " + cfg.icon;
   if (boxEl) { boxEl.style.background = cfg.boxBg; boxEl.style.color = cfg.boxColor; }
   if (titleEl) titleEl.textContent = title || "";
   if (msgEl) msgEl.textContent = message || "";
   if (btnEl) btnEl.onclick = onClose || null;
-
   bootstrap.Modal.getOrCreateInstance(modal).show();
 };
 
-/* Confirmation modal — destructive actions requiring user decision */
 proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confirmType) {
   const modal = document.getElementById("proviantConfirmModal");
   if (!modal) return;
-
   const titleEl = document.getElementById("proviantConfirmTitle");
   const msgEl = document.getElementById("proviantConfirmMessage");
   const btnEl = document.getElementById("proviantConfirmBtn");
-
   if (titleEl) titleEl.textContent = title || "Are you sure?";
   if (msgEl) msgEl.textContent = message || "";
   if (btnEl) {
     btnEl.textContent = confirmLabel || "Confirm";
     btnEl.className = "btn px-4 btn-" + (confirmType || "danger");
-    btnEl.onclick = function () {
-      bootstrap.Modal.getInstance(modal).hide();
-      onConfirm();
-    };
+    btnEl.onclick = function () { bootstrap.Modal.getInstance(modal).hide(); onConfirm(); };
   }
-
   bootstrap.Modal.getOrCreateInstance(modal).show();
 };
 
-proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  let data = JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null });
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: data,
-  });
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
+proviant.copyToClipboard = async function (text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { return false; }
 };
 
-proviant.getOpenFoodFactsData = async function (barcode) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/openfoodfacts/${barcode}`;
-  const apiCall = await fetch(url, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body,
-  };
-  return response;
+/* ── Utility helpers ────────────────────────────────────────────────────────── */
+proviant.formatDate = function (timestamp) {
+  const date = new Date(timestamp);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
-proviant.getProductsByBarcode = async function (barcode) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/byBarcode/${barcode}`;
-  const apiCall = await fetch(url, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body,
-  };
-  return response;
+proviant.badgifyCategories = function (categories, limit) {
+  let output = "";
+  const arr = categories.split(",");
+  for (let i = 0; i < arr.length; i++) {
+    if (i === limit) break;
+    const cat = arr[i].trim();
+    const parts = cat.split(":");
+    if (parts.length === 2) {
+      output += `<span class="badge bg-dark me-3">${parts[0].trim()}</span>${parts[1].trim()}</br>`;
+    } else {
+      output += `${cat}</br>`;
+    }
+  }
+  return output;
 };
 
-proviant.editProduct = async function (product) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${product.ID}`;
-  let data = JSON.stringify(product);
-  const apiCall = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: data,
-  });
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
+proviant.colorExpiry = function (date) {
+  return new Date(date) < Date.now() ? "bg-danger" : "bg-primary";
 };
 
-// Offline edit queue — persists amount-delta ops in localStorage for sync on reconnect
+/* ── Offline edit queue ──────────────────────────────────────────────────────── */
 proviant._offlineQueue = JSON.parse(localStorage.getItem('proviant_offline_queue') || '[]');
 
 proviant._saveQueue = function () {
@@ -157,684 +106,385 @@ proviant._saveQueue = function () {
 };
 
 proviant._enqueueAmountDelta = function (productID, delta) {
-  const existing = proviant._offlineQueue.find(function (op) { return op.productID === productID; });
+  const existing = proviant._offlineQueue.find(op => op.productID === productID);
   if (existing) {
     existing.delta += delta;
     if (existing.delta === 0) {
-      proviant._offlineQueue = proviant._offlineQueue.filter(function (op) { return op.productID !== productID; });
+      proviant._offlineQueue = proviant._offlineQueue.filter(op => op.productID !== productID);
     }
   } else {
-    proviant._offlineQueue.push({ productID: productID, delta: delta, ts: Date.now() });
+    proviant._offlineQueue.push({ productID, delta, ts: Date.now() });
   }
   proviant._saveQueue();
   proviant._updateOfflineBadge();
 };
 
 proviant._updateOfflineBadge = function () {
-  var countEl = document.getElementById('offlineQueueCount');
-  if (!countEl) return;
-  var n = proviant._offlineQueue.length;
-  if (n > 0) {
-    countEl.textContent = '(' + n + ' pending)';
-    countEl.classList.remove('d-none');
-  } else {
-    countEl.classList.add('d-none');
-  }
+  const el = document.getElementById('offlineQueueCount');
+  if (!el) return;
+  const n = proviant._offlineQueue.length;
+  if (n > 0) { el.textContent = `(${n} pending)`; el.classList.remove('d-none'); }
+  else { el.classList.add('d-none'); }
 };
 
 proviant._flushQueue = async function () {
   if (!navigator.onLine || proviant._offlineQueue.length === 0) return;
-  var queue = proviant._offlineQueue.slice();
+  const queue = proviant._offlineQueue.slice();
   proviant._offlineQueue = [];
   proviant._saveQueue();
   proviant._updateOfflineBadge();
-  for (var i = 0; i < queue.length; i++) {
-    var op = queue[i];
-    try {
-      await proviant._sendAmountDelta(op.productID, op.delta);
-    } catch (_e) {
-      proviant._enqueueAmountDelta(op.productID, op.delta);
-    }
+  for (const op of queue) {
+    try { await proviant._sendAmountDelta(op.productID, op.delta); }
+    catch (_) { proviant._enqueueAmountDelta(op.productID, op.delta); }
   }
 };
 
 proviant._sendAmountDelta = async function (productID, delta) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/amount`;
-  const apiCall = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ delta: delta }),
-  });
-  const body = await apiCall.json();
-  return {
-    code: apiCall.status,
-    message: body.message,
-    deleted: apiCall.status === 200 && typeof body.message === "string" && body.message.includes("deleted"),
-  };
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/amount`;
+  const res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ delta }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message, deleted: res.status === 200 && typeof body.message === "string" && body.message.includes("deleted") };
 };
 
 proviant.updateProductAmount = async function (productID, delta) {
-  if (!navigator.onLine) {
-    proviant._enqueueAmountDelta(productID, delta);
-    return { code: 200, message: 'queued', deleted: false, queued: true };
-  }
+  if (!navigator.onLine) { proviant._enqueueAmountDelta(productID, delta); return { code: 200, message: 'queued', deleted: false, queued: true }; }
   return proviant._sendAmountDelta(productID, delta);
+};
+
+/* ── Product API ─────────────────────────────────────────────────────────────── */
+proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.getOpenFoodFactsData = async function (barcode) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/openfoodfacts/${barcode}`;
+  const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
+proviant.getProductsByBarcode = async function (barcode) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/byBarcode/${barcode}`;
+  const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
+proviant.editProduct = async function (product) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${product.ID}`;
+  const res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(product) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.deleteProduct = async function (productID, archiveOnly) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}`;
-  if (archiveOnly) {
-    url += "?archiveOnly=true";
-  }
-  const apiCall = await fetch(url, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
-};
-
-proviant.bulkDeleteProducts = async function (productIDs) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkDelete`;
-  const apiCall = await fetch(url, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ productIDs }),
-  });
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
-};
-
-proviant.bulkArchiveProducts = async function (productIDs) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkArchive`;
-  const apiCall = await fetch(url, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ productIDs }),
-  });
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
-};
-
-proviant.bulkConsumeProducts = async function (productIDs) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkConsume`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ productIDs }),
-  });
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
-};
-
-proviant.bulkWasteProducts = async function (productIDs) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkWaste`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ productIDs }),
-  });
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
+  if (archiveOnly) url += "?archiveOnly=true";
+  const res = await fetch(url, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.restoreProduct = async function (productID) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/restore`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/restore`;
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+/* ── Bulk product operations ─────────────────────────────────────────────────── */
+proviant.bulkDeleteProducts = async function (productIDs) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkDelete`;
+  const res = await fetch(url, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIDs }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.bulkArchiveProducts = async function (productIDs) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkArchive`;
+  const res = await fetch(url, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIDs }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.bulkConsumeProducts = async function (productIDs) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkConsume`;
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIDs }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.bulkWasteProducts = async function (productIDs) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkWaste`;
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIDs }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.bulkRestoreProducts = async function (productIDs) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkRestore`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ productIDs }),
-  });
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkRestore`;
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIDs }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
+/* ── Auth / user API ─────────────────────────────────────────────────────────── */
 proviant.loginUser = async function (username, password) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/auth/login`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ username, password }),
-  });
-  let body = {};
-  try {
-    body = await apiCall.json();
-  } catch (_) {
-    // empty or non-JSON response
-  }
-  return {
-    code: apiCall.status,
-    body: body.message || body.code || "",
-    retryAfter: apiCall.headers.get("Retry-After"),
-  };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
+  let body = {}; try { body = await res.json(); } catch (_) {}
+  return { code: res.status, body: body.message || body.code || "", retryAfter: res.headers.get("Retry-After") };
 };
 
 proviant.signupUser = async function (username, mailAddress, password, inviteToken) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/auth/signup`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ username, mailAddress, password, inviteToken }),
-  });
-  const body = await apiCall.json();
-  const response = {
-    code: apiCall.status,
-    body: body.message,
-  };
-
-  if (!apiCall.ok) {
-    return {
-      code: apiCall.status,
-      body: `${body.message}`,
-    };
-  }
-  return response;
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/auth/signup`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, mailAddress, password, inviteToken }) });
+  const body = await res.json();
+  if (!res.ok) return { code: res.status, body: `${body.message}` };
+  return { code: res.status, body: body.message };
 };
 
 proviant.updateUser = async function (displayName, mailAddress) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user`;
-  const apiCall = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ displayName, mailAddress }),
-  });
-
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ displayName, mailAddress }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.updateUserPassword = async function (username, password) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/password`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ username, password }),
-  });
-
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/password`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.updateNotificationSettings = async function (preferences) {
-  let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/notification-preferences`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(preferences),
-  });
-
-  const body = await apiCall.json();
-  let response = {
-    code: apiCall.status,
-    message: body.message,
-  };
-  return response;
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/notification-preferences`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(preferences) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.generateTelegramLinkToken = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/telegram-link-token`;
-  const apiCall = await fetch(url, { method: "POST" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, token: body.token, botUsername: body.botUsername };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/telegram-link-token`, { method: "POST" });
+  const body = await res.json();
+  return { code: res.status, token: body.token, botUsername: body.botUsername };
 };
 
-proviant.updateHouseholdName = async function (name) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/name`;
-  const apiCall = await fetch(url, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
-};
-
-proviant.cancelApplication = async function (applicationID) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/applications/${applicationID}`;
-  const apiCall = await fetch(url, { method: "DELETE" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
-};
-
-proviant.removeMember = async function (userID) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/members/${userID}`;
-  const apiCall = await fetch(url, { method: "DELETE" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
-};
-
-proviant.leaveHousehold = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/household/leave`;
-  const apiCall = await fetch(url, { method: "POST" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
-};
-
-proviant.createHousehold = async function (name) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/household/create`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
-};
-
-proviant.applyForHousehold = async function (householdID) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/${householdID}/apply`;
-  const apiCall = await fetch(url, { method: "POST" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
-};
-
-proviant.approveApplication = async function (applicationID) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/applications/${applicationID}/approve`;
-  const apiCall = await fetch(url, { method: "POST" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
-};
-
-proviant.rejectApplication = async function (applicationID) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/applications/${applicationID}/reject`;
-  const apiCall = await fetch(url, { method: "POST" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
-};
-
-proviant.getHouseholdUsers = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users`;
-  const apiCall = await fetch(url, { method: "GET" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
-};
-
-proviant.updateHouseholdUser = async function (userID, username, mailAddress) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}`;
-  const apiCall = await fetch(url, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, mailAddress }),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
-};
-
-proviant.deleteHouseholdUser = async function (userID) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}`;
-  const apiCall = await fetch(url, { method: "DELETE" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
-};
-
-proviant.resetHouseholdUserPassword = async function (userID) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}/reset-password`;
-  const apiCall = await fetch(url, { method: "POST" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
-};
-
-// Helper function to get JWT token from cookie
 proviant.getToken = function () {
-  const name = "jwt=";
-  const decodedCookie = decodeURIComponent(document.cookie);
-  const ca = decodedCookie.split(';');
-  // Iterate over each cookie entry
-  for (let i = 0; i < ca.length; i++) {
-    let c = ca[i];
-    // Trim leading whitespace from cookie string
-    while (c.charAt(0) == ' ') {
-      c = c.substring(1);
-    }
-    // Check if this cookie starts with the target name (e.g., "jwt=")
-    if (c.indexOf(name) == 0) {
-      // Extract and return the cookie value (everything after name)
-      return c.substring(name.length, c.length);
-    }
-  }
-  return "";
+  const match = document.cookie.match(/(?:^|;\s*)jwt=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : "";
 };
 
 proviant.logoutUser = async function () {
-  try {
-    // Revoke the token server-side; the server also clears the HttpOnly jwt cookie.
-    await fetch('/auth/logout', {
-      method: 'POST',
-      credentials: 'include'
-    });
-  } catch (error) {
-    console.error('Logout request failed:', error);
-  }
+  try { await fetch('/auth/logout', { method: 'POST', credentials: 'include' }); }
+  catch (e) { console.error('Logout request failed:', e); }
 };
 
-proviant.formatDate = function (timestamp) {
-  const date = new Date(timestamp);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+/* ── Household API ───────────────────────────────────────────────────────────── */
+proviant.updateHouseholdName = async function (name) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/name`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
-// Render categories
-proviant.badgifyCategories = function (categories, limit) {
-  let output = "";
-  // Split categories
-  const categoriesArray = categories.split(",");
-  for (let index = 0; index < categoriesArray.length; index++) {
-    // Get element and split
-    const category = categoriesArray[index].trim();
-    const contents = category.split(":");
-
-    // early return
-    if (index == limit) {
-      break;
-    }
-
-    // Check if language was found
-    if (contents.length == 2) {
-      const lang = contents[0].trim();
-      const definition = contents[1].trim();
-      output += `<span class="badge bg-dark me-3">${lang}</span>${definition}</br>`;
-    } else {
-      output += `${category}</br>`;
-    }
-  }
-  return output;
+proviant.cancelApplication = async function (applicationID) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/applications/${applicationID}`, { method: "DELETE" });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
-// Render expire at
-proviant.colorExpiry = function (date) {
-  if (new Date(date) < Date.now()) {
-    return "bg-danger";
-  } else {
-    return "bg-primary";
-  }
+proviant.removeMember = async function (userID) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/members/${userID}`, { method: "DELETE" });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
-/* Invitation API methods */
+proviant.leaveHousehold = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/household/leave`, { method: "POST" });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.createHousehold = async function (name) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/household/create`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.applyForHousehold = async function (householdID) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/${householdID}/apply`, { method: "POST" });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.approveApplication = async function (applicationID) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/applications/${applicationID}/approve`, { method: "POST" });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.rejectApplication = async function (applicationID) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/applications/${applicationID}/reject`, { method: "POST" });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.getHouseholdUsers = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users`, { method: "GET" });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
+proviant.updateHouseholdUser = async function (userID, username, mailAddress) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, mailAddress }) });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
+proviant.deleteHouseholdUser = async function (userID) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}`, { method: "DELETE" });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.resetHouseholdUserPassword = async function (userID) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}/reset-password`, { method: "POST" });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+/* ── Invitation API ──────────────────────────────────────────────────────────── */
 proviant.createInvitation = async function (email) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.getInvitations = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations`;
-  const apiCall = await fetch(url, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, invitations: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, invitations: body };
 };
 
 proviant.cancelInvitation = async function (invitationID) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations/${invitationID}`;
-  const apiCall = await fetch(url, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations/${invitationID}`, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.acceptInvitation = async function (token) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/auth/invite/accept`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/auth/invite/accept`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
-/* Onboarding API methods */
+/* ── Onboarding API ─────────────────────────────────────────────────────────── */
 proviant.getOnboardingState = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/state`;
-  const apiCall = await fetch(url, { method: "GET" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/state`, { method: "GET" });
+  const body = await res.json();
+  return { code: res.status, body };
 };
 
 proviant.getOnboardingHouseholds = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/households`;
-  const apiCall = await fetch(url, { method: "GET" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/households`, { method: "GET" });
+  const body = await res.json();
+  return { code: res.status, body };
 };
 
 proviant.applyOnboardingHousehold = async function (householdId) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/apply-household`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ householdId }),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/apply-household`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ householdId }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.completeOnboarding = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/complete`;
-  const apiCall = await fetch(url, { method: "POST" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/complete`, { method: "POST" });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.updateOnboardingProfile = async function (displayName) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/profile`;
-  const apiCall = await fetch(url, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ displayName }),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/profile`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ displayName }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.createOnboardingHousehold = async function (name) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/create-household`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/create-household`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 proviant.joinOnboardingByInvite = async function (token) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/join-invite`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body.message };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/onboarding/join-invite`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
+/* ── Stats API ─────────────────────────────────────────────────────────────── */
 proviant.getProductStats = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/stats`;
-  const apiCall = await fetch(url, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/stats`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
 proviant.getStreak = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/streak`;
-  const apiCall = await fetch(url, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/streak`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
 proviant.getSavingsStats = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/savings/stats`;
-  const apiCall = await fetch(url, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/savings/stats`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
 proviant.getNotifications = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/notifications`;
-  const apiCall = await fetch(url, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/notifications`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
+/* ── Personal Access Token API ──────────────────────────────────────────────── */
 proviant.createPAT = async function (name, expiresAt) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens`;
   const payload = { name };
-  if (expiresAt) {
-    payload.expiresAt = expiresAt;
-  }
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  if (expiresAt) payload.expiresAt = expiresAt;
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
 proviant.getPATs = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens`;
-  const apiCall = await fetch(url, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
 proviant.deletePAT = async function (patID) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens/${patID}`;
-  const apiCall = await fetch(url, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/tokens/${patID}`, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
+/* ── Export API ─────────────────────────────────────────────────────────────── */
 proviant.exportProductsCSV = function (from, to) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/products.csv`;
-  const params = [];
-  if (from) params.push(`from=${from}`);
-  if (to) params.push(`to=${to}`);
-  if (params.length) url += `?${params.join("&")}`;
+  if (from) url += `?from=${from}`;
+  if (to) url += `${from ? '&' : '?'}to=${to}`;
   window.location.href = url;
 };
 
 proviant.exportProductsJSON = function (from, to) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/products.json`;
-  const params = [];
-  if (from) params.push(`from=${from}`);
-  if (to) params.push(`to=${to}`);
-  if (params.length) url += `?${params.join("&")}`;
+  if (from) url += `?from=${from}`;
+  if (to) url += `${from ? '&' : '?'}to=${to}`;
   window.location.href = url;
 };
 
 proviant.exportArchiveCSV = function (from, to) {
   let url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/archive.csv`;
-  const params = [];
-  if (from) params.push(`from=${from}`);
-  if (to) params.push(`to=${to}`);
-  if (params.length) url += `?${params.join("&")}`;
+  if (from) url += `?from=${from}`;
+  if (to) url += `${from ? '&' : '?'}to=${to}`;
   window.location.href = url;
 };
 
@@ -842,108 +492,64 @@ proviant.exportFullJSON = function () {
   window.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/export/full.json`;
 };
 
-/* Calendar sync API methods */
+/* ── Calendar API ───────────────────────────────────────────────────────────── */
 proviant.getCalendarTokenStatus = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`;
-  const apiCall = await fetch(url, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
 proviant.createCalendarToken = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`;
-  const apiCall = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`, { method: "POST", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
 proviant.deleteCalendarToken = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`;
-  const apiCall = await fetch(url, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token`, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
 proviant.downloadCalendarICS = function (token) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/export.ics?token=${encodeURIComponent(token)}`;
-  window.location.href = url;
+  window.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/export.ics?token=${encodeURIComponent(token)}`;
 };
 
-proviant.copyToClipboard = async function (text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-/* Webhook API methods */
+/* ── Webhook API ────────────────────────────────────────────────────────────── */
 proviant.getWebhooks = async function () {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks`;
-  const apiCall = await fetch(url, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, webhooks: body.webhooks };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, webhooks: body.webhooks };
 };
 
 proviant.createWebhook = async function (url, secret, events, active) {
-  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks`;
-  const apiCall = await fetch(apiUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, secret, events, active }),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url, secret, events, active }) });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
 proviant.updateWebhook = async function (id, url, secret, events, active) {
-  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}`;
-  const apiCall = await fetch(apiUrl, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, secret, events, active }),
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url, secret, events, active }) });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
 proviant.deleteWebhook = async function (id) {
-  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}`;
-  const apiCall = await fetch(apiUrl, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}`, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };
 
 proviant.getWebhookDeliveries = async function (id) {
-  const apiUrl = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}/deliveries`;
-  const apiCall = await fetch(apiUrl, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await apiCall.json();
-  return { code: apiCall.status, deliveries: body.deliveries };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}/deliveries`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, deliveries: body.deliveries };
 };
 
+/* ── Audit log API ──────────────────────────────────────────────────────────── */
 proviant.getAuditLogs = async function (date) {
   const params = date ? `?date=${encodeURIComponent(date)}` : "";
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/audit-log${params}`;
-  const apiCall = await fetch(url, { method: "GET" });
-  const body = await apiCall.json();
-  return { code: apiCall.status, message: body };
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/audit-log${params}`, { method: "GET" });
+  const body = await res.json();
+  return { code: res.status, message: body };
 };

@@ -1,8 +1,7 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v65';
+const CACHE_NAME = 'proviant-v67';
 
-// Static shell to pre-cache on install
 const PRECACHE_URLS = [
   '/manifest.json',
   '/assets/css/main.css',
