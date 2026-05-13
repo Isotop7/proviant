@@ -34,6 +34,7 @@ src/assets/js/chart*
 
 ## Custom
 src/proviant
+src/proviant_*
 src/config.yaml
 src/test/*.httpie
 .vscode/
