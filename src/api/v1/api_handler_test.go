@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"codeberg.org/isotop7/proviant/controllers/database"
@@ -369,6 +370,20 @@ func TestListWebhooks(t *testing.T) {
 
 func TestCreateWebhook(t *testing.T) {
 	t.Skip("Skipping - handler requires user to be found via GetUserByID and complex webhook repo setup")
+}
+
+func joinErrors(errs []database.BulkOperationError) string {
+	if len(errs) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	for i, err := range errs {
+		if i > 0 {
+			b.WriteString("; ")
+		}
+		b.WriteString(err.Error())
+	}
+	return b.String()
 }
 
 func TestJoinErrors(t *testing.T) {
