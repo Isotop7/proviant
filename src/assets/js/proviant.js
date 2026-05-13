@@ -231,6 +231,29 @@ proviant.bulkRestoreProducts = async function (productIDs) {
   return { code: res.status, message: body.message };
 };
 
+proviant.bulkAction = async function (type, ids, options = {}) {
+  const { confirm: needsConfirm = false, confirmTitle = '', confirmMsg = '', onDone = () => location.reload() } = options;
+  const fn = { delete: proviant.bulkWasteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkConsumeProducts }[type];
+  if (!fn) return;
+  if (needsConfirm) {
+    proviant.showConfirm(
+      confirmTitle || (type === 'delete' ? 'Mark as wasted' : type === 'archive' ? 'Mark as consumed' : 'Confirm'),
+      confirmMsg || `${ids.length} product${ids.length !== 1 ? 's' : ''}?${type === 'delete' ? ' This cannot be undone.' : ''}`,
+      async () => {
+        const res = await fn(ids);
+        if (res.code !== 200) console.error(res.message);
+        onDone();
+      },
+      type === 'delete' ? 'Wasted' : type === 'archive' ? 'Consumed' : 'Restore',
+      type === 'delete' ? 'danger' : type === 'archive' ? 'warning' : 'primary'
+    );
+  } else {
+    const res = await fn(ids);
+    if (res.code !== 200) console.error(res.message);
+    onDone();
+  }
+};
+
 /* ── Auth / user API ─────────────────────────────────────────────────────────── */
 proviant.loginUser = async function (username, password) {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
