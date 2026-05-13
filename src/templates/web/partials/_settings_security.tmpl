@@ -1,0 +1,90 @@
+{{ define "_settings_security" }}
+<div class="card card-section mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+        <div class="d-flex align-items-center gap-2">
+            <div class="icon-chip" aria-hidden="true">
+                <i class="bi bi-key"></i>
+            </div>
+            <h2 class="h5 mb-0 fw-semibold">API Tokens</h2>
+        </div>
+        <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnCreatePAT">
+            Create Token
+        </button>
+    </div>
+    <div class="card-body px-4 py-4">
+        <p class="text-secondary-custom small mb-3">Personal access tokens let you authenticate with the API without a browser session.</p>
+        <ul class="list-group" id="patList">
+            <li class="list-group-item text-center text-secondary-custom py-3" id="patLoading">
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="modal fade" id="createPatModal" tabindex="-1" aria-labelledby="createPatModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createPatModalLabel">Create API Token</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createPatForm">
+                    <div class="mb-3">
+                        <label for="inputPatName" class="form-label fw-medium">
+                            Token Name <span class="text-danger" aria-hidden="true">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="inputPatName" required>
+                        <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please enter a token name.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="inputPatExpiry" class="form-label fw-medium">
+                            Expires At <span class="text-secondary-custom fw-normal">(optional)</span>
+                        </label>
+                        <input type="datetime-local" class="form-control" id="inputPatExpiry">
+                    </div>
+                </form>
+                <div id="newTokenDisplay" class="alert alert-success d-none">
+                    <strong>Token created!</strong> Copy it now. You won't see it again.
+                    <pre class="mt-2 mb-0 font-monospace" id="newTokenValue"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-proviant-primary" id="btnSavePAT">Create</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ if .IsAdmin }}
+<div class="card card-section mb-4" id="auditLogSection">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+        <div class="d-flex align-items-center gap-2">
+            <div class="icon-chip" aria-hidden="true">
+                <i class="bi bi-shield-lock"></i>
+            </div>
+            <h2 class="h5 mb-0 fw-semibold">Activity Log</h2>
+        </div>
+        <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnRefreshAuditLog"
+                aria-label="Refresh activity log" title="Refresh">
+            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <p class="text-secondary-custom small px-4 pt-3 mb-0">Security-relevant actions from the last 7 days. Auto-refreshes every 30 seconds.</p>
+        <div class="audit-log-container" style="max-height: 280px; overflow-y: auto;" aria-live="polite" id="auditLogContainer">
+            <ul class="list-group list-group-flush" id="auditLogList">
+                <li class="list-group-item text-center text-secondary-custom py-4" id="auditLogLoading">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <span>Loading…</span>
+                </li>
+            </ul>
+        </div>
+        <div class="px-4 py-2 border-top" style="background: var(--bg-subtle);">
+            <small class="text-secondary-custom" id="auditLogMeta" style="font-size: var(--text-xs);"></small>
+        </div>
+    </div>
+</div>
+{{ end }}
+{{ end }}

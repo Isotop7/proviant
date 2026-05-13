@@ -1,0 +1,554 @@
+{{ define "_settings_household" }}
+<div class="card card-section mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+        <div class="d-flex align-items-center gap-2">
+            <div class="icon-chip" aria-hidden="true">
+                <i class="bi bi-geo-alt"></i>
+            </div>
+            <h2 class="h5 mb-0 fw-semibold">Storage Locations</h2>
+        </div>
+        {{ if .IsAdmin }}
+        <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnAddStorageLocation">
+            <i class="bi bi-plus-lg me-1"></i>Add Location
+        </button>
+        {{ end }}
+    </div>
+    <div class="card-body px-4 py-4">
+        <p class="text-secondary-custom small mb-3">Locations are shared across all household members.</p>
+        {{ if .Locations }}
+        <ul class="list-group mb-3" id="storageLocationList">
+            {{ range .Locations }}
+            <li class="list-group-item d-flex justify-content-between align-items-center" id="sl-{{ .ID }}">
+                <span>{{ .Icon }} <strong>{{ .Name }}</strong></span>
+                {{ if $.IsAdmin }}
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-proviant-secondary btn-edit-sl"
+                            data-id="{{ .ID }}" data-name="{{ .Name }}" data-icon="{{ .Icon }}"
+                            data-sortorder="{{ .SortOrder }}" aria-label="Edit {{ .Name }}">
+                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="btn btn-proviant-danger btn-delete-sl"
+                            data-id="{{ .ID }}" data-name="{{ .Name }}" aria-label="Delete {{ .Name }}">
+                        <i class="bi bi-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
+                {{ end }}
+            </li>
+            {{ end }}
+        </ul>
+        {{ else }}
+        <p class="text-secondary-custom small">No storage locations configured yet.</p>
+        {{ end }}
+    </div>
+</div>
+
+<div class="modal fade" id="storageLocationModal" tabindex="-1" aria-labelledby="storageLocationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="storageLocationModalLabel">Storage Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="slModalID">
+                <div class="mb-3">
+                    <label for="slModalName" class="form-label fw-medium">Name <span class="text-danger" aria-hidden="true">*</span></label>
+                    <input type="text" class="form-control" id="slModalName" required placeholder="e.g. Wine Cellar">
+                </div>
+                <div class="mb-3">
+                    <label for="slModalIcon" class="form-label fw-medium">Icon (emoji)</label>
+                    <input type="text" class="form-control" id="slModalIcon" placeholder="📦" maxlength="8">
+                </div>
+                <div class="mb-3">
+                    <label for="slModalSortOrder" class="form-label fw-medium">Sort Order</label>
+                    <input type="number" class="form-control" id="slModalSortOrder" value="0" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-proviant-primary" id="btnSaveStorageLocation">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-section mb-4" id="household">
+    <div class="card-header bg-white d-flex align-items-center gap-2 py-3 px-4">
+        <div class="icon-chip" aria-hidden="true">
+            <i class="bi bi-house"></i>
+        </div>
+        <h2 class="h5 mb-0 fw-semibold">Household</h2>
+    </div>
+    <div class="card-body px-4 py-4">
+
+        {{/* Current household info */}}
+        <div class="d-flex align-items-center gap-2 p-3 rounded bg-body-tertiary mb-4">
+            <span class="badge bg-secondary">ID: {{ .Household.ID }}</span>
+            <strong>{{ .Household.Name }}</strong>
+            {{ if .IsAdmin }}<span class="badge bg-primary"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
+        </div>
+
+        {{/* Rename household — admin only */}}
+        {{ if .IsAdmin }}
+        <div class="mb-4">
+            <h3 class="h6 fw-semibold mb-2"><i class="bi bi-pencil me-1"></i>Rename Household</h3>
+            <div class="input-group input-width-480">
+                <input type="text" class="form-control" id="inputHouseholdName"
+                       placeholder="New household name" aria-label="New household name"
+                       value="{{ .Household.Name }}">
+                <button type="button" class="btn btn-proviant-secondary" id="btnUpdateHouseholdName">Rename</button>
+            </div>
+        </div>
+        {{ end }}
+
+        {{/* Members list */}}
+        <div class="mb-4">
+            <h3 class="h6 fw-semibold mb-2"><i class="bi bi-people me-1"></i>Members</h3>
+            {{ if .Members }}
+            <ul class="list-group" id="memberList">
+                {{ range .Members }}
+                <li class="list-group-item d-flex justify-content-between align-items-center" id="member-{{ .ID }}">
+                    <span>
+                        <i class="bi bi-person me-2"></i>{{ .EffectiveName }}
+                        {{ if eq .ID $.User.ID }}<span class="badge bg-secondary ms-1">You</span>{{ end }}
+                        {{ if eq .ID $.Household.AdminID }}<span class="badge bg-primary ms-1"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
+                    </span>
+                    {{ if and $.IsAdmin (ne .ID $.Household.AdminID) }}
+                    <button type="button" class="btn btn-sm btn-proviant-danger btn-remove-member"
+                            data-id="{{ .ID }}" aria-label="Remove {{ .EffectiveName }}">
+                        <i class="bi bi-person-dash"></i>
+                    </button>
+                    {{ end }}
+                </li>
+                {{ end }}
+            </ul>
+        {{ else }}
+            <div class="text-center py-4 text-secondary-custom">
+                <i class="bi bi-people fs-1 mb-2 d-block"></i>
+                <p class="mb-1">You're the only one here.</p>
+                <p class="small mb-0">Use the invite form below to add members to this household.</p>
+            </div>
+            {{ end }}
+        </div>
+
+        {{/* ── Join & Invite ───────────────────────────────── */}}
+        <div class="mt-4 pt-4 border-top">
+            <h3 class="h6 fw-semibold text-secondary-custom mb-3"><i class="bi bi-person-plus me-1"></i>Join &amp; Invite</h3>
+
+            {{/* Apply to join a household */}}
+            <div class="mb-4">
+                <label for="inputApplyHouseholdID" class="form-label fw-medium">
+                    Apply to Join a Household
+                </label>
+                <p class="text-secondary-custom small mb-2">Enter the ID of the household you want to join. The admin will need to approve your request.</p>
+                <div class="input-group input-width-360">
+                    <span class="input-group-text"><i class="bi bi-hash"></i></span>
+                    <input type="number" class="form-control" id="inputApplyHouseholdID"
+                           placeholder="Household ID" aria-required="true" min="1">
+                    <button type="button" class="btn btn-proviant-secondary" id="btnApplyHousehold">Apply</button>
+                </div>
+                <div class="form-text">The admin can find their Household ID in their Settings page, or they can send you an invitation email directly.</div>
+            </div>
+
+            {{/* Outgoing pending applications */}}
+            {{ if .MyApplications }}
+            <div class="mb-4">
+                <h3 class="h6 fw-semibold mb-2"><i class="bi bi-send me-1"></i>Your Pending Applications</h3>
+                <p class="text-secondary-custom small mb-2">Awaiting admin approval.</p>
+                <ul class="list-group" id="myApplicationList">
+                    {{ range .MyApplications }}
+                    <li class="list-group-item d-flex justify-content-between align-items-center" id="my-application-{{ .ID }}">
+                        <span><i class="bi bi-house me-2"></i>Household #{{ .HouseholdID }}</span>
+                        <button type="button" class="btn btn-sm btn-proviant-danger btn-cancel-application"
+                                data-id="{{ .ID }}" aria-label="Cancel application for household #{{ .HouseholdID }}">
+                            <i class="bi bi-x-lg"></i> Cancel
+                        </button>
+                    </li>
+                    {{ end }}
+                </ul>
+            </div>
+            {{ end }}
+
+            {{/* Invite by email */}}
+            <div class="mb-4">
+                <label for="inputInviteEmail" class="form-label fw-medium">
+                    <i class="bi bi-envelope-paper me-1"></i>Invite by Email
+                </label>
+                <p class="text-secondary-custom small mb-2">Send an invitation to join this household. The recipient will receive an email with a magic link to accept.</p>
+                <div class="input-group input-width-480">
+                    <span class="input-group-text"><i class="bi bi-at"></i></span>
+                    <input type="email" class="form-control" id="inputInviteEmail"
+                           placeholder="user@example.com" aria-label="Email address to invite" autocomplete="email">
+                    <button type="button" class="btn btn-proviant-secondary" id="btnSendInvitation">Send Invite</button>
+                </div>
+            </div>
+
+            {{/* Sent invitations list */}}
+            {{ if .Invitations }}
+            <div class="mb-3">
+                <h3 class="h6 fw-semibold mb-2"><i class="bi bi-send me-1"></i>Sent Invitations</h3>
+                <p class="text-secondary-custom small mb-2">Invitations you have sent. Cancelled invitations are hidden by default.</p>
+                <ul class="list-group" id="invitationList">
+                    {{ range .Invitations }}
+                    {{ if ne .Status "cancelled" }}
+                    <li class="list-group-item d-flex justify-content-between align-items-center" id="invitation-{{ .ID }}">
+                        <span>
+                            <i class="bi bi-envelope me-2"></i>{{ .Email }}
+                            <span class="badge bg-secondary ms-2">{{ .Status }}</span>
+                            <small class="text-secondary-custom ms-2">Expires: {{ .ExpiresAt.Format "2006-01-02" }}</small>
+                        </span>
+                        {{ if eq .Status "pending" }}
+                        <button type="button" class="btn btn-sm btn-proviant-danger btn-cancel-invitation"
+                                data-id="{{ .ID }}" aria-label="Cancel invitation for {{ .Email }}">
+                            <i class="bi bi-x-lg"></i> Cancel
+                        </button>
+                        {{ end }}
+                    </li>
+                    {{ end }}
+                    {{ end }}
+                </ul>
+            </div>
+
+            {{/* Collapsible cancelled invitations */}}
+            {{ $hasCancelled := false }}
+            {{ range .Invitations }}
+            {{ if eq .Status "cancelled" }}{{ $hasCancelled = true }}{{ end }}
+            {{ end }}
+            {{ if $hasCancelled }}
+            <div class="mt-3">
+                <button type="button" class="btn btn-sm btn-proviant-secondary"
+                        data-bs-toggle="collapse" data-bs-target="#cancelledInvitations"
+                        aria-expanded="false" aria-controls="cancelledInvitations">
+                    <i class="bi bi-chevron-down me-1"></i>Show cancelled invitations
+                </button>
+            </div>
+            <div class="collapse mt-2" id="cancelledInvitations">
+                <ul class="list-group">
+                    {{ range .Invitations }}
+                    {{ if eq .Status "cancelled" }}
+                    <li class="list-group-item d-flex justify-content-between align-items-center text-secondary-custom" id="invitation-{{ .ID }}">
+                        <span>
+                            <i class="bi bi-envelope me-2"></i>{{ .Email }}
+                            <span class="badge bg-secondary ms-2">{{ .Status }}</span>
+                        </span>
+                    </li>
+                    {{ end }}
+                    {{ end }}
+                </ul>
+            </div>
+            {{ end }}
+            {{ end }}
+        </div>
+
+        {{/* Admin: Pending join requests */}}
+        {{ if .IsAdmin }}
+        {{ if .PendingApplications }}
+        <div class="mt-4 pt-4 border-top">
+            <h3 class="h6 fw-semibold mb-2"><i class="bi bi-people me-1"></i>Pending Join Requests</h3>
+            <ul class="list-group" id="applicationList">
+                {{ range .PendingApplications }}
+                <li class="list-group-item d-flex justify-content-between align-items-center" id="application-{{ .ID }}">
+                    <span><i class="bi bi-person me-2"></i>User #{{ .ApplicantID }}</span>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-proviant-primary btn-approve-application"
+                                data-id="{{ .ID }}" aria-label="Approve application from user #{{ .ApplicantID }}">
+                            <i class="bi bi-check-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-proviant-danger btn-reject-application"
+                                data-id="{{ .ID }}" aria-label="Reject application from user #{{ .ApplicantID }}">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </li>
+                {{ end }}
+            </ul>
+        </div>
+        {{ end }}
+        {{ end }}
+
+        {{/* Admin: User Management ──────────────────────────────── */}}
+        {{ if .IsAdmin }}
+        <div class="mt-4 pt-4 border-top">
+            <h3 class="h6 fw-semibold mb-1"><i class="bi bi-person-gear me-1"></i>User Management</h3>
+            <p class="text-secondary-custom small mb-3">Manage household members. Click edit to update username or email, reset password to send a password reset link, or remove to delete the user.</p>
+
+            <div class="mb-3">
+                <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnRefreshUsers">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                </button>
+            </div>
+            <ul class="list-group" id="adminUserList">
+                <li class="list-group-item text-center text-secondary-custom py-3" id="adminUserLoading">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
+                </li>
+            </ul>
+
+            <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editUserForm" novalidate>
+                                <input type="hidden" id="editUserID">
+                                <div class="mb-3">
+                                    <label for="editUsername" class="form-label fw-medium">Username</label>
+                                    <input type="text" class="form-control" id="editUsername" required>
+                                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Username is required.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editMailAddress" class="form-label fw-medium">Email Address</label>
+                                    <input type="email" class="form-control" id="editMailAddress" required>
+                                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Valid email is required.</div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-proviant-primary" id="btnSaveUserEdit">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{ end }}
+
+        {{/* ── Webhooks ──────────────────────────────────────── */}}
+        <div class="mt-4 pt-4 border-top">
+            <h3 class="h6 fw-semibold mb-1"><i class="bi bi-webhook me-1"></i>Webhooks</h3>
+            <p class="text-secondary-custom small mb-3">Receive event notifications via HTTP. Up to 3 retries on failure.</p>
+
+            <div id="webhookList" class="mb-3"></div>
+
+            <div class="list-group list-group-flush border rounded-3">
+                <div class="list-group-item px-3 py-3">
+                    <div class="d-flex align-items-center justify-content-between gap-3">
+                        <div>
+                            <div class="fw-medium small">Create New Webhook</div>
+                            <div class="text-secondary-custom small">Add a new endpoint to receive event payloads.</div>
+                        </div>
+                        <div class="form-check form-switch mb-0 flex-shrink-0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="toggleWebhookCreate">
+                            <label class="visually-hidden" for="toggleWebhookCreate">Create new webhook</label>
+                        </div>
+                    </div>
+                </div>
+                <div id="webhookCreateSettings" class="list-group-item px-3 py-3 bg-body-tertiary d-none">
+                    <form id="webhookCreateForm" novalidate>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="inputWebhookUrl" class="form-label fw-medium small">Webhook URL <span class="text-danger" aria-hidden="true">*</span></label>
+                                <input type="url" class="form-control" id="inputWebhookUrl" placeholder="https://example.com/webhook" required>
+                                <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please enter a valid URL.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="inputWebhookSecret" class="form-label fw-medium small">Secret <span class="text-danger" aria-hidden="true">*</span></label>
+                                <input type="password" class="form-control" id="inputWebhookSecret" placeholder="Minimum 16 characters" minlength="16" required>
+                                <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Secret must be at least 16 characters.</div>
+                                <div class="form-text">Signs payloads with HMAC-SHA256.</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-medium small">Events <span class="text-danger" aria-hidden="true">*</span></label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductCreated" data-event="product.created">
+                                        <label class="form-check-label small" for="eventProductCreated">product.created</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductExpired" data-event="product.expired">
+                                        <label class="form-check-label small" for="eventProductExpired">product.expired</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductExpiringSoon" data-event="product.expiring_soon">
+                                        <label class="form-check-label small" for="eventProductExpiringSoon">product.expiring_soon</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductWasted" data-event="product.wasted">
+                                        <label class="form-check-label small" for="eventProductWasted">product.wasted</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventHouseholdMemberJoined" data-event="household.member_joined">
+                                        <label class="form-check-label small" for="eventHouseholdMemberJoined">household.member_joined</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-proviant-primary btn-sm" id="btnCreateWebhook">
+                            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Create Webhook
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {{/* ── Danger Zone ─────────────────────────────────── */}}
+        <div class="mt-4 pt-4 border-top border-danger border-opacity-25">
+            <h3 class="h6 fw-semibold text-danger mb-3">
+                <i class="bi bi-exclamation-triangle me-1"></i>Danger Zone
+            </h3>
+
+            {{/* Create new household */}}
+            <div class="mb-4">
+                <label for="inputNewHouseholdName" class="form-label fw-medium">
+                    <i class="bi bi-house-add me-1"></i>Create New Household
+                </label>
+                <p class="text-secondary-custom small mb-2">Create a new household and switch to it. If you are currently the sole member, your products will be moved.</p>
+                <div class="input-group input-width-480">
+                    <span class="input-group-text"><i class="bi bi-house"></i></span>
+                    <input type="text" class="form-control" id="inputNewHouseholdName"
+                           placeholder="Household name" aria-label="New household name">
+                    <button type="button" class="btn btn-proviant-secondary" id="btnCreateHousehold">
+                        Create &amp; Switch
+                    </button>
+                </div>
+            </div>
+
+            {{/* Leave household */}}
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                    <p class="fw-medium mb-1"><i class="bi bi-box-arrow-left me-1"></i>Leave Household</p>
+                    <p class="text-secondary-custom small mb-0">You will be assigned a new personal household. If you are the sole member, your products will be moved with you.</p>
+                </div>
+                <button type="button" class="btn btn-proviant-danger flex-shrink-0" id="btnLeaveHousehold">Leave</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="webhookSecretModal" tabindex="-1" aria-labelledby="webhookSecretModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="webhookSecretModalLabel">Webhook Secret</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary-custom small mb-2">Copy this secret to verify webhook signatures. You will not be able to see it again.</p>
+                <input type="text" class="form-control" id="webhookSecretCopy" readonly>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-proviant-secondary" id="btnCloseWebhookSecret" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-proviant-primary" id="btnCopySecret">Copy</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="webhookDeliveriesModal" tabindex="-1" aria-labelledby="webhookDeliveriesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="webhookDeliveriesModalLabel">Webhook Delivery History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="deliveriesModalBody">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="telegramHelpModal" tabindex="-1" aria-labelledby="telegramHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="telegramHelpModalLabel">
+                    <i class="bi bi-telegram me-2" aria-hidden="true"></i>Telegram Bot Setup
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary-custom small mb-3">
+                    Each user creates and manages their own Telegram bot. No administrator involvement is required.
+                </p>
+                <ol class="small mb-3">
+                    <li class="mb-3">
+                        <strong>Create a bot</strong> — open Telegram, message
+                        <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a>,
+                        run <code>/newbot</code>, and follow the prompts. Copy the bot token you receive.
+                    </li>
+                    <li class="mb-3">
+                        <strong>Paste the token</strong> — enter your bot token in the <em>Bot Token</em> field in these settings and click <strong>Save</strong>.
+                        Proviant will start listening for messages on your bot immediately.
+                    </li>
+                    <li class="mb-3">
+                        <strong>Link your account</strong> — click <strong>Link Account</strong>, then <strong>Generate Token</strong>.
+                        Use the <em>Open in Telegram</em> button or copy the command and send it to your bot.
+                    </li>
+                    <li>
+                        <strong>Enable</strong> — toggle Telegram notifications on and save.
+                    </li>
+                </ol>
+                <div class="alert alert-info small mb-0 py-2">
+                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+                    Your bot uses long-polling — no public URL or webhook configuration is required.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="telegramLinkModal" tabindex="-1" aria-labelledby="telegramLinkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="telegramLinkModalLabel">
+                    <i class="bi bi-telegram me-2" aria-hidden="true"></i>Link Telegram Account
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="telegramLinkSteps">
+                    <p class="text-secondary-custom small mb-3">Follow these steps to connect your Telegram account:</p>
+                    <ol class="small mb-3">
+                        <li class="mb-2">Click <strong>Generate Token</strong> below.</li>
+                        <li class="mb-2">Click <strong>Open in Telegram</strong> to open the bot directly — or copy the command and send it manually to your bot.</li>
+                        <li class="mb-2">Press <strong>Start</strong> in the Telegram chat (if using the link) or wait for the bot to confirm the link.</li>
+                    </ol>
+                    <div id="telegramLinkCommand" class="d-none mb-3">
+                        <a id="telegramDeepLink" href="#" target="_blank" rel="noopener noreferrer"
+                        class="btn btn-proviant-primary w-100 d-none">
+                            <i class="bi bi-telegram me-2" aria-hidden="true"></i>Open in Telegram
+                        </a>
+                        <div id="telegramManualCommand" class="mt-2">
+                            <small class="text-secondary-custom d-block mb-1">
+                                Or copy and send this command directly to your bot:
+                            </small>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control font-monospace" id="telegramLinkCommandText" readonly>
+                                <button type="button" class="btn btn-proviant-secondary" id="btnCopyTelegramCommand"
+                                        title="Copy command" aria-label="Copy command">
+                                    <i class="bi bi-clipboard" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div id="telegramCommandCopied" class="form-text text-success d-none">
+                                <i class="bi bi-check-circle me-1"></i>Copied!
+                            </div>
+                        </div>
+                    </div>
+                    <p class="small text-secondary-custom mb-0">Token expires when used. Generate a new one if needed.</p>
+                </div>
+                <div id="telegramLinkAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-proviant-primary" id="btnGenerateTelegramToken">
+                    <i class="bi bi-key me-1" aria-hidden="true"></i>Generate Token
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
