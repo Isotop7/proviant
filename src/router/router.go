@@ -290,16 +290,17 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	householdAPI.POST("/:id/apply", v1.WrapHandler(v1.ApplyForHousehold))
 	householdAPI.GET("/applications", v1.WrapHandler(v1.GetHouseholdApplications))
-	householdAPI.POST("/applications/:id/approve", v1.WrapHandler(v1.ApproveHouseholdApplication))
-	householdAPI.POST("/applications/:id/reject", v1.WrapHandler(v1.RejectHouseholdApplication))
-	householdAPI.DELETE("/applications/:id", v1.WrapHandler(v1.CancelHouseholdApplication))
-	householdAPI.PATCH("/name", v1.WrapHandler(v1.UpdateHouseholdName))
-	householdAPI.DELETE("/members/:userId", v1.WrapHandler(v1.RemoveHouseholdMember))
 
-	// Household invitation routes
-	householdAPI.POST("/invitations", v1.WrapHandler(v1.CreateInvitation))
-	householdAPI.GET("/invitations", v1.WrapHandler(v1.GetInvitations))
-	householdAPI.DELETE("/invitations/:id", v1.WrapHandler(v1.CancelInvitation))
+	householdAdminAPI := householdAPI.Group("")
+	householdAdminAPI.Use(RequireHouseholdAdmin())
+	householdAdminAPI.POST("/applications/:id/approve", v1.WrapHandler(v1.ApproveHouseholdApplication))
+	householdAdminAPI.POST("/applications/:id/reject", v1.WrapHandler(v1.RejectHouseholdApplication))
+	householdAdminAPI.DELETE("/applications/:id", v1.WrapHandler(v1.CancelHouseholdApplication))
+	householdAdminAPI.PATCH("/name", v1.WrapHandler(v1.UpdateHouseholdName))
+	householdAdminAPI.DELETE("/members/:userId", v1.WrapHandler(v1.RemoveHouseholdMember))
+	householdAdminAPI.POST("/invitations", v1.WrapHandler(v1.CreateInvitation))
+	householdAdminAPI.GET("/invitations", v1.WrapHandler(v1.GetInvitations))
+	householdAdminAPI.DELETE("/invitations/:id", v1.WrapHandler(v1.CancelInvitation))
 
 	// Storage location routes
 	householdAPI.GET("/storage-locations", v1.WrapHandler(v1.ListStorageLocations))
@@ -309,7 +310,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Admin user management routes
 	adminAPI := engine.Group("/api/v1/admin/users")
-	adminAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
+	adminAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware(), RequireHouseholdAdmin())
 	adminAPI.GET("", v1.WrapHandler(v1.GetHouseholdUsers))
 	adminAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateHouseholdUser))
 	adminAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteHouseholdUser))

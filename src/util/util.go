@@ -17,6 +17,7 @@ const (
 	ContextKeyRequestID              = "requestID"
 	ContextKeyCSPNonce               = "cspNonce"
 	ContextKeyCSRFToken              = "csrfToken"
+	ContextKeyHouseholdID            = "householdID"
 
 	// Database query wrappers
 	QueryId               = "id = ?"

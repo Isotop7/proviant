@@ -41,17 +41,6 @@ func GetHouseholdUsers(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	household, hhErr := appCtx.Repos.Users.GetHouseholdByID(user.HouseholdID)
-	if hhErr != nil {
-		appCtx.Logger.Error().Msgf(MsgErrFetchingHousehold, hhErr)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-	if household.AdminID != appCtx.UserID {
-		api.RespondError(ctx, http.StatusForbidden, errors.ErrNotHouseholdAdmin)
-		return
-	}
-
 	users, err := appCtx.Repos.Users.GetUsersByHouseholdID(user.HouseholdID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error fetching household users: %s", err)
