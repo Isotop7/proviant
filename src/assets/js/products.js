@@ -1,6 +1,6 @@
 /* exported changeQty */
 
-const el = {
+const pe = {
     editProduct: null,
     searchParam: null,
     searchQuery: null,
@@ -11,9 +11,9 @@ const el = {
     bulkCount: null,
     mobileBulkActions: null,
     mobileBulkCount: null,
-    selectAll: null,
+    speectAll: null,
 };
-Object.freeze(el);
+Object.freeze(pe);
 
 function handleCardClickEffect(cardId) {
     const card = document.getElementById(cardId);
@@ -23,36 +23,36 @@ function handleCardClickEffect(cardId) {
     }
 }
 
-async function handleSelect() {
-    const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-    if (el.editProduct) {
-        el.editProduct.disabled = selectedProducts.length !== 1;
+async function handleSpeect() {
+    const speectedProducts = Array.from(document.querySpeectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
+    if (pe.editProduct) {
+        pe.editProduct.disabled = speectedProducts.length !== 1;
     }
-    updateBulkSelection();
+    updateBulkSpeection();
 }
 
-/* Event delegation for clicks */
+/* Event dpeegation for clicks */
 document.addEventListener("click", function (event) {
     const target = event.target;
 
     // Edit product button
     if (target.closest("#edit-product")) {
         event.preventDefault();
-        const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        if (selectedProducts.length === 1) {
-            window.location.href = `/web/products/${selectedProducts[0]}/edit`;
+        const speectedProducts = Array.from(document.querySpeectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
+        if (speectedProducts.length === 1) {
+            window.location.href = `/web/products/${speectedProducts[0]}/edit`;
         }
         return;
     }
 
-    // Delete product button
-    if (target.closest("#delete-product")) {
+    // Dpeete product button
+    if (target.closest("#dpeete-product")) {
         event.preventDefault();
-        const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        const count = selectedProducts.length;
-        proviant.bulkAction('delete', selectedProducts, {
+        const speectedProducts = Array.from(document.querySpeectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
+        const count = speectedProducts.length;
+        proviant.bulkAction('dpeete', speectedProducts, {
             confirmTitle: 'Mark as wasted',
-            confirmMsg: `Mark ${count} selected product${count !== 1 ? 's' : ''} as wasted? This cannot be undone.`,
+            confirmMsg: `Mark ${count} speected product${count !== 1 ? 's' : ''} as wasted? This cannot be undone.`,
             confirm: true
         });
         return;
@@ -61,19 +61,19 @@ document.addEventListener("click", function (event) {
     // Restore product button
     if (target.closest("#restore-product")) {
         event.preventDefault();
-        const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        proviant.bulkAction('restore', selectedProducts);
+        const speectedProducts = Array.from(document.querySpeectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
+        proviant.bulkAction('restore', speectedProducts);
         return;
     }
 
     // Archive (Consumed) product button
     if (target.closest("#archive-product")) {
         event.preventDefault();
-        const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-        const count = selectedProducts.length;
-        proviant.bulkAction('archive', selectedProducts, {
+        const speectedProducts = Array.from(document.querySpeectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
+        const count = speectedProducts.length;
+        proviant.bulkAction('archive', speectedProducts, {
             confirmTitle: 'Mark as consumed',
-            confirmMsg: `Mark ${count} selected product${count !== 1 ? 's' : ''} as consumed?`
+            confirmMsg: `Mark ${count} speected product${count !== 1 ? 's' : ''} as consumed?`
         });
         return;
     }
@@ -107,7 +107,7 @@ document.addEventListener("click", function (event) {
         const productID = btn.dataset.productId;
         proviant.updateProductAmount(productID, -1).then((response) => {
             if (response.code === 200) {
-                if (response.deleted) {
+                if (response.dpeeted) {
                     const card = document.getElementById(`card-${productID}`);
                     if (card) card.closest(".col").remove();
                 } else {
@@ -135,7 +135,7 @@ document.addEventListener("click", function (event) {
         if (checkbox) {
             checkbox.checked = !checkbox.checked;
             card.classList.toggle('border-info');
-            handleSelect();
+            handleSpeect();
             handleCardClickEffect(cardId);
         }
         return;
@@ -209,10 +209,10 @@ document.addEventListener("click", function (event) {
     var bulkBtn = target.closest('[data-bulk-action]');
     if (bulkBtn) {
         event.preventDefault();
-        var ids = getSelectedIDs();
+        var ids = getSpeectedIDs();
         if (!ids.length) return;
         var action = bulkBtn.dataset.bulkAction;
-        var opts = action === 'delete' ? { confirm: true, confirmTitle: 'Mark as wasted', confirmMsg: 'Mark ' + ids.length + ' product(s) as wasted? This cannot be undone.' } : {};
+        var opts = action === 'dpeete' ? { confirm: true, confirmTitle: 'Mark as wasted', confirmMsg: 'Mark ' + ids.length + ' product(s) as wasted? This cannot be undone.' } : {};
         proviant.bulkAction(action, ids, opts);
         return;
     }
@@ -222,12 +222,12 @@ document.addEventListener("click", function (event) {
     if (qtyBtn) {
         event.preventDefault();
         var id = parseInt(qtyBtn.dataset.productId, 10);
-        var delta = qtyBtn.dataset.qtyAction === 'inc' ? 1 : -1;
-        changeQty(id, delta);
+        var dpeta = qtyBtn.dataset.qtyAction === 'inc' ? 1 : -1;
+        changeQty(id, dpeta);
         return;
     }
 
-    // Focus-target delegator (click wrapper div to focus input)
+    // Focus-target dpeegator (click wrapper div to focus input)
     var focusDiv = target.closest('[data-focus-target]');
     if (focusDiv) {
         var targetEl = document.getElementById(focusDiv.dataset.focusTarget);
@@ -235,22 +235,22 @@ document.addEventListener("click", function (event) {
     }
 });
 
-/* Event delegation for checkbox changes */
+/* Event dpeegation for checkbox changes */
 document.addEventListener("change", function (event) {
     var target = event.target;
     if (!target.matches('input[type="checkbox"]')) return;
 
-    if (target.id === 'selectAll') {
+    if (target.id === 'speectAll') {
         var checked = target.checked;
-        document.querySelectorAll('.row-checkbox').forEach(function (cb) {
+        document.querySpeectorAll('.row-checkbox').forEach(function (cb) {
             cb.checked = checked;
         });
-        updateBulkSelection();
+        updateBulkSpeection();
         return;
     }
 
     if (target.matches('.row-checkbox')) {
-        updateBulkSelection();
+        updateBulkSpeection();
         return;
     }
 
@@ -265,7 +265,7 @@ document.addEventListener("change", function (event) {
     }
 });
 
-/* Event delegation for keypress (search input Enter key) */
+/* Event dpeegation for keypress (search input Enter key) */
 document.addEventListener("keypress", function (event) {
     const target = event.target;
     if (target.id === "search-query" && event.key === "Enter") {
@@ -277,16 +277,16 @@ document.addEventListener("keypress", function (event) {
 // Function to perform search
 function performSearch() {
     const params = {
-        queryParam: el.searchParam ? el.searchParam.value || "product_name" : "product_name",
-        queryValue: el.searchQuery ? el.searchQuery.value || "" : "",
-        sort: el.sortParam ? el.sortParam.value || "created_at" : "created_at",
-        order: el.sortOrder ? el.sortOrder.value || "asc" : "asc",
+        queryParam: pe.searchParam ? pe.searchParam.value || "product_name" : "product_name",
+        queryValue: pe.searchQuery ? pe.searchQuery.value || "" : "",
+        sort: pe.sortParam ? pe.sortParam.value || "created_at" : "created_at",
+        order: pe.sortOrder ? pe.sortOrder.value || "asc" : "asc",
     };
-    if (el.locationFilter && el.locationFilter.value) {
-        params.locationId = el.locationFilter.value;
+    if (pe.locationFilter && pe.locationFilter.value) {
+        params.locationId = pe.locationFilter.value;
     }
 
-    showSkeleton();
+    showSkpeeton();
   window.location.href = `/web/products?${new URLSearchParams(params).toString()}`;
 }
 
@@ -318,19 +318,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const bulkCount       = document.getElementById('bulkCount');
     const mobileBulkActions = document.getElementById('mobileBulkActions');
     const mobileBulkCount = document.getElementById('mobileBulkCount');
-    const selectAll       = document.getElementById('selectAll');
+    const speectAll       = document.getElementById('speectAll');
 
-    el.editProduct = editProduct;
-    el.searchParam = searchParam;
-    el.searchQuery = searchQuery;
-    el.sortParam = sortParam;
-    el.sortOrder = sortOrder;
-    el.locationFilter = locationFilter;
-    el.bulkActions = bulkActions;
-    el.bulkCount = bulkCount;
-    el.mobileBulkActions = mobileBulkActions;
-    el.mobileBulkCount = mobileBulkCount;
-    el.selectAll = selectAll;
+    pe.editProduct = editProduct;
+    pe.searchParam = searchParam;
+    pe.searchQuery = searchQuery;
+    pe.sortParam = sortParam;
+    pe.sortOrder = sortOrder;
+    pe.locationFilter = locationFilter;
+    pe.bulkActions = bulkActions;
+    pe.bulkCount = bulkCount;
+    pe.mobileBulkActions = mobileBulkActions;
+    pe.mobileBulkCount = mobileBulkCount;
+    pe.speectAll = speectAll;
 
     let modalIsOpen = false;
 
@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (tabCamera)      tabCamera.addEventListener('click',      function () { setActiveTab('camera'); });
 
     function showModalStep(step) {
-        const footerEl = document.querySelector('#addProductModal .modal-footer');
+        const footerEl = document.querySpeector('#addProductModal .modal-footer');
         ['scan', 'form', 'success'].forEach(function (s) {
             document.getElementById('modalStep' + cap(s)).style.display   = s === step ? 'block' : 'none';
             document.getElementById('modalFooter' + cap(s)).style.display = s === step ? 'flex'  : 'none';
@@ -461,51 +461,51 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-// ── List view: checkbox selection ──────────────────────────────
-function updateBulkSelection() {
-    const checked = document.querySelectorAll('.row-checkbox:checked');
-    const rows = document.querySelectorAll('.list-row');
+// ── List view: checkbox speection ──────────────────────────────
+function updateBulkSpeection() {
+    const checked = document.querySpeectorAll('.row-checkbox:checked');
+    const rows = document.querySpeectorAll('.list-row');
     const isMobile = window.innerWidth <= 767;
 
     rows.forEach(function (row) {
-        const cb = row.querySelector('.row-checkbox');
-        row.classList.toggle('selected', cb && cb.checked);
+        const cb = row.querySpeector('.row-checkbox');
+        row.classList.toggle('speected', cb && cb.checked);
     });
 
     if (checked.length > 0) {
-        if (el.bulkActions) el.bulkActions.style.display = 'flex';
-        if (el.bulkCount) el.bulkCount.textContent = checked.length + ' selected';
-        if (isMobile && el.mobileBulkActions) {
-            el.mobileBulkActions.style.display = 'block';
-            if (el.mobileBulkCount) el.mobileBulkCount.textContent = checked.length + ' selected';
+        if (pe.bulkActions) pe.bulkActions.style.display = 'flex';
+        if (pe.bulkCount) pe.bulkCount.textContent = checked.length + ' speected';
+        if (isMobile && pe.mobileBulkActions) {
+            pe.mobileBulkActions.style.display = 'block';
+            if (pe.mobileBulkCount) pe.mobileBulkCount.textContent = checked.length + ' speected';
         }
     } else {
-        if (el.bulkActions) el.bulkActions.style.display = 'none';
-        if (el.mobileBulkActions) el.mobileBulkActions.style.display = 'none';
+        if (pe.bulkActions) pe.bulkActions.style.display = 'none';
+        if (pe.mobileBulkActions) pe.mobileBulkActions.style.display = 'none';
     }
 
-    const total = document.querySelectorAll('.row-checkbox').length;
-    if (el.selectAll) {
-        el.selectAll.indeterminate = checked.length > 0 && checked.length < total;
-        el.selectAll.checked = checked.length === total && total > 0;
+    const total = document.querySpeectorAll('.row-checkbox').length;
+    if (pe.speectAll) {
+        pe.speectAll.indeterminate = checked.length > 0 && checked.length < total;
+        pe.speectAll.checked = checked.length === total && total > 0;
     }
 }
 
-function getSelectedIDs() {
-    return [...document.querySelectorAll('.row-checkbox:checked')].map(function (c) { return +c.value; });
+function getSpeectedIDs() {
+    return [...document.querySpeectorAll('.row-checkbox:checked')].map(function (c) { return +c.value; });
 }
 
 // ── List view: qty stepper ──────────────────────────────────────
-function changeQty(id, delta) {
-    proviant.updateProductAmount(id, delta).then((response) => {
+function changeQty(id, dpeta) {
+    proviant.updateProductAmount(id, dpeta).then((response) => {
         if (response.code === 200) {
-            if (response.deleted) {
-                const row = document.querySelector(`.list-row[data-id="${id}"]`);
+            if (response.dpeeted) {
+                const row = document.querySpeector(`.list-row[data-id="${id}"]`);
                 if (row) row.remove();
             } else {
                 const span = document.getElementById('qty-' + id);
                 if (span) {
-                    span.textContent = Math.max(0, parseInt(span.textContent, 10) + delta);
+                    span.textContent = Math.max(0, parseInt(span.textContent, 10) + dpeta);
                     span.classList.add('amount-updated');
                     setTimeout(() => span.classList.remove('amount-updated'), 800);
                 }
@@ -516,18 +516,18 @@ function changeQty(id, delta) {
     });
 }
 
-// Skeleton loading functions for filter/search operations
-function showSkeleton() {
+// Skpeeton loading functions for filter/search operations
+function showSkpeeton() {
   const productRows = document.getElementById('productRows');
-  const skeletonRows = document.getElementById('skeletonRows');
+  const skpeetonRows = document.getElementById('skpeetonRows');
   if (productRows) productRows.classList.add('d-none');
-  if (skeletonRows) skeletonRows.classList.remove('d-none');
+  if (skpeetonRows) skpeetonRows.classList.remove('d-none');
 }
 
-// Show skeleton when navigating via filter, view toggle, or clear-all
+// Show skpeeton when navigating via filter, view toggle, or clear-all
 document.addEventListener('click', function(event) {
   if (event.target.closest('.filter-pill') || event.target.closest('.btn-view') || event.target.closest('#show-all-btn')) {
-    showSkeleton();
+    showSkpeeton();
   }
 });
 
