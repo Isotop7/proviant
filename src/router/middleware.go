@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
-	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/controllers/database"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"

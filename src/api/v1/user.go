@@ -35,7 +35,7 @@ import (
 // @Router        	/api/v1/user [patch]
 func UpdateUser(ctx *gin.Context, appCtx *AppContext) {
 	var req struct {
-		DisplayName string `json:"displayName"`
+		DisplayName string `json:"displayName" binding:"max=100"`
 		MailAddress string `json:"mailAddress" binding:"required,email"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {

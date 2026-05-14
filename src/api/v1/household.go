@@ -68,10 +68,6 @@ func CreateHousehold(ctx *gin.Context, appCtx *AppContext) {
 		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
-	if req.Name == "" {
-		api.RespondError(ctx, http.StatusBadRequest, errors.New(MsgHouseholdNameEmpty))
-		return
-	}
 
 	if err := appCtx.Repos.Households.CreateAndSwitchHousehold(appCtx.UserID, req.Name); err != nil {
 		appCtx.Logger.Error().Msgf("Error creating household: %s", err)
@@ -221,10 +217,6 @@ func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext) {
 		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
-	if req.Name == "" {
-		api.RespondError(ctx, http.StatusBadRequest, errors.New(MsgHouseholdNameEmpty))
-		return
-	}
 
 	user, userErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if userErr != nil {
@@ -323,11 +315,11 @@ func parseUintParam(ctx *gin.Context, logger *zerolog.Logger, paramName, invalid
 }
 
 type createHouseholdRequest struct {
-	Name string `json:"name"`
+	Name string `json:"name" binding:"required,min=1,max=100"`
 }
 
 type updateHouseholdNameRequest struct {
-	Name string `json:"name"`
+	Name string `json:"name" binding:"required,min=1,max=100"`
 }
 
 func recordMemberLeft(ctx *gin.Context, userID uint, householdID uint) {

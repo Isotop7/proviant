@@ -22,11 +22,11 @@ import (
 )
 
 type AppContext struct {
-	Logger    *zerolog.Logger
-	DB        *gorm.DB
-	Repos     *database.RepositoryContainer
-	UserID    uint
-	Products  *services.ProductService
+	Logger   *zerolog.Logger
+	DB       *gorm.DB
+	Repos    *database.RepositoryContainer
+	UserID   uint
+	Products *services.ProductService
 }
 
 func mustGetAppContext(ctx *gin.Context, logger *zerolog.Logger) *AppContext {

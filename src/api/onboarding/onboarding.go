@@ -102,7 +102,7 @@ func UpdateOnboardingProfile(ctx *gin.Context) {
 	}
 
 	var req struct {
-		DisplayName string `json:"displayName"`
+		DisplayName string `json:"displayName" binding:"max=100"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.Error().Msgf(apperrors.ErrParseBodyWrapper, err.Error())
@@ -146,7 +146,7 @@ func CreateOnboardingHousehold(ctx *gin.Context) {
 	}
 
 	var req struct {
-		Name string `json:"name" binding:"required"`
+		Name string `json:"name" binding:"required,min=1,max=100"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.Warn().Msgf(apperrors.ErrParseBodyWrapper, err.Error())
@@ -154,13 +154,7 @@ func CreateOnboardingHousehold(ctx *gin.Context) {
 		return
 	}
 
-	name := strings.TrimSpace(req.Name)
-	if name == "" {
-		api.RespondError(ctx, http.StatusBadRequest, errors.New("household name cannot be empty"))
-		return
-	}
-
-	if err := repos.Households.CreateAndSwitchHousehold(userID, name); err != nil {
+	if err := repos.Households.CreateAndSwitchHousehold(userID, req.Name); err != nil {
 		logger.Error().Msgf("Failed to create household: %s", err.Error())
 		api.RespondError(ctx, http.StatusInternalServerError, errors.New("failed to create household"))
 		return
