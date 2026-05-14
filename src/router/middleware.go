@@ -10,6 +10,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
@@ -27,6 +28,43 @@ import (
 const MsgInvalidCredentials = "Invalid credentials"
 
 var errEmailNotVerified = errors.New("email not verified")
+
+func RequireHouseholdAdmin() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+		dbHandle, _ := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
+
+		userIDVal, exists := ctx.Get(util.ContextKeyUserID)
+		if !exists {
+			api.RespondError(ctx, http.StatusUnauthorized, errors.New("user not authenticated"))
+			ctx.Abort()
+			return
+		}
+		userID := userIDVal.(uint)
+
+		userRepo := database.NewUserRepository(dbHandle)
+		user, err := userRepo.GetUserByID(userID)
+		if err != nil {
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserID)
+			ctx.Abort()
+			return
+		}
+		household, err := userRepo.GetHouseholdByID(user.HouseholdID)
+		if err != nil {
+			logger.Error().Msgf("Error fetching household: %s", err)
+			api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
+			ctx.Abort()
+			return
+		}
+		if household.AdminID != userID {
+			api.RespondError(ctx, http.StatusForbidden, apperrors.ErrNotHouseholdAdmin)
+			ctx.Abort()
+			return
+		}
+		ctx.Set(util.ContextKeyHouseholdID, household.ID)
+		ctx.Next()
+	}
+}
 
 // parseRequestID validates if the string is a valid UUID, returns empty string if not
 func parseRequestID(s string) string {

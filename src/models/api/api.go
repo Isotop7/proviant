@@ -15,7 +15,7 @@ type OnboardingStateResponse struct {
 
 // ProductAmountDTO is the request body for updating a product's amount
 type ProductAmountDTO struct {
-	Delta int `json:"delta" binding:"required"`
+	Delta int `json:"delta" binding:"required,min=0"`
 }
 
 // HouseholdListItem represents a household in the discovery list

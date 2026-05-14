@@ -225,7 +225,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.GET("/archived", v1.WrapHandler(v1.GetArchivedProducts))
 	publicProductAPI.GET("/expired", v1.WrapHandler(v1.GetExpired))
 	publicProductAPI.POST("", v1.WrapHandler(v1.CreateProduct))
-	publicProductAPI.POST("/scan", v1.WrapHandler(v1.ScanProduct))
+	publicProductAPI.POST("/scan", scanRateLimitMiddleware, v1.WrapHandler(v1.ScanProduct))
 	publicProductAPI.POST("/scan-date", v1.WrapHandler(v1.ScanExpiryDate))
 	publicProductAPI.GET("/byBarcode/:barcode", v1.WrapHandler(v1.GetProductsByBarcode))
 	publicProductAPI.GET("/openfoodfacts/:barcode", v1.WrapHandler(v1.GetOpenFoodFactsData))
@@ -244,7 +244,8 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedUserAPI := engine.Group("/api/v1/user")
 	protectedUserAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	protectedUserAPI.PATCH("", v1.WrapHandler(v1.UpdateUser))
-	protectedUserAPI.POST("/password", v1.WrapHandler(v1.UpdateUserPassword))
+
+	protectedUserAPI.POST("/password", passwordRateLimitMiddleware, v1.WrapHandler(v1.UpdateUserPassword))
 	protectedUserAPI.GET("/notification-preferences", v1.WrapHandler(v1.GetUserNotificationPreferences))
 	protectedUserAPI.POST("/notification-preferences", v1.WrapHandler(v1.UpdateUserNotificationPreferences))
 	protectedUserAPI.POST("/telegram-link-token", v1.WrapHandler(v1.GenerateTelegramLinkToken))
@@ -290,16 +291,17 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	householdAPI.POST("/:id/apply", v1.WrapHandler(v1.ApplyForHousehold))
 	householdAPI.GET("/applications", v1.WrapHandler(v1.GetHouseholdApplications))
-	householdAPI.POST("/applications/:id/approve", v1.WrapHandler(v1.ApproveHouseholdApplication))
-	householdAPI.POST("/applications/:id/reject", v1.WrapHandler(v1.RejectHouseholdApplication))
-	householdAPI.DELETE("/applications/:id", v1.WrapHandler(v1.CancelHouseholdApplication))
-	householdAPI.PATCH("/name", v1.WrapHandler(v1.UpdateHouseholdName))
-	householdAPI.DELETE("/members/:userId", v1.WrapHandler(v1.RemoveHouseholdMember))
 
-	// Household invitation routes
-	householdAPI.POST("/invitations", v1.WrapHandler(v1.CreateInvitation))
-	householdAPI.GET("/invitations", v1.WrapHandler(v1.GetInvitations))
-	householdAPI.DELETE("/invitations/:id", v1.WrapHandler(v1.CancelInvitation))
+	householdAdminAPI := householdAPI.Group("")
+	householdAdminAPI.Use(RequireHouseholdAdmin())
+	householdAdminAPI.POST("/applications/:id/approve", v1.WrapHandler(v1.ApproveHouseholdApplication))
+	householdAdminAPI.POST("/applications/:id/reject", v1.WrapHandler(v1.RejectHouseholdApplication))
+	householdAdminAPI.DELETE("/applications/:id", v1.WrapHandler(v1.CancelHouseholdApplication))
+	householdAdminAPI.PATCH("/name", v1.WrapHandler(v1.UpdateHouseholdName))
+	householdAdminAPI.DELETE("/members/:userId", v1.WrapHandler(v1.RemoveHouseholdMember))
+	householdAdminAPI.POST("/invitations", v1.WrapHandler(v1.CreateInvitation))
+	householdAdminAPI.GET("/invitations", v1.WrapHandler(v1.GetInvitations))
+	householdAdminAPI.DELETE("/invitations/:id", v1.WrapHandler(v1.CancelInvitation))
 
 	// Storage location routes
 	householdAPI.GET("/storage-locations", v1.WrapHandler(v1.ListStorageLocations))
@@ -309,7 +311,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Admin user management routes
 	adminAPI := engine.Group("/api/v1/admin/users")
-	adminAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
+	adminAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware(), RequireHouseholdAdmin())
 	adminAPI.GET("", v1.WrapHandler(v1.GetHouseholdUsers))
 	adminAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateHouseholdUser))
 	adminAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteHouseholdUser))
