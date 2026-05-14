@@ -1,0 +1,30 @@
+{{ define "content" }}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card card-section">
+                <div class="card-body p-4 text-center">
+                    {{if .Error}}
+                        <div class="text-danger mb-3">
+                            <i class="bi bi-exclamation-circle-fill fs-1"></i>
+                        </div>
+                        <h1 class="h4 mb-3">Unable to Unsubscribe</h1>
+                        <p class="text-secondary-custom">{{.Error}}</p>
+                    {{else if .Success}}
+                        <div class="text-success mb-3">
+                            <i class="bi bi-check-circle-fill fs-1"></i>
+                        </div>
+                        <h1 class="h4 mb-3">Unsubscribed</h1>
+                        <p class="text-secondary-custom">
+                            You have been successfully unsubscribed from expiry digest emails
+                            {{if .HouseholdName}}for <strong>{{.HouseholdName}}</strong>{{end}}.
+                        </p>
+                        <p class="text-secondary-custom small">You can resubscribe anytime in your notification settings.</p>
+                    {{end}}
+                    <a href="/web" class="btn btn-proviant-primary mt-3">Go to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}

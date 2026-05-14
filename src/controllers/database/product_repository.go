@@ -59,10 +59,12 @@ type ProductRepositoryInterface interface {
 	GetWasteThisMonth(userID uint) (int, error)
 	GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
 	GetProductsByHousehold(householdID uint) ([]database.Product, error)
+	GetSubThresholdProducts(userID uint) ([]database.Product, error)
 	ConsumeProduct(productID, userID uint) error
 	WasteProduct(productID, userID uint) error
 	BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
 	BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
+	GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
 }
 
 var _ ProductRepositoryInterface = (*ProductRepository)(nil)
@@ -334,6 +336,8 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 	dbProduct.Amount = product.Amount
 	dbProduct.Unit = product.Unit
 	dbProduct.StorageLocationID = product.StorageLocationID
+	dbProduct.NotificationLeadDays = product.NotificationLeadDays
+	dbProduct.MinStockAmount = product.MinStockAmount
 
 	saveResult := r.DB.Save(&dbProduct)
 	return saveResult.Error
@@ -898,6 +902,61 @@ func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database
 	return products, result.Error
 }
 
+func (r *ProductRepository) GetSubThresholdProducts(userID uint) ([]database.Product, error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return []database.Product{}, err
+	}
+
+	var products []database.Product
+	err = r.DB.Preload("StorageLocation").
+		Where("household_id = ? AND deleted_at IS NULL AND amount < min_stock_amount AND min_stock_amount > 0", householdID).
+		Find(&products).Error
+	if err != nil {
+		return []database.Product{}, err
+	}
+	return products, nil
+}
+
+type MailDigestProductGroup struct {
+	Today    []database.Product
+	ThisWeek []database.Product
+	NextWeek []database.Product
+}
+
+func (r *ProductRepository) GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error) {
+	now := time.Now()
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfToday := startOfToday.AddDate(0, 0, 1).Add(-time.Nanosecond)
+	endOfWeek := startOfToday.AddDate(0, 0, 7).Add(-time.Nanosecond)
+	endOfNextWeek := startOfToday.AddDate(0, 0, 14).Add(-time.Nanosecond)
+
+	var allProducts []database.Product
+	if err := r.DB.
+		Where("household_id = ? AND deleted_at IS NULL", householdID).
+		Where("expire_at > ?", startOfToday).
+		Where("expire_at <= ?", endOfNextWeek).
+		Order("expire_at ASC").
+		Find(&allProducts).Error; err != nil {
+		return MailDigestProductGroup{}, err
+	}
+
+	var group MailDigestProductGroup
+	for i := range allProducts {
+		p := &allProducts[i]
+		switch {
+		case !p.ExpireAt.After(endOfToday):
+			group.Today = append(group.Today, *p)
+		case !p.ExpireAt.After(endOfWeek):
+			group.ThisWeek = append(group.ThisWeek, *p)
+		default:
+			group.NextWeek = append(group.NextWeek, *p)
+		}
+	}
+
+	return group, nil
+}
+
 func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
 	product, err := r.GetProductByID(productID, userID)
 	if err != nil {
@@ -947,6 +1006,7 @@ type CalendarTokenRepositoryInterface interface {
 	DeleteByUserID(userID uint) error
 	GetByUserID(userID uint) (authentication.CalendarToken, error)
 	Create(ct *authentication.CalendarToken) error
+	Update(ct *authentication.CalendarToken) error
 }
 
 var _ CalendarTokenRepositoryInterface = (*CalendarTokenRepository)(nil)
@@ -962,7 +1022,13 @@ func NewCalendarTokenRepository(db *gorm.DB) *CalendarTokenRepository {
 func (r *CalendarTokenRepository) GetByToken(token string) (authentication.CalendarToken, error) {
 	var ct authentication.CalendarToken
 	err := r.DB.Where("token = ?", token).First(&ct).Error
-	return ct, err
+	if err != nil {
+		return ct, err
+	}
+	if ct.ExpiresAt.Before(time.Now()) {
+		return ct, errors.ErrTokenExpired
+	}
+	return ct, nil
 }
 
 func (r *CalendarTokenRepository) DeleteByUserID(userID uint) error {
@@ -977,4 +1043,8 @@ func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.Calen
 
 func (r *CalendarTokenRepository) Create(ct *authentication.CalendarToken) error {
 	return r.DB.Create(ct).Error
+}
+
+func (r *CalendarTokenRepository) Update(ct *authentication.CalendarToken) error {
+	return r.DB.Save(ct).Error
 }

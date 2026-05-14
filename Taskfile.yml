@@ -23,6 +23,12 @@ tasks:
       - cp ./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* ./src/assets/js/
       - cmd: cd src && go get -u
 
+  vet:
+    desc: Run go vet
+    dir: src
+    cmds:
+      - go vet
+
   tidy:
     desc: Format code and tidy modfile
     dir: src

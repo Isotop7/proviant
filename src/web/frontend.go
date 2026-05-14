@@ -11,6 +11,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -515,14 +516,22 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 		return
 	}
 
+	user, userErr := repos.Users.GetUserByID(userID)
+	if userErr != nil {
+		logger.Error().Msgf("Error getting user: %s", userErr)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
+		return
+	}
+
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
 	pageData := map[string]any{
-		"InviteToken": ctx.Query("invite_token"),
-		"Title":       "Products",
-		"Product":     product,
-		"Locations":   locations,
-		"IsArchived":  product.DeletedAt.Valid,
+		"InviteToken":                     ctx.Query("invite_token"),
+		"Title":                           "Products",
+		"Product":                         product,
+		"Locations":                       locations,
+		"IsArchived":                      product.DeletedAt.Valid,
+		"GlobalNotificationThresholdDays": user.NotificationPreferences.NotificationThresholdDays,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
 }
@@ -710,7 +719,6 @@ func (frontend *Frontend) Recipes(ctx *gin.Context) {
 
 	householdID, err := repos.Users.GetUserHouseholdByID(userID)
 	if err != nil || householdID == 0 {
-		// No household, still render page with empty state (frontend will handle)
 		householdID = 0
 	}
 
@@ -721,4 +729,98 @@ func (frontend *Frontend) Recipes(ctx *gin.Context) {
 	}
 
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "recipes.tmpl", pageData)
+}
+
+// ShoppingList renders the auto-generated shopping list page
+// @Summary      Shopping List page
+// @Description  Renders products below minimum stock threshold
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/shopping-list [get]
+func (frontend *Frontend) ShoppingList(ctx *gin.Context) {
+	logger, repos, userID, ok := frontend.mustGetPageContext(ctx)
+	if !ok {
+		return
+	}
+
+	products, prodErr := repos.Products.GetSubThresholdProducts(userID)
+	if prodErr != nil {
+		logger.Error().Msgf("Error getting shopping list: %s", prodErr)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, "Error loading shopping list")
+		return
+	}
+
+	pageData := map[string]any{
+		"InviteToken":  ctx.Query("invite_token"),
+		"Title":        "Shopping List",
+		"Products":     products,
+		"ProductCount": len(products),
+	}
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "shoppingList.tmpl", pageData)
+}
+
+// Unsubscribe handles one-click unsubscribe from email digests.
+// @Summary      Unsubscribe from email digests
+// @Description  Handles unsubscribe token and disables digest for user
+// @Tags         web
+// @Produce      html
+// @Param        token  query  string  true  "Unsubscribe token"
+// @Success      200    {string}  html
+// @Failure      400    {object}  api.APIResponse
+// @Failure      404    {object}  api.APIResponse
+// @Router       /web/unsubscribe [get]
+func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
+	token := ctx.Query("token")
+	if token == "" {
+		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "baseAuth", "unsubscribe.tmpl", map[string]any{
+			"Title": "Unsubscribe",
+			"Error": "No unsubscribe token provided.",
+		})
+		return
+	}
+
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
+		logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "baseAuth", "unsubscribe.tmpl", map[string]any{
+			"Title": "Unsubscribe",
+			"Error": "Internal server error.",
+		})
+		return
+	}
+
+	user, userErr := repos.Notifications.GetUserByMailDigestUnsubscribeToken(token)
+	if userErr != nil {
+		templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "baseAuth", "unsubscribe.tmpl", map[string]any{
+			"Title": "Unsubscribe",
+			"Error": "Invalid or expired unsubscribe link.",
+		})
+		return
+	}
+
+	if err := repos.Notifications.DeleteMailDigestUnsubscribeToken(token); err != nil {
+		logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+		logger.Warn().Msgf("Unsubscribe: failed to delete token: %s", err)
+	}
+
+	user.NotificationPreferences.MailDigestFrequency = authentication.MailDigestFrequencyDisabled
+	if updateErr := repos.Users.UpdateUser(user.ID, &user); updateErr != nil {
+		logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+		logger.Error().Msgf("Unsubscribe: failed to update user: %s", updateErr)
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "baseAuth", "unsubscribe.tmpl", map[string]any{
+			"Title": "Unsubscribe",
+			"Error": "Failed to update preferences.",
+		})
+		return
+	}
+
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "unsubscribe.tmpl", map[string]any{
+		"Title":         "Unsubscribe",
+		"Success":       true,
+		"HouseholdName": user.Household.Name,
+	})
 }

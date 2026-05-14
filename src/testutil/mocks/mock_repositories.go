@@ -157,6 +157,12 @@ func (m *MockProductRepository) GetExpiringProductsByHousehold(householdID uint,
 func (m *MockProductRepository) GetProductsByHousehold(householdID uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
+func (m *MockProductRepository) GetSubThresholdProducts(userID uint) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
+func (m *MockProductRepository) GetExpiringProductsForMailDigest(householdID uint) (database.MailDigestProductGroup, error) {
+	return database.MailDigestProductGroup{}, m.Err
+}
 func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error { return m.Err }
 func (m *MockProductRepository) WasteProduct(productID, userID uint) error   { return m.Err }
 func (m *MockProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []database.BulkOperationError {
@@ -537,6 +543,27 @@ func (m *MockNotificationRepository) SetTelegramBotUsername(userID uint, usernam
 func (m *MockNotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentication.User, error) {
 	return m.Users, m.Err
 }
+func (m *MockNotificationRepository) SaveWebPushSubscription(userID uint, subscriptionJSON string) error {
+	return m.Err
+}
+func (m *MockNotificationRepository) DeleteWebPushSubscription(userID uint) error {
+	return m.Err
+}
+func (m *MockNotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, err error) {
+	return "", "", m.Err
+}
+func (m *MockNotificationRepository) GenerateMailDigestUnsubscribeToken(userID uint) (string, error) {
+	return "", m.Err
+}
+func (m *MockNotificationRepository) GetUserByMailDigestUnsubscribeToken(token string) (authentication.User, error) {
+	return m.User, m.Err
+}
+func (m *MockNotificationRepository) DeleteMailDigestUnsubscribeToken(token string) error {
+	return m.Err
+}
+func (m *MockNotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error) {
+	return nil, m.Err
+}
 
 var _ database.NotificationRepositoryInterface = (*MockNotificationRepository)(nil)
 
@@ -585,6 +612,7 @@ func (m *MockCalendarTokenRepository) GetByUserID(userID uint) (authentication.C
 	return m.CalendarToken, m.Err
 }
 func (m *MockCalendarTokenRepository) Create(ct *authentication.CalendarToken) error { return m.Err }
+func (m *MockCalendarTokenRepository) Update(ct *authentication.CalendarToken) error { return m.Err }
 
 var _ database.CalendarTokenRepositoryInterface = (*MockCalendarTokenRepository)(nil)
 

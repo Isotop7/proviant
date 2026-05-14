@@ -178,6 +178,14 @@ function toggleTelegramSettings() {
   }
 }
 
+function toggleWebPushSettings() {
+  const toggle = document.getElementById("togglePushNotifications");
+  const settings = document.getElementById("pushSettings");
+  if (toggle && settings) {
+    settings.classList.toggle("d-none", !toggle.checked);
+  }
+}
+
 function toggleWebhookCreate() {
   const toggle = document.getElementById("toggleWebhookCreate");
   const settings = document.getElementById("webhookCreateSettings");
@@ -287,6 +295,7 @@ function UpdateNotificationSettings() {
     monthlyWasteReportEnabled: document.getElementById("toggleMonthlyWasteReport")?.checked ?? false,
     telegramEnabled: document.getElementById("toggleTelegramNotifications")?.checked ?? false,
     telegramBotToken: document.getElementById("inputTelegramBotToken")?.value ?? "",
+    digestFrequency: document.querySelector('input[name="digestFrequency"]:checked')?.value ?? "disabled",
   };
 
   proviant
@@ -1346,6 +1355,13 @@ document.addEventListener("click", function (event) {
     saveStorageLocation();
     return;
   }
+
+  // Push notification — unsubscribe button
+  if (target.closest("#btnPushUnsubscribe")) {
+    event.preventDefault();
+    handleWebPushUnsubscribe();
+    return;
+  }
 });
 
 /* ── Event delegation — inputs ───────────────────────────────────── */
@@ -1431,6 +1447,10 @@ document.addEventListener("change", function (event) {
   if (event.target.id === "toggleWebhookCreate") {
     toggleWebhookCreate();
   }
+  if (event.target.id === "togglePushNotifications") {
+    toggleWebPushSettings();
+    handleWebPushToggle();
+  }
 });
 
 /* ── Auto-load admin users on page load ─────────────────────────── */
@@ -1439,6 +1459,7 @@ document.addEventListener("DOMContentLoaded", function () {
   loadPATs();
   loadCalendarTokenStatus();
   LoadWebhooks();
+  initWebPushNotifications();
 
   const auditLogSection = document.getElementById("auditLogSection");
   if (auditLogSection) {
@@ -1492,6 +1513,25 @@ function loadCalendarTokenStatus() {
         noTokenEl.classList.add("d-none");
         hasTokenEl.classList.remove("d-none");
         urlInput.value = url;
+
+        const expiresAt = response.message.expiresAt;
+        const isExpiringSoon = response.message.isExpiringSoon;
+        const expirySection = document.getElementById("calendarExpirySection");
+        const expiryBadge = document.getElementById("calendarExpiryBadge");
+        const expiryDate = document.getElementById("calendarExpiryDate");
+
+        if (expirySection) {
+          expirySection.classList.remove("d-none");
+          if (isExpiringSoon && expiryBadge) {
+            expiryBadge.classList.remove("d-none");
+          } else if (expiryBadge) {
+            expiryBadge.classList.add("d-none");
+          }
+          if (expiryDate && expiresAt) {
+            const expiryDateObj = new Date(expiresAt);
+            expiryDate.textContent = "Expires: " + expiryDateObj.toLocaleDateString();
+          }
+        }
       } else {
         noTokenEl.classList.remove("d-none");
         hasTokenEl.classList.add("d-none");
@@ -1533,12 +1573,27 @@ function handleCalendarRegenerate() {
       const btn = document.getElementById("btnCalendarRegenerate");
       if (btn) setButtonLoading(btn, true);
 
-      proviant.createCalendarToken().then((response) => {
+      proviant.rotateCalendarToken().then((response) => {
         if (btn) setButtonLoading(btn, false);
         if (response.code === 201) {
           const url = response.message.url;
           const urlInput = document.getElementById("calendarUrl");
           urlInput.value = url;
+
+          const expiresAt = response.message.expiresAt;
+          const expirySection = document.getElementById("calendarExpirySection");
+          const expiryBadge = document.getElementById("calendarExpiryBadge");
+          const expiryDate = document.getElementById("calendarExpiryDate");
+
+          if (expirySection) {
+            expirySection.classList.remove("d-none");
+            if (expiryBadge) expiryBadge.classList.add("d-none");
+            if (expiryDate && expiresAt) {
+              const expiryDateObj = new Date(expiresAt);
+              expiryDate.textContent = "Expires: " + expiryDateObj.toLocaleDateString();
+            }
+          }
+
           proviant.showFeedback('success', 'Token Regenerated', 'Calendar token regenerated with new URL.');
         } else {
           proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to regenerate calendar token"}`);
@@ -1730,4 +1785,118 @@ function deleteStorageLocation(id) {
     .catch((err) => {
       proviant.showFeedback("error", "Error", `Request failed: ${err}`);
     });
+}
+
+/* ── Web Push Notification Management ─────────────────────────────────────── */
+let cachedWebPushVAPIDKey = null;
+
+async function initWebPushNotifications() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    const toggle = document.getElementById("togglePushNotifications");
+    const helpBtn = document.getElementById("btnPushHelp");
+    if (toggle) toggle.disabled = true;
+    if (helpBtn) helpBtn.disabled = true;
+    return;
+  }
+
+  const permission = Notification.permission;
+  const toggle = document.getElementById("togglePushNotifications");
+  const pushSettings = document.getElementById("pushSettings");
+
+  if (permission === 'granted') {
+    if (toggle) toggle.checked = true;
+    if (pushSettings) pushSettings.classList.remove("d-none");
+  } else if (permission === 'denied') {
+    if (toggle) toggle.checked = false;
+    if (toggle) toggle.disabled = true;
+  }
+
+  try {
+    const keyResponse = await proviant.getWebPushVAPIDPublicKey();
+    if (keyResponse.code === 200) {
+      cachedWebPushVAPIDKey = keyResponse.publicKey;
+    }
+  } catch (e) {
+    console.error('Failed to fetch VAPID key:', e);
+  }
+}
+
+async function handleWebPushToggle() {
+  if (!cachedWebPushVAPIDKey) {
+    try {
+      const keyResponse = await proviant.getWebPushVAPIDPublicKey();
+      if (keyResponse.code === 200) {
+        cachedWebPushVAPIDKey = keyResponse.publicKey;
+      }
+    } catch {
+      proviant.showFeedback('error', 'Error', 'Failed to initialize web push notifications.');
+      return;
+    }
+  }
+
+  const permission = Notification.permission;
+  if (permission === 'denied') {
+    proviant.showFeedback('warning', 'Blocked', 'Push notifications are blocked. Please enable them in your browser settings.');
+    const toggle = document.getElementById("togglePushNotifications");
+    if (toggle) toggle.checked = false;
+    return;
+  }
+
+  if (permission !== 'granted') {
+    const result = await Notification.requestPermission();
+    if (result !== 'granted') {
+      proviant.showFeedback('warning', 'Not Allowed', 'Push notification permission denied.');
+      return;
+    }
+  }
+
+  try {
+    const sw = await navigator.serviceWorker.ready;
+    const subscription = await sw.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: cachedWebPushVAPIDKey,
+    });
+
+    const subJSON = subscription.toJSON();
+    const response = await proviant.subscribeWebPush({
+      endpoint: subJSON.endpoint,
+      keys: {
+        p256dh: subJSON.keys.p256dh,
+        auth: subJSON.keys.auth,
+      },
+    });
+
+    if (response.code === 200) {
+      const pushSettings = document.getElementById("pushSettings");
+      if (pushSettings) pushSettings.classList.remove("d-none");
+      proviant.showFeedback('success', 'Enabled', 'Push notifications enabled.');
+    } else {
+      proviant.showFeedback('error', 'Error', 'Failed to save push subscription.');
+    }
+  } catch (e) {
+    proviant.showFeedback('error', 'Error', `Push subscription failed: ${e.message}`);
+  }
+}
+
+async function handleWebPushUnsubscribe() {
+  try {
+    const sw = await navigator.serviceWorker.ready;
+    const subscription = await sw.pushManager.getSubscription();
+    if (subscription) {
+      await subscription.unsubscribe();
+    }
+
+    const response = await proviant.unsubscribeWebPush();
+    if (response.code === 200) {
+      const toggle = document.getElementById("togglePushNotifications");
+      const pushSettings = document.getElementById("pushSettings");
+      if (toggle) toggle.checked = false;
+      if (pushSettings) pushSettings.classList.add("d-none");
+      proviant.showFeedback('success', 'Disabled', 'Push notifications disabled.');
+    } else {
+      proviant.showFeedback('error', 'Error', 'Failed to disable push notifications.');
+    }
+  } catch (e) {
+    proviant.showFeedback('error', 'Error', `Unsubscribe failed: ${e.message}`);
+  }
 }

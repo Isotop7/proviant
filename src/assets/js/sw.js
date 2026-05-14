@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v68';
+const CACHE_NAME = 'proviant-v76';
 
 const PRECACHE_URLS = [
   '/manifest.json',
@@ -74,6 +74,31 @@ self.addEventListener('activate', (event) => {
     )
   );
   self.clients.claim();
+});
+
+// ── Push: handle push notifications ──────────────────────────────────────────
+self.addEventListener('push', function(event) {
+  if (!event.data) return;
+  const data = event.data.json();
+  const title = data.title || 'Proviant';
+  const options = {
+    body: data.body || '',
+    icon: '/assets/icons/proviant_logo_192.png',
+    badge: '/assets/icons/proviant_logo_192.png',
+    tag: data.tag || 'proviant-notification',
+    data: data.url || '/',
+  };
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// ── Notification Click: handle click on notification ─────────────────────────
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow(event.notification.data || '/')
+  );
 });
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────

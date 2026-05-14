@@ -534,6 +534,12 @@ proviant.deleteCalendarToken = async function () {
   return { code: res.status, message: body };
 };
 
+proviant.rotateCalendarToken = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token/rotate`, { method: "POST", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
 proviant.downloadCalendarICS = function (token) {
   window.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/export.ics?token=${encodeURIComponent(token)}`;
 };
@@ -567,6 +573,25 @@ proviant.getWebhookDeliveries = async function (id) {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/webhooks/${id}/deliveries`, { method: "GET", headers: { "Content-Type": "application/json" } });
   const body = await res.json();
   return { code: res.status, deliveries: body.deliveries };
+};
+
+/* ── Web Push Notification API ───────────────────────────────────────────────── */
+proviant.getWebPushVAPIDPublicKey = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/notifications/push/vapidPublicKey`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, publicKey: body.publicKey };
+};
+
+proviant.subscribeWebPush = async function (subscription) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/notifications/push/subscribe`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(subscription) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.unsubscribeWebPush = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/notifications/push/subscribe`, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
 };
 
 /* ── Audit log API ──────────────────────────────────────────────────────────── */

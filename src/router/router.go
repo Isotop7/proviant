@@ -285,6 +285,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	notificationAPI := engine.Group("/api/v1/notifications")
 	notificationAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	notificationAPI.GET("", v1.WrapHandler(v1.GetNotifications))
+	notificationAPI.GET("/push/vapidPublicKey", v1.WrapHandler(v1.GetWebPushVAPIDPublicKey))
+	notificationAPI.POST("/push/subscribe", v1.WrapHandler(v1.SubscribeWebPushNotifications))
+	notificationAPI.DELETE("/push/subscribe", v1.WrapHandler(v1.UnsubscribeWebPushNotifications))
 
 	// Household application routes
 	householdAPI := engine.Group("/api/v1/household")
@@ -347,8 +350,14 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	calendarAPI.GET("/export.ics", v1.ExportICalendar)
 	calendarAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	calendarAPI.POST("/token", v1.WrapHandler(v1.CreateCalendarToken))
+	calendarAPI.POST("/token/rotate", v1.WrapHandler(v1.RotateCalendarToken))
 	calendarAPI.DELETE("/token", v1.WrapHandler(v1.DeleteCalendarToken))
 	calendarAPI.GET("/token", v1.WrapHandler(v1.GetCalendarTokenStatus))
+
+	// Auto shopping list routes
+	shoppingListAPI := engine.Group("/api/v1/shopping-list")
+	shoppingListAPI.Use(jwtAPIUserAwareMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
+	shoppingListAPI.GET("/auto", v1.WrapHandler(v1.GetAutoShoppingList))
 
 	// PWA — serve manifest and service worker at root scope (no auth required)
 	engine.GET("/manifest.json", func(ctx *gin.Context) {
@@ -394,12 +403,16 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products/scan", webFrontendHandler.ProductsScan)
 	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
 	publicWebFrontend.GET("/recipes", webFrontendHandler.Recipes)
+	publicWebFrontend.GET("/shopping-list", webFrontendHandler.ShoppingList)
 
 	// Public invite acceptance page (no auth required)
 	engine.GET("/web/invite/accept", webFrontendHandler.AcceptInvite)
 
 	// Public email verification page (no auth required)
 	engine.GET("/web/verify-email", webFrontendHandler.VerifyEmail)
+
+	// Public unsubscribe page (no auth required)
+	engine.GET("/web/unsubscribe", webFrontendHandler.Unsubscribe)
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")

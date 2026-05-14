@@ -36,6 +36,10 @@ server:
     password_per_minute: 3
     scan_per_minute: 10
 
+calendar:
+  tokenExpiryDays: 365
+  expiringSoonDays: 30
+
 database:
   engine: mariadb
   mariadb:
@@ -68,6 +72,9 @@ notification:
     hour: 8
   telegram:
     timeout: 10
+  mailDigest:
+    enabled: false
+    defaultTime: "08:00"
 
 openfoodfacts:
   url: https://world.openfoodfacts.org/api/v2/product

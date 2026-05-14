@@ -30,6 +30,12 @@
                 <i class="bi bi-{{ expiryStatusIcon .ExpireAt }}" aria-hidden="true"></i>
                 {{ expiryStatusLabel .ExpireAt }}
             </span>
+            {{ if and (gt .MinStockAmount 0) (lt .Amount .MinStockAmount) }}
+            <span class="badge-status badge-lowstock">
+                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                Low stock
+            </span>
+            {{ end }}
             <div class="product-meta mt-2">
                 <i class="bi bi-calendar-event" aria-hidden="true"></i> {{ .ExpireAt | humanDate }}
             </div>

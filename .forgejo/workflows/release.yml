@@ -20,20 +20,11 @@ jobs:
           git pull origin main
 
       - name: Install git-cliff
-        uses: https://github.com/taiki-e/install-action@git-cliff
+        uses: taiki-e/install-action@git-cliff
 
       - name: Generate full changelog
         run: |
           git-cliff --config cliff.toml --verbose --output CHANGELOG.md
-
-      - name: Generate release notes (since last tag)
-        run: |
-          previous_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$previous_tag" ]; then
-            git-cliff --config cliff.toml --verbose "$previous_tag..HEAD" --output RELEASE_NOTES.md
-          else
-            git-cliff --config cliff.toml --verbose --output RELEASE_NOTES.md
-          fi
 
       - name: Configure git
         run: |
@@ -49,9 +40,23 @@ jobs:
           git checkout tmp-main -- CHANGELOG.md
 
       - name: Create Release
-        uses: https://code.forgejo.org/actions/forgejo-release@v2.12.0
-        with:
-          direction: upload
-          token: ${{ secrets.RELEASE_TOKEN }}
-          release-notes-file: RELEASE_NOTES.md
-          override: true
+        run: |
+          previous_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$previous_tag" ]; then
+            git-cliff --config cliff.toml --verbose "$previous_tag..HEAD" --output /tmp/release_notes.md
+          else
+            echo "# Release ${{ forgejo.ref_name }}" > /tmp/release_notes.md
+            git-cliff --config cliff.toml --verbose --output CHANGELOG.md
+            cat CHANGELOG.md >> /tmp/release_notes.md
+          fi
+          curl -X POST \
+            "https://codeberg.org/api/v1/repos/${{ forgejo.repository }}/releases" \
+            -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "tag_name": "${{ forgejo.ref_name }}",
+              "name": "${{ forgejo.ref_name }}",
+              "body": "'"$(cat /tmp/release_notes.md)"'",
+              "draft": false,
+              "prerelease": false
+            }'

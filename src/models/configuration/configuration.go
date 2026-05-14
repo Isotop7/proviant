@@ -79,6 +79,12 @@ type ServerConfiguration struct {
 	DemoMode        bool                   `mapstructure:"demoMode"`
 }
 
+// CalendarConfiguration contains settings for calendar token expiry and warnings.
+type CalendarConfiguration struct {
+	TokenExpiryDays  int `mapstructure:"tokenExpiryDays"`  // days until calendar token expires, default 365
+	ExpiringSoonDays int `mapstructure:"expiringSoonDays"` // days before expiry to show warning, default 30
+}
+
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog
 type LoggingConfiguration struct {
 	Enabled bool
@@ -114,6 +120,12 @@ type TelegramConfiguration struct {
 	PollerWorkers int // Number of worker goroutines for polling all users (default: 10)
 }
 
+// MailDigestConfiguration controls when the expiry digest email is sent.
+type MailDigestConfiguration struct {
+	Enabled     bool
+	DefaultTime string `mapstructure:"defaultTime"` // "08:00"
+}
+
 // NotificationConfiguration contains all properties regarding the notification handler
 type NotificationConfiguration struct {
 	Enabled            bool
@@ -122,6 +134,7 @@ type NotificationConfiguration struct {
 	Ntfy               NtfyConfiguration
 	MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
 	Telegram           TelegramConfiguration           `mapstructure:"telegram"`
+	MailDigest         MailDigestConfiguration         `mapstructure:"mailDigest"`
 }
 
 // OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
@@ -164,6 +177,7 @@ type ExpiryConfiguration struct {
 type ProviantConfiguration struct {
 	Database      DatabaseConfiguration
 	Server        ServerConfiguration
+	Calendar      CalendarConfiguration `mapstructure:"calendar"`
 	Logging       LoggingConfiguration
 	Notification  NotificationConfiguration
 	OpenFoodFacts OpenFoodFactsConfiguration

@@ -1,6 +1,11 @@
 package database
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,15 +14,21 @@ import (
 	"codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 
+	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
 type NotificationRepository struct {
-	DB *gorm.DB
+	DB     *gorm.DB
+	Logger *zerolog.Logger
 }
 
 func NewNotificationRepository(db *gorm.DB) *NotificationRepository {
 	return &NotificationRepository{DB: db}
+}
+
+func NewNotificationRepositoryWithLogger(db *gorm.DB, logger *zerolog.Logger) *NotificationRepository {
+	return &NotificationRepository{DB: db, Logger: logger}
 }
 
 type NotificationRepositoryInterface interface {
@@ -37,6 +48,7 @@ type NotificationRepositoryInterface interface {
 	MarkInvitationSent(invitationID uint) error
 	MarkInvitationSendFailed(invitationID uint) error
 	GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error)
+	GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error)
 	GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error)
 	GetOnboardingState(userID uint) (database.OnboardingState, error)
 	MarkNotificationsSetup(userID uint) error
@@ -48,6 +60,12 @@ type NotificationRepositoryInterface interface {
 	SetTelegramLinkToken(userID uint, token string) error
 	SetTelegramBotUsername(userID uint, username string) error
 	GetAllUsersWithTelegramBotToken() ([]authentication.User, error)
+	SaveWebPushSubscription(userID uint, subscriptionJSON string) error
+	DeleteWebPushSubscription(userID uint) error
+	GetVAPIDKeys() (publicKey, privateKey string, err error)
+	GenerateMailDigestUnsubscribeToken(userID uint) (string, error)
+	GetUserByMailDigestUnsubscribeToken(token string) (authentication.User, error)
+	DeleteMailDigestUnsubscribeToken(token string) error
 }
 
 func (r *NotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error) {
@@ -118,6 +136,8 @@ func (r *NotificationRepository) GetHouseholdMembersNotificationPreferences(hous
 			TelegramChatID:            user.NotificationPreferences.TelegramChatID,
 			TelegramBotToken:          user.NotificationPreferences.TelegramBotToken,
 			NotificationThresholdDays: user.NotificationPreferences.NotificationThresholdDays,
+			WebPushEnabled:            user.NotificationPreferences.WebPushEnabled,
+			WebPushSubscriptionJSON:   user.NotificationPreferences.WebPushSubscriptionJSON,
 		})
 	}
 
@@ -285,6 +305,133 @@ func (r *NotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentica
 	var users []authentication.User
 	err := r.DB.Where("telegram_bot_token != ''").Find(&users).Error
 	return users, err
+}
+
+func (r *NotificationRepository) SaveWebPushSubscription(userID uint, subscriptionJSON string) error {
+	return r.DB.Model(&authentication.User{}).
+		Where(util.QueryId, userID).
+		Updates(map[string]any{
+			"web_push_enabled":           true,
+			"web_push_subscription_json": subscriptionJSON,
+		}).Error
+}
+
+func (r *NotificationRepository) DeleteWebPushSubscription(userID uint) error {
+	return r.DB.Model(&authentication.User{}).
+		Where(util.QueryId, userID).
+		Updates(map[string]any{
+			"web_push_enabled":           false,
+			"web_push_subscription_json": "",
+		}).Error
+}
+
+func (r *NotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, err error) {
+	var config database.WebPushConfig
+	findErr := r.DB.First(&config).Error
+	if findErr == nil {
+		return config.PublicKey, config.PrivateKey, nil
+	}
+	if !errors.Is(findErr, gorm.ErrRecordNotFound) {
+		return "", "", findErr
+	}
+
+	privateKeyBytes, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return "", "", err
+	}
+
+	publicKeyBytes := elliptic.MarshalCompressed(elliptic.P256(), privateKeyBytes.X, privateKeyBytes.Y)
+
+	config = database.WebPushConfig{
+		PublicKey:  base64.URLEncoding.EncodeToString(publicKeyBytes),
+		PrivateKey: base64.URLEncoding.EncodeToString(privateKeyBytes.D.Bytes()),
+	}
+	if saveErr := r.DB.Create(&config).Error; saveErr != nil {
+		return "", "", saveErr
+	}
+
+	return config.PublicKey, config.PrivateKey, nil
+}
+
+func (r *NotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error) {
+	var users []authentication.User
+	if err := r.DB.
+		Where("digest_frequency IN ?", []string{authentication.MailDigestFrequencyDaily, authentication.MailDigestFrequencyWeekly}).
+		Where("email_enabled = ?", true).
+		Where("mail_address != ''").
+		Find(&users).Error; err != nil {
+		return nil, err
+	}
+
+	index := map[uint]*models.HouseholdMailDigestTarget{}
+	for i := range users {
+		user := &users[i]
+		if _, ok := index[user.HouseholdID]; !ok {
+			name := fmt.Sprintf("Household #%d", user.HouseholdID)
+			if h, err := r.GetHouseholdByID(user.HouseholdID); err == nil {
+				name = h.Name
+			}
+			index[user.HouseholdID] = &models.HouseholdMailDigestTarget{
+				HouseholdID:   user.HouseholdID,
+				HouseholdName: name,
+			}
+		}
+
+		token, tokErr := r.getMailDigestUnsubscribeTokenForUser(user.ID)
+		if tokErr != nil && !errors.Is(tokErr, gorm.ErrRecordNotFound) {
+			r.Logger.Warn().Msgf("Mail digest: failed to get unsubscribe token for user %d: %s", user.ID, tokErr)
+			continue
+		}
+
+		index[user.HouseholdID].Users = append(index[user.HouseholdID].Users, models.MailDigestUser{
+			UserID:              user.ID,
+			Email:               user.MailAddress,
+			MailDigestFrequency: user.NotificationPreferences.MailDigestFrequency,
+			MailDigestToken:     token,
+		})
+	}
+
+	targets := make([]models.HouseholdMailDigestTarget, 0, len(index))
+	for _, t := range index {
+		targets = append(targets, *t)
+	}
+	return targets, nil
+}
+
+func (r *NotificationRepository) getMailDigestUnsubscribeTokenForUser(userID uint) (string, error) {
+	var tokenRecord database.MailDigestUnsubscribeToken
+	err := r.DB.Where("user_id = ?", userID).First(&tokenRecord).Error
+	return tokenRecord.MailDigestToken, err
+}
+
+func (r *NotificationRepository) GenerateMailDigestUnsubscribeToken(userID uint) (string, error) {
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", err
+	}
+	tokenStr := base64.URLEncoding.EncodeToString(tokenBytes)
+
+	ut := database.MailDigestUnsubscribeToken{
+		MailDigestToken: tokenStr,
+		UserID:          userID,
+		CreatedAt:       time.Now(),
+	}
+	if err := r.DB.Create(&ut).Error; err != nil {
+		return "", err
+	}
+	return tokenStr, nil
+}
+
+func (r *NotificationRepository) GetUserByMailDigestUnsubscribeToken(tokenStr string) (authentication.User, error) {
+	var ut database.MailDigestUnsubscribeToken
+	if err := r.DB.Where("mail_digest_token = ?", tokenStr).First(&ut).Error; err != nil {
+		return authentication.User{}, err
+	}
+	return r.GetUserByID(ut.UserID)
+}
+
+func (r *NotificationRepository) DeleteMailDigestUnsubscribeToken(tokenStr string) error {
+	return r.DB.Where("mail_digest_token = ?", tokenStr).Delete(&database.MailDigestUnsubscribeToken{}).Error
 }
 
 func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error) {

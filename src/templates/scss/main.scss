@@ -548,6 +548,11 @@ $bootstrap-icons-font-dir: "../fonts";
   background: oklch(94% .006 70deg);
   border-color: oklch(80% .008 70deg);
 }
+.badge-lowstock {
+  color: oklch(50% .16 80deg);
+  background: oklch(97% .05 80deg);
+  border-color: oklch(85% .1 80deg);
+}
 
 // Sidebar nav
 .pv-sidebar {
@@ -1247,10 +1252,10 @@ th a {
   left: 0;
   z-index: 9999;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-end;
+  justify-content: space-around;
   height: 60px;
-  padding: 0 8px;
+  padding: 0 4px;
   padding-bottom: env(safe-area-inset-bottom, 0);
   background: var(--surface);
   border-top: 1px solid var(--border);
@@ -1258,32 +1263,21 @@ th a {
   transform: translateZ(0);
 }
 
-.bottom-nav-left,
-.bottom-nav-right {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: space-around;
-}
-
-.bottom-nav-center {
-  position: relative;
-  top: -8px;
-  flex-shrink: 0;
-}
-
 .bottom-nav-scan {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
+  width: 64px;
+  height: 64px;
   color: var(--accent-fg);
   text-decoration: none;
   background: var(--accent);
   border-radius: 50%;
   box-shadow: 0 4px 12px oklch(50% .12 162deg / .4);
   transition: transform var(--duration-base), box-shadow var(--duration-base);
+  flex-shrink: 0;
+  align-self: flex-end;
+  margin-bottom: 4px;
 
   i {
     font-size: 24px;
@@ -1305,12 +1299,15 @@ th a {
   gap: 3px;
   align-items: center;
   justify-content: center;
-  padding: 8px 12px;
+  padding: 8px 8px;
   font-size: 10px;
   font-weight: 400;
   color: var(--fg-3);
   text-decoration: none;
   transition: color 120ms;
+  background: none;
+  border: none;
+  cursor: pointer;
 
   i {
     display: block;
@@ -1323,6 +1320,60 @@ th a {
   &.active {
     font-weight: 700;
     color: var(--accent);
+  }
+}
+
+.mobile-top-more {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 10000;
+  display: none;
+
+  @media (max-width: 767.98px) {
+    display: block;
+  }
+}
+
+.mobile-top-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--fg-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 120ms;
+  box-shadow: 0 2px 8px oklch(18% .022 70deg / .12);
+
+  i {
+    font-size: 18px;
+  }
+
+  &:hover,
+  &[aria-expanded="true"] {
+    color: var(--accent);
+  }
+}
+
+.mobile-top-more-dropdown {
+  margin-top: 8px;
+  min-width: 160px;
+
+  .dropdown-item {
+    font-size: 12px;
+    font-family: var(--font-ui);
+  }
+
+  .dropdown-item--danger {
+    color: var(--bs-danger);
+
+    &:hover {
+      background-color: var(--bs-danger-bg-subtle);
+    }
   }
 }
 
@@ -3037,3 +3088,4 @@ select.pv-field-input {
     align-items: center;
   }
 }
+

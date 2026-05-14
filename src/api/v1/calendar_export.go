@@ -104,7 +104,11 @@ func ExportICalendar(ctx *gin.Context) {
 		if logger != nil {
 			logger.Debug().Msgf("Invalid calendar token: %s", err)
 		}
-		api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrInvalidRequest)
+		if err == apperrors.ErrTokenExpired {
+			api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrTokenExpired)
+		} else {
+			api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrInvalidRequest)
+		}
 		return
 	}
 

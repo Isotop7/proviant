@@ -24,6 +24,7 @@ import "codeberg.org/isotop7/proviant/api"
 
 - [Constants](<#constants>)
 - [Variables](<#variables>)
+- [func RespondError\(ctx \*gin.Context, status int, err error\)](<#RespondError>)
 - [type APIResponse](<#APIResponse>)
   - [func CreateFailedError\(\) APIResponse](<#CreateFailedError>)
   - [func DeleteFailedError\(\) APIResponse](<#DeleteFailedError>)
@@ -58,6 +59,15 @@ var (
     ResponseErrUserNoProductsFound       = APIResponse{Message: errors.ErrUserNoProductsFound.Error()}
 )
 ```
+
+<a name="RespondError"></a>
+## func RespondError
+
+```go
+func RespondError(ctx *gin.Context, status int, err error)
+```
+
+
 
 <a name="APIResponse"></a>
 ## type APIResponse
@@ -228,6 +238,7 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [type WebhookService](<#WebhookService>)
   - [func GetWebhookService\(\) \*WebhookService](<#GetWebhookService>)
   - [func \(s \*WebhookService\) FireEvent\(event string, payload map\[string\]any\)](<#WebhookService.FireEvent>)
+  - [func \(s \*WebhookService\) FireEventContext\(ctx context.Context, event string, payload map\[string\]any\)](<#WebhookService.FireEventContext>)
 
 
 ## Constants
@@ -842,6 +853,15 @@ func (s *WebhookService) FireEvent(event string, payload map[string]any)
 
 
 
+<a name="WebhookService.FireEventContext"></a>
+### func \(\*WebhookService\) FireEventContext
+
+```go
+func (s *WebhookService) FireEventContext(ctx context.Context, event string, payload map[string]any)
+```
+
+
+
 # docs
 
 ```go
@@ -1065,6 +1085,9 @@ var (
     // ErrHouseholdNotFound is thrown when a requested household does not exist
     ErrHouseholdNotFound = errors.New("household not found")
 
+    // ErrHouseholdNameEmpty is thrown when a household name is empty or whitespace
+    ErrHouseholdNameEmpty = errors.New("household name cannot be empty")
+
     // ErrNotHouseholdAdmin is thrown when a user attempts an admin action on a household they do not administrate
     ErrNotHouseholdAdmin = errors.New("user is not the admin of this household")
 
@@ -1196,6 +1219,9 @@ var (
 
     // ErrInvalidRequest is thrown when the request is malformed or missing required parameters
     ErrInvalidRequest = errors.New("invalid request")
+
+    // ErrTokenExpired is thrown when a calendar token has passed its expiration date
+    ErrTokenExpired = errors.New("calendar token expired")
 
     // ErrInternalServer is thrown when an internal server error occurs
     ErrInternalServer = errors.New("internal server error")
@@ -1534,6 +1560,7 @@ router contains the gin router definitions and maps requests to handlers
 - [func JWTMiddleware\(proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
 - [func PATMiddleware\(jwtMiddleware \*jwt.GinJWTMiddleware\) gin.HandlerFunc](<#PATMiddleware>)
 - [func RequestIDMiddleware\(baseLogger \*zerolog.Logger\) gin.HandlerFunc](<#RequestIDMiddleware>)
+- [func RequireHouseholdAdmin\(\) gin.HandlerFunc](<#RequireHouseholdAdmin>)
 - [func SecurityHeadersMiddleware\(proviantConfig \*configuration.ProviantConfiguration\) gin.HandlerFunc](<#SecurityHeadersMiddleware>)
 - [func SetupRouter\(logger \*zerolog.Logger, proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl \*controllers.OpenFoodFactsAPIController, notificationController \*controllers.NotificationController, ocrController \*controllers.OCRControllerImpl\) \*gin.Engine](<#SetupRouter>)
 - [func UnauthorizedAPIFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedAPIFunc>)
@@ -1613,6 +1640,15 @@ func RequestIDMiddleware(baseLogger *zerolog.Logger) gin.HandlerFunc
 
 RequestIDMiddleware mints a UUID per request, stashes it in gin.Context, sets the response header, and replaces the context logger with a child logger
 
+<a name="RequireHouseholdAdmin"></a>
+## func RequireHouseholdAdmin
+
+```go
+func RequireHouseholdAdmin() gin.HandlerFunc
+```
+
+
+
 <a name="SecurityHeadersMiddleware"></a>
 ## func SecurityHeadersMiddleware
 
@@ -1666,6 +1702,108 @@ func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc
 ```
 
 ZerologMiddleware implements a gin.HandlerFunc and logs the output from gin
+
+# services
+
+```go
+import "codeberg.org/isotop7/proviant/services"
+```
+
+## Index
+
+- [type ProductService](<#ProductService>)
+  - [func NewProductService\(repos \*database.RepositoryContainer, logger \*zerolog.Logger\) \*ProductService](<#NewProductService>)
+  - [func \(s \*ProductService\) BulkConsumeProducts\(productIDs \[\]uint, userID uint\) error](<#ProductService.BulkConsumeProducts>)
+  - [func \(s \*ProductService\) BulkRestoreProducts\(productIDs \[\]uint, userID uint\) error](<#ProductService.BulkRestoreProducts>)
+  - [func \(s \*ProductService\) BulkWasteProducts\(productIDs \[\]uint, userID uint\) error](<#ProductService.BulkWasteProducts>)
+  - [func \(s \*ProductService\) ConsumeProduct\(productID, userID uint\) error](<#ProductService.ConsumeProduct>)
+  - [func \(s \*ProductService\) DeleteProduct\(productID, userID uint, archiveOnly bool\) error](<#ProductService.DeleteProduct>)
+  - [func \(s \*ProductService\) RestoreProduct\(productID, userID uint\) error](<#ProductService.RestoreProduct>)
+  - [func \(s \*ProductService\) WasteProduct\(productID, userID uint\) error](<#ProductService.WasteProduct>)
+
+
+<a name="ProductService"></a>
+## type ProductService
+
+
+
+```go
+type ProductService struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewProductService"></a>
+### func NewProductService
+
+```go
+func NewProductService(repos *database.RepositoryContainer, logger *zerolog.Logger) *ProductService
+```
+
+
+
+<a name="ProductService.BulkConsumeProducts"></a>
+### func \(\*ProductService\) BulkConsumeProducts
+
+```go
+func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) error
+```
+
+
+
+<a name="ProductService.BulkRestoreProducts"></a>
+### func \(\*ProductService\) BulkRestoreProducts
+
+```go
+func (s *ProductService) BulkRestoreProducts(productIDs []uint, userID uint) error
+```
+
+
+
+<a name="ProductService.BulkWasteProducts"></a>
+### func \(\*ProductService\) BulkWasteProducts
+
+```go
+func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) error
+```
+
+
+
+<a name="ProductService.ConsumeProduct"></a>
+### func \(\*ProductService\) ConsumeProduct
+
+```go
+func (s *ProductService) ConsumeProduct(productID, userID uint) error
+```
+
+
+
+<a name="ProductService.DeleteProduct"></a>
+### func \(\*ProductService\) DeleteProduct
+
+```go
+func (s *ProductService) DeleteProduct(productID, userID uint, archiveOnly bool) error
+```
+
+
+
+<a name="ProductService.RestoreProduct"></a>
+### func \(\*ProductService\) RestoreProduct
+
+```go
+func (s *ProductService) RestoreProduct(productID, userID uint) error
+```
+
+
+
+<a name="ProductService.WasteProduct"></a>
+### func \(\*ProductService\) WasteProduct
+
+```go
+func (s *ProductService) WasteProduct(productID, userID uint) error
+```
+
+
 
 # templates
 
@@ -1919,6 +2057,7 @@ const (
     ContextKeyRequestID              = "requestID"
     ContextKeyCSPNonce               = "cspNonce"
     ContextKeyCSRFToken              = "csrfToken"
+    ContextKeyHouseholdID            = "householdID"
 
     // Database query wrappers
     QueryId               = "id = ?"
@@ -2285,85 +2424,97 @@ v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
-v1 implements version 1 of the proviant API
-
 ## Index
 
 - [Constants](<#constants>)
-- [func AdminResetUserPassword\(ctx \*gin.Context\)](<#AdminResetUserPassword>)
-- [func ApplyForHousehold\(ctx \*gin.Context\)](<#ApplyForHousehold>)
-- [func ApproveHouseholdApplication\(ctx \*gin.Context\)](<#ApproveHouseholdApplication>)
-- [func BulkConsumeProducts\(ctx \*gin.Context\)](<#BulkConsumeProducts>)
-- [func BulkRestoreProducts\(ctx \*gin.Context\)](<#BulkRestoreProducts>)
-- [func BulkWasteProducts\(ctx \*gin.Context\)](<#BulkWasteProducts>)
-- [func CancelHouseholdApplication\(ctx \*gin.Context\)](<#CancelHouseholdApplication>)
-- [func CancelInvitation\(ctx \*gin.Context\)](<#CancelInvitation>)
-- [func ConsumeProduct\(ctx \*gin.Context\)](<#ConsumeProduct>)
-- [func CreateCalendarToken\(ctx \*gin.Context\)](<#CreateCalendarToken>)
-- [func CreateHousehold\(ctx \*gin.Context\)](<#CreateHousehold>)
-- [func CreateInvitation\(ctx \*gin.Context\)](<#CreateInvitation>)
-- [func CreateProduct\(ctx \*gin.Context\)](<#CreateProduct>)
-- [func CreateStorageLocation\(ctx \*gin.Context\)](<#CreateStorageLocation>)
-- [func CreateUserToken\(ctx \*gin.Context\)](<#CreateUserToken>)
-- [func CreateWebhook\(ctx \*gin.Context\)](<#CreateWebhook>)
-- [func DeleteCalendarToken\(ctx \*gin.Context\)](<#DeleteCalendarToken>)
-- [func DeleteHouseholdUser\(ctx \*gin.Context\)](<#DeleteHouseholdUser>)
-- [func DeleteProduct\(ctx \*gin.Context\)](<#DeleteProduct>)
-- [func DeleteStorageLocation\(ctx \*gin.Context\)](<#DeleteStorageLocation>)
-- [func DeleteUserToken\(ctx \*gin.Context\)](<#DeleteUserToken>)
-- [func DeleteWebhook\(ctx \*gin.Context\)](<#DeleteWebhook>)
-- [func ExportArchiveCSV\(ctx \*gin.Context\)](<#ExportArchiveCSV>)
-- [func ExportFullJSON\(ctx \*gin.Context\)](<#ExportFullJSON>)
+- [func AdminResetUserPassword\(ctx \*gin.Context, appCtx \*AppContext\)](<#AdminResetUserPassword>)
+- [func AppContextMiddleware\(\) gin.HandlerFunc](<#AppContextMiddleware>)
+- [func ApplyForHousehold\(ctx \*gin.Context, appCtx \*AppContext\)](<#ApplyForHousehold>)
+- [func ApproveHouseholdApplication\(ctx \*gin.Context, appCtx \*AppContext\)](<#ApproveHouseholdApplication>)
+- [func BulkConsumeProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#BulkConsumeProducts>)
+- [func BulkRestoreProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#BulkRestoreProducts>)
+- [func BulkWasteProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#BulkWasteProducts>)
+- [func CancelHouseholdApplication\(ctx \*gin.Context, appCtx \*AppContext\)](<#CancelHouseholdApplication>)
+- [func CancelInvitation\(ctx \*gin.Context, appCtx \*AppContext\)](<#CancelInvitation>)
+- [func ConsumeProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#ConsumeProduct>)
+- [func CreateCalendarToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateCalendarToken>)
+- [func CreateHousehold\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateHousehold>)
+- [func CreateInvitation\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateInvitation>)
+- [func CreateProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateProduct>)
+- [func CreateStorageLocation\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateStorageLocation>)
+- [func CreateUserToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateUserToken>)
+- [func CreateWebhook\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateWebhook>)
+- [func DeleteCalendarToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteCalendarToken>)
+- [func DeleteHouseholdUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteHouseholdUser>)
+- [func DeleteProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteProduct>)
+- [func DeleteStorageLocation\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteStorageLocation>)
+- [func DeleteUserToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteUserToken>)
+- [func DeleteWebhook\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteWebhook>)
+- [func ExportArchiveCSV\(ctx \*gin.Context, appCtx \*AppContext\)](<#ExportArchiveCSV>)
+- [func ExportFullJSON\(ctx \*gin.Context, appCtx \*AppContext\)](<#ExportFullJSON>)
 - [func ExportICalendar\(ctx \*gin.Context\)](<#ExportICalendar>)
-- [func ExportProductsCSV\(ctx \*gin.Context\)](<#ExportProductsCSV>)
-- [func ExportProductsJSON\(ctx \*gin.Context\)](<#ExportProductsJSON>)
-- [func GenerateTelegramLinkToken\(ctx \*gin.Context\)](<#GenerateTelegramLinkToken>)
-- [func GetArchivedProducts\(ctx \*gin.Context\)](<#GetArchivedProducts>)
-- [func GetAuditLogs\(ctx \*gin.Context\)](<#GetAuditLogs>)
-- [func GetCalendarTokenStatus\(ctx \*gin.Context\)](<#GetCalendarTokenStatus>)
-- [func GetExpired\(ctx \*gin.Context\)](<#GetExpired>)
-- [func GetHouseholdApplications\(ctx \*gin.Context\)](<#GetHouseholdApplications>)
-- [func GetHouseholdUsers\(ctx \*gin.Context\)](<#GetHouseholdUsers>)
-- [func GetInvitations\(ctx \*gin.Context\)](<#GetInvitations>)
-- [func GetNotifications\(ctx \*gin.Context\)](<#GetNotifications>)
-- [func GetOpenFoodFactsData\(ctx \*gin.Context\)](<#GetOpenFoodFactsData>)
-- [func GetProduct\(ctx \*gin.Context\)](<#GetProduct>)
-- [func GetProductStats\(ctx \*gin.Context\)](<#GetProductStats>)
-- [func GetProductSummary\(ctx \*gin.Context\)](<#GetProductSummary>)
-- [func GetProducts\(ctx \*gin.Context\)](<#GetProducts>)
-- [func GetProductsByBarcode\(ctx \*gin.Context\)](<#GetProductsByBarcode>)
-- [func GetRecipeSuggestions\(ctx \*gin.Context\)](<#GetRecipeSuggestions>)
-- [func GetSavingsStats\(ctx \*gin.Context\)](<#GetSavingsStats>)
-- [func GetStreak\(ctx \*gin.Context\)](<#GetStreak>)
-- [func GetUserNotificationPreferences\(ctx \*gin.Context\)](<#GetUserNotificationPreferences>)
-- [func GetWebhook\(ctx \*gin.Context\)](<#GetWebhook>)
-- [func GetWebhookDeliveries\(ctx \*gin.Context\)](<#GetWebhookDeliveries>)
-- [func LeaveHousehold\(ctx \*gin.Context\)](<#LeaveHousehold>)
-- [func ListStorageLocations\(ctx \*gin.Context\)](<#ListStorageLocations>)
-- [func ListUserTokens\(ctx \*gin.Context\)](<#ListUserTokens>)
-- [func ListWebhooks\(ctx \*gin.Context\)](<#ListWebhooks>)
-- [func RejectHouseholdApplication\(ctx \*gin.Context\)](<#RejectHouseholdApplication>)
-- [func RemoveHouseholdMember\(ctx \*gin.Context\)](<#RemoveHouseholdMember>)
-- [func RestoreProduct\(ctx \*gin.Context\)](<#RestoreProduct>)
-- [func ScanExpiryDate\(ctx \*gin.Context\)](<#ScanExpiryDate>)
-- [func ScanProduct\(ctx \*gin.Context\)](<#ScanProduct>)
-- [func SearchProducts\(ctx \*gin.Context\)](<#SearchProducts>)
-- [func SetExpireAt\(ctx \*gin.Context\)](<#SetExpireAt>)
-- [func UpdateHouseholdName\(ctx \*gin.Context\)](<#UpdateHouseholdName>)
-- [func UpdateHouseholdUser\(ctx \*gin.Context\)](<#UpdateHouseholdUser>)
-- [func UpdateProduct\(ctx \*gin.Context\)](<#UpdateProduct>)
-- [func UpdateProductAmount\(ctx \*gin.Context\)](<#UpdateProductAmount>)
-- [func UpdateStorageLocation\(ctx \*gin.Context\)](<#UpdateStorageLocation>)
-- [func UpdateUser\(ctx \*gin.Context\)](<#UpdateUser>)
-- [func UpdateUserNotificationPreferences\(ctx \*gin.Context\)](<#UpdateUserNotificationPreferences>)
-- [func UpdateUserPassword\(ctx \*gin.Context\)](<#UpdateUserPassword>)
-- [func UpdateWebhook\(ctx \*gin.Context\)](<#UpdateWebhook>)
-- [func WasteProduct\(ctx \*gin.Context\)](<#WasteProduct>)
+- [func ExportProductsCSV\(ctx \*gin.Context, appCtx \*AppContext\)](<#ExportProductsCSV>)
+- [func ExportProductsJSON\(ctx \*gin.Context, appCtx \*AppContext\)](<#ExportProductsJSON>)
+- [func GenerateTelegramLinkToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#GenerateTelegramLinkToken>)
+- [func GetArchivedProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetArchivedProducts>)
+- [func GetAuditLogs\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetAuditLogs>)
+- [func GetCalendarTokenStatus\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetCalendarTokenStatus>)
+- [func GetExpired\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetExpired>)
+- [func GetHouseholdApplications\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdApplications>)
+- [func GetHouseholdUsers\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdUsers>)
+- [func GetInvitations\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetInvitations>)
+- [func GetNotifications\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetNotifications>)
+- [func GetOpenFoodFactsData\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetOpenFoodFactsData>)
+- [func GetProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProduct>)
+- [func GetProductStats\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProductStats>)
+- [func GetProductSummary\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProductSummary>)
+- [func GetProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProducts>)
+- [func GetProductsByBarcode\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProductsByBarcode>)
+- [func GetRecipeSuggestions\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetRecipeSuggestions>)
+- [func GetSavingsStats\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetSavingsStats>)
+- [func GetStreak\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetStreak>)
+- [func GetUserNotificationPreferences\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetUserNotificationPreferences>)
+- [func GetWebhook\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWebhook>)
+- [func GetWebhookDeliveries\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWebhookDeliveries>)
+- [func LeaveHousehold\(ctx \*gin.Context, appCtx \*AppContext\)](<#LeaveHousehold>)
+- [func ListStorageLocations\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListStorageLocations>)
+- [func ListUserTokens\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListUserTokens>)
+- [func ListWebhooks\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListWebhooks>)
+- [func ParseArchiveOnly\(ctx \*gin.Context\) \(bool, bool\)](<#ParseArchiveOnly>)
+- [func RejectHouseholdApplication\(ctx \*gin.Context, appCtx \*AppContext\)](<#RejectHouseholdApplication>)
+- [func RemoveHouseholdMember\(ctx \*gin.Context, appCtx \*AppContext\)](<#RemoveHouseholdMember>)
+- [func RestoreProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#RestoreProduct>)
+- [func RotateCalendarToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#RotateCalendarToken>)
+- [func ScanExpiryDate\(ctx \*gin.Context, appCtx \*AppContext\)](<#ScanExpiryDate>)
+- [func ScanProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#ScanProduct>)
+- [func SearchProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#SearchProducts>)
+- [func SetExpireAt\(ctx \*gin.Context, appCtx \*AppContext\)](<#SetExpireAt>)
+- [func UpdateHouseholdName\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdName>)
+- [func UpdateHouseholdUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdUser>)
+- [func UpdateProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateProduct>)
+- [func UpdateProductAmount\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateProductAmount>)
+- [func UpdateStorageLocation\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateStorageLocation>)
+- [func UpdateUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateUser>)
+- [func UpdateUserNotificationPreferences\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateUserNotificationPreferences>)
+- [func UpdateUserPassword\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateUserPassword>)
+- [func UpdateWebhook\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateWebhook>)
+- [func WasteProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#WasteProduct>)
+- [func WrapHandler\(fn APIHandler\) gin.HandlerFunc](<#WrapHandler>)
+- [type APIHandler](<#APIHandler>)
+- [type AppContext](<#AppContext>)
+  - [func SetupTestAppContext\(ctx \*gin.Context, userID uint\) \*AppContext](<#SetupTestAppContext>)
+- [type ArchiveOnlyQuery](<#ArchiveOnlyQuery>)
 - [type CalendarTokenResponse](<#CalendarTokenResponse>)
 - [type FullExportHousehold](<#FullExportHousehold>)
 - [type FullExportMember](<#FullExportMember>)
 - [type FullExportProducts](<#FullExportProducts>)
 - [type FullExportResponse](<#FullExportResponse>)
+- [type ProductListQuery](<#ProductListQuery>)
+  - [func ParseProductListQuery\(ctx \*gin.Context\) \(ProductListQuery, bool\)](<#ParseProductListQuery>)
+- [type ProductSearchQuery](<#ProductSearchQuery>)
+  - [func ParseProductSearchQuery\(ctx \*gin.Context\) \(ProductSearchQuery, bool\)](<#ParseProductSearchQuery>)
+- [type ProductSortQuery](<#ProductSortQuery>)
+  - [func ParseProductSortQuery\(ctx \*gin.Context\) \(ProductSortQuery, bool\)](<#ParseProductSortQuery>)
 
 
 ## Constants
@@ -2386,6 +2537,16 @@ const (
 )
 ```
 
+<a name="CalendarTokenLength"></a>
+
+```go
+const (
+    CalendarTokenLength       = 32
+    DefaultCalendarExpiryDays = 365
+    CalendarExpiringSoonDays  = 30
+)
+```
+
 <a name="MsgInvalidApplicationId"></a>
 
 ```go
@@ -2403,12 +2564,6 @@ const (
     FmtProductNotFoundOrNoAccess        = "Product with ID '%d' was not found or you do not have access"
     MsgFailedToGetControllerFromContext = "Failed to get controller from context"
 )
-```
-
-<a name="CalendarTokenLength"></a>
-
-```go
-const CalendarTokenLength = 32
 ```
 
 <a name="GetUserActiveProductsFiltered"></a>
@@ -2431,16 +2586,25 @@ const (
 ## func AdminResetUserPassword
 
 ```go
-func AdminResetUserPassword(ctx *gin.Context)
+func AdminResetUserPassword(ctx *gin.Context, appCtx *AppContext)
 ```
 
 AdminResetUserPassword triggers a password reset email for a household member. @Summary Reset user password @Description Sends a password reset email to the specified user. Caller must be admin. @Tags household @Produce json @Param id path int true "User ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users/\{id\}/reset\-password \[post\]
+
+<a name="AppContextMiddleware"></a>
+## func AppContextMiddleware
+
+```go
+func AppContextMiddleware() gin.HandlerFunc
+```
+
+
 
 <a name="ApplyForHousehold"></a>
 ## func ApplyForHousehold
 
 ```go
-func ApplyForHousehold(ctx *gin.Context)
+func ApplyForHousehold(ctx *gin.Context, appCtx *AppContext)
 ```
 
 ApplyForHousehold submits a join application for an existing household. @Summary Apply to join a household @Description Creates a pending application for the calling user to join the specified household. @Tags household @Produce json @Param id path int true "Household ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/\{id\}/apply \[post\]
@@ -2449,7 +2613,7 @@ ApplyForHousehold submits a join application for an existing household. @Summary
 ## func ApproveHouseholdApplication
 
 ```go
-func ApproveHouseholdApplication(ctx *gin.Context)
+func ApproveHouseholdApplication(ctx *gin.Context, appCtx *AppContext)
 ```
 
 ApproveHouseholdApplication approves a pending join application. @Summary Approve a household application @Description Moves the applicant into the household. Caller must be the household admin. @Tags household @Produce json @Param id path int true "Application ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications/\{id\}/approve \[post\]
@@ -2458,7 +2622,7 @@ ApproveHouseholdApplication approves a pending join application. @Summary Approv
 ## func BulkConsumeProducts
 
 ```go
-func BulkConsumeProducts(ctx *gin.Context)
+func BulkConsumeProducts(ctx *gin.Context, appCtx *AppContext)
 ```
 
 BulkConsumeProducts marks multiple products as consumed \(soft\-delete, no product.wasted event\) @Summary Mark products as consumed @Description Soft\-deletes \(archives\) multiple products without firing product.wasted webhook events @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/bulkConsume \[post\]
@@ -2467,7 +2631,7 @@ BulkConsumeProducts marks multiple products as consumed \(soft\-delete, no produ
 ## func BulkRestoreProducts
 
 ```go
-func BulkRestoreProducts(ctx *gin.Context)
+func BulkRestoreProducts(ctx *gin.Context, appCtx *AppContext)
 ```
 
 BulkRestoreProducts restores a list of products of a user @Summary Restores a list of product @Description Restores a list of product of a user @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/bulkRestore \[post\]
@@ -2476,7 +2640,7 @@ BulkRestoreProducts restores a list of products of a user @Summary Restores a li
 ## func BulkWasteProducts
 
 ```go
-func BulkWasteProducts(ctx *gin.Context)
+func BulkWasteProducts(ctx *gin.Context, appCtx *AppContext)
 ```
 
 BulkWasteProducts marks multiple products as wasted \(hard\-delete, fires product.wasted webhook per product\) @Summary Mark products as wasted @Description Hard\-deletes multiple products and fires the product.wasted webhook event per product @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/bulkWaste \[post\]
@@ -2485,7 +2649,7 @@ BulkWasteProducts marks multiple products as wasted \(hard\-delete, fires produc
 ## func CancelHouseholdApplication
 
 ```go
-func CancelHouseholdApplication(ctx *gin.Context)
+func CancelHouseholdApplication(ctx *gin.Context, appCtx *AppContext)
 ```
 
 CancelHouseholdApplication cancels a pending application submitted by the caller. @Summary Cancel own household application @Tags household @Produce json @Param id path int true "Application ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications/\{id\} \[delete\]
@@ -2494,7 +2658,7 @@ CancelHouseholdApplication cancels a pending application submitted by the caller
 ## func CancelInvitation
 
 ```go
-func CancelInvitation(ctx *gin.Context)
+func CancelInvitation(ctx *gin.Context, appCtx *AppContext)
 ```
 
 CancelInvitation cancels a pending invitation. @Summary Cancel invitation @Description Cancels a pending invitation by ID @Tags Invitation @Produce json @Param id path int true "Invitation ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations/\{id\} \[delete\]
@@ -2503,7 +2667,7 @@ CancelInvitation cancels a pending invitation. @Summary Cancel invitation @Descr
 ## func ConsumeProduct
 
 ```go
-func ConsumeProduct(ctx *gin.Context)
+func ConsumeProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
 ConsumeProduct marks a product as consumed \(soft\-delete/archive, no product.wasted event\) @Summary Mark product as consumed @Description Soft\-deletes \(archives\) a product without firing a product.wasted webhook event @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/consume \[post\]
@@ -2512,7 +2676,7 @@ ConsumeProduct marks a product as consumed \(soft\-delete/archive, no product.wa
 ## func CreateCalendarToken
 
 ```go
-func CreateCalendarToken(ctx *gin.Context)
+func CreateCalendarToken(ctx *gin.Context, appCtx *AppContext)
 ```
 
 CreateCalendarToken creates a new calendar token for CalDAV/iCal subscription @Summary Create calendar token @Description Creates or regenerates a personal calendar token for iCal/CalDAV subscription. Old token is invalidated. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 201 \{object\} CalendarTokenResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token \[post\]
@@ -2521,7 +2685,7 @@ CreateCalendarToken creates a new calendar token for CalDAV/iCal subscription @S
 ## func CreateHousehold
 
 ```go
-func CreateHousehold(ctx *gin.Context)
+func CreateHousehold(ctx *gin.Context, appCtx *AppContext)
 ```
 
 CreateHousehold creates a new named household and switches the calling user to it. @Summary Create and switch to a new household @Description Creates a new household with the given name and assigns the user to it. @Tags household @Accept json @Produce json @Param household body createHouseholdRequest true "Household" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/household/create \[post\]
@@ -2530,7 +2694,7 @@ CreateHousehold creates a new named household and switches the calling user to i
 ## func CreateInvitation
 
 ```go
-func CreateInvitation(ctx *gin.Context)
+func CreateInvitation(ctx *gin.Context, appCtx *AppContext)
 ```
 
 CreateInvitation creates a new household invitation and sends an email to the recipient. @Summary Create invitation @Description Creates a new household invitation and sends an email to the recipient @Tags Invitation @Accept json @Produce json @Param request body createInvitationRequest true "Invitation request" @Success 201 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations \[post\]
@@ -2539,7 +2703,7 @@ CreateInvitation creates a new household invitation and sends an email to the re
 ## func CreateProduct
 
 ```go
-func CreateProduct(ctx *gin.Context)
+func CreateProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
 CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
@@ -2548,7 +2712,7 @@ CreateProduct creates a new product of a user @Summary Creates a new product @De
 ## func CreateStorageLocation
 
 ```go
-func CreateStorageLocation(ctx *gin.Context)
+func CreateStorageLocation(ctx *gin.Context, appCtx *AppContext)
 ```
 
 CreateStorageLocation adds a new storage location to the calling user's household. @Summary Create a storage location @Description Creates a named storage location for the household. @Tags household @Accept json @Produce json @Param body body storageLocationRequest true "Location data" @Success 201 \{object\} database.StorageLocation @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations \[post\]
@@ -2557,7 +2721,7 @@ CreateStorageLocation adds a new storage location to the calling user's househol
 ## func CreateUserToken
 
 ```go
-func CreateUserToken(ctx *gin.Context)
+func CreateUserToken(ctx *gin.Context, appCtx *AppContext)
 ```
 
 
@@ -2566,7 +2730,7 @@ func CreateUserToken(ctx *gin.Context)
 ## func CreateWebhook
 
 ```go
-func CreateWebhook(ctx *gin.Context)
+func CreateWebhook(ctx *gin.Context, appCtx *AppContext)
 ```
 
 CreateWebhook creates a new webhook @Summary Create a webhook @Description Creates a new webhook for the authenticated user @Tags webhook @Accept json @Produce json @Param request body apiModel.CreateWebhookRequest true "Webhook" @Success 201 \{object\} apiModel.WebhookResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks \[post\] @Security BearerAuth
@@ -2575,7 +2739,7 @@ CreateWebhook creates a new webhook @Summary Create a webhook @Description Creat
 ## func DeleteCalendarToken
 
 ```go
-func DeleteCalendarToken(ctx *gin.Context)
+func DeleteCalendarToken(ctx *gin.Context, appCtx *AppContext)
 ```
 
 DeleteCalendarToken removes the user's calendar token @Summary Delete calendar token @Description Removes the personal calendar token, invalidating any active iCal/CalDAV subscriptions. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token \[delete\]
@@ -2584,7 +2748,7 @@ DeleteCalendarToken removes the user's calendar token @Summary Delete calendar t
 ## func DeleteHouseholdUser
 
 ```go
-func DeleteHouseholdUser(ctx *gin.Context)
+func DeleteHouseholdUser(ctx *gin.Context, appCtx *AppContext)
 ```
 
 DeleteHouseholdUser deletes a user from the household. @Summary Delete household member @Description Deletes a user from the household. Caller must be admin. @Tags household @Produce json @Param id path int true "User ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users/\{id\} \[delete\]
@@ -2593,7 +2757,7 @@ DeleteHouseholdUser deletes a user from the household. @Summary Delete household
 ## func DeleteProduct
 
 ```go
-func DeleteProduct(ctx *gin.Context)
+func DeleteProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param archiveOnly query bool false "Archive only" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
@@ -2602,7 +2766,7 @@ DeleteProduct deletes a product of a user @Summary Deletes a product @Descriptio
 ## func DeleteStorageLocation
 
 ```go
-func DeleteStorageLocation(ctx *gin.Context)
+func DeleteStorageLocation(ctx *gin.Context, appCtx *AppContext)
 ```
 
 DeleteStorageLocation removes a storage location. Assigned products become unassigned. @Summary Delete a storage location @Description Deletes a storage location and unassigns all products from it. @Tags household @Produce json @Param id path int true "Location ID" @Success 200 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations/:id \[delete\]
@@ -2611,7 +2775,7 @@ DeleteStorageLocation removes a storage location. Assigned products become unass
 ## func DeleteUserToken
 
 ```go
-func DeleteUserToken(ctx *gin.Context)
+func DeleteUserToken(ctx *gin.Context, appCtx *AppContext)
 ```
 
 
@@ -2620,16 +2784,16 @@ func DeleteUserToken(ctx *gin.Context)
 ## func DeleteWebhook
 
 ```go
-func DeleteWebhook(ctx *gin.Context)
+func DeleteWebhook(ctx *gin.Context, appCtx *AppContext)
 ```
 
-DeleteWebhook deletes a webhook @Summary Delete a webhook @Description Deletes a webhook by ID @Tags webhook @Produce json @Param id path int true "Webhook ID" @Success 200 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks/\{id\} \[delete\] @Security BearerAuth
+
 
 <a name="ExportArchiveCSV"></a>
 ## func ExportArchiveCSV
 
 ```go
-func ExportArchiveCSV(ctx *gin.Context)
+func ExportArchiveCSV(ctx *gin.Context, appCtx *AppContext)
 ```
 
 ExportArchiveCSV exports the user's archived products as CSV. @Summary Export archived products as CSV @Description Returns a CSV file with all archived products for the user @Tags export @Produce text/csv @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{file\} binary "CSV file" @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/archive.csv \[get\]
@@ -2638,7 +2802,7 @@ ExportArchiveCSV exports the user's archived products as CSV. @Summary Export ar
 ## func ExportFullJSON
 
 ```go
-func ExportFullJSON(ctx *gin.Context)
+func ExportFullJSON(ctx *gin.Context, appCtx *AppContext)
 ```
 
 ExportFullJSON exports all household data as JSON. @Summary Export all household data as JSON @Description Returns a comprehensive JSON export including household info, members, products, and statistics @Tags export @Produce application/json @Success 200 \{object\} FullExportResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/full.json \[get\]
@@ -2656,7 +2820,7 @@ ExportICalendar returns an iCalendar feed of products expiring in the next 30 da
 ## func ExportProductsCSV
 
 ```go
-func ExportProductsCSV(ctx *gin.Context)
+func ExportProductsCSV(ctx *gin.Context, appCtx *AppContext)
 ```
 
 ExportProductsCSV exports the user's active products as CSV. @Summary Export products as CSV @Description Returns a CSV file with all active products for the user @Tags export @Produce text/csv @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{file\} binary "CSV file" @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/products.csv \[get\]
@@ -2665,7 +2829,7 @@ ExportProductsCSV exports the user's active products as CSV. @Summary Export pro
 ## func ExportProductsJSON
 
 ```go
-func ExportProductsJSON(ctx *gin.Context)
+func ExportProductsJSON(ctx *gin.Context, appCtx *AppContext)
 ```
 
 ExportProductsJSON exports the user's active products as JSON. @Summary Export products as JSON @Description Returns a JSON file with all active products for the user @Tags export @Produce application/json @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{file\} binary "JSON file" @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/products.json \[get\]
@@ -2674,7 +2838,7 @@ ExportProductsJSON exports the user's active products as JSON. @Summary Export p
 ## func GenerateTelegramLinkToken
 
 ```go
-func GenerateTelegramLinkToken(ctx *gin.Context)
+func GenerateTelegramLinkToken(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GenerateTelegramLinkToken generates a one\-time token for linking a Telegram chat to the user account. @Summary Generate Telegram link token @Description Generates a short\-lived token the user sends to the Proviant Telegram bot to link their account @Tags user @Produce json @Success 200 \{object\} map\[string\]string @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/telegram\-link\-token \[post\]
@@ -2683,7 +2847,7 @@ GenerateTelegramLinkToken generates a one\-time token for linking a Telegram cha
 ## func GetArchivedProducts
 
 ```go
-func GetArchivedProducts(ctx *gin.Context)
+func GetArchivedProducts(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetArchivedProducts returns the archived products of a user @Summary Return a list of archived products @Description Return a list of archived products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/archived \[get\]
@@ -2692,7 +2856,7 @@ GetArchivedProducts returns the archived products of a user @Summary Return a li
 ## func GetAuditLogs
 
 ```go
-func GetAuditLogs(ctx *gin.Context)
+func GetAuditLogs(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetAuditLogs returns the audit log entries. @Summary Get audit logs @Description Returns paginated audit log entries \(admin only\) @Tags admin @Produce json @Param limit query int false "Maximum number of logs to return \(default 100, max 1000\)" @Param date query string false "Filter by date \(YYYY\-MM\-DD format\)" @Success 200 \{array\} database.AuditLog @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/admin/audit\-log \[get\]
@@ -2701,7 +2865,7 @@ GetAuditLogs returns the audit log entries. @Summary Get audit logs @Description
 ## func GetCalendarTokenStatus
 
 ```go
-func GetCalendarTokenStatus(ctx *gin.Context)
+func GetCalendarTokenStatus(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetCalendarTokenStatus returns the user's calendar token status and subscription URL @Summary Get calendar token status @Description Returns whether the user has a calendar token and the subscription URL for iCal/CalDAV. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 200 \{object\} map\[string\]interface\{\} @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token \[get\]
@@ -2710,7 +2874,7 @@ GetCalendarTokenStatus returns the user's calendar token status and subscription
 ## func GetExpired
 
 ```go
-func GetExpired(ctx *gin.Context)
+func GetExpired(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetExpired returns the list of all expired products of a user @Summary Gets expired products @Description Gets a list of expired products of a user @Tags product @Accept json @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/expired \[get\]
@@ -2719,7 +2883,7 @@ GetExpired returns the list of all expired products of a user @Summary Gets expi
 ## func GetHouseholdApplications
 
 ```go
-func GetHouseholdApplications(ctx *gin.Context)
+func GetHouseholdApplications(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetHouseholdApplications returns all pending applications for the household the caller administrates. @Summary List pending household applications @Description Returns pending join applications for the household the calling user is admin of. @Tags household @Produce json @Success 200 \{array\} database.HouseholdApplication @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications \[get\]
@@ -2728,7 +2892,7 @@ GetHouseholdApplications returns all pending applications for the household the 
 ## func GetHouseholdUsers
 
 ```go
-func GetHouseholdUsers(ctx *gin.Context)
+func GetHouseholdUsers(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetHouseholdUsers returns all users in the household. @Summary List household members @Description Returns all users that belong to the household the caller is admin of @Tags household @Produce json @Success 200 \{array\} authentication.User @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users \[get\]
@@ -2737,7 +2901,7 @@ GetHouseholdUsers returns all users in the household. @Summary List household me
 ## func GetInvitations
 
 ```go
-func GetInvitations(ctx *gin.Context)
+func GetInvitations(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetInvitations returns all invitations for the calling user's household. @Summary Get household invitations @Description Returns all invitations for the calling user's household @Tags Invitation @Produce json @Success 200 \{array\} database.HouseholdInvitation @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations \[get\]
@@ -2746,7 +2910,7 @@ GetInvitations returns all invitations for the calling user's household. @Summar
 ## func GetNotifications
 
 ```go
-func GetNotifications(ctx *gin.Context)
+func GetNotifications(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetNotifications returns actionable notification items for the current user: pending invitations from their household, incoming join requests \(admin only\), and outgoing join requests the user submitted. @Summary Get notifications @Description Returns pending invitations and household join requests for the current user @Tags Notifications @Produce json @Success 200 \{object\} apiModel.NotificationsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/notifications \[get\]
@@ -2755,7 +2919,7 @@ GetNotifications returns actionable notification items for the current user: pen
 ## func GetOpenFoodFactsData
 
 ```go
-func GetOpenFoodFactsData(ctx *gin.Context)
+func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode, using the database cache when cacheEnabled is true in the OpenFoodFacts configuration.
@@ -2766,7 +2930,7 @@ GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode
 ## func GetProduct
 
 ```go
-func GetProduct(ctx *gin.Context)
+func GetProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetProduct return a single product of a user @Summary Returns a single product @Description Returns a single product of user @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[get\]
@@ -2775,7 +2939,7 @@ GetProduct return a single product of a user @Summary Returns a single product @
 ## func GetProductStats
 
 ```go
-func GetProductStats(ctx *gin.Context)
+func GetProductStats(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetProductStats returns aggregated product statistics for the authenticated user @Summary Return product statistics @Description Returns waste rate, top archived products, category breakdown and expiry trend @Tags product @Produce json @Success 200 \{object\} apiModel.ProductStatsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/stats \[get\]
@@ -2784,7 +2948,7 @@ GetProductStats returns aggregated product statistics for the authenticated user
 ## func GetProductSummary
 
 ```go
-func GetProductSummary(ctx *gin.Context)
+func GetProductSummary(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetProductSummary returns a lightweight count summary for Home Assistant sensor polling @Summary Return product summary @Description Returns expiring\-soon count, expired count, total active count, and waste\-this\-month count in one request @Tags product @Produce json @Success 200 \{object\} apiModel.ProductSummaryResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/summary \[get\]
@@ -2793,7 +2957,7 @@ GetProductSummary returns a lightweight count summary for Home Assistant sensor 
 ## func GetProducts
 
 ```go
-func GetProducts(ctx *gin.Context)
+func GetProducts(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetProducts returns the products of a user @Summary Return a list of products @Description Return a list of products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[get\]
@@ -2802,7 +2966,7 @@ GetProducts returns the products of a user @Summary Return a list of products @D
 ## func GetProductsByBarcode
 
 ```go
-func GetProductsByBarcode(ctx *gin.Context)
+func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetProductsByBarcode returns a list of products of a user matching a barcode @Summary Returns a list of products @Description Returns a list of products of user matching the given barcode @Tags product @Produce json @Param barcode path int true "Barcode" @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/productsByBarcode \[get\]
@@ -2811,7 +2975,7 @@ GetProductsByBarcode returns a list of products of a user matching a barcode @Su
 ## func GetRecipeSuggestions
 
 ```go
-func GetRecipeSuggestions(ctx *gin.Context)
+func GetRecipeSuggestions(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetRecipeSuggestions returns recipe suggestions based on expiring products @Summary Recipe suggestions @Description Returns up to 6 recipe suggestions matching products expiring within 7 days @Tags recipes @Produce json @Param limit query int false "Number of suggestions \(default 6, max 10\)" @Success 200 \{array\} apiModel.RecipeSuggestionResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes/suggestions \[get\]
@@ -2820,7 +2984,7 @@ GetRecipeSuggestions returns recipe suggestions based on expiring products @Summ
 ## func GetSavingsStats
 
 ```go
-func GetSavingsStats(ctx *gin.Context)
+func GetSavingsStats(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetSavingsStats returns money and CO2 savings for the authenticated user's household @Summary Get savings statistics @Description Returns EUR saved/wasted and kg CO2 avoided/emitted for the current month and lifetime. @Description CO2 coefficients sourced from Agribalyse LCA database via Open Food Facts ecoscore\_data. @Tags savings @Produce json @Success 200 \{object\} apiModel.SavingsStatsResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/savings/stats \[get\]
@@ -2829,7 +2993,7 @@ GetSavingsStats returns money and CO2 savings for the authenticated user's house
 ## func GetStreak
 
 ```go
-func GetStreak(ctx *gin.Context)
+func GetStreak(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetStreak returns the current waste\-free streak for the user's household @Summary Get waste\-free streak @Description Returns the current and longest waste\-free streak for the caller's household @Tags streak @Produce json @Success 200 \{object\} apiModel.StreakResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/streak \[get\]
@@ -2838,7 +3002,7 @@ GetStreak returns the current waste\-free streak for the user's household @Summa
 ## func GetUserNotificationPreferences
 
 ```go
-func GetUserNotificationPreferences(ctx *gin.Context)
+func GetUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetUserNotificationPreferences gets a user's notification preferences @Summary Gets a user's notification preferences @Description Retrieves notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} authentication.NotificationPreferences @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[get\]
@@ -2847,25 +3011,25 @@ GetUserNotificationPreferences gets a user's notification preferences @Summary G
 ## func GetWebhook
 
 ```go
-func GetWebhook(ctx *gin.Context)
+func GetWebhook(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetWebhook returns a webhook by ID @Summary Get a webhook @Description Returns a webhook by ID @Tags webhook @Produce json @Param id path int true "Webhook ID" @Success 200 \{object\} apiModel.WebhookResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks/\{id\} \[get\] @Security BearerAuth
+
 
 <a name="GetWebhookDeliveries"></a>
 ## func GetWebhookDeliveries
 
 ```go
-func GetWebhookDeliveries(ctx *gin.Context)
+func GetWebhookDeliveries(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetWebhookDeliveries returns delivery logs for a webhook @Summary Get webhook delivery logs @Description Returns delivery logs for a webhook @Tags webhook @Produce json @Param id path int true "Webhook ID" @Success 200 \{object\} apiModel.DeliveryLogListResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks/\{id\}/deliveries \[get\] @Security BearerAuth
+
 
 <a name="LeaveHousehold"></a>
 ## func LeaveHousehold
 
 ```go
-func LeaveHousehold(ctx *gin.Context)
+func LeaveHousehold(ctx *gin.Context, appCtx *AppContext)
 ```
 
 LeaveHousehold removes the calling user from their current household and assigns them a new personal one. @Summary Leave current household @Description Creates a new personal household for the user. Products are moved if they were the sole member. @Tags household @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/household/leave \[post\]
@@ -2874,7 +3038,7 @@ LeaveHousehold removes the calling user from their current household and assigns
 ## func ListStorageLocations
 
 ```go
-func ListStorageLocations(ctx *gin.Context)
+func ListStorageLocations(ctx *gin.Context, appCtx *AppContext)
 ```
 
 ListStorageLocations returns all storage locations for the calling user's household. @Summary List storage locations @Description Returns all storage locations belonging to the user's household, ordered by sort\_order. @Tags household @Produce json @Success 200 \{array\} database.StorageLocation @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations \[get\]
@@ -2883,7 +3047,7 @@ ListStorageLocations returns all storage locations for the calling user's househ
 ## func ListUserTokens
 
 ```go
-func ListUserTokens(ctx *gin.Context)
+func ListUserTokens(ctx *gin.Context, appCtx *AppContext)
 ```
 
 
@@ -2892,16 +3056,25 @@ func ListUserTokens(ctx *gin.Context)
 ## func ListWebhooks
 
 ```go
-func ListWebhooks(ctx *gin.Context)
+func ListWebhooks(ctx *gin.Context, appCtx *AppContext)
 ```
 
-ListWebhooks returns all webhooks for the authenticated user @Summary List webhooks @Description Returns all webhooks for the authenticated user @Tags webhook @Produce json @Success 200 \{object\} apiModel.WebhookListResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks \[get\] @Security BearerAuth
+
+
+<a name="ParseArchiveOnly"></a>
+## func ParseArchiveOnly
+
+```go
+func ParseArchiveOnly(ctx *gin.Context) (bool, bool)
+```
+
+
 
 <a name="RejectHouseholdApplication"></a>
 ## func RejectHouseholdApplication
 
 ```go
-func RejectHouseholdApplication(ctx *gin.Context)
+func RejectHouseholdApplication(ctx *gin.Context, appCtx *AppContext)
 ```
 
 RejectHouseholdApplication rejects a pending join application. @Summary Reject a household application @Description Marks the application as rejected. Caller must be the household admin. @Tags household @Produce json @Param id path int true "Application ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications/\{id\}/reject \[post\]
@@ -2910,7 +3083,7 @@ RejectHouseholdApplication rejects a pending join application. @Summary Reject a
 ## func RemoveHouseholdMember
 
 ```go
-func RemoveHouseholdMember(ctx *gin.Context)
+func RemoveHouseholdMember(ctx *gin.Context, appCtx *AppContext)
 ```
 
 RemoveHouseholdMember removes a member from the caller's household. Caller must be the admin. @Summary Remove a household member @Tags household @Produce json @Param userId path int true "User ID to remove" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/members/\{userId\} \[delete\]
@@ -2919,16 +3092,25 @@ RemoveHouseholdMember removes a member from the caller's household. Caller must 
 ## func RestoreProduct
 
 ```go
-func RestoreProduct(ctx *gin.Context)
+func RestoreProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
 RestoreProduct restores an archived product of a user @Summary Restores a product @Description Restores an archived product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/restore \[post\]
+
+<a name="RotateCalendarToken"></a>
+## func RotateCalendarToken
+
+```go
+func RotateCalendarToken(ctx *gin.Context, appCtx *AppContext)
+```
+
+RotateCalendarToken invalidates the current token and issues a new one @Summary Rotate calendar token @Description Invalidates the current calendar token and creates a new one with a fresh expiry date. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 201 \{object\} CalendarTokenResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token/rotate \[post\]
 
 <a name="ScanExpiryDate"></a>
 ## func ScanExpiryDate
 
 ```go
-func ScanExpiryDate(ctx *gin.Context)
+func ScanExpiryDate(ctx *gin.Context, appCtx *AppContext)
 ```
 
 ScanExpiryDate scans an uploaded image for expiry date @Summary Scan expiry date from product photo @Description Upload an image of product packaging; returns detected expiry date with confidence score @Tags product @Accept multipart/form\-data @Produce json @Param image formData file true "Product packaging image" @Success 200 \{object\} apiModel.ExpiryScanResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/scan\-date \[post\]
@@ -2937,7 +3119,7 @@ ScanExpiryDate scans an uploaded image for expiry date @Summary Scan expiry date
 ## func ScanProduct
 
 ```go
-func ScanProduct(ctx *gin.Context)
+func ScanProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
 ScanProduct returns a barcode based on an image @Summary Scan product @Description Returns the barcode of a product in an uploaded image @Tags product @Accept json @Produce json @Success 200 \{object\} database.ProductDTOBarcode @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/scan \[post\]
@@ -2946,7 +3128,7 @@ ScanProduct returns a barcode based on an image @Summary Scan product @Descripti
 ## func SearchProducts
 
 ```go
-func SearchProducts(ctx *gin.Context)
+func SearchProducts(ctx *gin.Context, appCtx *AppContext)
 ```
 
 SearchProducts returns a list of products based on a query @Summary Search products @Description Returns a list of products based on a query @Tags product @Produce json @Param queryParam query string true "Search field \(product\_name, barcode, category, storage\_location\)" @Param queryValue query string true "Search value" @Param sort query string false "Sort field" default\(product\_name\) @Param order query string false "Sort order \(asc, desc\)" default\(asc\) @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/search \[GET\]
@@ -2955,7 +3137,7 @@ SearchProducts returns a list of products based on a query @Summary Search produ
 ## func SetExpireAt
 
 ```go
-func SetExpireAt(ctx *gin.Context)
+func SetExpireAt(ctx *gin.Context, appCtx *AppContext)
 ```
 
 SetExpireAt updates the expire date of a product of a user @Summary Updates the expire date @Description Updates the expire date of a product @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param timestamp body database.Timestamp true "Timestamp" @Success 200 \{object\} database.ProductDTOExpire @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/expire \[post\]
@@ -2964,7 +3146,7 @@ SetExpireAt updates the expire date of a product of a user @Summary Updates the 
 ## func UpdateHouseholdName
 
 ```go
-func UpdateHouseholdName(ctx *gin.Context)
+func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext)
 ```
 
 UpdateHouseholdName renames the caller's household. Caller must be the household admin. @Summary Rename household @Tags household @Accept json @Produce json @Param household body updateHouseholdNameRequest true "Name" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/name \[patch\]
@@ -2973,7 +3155,7 @@ UpdateHouseholdName renames the caller's household. Caller must be the household
 ## func UpdateHouseholdUser
 
 ```go
-func UpdateHouseholdUser(ctx *gin.Context)
+func UpdateHouseholdUser(ctx *gin.Context, appCtx *AppContext)
 ```
 
 UpdateHouseholdUser updates a user's username or email. @Summary Update household member @Description Updates the username or email of a user in the household. Caller must be admin. @Tags household @Accept json @Produce json @Param id path int true "User ID" @Param user body updateAdminUserRequest true "User data" @Success 200 \{object\} authentication.User @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users/\{id\} \[patch\]
@@ -2982,7 +3164,7 @@ UpdateHouseholdUser updates a user's username or email. @Summary Update househol
 ## func UpdateProduct
 
 ```go
-func UpdateProduct(ctx *gin.Context)
+func UpdateProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
 UpdateProduct updates a product of a user @Summary Updates a product @Description Updates a product with new values @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.Product true "Product" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[patch\]
@@ -2991,7 +3173,7 @@ UpdateProduct updates a product of a user @Summary Updates a product @Descriptio
 ## func UpdateProductAmount
 
 ```go
-func UpdateProductAmount(ctx *gin.Context)
+func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext)
 ```
 
 UpdateProductAmount updates the amount of a product by a given delta. If the resulting amount is \<= 0, the product is hard\-deleted. @Summary Update product amount @Description Applies a delta to a product's amount. Hard\-deletes the product when amount reaches 0. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param delta body api.ProductAmountDTO true "Amount delta" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/amount \[patch\]
@@ -3000,7 +3182,7 @@ UpdateProductAmount updates the amount of a product by a given delta. If the res
 ## func UpdateStorageLocation
 
 ```go
-func UpdateStorageLocation(ctx *gin.Context)
+func UpdateStorageLocation(ctx *gin.Context, appCtx *AppContext)
 ```
 
 UpdateStorageLocation renames or re\-icons a storage location. @Summary Update a storage location @Description Updates the name, icon, and sort order of an existing storage location. @Tags household @Accept json @Produce json @Param id path int true "Location ID" @Param body body storageLocationRequest true "Location data" @Success 200 \{object\} database.StorageLocation @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations/:id \[patch\]
@@ -3009,7 +3191,7 @@ UpdateStorageLocation renames or re\-icons a storage location. @Summary Update a
 ## func UpdateUser
 
 ```go
-func UpdateUser(ctx *gin.Context)
+func UpdateUser(ctx *gin.Context, appCtx *AppContext)
 ```
 
 UpdateUser updates a user's display name and email address. The login username is never modified by this endpoint. @Summary Updates a user object @Description Updates display name and email of the authenticated user @Tags user @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user \[patch\]
@@ -3018,7 +3200,7 @@ UpdateUser updates a user's display name and email address. The login username i
 ## func UpdateUserNotificationPreferences
 
 ```go
-func UpdateUserNotificationPreferences(ctx *gin.Context)
+func UpdateUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext)
 ```
 
 UpdateUserNotificationPreferences updates a user's notification preferences @Summary Updates a user's notification preferences @Description Updates notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[post\]
@@ -3027,7 +3209,7 @@ UpdateUserNotificationPreferences updates a user's notification preferences @Sum
 ## func UpdateUserPassword
 
 ```go
-func UpdateUserPassword(ctx *gin.Context)
+func UpdateUserPassword(ctx *gin.Context, appCtx *AppContext)
 ```
 
 UpdateUserPassword updates a user password @Summary Updates a user password @Description Updates password of a user @Tags user @Accept json @Produce json @Param login body authentication.Login true "Login" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/password \[post\]
@@ -3036,19 +3218,72 @@ UpdateUserPassword updates a user password @Summary Updates a user password @Des
 ## func UpdateWebhook
 
 ```go
-func UpdateWebhook(ctx *gin.Context)
+func UpdateWebhook(ctx *gin.Context, appCtx *AppContext)
 ```
 
-UpdateWebhook updates a webhook @Summary Update a webhook @Description Updates a webhook by ID @Tags webhook @Accept json @Produce json @Param id path int true "Webhook ID" @Param request body apiModel.UpdateWebhookRequest true "Webhook update" @Success 200 \{object\} apiModel.WebhookResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks/\{id\} \[patch\] @Security BearerAuth
+
 
 <a name="WasteProduct"></a>
 ## func WasteProduct
 
 ```go
-func WasteProduct(ctx *gin.Context)
+func WasteProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
 WasteProduct marks a product as wasted \(hard\-delete, fires product.wasted webhook event\) @Summary Mark product as wasted @Description Hard\-deletes a product and fires the product.wasted webhook event @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/waste \[post\]
+
+<a name="WrapHandler"></a>
+## func WrapHandler
+
+```go
+func WrapHandler(fn APIHandler) gin.HandlerFunc
+```
+
+
+
+<a name="APIHandler"></a>
+## type APIHandler
+
+
+
+```go
+type APIHandler func(*gin.Context, *AppContext)
+```
+
+<a name="AppContext"></a>
+## type AppContext
+
+
+
+```go
+type AppContext struct {
+    Logger   *zerolog.Logger
+    DB       *gorm.DB
+    Repos    *database.RepositoryContainer
+    UserID   uint
+    Products *services.ProductService
+}
+```
+
+<a name="SetupTestAppContext"></a>
+### func SetupTestAppContext
+
+```go
+func SetupTestAppContext(ctx *gin.Context, userID uint) *AppContext
+```
+
+
+
+<a name="ArchiveOnlyQuery"></a>
+## type ArchiveOnlyQuery
+
+
+
+```go
+type ArchiveOnlyQuery struct {
+    ArchiveOnly bool `form:"archiveOnly"`
+}
+```
 
 <a name="CalendarTokenResponse"></a>
 ## type CalendarTokenResponse
@@ -3057,8 +3292,9 @@ WasteProduct marks a product as wasted \(hard\-delete, fires product.wasted webh
 
 ```go
 type CalendarTokenResponse struct {
-    Token string `json:"token"`
-    URL   string `json:"url"`
+    Token     string    `json:"token"`
+    URL       string    `json:"url"`
+    ExpiresAt time.Time `json:"expiresAt"`
 }
 ```
 
@@ -3113,6 +3349,70 @@ type FullExportResponse struct {
 }
 ```
 
+<a name="ProductListQuery"></a>
+## type ProductListQuery
+
+
+
+```go
+type ProductListQuery struct {
+    Limit int `form:"limit" binding:"omitempty,min=1,max=1000"`
+}
+```
+
+<a name="ParseProductListQuery"></a>
+### func ParseProductListQuery
+
+```go
+func ParseProductListQuery(ctx *gin.Context) (ProductListQuery, bool)
+```
+
+
+
+<a name="ProductSearchQuery"></a>
+## type ProductSearchQuery
+
+
+
+```go
+type ProductSearchQuery struct {
+    QueryParam string `form:"queryParam" binding:"required"`
+    QueryValue string `form:"queryValue" binding:"required"`
+    Sort       string `form:"sort" binding:"omitempty,oneof=product_name expire_at created_at category storage_location barcode"`
+    Order      string `form:"order" binding:"omitempty,oneof=asc desc"`
+}
+```
+
+<a name="ParseProductSearchQuery"></a>
+### func ParseProductSearchQuery
+
+```go
+func ParseProductSearchQuery(ctx *gin.Context) (ProductSearchQuery, bool)
+```
+
+
+
+<a name="ProductSortQuery"></a>
+## type ProductSortQuery
+
+
+
+```go
+type ProductSortQuery struct {
+    Sort  string `form:"sort" binding:"omitempty,oneof=product_name expire_at created_at"`
+    Order string `form:"order" binding:"omitempty,oneof=asc desc"`
+}
+```
+
+<a name="ParseProductSortQuery"></a>
+### func ParseProductSortQuery
+
+```go
+func ParseProductSortQuery(ctx *gin.Context) (ProductSortQuery, bool)
+```
+
+
+
 # database
 
 ```go
@@ -3136,6 +3436,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*CalendarTokenRepository\) DeleteByUserID\(userID uint\) error](<#CalendarTokenRepository.DeleteByUserID>)
   - [func \(r \*CalendarTokenRepository\) GetByToken\(token string\) \(authentication.CalendarToken, error\)](<#CalendarTokenRepository.GetByToken>)
   - [func \(r \*CalendarTokenRepository\) GetByUserID\(userID uint\) \(authentication.CalendarToken, error\)](<#CalendarTokenRepository.GetByUserID>)
+  - [func \(r \*CalendarTokenRepository\) Update\(ct \*authentication.CalendarToken\) error](<#CalendarTokenRepository.Update>)
 - [type CalendarTokenRepositoryInterface](<#CalendarTokenRepositoryInterface>)
 - [type ExpiryScanRepository](<#ExpiryScanRepository>)
   - [func NewExpiryScanRepository\(db \*gorm.DB\) \*ExpiryScanRepository](<#NewExpiryScanRepository>)
@@ -3164,6 +3465,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*InvitationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#InvitationRepository.AcceptInvitation>)
   - [func \(r \*InvitationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#InvitationRepository.CancelInvitation>)
   - [func \(r \*InvitationRepository\) CreateInvitation\(householdID, inviterID uint, email string\) \(database.HouseholdInvitation, error\)](<#InvitationRepository.CreateInvitation>)
+  - [func \(r \*InvitationRepository\) CreateInvitationTx\(tx \*gorm.DB, householdID, inviterID uint, email string\) \(database.HouseholdInvitation, error\)](<#InvitationRepository.CreateInvitationTx>)
   - [func \(r \*InvitationRepository\) GetInvitationByToken\(token string\) \(database.HouseholdInvitation, error\)](<#InvitationRepository.GetInvitationByToken>)
   - [func \(r \*InvitationRepository\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]database.HouseholdInvitation, error\)](<#InvitationRepository.GetInvitationsForHousehold>)
   - [func \(r \*InvitationRepository\) GetPendingInvitationsForHousehold\(householdID uint\) \(\[\]database.HouseholdInvitation, error\)](<#InvitationRepository.GetPendingInvitationsForHousehold>)
@@ -3488,6 +3790,15 @@ func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.Calen
 
 
 
+<a name="CalendarTokenRepository.Update"></a>
+### func \(\*CalendarTokenRepository\) Update
+
+```go
+func (r *CalendarTokenRepository) Update(ct *authentication.CalendarToken) error
+```
+
+
+
 <a name="CalendarTokenRepositoryInterface"></a>
 ## type CalendarTokenRepositoryInterface
 
@@ -3499,6 +3810,7 @@ type CalendarTokenRepositoryInterface interface {
     DeleteByUserID(userID uint) error
     GetByUserID(userID uint) (authentication.CalendarToken, error)
     Create(ct *authentication.CalendarToken) error
+    Update(ct *authentication.CalendarToken) error
 }
 ```
 
@@ -3769,6 +4081,15 @@ func (r *InvitationRepository) CreateInvitation(householdID, inviterID uint, ema
 
 
 
+<a name="InvitationRepository.CreateInvitationTx"></a>
+### func \(\*InvitationRepository\) CreateInvitationTx
+
+```go
+func (r *InvitationRepository) CreateInvitationTx(tx *gorm.DB, householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
+```
+
+
+
 <a name="InvitationRepository.GetInvitationByToken"></a>
 ### func \(\*InvitationRepository\) GetInvitationByToken
 
@@ -3840,6 +4161,7 @@ func (r *InvitationRepository) MarkInvitationSent(invitationID uint) error
 ```go
 type InvitationRepositoryInterface interface {
     CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
+    CreateInvitationTx(tx *gorm.DB, householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
     GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
     GetPendingInvitationsForHousehold(householdID uint) ([]database.HouseholdInvitation, error)
     GetInvitationByToken(token string) (database.HouseholdInvitation, error)
@@ -5766,7 +6088,7 @@ ProductAmountDTO is the request body for updating a product's amount
 
 ```go
 type ProductAmountDTO struct {
-    Delta int `json:"delta" binding:"required"`
+    Delta int `json:"delta" binding:"required,min=-1000"`
 }
 ```
 
@@ -5974,8 +6296,9 @@ import "codeberg.org/isotop7/proviant/models/authentication"
 ```go
 type CalendarToken struct {
     gorm.Model
-    UserID uint   `gorm:"index, not null"`
-    Token  string `gorm:"uniqueIndex, not null"`
+    UserID    uint      `gorm:"index, not null"`
+    Token     string    `gorm:"uniqueIndex, not null"`
+    ExpiresAt time.Time `gorm:"index, not null"`
 }
 ```
 
@@ -6492,9 +6815,11 @@ RateLimitConfiguration holds per\-endpoint rate limits in requests per minute.
 
 ```go
 type RateLimitConfiguration struct {
-    LoginPerMinute  int `mapstructure:"login_per_minute"`
-    SignupPerMinute int `mapstructure:"signup_per_minute"`
-    ExportPerMinute int `mapstructure:"export_per_minute"`
+    LoginPerMinute    int `mapstructure:"login_per_minute"`
+    SignupPerMinute   int `mapstructure:"signup_per_minute"`
+    ExportPerMinute   int `mapstructure:"export_per_minute"`
+    PasswordPerMinute int `mapstructure:"password_per_minute"`
+    ScanPerMinute     int `mapstructure:"scan_per_minute"`
 }
 ```
 
@@ -6549,16 +6874,17 @@ ServerConfiguration contains all properties regarding the proviant server
 
 ```go
 type ServerConfiguration struct {
-    Port            int
-    Authentication  AuthenticationConfiguration
-    CORS            CorsConfiguration
-    BaseURL         string
-    SecurityHeaders SecurityHeadersConfiguration
-    RateLimit       RateLimitConfiguration `mapstructure:"rateLimit"`
-    TrustedProxies  []string               `mapstructure:"trustedProxies"`
-    MaxUploadSizeMB int                    `mapstructure:"maxUploadSizeMB"`
-    Debug           bool                   `mapstructure:"debug"`
-    DemoMode        bool                   `mapstructure:"demoMode"`
+    Port                    int
+    Authentication          AuthenticationConfiguration
+    CORS                    CorsConfiguration
+    BaseURL                 string
+    SecurityHeaders         SecurityHeadersConfiguration
+    RateLimit               RateLimitConfiguration `mapstructure:"rateLimit"`
+    TrustedProxies          []string               `mapstructure:"trustedProxies"`
+    MaxUploadSizeMB         int                    `mapstructure:"maxUploadSizeMB"`
+    Debug                   bool                   `mapstructure:"debug"`
+    DemoMode                bool                   `mapstructure:"demoMode"`
+    CalendarTokenExpiryDays int                    `mapstructure:"calendarTokenExpiryDays"` // days until calendar token expires, default 365
 }
 ```
 
@@ -7156,6 +7482,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockCalendarTokenRepository\) DeleteByUserID\(userID uint\) error](<#MockCalendarTokenRepository.DeleteByUserID>)
   - [func \(m \*MockCalendarTokenRepository\) GetByToken\(token string\) \(authentication.CalendarToken, error\)](<#MockCalendarTokenRepository.GetByToken>)
   - [func \(m \*MockCalendarTokenRepository\) GetByUserID\(userID uint\) \(authentication.CalendarToken, error\)](<#MockCalendarTokenRepository.GetByUserID>)
+  - [func \(m \*MockCalendarTokenRepository\) Update\(ct \*authentication.CalendarToken\) error](<#MockCalendarTokenRepository.Update>)
 - [type MockExpiryScanRepository](<#MockExpiryScanRepository>)
   - [func \(m \*MockExpiryScanRepository\) Create\(scan \*dbModel.ExpiryScan\) error](<#MockExpiryScanRepository.Create>)
   - [func \(m \*MockExpiryScanRepository\) GetByUser\(userID uint, limit int\) \(\[\]dbModel.ExpiryScan, error\)](<#MockExpiryScanRepository.GetByUser>)
@@ -7178,6 +7505,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockInvitationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#MockInvitationRepository.AcceptInvitation>)
   - [func \(m \*MockInvitationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#MockInvitationRepository.CancelInvitation>)
   - [func \(m \*MockInvitationRepository\) CreateInvitation\(householdID, inviterID uint, email string\) \(dbModel.HouseholdInvitation, error\)](<#MockInvitationRepository.CreateInvitation>)
+  - [func \(m \*MockInvitationRepository\) CreateInvitationTx\(tx \*gorm.DB, householdID, inviterID uint, email string\) \(dbModel.HouseholdInvitation, error\)](<#MockInvitationRepository.CreateInvitationTx>)
   - [func \(m \*MockInvitationRepository\) GetInvitationByToken\(token string\) \(dbModel.HouseholdInvitation, error\)](<#MockInvitationRepository.GetInvitationByToken>)
   - [func \(m \*MockInvitationRepository\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]dbModel.HouseholdInvitation, error\)](<#MockInvitationRepository.GetInvitationsForHousehold>)
   - [func \(m \*MockInvitationRepository\) GetPendingInvitationsForHousehold\(householdID uint\) \(\[\]dbModel.HouseholdInvitation, error\)](<#MockInvitationRepository.GetPendingInvitationsForHousehold>)
@@ -7399,6 +7727,15 @@ func (m *MockCalendarTokenRepository) GetByUserID(userID uint) (authentication.C
 
 
 
+<a name="MockCalendarTokenRepository.Update"></a>
+### func \(\*MockCalendarTokenRepository\) Update
+
+```go
+func (m *MockCalendarTokenRepository) Update(ct *authentication.CalendarToken) error
+```
+
+
+
 <a name="MockExpiryScanRepository"></a>
 ## type MockExpiryScanRepository
 
@@ -7607,6 +7944,15 @@ func (m *MockInvitationRepository) CancelInvitation(invitationID, userID uint) e
 
 ```go
 func (m *MockInvitationRepository) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error)
+```
+
+
+
+<a name="MockInvitationRepository.CreateInvitationTx"></a>
+### func \(\*MockInvitationRepository\) CreateInvitationTx
+
+```go
+func (m *MockInvitationRepository) CreateInvitationTx(tx *gorm.DB, householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error)
 ```
 
 
@@ -9081,10 +9427,13 @@ static implements "constants" used in proviant
 
 ## Constants
 
-<a name="TokenRealm"></a>
+<a name="Version"></a>
 
 ```go
 const (
+    // Version is the current proviant version
+    Version = "v0.14.0"
+
     // TokenRealm is the realm of tokens
     TokenRealm = "proviant"
 

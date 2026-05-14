@@ -311,6 +311,9 @@ var (
 	// ErrInvalidRequest is thrown when the request is malformed or missing required parameters
 	ErrInvalidRequest = errors.New("invalid request")
 
+	// ErrTokenExpired is thrown when a calendar token has passed its expiration date
+	ErrTokenExpired = errors.New("calendar token expired")
+
 	// ErrInternalServer is thrown when an internal server error occurs
 	ErrInternalServer = errors.New("internal server error")
 

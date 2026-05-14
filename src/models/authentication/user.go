@@ -11,6 +11,12 @@ import (
 )
 
 // NotificationPreferences contains user-specific notification settings
+const (
+	MailDigestFrequencyDisabled = "disabled"
+	MailDigestFrequencyDaily    = "daily"
+	MailDigestFrequencyWeekly   = "weekly"
+)
+
 type NotificationPreferences struct {
 	EmailEnabled              bool   `json:"emailEnabled" gorm:"default:true"`
 	NtfyEnabled               bool   `json:"ntfyEnabled" gorm:"default:false"`
@@ -26,6 +32,9 @@ type NotificationPreferences struct {
 	TelegramBotUsername       string `json:"-"`
 	TelegramLinked            bool   `json:"telegramLinked" gorm:"-"`
 	TelegramBotConfigured     bool   `json:"telegramBotConfigured" gorm:"-"`
+	WebPushEnabled            bool   `json:"webPushEnabled" gorm:"column:web_push_enabled;default:false"`
+	WebPushSubscriptionJSON   string `json:"-" gorm:"column:web_push_subscription_json;type:text"`
+	MailDigestFrequency       string `json:"mailDigestFrequency" gorm:"column:mail_digest_frequency;default:'disabled'"`
 }
 
 // User is the struct for the database definition and the JWT claims

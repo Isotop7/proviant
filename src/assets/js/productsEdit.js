@@ -10,6 +10,8 @@ function getFormElements() {
         labelProductID:    document.getElementById('labelProductID'),
         imgProduct:        document.getElementById('imgProduct'),
         alertEditProduct:  document.getElementById('alertEditProduct'),
+        inputNotificationLeadDays: document.getElementById('inputNotificationLeadDays'),
+        inputMinStockAmount:      document.getElementById('inputMinStockAmount'),
     };
 }
 
@@ -37,6 +39,14 @@ function editProduct() {
     const storageLocationId = selectStorageLocation && selectStorageLocation.value
         ? Number.parseInt(selectStorageLocation.value) : null;
 
+    const inputNotificationLeadDays = document.getElementById('inputNotificationLeadDays');
+    const notificationLeadDays = inputNotificationLeadDays && inputNotificationLeadDays.value
+        ? Number.parseInt(inputNotificationLeadDays.value) : null;
+
+    const inputMinStockAmount = document.getElementById('inputMinStockAmount');
+    const minStockAmount = inputMinStockAmount && inputMinStockAmount.value
+        ? Number.parseInt(inputMinStockAmount.value) || 0 : 0;
+
     const product = {
         "ID": productID,
         "productName": els.inputProductName.value.trim(),
@@ -46,6 +56,8 @@ function editProduct() {
         "expireAt": expireDate ? expireDate.toISOString() : null,
         "amount": els.inputAmount ? Number.parseInt(els.inputAmount.value) || 0 : 0,
         "storageLocationId": storageLocationId,
+        "notificationLeadDays": notificationLeadDays,
+        "minStockAmount": minStockAmount,
     };
 
     proviant.editProduct(product).then((response) => {

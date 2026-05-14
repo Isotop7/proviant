@@ -1,0 +1,95 @@
+{{ define "content" }}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Shopping List</h1>
+        <p class="page-header-subtitle">{{ .ProductCount }} items below stock threshold</p>
+    </div>
+    <button class="btn btn-proviant-secondary d-none d-md-flex align-items-center gap-2" id="btnPrintShoppingList" type="button">
+        <i class="bi bi-printer"></i> Print list
+    </button>
+</div>
+
+{{ if .Products }}
+<div id="productList">
+    <div class="list-header">
+        <div class="list-checkbox-col">
+            <input type="checkbox" id="selectAll" class="list-checkbox">
+        </div>
+        <div class="col-product">Product</div>
+        <div class="col-status">Status</div>
+        <div class="col-location">Location</div>
+        <div class="col-qty">Qty</div>
+    </div>
+    <div id="productRows">
+    {{ range .Products }}
+    <div class="list-row" data-id="{{ .Model.ID }}" id="card-{{ .Model.ID }}">
+        <div class="list-checkbox-col">
+            <input type="checkbox" class="row-checkbox list-checkbox" value="{{ .Model.ID }}">
+        </div>
+        <div class="col-product">
+            <a href="/web/products/{{ .Model.ID }}/edit" class="list-thumb">
+                {{ if .ImageURL }}
+                <img src="{{ .ImageURL }}" alt="{{ .ProductName }}" class="list-thumb-img" loading="lazy">
+                {{ end }}
+                <div class="list-thumb-fallback">
+                    <i class="bi bi-box-seam list-thumb-icon"></i>
+                </div>
+                <div class="list-status-dot status-lowstock"></div>
+            </a>
+            <div class="list-product-text">
+                <a href="/web/products/{{ .Model.ID }}/edit" class="list-product-name">
+                    {{ .ProductName }}
+                </a>
+                <div class="list-product-meta">
+                    #{{ .Model.ID }} · {{ .Barcode }}
+                </div>
+            </div>
+        </div>
+        <div class="col-status">
+            <span class="badge-status badge-lowstock">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                Low stock
+            </span>
+            <div class="small text-secondary-custom mt-1">
+                <span class="text-nowrap">{{ .Amount }}</span>
+                <span class="text-nowrap"> / </span>
+                <span class="text-nowrap">{{ .MinStockAmount }}</span>
+            </div>
+        </div>
+        <div class="col-location">
+            {{ if .StorageLocation }}{{ .StorageLocation.Name }}{{ else }}—{{ end }}
+        </div>
+        <div class="col-qty">
+            <div class="qty-stepper">
+                <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}">−</button>
+                <span id="qty-{{ .Model.ID }}">{{ .Amount }}</span>
+                <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}">+</button>
+            </div>
+        </div>
+    </div>
+    {{ end }}
+    </div>
+</div>
+
+<script type="application/json" id="shoppingListData">
+[
+{{ range $i, $p := .Products }}{{ if $i }},{{ end }}
+{"id":{{ $p.Model.ID }},"name":"{{ $p.ProductName }}","amount":{{ $p.Amount }},"minAmount":{{ $p.MinStockAmount }}}
+{{ end }}
+]
+</script>
+{{ else }}
+<div class="text-center py-5">
+    <div class="mb-4">
+        <i class="bi bi-cart3 fs-1 text-secondary-custom"></i>
+    </div>
+    <h2 class="h4 mb-2">Your shopping list is empty</h2>
+    <p class="text-secondary-custom mb-4">All products are above their minimum stock threshold.</p>
+    <a href="/web/products" class="btn btn-proviant-primary">Browse products</a>
+</div>
+{{ end }}
+
+<script src="/assets/js/shoppingList.js"></script>
+
+{{ end }}

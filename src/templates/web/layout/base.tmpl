@@ -22,34 +22,42 @@
 
 <body>
   {{template "nav" .}}
+  <!-- Mobile top-right more menu -->
+  <div class="mobile-top-more">
+    <button class="mobile-top-more-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More options">
+      <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end mobile-top-more-dropdown">
+      <a href="/web/user/settings" class="dropdown-item">
+        <i class="bi bi-gear-wide-connected me-2" aria-hidden="true"></i>Settings
+      </a>
+      <a href="/web" id="btnLogout" class="dropdown-item dropdown-item--danger">
+        <i class="bi bi-escape me-2" aria-hidden="true"></i>Logout
+      </a>
+    </div>
+  </div>
   <!-- Mobile bottom navigation -->
   <nav class="bottom-nav" aria-label="Mobile navigation">
-    <div class="bottom-nav-left">
-      <a href="/web" class="bottom-nav-item {{ if eq .Title "Home" }}active{{ end }}"
-         {{ if eq .Title "Home" }}aria-current="page"{{ end }}>
-        <i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard</span>
-      </a>
-      <a href="/web/products" class="bottom-nav-item {{ if eq .Title "Products" }}active{{ end }}"
-         {{ if eq .Title "Products" }}aria-current="page"{{ end }}>
-        <i class="bi bi-box-seam" aria-hidden="true"></i><span>Products</span>
-      </a>
-    </div>
-    <div class="bottom-nav-center">
-      <a href="/web/products/scan" class="bottom-nav-scan {{ if eq .Title "Scan Product" }}active{{ end }}"
-         {{ if eq .Title "Scan Product" }}aria-current="page"{{ end }}>
-        <i class="bi bi-upc-scan" aria-hidden="true"></i>
-      </a>
-    </div>
-    <div class="bottom-nav-right">
-      <a href="/web/recipes" class="bottom-nav-item {{ if eq .Title "Recipes" }}active{{ end }}"
-         {{ if eq .Title "Recipes" }}aria-current="page"{{ end }}>
-        <i class="bi bi-book" aria-hidden="true"></i><span>Recipes</span>
-      </a>
-      <a href="/web/user/settings" class="bottom-nav-item {{ if eq .Title "User Settings" }}active{{ end }}"
-         {{ if eq .Title "User Settings" }}aria-current="page"{{ end }}>
-        <i class="bi bi-person-circle" aria-hidden="true"></i><span>Settings</span>
-      </a>
-    </div>
+    <a href="/web" class="bottom-nav-item {{ if eq .Title "Home" }}active{{ end }}"
+       {{ if eq .Title "Home" }}aria-current="page"{{ end }}>
+      <i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard</span>
+    </a>
+    <a href="/web/products" class="bottom-nav-item {{ if eq .Title "Products" }}active{{ end }}"
+       {{ if eq .Title "Products" }}aria-current="page"{{ end }}>
+      <i class="bi bi-box-seam" aria-hidden="true"></i><span>Products</span>
+    </a>
+    <a href="/web/products/scan" class="bottom-nav-scan {{ if eq .Title "Scan Product" }}active{{ end }}"
+       {{ if eq .Title "Scan Product" }}aria-current="page"{{ end }}>
+      <i class="bi bi-upc-scan" aria-hidden="true"></i>
+    </a>
+    <a href="/web/shopping-list" class="bottom-nav-item {{ if eq .Title "Shopping List" }}active{{ end }}"
+       {{ if eq .Title "Shopping List" }}aria-current="page"{{ end }}>
+      <i class="bi bi-cart3" aria-hidden="true"></i><span>Shopping</span>
+    </a>
+    <a href="/web/recipes" class="bottom-nav-item {{ if eq .Title "Recipes" }}active{{ end }}"
+       {{ if eq .Title "Recipes" }}aria-current="page"{{ end }}>
+      <i class="bi bi-book" aria-hidden="true"></i><span>Recipes</span>
+    </a>
   </nav>
   <!-- Offline banner — shown by JS when navigator.onLine === false -->
   <div id="offlineBanner" class="offline-banner d-none" role="status" aria-live="polite">

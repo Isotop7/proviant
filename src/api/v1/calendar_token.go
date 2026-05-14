@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"strings"
+	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
@@ -15,7 +16,11 @@ import (
 	"gorm.io/gorm"
 )
 
-const CalendarTokenLength = 32
+const (
+	CalendarTokenLength       = 32
+	DefaultCalendarExpiryDays = 365
+	CalendarExpiringSoonDays  = 30
+)
 
 func generateCalendarToken() (string, error) {
 	bytes := make([]byte, CalendarTokenLength)
@@ -26,8 +31,35 @@ func generateCalendarToken() (string, error) {
 }
 
 type CalendarTokenResponse struct {
-	Token string `json:"token"`
-	URL   string `json:"url"`
+	Token     string    `json:"token"`
+	URL       string    `json:"url"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}
+
+func getCalendarExpiryDays(ctx *gin.Context) int {
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	if proviantConfig != nil && proviantConfig.Calendar.TokenExpiryDays > 0 {
+		return proviantConfig.Calendar.TokenExpiryDays
+	}
+	return DefaultCalendarExpiryDays
+}
+
+func getCalendarExpiringSoonDays(ctx *gin.Context) int {
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	if proviantConfig != nil && proviantConfig.Calendar.ExpiringSoonDays > 0 {
+		return proviantConfig.Calendar.ExpiringSoonDays
+	}
+	return CalendarExpiringSoonDays
+}
+
+func buildCalendarURL(baseURL, token string) string {
+	if baseURL == "" {
+		baseURL = "/"
+	}
+	if !strings.HasSuffix(baseURL, "/") {
+		baseURL += "/"
+	}
+	return baseURL + "api/v1/calendar/export.ics?token=" + token
 }
 
 // CreateCalendarToken creates a new calendar token for CalDAV/iCal subscription
@@ -57,9 +89,11 @@ func CreateCalendarToken(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
+	expiryDays := getCalendarExpiryDays(ctx)
 	calendarToken := &authentication.CalendarToken{
-		UserID: appCtx.UserID,
-		Token:  rawToken,
+		UserID:    appCtx.UserID,
+		Token:     rawToken,
+		ExpiresAt: time.Now().AddDate(0, 0, expiryDays),
 	}
 	createErr := appCtx.Repos.CalendarTokens.Create(calendarToken)
 	if createErr != nil {
@@ -73,16 +107,66 @@ func CreateCalendarToken(ctx *gin.Context, appCtx *AppContext) {
 	if proviantConfig != nil {
 		baseURL = proviantConfig.Server.BaseURL
 	}
-	if baseURL == "" {
-		baseURL = "/"
+
+	resp := CalendarTokenResponse{
+		Token:     rawToken,
+		URL:       buildCalendarURL(baseURL, rawToken),
+		ExpiresAt: calendarToken.ExpiresAt,
 	}
-	if !strings.HasSuffix(baseURL, "/") {
-		baseURL += "/"
+
+	ctx.JSON(http.StatusCreated, resp)
+}
+
+// RotateCalendarToken invalidates the current token and issues a new one
+// @Summary      Rotate calendar token
+// @Description  Invalidates the current calendar token and creates a new one with a fresh expiry date.
+// @Tags         calendar
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      201  {object}  CalendarTokenResponse
+// @Failure      400  {object}  api.APIResponse
+// @Failure      401  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/calendar/token/rotate [post]
+func RotateCalendarToken(ctx *gin.Context, appCtx *AppContext) {
+	rawToken, genErr := generateCalendarToken()
+	if genErr != nil {
+		appCtx.Logger.Error().Msgf("generateCalendarToken: %s", genErr)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to rotate calendar token"})
+		return
+	}
+
+	delErr := appCtx.Repos.CalendarTokens.DeleteByUserID(appCtx.UserID)
+	if delErr != nil {
+		appCtx.Logger.Error().Msgf("DeleteByUserID: %s", delErr)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to rotate calendar token"})
+		return
+	}
+
+	expiryDays := getCalendarExpiryDays(ctx)
+	calendarToken := &authentication.CalendarToken{
+		UserID:    appCtx.UserID,
+		Token:     rawToken,
+		ExpiresAt: time.Now().AddDate(0, 0, expiryDays),
+	}
+	createErr := appCtx.Repos.CalendarTokens.Create(calendarToken)
+	if createErr != nil {
+		appCtx.Logger.Error().Msgf("Create: %s", createErr)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to rotate calendar token"})
+		return
+	}
+
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	baseURL := ""
+	if proviantConfig != nil {
+		baseURL = proviantConfig.Server.BaseURL
 	}
 
 	resp := CalendarTokenResponse{
-		Token: rawToken,
-		URL:   baseURL + "api/v1/calendar/export.ics?token=" + rawToken,
+		Token:     rawToken,
+		URL:       buildCalendarURL(baseURL, rawToken),
+		ExpiresAt: calendarToken.ExpiresAt,
 	}
 
 	ctx.JSON(http.StatusCreated, resp)
@@ -140,15 +224,13 @@ func GetCalendarTokenStatus(ctx *gin.Context, appCtx *AppContext) {
 	if proviantConfig != nil {
 		baseURL = proviantConfig.Server.BaseURL
 	}
-	if baseURL == "" {
-		baseURL = "/"
-	}
-	if !strings.HasSuffix(baseURL, "/") {
-		baseURL += "/"
-	}
+
+	isExpiringSoon := calendarToken.ExpiresAt.Before(time.Now().AddDate(0, 0, getCalendarExpiringSoonDays(ctx)))
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"hasToken": true,
-		"url":      baseURL + "api/v1/calendar/export.ics?token=" + calendarToken.Token,
+		"hasToken":       true,
+		"url":            buildCalendarURL(baseURL, calendarToken.Token),
+		"expiresAt":      calendarToken.ExpiresAt,
+		"isExpiringSoon": isExpiringSoon,
 	})
 }

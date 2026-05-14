@@ -26,4 +26,10 @@ const (
 	QueryWebhookId        = "webhook_id = ?"
 	WhereDeletedIsNotNull = "deleted_at IS NOT NULL"
 	WhereDeletedIsNull    = "deleted_at IS NULL"
+
+	// Mail digest
+	LabelMailDigest       = "mailDigest"
+	LabelMailDigestDot    = "mail_digest"
+	LabelMailDigestPascal = "MailDigest"
+	RouteUnsubscribe      = "/web/unsubscribe"
 )

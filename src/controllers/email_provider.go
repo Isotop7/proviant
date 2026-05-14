@@ -45,20 +45,12 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 		return fmt.Errorf("invalid recipient type for email provider")
 	}
 
-	// Create new mail object
 	mail := gomail.NewMessage()
-
-	// Set sender
 	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
-
-	// Set recipient
 	mail.SetHeader(headerTo, recipient)
-
-	// Set header
 	subject := fmt.Sprintf("proviant - Warning - Product '%s' expired", product.ProductName)
 	mail.SetHeader(headerSubject, subject)
 
-	// Generate email body from template
 	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/expired.html")
 	if templErr != nil {
 		return templErr
@@ -75,15 +67,12 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 		Barcode:     product.Barcode,
 		ExpireAt:    product.ExpireAt,
 	})
-	// Check for templating errors
 	if templExecErr != nil {
 		return templExecErr
 	}
 
-	// Set body of mail to generated template output
 	mail.SetBody(mimeTypeHTML, bodyBuf.String())
 
-	// Settings for SMTP server
 	mailDialer := gomail.Dialer{
 		Host: e.Configuration.Host,
 		Port: e.Configuration.Port,
@@ -94,10 +83,8 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 		mailDialer.Password = e.Configuration.Password
 	}
 
-	// Set ssl mode
 	mailDialer.SSL = e.Configuration.SSL
 
-	// Send mail and return error
 	return emailSendFunc(&mailDialer, mail)
 }
 
@@ -196,12 +183,62 @@ func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, 
 	return emailSendFunc(&mailDialer, mail)
 }
 
+// SendExpiryDigestEmail sends an expiry digest email to a single recipient.
+// Returns nil if all product groups are empty (no email sent).
+func (e *EmailNotificationProvider) SendExpiryDigestEmail(productGroups interface {
+	GetToday() []dbModel.Product
+	GetThisWeek() []dbModel.Product
+	GetNextWeek() []dbModel.Product
+}, recipientEmail, householdName, unsubscribeURL string) error {
+	groups := productGroups
+	if len(groups.GetToday()) == 0 && len(groups.GetThisWeek()) == 0 && len(groups.GetNextWeek()) == 0 {
+		return nil
+	}
+
+	templ, err := template.ParseFS(templates.TemplateFiles, "notification/expiry_mail_digest.html")
+	if err != nil {
+		return err
+	}
+
+	data := struct {
+		HouseholdName    string
+		GeneratedDate    string
+		ProductsToday    []dbModel.Product
+		ProductsThisWeek []dbModel.Product
+		ProductsNextWeek []dbModel.Product
+		UnsubscribeURL   string
+	}{
+		HouseholdName:    householdName,
+		GeneratedDate:    time.Now().Format("January 2, 2006"),
+		ProductsToday:    groups.GetToday(),
+		ProductsThisWeek: groups.GetThisWeek(),
+		ProductsNextWeek: groups.GetNextWeek(),
+		UnsubscribeURL:   unsubscribeURL,
+	}
+
+	var buf bytes.Buffer
+	if err := templ.Execute(&buf, data); err != nil {
+		return err
+	}
+
+	mail := gomail.NewMessage()
+	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
+	mail.SetHeader(headerTo, recipientEmail)
+	mail.SetHeader(headerSubject, fmt.Sprintf("Proviant — Expiry Digest for %s", householdName))
+	mail.SetBody(mimeTypeHTML, buf.String())
+
+	dialer := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
+	if e.Configuration.User != "" && e.Configuration.Password != "" {
+		dialer.Username = e.Configuration.User
+		dialer.Password = e.Configuration.Password
+	}
+	return emailSendFunc(&dialer, mail)
+}
+
 // SendInvitationEmail sends an invitation email to the recipient
 func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
-	// Construct magic link
 	magicLink := fmt.Sprintf("%s/web/invite/accept?token=%s", baseURL, invitation.Token)
 
-	// Generate email body from template
 	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/invitation.html")
 	if templErr != nil {
 		return templErr
@@ -224,22 +261,12 @@ func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.Hous
 		return templExecErr
 	}
 
-	// Create new mail object
 	mail := gomail.NewMessage()
-
-	// Set sender
 	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
-
-	// Set recipient
 	mail.SetHeader(headerTo, invitation.Email)
-
-	// Set subject
 	mail.SetHeader(headerSubject, fmt.Sprintf("You're invited to join '%s' on Proviant", householdName))
-
-	// Set body of mail to generated template output
 	mail.SetBody(mimeTypeHTML, bodyBuf.String())
 
-	// Settings for SMTP server
 	mailDialer := gomail.Dialer{
 		Host: e.Configuration.Host,
 		Port: e.Configuration.Port,
@@ -251,6 +278,5 @@ func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.Hous
 		mailDialer.Password = e.Configuration.Password
 	}
 
-	// Send mail and return error
 	return emailSendFunc(&mailDialer, mail)
 }

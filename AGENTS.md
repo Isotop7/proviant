@@ -388,6 +388,8 @@ Project uses [Conventional Commits](https://www.conventionalcommits.org/) for au
   )
   ```
 - **OpenFoodFacts caching**: Barcode lookups go through backend proxy `GET /api/v1/products/openfoodfacts/:barcode` (JWT-protected). When `openfoodfacts.cacheEnabled: true`, responses stored in `open_food_facts_caches` table (`src/models/database/openfoodfacts_cache.go`) and served from there on subsequent requests. Frontend (`src/assets/js/productsCreate.js`) calls `proviant.getOpenFoodFactsData()` from `proviant.js` — **do not** reintroduce direct browser calls to `world.openfoodfacts.org`. Cache operations in `src/controllers/database/databasecontroller.go` (`GetOpenFoodFactsCacheByBarcode`, `CreateOpenFoodFactsCache`).
+- **Config values**: New config blocks (e.g., `mailDigest`, `ntfy`, `telegram`) go under `notification:` section in config files. Always add to all three: `config.yaml`, `config.yaml.sqlite.tmpl`, `config.yaml.mariadb.tmpl`.
+- **String literals**: New string constants (route labels, config keys, section identifiers) must be centralized in `src/util/util.go` under a appropriate group comment.
 
 ## UI/UX Standards
 

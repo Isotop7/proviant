@@ -147,6 +147,33 @@
                             {{if .User.NotificationPreferences.TelegramLinked}}Relink Account{{else}}Link Account{{end}}
                         </button>
                     </div>
+                    <div class="list-group-item px-3 py-3">
+                        <div class="d-flex align-items-center justify-content-between gap-3">
+                            <div>
+                                <div class="fw-medium small">Push Notifications</div>
+                                <div class="text-secondary-custom small">Browser push — works on Chrome, Firefox, Safari.</div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnPushHelp"
+                                        data-bs-toggle="modal" data-bs-target="#pushHelpModal"
+                                        aria-label="How to set up push notifications">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </button>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           id="togglePushNotifications">
+                                    <label class="visually-hidden" for="togglePushNotifications">Push Notifications</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="pushSettings" class="list-group-item px-3 py-3 bg-body-tertiary{{if not .User.NotificationPreferences.WebPushEnabled}} d-none{{end}}">
+                        <p class="small mb-0 text-secondary-custom">
+                            <i class="bi bi-bell me-1" aria-hidden="true"></i>
+                            Push notifications active.
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="btnPushUnsubscribe">Disable</button>
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -178,6 +205,38 @@
                             <li>Includes waste rate and month-over-month comparison</li>
                             <li>Sent to every household member with this option enabled</li>
                         </ul>
+                    </div>
+
+                    <!-- Expiry Digest -->
+                    <div class="list-group-item px-3 py-3">
+                        <div class="d-flex align-items-center justify-content-between gap-3">
+                            <div>
+                                <div class="fw-medium small">Expiry Digest</div>
+                                <div class="text-secondary-custom small">
+                                    <i class="bi bi-calendar2-week me-1" aria-hidden="true"></i>Summary of expiring products via email
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-3 py-3 bg-body-tertiary">
+                        <p class="small mb-2 text-secondary-custom">Receive a periodic summary of products expiring soon.</p>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="digestFrequency" id="digestDisabled" value="disabled"
+                                    {{if eq .User.NotificationPreferences.MailDigestFrequency "disabled"}}checked{{end}}>
+                                <label class="form-check-label small" for="digestDisabled">Disabled</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="digestFrequency" id="digestDaily" value="daily"
+                                    {{if eq .User.NotificationPreferences.MailDigestFrequency "daily"}}checked{{end}}>
+                                <label class="form-check-label small" for="digestDaily">Daily</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="digestFrequency" id="digestWeekly" value="weekly"
+                                    {{if eq .User.NotificationPreferences.MailDigestFrequency "weekly"}}checked{{end}}>
+                                <label class="form-check-label small" for="digestWeekly">Weekly (Monday)</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -225,6 +284,12 @@
                 <div id="calendarUrlCopied" class="form-text text-success d-none">
                     <i class="bi bi-check-circle me-1"></i>URL copied to clipboard!
                 </div>
+            </div>
+            <div id="calendarExpirySection" class="mb-3 d-none">
+                <span id="calendarExpiryBadge" class="badge bg-warning text-dark mb-2 d-none">
+                    <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>Expiring soon
+                </span>
+                <div id="calendarExpiryDate" class="text-secondary-custom small"></div>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-medium">Instructions</label>
