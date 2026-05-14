@@ -58,9 +58,11 @@ type SecurityHeadersConfiguration struct {
 
 // RateLimitConfiguration holds per-endpoint rate limits in requests per minute.
 type RateLimitConfiguration struct {
-	LoginPerMinute  int `mapstructure:"login_per_minute"`
-	SignupPerMinute int `mapstructure:"signup_per_minute"`
-	ExportPerMinute int `mapstructure:"export_per_minute"`
+	LoginPerMinute    int `mapstructure:"login_per_minute"`
+	SignupPerMinute   int `mapstructure:"signup_per_minute"`
+	ExportPerMinute   int `mapstructure:"export_per_minute"`
+	PasswordPerMinute int `mapstructure:"password_per_minute"`
+	ScanPerMinute     int `mapstructure:"scan_per_minute"`
 }
 
 // ServerConfiguration contains all properties regarding the proviant server
@@ -274,7 +276,8 @@ func (ec *ProviantConfiguration) ValidateServerConfiguration() error {
 		return errors.ErrServerInvalidTokenLifetime
 	}
 	rl := ec.Server.RateLimit
-	if rl.LoginPerMinute <= 0 || rl.SignupPerMinute <= 0 || rl.ExportPerMinute <= 0 {
+	if rl.LoginPerMinute <= 0 || rl.SignupPerMinute <= 0 || rl.ExportPerMinute <= 0 ||
+		rl.PasswordPerMinute <= 0 || rl.ScanPerMinute <= 0 {
 		return errors.ErrRateLimitInvalidValue
 	}
 	return nil

@@ -225,7 +225,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.GET("/archived", v1.WrapHandler(v1.GetArchivedProducts))
 	publicProductAPI.GET("/expired", v1.WrapHandler(v1.GetExpired))
 	publicProductAPI.POST("", v1.WrapHandler(v1.CreateProduct))
-	publicProductAPI.POST("/scan", v1.WrapHandler(v1.ScanProduct))
+	publicProductAPI.POST("/scan", scanRateLimitMiddleware, v1.WrapHandler(v1.ScanProduct))
 	publicProductAPI.POST("/scan-date", v1.WrapHandler(v1.ScanExpiryDate))
 	publicProductAPI.GET("/byBarcode/:barcode", v1.WrapHandler(v1.GetProductsByBarcode))
 	publicProductAPI.GET("/openfoodfacts/:barcode", v1.WrapHandler(v1.GetOpenFoodFactsData))
@@ -244,7 +244,8 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedUserAPI := engine.Group("/api/v1/user")
 	protectedUserAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	protectedUserAPI.PATCH("", v1.WrapHandler(v1.UpdateUser))
-	protectedUserAPI.POST("/password", v1.WrapHandler(v1.UpdateUserPassword))
+
+	protectedUserAPI.POST("/password", passwordRateLimitMiddleware, v1.WrapHandler(v1.UpdateUserPassword))
 	protectedUserAPI.GET("/notification-preferences", v1.WrapHandler(v1.GetUserNotificationPreferences))
 	protectedUserAPI.POST("/notification-preferences", v1.WrapHandler(v1.UpdateUserNotificationPreferences))
 	protectedUserAPI.POST("/telegram-link-token", v1.WrapHandler(v1.GenerateTelegramLinkToken))
