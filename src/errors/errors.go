@@ -176,6 +176,9 @@ var (
 	// ErrHouseholdNotFound is thrown when a requested household does not exist
 	ErrHouseholdNotFound = errors.New("household not found")
 
+	// ErrHouseholdNameEmpty is thrown when a household name is empty or whitespace
+	ErrHouseholdNameEmpty = errors.New("household name cannot be empty")
+
 	// ErrNotHouseholdAdmin is thrown when a user attempts an admin action on a household they do not administrate
 	ErrNotHouseholdAdmin = errors.New("user is not the admin of this household")
 

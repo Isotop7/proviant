@@ -154,6 +154,11 @@ func CreateOnboardingHousehold(ctx *gin.Context) {
 		return
 	}
 
+	if strings.TrimSpace(req.Name) == "" {
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrHouseholdNameEmpty)
+		return
+	}
+
 	if err := repos.Households.CreateAndSwitchHousehold(userID, req.Name); err != nil {
 		logger.Error().Msgf("Failed to create household: %s", err.Error())
 		api.RespondError(ctx, http.StatusInternalServerError, errors.New("failed to create household"))
