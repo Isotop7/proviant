@@ -50,3 +50,6 @@ src/data
 
 # Issue sync
 issues/
+
+# markdown files
+RELEASE_NOTES.md
