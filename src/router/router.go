@@ -285,6 +285,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	notificationAPI := engine.Group("/api/v1/notifications")
 	notificationAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	notificationAPI.GET("", v1.WrapHandler(v1.GetNotifications))
+	notificationAPI.GET("/push/vapidPublicKey", v1.WrapHandler(v1.GetWebPushVAPIDPublicKey))
+	notificationAPI.POST("/push/subscribe", v1.WrapHandler(v1.SubscribeWebPushNotifications))
+	notificationAPI.DELETE("/push/subscribe", v1.WrapHandler(v1.UnsubscribeWebPushNotifications))
 
 	// Household application routes
 	householdAPI := engine.Group("/api/v1/household")

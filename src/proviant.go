@@ -250,6 +250,7 @@ func main() {
 		&dbModel.SavingsRecord{},
 		&dbModel.ExpiryScan{},
 		&dbModel.AuditLog{},
+		&dbModel.WebPushConfig{},
 	)
 	if migrationError != nil {
 		panic(migrationError)

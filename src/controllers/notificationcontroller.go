@@ -125,6 +125,13 @@ func (nc *NotificationController) newTelegramProvider(botToken string) *Telegram
 	}
 }
 
+func (nc *NotificationController) newWebPushProvider() *WebPushNotificationProvider {
+	return &WebPushNotificationProvider{
+		NotificationRepo: nc.NotificationRepo,
+		Logger:            nc.Logger,
+	}
+}
+
 // GetUserTelegramBotUsername returns the bot username resolved at poller start for a user.
 func (nc *NotificationController) GetUserTelegramBotUsername(userID uint) string {
 	if v, ok := nc.botUsernames.Load(userID); ok {
@@ -231,8 +238,8 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 		}
 
 		// Send notifications for each recipient
-		for _, pref := range preferences {
-			nc.sendNotificationsForRecipient(product, &pref)
+		for i := range preferences {
+			nc.sendNotificationsForRecipient(product, &preferences[i])
 		}
 	}
 }
@@ -256,6 +263,10 @@ func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel
 	}
 
 	if nc.sendTelegram(product, recipientInfo) && !notified {
+		notified = nc.markNotified(product.ID)
+	}
+
+	if nc.sendWebPush(product, recipientInfo) && !notified {
 		notified = nc.markNotified(product.ID)
 	}
 
@@ -306,6 +317,23 @@ func (nc *NotificationController) sendTelegram(product *dbModel.Product, recipie
 			return false
 		}
 		nc.Logger.Info().Msg("Successfully sent telegram notification")
+		return true
+	}
+	return false
+}
+
+func (nc *NotificationController) sendWebPush(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) bool {
+	if recipientInfo.WebPushEnabled && recipientInfo.WebPushSubscriptionJSON != "" {
+		nc.Logger.Info().Msgf("Attempting webpush notification for product '%s' (ID: %d)", product.ProductName, product.ID)
+		webPushProvider := nc.newWebPushProvider()
+		if webPushProvider == nil {
+			return false
+		}
+		if err := webPushProvider.SendNotification(product, recipientInfo.WebPushSubscriptionJSON); err != nil {
+			nc.Logger.Error().Msgf("Failed to send webpush notification: %s", err)
+			return false
+		}
+		nc.Logger.Info().Msg("Successfully sent webpush notification")
 		return true
 	}
 	return false

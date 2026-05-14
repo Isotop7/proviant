@@ -1,6 +1,11 @@
 package database
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"time"
 
@@ -48,6 +53,9 @@ type NotificationRepositoryInterface interface {
 	SetTelegramLinkToken(userID uint, token string) error
 	SetTelegramBotUsername(userID uint, username string) error
 	GetAllUsersWithTelegramBotToken() ([]authentication.User, error)
+	SaveWebPushSubscription(userID uint, subscriptionJSON string) error
+	DeleteWebPushSubscription(userID uint) error
+	GetVAPIDKeys() (publicKey, privateKey string, err error)
 }
 
 func (r *NotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error) {
@@ -118,6 +126,8 @@ func (r *NotificationRepository) GetHouseholdMembersNotificationPreferences(hous
 			TelegramChatID:            user.NotificationPreferences.TelegramChatID,
 			TelegramBotToken:          user.NotificationPreferences.TelegramBotToken,
 			NotificationThresholdDays: user.NotificationPreferences.NotificationThresholdDays,
+			WebPushEnabled:          user.NotificationPreferences.WebPushEnabled,
+			WebPushSubscriptionJSON: user.NotificationPreferences.WebPushSubscriptionJSON,
 		})
 	}
 
@@ -285,6 +295,52 @@ func (r *NotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentica
 	var users []authentication.User
 	err := r.DB.Where("telegram_bot_token != ''").Find(&users).Error
 	return users, err
+}
+
+func (r *NotificationRepository) SaveWebPushSubscription(userID uint, subscriptionJSON string) error {
+	return r.DB.Model(&authentication.User{}).
+		Where(util.QueryId, userID).
+		Updates(map[string]any{
+			"web_push_enabled":            true,
+			"web_push_subscription_json": subscriptionJSON,
+		}).Error
+}
+
+func (r *NotificationRepository) DeleteWebPushSubscription(userID uint) error {
+	return r.DB.Model(&authentication.User{}).
+		Where(util.QueryId, userID).
+		Updates(map[string]any{
+			"web_push_enabled":            false,
+			"web_push_subscription_json": "",
+		}).Error
+}
+
+func (r *NotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, err error) {
+	var config database.WebPushConfig
+	findErr := r.DB.First(&config).Error
+	if findErr == nil {
+		return config.PublicKey, config.PrivateKey, nil
+	}
+	if !errors.Is(findErr, gorm.ErrRecordNotFound) {
+		return "", "", findErr
+	}
+
+	privateKeyBytes, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return "", "", err
+	}
+
+	publicKeyBytes := elliptic.MarshalCompressed(elliptic.P256(), privateKeyBytes.X, privateKeyBytes.Y)
+
+	config = database.WebPushConfig{
+		PublicKey:  base64.URLEncoding.EncodeToString(publicKeyBytes),
+		PrivateKey: base64.URLEncoding.EncodeToString(privateKeyBytes.D.Bytes()),
+	}
+	if saveErr := r.DB.Create(&config).Error; saveErr != nil {
+		return "", "", saveErr
+	}
+
+	return config.PublicKey, config.PrivateKey, nil
 }
 
 func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error) {

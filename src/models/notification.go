@@ -12,4 +12,6 @@ type NotificationRecipientInfo struct {
 	TelegramChatID            string
 	TelegramBotToken          string
 	NotificationThresholdDays int
+	WebPushEnabled          bool
+	WebPushSubscriptionJSON string
 }

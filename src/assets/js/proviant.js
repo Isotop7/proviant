@@ -575,6 +575,25 @@ proviant.getWebhookDeliveries = async function (id) {
   return { code: res.status, deliveries: body.deliveries };
 };
 
+/* ── Web Push Notification API ───────────────────────────────────────────────── */
+proviant.getWebPushVAPIDPublicKey = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/notifications/push/vapidPublicKey`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, publicKey: body.publicKey };
+};
+
+proviant.subscribeWebPush = async function (subscription) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/notifications/push/subscribe`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(subscription) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.unsubscribeWebPush = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/notifications/push/subscribe`, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
 /* ── Audit log API ──────────────────────────────────────────────────────────── */
 proviant.getAuditLogs = async function (date) {
   const params = date ? `?date=${encodeURIComponent(date)}` : "";

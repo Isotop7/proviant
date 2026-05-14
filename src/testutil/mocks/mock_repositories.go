@@ -537,6 +537,15 @@ func (m *MockNotificationRepository) SetTelegramBotUsername(userID uint, usernam
 func (m *MockNotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentication.User, error) {
 	return m.Users, m.Err
 }
+func (m *MockNotificationRepository) SaveWebPushSubscription(userID uint, subscriptionJSON string) error {
+	return m.Err
+}
+func (m *MockNotificationRepository) DeleteWebPushSubscription(userID uint) error {
+	return m.Err
+}
+func (m *MockNotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, err error) {
+	return "", "", m.Err
+}
 
 var _ database.NotificationRepositoryInterface = (*MockNotificationRepository)(nil)
 

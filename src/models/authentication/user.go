@@ -26,6 +26,8 @@ type NotificationPreferences struct {
 	TelegramBotUsername       string `json:"-"`
 	TelegramLinked            bool   `json:"telegramLinked" gorm:"-"`
 	TelegramBotConfigured     bool   `json:"telegramBotConfigured" gorm:"-"`
+	WebPushEnabled          bool   `json:"webPushEnabled" gorm:"column:web_push_enabled;default:false"`
+	WebPushSubscriptionJSON string `json:"-" gorm:"column:web_push_subscription_json;type:text"`
 }
 
 // User is the struct for the database definition and the JWT claims

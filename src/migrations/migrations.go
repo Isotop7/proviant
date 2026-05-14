@@ -167,6 +167,17 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 		return err
 	}
 
+	// Migrations for push notifications
+logger.Debug().Msg("Running database migrations for web push notifications")
+		if err := AddWebPushNotificationMigration(db); err != nil {
+			return err
+		}
+
+		logger.Debug().Msg("Renaming legacy push columns to web_push columns")
+		if err := RenamePushNotificationColumns(logger, db); err != nil {
+			return err
+		}
+
 	// Backfill email verification for existing users
 	logger.Debug().Msg("Running database migrations for email verification backfill")
 	if err := BackfillEmailVerification(logger, db); err != nil {
@@ -224,5 +235,45 @@ func BackfillEmailVerification(logger *zerolog.Logger, db *gorm.DB) error {
 	}
 
 	logger.Info().Int64("count", result.RowsAffected).Msg("Backfilled email verification")
+	return nil
+}
+
+// AddWebPushNotificationMigration adds web push notification columns to users table
+func AddWebPushNotificationMigration(db *gorm.DB) error {
+	err := db.Exec(`
+		ALTER TABLE users
+		ADD COLUMN web_push_enabled BOOLEAN DEFAULT FALSE,
+		ADD COLUMN web_push_subscription_json TEXT
+	`).Error
+
+	if err != nil && (strings.Contains(err.Error(), "duplicate column") ||
+		strings.Contains(err.Error(), "already exists") ||
+		strings.Contains(err.Error(), "already has column")) {
+		return nil
+	}
+
+	return err
+}
+
+// RenamePushNotificationColumns renames legacy push columns to web_push prefix
+func RenamePushNotificationColumns(logger *zerolog.Logger, db *gorm.DB) error {
+	var columnCount int64
+	db.Raw("SELECT COUNT(*) FROM pragma_table_info('users') WHERE name = 'push_enabled'").Scan(&columnCount)
+	if columnCount == 0 {
+		logger.Debug().Msg("push_enabled column already renamed, skipping")
+		return nil
+	}
+
+	stmts := []string{
+		"ALTER TABLE users RENAME COLUMN push_enabled TO web_push_enabled",
+		"ALTER TABLE users RENAME COLUMN push_subscription_json TO web_push_subscription_json",
+	}
+	for _, sql := range stmts {
+		if err := db.Exec(sql).Error; err != nil {
+			logger.Warn().Err(err).Msgf("Failed to rename column: %s", sql)
+			return err
+		}
+	}
+	logger.Info().Msg("Renamed push columns to web_push columns")
 	return nil
 }
