@@ -36,3 +36,11 @@ jobs:
           git add CHANGELOG.md
           git commit -m "chore: update CHANGELOG.md for ${{ forgejo.ref_name }}"
           git push "https://${{ secrets.RELEASE_TOKEN }}@codeberg.org/${{ forgejo.repository }}.git" HEAD:main
+
+      - name: Create Release
+        uses: https://code.forgejo.org/actions/forgejo-release@v2.12.0
+        with:
+          direction: upload
+          token: ${{ secrets.RELEASE_TOKEN }}
+          release-notes-file: CHANGELOG.md
+          override: true
