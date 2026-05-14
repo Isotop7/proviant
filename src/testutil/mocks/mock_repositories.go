@@ -157,6 +157,9 @@ func (m *MockProductRepository) GetExpiringProductsByHousehold(householdID uint,
 func (m *MockProductRepository) GetProductsByHousehold(householdID uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
+func (m *MockProductRepository) GetSubThresholdProducts(userID uint) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
 func (m *MockProductRepository) GetExpiringProductsForMailDigest(householdID uint) (database.MailDigestProductGroup, error) {
 	return database.MailDigestProductGroup{}, m.Err
 }

@@ -56,6 +56,10 @@ func today() string {
 	return time.Now().Format(util.DefaultDateFormatParseStr)
 }
 
+func now() string {
+	return time.Now().Format("2006-01-02 15:04")
+}
+
 func hasPassed(t time.Time) bool {
 	return t.Before(time.Now())
 }
@@ -307,6 +311,7 @@ var customTemplateFunctions = template.FuncMap{
 	"humanDateTime":        humanDateTime,
 	"humanDateTimeFromSQL": humanDateTimeFromSQL,
 	"inputDate":            inputDate,
+	"now":                  now,
 	"today":                today,
 	"hasPassed":            hasPassed,
 	"expiryBadgeClass":     expiryBadgeClass,

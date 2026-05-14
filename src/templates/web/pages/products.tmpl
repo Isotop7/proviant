@@ -287,6 +287,12 @@
                 <i class="bi bi-{{ expiryStatusIcon .ExpireAt }}"></i>
                 {{ expiryStatusLabel .ExpireAt }}
             </span>
+            {{ if and (gt .MinStockAmount 0) (lt .Amount .MinStockAmount) }}
+            <span class="badge-status badge-lowstock">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                Low stock
+            </span>
+            {{ end }}
         </div>
         {{ $urgency := expiryUrgencyText .ExpireAt }}
         {{ if $urgency }}

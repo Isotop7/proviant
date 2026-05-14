@@ -19,6 +19,11 @@
 			{{ end }}
 			{{ end }}
 		</a>
+		<a href="/web/shopping-list" class="pv-nav-item {{ if eq .Title "Shopping List" }}active{{ end }}"
+			{{ if eq .Title "Shopping List" }}aria-current="page"{{ end }}
+			data-bs-toggle="tooltip" data-bs-placement="right" title="Shopping List">
+			<i class="bi bi-cart3" aria-hidden="true"></i> Shopping List
+		</a>
 		<a href="/web/recipes" class="pv-nav-item {{ if eq .Title "Recipes" }}active{{ end }}"
 			{{ if eq .Title "Recipes" }}aria-current="page"{{ end }}
 			data-bs-toggle="tooltip" data-bs-placement="right" title="Recipes">

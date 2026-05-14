@@ -59,11 +59,12 @@ type ProductRepositoryInterface interface {
 	GetWasteThisMonth(userID uint) (int, error)
 	GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
 	GetProductsByHousehold(householdID uint) ([]database.Product, error)
+	GetSubThresholdProducts(userID uint) ([]database.Product, error)
 	ConsumeProduct(productID, userID uint) error
 	WasteProduct(productID, userID uint) error
 	BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
 	BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
-GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
+	GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
 }
 
 var _ ProductRepositoryInterface = (*ProductRepository)(nil)
@@ -336,6 +337,7 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 	dbProduct.Unit = product.Unit
 	dbProduct.StorageLocationID = product.StorageLocationID
 	dbProduct.NotificationLeadDays = product.NotificationLeadDays
+	dbProduct.MinStockAmount = product.MinStockAmount
 
 	saveResult := r.DB.Save(&dbProduct)
 	return saveResult.Error
@@ -900,10 +902,26 @@ func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database
 	return products, result.Error
 }
 
+func (r *ProductRepository) GetSubThresholdProducts(userID uint) ([]database.Product, error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return []database.Product{}, err
+	}
+
+	var products []database.Product
+	err = r.DB.Preload("StorageLocation").
+		Where("household_id = ? AND deleted_at IS NULL AND amount < min_stock_amount AND min_stock_amount > 0", householdID).
+		Find(&products).Error
+	if err != nil {
+		return []database.Product{}, err
+	}
+	return products, nil
+}
+
 type MailDigestProductGroup struct {
-	Today     []database.Product
-	ThisWeek  []database.Product
-	NextWeek  []database.Product
+	Today    []database.Product
+	ThisWeek []database.Product
+	NextWeek []database.Product
 }
 
 func (r *ProductRepository) GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error) {

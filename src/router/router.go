@@ -354,6 +354,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	calendarAPI.DELETE("/token", v1.WrapHandler(v1.DeleteCalendarToken))
 	calendarAPI.GET("/token", v1.WrapHandler(v1.GetCalendarTokenStatus))
 
+	// Auto shopping list routes
+	shoppingListAPI := engine.Group("/api/v1/shopping-list")
+	shoppingListAPI.Use(jwtAPIUserAwareMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
+	shoppingListAPI.GET("/auto", v1.WrapHandler(v1.GetAutoShoppingList))
+
 	// PWA — serve manifest and service worker at root scope (no auth required)
 	engine.GET("/manifest.json", func(ctx *gin.Context) {
 		content, readErr := assets.AssetFiles.ReadFile("manifest.json")
@@ -398,6 +403,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products/scan", webFrontendHandler.ProductsScan)
 	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
 	publicWebFrontend.GET("/recipes", webFrontendHandler.Recipes)
+	publicWebFrontend.GET("/shopping-list", webFrontendHandler.ShoppingList)
 
 	// Public invite acceptance page (no auth required)
 	engine.GET("/web/invite/accept", webFrontendHandler.AcceptInvite)

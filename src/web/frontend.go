@@ -526,11 +526,11 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
 	pageData := map[string]any{
-		"InviteToken":                    ctx.Query("invite_token"),
-		"Title":                          "Products",
-		"Product":                        product,
-		"Locations":                      locations,
-		"IsArchived":                     product.DeletedAt.Valid,
+		"InviteToken":                     ctx.Query("invite_token"),
+		"Title":                           "Products",
+		"Product":                         product,
+		"Locations":                       locations,
+		"IsArchived":                      product.DeletedAt.Valid,
 		"GlobalNotificationThresholdDays": user.NotificationPreferences.NotificationThresholdDays,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
@@ -731,6 +731,37 @@ func (frontend *Frontend) Recipes(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "recipes.tmpl", pageData)
 }
 
+// ShoppingList renders the auto-generated shopping list page
+// @Summary      Shopping List page
+// @Description  Renders products below minimum stock threshold
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/shopping-list [get]
+func (frontend *Frontend) ShoppingList(ctx *gin.Context) {
+	logger, repos, userID, ok := frontend.mustGetPageContext(ctx)
+	if !ok {
+		return
+	}
+
+	products, prodErr := repos.Products.GetSubThresholdProducts(userID)
+	if prodErr != nil {
+		logger.Error().Msgf("Error getting shopping list: %s", prodErr)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, "Error loading shopping list")
+		return
+	}
+
+	pageData := map[string]any{
+		"InviteToken":  ctx.Query("invite_token"),
+		"Title":        "Shopping List",
+		"Products":     products,
+		"ProductCount": len(products),
+	}
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "shoppingList.tmpl", pageData)
+}
+
 // Unsubscribe handles one-click unsubscribe from email digests.
 // @Summary      Unsubscribe from email digests
 // @Description  Handles unsubscribe token and disables digest for user
@@ -788,8 +819,8 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 	}
 
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "unsubscribe.tmpl", map[string]any{
-		"Title":       "Unsubscribe",
-		"Success":     true,
+		"Title":         "Unsubscribe",
+		"Success":       true,
 		"HouseholdName": user.Household.Name,
 	})
 }
