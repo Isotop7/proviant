@@ -168,15 +168,15 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 	}
 
 	// Migrations for push notifications
-logger.Debug().Msg("Running database migrations for web push notifications")
-		if err := AddWebPushNotificationMigration(db); err != nil {
-			return err
-		}
+	logger.Debug().Msg("Running database migrations for web push notifications")
+	if err := AddWebPushNotificationMigration(db); err != nil {
+		return err
+	}
 
-		logger.Debug().Msg("Renaming legacy push columns to web_push columns")
-		if err := RenamePushNotificationColumns(logger, db); err != nil {
-			return err
-		}
+	logger.Debug().Msg("Renaming legacy push columns to web_push columns")
+	if err := RenamePushNotificationColumns(logger, db); err != nil {
+		return err
+	}
 
 	// Backfill email verification for existing users
 	logger.Debug().Msg("Running database migrations for email verification backfill")

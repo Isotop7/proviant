@@ -136,8 +136,8 @@ func (r *NotificationRepository) GetHouseholdMembersNotificationPreferences(hous
 			TelegramChatID:            user.NotificationPreferences.TelegramChatID,
 			TelegramBotToken:          user.NotificationPreferences.TelegramBotToken,
 			NotificationThresholdDays: user.NotificationPreferences.NotificationThresholdDays,
-			WebPushEnabled:          user.NotificationPreferences.WebPushEnabled,
-			WebPushSubscriptionJSON: user.NotificationPreferences.WebPushSubscriptionJSON,
+			WebPushEnabled:            user.NotificationPreferences.WebPushEnabled,
+			WebPushSubscriptionJSON:   user.NotificationPreferences.WebPushSubscriptionJSON,
 		})
 	}
 
@@ -311,7 +311,7 @@ func (r *NotificationRepository) SaveWebPushSubscription(userID uint, subscripti
 	return r.DB.Model(&authentication.User{}).
 		Where(util.QueryId, userID).
 		Updates(map[string]any{
-			"web_push_enabled":            true,
+			"web_push_enabled":           true,
 			"web_push_subscription_json": subscriptionJSON,
 		}).Error
 }
@@ -320,7 +320,7 @@ func (r *NotificationRepository) DeleteWebPushSubscription(userID uint) error {
 	return r.DB.Model(&authentication.User{}).
 		Where(util.QueryId, userID).
 		Updates(map[string]any{
-			"web_push_enabled":            false,
+			"web_push_enabled":           false,
 			"web_push_subscription_json": "",
 		}).Error
 }

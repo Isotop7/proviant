@@ -17,8 +17,8 @@ import (
 
 const (
 	mimeTypeHTML  = "text/html"
-	headerFrom   = "From"
-	headerTo     = "To"
+	headerFrom    = "From"
+	headerTo      = "To"
 	headerSubject = "Subject"
 )
 

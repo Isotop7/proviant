@@ -132,7 +132,7 @@ func (nc *NotificationController) newTelegramProvider(botToken string) *Telegram
 func (nc *NotificationController) newWebPushProvider() *WebPushNotificationProvider {
 	return &WebPushNotificationProvider{
 		NotificationRepo: nc.NotificationRepo,
-		Logger:            nc.Logger,
+		Logger:           nc.Logger,
 	}
 }
 
@@ -633,7 +633,7 @@ func (nc *NotificationController) sendStreakTelegramIfEnabled(
 // StartDigestScheduler starts a goroutine that checks every minute whether
 // any household's digest is due, and sends expiry digest emails.
 func (nc *NotificationController) StartMailDigestScheduler(baseURL string) {
-if !nc.Configuration.MailDigest.Enabled {
+	if !nc.Configuration.MailDigest.Enabled {
 
 		nc.Logger.Info().Msg("Mail digest scheduler: disabled by config")
 
@@ -704,9 +704,9 @@ type digestProductGroupAdapter struct {
 	group dbController.MailDigestProductGroup
 }
 
-func (a *digestProductGroupAdapter) GetToday() []dbModel.Product     { return a.group.Today }
-func (a *digestProductGroupAdapter) GetThisWeek() []dbModel.Product  { return a.group.ThisWeek }
-func (a *digestProductGroupAdapter) GetNextWeek() []dbModel.Product  { return a.group.NextWeek }
+func (a *digestProductGroupAdapter) GetToday() []dbModel.Product    { return a.group.Today }
+func (a *digestProductGroupAdapter) GetThisWeek() []dbModel.Product { return a.group.ThisWeek }
+func (a *digestProductGroupAdapter) GetNextWeek() []dbModel.Product { return a.group.NextWeek }
 
 func (nc *NotificationController) shouldSendDigestNow(frequency, defaultTime string, now time.Time) bool {
 	hour, min, _ := now.Clock()

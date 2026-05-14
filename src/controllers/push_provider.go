@@ -15,9 +15,9 @@ type WebPushKeyProvider interface {
 
 type WebPushNotificationProvider struct {
 	NotificationRepo WebPushKeyProvider
-	VAPIDPublicKey    string
-	VAPIDPrivateKey   string
-	Logger            *zerolog.Logger
+	VAPIDPublicKey   string
+	VAPIDPrivateKey  string
+	Logger           *zerolog.Logger
 }
 
 func (p *WebPushNotificationProvider) GetProviderType() string {

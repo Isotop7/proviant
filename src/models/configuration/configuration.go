@@ -122,7 +122,7 @@ type TelegramConfiguration struct {
 
 // MailDigestConfiguration controls when the expiry digest email is sent.
 type MailDigestConfiguration struct {
-	Enabled    bool
+	Enabled     bool
 	DefaultTime string `mapstructure:"defaultTime"` // "08:00"
 }
 
@@ -134,7 +134,7 @@ type NotificationConfiguration struct {
 	Ntfy               NtfyConfiguration
 	MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
 	Telegram           TelegramConfiguration           `mapstructure:"telegram"`
-	MailDigest           MailDigestConfiguration           `mapstructure:"mailDigest"`
+	MailDigest         MailDigestConfiguration         `mapstructure:"mailDigest"`
 }
 
 // OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
