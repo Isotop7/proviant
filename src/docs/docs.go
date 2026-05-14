@@ -271,6 +271,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/calendar/token/rotate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Invalidates the current calendar token and creates a new one with a fresh expiry date.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "calendar"
+                ],
+                "summary": "Rotate calendar token",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/v1.CalendarTokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/household/applications": {
             "get": {
                 "description": "Returns pending join applications for the household the calling user is admin of.",
@@ -3042,35 +3088,6 @@ const docTemplate = `{
             }
         },
         "/api/v1/webhooks": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns all webhooks for the authenticated user",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "webhook"
-                ],
-                "summary": "List webhooks",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.WebhookListResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            },
             "post": {
                 "security": [
                     {
@@ -3108,204 +3125,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/webhooks/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns a webhook by ID",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "webhook"
-                ],
-                "summary": "Get a webhook",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Webhook ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.WebhookResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Deletes a webhook by ID",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "webhook"
-                ],
-                "summary": "Delete a webhook",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Webhook ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            },
-            "patch": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Updates a webhook by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "webhook"
-                ],
-                "summary": "Update a webhook",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Webhook ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Webhook update",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/api.UpdateWebhookRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.WebhookResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/webhooks/{id}/deliveries": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns delivery logs for a webhook",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "webhook"
-                ],
-                "summary": "Get webhook delivery logs",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Webhook ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.DeliveryLogListResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -3895,40 +3714,6 @@ const docTemplate = `{
                 }
             }
         },
-        "api.DeliveryLogListResponse": {
-            "type": "object",
-            "properties": {
-                "deliveries": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/api.DeliveryLogResponse"
-                    }
-                }
-            }
-        },
-        "api.DeliveryLogResponse": {
-            "type": "object",
-            "properties": {
-                "attempt": {
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "error": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "responseBody": {
-                    "type": "string"
-                },
-                "statusCode": {
-                    "type": "integer"
-                }
-            }
-        },
         "api.ExpiryScanResponse": {
             "type": "object",
             "properties": {
@@ -4033,7 +3818,8 @@ const docTemplate = `{
             ],
             "properties": {
                 "delta": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": -1000
                 }
             }
         },
@@ -4202,39 +3988,6 @@ const docTemplate = `{
                 },
                 "longestStreak": {
                     "type": "integer"
-                }
-            }
-        },
-        "api.UpdateWebhookRequest": {
-            "type": "object",
-            "properties": {
-                "active": {
-                    "type": "boolean"
-                },
-                "events": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "secret": {
-                    "type": "string",
-                    "minLength": 16
-                },
-                "url": {
-                    "type": "string"
-                }
-            }
-        },
-        "api.WebhookListResponse": {
-            "type": "object",
-            "properties": {
-                "webhooks": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/api.WebhookResponse"
-                    }
                 }
             }
         },
@@ -4690,6 +4443,9 @@ const docTemplate = `{
         "v1.CalendarTokenResponse": {
             "type": "object",
             "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
                 "token": {
                     "type": "string"
                 },
@@ -4762,9 +4518,14 @@ const docTemplate = `{
         },
         "v1.createHouseholdRequest": {
             "type": "object",
+            "required": [
+                "name"
+            ],
             "properties": {
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
                 }
             }
         },
@@ -4809,9 +4570,14 @@ const docTemplate = `{
         },
         "v1.updateHouseholdNameRequest": {
             "type": "object",
+            "required": [
+                "name"
+            ],
             "properties": {
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
                 }
             }
         }

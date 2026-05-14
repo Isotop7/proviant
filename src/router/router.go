@@ -347,6 +347,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	calendarAPI.GET("/export.ics", v1.ExportICalendar)
 	calendarAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	calendarAPI.POST("/token", v1.WrapHandler(v1.CreateCalendarToken))
+	calendarAPI.POST("/token/rotate", v1.WrapHandler(v1.RotateCalendarToken))
 	calendarAPI.DELETE("/token", v1.WrapHandler(v1.DeleteCalendarToken))
 	calendarAPI.GET("/token", v1.WrapHandler(v1.GetCalendarTokenStatus))
 

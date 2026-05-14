@@ -585,6 +585,7 @@ func (m *MockCalendarTokenRepository) GetByUserID(userID uint) (authentication.C
 	return m.CalendarToken, m.Err
 }
 func (m *MockCalendarTokenRepository) Create(ct *authentication.CalendarToken) error { return m.Err }
+func (m *MockCalendarTokenRepository) Update(ct *authentication.CalendarToken) error { return m.Err }
 
 var _ database.CalendarTokenRepositoryInterface = (*MockCalendarTokenRepository)(nil)
 

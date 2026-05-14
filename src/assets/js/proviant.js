@@ -534,6 +534,12 @@ proviant.deleteCalendarToken = async function () {
   return { code: res.status, message: body };
 };
 
+proviant.rotateCalendarToken = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/token/rotate`, { method: "POST", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
 proviant.downloadCalendarICS = function (token) {
   window.location.href = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/calendar/export.ics?token=${encodeURIComponent(token)}`;
 };

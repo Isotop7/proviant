@@ -79,6 +79,12 @@ type ServerConfiguration struct {
 	DemoMode        bool                   `mapstructure:"demoMode"`
 }
 
+// CalendarConfiguration contains settings for calendar token expiry and warnings.
+type CalendarConfiguration struct {
+	TokenExpiryDays  int `mapstructure:"tokenExpiryDays"`  // days until calendar token expires, default 365
+	ExpiringSoonDays int `mapstructure:"expiringSoonDays"` // days before expiry to show warning, default 30
+}
+
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog
 type LoggingConfiguration struct {
 	Enabled bool
@@ -164,6 +170,7 @@ type ExpiryConfiguration struct {
 type ProviantConfiguration struct {
 	Database      DatabaseConfiguration
 	Server        ServerConfiguration
+	Calendar      CalendarConfiguration `mapstructure:"calendar"`
 	Logging       LoggingConfiguration
 	Notification  NotificationConfiguration
 	OpenFoodFacts OpenFoodFactsConfiguration

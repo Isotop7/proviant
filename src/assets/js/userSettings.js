@@ -1492,6 +1492,25 @@ function loadCalendarTokenStatus() {
         noTokenEl.classList.add("d-none");
         hasTokenEl.classList.remove("d-none");
         urlInput.value = url;
+
+        const expiresAt = response.message.expiresAt;
+        const isExpiringSoon = response.message.isExpiringSoon;
+        const expirySection = document.getElementById("calendarExpirySection");
+        const expiryBadge = document.getElementById("calendarExpiryBadge");
+        const expiryDate = document.getElementById("calendarExpiryDate");
+
+        if (expirySection) {
+          expirySection.classList.remove("d-none");
+          if (isExpiringSoon && expiryBadge) {
+            expiryBadge.classList.remove("d-none");
+          } else if (expiryBadge) {
+            expiryBadge.classList.add("d-none");
+          }
+          if (expiryDate && expiresAt) {
+            const expiryDateObj = new Date(expiresAt);
+            expiryDate.textContent = "Expires: " + expiryDateObj.toLocaleDateString();
+          }
+        }
       } else {
         noTokenEl.classList.remove("d-none");
         hasTokenEl.classList.add("d-none");
@@ -1533,12 +1552,27 @@ function handleCalendarRegenerate() {
       const btn = document.getElementById("btnCalendarRegenerate");
       if (btn) setButtonLoading(btn, true);
 
-      proviant.createCalendarToken().then((response) => {
+      proviant.rotateCalendarToken().then((response) => {
         if (btn) setButtonLoading(btn, false);
         if (response.code === 201) {
           const url = response.message.url;
           const urlInput = document.getElementById("calendarUrl");
           urlInput.value = url;
+
+          const expiresAt = response.message.expiresAt;
+          const expirySection = document.getElementById("calendarExpirySection");
+          const expiryBadge = document.getElementById("calendarExpiryBadge");
+          const expiryDate = document.getElementById("calendarExpiryDate");
+
+          if (expirySection) {
+            expirySection.classList.remove("d-none");
+            if (expiryBadge) expiryBadge.classList.add("d-none");
+            if (expiryDate && expiresAt) {
+              const expiryDateObj = new Date(expiresAt);
+              expiryDate.textContent = "Expires: " + expiryDateObj.toLocaleDateString();
+            }
+          }
+
           proviant.showFeedback('success', 'Token Regenerated', 'Calendar token regenerated with new URL.');
         } else {
           proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to regenerate calendar token"}`);
