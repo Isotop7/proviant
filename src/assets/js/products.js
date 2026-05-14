@@ -1,5 +1,20 @@
 /* exported changeQty */
 
+const el = {
+    editProduct: null,
+    searchParam: null,
+    searchQuery: null,
+    sortParam: null,
+    sortOrder: null,
+    locationFilter: null,
+    bulkActions: null,
+    bulkCount: null,
+    mobileBulkActions: null,
+    mobileBulkCount: null,
+    selectAll: null,
+};
+Object.freeze(el);
+
 function handleCardClickEffect(cardId) {
     const card = document.getElementById(cardId);
     if (card) {
@@ -10,11 +25,9 @@ function handleCardClickEffect(cardId) {
 
 async function handleSelect() {
     const selectedProducts = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(checkbox => checkbox.id.split('-')[1]);
-    const editBtn = document.getElementById('edit-product');
-    if (editBtn) {
-        editBtn.disabled = selectedProducts.length !== 1;
+    if (el.editProduct) {
+        el.editProduct.disabled = selectedProducts.length !== 1;
     }
-    // Also update bulk selection state (for mobile bulk bar, etc.)
     updateBulkSelection();
 }
 
@@ -263,20 +276,14 @@ document.addEventListener("keypress", function (event) {
 
 // Function to perform search
 function performSearch() {
-    const queryParam = document.getElementById("search-param");
-    const queryValue = document.getElementById("search-query");
-    const sortParam = document.getElementById("sort-param");
-    const sortOrder = document.getElementById("sort-order");
-    // Build query string and redirect to products page
-    const locationFilter = document.getElementById("location-filter");
     const params = {
-        queryParam: queryParam ? queryParam.value || "product_name" : "product_name",
-        queryValue: queryValue ? queryValue.value || "" : "",
-        sort: sortParam ? sortParam.value || "created_at" : "created_at",
-        order: sortOrder ? sortOrder.value || "asc" : "asc",
+        queryParam: el.searchParam ? el.searchParam.value || "product_name" : "product_name",
+        queryValue: el.searchQuery ? el.searchQuery.value || "" : "",
+        sort: el.sortParam ? el.sortParam.value || "created_at" : "created_at",
+        order: el.sortOrder ? el.sortOrder.value || "asc" : "asc",
     };
-    if (locationFilter && locationFilter.value) {
-        params.locationId = locationFilter.value;
+    if (el.locationFilter && el.locationFilter.value) {
+        params.locationId = el.locationFilter.value;
     }
 
     showSkeleton();
@@ -301,6 +308,29 @@ document.addEventListener('DOMContentLoaded', function () {
     const tabCamera       = document.getElementById('tabCamera');
     const manualSection   = document.getElementById('manualInputSection');
     const cameraSection   = document.getElementById('cameraSection');
+    const editProduct     = document.getElementById('edit-product');
+    const searchParam     = document.getElementById('search-param');
+    const searchQuery     = document.getElementById('search-query');
+    const sortParam       = document.getElementById('sort-param');
+    const sortOrder       = document.getElementById('sort-order');
+    const locationFilter  = document.getElementById('location-filter');
+    const bulkActions     = document.getElementById('bulkActions');
+    const bulkCount       = document.getElementById('bulkCount');
+    const mobileBulkActions = document.getElementById('mobileBulkActions');
+    const mobileBulkCount = document.getElementById('mobileBulkCount');
+    const selectAll       = document.getElementById('selectAll');
+
+    el.editProduct = editProduct;
+    el.searchParam = searchParam;
+    el.searchQuery = searchQuery;
+    el.sortParam = sortParam;
+    el.sortOrder = sortOrder;
+    el.locationFilter = locationFilter;
+    el.bulkActions = bulkActions;
+    el.bulkCount = bulkCount;
+    el.mobileBulkActions = mobileBulkActions;
+    el.mobileBulkCount = mobileBulkCount;
+    el.selectAll = selectAll;
 
     let modalIsOpen = false;
 
@@ -434,11 +464,7 @@ document.addEventListener('DOMContentLoaded', function () {
 // ── List view: checkbox selection ──────────────────────────────
 function updateBulkSelection() {
     const checked = document.querySelectorAll('.row-checkbox:checked');
-    const bulk = document.getElementById('bulkActions');
-    const count = document.getElementById('bulkCount');
     const rows = document.querySelectorAll('.list-row');
-    const mobileBulk = document.getElementById('mobileBulkActions');
-    const mobileCount = document.getElementById('mobileBulkCount');
     const isMobile = window.innerWidth <= 767;
 
     rows.forEach(function (row) {
@@ -447,22 +473,21 @@ function updateBulkSelection() {
     });
 
     if (checked.length > 0) {
-        if (bulk) bulk.style.display = 'flex';
-        if (count) count.textContent = checked.length + ' selected';
-        if (isMobile && mobileBulk) {
-            mobileBulk.style.display = 'block';
-            if (mobileCount) mobileCount.textContent = checked.length + ' selected';
+        if (el.bulkActions) el.bulkActions.style.display = 'flex';
+        if (el.bulkCount) el.bulkCount.textContent = checked.length + ' selected';
+        if (isMobile && el.mobileBulkActions) {
+            el.mobileBulkActions.style.display = 'block';
+            if (el.mobileBulkCount) el.mobileBulkCount.textContent = checked.length + ' selected';
         }
     } else {
-        if (bulk) bulk.style.display = 'none';
-        if (mobileBulk) mobileBulk.style.display = 'none';
+        if (el.bulkActions) el.bulkActions.style.display = 'none';
+        if (el.mobileBulkActions) el.mobileBulkActions.style.display = 'none';
     }
 
-    const all = document.getElementById('selectAll');
     const total = document.querySelectorAll('.row-checkbox').length;
-    if (all) {
-        all.indeterminate = checked.length > 0 && checked.length < total;
-        all.checked = checked.length === total && total > 0;
+    if (el.selectAll) {
+        el.selectAll.indeterminate = checked.length > 0 && checked.length < total;
+        el.selectAll.checked = checked.length === total && total > 0;
     }
 }
 
