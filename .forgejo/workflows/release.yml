@@ -22,9 +22,18 @@ jobs:
       - name: Install git-cliff
         uses: https://github.com/taiki-e/install-action@git-cliff
 
-      - name: Generate changelog
+      - name: Generate full changelog
         run: |
           git-cliff --config cliff.toml --verbose --output CHANGELOG.md
+
+      - name: Generate release notes (since last tag)
+        run: |
+          previous_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$previous_tag" ]; then
+            git-cliff --config cliff.toml --verbose --from "$previous_tag" --output RELEASE_NOTES.md
+          else
+            git-cliff --config cliff.toml --verbose --output RELEASE_NOTES.md
+          fi
 
       - name: Configure git
         run: |
@@ -44,5 +53,5 @@ jobs:
         with:
           direction: upload
           token: ${{ secrets.RELEASE_TOKEN }}
-          release-notes-file: CHANGELOG.md
+          release-notes-file: RELEASE_NOTES.md
           override: true
