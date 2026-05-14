@@ -334,6 +334,7 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 	dbProduct.Amount = product.Amount
 	dbProduct.Unit = product.Unit
 	dbProduct.StorageLocationID = product.StorageLocationID
+	dbProduct.NotificationLeadDays = product.NotificationLeadDays
 
 	saveResult := r.DB.Save(&dbProduct)
 	return saveResult.Error

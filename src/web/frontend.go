@@ -515,14 +515,22 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 		return
 	}
 
+	user, userErr := repos.Users.GetUserByID(userID)
+	if userErr != nil {
+		logger.Error().Msgf("Error getting user: %s", userErr)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrInvalidUserData.Error())
+		return
+	}
+
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
 	pageData := map[string]any{
-		"InviteToken": ctx.Query("invite_token"),
-		"Title":       "Products",
-		"Product":     product,
-		"Locations":   locations,
-		"IsArchived":  product.DeletedAt.Valid,
+		"InviteToken":                    ctx.Query("invite_token"),
+		"Title":                          "Products",
+		"Product":                        product,
+		"Locations":                      locations,
+		"IsArchived":                     product.DeletedAt.Valid,
+		"GlobalNotificationThresholdDays": user.NotificationPreferences.NotificationThresholdDays,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsEdit.tmpl", pageData)
 }

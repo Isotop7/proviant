@@ -266,7 +266,13 @@ func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel
 }
 
 func (nc *NotificationController) isWithinNotificationThreshold(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) bool {
-	cutoff := time.Now().AddDate(0, 0, recipientInfo.NotificationThresholdDays)
+	var threshold int
+	if product.NotificationLeadDays != nil {
+		threshold = *product.NotificationLeadDays
+	} else {
+		threshold = recipientInfo.NotificationThresholdDays
+	}
+	cutoff := time.Now().AddDate(0, 0, threshold)
 	if product.ExpireAt.After(cutoff) {
 		nc.Logger.Debug().Msgf("Product '%s' (ID: %d) not yet within threshold for recipient, skipping",
 			product.ProductName, product.ID)

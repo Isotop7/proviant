@@ -10,6 +10,7 @@ function getFormElements() {
         labelProductID:    document.getElementById('labelProductID'),
         imgProduct:        document.getElementById('imgProduct'),
         alertEditProduct:  document.getElementById('alertEditProduct'),
+        inputNotificationLeadDays: document.getElementById('inputNotificationLeadDays'),
     };
 }
 
@@ -37,6 +38,10 @@ function editProduct() {
     const storageLocationId = selectStorageLocation && selectStorageLocation.value
         ? Number.parseInt(selectStorageLocation.value) : null;
 
+    const inputNotificationLeadDays = document.getElementById('inputNotificationLeadDays');
+    const notificationLeadDays = inputNotificationLeadDays && inputNotificationLeadDays.value
+        ? Number.parseInt(inputNotificationLeadDays.value) : null;
+
     const product = {
         "ID": productID,
         "productName": els.inputProductName.value.trim(),
@@ -46,6 +51,7 @@ function editProduct() {
         "expireAt": expireDate ? expireDate.toISOString() : null,
         "amount": els.inputAmount ? Number.parseInt(els.inputAmount.value) || 0 : 0,
         "storageLocationId": storageLocationId,
+        "notificationLeadDays": notificationLeadDays,
     };
 
     proviant.editProduct(product).then((response) => {

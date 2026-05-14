@@ -143,6 +143,13 @@
                 {{ end }}
               </select>
             </div>
+            <div class="pv-field">
+              <label class="pv-field-label">Notification lead time</label>
+              <input type="number" class="pv-field-input" id="inputNotificationLeadDays"
+                value="{{ if .Product.NotificationLeadDays }}{{ .Product.NotificationLeadDays }}{{ end }}"
+                min="0" placeholder="Default: {{ .GlobalNotificationThresholdDays }}">
+              <div class="pv-field-hint">Days before expiry to notify. Leave blank to use household default ({{ .GlobalNotificationThresholdDays }} days).</div>
+            </div>
           </div>
         </div>
 
