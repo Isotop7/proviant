@@ -5,7 +5,7 @@ import "time"
 
 const (
 	// Version is the current proviant version
-	Version = "v0.12.2"
+	Version = "v0.12.3"
 
 	// TokenRealm is the realm of tokens
 	TokenRealm = "proviant"
