@@ -1,12 +1,30 @@
-/* Helper to dynamically query DOM elements — always fresh, never stale */
-function getFormElements() {
-    return {
-        foundBarcodeWrapper: document.getElementById('foundBarcode'),
-        productDataWrapper: document.getElementById('productData'),
-        inputBarcode: document.getElementById('barcode'),
-        inputExpireAt: document.getElementById('expireAt'),
-    };
-}
+const el = Object.freeze({
+    foundBarcodeWrapper: document.getElementById('foundBarcode'),
+    productDataWrapper: document.getElementById('productData'),
+    inputBarcode: document.getElementById('barcode'),
+    inputExpireAt: document.getElementById('expireAt'),
+    productInfoImage: document.getElementById('productInfoImage'),
+    productInfoName: document.getElementById('productInfoName'),
+    productInfoGenericName: document.getElementById('productInfoGenericName'),
+    storageHint: document.getElementById('storageHint'),
+    btnScan: document.getElementById('btnScan'),
+    btnAddProduct: document.getElementById('btnAddProduct'),
+    btnShowProduct: document.getElementById('btnShowProduct'),
+    btnDeleteProductModal: document.getElementById('btnDeleteProductModal'),
+    btnArchiveProductModal: document.getElementById('btnArchiveProductModal'),
+    btnShowProducts: document.getElementById('btnShowProducts'),
+    instanceDropdown: document.getElementById('instanceDropdown'),
+    barcodeLookupLoading: document.getElementById('barcodeLookupLoading'),
+    barcodeReaderWrapper: document.getElementById('barcode-reader-wrapper'),
+    amount: document.getElementById('amount'),
+    amountDisplay: document.getElementById('amountDisplay'),
+    modalStorageLocation: document.getElementById('modalStorageLocation'),
+    btnAmountDec: document.getElementById('btnAmountDec'),
+    btnAmountInc: document.getElementById('btnAmountInc'),
+    btnExpireAdd3: document.getElementById('btnExpireAdd3'),
+    btnExpireAdd7: document.getElementById('btnExpireAdd7'),
+    btnExpireAdd1m: document.getElementById('btnExpireAdd1m'),
+});
 const html5QrCode = new Html5Qrcode('barcode-reader',
     { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13] }
 );
@@ -19,19 +37,17 @@ const ProductState = Object.freeze({
 
 // UI functions
 function showError(error) {
-    const els = getFormElements();
-    if (els.inputBarcode) {
-        els.inputBarcode.value = '';
-        els.inputBarcode.style.backgroundColor = 'var(--bs-warning)';
-        els.inputBarcode.style.color = 'var(--bs-warning-text)';
+    if (el.inputBarcode) {
+        el.inputBarcode.value = '';
+        el.inputBarcode.style.backgroundColor = 'var(--bs-warning)';
+        el.inputBarcode.style.color = 'var(--bs-warning-text)';
     }
     console.error(error);
 }
 function showBarcode(barcode) {
-    const els = getFormElements();
-    if (els.inputBarcode) {
-        els.inputBarcode.value = barcode;
-        els.inputBarcode.classList.add('border-success');
+    if (el.inputBarcode) {
+        el.inputBarcode.value = barcode;
+        el.inputBarcode.classList.add('border-success');
     }
 }
 function showAlert(isSuccess, message) {
@@ -42,63 +58,67 @@ function showAlert(isSuccess, message) {
     }
 }
 function clearProductInfo() {
-    document.getElementById('productInfoImage').src = '';
-    document.getElementById('productInfoImage').alt = '';
-    document.getElementById('productInfoName').innerText = '';
-    document.getElementById('productInfoGenericName').innerText = '';
-    const hintEl = document.getElementById('storageHint');
-    if (hintEl) {
-        hintEl.textContent = '';
-        hintEl.classList.add('d-none');
+    if (el.productInfoImage) {
+        el.productInfoImage.src = '';
+        el.productInfoImage.alt = '';
+    }
+    if (el.productInfoName) el.productInfoName.innerText = '';
+    if (el.productInfoGenericName) el.productInfoGenericName.innerText = '';
+    if (el.storageHint) {
+        el.storageHint.textContent = '';
+        el.storageHint.classList.add('d-none');
     }
 }
 
 // Loading state helper for barcode lookup
 function setBarcodeLoading(loading) {
-  const el = document.getElementById('barcodeLookupLoading');
-  if (el) {
+  if (el.barcodeLookupLoading) {
     if (loading) {
-      el.classList.remove('d-none');
+      el.barcodeLookupLoading.classList.remove('d-none');
     } else {
-      el.classList.add('d-none');
+      el.barcodeLookupLoading.classList.add('d-none');
     }
   }
 }
 function showProductData(product) {
-    document.getElementById('productInfoImage').src = product.imageUrl;
-    document.getElementById('productInfoImage').alt = product.productName || 'Product image';
-    document.getElementById('productInfoName').innerText = product.productName;
-    if (product.categories != 'undefined' && product.categories != null) {
-        document.getElementById('productInfoGenericName').innerText = product.categories;
+    if (el.productInfoImage) {
+        el.productInfoImage.src = product.imageUrl;
+        el.productInfoImage.alt = product.productName || 'Product image';
     }
-    const hintEl = document.getElementById('storageHint');
-    if (hintEl) {
+    if (el.productInfoName) el.productInfoName.innerText = product.productName;
+    if (product.categories != 'undefined' && product.categories != null) {
+        if (el.productInfoGenericName) el.productInfoGenericName.innerText = product.categories;
+    }
+    if (el.storageHint) {
         if (product.storageHint) {
-            hintEl.textContent = product.storageHint;
-            hintEl.classList.remove('d-none');
+            el.storageHint.textContent = product.storageHint;
+            el.storageHint.classList.remove('d-none');
         } else {
-            hintEl.classList.add('d-none');
+            el.storageHint.classList.add('d-none');
         }
     }
-    document.getElementById('productData').classList.remove('d-none');
+    if (el.productDataWrapper) el.productDataWrapper.classList.remove('d-none');
 }
 
 // UI toggle functions
 function toggleBtnScan(state) {
-    const btnScan = document.getElementById('btnScan');
-    if (state) {
-        btnScan.dataset.action = 'scan';
-        btnScan.innerHTML = '<i class="bi bi-upc-scan px-2"></i>Scan';
-    } else {
-        btnScan.dataset.action = 'stop';
-        btnScan.innerHTML = '<i class="bi bi-stop-circle px-2"></i>Stop';
+    if (el.btnScan) {
+        if (state) {
+            el.btnScan.dataset.action = 'scan';
+            el.btnScan.innerHTML = '<i class="bi bi-upc-scan px-2"></i>Scan';
+        } else {
+            el.btnScan.dataset.action = 'stop';
+            el.btnScan.innerHTML = '<i class="bi bi-stop-circle px-2"></i>Stop';
+        }
     }
 }
 function toggleBtnAddProduct(state) {
-    if (state) {
-        document.getElementById('btnAddProduct').disabled = false;
-    } else {
-        document.getElementById('btnAddProduct').disabled = true;
+    if (el.btnAddProduct) {
+        if (state) {
+            el.btnAddProduct.disabled = false;
+        } else {
+            el.btnAddProduct.disabled = true;
+        }
     }
 }
 function togglePlaceholders(state) {
@@ -129,7 +149,7 @@ function clearScanUI() {
     toggleBtnScan(true);
     toggleBtnAddProduct(true);
     togglePlaceholders(false);
-    document.getElementById('barcode-reader-wrapper').style.display = 'none';
+    if (el.barcodeReaderWrapper) el.barcodeReaderWrapper.style.display = 'none';
     if (html5QrCode.getState() == Html5QrcodeScannerState.SCANNING) {
         html5QrCode.stop();
         html5QrCode.clear();
@@ -137,13 +157,12 @@ function clearScanUI() {
 };
 const formatProductDataAsOption = (product) => `${product.productName}; Created: ${proviant.formatDate(product.CreatedAt)}; Expire at: ${proviant.formatDate(product.expireAt)}; Notified at: ${proviant.formatDate(product.notifiedAt)}`;
 function setProductOptionsState(productState, products) {
-    // Get all elements
-    const btnAdd = document.getElementById('btnAddProduct');
-    const btnShow = document.getElementById('btnShowProduct')
-    const btnDeleteModal = document.getElementById('btnDeleteProductModal');
-    const btnArchiveModal = document.getElementById('btnArchiveProductModal');
-    const btnShowAll = document.getElementById('btnShowProducts');
-    const instanceDropdown = document.getElementById('instanceDropdown');
+    const btnAdd = el.btnAddProduct;
+    const btnShow = el.btnShowProduct;
+    const btnDeleteModal = el.btnDeleteProductModal;
+    const btnArchiveModal = el.btnArchiveProductModal;
+    const btnShowAll = el.btnShowProducts;
+    const instanceDropdown = el.instanceDropdown;
 
     // Clear all states
     btnAdd.disabled = true;
@@ -202,24 +221,22 @@ function formatInputDate(date) {
 }
 
 function shiftExpiry(days, months) {
-    // Always read the element fresh — avoids stale reference after DOM updates
-    const el = document.getElementById('expireAt');
-    const base = el.value ? parseInputDate(el.value) : new Date();
+    const inputEl = el.inputExpireAt;
+    if (!inputEl) return;
+    const base = inputEl.value ? parseInputDate(inputEl.value) : new Date();
     if (days !== 0) base.setDate(base.getDate() + days);
     if (months !== 0) base.setMonth(base.getMonth() + months);
-    el.value = formatInputDate(base);
-    // Flash the field so the user sees the value changed
-    el.classList.remove('date-updated');
-    void el.offsetWidth; // force reflow to restart the animation if clicked repeatedly
-    el.classList.add('date-updated');
-    el.addEventListener('animationend', () => el.classList.remove('date-updated'), { once: true });
+    inputEl.value = formatInputDate(base);
+    inputEl.classList.remove('date-updated');
+    void inputEl.offsetWidth;
+    inputEl.classList.add('date-updated');
+    inputEl.addEventListener('animationend', () => inputEl.classList.remove('date-updated'), { once: true });
 }
 
 // Async functions
 async function queryProductInfoRequest(barcode) {
     return proviant.getOpenFoodFactsData(barcode).catch(() => {
-        const els = getFormElements();
-        const bc = els.inputBarcode ? els.inputBarcode.value : 'unknown';
+        const bc = el.inputBarcode ? el.inputBarcode.value : 'unknown';
         showError(`Could not find product with barcode ${bc}!`);
     });
 }
@@ -242,14 +259,16 @@ function queryProductInfo(barcode) {
     });
 }
 function storeBarcode(barcode) {
-    document.getElementById('barcode').dataset.barcode = barcode;
-    document.getElementById('barcode').value = barcode;
-    document.getElementById('productData').classList.remove('d-none');
+    if (el.inputBarcode) {
+        el.inputBarcode.dataset.barcode = barcode;
+        el.inputBarcode.value = barcode;
+    }
+    if (el.productDataWrapper) el.productDataWrapper.classList.remove('d-none');
 }
 function getSelectedProductName() {
-    const instanceDropdown = document.getElementById('instanceDropdown');
-    if (!instanceDropdown || instanceDropdown.selectedIndex < 0) return '';
-    return instanceDropdown[instanceDropdown.selectedIndex].innerText.split(';')[0].trim();
+    const dropdown = el.instanceDropdown;
+    if (!dropdown || dropdown.selectedIndex < 0) return '';
+    return dropdown[dropdown.selectedIndex].innerText.split(';')[0].trim();
 }
 function checkBarcode(barcode) {
   proviant.getProductsByBarcode(barcode).then((response) => {
@@ -281,11 +300,11 @@ function checkBarcode(barcode) {
 
 // Button handlers
 function handleScanButton() {
-    const btnScan = document.getElementById('btnScan');
+    const btnScan = el.btnScan;
     if (btnScan.dataset.action == 'scan') {
         toggleGrowers(true);
         toggleBtnScan(false);
-        document.getElementById('barcode-reader-wrapper').style.display = '';
+        if (el.barcodeReaderWrapper) el.barcodeReaderWrapper.style.display = '';
         html5QrCode.start(
             { facingMode: 'environment' },
             {
@@ -309,24 +328,24 @@ function handleScanButton() {
     }
 };
 function handleBtnAddProduct() {
-    const els = getFormElements();
-    if (!els.inputBarcode || !els.inputExpireAt) return;
-    if (!(els.inputBarcode.checkValidity() && els.inputExpireAt.checkValidity())) {
+    if (!el.inputBarcode || !el.inputExpireAt) return;
+    if (!(el.inputBarcode.checkValidity() && el.inputExpireAt.checkValidity())) {
         return;
     }
 
-    const barcode = document.getElementById('barcode').value;
+    const barcode = el.inputBarcode.value;
     if (barcode === '') {
         showAlert(false, 'Barcode cannot be empty');
         return;
     }
-    const expireAt = document.getElementById('expireAt').valueAsDate.toISOString();
-    const amountEl = document.getElementById('amount');
+    const expireAt = el.inputExpireAt.valueAsDate.toISOString();
+    const amountEl = el.amount;
     const amount = amountEl ? parseInt(amountEl.value, 10) || 1 : 1;
-    const locationEl = document.getElementById('modalStorageLocation');
+    const locationEl = el.modalStorageLocation;
     const storageLocationId = locationEl && locationEl.value ? parseInt(locationEl.value, 10) : null;
 
-    const btn = document.getElementById('btnAddProduct');
+    const btn = el.btnAddProduct;
+    if (!btn) return;
     btn.classList.add('loading');
     btn.disabled = true;
 
@@ -354,13 +373,13 @@ function handleBtnAddProduct() {
     });
 }
 function handleBtnShowProduct() {
-    const instanceDropdown = document.getElementById('instanceDropdown');
-    const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
+    const dropdown = el.instanceDropdown;
+    const productId = dropdown[dropdown.selectedIndex].value;
     globalThis.location = `/web/products/${productId}/view`;
 }
 function handleBtnDeleteProductModal() {
-    const instanceDropdown = document.getElementById('instanceDropdown');
-    const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
+    const dropdown = el.instanceDropdown;
+    const productId = dropdown[dropdown.selectedIndex].value;
     const productName = getSelectedProductName();
     proviant.showConfirm(
         'Mark as wasted',
@@ -380,8 +399,8 @@ function handleBtnDeleteProductModal() {
 }
 
 function handleBtnArchiveProductModal() {
-    const instanceDropdown = document.getElementById('instanceDropdown');
-    const productId = instanceDropdown[instanceDropdown.selectedIndex].value;
+    const dropdown = el.instanceDropdown;
+    const productId = dropdown[dropdown.selectedIndex].value;
     const productName = getSelectedProductName();
     proviant.showConfirm(
         'Mark as consumed',
@@ -400,21 +419,20 @@ function handleBtnArchiveProductModal() {
     );
 }
 function handleBtnShowProducts() {
-    const barcode = document.getElementById('barcode').value;
-    globalThis.location = `/web/products?queryParam=barcode&queryValue=${barcode}`;
+    const bc = el.inputBarcode ? el.inputBarcode.value : '';
+    globalThis.location = `/web/products?queryParam=barcode&queryValue=${bc}`;
 }
 
 // Input handlers
 function handleChangedBarcode() {
-    const els = getFormElements();
-    if (!els.inputBarcode) return;
-    if (!(els.inputBarcode.checkValidity())) {
-        if (els.inputBarcode.classList.contains('border-success')) {
-            els.inputBarcode.classList.remove('border-success')
+    if (!el.inputBarcode) return;
+    if (!(el.inputBarcode.checkValidity())) {
+        if (el.inputBarcode.classList.contains('border-success')) {
+            el.inputBarcode.classList.remove('border-success')
         }
         return;
     }
-    const barcode = document.getElementById('barcode').value;
+    const barcode = el.inputBarcode.value;
     queryProductInfo(barcode);
     showBarcode(barcode)
     storeBarcode(barcode);
@@ -481,8 +499,8 @@ document.addEventListener('click', function (event) {
 
     if (target.closest('#btnAmountDec')) {
         event.preventDefault();
-        const hiddenInput = document.getElementById('amount');
-        const display = document.getElementById('amountDisplay');
+        const hiddenInput = el.amount;
+        const display = el.amountDisplay;
         if (hiddenInput && display) {
             const newVal = Math.max(1, parseInt(hiddenInput.value, 10) - 1);
             hiddenInput.value = newVal;
@@ -493,8 +511,8 @@ document.addEventListener('click', function (event) {
 
     if (target.closest('#btnAmountInc')) {
         event.preventDefault();
-        const hiddenInput = document.getElementById('amount');
-        const display = document.getElementById('amountDisplay');
+        const hiddenInput = el.amount;
+        const display = el.amountDisplay;
         if (hiddenInput && display) {
             const newVal = parseInt(hiddenInput.value, 10) + 1;
             hiddenInput.value = newVal;

@@ -5,35 +5,21 @@
 # changelog header
 header = """
 # Changelog\n
-All notable changes to `proviant` are documented in this file.\n
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n
 """
 # template for the changelog body
 body = """
 {% if version %}\
-    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}\
 {% else %}\
-    ## [unreleased]
+    ## [unreleased]\
 {% endif %}\
-{% for group, commits in commits | group_by(attribute="group") %}
+{% for group, commits in commits | group_by(attribute="group") %}\n
     ### {{ group | upper_first }}
-    {% for commit in commits | filter(attribute="scope") | sort(attribute="scope") %}
+    {% for commit in commits %}\
         - {% if commit.scope %}**{{ commit.scope }}:** {% endif %}\
             {{ commit.message | upper_first }}\
     {% endfor %}\
-    {% for commit in commits | filter(attribute="scope") | reverse | filter(attribute="scope") | reverse %}
-    {% endfor %}\
-    {% for commit in commits | filter(attribute="scope") | sort(attribute="scope") %}
-    {% endfor %}\
-    {% for commit in commits | filter(attribute="scope") %}
-    {% endfor %}\
-    {% for commit in commits %}
-        {% if commit.scope == "" and commit.breaking == false %}\
-            - {{ commit.message | upper_first }}
-        {% endif %}\
-    {% endfor %}\
-{% endfor %}\n
+{% endfor %}\n\n
 """
 # template for the changelog footer
 footer = """
@@ -46,7 +32,12 @@ trim = true
 # parse the commits based on https://www.conventionalcommits.org
 conventional_commits = true
 # filter out the commits that are not conventional
-filter_unconventional = true
+filter_unconventional = false
+commit_preprocessors = [
+    { pattern = "(\n)closes #(\\d+)", replace = "\nCloses: #$2" },
+    { pattern = "(\n)fixes #(\\d+)", replace = "\nFixes: #$2" },
+    { pattern = "(\n)refs #(\\d+)", replace = "\nRefs: #$2" },
+]
 # process each commit with these parsers
 commit_parsers = [
     { message = "^feat", group = "Added" },
