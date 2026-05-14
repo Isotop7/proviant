@@ -405,6 +405,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Public email verification page (no auth required)
 	engine.GET("/web/verify-email", webFrontendHandler.VerifyEmail)
 
+	// Public unsubscribe page (no auth required)
+	engine.GET("/web/unsubscribe", webFrontendHandler.Unsubscribe)
+
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")
 	protectedWebFrontend.Use(jwtFrontendUserAwareMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware())

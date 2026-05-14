@@ -183,6 +183,11 @@ func UpdateUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
+	if err := validateMailDigestFrequency(preferences.MailDigestFrequency); err != nil {
+		api.RespondError(ctx, http.StatusBadRequest, err)
+		return
+	}
+
 	user, getErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if getErr != nil {
 		appCtx.Logger.Error().Msgf("Error getting user: %s", getErr)
@@ -197,6 +202,7 @@ func UpdateUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext) {
 
 	newToken, tokenChanged := resolveTelegramTokenUpdate(&user, &preferences)
 
+	oldMailDigestFrequency := user.NotificationPreferences.MailDigestFrequency
 	user.NotificationPreferences = preferences
 
 	updateErr := appCtx.Repos.Users.UpdateUser(user.ID, &user)
@@ -207,6 +213,12 @@ func UpdateUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	manageUserTelegramPoller(ctx, appCtx.UserID, tokenChanged, newToken)
+
+	if oldMailDigestFrequency == authentication.MailDigestFrequencyDisabled && preferences.MailDigestFrequency != authentication.MailDigestFrequencyDisabled {
+		if _, genErr := appCtx.Repos.Notifications.GenerateMailDigestUnsubscribeToken(user.ID); genErr != nil {
+			appCtx.Logger.Warn().Msgf("Failed to generate unsubscribe token for user %d: %s", user.ID, genErr)
+		}
+	}
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Notification preferences updated successfully"})
 }
@@ -256,6 +268,18 @@ func validateNtfyPreferences(prefs *authentication.NotificationPreferences) erro
 		return fmt.Errorf("ntfy URL is required when ntfy is enabled")
 	}
 	return nil
+}
+
+func validateMailDigestFrequency(freq string) error {
+	if freq == "" {
+		return nil
+	}
+	switch freq {
+	case authentication.MailDigestFrequencyDisabled, authentication.MailDigestFrequencyDaily, authentication.MailDigestFrequencyWeekly:
+		return nil
+	default:
+		return fmt.Errorf("invalid mail digest frequency: must be 'disabled', 'daily', or 'weekly'")
+	}
 }
 
 // resolveTelegramTokenUpdate reconciles the incoming bot token with the stored one,

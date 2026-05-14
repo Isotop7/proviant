@@ -32,3 +32,18 @@ type HouseholdReportTarget struct {
 	Recipients         []string            // email addresses
 	TelegramRecipients []TelegramRecipient // per-user bot token + chat ID pairs
 }
+
+// HouseholdMailDigestTarget pairs a household with users that have digest enabled.
+type HouseholdMailDigestTarget struct {
+	HouseholdID   uint
+	HouseholdName string
+	Users         []MailDigestUser
+}
+
+// MailDigestUser holds user info for digest email delivery.
+type MailDigestUser struct {
+	UserID              uint
+	Email               string
+	MailDigestFrequency string
+	MailDigestToken     string
+}

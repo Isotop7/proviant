@@ -38,35 +38,38 @@ func TestTelegramTimeout(t *testing.T) {
 
 func TestNotificationControllerInitialization(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 	nc := &NotificationController{
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{},
-		NotificationRepo: mockRepo,
+		NotificationRepo: mockRepos.Notifications,
+		ProductRepo:      mockRepos.Products,
 	}
 	assert.NotNil(t, nc.NotificationRepo)
 }
 
 func TestGenerateNotifications(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 
 	t.Run("empty products no-op", func(t *testing.T) {
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Interval: 24},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
 		nc.generateNotifications(&[]dbModel.Product{})
 	})
 
 	t.Run("preferences error logs and continues", func(t *testing.T) {
-		mockRepo.NotifRecipients = nil
-		mockRepo.Err = gorm.ErrInvalidData
+		mockRepos.Notifications.NotifRecipients = nil
+		mockRepos.Notifications.Err = gorm.ErrInvalidData
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Interval: 24},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
 		products := []dbModel.Product{
 			{Model: gorm.Model{ID: 1}, ProductName: "Test", ExpireAt: time.Now().Add(-1 * time.Hour), HouseholdID: 1},
@@ -77,7 +80,7 @@ func TestGenerateNotifications(t *testing.T) {
 
 func TestSendNotificationsForRecipient(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 
 	tests := []struct {
 		name            string
@@ -98,7 +101,8 @@ func TestSendNotificationsForRecipient(t *testing.T) {
 			nc := &NotificationController{
 				Logger:           &logger,
 				Configuration:    &configuration.NotificationConfiguration{Interval: 24},
-				NotificationRepo: mockRepo,
+				NotificationRepo: mockRepos.Notifications,
+				ProductRepo:      mockRepos.Products,
 			}
 			if tt.emailEnabled {
 				nc.Providers = []NotificationProvider{
@@ -122,8 +126,8 @@ func TestSendNotificationsForRecipient(t *testing.T) {
 
 func TestNewNotificationController(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
-	nc := NewNotificationController(&logger, &configuration.NotificationConfiguration{}, mockRepo)
+	mockRepos := repomocks.NewMockRepositoryContainer()
+	nc := NewNotificationController(&logger, &configuration.NotificationConfiguration{}, mockRepos.Notifications, mockRepos.Products)
 	assert.NotNil(t, nc)
 	assert.Equal(t, 15*time.Second, nc.telegramClient.Timeout)
 	assert.Equal(t, "https://api.telegram.org", nc.telegramAPIBase)
@@ -131,13 +135,14 @@ func TestNewNotificationController(t *testing.T) {
 
 func TestInitializeProviders(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 
 	t.Run("no providers configured", func(t *testing.T) {
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
 		nc.initializeProviders()
 		assert.Empty(t, nc.Providers)
@@ -149,7 +154,8 @@ func TestInitializeProviders(t *testing.T) {
 			Configuration: &configuration.NotificationConfiguration{
 				SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587},
 			},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
 		nc.initializeProviders()
 		assert.Len(t, nc.Providers, 1)
@@ -159,15 +165,15 @@ func TestInitializeProviders(t *testing.T) {
 
 func TestDispatchEarlyReturn(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 
 	t.Run("disabled returns early", func(t *testing.T) {
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Enabled: false},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
-		// Should return early without starting goroutine
 		nc.Dispatch()
 	})
 
@@ -175,11 +181,9 @@ func TestDispatchEarlyReturn(t *testing.T) {
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Enabled: true, Interval: 24},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
-		// This will start a goroutine that loops forever
-		// We can't easily test this, but we can verify it doesn't panic
-		// For now, just call it and let it run briefly
 		go nc.Dispatch()
 		time.Sleep(50 * time.Millisecond)
 	})
@@ -187,27 +191,29 @@ func TestDispatchEarlyReturn(t *testing.T) {
 
 func TestSendStreakMilestoneNotifications(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 
 	t.Run("prefs error returns early", func(t *testing.T) {
-		mockRepo.Err = gorm.ErrInvalidData
+		mockRepos.Notifications.Err = gorm.ErrInvalidData
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
 		nc.sendStreakMilestoneNotifications(1, 7)
 	})
 
 	t.Run("email fan-out success", func(t *testing.T) {
-		mockRepo.NotifRecipients = []models.NotificationRecipientInfo{
+		mockRepos.Notifications.NotifRecipients = []models.NotificationRecipientInfo{
 			{EmailEnabled: true, EmailAddress: "test@example.com"},
 		}
-		mockRepo.Err = nil
+		mockRepos.Notifications.Err = nil
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
 		nc.sendStreakMilestoneNotifications(1, 7)
 	})
@@ -218,13 +224,14 @@ func TestSendStreakMilestoneNotifications(t *testing.T) {
 		}))
 		defer server.Close()
 
-		mockRepo.NotifRecipients = []models.NotificationRecipientInfo{
+		mockRepos.Notifications.NotifRecipients = []models.NotificationRecipientInfo{
 			{TelegramEnabled: true, TelegramChatID: "123", TelegramBotToken: "token"},
 		}
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 			telegramClient:   &http.Client{Timeout: 5 * time.Second},
 			telegramAPIBase:  server.URL,
 		}
@@ -234,7 +241,7 @@ func TestSendStreakMilestoneNotifications(t *testing.T) {
 
 func TestSendInvitationEmail(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 	invitation := &dbModel.HouseholdInvitation{
 		Model:       gorm.Model{ID: 1},
 		Email:       "test@example.com",
@@ -244,14 +251,16 @@ func TestSendInvitationEmail(t *testing.T) {
 	nc := &NotificationController{
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
-		NotificationRepo: mockRepo,
+		NotificationRepo: mockRepos.Notifications,
+		ProductRepo:      mockRepos.Products,
 	}
 
 	t.Run("not configured returns error", func(t *testing.T) {
 		ncBad := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
 		err := ncBad.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com")
 		assert.Error(t, err)
@@ -282,7 +291,7 @@ func TestSendInvitationEmail(t *testing.T) {
 
 func TestSendVerificationEmail(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 	invitation := &dbModel.HouseholdInvitation{
 		Model:       gorm.Model{ID: 1},
 		Email:       "test@example.com",
@@ -292,14 +301,16 @@ func TestSendVerificationEmail(t *testing.T) {
 	nc := &NotificationController{
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
-		NotificationRepo: mockRepo,
+		NotificationRepo: mockRepos.Notifications,
+		ProductRepo:      mockRepos.Products,
 	}
 
 	t.Run("not configured returns error", func(t *testing.T) {
 		ncBad := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
 		err := ncBad.SendVerificationEmail(invitation, "user1", "http://example.com")
 		assert.Error(t, err)
@@ -319,18 +330,20 @@ func TestSendVerificationEmail(t *testing.T) {
 
 func TestSendEmailVerification(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 	nc := &NotificationController{
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
-		NotificationRepo: mockRepo,
+		NotificationRepo: mockRepos.Notifications,
+		ProductRepo:      mockRepos.Products,
 	}
 
 	t.Run("not configured returns error", func(t *testing.T) {
 		ncBad := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
 		err := ncBad.SendEmailVerification("test@example.com", "user1", "token", "http://example.com", time.Now())
 		assert.Error(t, err)
@@ -350,28 +363,29 @@ func TestSendEmailVerification(t *testing.T) {
 
 func TestDispatchInvitationsEarlyReturn(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 
 	t.Run("email not configured returns early", func(t *testing.T) {
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Interval: 24},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
-		// Should return early without starting goroutine
 		nc.DispatchInvitations("http://example.com")
 	})
 }
 
 func TestDispatchMonthlyWasteReportsEarlyReturn(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 
 	t.Run("email not configured", func(t *testing.T) {
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{MonthlyWasteReport: configuration.MonthlyWasteReportConfiguration{Day: 1, Hour: 0}},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 		}
 		emailProvider := &EmailNotificationProvider{Configuration: configuration.SMTPConfiguration{}}
 		nc.processMonthlyWasteReports(emailProvider)
@@ -380,13 +394,14 @@ func TestDispatchMonthlyWasteReportsEarlyReturn(t *testing.T) {
 
 func TestDispatchStreakUpdatesEarlyReturn(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 
 	t.Run("nil StreakRepo returns early", func(t *testing.T) {
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 			StreakRepo:       nil,
 		}
 		nc.DispatchStreakUpdates()
@@ -395,14 +410,15 @@ func TestDispatchStreakUpdatesEarlyReturn(t *testing.T) {
 
 func TestStartAllUserTelegramPollers(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 
 	t.Run("no users initializes pool", func(t *testing.T) {
-		mockRepo.Users = []authentication.User{}
+		mockRepos.Notifications.Users = []authentication.User{}
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Telegram: configuration.TelegramConfiguration{PollerWorkers: 2}},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 			telegramClient:   &http.Client{Timeout: 5 * time.Second},
 			telegramAPIBase:  "https://api.telegram.org",
 		}
@@ -413,13 +429,14 @@ func TestStartAllUserTelegramPollers(t *testing.T) {
 	})
 
 	t.Run("pool starts with workers", func(t *testing.T) {
-		mockRepo.Users = []authentication.User{
+		mockRepos.Notifications.Users = []authentication.User{
 			{Model: gorm.Model{ID: 1}, NotificationPreferences: authentication.NotificationPreferences{TelegramBotToken: "test-token"}},
 		}
 		nc := &NotificationController{
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Telegram: configuration.TelegramConfiguration{PollerWorkers: 2}},
-			NotificationRepo: mockRepo,
+			NotificationRepo: mockRepos.Notifications,
+			ProductRepo:      mockRepos.Products,
 			telegramClient:   &http.Client{Timeout: 5 * time.Second},
 			telegramAPIBase:  "https://api.telegram.org",
 		}
@@ -460,11 +477,12 @@ func TestSendTelegramText(t *testing.T) {
 
 func TestGetUserTelegramBotUsername(t *testing.T) {
 	logger := zerolog.Nop()
-	mockRepo := repomocks.NewMockRepositoryContainer().Notifications
+	mockRepos := repomocks.NewMockRepositoryContainer()
 	nc := &NotificationController{
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{},
-		NotificationRepo: mockRepo,
+		NotificationRepo: mockRepos.Notifications,
+		ProductRepo:      mockRepos.Products,
 	}
 	assert.Equal(t, "", nc.GetUserTelegramBotUsername(1))
 }

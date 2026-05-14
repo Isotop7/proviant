@@ -157,6 +157,9 @@ func (m *MockProductRepository) GetExpiringProductsByHousehold(householdID uint,
 func (m *MockProductRepository) GetProductsByHousehold(householdID uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
+func (m *MockProductRepository) GetExpiringProductsForMailDigest(householdID uint) (database.MailDigestProductGroup, error) {
+	return database.MailDigestProductGroup{}, m.Err
+}
 func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error { return m.Err }
 func (m *MockProductRepository) WasteProduct(productID, userID uint) error   { return m.Err }
 func (m *MockProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []database.BulkOperationError {
@@ -545,6 +548,18 @@ func (m *MockNotificationRepository) DeleteWebPushSubscription(userID uint) erro
 }
 func (m *MockNotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, err error) {
 	return "", "", m.Err
+}
+func (m *MockNotificationRepository) GenerateMailDigestUnsubscribeToken(userID uint) (string, error) {
+	return "", m.Err
+}
+func (m *MockNotificationRepository) GetUserByMailDigestUnsubscribeToken(token string) (authentication.User, error) {
+	return m.User, m.Err
+}
+func (m *MockNotificationRepository) DeleteMailDigestUnsubscribeToken(token string) error {
+	return m.Err
+}
+func (m *MockNotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error) {
+	return nil, m.Err
 }
 
 var _ database.NotificationRepositoryInterface = (*MockNotificationRepository)(nil)

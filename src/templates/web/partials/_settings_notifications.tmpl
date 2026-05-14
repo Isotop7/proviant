@@ -206,6 +206,38 @@
                             <li>Sent to every household member with this option enabled</li>
                         </ul>
                     </div>
+
+                    <!-- Expiry Digest -->
+                    <div class="list-group-item px-3 py-3">
+                        <div class="d-flex align-items-center justify-content-between gap-3">
+                            <div>
+                                <div class="fw-medium small">Expiry Digest</div>
+                                <div class="text-secondary-custom small">
+                                    <i class="bi bi-calendar2-week me-1" aria-hidden="true"></i>Summary of expiring products via email
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-3 py-3 bg-body-tertiary">
+                        <p class="small mb-2 text-secondary-custom">Receive a periodic summary of products expiring soon.</p>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="digestFrequency" id="digestDisabled" value="disabled"
+                                    {{if eq .User.NotificationPreferences.MailDigestFrequency "disabled"}}checked{{end}}>
+                                <label class="form-check-label small" for="digestDisabled">Disabled</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="digestFrequency" id="digestDaily" value="daily"
+                                    {{if eq .User.NotificationPreferences.MailDigestFrequency "daily"}}checked{{end}}>
+                                <label class="form-check-label small" for="digestDaily">Daily</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="digestFrequency" id="digestWeekly" value="weekly"
+                                    {{if eq .User.NotificationPreferences.MailDigestFrequency "weekly"}}checked{{end}}>
+                                <label class="form-check-label small" for="digestWeekly">Weekly (Monday)</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

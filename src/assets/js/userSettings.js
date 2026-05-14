@@ -295,6 +295,7 @@ function UpdateNotificationSettings() {
     monthlyWasteReportEnabled: document.getElementById("toggleMonthlyWasteReport")?.checked ?? false,
     telegramEnabled: document.getElementById("toggleTelegramNotifications")?.checked ?? false,
     telegramBotToken: document.getElementById("inputTelegramBotToken")?.value ?? "",
+    digestFrequency: document.querySelector('input[name="digestFrequency"]:checked')?.value ?? "disabled",
   };
 
   proviant

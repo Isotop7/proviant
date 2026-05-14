@@ -71,11 +71,13 @@ func setupDatabase(logger *zerolog.Logger, databaseConfiguration *configuration.
 
 // setupNotificationController initializes the notification controller and starts the notification handler goroutine.
 func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB) *controllers.NotificationController {
-	notificationRepo := dbController.NewNotificationRepository(dbHandle)
+	notificationRepo := dbController.NewNotificationRepositoryWithLogger(dbHandle, logger)
+	productRepo := dbController.NewProductRepository(dbHandle)
 	notificationController := controllers.NewNotificationController(
 		logger,
 		&proviantConfiguration.Notification,
 		notificationRepo,
+		productRepo,
 	)
 	notificationController.StreakRepo = dbController.NewStreakRepository(dbHandle)
 	// Dispatch notification handler goroutine
@@ -88,6 +90,8 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 	notificationController.DispatchStreakUpdates()
 	// Start per-user Telegram long-polling goroutines for all users with a bot token
 	notificationController.StartAllUserTelegramPollers()
+	// Start per-household Mail Digest scheduler
+	notificationController.StartMailDigestScheduler(proviantConfiguration.Server.BaseURL)
 	return notificationController
 }
 
@@ -105,6 +109,10 @@ func setupConfig() *configuration.ProviantConfiguration {
 	// Set defaults for monthly waste report schedule
 	viper.SetDefault("notification.monthlyWasteReport.day", 1)
 	viper.SetDefault("notification.monthlyWasteReport.hour", 8)
+
+	// Set defaults for digest scheduler
+	viper.SetDefault("notification.digest.enabled", true)
+	viper.SetDefault("notification.digest.defaultTime", "08:00")
 
 	// Set defaults for Telegram poller pool
 	viper.SetDefault("notification.telegram.pollerWorkers", 10)
@@ -251,6 +259,7 @@ func main() {
 		&dbModel.ExpiryScan{},
 		&dbModel.AuditLog{},
 		&dbModel.WebPushConfig{},
+		&dbModel.MailDigestUnsubscribeToken{},
 	)
 	if migrationError != nil {
 		panic(migrationError)

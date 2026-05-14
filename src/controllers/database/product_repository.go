@@ -63,6 +63,7 @@ type ProductRepositoryInterface interface {
 	WasteProduct(productID, userID uint) error
 	BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
 	BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
+GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
 }
 
 var _ ProductRepositoryInterface = (*ProductRepository)(nil)
@@ -897,6 +898,45 @@ func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database
 	var products []database.Product
 	result := r.DB.Where("household_id = ? AND deleted_at IS NULL", householdID).Find(&products)
 	return products, result.Error
+}
+
+type MailDigestProductGroup struct {
+	Today     []database.Product
+	ThisWeek  []database.Product
+	NextWeek  []database.Product
+}
+
+func (r *ProductRepository) GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error) {
+	now := time.Now()
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfToday := startOfToday.AddDate(0, 0, 1).Add(-time.Nanosecond)
+	endOfWeek := startOfToday.AddDate(0, 0, 7).Add(-time.Nanosecond)
+	endOfNextWeek := startOfToday.AddDate(0, 0, 14).Add(-time.Nanosecond)
+
+	var allProducts []database.Product
+	if err := r.DB.
+		Where("household_id = ? AND deleted_at IS NULL", householdID).
+		Where("expire_at > ?", startOfToday).
+		Where("expire_at <= ?", endOfNextWeek).
+		Order("expire_at ASC").
+		Find(&allProducts).Error; err != nil {
+		return MailDigestProductGroup{}, err
+	}
+
+	var group MailDigestProductGroup
+	for i := range allProducts {
+		p := &allProducts[i]
+		switch {
+		case !p.ExpireAt.After(endOfToday):
+			group.Today = append(group.Today, *p)
+		case !p.ExpireAt.After(endOfWeek):
+			group.ThisWeek = append(group.ThisWeek, *p)
+		default:
+			group.NextWeek = append(group.NextWeek, *p)
+		}
+	}
+
+	return group, nil
 }
 
 func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {

@@ -120,6 +120,12 @@ type TelegramConfiguration struct {
 	PollerWorkers int // Number of worker goroutines for polling all users (default: 10)
 }
 
+// MailDigestConfiguration controls when the expiry digest email is sent.
+type MailDigestConfiguration struct {
+	Enabled    bool
+	DefaultTime string `mapstructure:"defaultTime"` // "08:00"
+}
+
 // NotificationConfiguration contains all properties regarding the notification handler
 type NotificationConfiguration struct {
 	Enabled            bool
@@ -128,6 +134,7 @@ type NotificationConfiguration struct {
 	Ntfy               NtfyConfiguration
 	MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
 	Telegram           TelegramConfiguration           `mapstructure:"telegram"`
+	MailDigest           MailDigestConfiguration           `mapstructure:"mailDigest"`
 }
 
 // OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller

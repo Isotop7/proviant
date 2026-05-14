@@ -8,12 +8,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	dbController "codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/models"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
@@ -43,6 +45,7 @@ type NotificationController struct {
 	Logger           *zerolog.Logger
 	Configuration    *configuration.NotificationConfiguration
 	NotificationRepo dbController.NotificationRepositoryInterface
+	ProductRepo      dbController.ProductRepositoryInterface
 	StreakRepo       dbController.StreakRepositoryInterface
 	Providers        []NotificationProvider
 	telegramClient   *http.Client
@@ -76,16 +79,17 @@ func NewNotificationController(
 	logger *zerolog.Logger,
 	config *configuration.NotificationConfiguration,
 	notificationRepo dbController.NotificationRepositoryInterface,
+	productRepo dbController.ProductRepositoryInterface,
 ) *NotificationController {
 	notificationController := &NotificationController{
 		Logger:           logger,
 		Configuration:    config,
 		NotificationRepo: notificationRepo,
+		ProductRepo:      productRepo,
 		telegramClient:   &http.Client{Timeout: time.Duration(telegramTimeout(config)) * time.Second},
 		telegramAPIBase:  "https://api.telegram.org",
 	}
 
-	// Initialize providers
 	notificationController.initializeProviders()
 
 	return notificationController
@@ -624,6 +628,114 @@ func (nc *NotificationController) sendStreakTelegramIfEnabled(
 			nc.Logger.Error().Msgf("Streak milestone: telegram failed: %s", sendErr)
 		}
 	}
+}
+
+// StartDigestScheduler starts a goroutine that checks every minute whether
+// any household's digest is due, and sends expiry digest emails.
+func (nc *NotificationController) StartMailDigestScheduler(baseURL string) {
+if !nc.Configuration.MailDigest.Enabled {
+
+		nc.Logger.Info().Msg("Mail digest scheduler: disabled by config")
+
+		return
+	}
+
+	defaultTime := nc.Configuration.MailDigest.DefaultTime
+	if defaultTime == "" {
+		defaultTime = "08:00"
+	}
+
+	go func() {
+		for {
+			nc.processMailDigestEmails(baseURL, defaultTime)
+			time.Sleep(1 * time.Minute)
+		}
+	}()
+}
+
+func (nc *NotificationController) processMailDigestEmails(baseURL, defaultTime string) {
+	targets, err := nc.NotificationRepo.GetHouseholdsWithMailDigestEnabled()
+	if err != nil {
+		nc.Logger.Error().Msgf("Digest scheduler: failed to fetch households: %s", err)
+		return
+	}
+
+	now := time.Now()
+
+	for i := range targets {
+		target := &targets[i]
+		for j := range target.Users {
+			user := &target.Users[j]
+			if !nc.shouldSendDigestNow(user.MailDigestFrequency, defaultTime, now) {
+				continue
+			}
+
+			productGroups, prodErr := nc.ProductRepo.GetExpiringProductsForMailDigest(target.HouseholdID)
+			if prodErr != nil {
+				nc.Logger.Error().Msgf("Digest scheduler: failed to get products for household %d: %s", target.HouseholdID, prodErr)
+				continue
+			}
+
+			if len(productGroups.Today) == 0 && len(productGroups.ThisWeek) == 0 && len(productGroups.NextWeek) == 0 {
+				continue
+			}
+
+			unsubscribeURL := ""
+			if user.MailDigestToken != "" {
+				unsubscribeURL = fmt.Sprintf("%s/web/unsubscribe?token=%s", baseURL, user.MailDigestToken)
+			}
+
+			emailProvider := nc.newEmailProvider()
+			if !emailProvider.IsConfigured() {
+				continue
+			}
+
+			digestGroups := &digestProductGroupAdapter{group: productGroups}
+			if sendErr := emailProvider.SendExpiryDigestEmail(digestGroups, user.Email, target.HouseholdName, unsubscribeURL); sendErr != nil {
+				nc.Logger.Error().Msgf("Digest scheduler: failed to send digest to %s: %s", user.Email, sendErr)
+			} else {
+				nc.Logger.Info().Msgf("Digest scheduler: sent digest to %s (household %d)", user.Email, target.HouseholdID)
+			}
+		}
+	}
+}
+
+type digestProductGroupAdapter struct {
+	group dbController.MailDigestProductGroup
+}
+
+func (a *digestProductGroupAdapter) GetToday() []dbModel.Product     { return a.group.Today }
+func (a *digestProductGroupAdapter) GetThisWeek() []dbModel.Product  { return a.group.ThisWeek }
+func (a *digestProductGroupAdapter) GetNextWeek() []dbModel.Product  { return a.group.NextWeek }
+
+func (nc *NotificationController) shouldSendDigestNow(frequency, defaultTime string, now time.Time) bool {
+	hour, min, _ := now.Clock()
+	currentMins := hour*60 + min
+
+	parsedHour, parsedMin, _ := parseTime(defaultTime)
+	targetMins := parsedHour*60 + parsedMin
+
+	switch frequency {
+	case authentication.MailDigestFrequencyDaily:
+		return currentMins == targetMins
+	case authentication.MailDigestFrequencyWeekly:
+		if now.Weekday() != time.Monday {
+			return false
+		}
+		return currentMins == targetMins
+	default:
+		return false
+	}
+}
+
+func parseTime(t string) (hour, min, sec int) {
+	parts := strings.Split(t, ":")
+	if len(parts) >= 2 {
+		h, _ := strconv.Atoi(parts[0])
+		m, _ := strconv.Atoi(parts[1])
+		return h, m, 0
+	}
+	return 8, 0, 0
 }
 
 // StartAllUserTelegramPollers queries all users with a configured bot token and starts
