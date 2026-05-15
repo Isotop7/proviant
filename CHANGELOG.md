@@ -24,12 +24,14 @@ Closes: #307
 
 ### Fixed
 - (c322b7f7): Fix git-cliff install step
+- (f646df54): Fix tag finding logic
 
 
 ### Miscellaneous
 - (cdaa15d0): Update CHANGELOG.md for v0.14.0
 - (2f9f2c9a): Update CHANGELOG.md for v0.15.0
 - (b4bcf453): Update CHANGELOG.md for v0.15.0
+- (cffa4620): Update CHANGELOG.md for v0.15.0
 
 
 ## [0.14.0] - 2026-05-14
