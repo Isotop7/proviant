@@ -1,173 +1,333 @@
 # Changelog
 
+## [0.15.0] - 2026-05-15
+
+### Added
+- (3216658f): Feat(api): add calendar token expiry and rotation
+Closes: #296
+- (3ffa3e4b): Feat(products): per-product expire lead time
+Closes: #297
+- (1ffa18ae): Feat(notifications): add web push notifications
+closes: #298
+- (0f3eb20b): Feat(notifications): add expiry mail digest
+Closes: #299
+- (fe1760d3): Feat: add auto shopping list
+Closes: #307
+
+
+### Changed
+- (bd9ecca5): Update release mechanism
+- (0df85b21): Update cliff config
+
+
+### Fixed
+- (c322b7f7): Fix git-cliff install step
+
+
+### Miscellaneous
+- (cdaa15d0): Update CHANGELOG.md for v0.14.0
+
+
 ## [0.14.0] - 2026-05-14
 
 ### CI/CD
-- Update git-cliff range syntax and simplify template
+- (cbe5c7bb): Update git-cliff range syntax and simplify template
+
 
 ### Changed
-- Update packages- Refactor(assets): cache DOM refs in products JS
+- (2bf78299): Update packages
+- (131db738): Refactor(assets): cache DOM refs in products JS
 Closes: #290
 
+
 ### Fixed
-- Fix scss
+- (d26a0cf9): Fix scss
+
 
 ### Miscellaneous
-- Update go.sum and relax delta validation
+- (dd94e471): Update go.sum and relax delta validation
+
 
 ## [0.13.0] - 2026-05-14
 
 ### Added
-- Feat(api): add input validation for amount displayName household name
-Closes: #291- Feat(router): add rate limiting for password and scan endpoints
+- (e6f84aa5): Feat(api): add input validation for amount displayName household name
+Closes: #291
+- (3ddee155): Feat(router): add rate limiting for password and scan endpoints
 Closes: #293
 
+
 ### Changed
-- Update version- Refactor(router): add RequireHouseholdAdmin middleware
+- (3e343bef): Update version
+- (36c02ec0): Refactor(router): add RequireHouseholdAdmin middleware
 Closes: #289
 
+
 ### Fixed
-- Fix scss- Fix test errors
+- (60875e6e): Fix scss
+- (8c47b0dc): Fix test errors
+
 
 ### Miscellaneous
-- Update CHANGELOG.md for v0.12.2
+- (04c8de32): Update CHANGELOG.md for v0.12.2
+
 
 ## [0.12.3] - 2026-05-14
 
 ### Changed
-- Update version
+- (64beb748): Update version
+
 
 ## [0.12.2] - 2026-05-14
 
 ### Changed
-- Update version
+- (69e351d2): Update version
+
 
 ### Fixed
-- Fix release mechanism
+- (a9ad2f3b): Fix release mechanism
+
 
 ### Miscellaneous
-- Update CHANGELOG.md for v0.12.1
+- (3a98c22e): Update CHANGELOG.md for v0.12.1
+
 
 ## [0.12.1] - 2026-05-14
 
 ### Added
-- **nav:** Add version badge
+- (d5145403): **nav:** Add version badge
+
 
 ### CI/CD
-- Create release on tag push
+- (ed5939e9): Create release on tag push
+
 
 ### Changed
-- Update version
+- (c727260f): Update version
+
 
 ### Miscellaneous
-- Update CHANGELOG.md for v0.12.0
+- (b15228e5): Update CHANGELOG.md for v0.12.0
+
 
 ## [0.12.0] - 2026-05-13
 
 ### Added
-- Feat(webhooks): add context-aware webhook delivery with timeout
-Closes: #282- Feat(api): add ProductService
-Closes: #286- **api:** Add calendar export
+- (d61ddf01): Feat(webhooks): add context-aware webhook delivery with timeout
+Closes: #282
+- (78759c66): Feat(api): add ProductService
+Closes: #286
+- (24ac30f7): **api:** Add calendar export
+
 
 ### Changed
-- Refactor(api): extract handler boilerplate into AppContext
-Closes: #279- Change(api): clean up handlers
-Closes: #280- Refactor(api): extract query types to queryparser
-Closes: #281- Refactor(templates): split userSettings.tmpl into 4 partials
-Closes: #284- Refactor(assets): merge JS modules into single proviant.js
-Closes: #285- Refactor(assets): unify bulk action helper
-Closes: #288- Update golangci-lint version
+- (7daf8feb): Refactor(api): extract handler boilerplate into AppContext
+Closes: #279
+- (91e49724): Change(api): clean up handlers
+Closes: #280
+- (0405c7ed): Refactor(api): extract query types to queryparser
+Closes: #281
+- (4cd515c4): Refactor(templates): split userSettings.tmpl into 4 partials
+Closes: #284
+- (94447306): Refactor(assets): merge JS modules into single proviant.js
+Closes: #285
+- (83361374): Refactor(assets): unify bulk action helper
+Closes: #288
+- (3a93ccad): Update golangci-lint version
+
 
 ### Fixed
-- **api:** Ensure baseURL trailing slash- Fix css- Fix(api): wrap invitation email in transaction
+- (51d5f3c3): **api:** Ensure baseURL trailing slash
+- (0bf99739): Fix css
+- (cd5b9285): Fix(api): wrap invitation email in transaction
 Closes: #283
 
+
 ### Miscellaneous
-- Update CHANGELOG.md for v0.11.0- **assets:** Fix offline button to anchor tag- **templates:** Fix embed pattern
+- (300fd6fc): Update CHANGELOG.md for v0.11.0
+- (85233084): **assets:** Fix offline button to anchor tag
+- (5be235f6): **templates:** Fix embed pattern
+
 
 ### Testing
-- Add household assertions
+- (8dbdd41c): Add household assertions
+
 
 ## [0.11.0] - 2026-05-09
 
 ### Added
-- Feat(audit): add audit logging
-Closes: #180- Add demo instance
+- (e80b5132): Feat(audit): add audit logging
+Closes: #180
+- (fc4c1220): Add demo instance
+
 
 ### Changed
-- Fix golangci errors- Update packages and make vuln scan optional- Update README and docs
+- (284ec9ec): Fix golangci errors
+- (494ae850): Update packages and make vuln scan optional
+- (c68a5d94): Update README and docs
+
 
 ### Fixed
-- Fix js file
+- (56226fe0): Fix js file
+
 
 ### Miscellaneous
-- Update CHANGELOG.md for v0.10.0- Chore: update auth, config, middleware, and frontend
+- (df612b3b): Update CHANGELOG.md for v0.10.0
+- (52419c96): Chore: update auth, config, middleware, and frontend
 Closes: #200
+
 
 ## [0.10.0] - 2026-05-07
 
 ### Added
-- **api:** Unify error responses- **web:** Add skeleton loading and image fallbacks- **router:** Add request-id and user logging- **models:** Add db indexes- **assets:** Update user settings- **templates:** Update nav- **templates:** Update product card- **assets:** Improve products creation barcode handling- Feat(templates): add brand link
-Closes: #241- Feat(templates): improve products UI
-Closes: #242- Feat(templates): add household anchor
-Closes: #243- Feat(templates): update page templates
-Closes: #244- Add login migration prompt- Feat(web): update auth and settings
-Closes: #246- Feat(api): add and rename product archive endpoints
-Closes: #276- Add sonar exclusions
+- (a39550cd): **api:** Unify error responses
+- (d7fb2e86): **web:** Add skeleton loading and image fallbacks
+- (f25b4e80): **router:** Add request-id and user logging
+- (3bbc8dc6): **models:** Add db indexes
+- (65f094fe): **assets:** Update user settings
+- (dde8a50a): **templates:** Update nav
+- (87b881e1): **templates:** Update product card
+- (53125d37): **assets:** Improve products creation barcode handling
+- (9bf14e4c): Feat(templates): add brand link
+Closes: #241
+- (0c66a365): Feat(templates): improve products UI
+Closes: #242
+- (17b167b7): Feat(templates): add household anchor
+Closes: #243
+- (a73e7027): Feat(templates): update page templates
+Closes: #244
+- (9b2a3a34): Add login migration prompt
+- (1dab2fb1): Feat(web): update auth and settings
+Closes: #246
+- (7ac9a118): Feat(api): add and rename product archive endpoints
+Closes: #276
+- (b333423b): Add sonar exclusions
 fix bash script
-refactor dockerfile- Add comments- Add sonar export- Update product listing- **web:** Redesign auth page- Feat: add bulk consume/waste
-Closes: #277- Feat: add trusted proxies
-Closes: #332- Feat(products): track removal reason
-Closes: #278- Feat: configurable upload size
-Closes: #340- Feat(models): add configuration model and tests
-Closes: #348- Feat: add debug mode support
-Closes: #357- Feat: add rate limit config
-Closes: #358- Feat(web): add sw update banner
-Closes: #368- Feat(controllers): add Telegram poller pool
-Closes: #366- Feat: add storage hint support for OpenFoodFacts
+refactor dockerfile
+- (9c4adeb9): Add comments
+- (7040cecb): Add sonar export
+- (1115660b): Update product listing
+- (4dcfe807): **web:** Redesign auth page
+- (b7606313): Feat: add bulk consume/waste
+Closes: #277
+- (77a9bee5): Feat: add trusted proxies
+Closes: #332
+- (209014fb): Feat(products): track removal reason
+Closes: #278
+- (7f6074e9): Feat: configurable upload size
+Closes: #340
+- (4d9104d7): Feat(models): add configuration model and tests
+Closes: #348
+- (2264e737): Feat: add debug mode support
+Closes: #357
+- (a02db823): Feat: add rate limit config
+Closes: #358
+- (69d1278b): Feat(web): add sw update banner
+Closes: #368
+- (0887e78d): Feat(controllers): add Telegram poller pool
+Closes: #366
+- (b4d96079): Feat: add storage hint support for OpenFoodFacts
 Closes: #386
 
+
 ### Changed
-- **api:** Use uint for IDs- **api:** Introduce repository pattern- **assets:** Cache product images in sw and browser- **controllers:** Improve testability- Refactor(assets): refactor dashboard
-Closes: #249- Refactor Signup function to use distinct helper functions
+- (c5e190b1): **api:** Use uint for IDs
+- (5302ab6c): **api:** Introduce repository pattern
+- (b010d261): **assets:** Cache product images in sw and browser
+- (e4fccaf3): **controllers:** Improve testability
+- (18cde972): Refactor(assets): refactor dashboard
+Closes: #249
+- (0d0a43ba): Refactor Signup function to use distinct helper functions
 use const instead of duplicating strings
-remove unused var- Refactor AdminResetUserPassword
-use consts- Refactor building stats- **api:** Extract helpers- Extract magic strings- Use query constants- Use constants- **notification:** Simplify sender- Replace magic strings- Extract helpers- Extract helpers- Extract helpers- Extract types- **web:** Pass by pointer- Extract helpers- Extract helpers- Refactor(controllers): extract provider init helpers
-Closes: #353- Refactor: rename error variables
+remove unused var
+- (c25854e4): Refactor AdminResetUserPassword
+use consts
+- (cea76aca): Refactor building stats
+- (eb943bbb): **api:** Extract helpers
+- (dcbd6b78): Extract magic strings
+- (a947b943): Use query constants
+- (06ec3a5f): Use constants
+- (2bb32a43): **notification:** Simplify sender
+- (06d80015): Replace magic strings
+- (21da94de): Extract helpers
+- (ffa0bc15): Extract helpers
+- (5f4c3ee7): Extract helpers
+- (e6ea409d): Extract types
+- (48d3e318): **web:** Pass by pointer
+- (e2912e25): Extract helpers
+- (cc37171f): Extract helpers
+- (f4f4df6a): Refactor(controllers): extract provider init helpers
+Closes: #353
+- (7611afc3): Refactor: rename error variables
 Closes: #360
 
+
 ### Fixed
-- **controllers:** Check repo- Fix scss warnings- Fix language code- Fix unicode char- Fix templating error- Fix js error and update docs- Fix(api): safe type assertion
-Closes: #334- Fix(api): validate EAN-13
-Closes: #346- Fix(api): correct HTTP status codes
-Closes: #355- Fix: align log levels
-Closes: #356- Fix(api): validate limit param
-Closes: #364- Fix(router): batch revoked token cleanup
+- (f335c243): **controllers:** Check repo
+- (8fcf7dbf): Fix scss warnings
+- (9c4b34f2): Fix language code
+- (0867b6ff): Fix unicode char
+- (3ef025bd): Fix templating error
+- (3741ded8): Fix js error and update docs
+- (9b7fae65): Fix(api): safe type assertion
+Closes: #334
+- (4135f0c6): Fix(api): validate EAN-13
+Closes: #346
+- (967afadd): Fix(api): correct HTTP status codes
+Closes: #355
+- (cc2ab29a): Fix: align log levels
+Closes: #356
+- (0d89cf31): Fix(api): validate limit param
+Closes: #364
+- (c55e2e72): Fix(router): batch revoked token cleanup
 Closes: #365
 
+
 ### Miscellaneous
-- Drop kilo lock- **web:** Update product pages- Style(templates): update button styles
-Closes: #240- Style(assets): add blur validation
-Closes: #245- Chore: add UI/UX standards
-Closes: #250- Style(templates): update text hierarchy
-Closes: #255- Style: update frontend
+- (254b583b): Drop kilo lock
+- (2c5d1bdf): **web:** Update product pages
+- (2562ea3e): Style(templates): update button styles
+Closes: #240
+- (11de45b7): Style(assets): add blur validation
+Closes: #245
+- (7809ebbc): Chore: add UI/UX standards
+Closes: #250
+- (c58bc6a4): Style(templates): update text hierarchy
+Closes: #255
+- (cf11e47e): Style: update frontend
 Closes: #253
-Closes: #252- Style(templates): fix footer attribution text
-Closes: #256- Style(templates): add household id help text
-Closes: #247- Modernize scss- **login:** Drop backgrounds- **sonar:** Add duplications export
+Closes: #252
+- (afae97ff): Style(templates): fix footer attribution text
+Closes: #256
+- (6ecc727a): Style(templates): add household id help text
+Closes: #247
+- (7dd37de5): Modernize scss
+- (747129f5): **login:** Drop backgrounds
+- (5a807c4e): **sonar:** Add duplications export
+
 
 ### Removed
-- Remove unused function- Remove unused var- Delete temporary file- Remove login hints from login page
+- (6b0c6925): Remove unused function
+- (a6b95d81): Remove unused var
+- (75618952): Delete temporary file
+- (4590d974): Remove login hints from login page
+
 
 ### Security
-- Security: use CSP nonces
-Closes: #330- Security(webhook): validate URLs
-Closes: #338- Security: add CSRF protection
-Closes: #336- Security: increase password policy defaults
+- (7424f0c8): Security: use CSP nonces
+Closes: #330
+- (e6b9a914): Security(webhook): validate URLs
+Closes: #338
+- (7b7978e0): Security: add CSRF protection
+Closes: #336
+- (7168546a): Security: increase password policy defaults
 Closes: #344
 
+
 ### Testing
-- Add api and controller tests- **api:** Update onboarding
+- (43b421e6): Add api and controller tests
+- (d5a92297): **api:** Update onboarding
+
 
 ## [0.9.0-rc5] - 2026-04-25
 
@@ -178,69 +338,99 @@ Closes: #344
 ## [0.9.0-rc2] - 2026-04-25
 
 ### Changed
-- Update actions
+- (b231f382): Update actions
+
 
 ## [0.9.0-rc1] - 2026-04-25
 
 ### Miscellaneous
-- Update CHANGELOG.md for v0.9.0-rc5- Add recipe mobile screenshot
+- (a2c168ea): Update CHANGELOG.md for v0.9.0-rc5
+- (36588c1c): Add recipe mobile screenshot
+
 
 ## [0.9.0] - 2026-04-24
 
 ### Added
-- **streak:** Add household waste-free streak tracking- **products:** Add storage location support- Feat: add automated changelog generation with git-cliff and release
-workflow- Enhance products page UI with mobile improvements and animations
+- (bb2d1d43): **streak:** Add household waste-free streak tracking
+- (8d985656): **products:** Add storage location support
+- (163732de): Feat: add automated changelog generation with git-cliff and release
+workflow
+- (caed8313): Enhance products page UI with mobile improvements and animations
+
 
 ### Changed
-- Update icons and design system- Update design system- Update design- Update icons- Refactor code- Refactor(scss): standardize oklch color syntax and property ordering
+- (b5e4628b): Update icons and design system
+- (51e141f1): Update design system
+- (b9380a10): Update design
+- (00078b04): Update icons
+- (4e5f7bb9): Refactor code
+- (806113ce): Refactor(scss): standardize oklch color syntax and property ordering
 Normalize oklch values to minimal form (e.g. .5 vs 0.50, add deg)
 and reorder properties consistently across all rules for readability.
-No functional changes.- Update design system
+No functional changes.
+- (50f7b237): Update design system
+
 
 ### Documentation
-- Update documentation
+- (55821873): Update documentation
+
 
 ### Fixed
-- Fix nilness check
+- (acd187f9): Fix nilness check
+
 
 ### Miscellaneous
-- Update logo and stylesheet
+- (6b4d71a9): Update logo and stylesheet
+
 
 ### Removed
-- Drop commit tools
+- (540b62b6): Drop commit tools
+
 
 ## [0.8.0] - 2026-04-20
 
 ### Added
-- Feat(notifications): add monthly waste report
+- (51559bd3): Feat(notifications): add monthly waste report
 Enable households to receive automated monthly emails with waste
 statistics
 to track and reduce food waste. Reports include total wasted items,
 waste rate,
 and comparison to previous month, sent on configured day/hour (UTC) to
-opted-in members.- **settings:** Refactor notification settings layout- **notifications:** Add Telegram bot notification provider- **api:** Add Home Assistant integration endpoints- **telegram:** Move bot token to user scope
+opted-in members.
+- (4d7e041f): **settings:** Refactor notification settings layout
+- (ec9c3e1f): **notifications:** Add Telegram bot notification provider
+- (1d28d520): **api:** Add Home Assistant integration endpoints
+- (9165f1be): **telegram:** Move bot token to user scope
+
 
 ### Changed
-- Update go to 1.25.9
+- (7c9179a7): Update go to 1.25.9
+
 
 ### Fixed
-- **lint:** Resolve golangci-lint and htmlhint violations
+- (84030c3e): **lint:** Resolve golangci-lint and htmlhint violations
+
 
 ## [0.7.0] - 2026-04-17
 
 ### Added
-- **products:** Add expiry urgency indicators and default sort by expiry- Feat: add display names and profile step to onboarding
+- (9424dd4d): **products:** Add expiry urgency indicators and default sort by expiry
+- (077a5149): Feat: add display names and profile step to onboarding
 Introduces user display names separate from login usernames for better
 privacy.
 Adds profile configuration as first onboarding step before household
 selection.
 
+
 ### Changed
-- Update default csp- Refactor: reduce code duplication in API and frontend
+- (4becc4f6): Update default csp
+- (64f4ad3c): Refactor: reduce code duplication in API and frontend
 Consolidates ID parsing, error handling, and bulk operations into shared
 helpers.
 Improves code maintainability and consistency across product and
-household APIs.- **api/v1:** Extract Gin context helpers to cut handler boilerplate
+household APIs.
+- (a67a98de): **api/v1:** Extract Gin context helpers to cut handler boilerplate
+
 
 ## [0.6.1] - 2026-04-15
 
@@ -251,169 +441,444 @@ household APIs.- **api/v1:** Extract Gin context helpers to cut handler boilerpl
 ## [0.3.0] - 2025-12-26
 
 ### Added
-- Implement client side search- Add ci- Add soft delete update docs- Add optional soft deletion on api call- Add zed debugging config- Add archiving on frontend- Add methods and frontend to get archived products update best before
-date icon- Add deletion to archive get unscoped products when checking for deletion- Add deletion to archive get unscoped products when checking for deletion- Add golangci.yml and use action- Add api model and partial- Add motion effect on click make card clickable- Add template- Implement option bar and card selection in archive page add API and
-database functions for bulk restore update docs- Add hero-icon class- Add basic font and fix imports- Add const strings cleanup switch statements that could be ifs- Add flagReplace function- Add all country codes- Add changelog- Add interface and unit test- Add unit tests- Add code coverage make target- Add code coverage to ci- Add unit test- Add logger check from context- Add unit tests- Add unit test- Add unit test- Add default values- Add test unit- Add unit test- Add unit tests- Add unit test- Add interface- Add safeguard for empty limit add unit test- Add new tiles reformat code- Implement ntfy
+- (9dd62232): Implement client side search
+- (c81ae763): Add ci
+- (8e5134e7): Add soft delete update docs
+- (cefb26fd): Add optional soft deletion on api call
+- (67f06922): Add zed debugging config
+- (38159c75): Add archiving on frontend
+- (7467768a): Add methods and frontend to get archived products update best before
+date icon
+- (d4d937bf): Add deletion to archive get unscoped products when checking for deletion
+- (5773bdb6): Add deletion to archive get unscoped products when checking for deletion
+- (80d36f8d): Add golangci.yml and use action
+- (b28df158): Add api model and partial
+- (84944699): Add motion effect on click make card clickable
+- (971f45ae): Add template
+- (8fb16b26): Implement option bar and card selection in archive page add API and
+database functions for bulk restore update docs
+- (469f8bc8): Add hero-icon class
+- (fabc9075): Add basic font and fix imports
+- (f2f58235): Add const strings cleanup switch statements that could be ifs
+- (590512a8): Add flagReplace function
+- (d5bd5b83): Add all country codes
+- (a3f9e59e): Add changelog
+- (85553ea4): Add interface and unit test
+- (3ce6e422): Add unit tests
+- (174fa4ad): Add code coverage make target
+- (4c025fc2): Add code coverage to ci
+- (0ca15641): Add unit test
+- (0317b829): Add logger check from context
+- (ad9e875c): Add unit tests
+- (fe665125): Add unit test
+- (82aec25c): Add unit test
+- (26bc9f76): Add default values
+- (5fd46a9f): Add test unit
+- (a9bca6b7): Add unit test
+- (7988b462): Add unit tests
+- (7dbc974a): Add unit test
+- (9193b613): Add interface
+- (9bd245e4): Add safeguard for empty limit add unit test
+- (ac700fe6): Add new tiles reformat code
+- (46bb252e): Implement ntfy
 add notification controller implementation for ntfy
 add UI and backend features to set notification config
 move fromAddress to smtp config
-reformat code- Add quick pickers- Add animation- Add household functions in frontend, backend and database- Add guard for invalid timestamps- Add design implementation guide- Add vulnerability scans
-update mods- Feat(api): add personal access tokens for headless API auth
+reformat code
+- (a3bfc458): Add quick pickers
+- (18ebfe42): Add animation
+- (2c48d08e): Add household functions in frontend, backend and database
+- (1a4eebcd): Add guard for invalid timestamps
+- (a5dbc453): Add design implementation guide
+- (3fb9b6aa): Add vulnerability scans
+update mods
+- (20499dd7): Feat(api): add personal access tokens for headless API auth
 Users create named tokens stored as SHA-256 hashes. Tokens use
 Authorization: Bearer header with proviant_pat_ prefix. Middleware
 checks PAT before falling back to JWT. Token value shown once at
 creation.
-Closes #201- Feat(api): add CSV/JSON bulk export endpoints
+Closes #201
+- (bcc5211d): Feat(api): add CSV/JSON bulk export endpoints
 Add GET
 /api/v1/products/export/{products.csv,products.json,archive.csv,full.json}
 with optional date range filtering and 1 req/min rate limit per user.
-Closes #203- Feat(calendar): add iCal export for product expiry dates
+Closes #203
+- (78702508): Feat(calendar): add iCal export for product expiry dates
 Implement GET /api/v1/calendar/export.ics with token query param auth
 for calendar app subscription (Google Calendar, Apple Calendar,
 Thunderbird).
 Include POST/DELETE/GET /api/v1/calendar/token for token management.
-Refs #193- Add frontend controls for calendar sync
+Refs #193
+- (ae0a2512): Add frontend controls for calendar sync
+
 
 ### Changed
-- Update gitlab ci- Update makefile and image- Update filtering and search
-add label for mobile menu- Update packages- Update docs- Update job name- Update docs- Update image version- Update layout- Update button order- Update golanci-lint update docs remove old gitlab ci files- Update go modules and node modules- Update docs and README- Update styling- Update modules- Update font to VendSans
+- (d7acddf8): Update gitlab ci
+- (76f9779a): Update makefile and image
+- (accafe94): Update filtering and search
+add label for mobile menu
+- (7e0bd380): Update packages
+- (33f2896a): Update docs
+- (afb2b5ee): Update job name
+- (c68789da): Update docs
+- (fe985a09): Update image version
+- (0086fce7): Update layout
+- (225c86f6): Update button order
+- (c6484d09): Update golanci-lint update docs remove old gitlab ci files
+- (4c8b00bd): Update go modules and node modules
+- (add31e6a): Update docs and README
+- (8564c99c): Update styling
+- (10011f43): Update modules
+- (445c3e72): Update font to VendSans
+
 
 ### Documentation
-- Add swagger documentation to api and web handlers
+- (7b49253f): Add swagger documentation to api and web handlers
+
 
 ### Fix
-- Readd frontend handler to archive products
+- (ddbec80c): Readd frontend handler to archive products
+
 
 ### Fixed
-- Fix margin on mobile view- Fix location of warning- Fix docker and makefile- Fix file name- Fix uncatched error in defer function- Fix unauthenticated error switch back to POST- Fix folder name- Fix comment- Fix path update version- Fix var name- Fix registry url- Fix selecting and deselecting card update empty archive page- Fix passing of OpenFoodFactsAPI controller- Fix search redirect and duplicated html element- Fix typo- Fix tests- Fix saving notification preferences- Fix empty return of array- Fix js lint warnings
+- (40ebf7a8): Fix margin on mobile view
+- (fd937806): Fix location of warning
+- (24bffcbc): Fix docker and makefile
+- (32a29161): Fix file name
+- (6cc796e0): Fix uncatched error in defer function
+- (dccd076f): Fix unauthenticated error switch back to POST
+- (15791741): Fix folder name
+- (c80f82f3): Fix comment
+- (163883ff): Fix path update version
+- (546363eb): Fix var name
+- (c6b790ac): Fix registry url
+- (97a08787): Fix selecting and deselecting card update empty archive page
+- (408df047): Fix passing of OpenFoodFactsAPI controller
+- (7b2f4948): Fix search redirect and duplicated html element
+- (65313f63): Fix typo
+- (fe81536e): Fix tests
+- (e19f5adb): Fix saving notification preferences
+- (723ac787): Fix empty return of array
+- (18278489): Fix js lint warnings
+
 
 ### Removed
-- Remove debug step- Remove unneccessary string format use empty string comparison pass some
-objects by reference fix shadow import- Remove duplicated try- Remove duplicated try- Remove search site- Remove tooltips and normalize font size of input box
+- (2b914fde): Remove debug step
+- (90e15c5b): Remove unneccessary string format use empty string comparison pass some
+objects by reference fix shadow import
+- (c9158b74): Remove duplicated try
+- (980d674c): Remove duplicated try
+- (406c9f16): Remove search site
+- (e8ba5a40): Remove tooltips and normalize font size of input box
+
 
 ## [0.2.0] - 2024-11-30
 
 ### Added
-- Add comment- Add title tag
+- (c8990e7c): Add comment
+- (79f15e44): Add title tag
 update docker image user
 use constant for API responses
 fix return of bool
-update go mod- Add route to scan barcode
+update go mod
+- (73a4dbdc): Add route to scan barcode
 add cors middleware
-add cors config- Add target
-update dockerbuild paths- Add template cache and custom write function
+add cors config
+- (550014bb): Add target
+update dockerbuild paths
+- (7bcee7bf): Add template cache and custom write function
 add blank handlers and pages
-fix css and add popper- Add blank files and handlers
-add template cache- Implement redirect to auth page
+fix css and add popper
+- (4d3ca6b4): Add blank files and handlers
+add template cache
+- (9e4858de): Implement redirect to auth page
 allow custom base for Render()
 add auth page
-add frontend object for request handling- Add cookie transparentl
+add frontend object for request handling
+- (a990c721): Add cookie transparentl
 send cookie to client to limit client-side-scripting
 cleanup forms
-add boostrap js files- Add logout function and button
+add boostrap js files
+- (6d9e1954): Add logout function and button
 update css
-update layout and navbar- Add script to create products
+update layout and navbar
+- (f153e423): Add script to create products
 update template
-add bootstrap-icons- Add fonts and update css
+add bootstrap-icons
+- (69d0bbd0): Add fonts and update css
 add footer
-use light theme- Add scripts for scanning qr codes- Add loading indicators- Add expiro lib
-add product view- Add template files and handlers- Add error check- Add class for middlewars
+use light theme
+- (a718b122): Add scripts for scanning qr codes
+- (aaeca536): Add loading indicators
+- (916c2886): Add expiro lib
+add product view
+- (1d66183b): Add template files and handlers
+- (6a087a7a): Add error check
+- (b19cdafb): Add class for middlewars
 pass Authorizator and UnauthorizedFunc as parameters
 use user aware processing on frontend routes
 add custom error page
-add errors and rewrite APIResponses- Add user settings template
-add custom middleware- Add basic validation to login data
+add errors and rewrite APIResponses
+- (60d35b21): Add user settings template
+add custom middleware
+- (0afab598): Add basic validation to login data
 add error box to login data
-fix inputUsername border- Add signup and alerts to auth page- Add additional methods to check user uniqueness
+fix inputUsername border
+- (b3668c8b): Add signup and alerts to auth page
+- (154ab6f7): Add additional methods to check user uniqueness
 add new custom errors and cast from error
-allow short usernames- Add success toast
-update api call- Add product view and helper functions- Add comments and refactor code- Add functions to update user and password
+allow short usernames
+- (1d36cc98): Add success toast
+update api call
+- (1ded5581): Add product view and helper functions
+- (c9b2a229): Add comments and refactor code
+- (5f89e40d): Add functions to update user and password
 new api handlers
 frontend wiring and scripts
-add option for unauthenticated smtp call- Add validation checks- Add default value for expireAt
-ref #49- Add tile
+add option for unauthenticated smtp call
+- (b1d8bf9e): Add validation checks
+- (4c1fb10c): Add default value for expireAt
+ref #49
+- (e0a18c9e): Add tile
 add database function to generate tile stats
 product: add click handler table row
 product: add notifiy timestamp
-update ui style- Add loading spinner
-update UI- Add product edit page layout
+update ui style
+- (55182db4): Add loading spinner
+update UI
+- (3968578b): Add product edit page layout
 refactor product view
-reorder nav- Add product edit page
+reorder nav
+- (49923d66): Add product edit page
 add edit product function
-add patch dto- Add trim- Add basic search- Add sqlite backend- Add sqlite compose file
-update dockerfile for sqlite deployment- Add html5-qrcode for live scanning
-cleanup UI and code- Add API call to get user products by barcode- Add instance query and button toolbar- Add fading and clear alert on new create- Add modal and implement deletion- Add new icons
+add patch dto
+- (c5bf0419): Add trim
+- (4c484333): Add basic search
+- (b72d76db): Add sqlite backend
+- (1b25d87a): Add sqlite compose file
+update dockerfile for sqlite deployment
+- (2683b4b9): Add html5-qrcode for live scanning
+cleanup UI and code
+- (d05b126a): Add API call to get user products by barcode
+- (d056c69d): Add instance query and button toolbar
+- (9cfc38c5): Add fading and clear alert on new create
+- (d54ab55d): Add modal and implement deletion
+- (f7358906): Add new icons
 add favicon
-update footer and auth site- Add icons- Add screenshots- Add household functionality
+update footer and auth site
+- (8dec3ef2): Add icons
+- (d1030954): Add screenshots
+- (cd54e35d): Add household functionality
 add database migrations
 update functions to be scoped on household
 add template for no products
 update frontend
 
+
 ### Changed
-- Refactor code- Update doc- Update doc- Refactor code
+- (55378137): Refactor code
+- (2ed572e4): Update doc
+- (280dea06): Update doc
+- (2257a7a9): Refactor code
 add logging
 update response types
-update docs- Update README- Refactor code- Update README- Update CI- Update README- Update README- Update gitignore and fix ci change path- Update README- Update ci- Update comment- Update README- Update DOCKERFILE- Update doc- Update css steps and add makefile target- Update theme- Refactor product scan page- Update signup to include mail- Refactor code- Update doc- Update modules
-add init step for go modules- Refactor js code- Update offcanvas navbar- Update ui
+update docs
+- (6ca489fe): Update README
+- (d7faac90): Refactor code
+- (2e28ec95): Update README
+- (65f8aab2): Update CI
+- (9655472e): Update README
+- (ba3f4648): Update README
+- (135bc92f): Update gitignore and fix ci change path
+- (9d41c86f): Update README
+- (de04a97c): Update ci
+- (e9fe586f): Update comment
+- (3510edc4): Update README
+- (a2f7ed1a): Update DOCKERFILE
+- (e506f3de): Update doc
+- (1d096969): Update css steps and add makefile target
+- (433e07ea): Update theme
+- (9824301c): Refactor product scan page
+- (17911f7b): Update signup to include mail
+- (b963099c): Refactor code
+- (fa7336eb): Update doc
+- (0fc3cbb9): Update modules
+add init step for go modules
+- (5deae6b5): Refactor js code
+- (a6f5e5ab): Update offcanvas navbar
+- (2f4aa447): Update ui
 increase font size
 dont use card on view
-fix checkbox trigger function- Update layout of create page- Update search page
-update humanDate templating function- Update product view page and add edit button- Update README- Update README
+fix checkbox trigger function
+- (451ed48f): Update layout of create page
+- (99862915): Update search page
+update humanDate templating function
+- (1d76adff): Update product view page and add edit button
+- (0b0d092e): Update README
+- (532a7859): Update README
 update docs
-update go modules- Update README- Update css
+update go modules
+- (c740ca70): Update README
+- (1e2f845e): Update css
 update fonts
-update node modules- Update dockerfile
+update node modules
+- (42889313): Update dockerfile
 update alpine and golang
 build and include assets
-use default sqlite template- Update logos- Refactor dockerfile- Update go modules- Update lint image- Update images and README- Update README- Update tile layout- Update home template
-hide footer for now- Update search page and portal page layout- Update main menu- Update navigation- Update user settings- Update css
-fix script name- Update fonts- Update site- Update product cards
+use default sqlite template
+- (ef6ac63a): Update logos
+- (e1df0b43): Refactor dockerfile
+- (1768b1a5): Update go modules
+- (2291f7b1): Update lint image
+- (12361a26): Update images and README
+- (1e760476): Update README
+- (db4fe7a7): Update tile layout
+- (11215186): Update home template
+hide footer for now
+- (028816ef): Update search page and portal page layout
+- (05e8078e): Update main menu
+- (b4cdd31a): Update navigation
+- (578c8682): Update user settings
+- (660ef0fe): Update css
+fix script name
+- (652e5e62): Update fonts
+- (487b9636): Update site
+- (b5214a07): Update product cards
 update navbar
-make qr code scanner responsive- Update background to border- Update packages- Update go modules- Refactor code
-add handler to show all products for barcode- Update icons- Update gitignore
+make qr code scanner responsive
+- (b08414e0): Update background to border
+- (d4310365): Update packages
+- (86d9f4ae): Update go modules
+- (4bb5f4c0): Refactor code
+add handler to show all products for barcode
+- (f4220577): Update icons
+- (5fef3ec6): Update gitignore
+
 
 ### Fixed
-- Fix ineffectual assignment- Fix init target- Fix redirect state- Fix login screen contrast
-fix username input border- Fix comment- Fix setting timestamps- Fix null redirect- Fix mail address check and user id query
-update css- Fix rewriting of headers- Fix passing of json and add break in switch
-add doc and screenshots- Fix badgifyCategories when not splittable
-add splitString templating function- Fix duplicated import
-fix invalid variable name- Fix dereferencing
+- (dea3e119): Fix ineffectual assignment
+- (2a168c1a): Fix init target
+- (f44d6bca): Fix redirect state
+- (cc2a736f): Fix login screen contrast
+fix username input border
+- (9b2d6f77): Fix comment
+- (92388146): Fix setting timestamps
+- (d73164a6): Fix null redirect
+- (e94ce068): Fix mail address check and user id query
+update css
+- (f949baf0): Fix rewriting of headers
+- (de18d773): Fix passing of json and add break in switch
+add doc and screenshots
+- (a4a9e4fb): Fix badgifyCategories when not splittable
+add splitString templating function
+- (cbaac264): Fix duplicated import
+fix invalid variable name
+- (1b713a5f): Fix dereferencing
+
 
 ### Miscellaneous
-- Style updates
+- (1c7d60cb): Style updates
+
 
 ### Removed
-- Remove padding and rounding on image- Remove scan sites and update create pages
+- (28abd2df): Remove padding and rounding on image
+- (ef9e0a31): Remove scan sites and update create pages
+
 
 ## [0.1] - 2023-12-29
 
 ### Added
-- Add basic web ui layout- Add highlighting for past best before date- Add time limit to regex operation- Implement quick returns if Notification is disabled and embedded Broker is used- Add database creation step- Add platformio build 0.1.0
+- (c32aa257): Add basic web ui layout
+- (9e3b75b9): Add highlighting for past best before date
+- (a19018f8): Add time limit to regex operation
+- (795e7315): Implement quick returns if Notification is disabled and embedded Broker is used
+- (4c72cd44): Add database creation step
+- (19499a4a): Add platformio build 0.1.0
 supports reading config
 supports setting config (not yet used in main.cpp)
-supports reading serial in from scanner module- Add solution file- Add search bar and page- Add dockerfile and build jobs- Add remote url- Add handler for unknown topic- Add barcode to error message- Add debug steps- Add debug step- Add openfoodfactsapicontroller
-populate object with data- Add distinct api method to set ExpireAt
+supports reading serial in from scanner module
+- (f0c4b95b): Add solution file
+- (dae0ce1a): Add search bar and page
+- (c9d3d0d9): Add dockerfile and build jobs
+- (8a10578b): Add remote url
+- (8781158b): Add handler for unknown topic
+- (86a64606): Add barcode to error message
+- (a5aa4245): Add debug steps
+- (bfda654a): Add debug step
+- (66bb97ec): Add openfoodfactsapicontroller
+populate object with data
+- (071663b9): Add distinct api method to set ExpireAt
 rename BestBefore to ExpireAt
-add filter to api call- Add gitlab ci- Add mail notification
+add filter to api call
+- (ddb607f4): Add gitlab ci
+- (2573d006): Add mail notification
 add mail template
-change toAddress to []string- Add authenticaton middleware
+change toAddress to []string
+- (b44ee440): Add authenticaton middleware
 add database controller
 refactor model structure
 
+
 ### Changed
-- Update config check and values- Update namespace definition- Update workflow- Update login step- Update ci tasks- Update ci steps- Update ci- Update CI- Update build file- Update path- Update go version- Update actions
-add template- Update dockerfile- Update context- Update actions- Update CRUD methods- Update name- Update image- Update build target- Update stage- Update notifiedAt after notification is sent- Update mail template- Update var for privat push- Update README- Update README
-relocate file- Update README- Update README- Update README- Update README- Update README
+- (a9c162a6): Update config check and values
+- (50f14ec8): Update namespace definition
+- (b6c0ef6b): Update workflow
+- (cd88a9f9): Update login step
+- (6ff5fe16): Update ci tasks
+- (15704b11): Update ci steps
+- (27cebf76): Update ci
+- (0a80e41e): Update CI
+- (61b781b7): Update build file
+- (d2f21233): Update path
+- (8a600326): Update go version
+- (ec68a0e7): Update actions
+add template
+- (ddd0934f): Update dockerfile
+- (9a8e2202): Update context
+- (64b57f9e): Update actions
+- (be988674): Update CRUD methods
+- (eec49436): Update name
+- (1169f6e7): Update image
+- (64950d2d): Update build target
+- (7bc4cba5): Update stage
+- (69b854b5): Update notifiedAt after notification is sent
+- (4cf4730f): Update mail template
+- (2bb971a2): Update var for privat push
+- (ab94cd40): Update README
+- (429e8001): Update README
+relocate file
+- (999fd45e): Update README
+- (34cd3bf6): Update README
+- (5c797f83): Update README
+- (d759e275): Update README
+- (e1edfdeb): Update README
+
 
 ### Fixed
-- Fix location of sln copy- Fix build- Fix typo- Fix comments
+- (deabf32c): Fix location of sln copy
+- (69b9001f): Fix build
+- (d597cab5): Fix typo
+- (b5b29d05): Fix comments
 fix names
-update ci- Fix version- Fix naming- Fix push uri- Fix docker build- Fix ci- Fix annotations
-fix naming- Fix ci
+update ci
+- (85f333a2): Fix version
+- (45b020bc): Fix naming
+- (ed44960b): Fix push uri
+- (01c6ebea): Fix docker build
+- (efb03ea3): Fix ci
+- (aadb11d8): Fix annotations
+fix naming
+- (22429237): Fix ci
+
 
 ### Removed
-- Remove vscode- Remove old folder- Remove context- Remove step- Remove exists rule- Remove html code- Remove artifacts
+- (8ad219f7): Remove vscode
+- (03d325be): Remove old folder
+- (a6e10c65): Remove context
+- (32a9a147): Remove step
+- (d580e0ba): Remove exists rule
+- (a649fa36): Remove html code
+- (9fa5c8b8): Remove artifacts
+
 
 <!-- generated by git-cliff -->
