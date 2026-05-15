@@ -43,8 +43,10 @@ jobs:
         run: |
           previous_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [ -n "$previous_tag" ]; then
+            echo "Creating release from previous tag $previous_tag"
             git-cliff --config cliff.toml --verbose "$previous_tag..HEAD" --output /tmp/release_notes.md
           else
+            echo "Creating full changelog"
             echo "# Release ${{ forgejo.ref_name }}" > /tmp/release_notes.md
             git-cliff --config cliff.toml --verbose --output CHANGELOG.md
             cat CHANGELOG.md >> /tmp/release_notes.md
