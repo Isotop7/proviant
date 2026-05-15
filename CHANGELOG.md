@@ -13,6 +13,7 @@ closes: #298
 Closes: #299
 - (fe1760d3): Feat: add auto shopping list
 Closes: #307
+- (7b8ee409): Add debug step
 
 
 ### Changed
@@ -28,6 +29,7 @@ Closes: #307
 ### Miscellaneous
 - (cdaa15d0): Update CHANGELOG.md for v0.14.0
 - (2f9f2c9a): Update CHANGELOG.md for v0.15.0
+- (b4bcf453): Update CHANGELOG.md for v0.15.0
 
 
 ## [0.14.0] - 2026-05-14
