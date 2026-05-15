@@ -18,6 +18,7 @@ Closes: #307
 ### Changed
 - (bd9ecca5): Update release mechanism
 - (0df85b21): Update cliff config
+- (e7dfbb69): Update release mechanism
 
 
 ### Fixed
@@ -26,6 +27,7 @@ Closes: #307
 
 ### Miscellaneous
 - (cdaa15d0): Update CHANGELOG.md for v0.14.0
+- (2f9f2c9a): Update CHANGELOG.md for v0.15.0
 
 
 ## [0.14.0] - 2026-05-14
