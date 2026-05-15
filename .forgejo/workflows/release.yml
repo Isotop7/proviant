@@ -41,20 +41,22 @@ jobs:
 
       - name: Create Release
         run: |
-          previous_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$previous_tag" ]; then
-            echo "Creating release from previous tag $previous_tag"
-            git-cliff --config cliff.toml --verbose "$previous_tag..HEAD" --output /tmp/release_notes.md
-          else
+          current_tag="${{ forgejo.ref_name }}"
+          all_tags_sorted=$(git tag --sort=-v:refname)
+          previous_tag=$(echo "$all_tags_sorted" | grep -A100 "^${current_tag}$" | sed -n '2p')
+          if [ -z "$previous_tag" ]; then
             echo "Creating full changelog"
-            echo "# Release ${{ forgejo.ref_name }}" > /tmp/release_notes.md
+            echo "# Release $current_tag" > /tmp/release_notes.md
             git-cliff --config cliff.toml --verbose --output CHANGELOG.md
             cat CHANGELOG.md >> /tmp/release_notes.md
+          else
+            echo "Creating release from previous tag $previous_tag"
+            git-cliff --config cliff.toml --verbose "$previous_tag..$current_tag" --output /tmp/release_notes.md
           fi
           release_body=$(cat /tmp/release_notes.md)
           curl -X POST \
             "https://codeberg.org/api/v1/repos/${{ forgejo.repository }}/releases" \
             -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "$(jq -n --arg body "$release_body" --arg tag "${{ forgejo.ref_name }}" \
+            -d "$(jq -n --arg body "$release_body" --arg tag "$current_tag" \
                 '{tag_name: $tag, name: $tag, body: $body, draft: false, prerelease: false}')"
