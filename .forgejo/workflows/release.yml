@@ -49,14 +49,10 @@ jobs:
             git-cliff --config cliff.toml --verbose --output CHANGELOG.md
             cat CHANGELOG.md >> /tmp/release_notes.md
           fi
+          release_body=$(cat /tmp/release_notes.md)
           curl -X POST \
             "https://codeberg.org/api/v1/repos/${{ forgejo.repository }}/releases" \
             -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "tag_name": "${{ forgejo.ref_name }}",
-              "name": "${{ forgejo.ref_name }}",
-              "body": "'"$(cat /tmp/release_notes.md)"'",
-              "draft": false,
-              "prerelease": false
-            }'
+            -d "$(jq -n --arg body "$release_body" --arg tag "${{ forgejo.ref_name }}" \
+                '{tag_name: $tag, name: $tag, body: $body, draft: false, prerelease: false}')"
