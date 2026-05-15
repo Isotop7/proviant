@@ -1,5 +1,11 @@
 # Changelog
 
+## [unreleased]
+
+### Miscellaneous
+- (4ad75a58): Update CHANGELOG.md for v0.15.0
+
+
 ## [0.15.0] - 2026-05-15
 
 ### Added
