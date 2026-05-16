@@ -28,6 +28,7 @@ var testModels = []any{
 	&dbModel.HouseholdApplication{},
 	&dbModel.EmailVerification{},
 	&dbModel.ProductCategoryPrice{},
+	&dbModel.ActivityLog{},
 }
 
 func SetupTestDB(t *testing.T) *gorm.DB {

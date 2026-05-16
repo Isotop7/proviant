@@ -468,6 +468,13 @@ proviant.getNotifications = async function () {
   return { code: res.status, message: body };
 };
 
+/* ── Household Activity API ──────────────────────────────────────────────────── */
+proviant.getActivityFeed = async function (limit = 10, offset = 0) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/activity?limit=${limit}&offset=${offset}`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
 /* ── Personal Access Token API ──────────────────────────────────────────────── */
 proviant.createPAT = async function (name, expiresAt) {
   const payload = { name };

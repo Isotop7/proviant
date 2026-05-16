@@ -297,6 +297,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	householdAPI.POST("/:id/apply", v1.WrapHandler(v1.ApplyForHousehold))
 	householdAPI.GET("/applications", v1.WrapHandler(v1.GetHouseholdApplications))
+	householdAPI.GET("/activity", v1.WrapHandler(v1.GetHouseholdActivity))
 
 	householdAdminAPI := householdAPI.Group("")
 	householdAdminAPI.Use(RequireHouseholdAdmin())

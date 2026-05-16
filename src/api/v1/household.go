@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
@@ -267,6 +268,76 @@ func CancelHouseholdApplication(ctx *gin.Context, appCtx *AppContext) {
 		appCtx.Logger.Error().Msgf("Error cancelling application: %s", cancelErr)
 		api.RespondError(ctx, http.StatusInternalServerError, cancelErr)
 	}
+}
+
+// GetHouseholdActivity returns the activity feed for the caller's household.
+// @Summary      Get household activity feed
+// @Description  Returns paginated activity log entries for the household the caller belongs to.
+// @Tags         household
+// @Produce      json
+// @Param        limit  query     int  false  "Max entries to return (default 50, max 100)"
+// @Param        offset query     int  false  "Number of entries to skip (default 0)"
+// @Success      200    {object}  api.ActivityLogResponse
+// @Failure      400    {object}  api.APIResponse
+// @Failure      500    {object}  api.APIResponse
+// @Router       /api/v1/household/activity [get]
+func GetHouseholdActivity(ctx *gin.Context, appCtx *AppContext) {
+	limit := 50
+	if l := ctx.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
+			limit = parsed
+			limit = min(limit, 100)
+		}
+	}
+
+	offset := 0
+	if o := ctx.Query("offset"); o != "" {
+		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
+			offset = parsed
+		}
+	}
+
+	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
+	if err != nil {
+		appCtx.Logger.Error().Msgf("GetHouseholdActivity: failed to get user: %s", err)
+		api.RespondError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	logs, err := appCtx.Repos.ActivityLogs.GetByHousehold(ctx, user.HouseholdID, limit, offset)
+	if err != nil {
+		appCtx.Logger.Error().Msgf("GetHouseholdActivity: failed to get activity logs: %s", err)
+		api.RespondError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	total, countErr := appCtx.Repos.ActivityLogs.GetByHouseholdCount(ctx, user.HouseholdID)
+	if countErr != nil {
+		appCtx.Logger.Error().Msgf("GetHouseholdActivity: failed to count activity logs: %s", countErr)
+		api.RespondError(ctx, http.StatusInternalServerError, countErr)
+		return
+	}
+
+	entries := make([]apiModel.ActivityEntry, 0, len(logs))
+	for i := range logs {
+		log := &logs[i]
+		entries = append(entries, apiModel.ActivityEntry{
+			UserID:      log.UserID,
+			UserName:    log.UserName,
+			Action:      log.Action,
+			ProductID:   log.ProductID,
+			ProductName: log.ProductName,
+			Quantity:    log.Quantity,
+			Timestamp:   log.Timestamp.Format(time.RFC3339),
+		})
+	}
+
+	ctx.JSON(http.StatusOK, apiModel.ActivityLogResponse{
+		Activities: entries,
+		Total:      total,
+		Limit:      limit,
+		Offset:     offset,
+	})
 }
 
 // RemoveHouseholdMember removes a member from the caller's household. Caller must be the admin.

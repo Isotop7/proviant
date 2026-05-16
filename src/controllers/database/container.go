@@ -20,6 +20,7 @@ type RepositoryContainer struct {
 	ExpiryScan        ExpiryScanRepositoryInterface
 	CalendarTokens    CalendarTokenRepositoryInterface
 	AuditLogs         AuditLogRepositoryInterface
+	ActivityLogs      ActivityLogRepositoryInterface
 	ShoppingListItems ShoppingListItemRepository
 }
 
@@ -40,6 +41,7 @@ func NewRepositoryContainer(db *gorm.DB) *RepositoryContainer {
 		ExpiryScan:        NewExpiryScanRepository(db),
 		CalendarTokens:    NewCalendarTokenRepository(db),
 		AuditLogs:         NewAuditLogRepository(db),
+		ActivityLogs:      NewActivityLogRepository(db),
 		ShoppingListItems: NewShoppingListItemRepository(db),
 	}
 }
