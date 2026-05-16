@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (activityResponse.code === 200 && activityResponse.message && activityResponse.message.activities) {
         const activities = activityResponse.message.activities;
         const activityCol = document.createElement('div');
-        activityCol.className = 'h-100';
+        activityCol.className = 'col-12';
 
         const actionIconMap = {
           add: 'bi-plus-circle',
@@ -220,7 +220,10 @@ document.addEventListener('DOMContentLoaded', async function () {
             </div>
           </div>`;
 
-        dashboard.appendChild(activityCol);
+        const activityRow = document.createElement('div');
+        activityRow.className = 'col-12';
+        activityRow.appendChild(activityCol);
+        dashboard.appendChild(activityRow);
       }
 
       // Savings tiles

@@ -2707,7 +2707,7 @@ select.pv-field-input {
 
 .list-header {
   display: grid;
-  grid-template-columns: 32px 1fr 120px 140px 90px 80px;
+  grid-template-columns: 32px 1fr 120px 140px 90px 80px 50px;
   gap: 10px;
   padding: 8px 16px;
   background: var(--bg-subtle);
@@ -2724,10 +2724,11 @@ select.pv-field-input {
 
 .list-row {
   display: grid;
-  grid-template-columns: 32px 1fr 120px 140px 90px 80px;
+  grid-template-columns: 32px 1fr 120px 140px 90px 80px 50px;
   gap: 10px;
   align-items: center;
   padding: 9px 16px;
+  overflow: hidden;
   cursor: default;
   border-bottom: 1px solid var(--border-subtle);
   transition: background 120ms;
@@ -3014,12 +3015,36 @@ select.pv-field-input {
 @media (max-width: 767.98px) {
   .list-header,
   .list-row {
-    grid-template-columns: 18px 1fr 40px 64px 40px;
+    grid-template-columns: 12px 1fr 60px 48px 20px;
+    overflow: hidden;
+  }
+
+  .list-header {
+    .col-qty,
+    .col-actions {
+      justify-content: flex-end;
+      text-align: right;
+    }
   }
 
   .col-status,
   .col-location {
     display: none;
+  }
+
+  .col-qty {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  .qty-stepper {
+    flex-shrink: 0;
+  }
+
+  .col-actions {
+    flex-shrink: 0;
   }
 
   // Hide desktop-only bulk actions and export divider; mobile dropdown remains visible
