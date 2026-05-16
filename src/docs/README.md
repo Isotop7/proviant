@@ -192,12 +192,17 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(e \*EmailNotificationProvider\) GetProviderType\(\) string](<#EmailNotificationProvider.GetProviderType>)
   - [func \(e \*EmailNotificationProvider\) IsConfigured\(\) bool](<#EmailNotificationProvider.IsConfigured>)
   - [func \(e \*EmailNotificationProvider\) SendEmailVerificationEmail\(email, username, token, baseURL string, expiresAt time.Time\) error](<#EmailNotificationProvider.SendEmailVerificationEmail>)
+  - [func \(e \*EmailNotificationProvider\) SendExpiryDigestEmail\(productGroups interface \{
+    GetToday\(\) \[\]dbModel.Product
+    GetThisWeek\(\) \[\]dbModel.Product
+    GetNextWeek\(\) \[\]dbModel.Product
+\}, recipientEmail, householdName, unsubscribeURL string\) error](<#EmailNotificationProvider.SendExpiryDigestEmail>)
   - [func \(e \*EmailNotificationProvider\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#EmailNotificationProvider.SendInvitationEmail>)
   - [func \(e \*EmailNotificationProvider\) SendMonthlyWasteReport\(recipient string, stats \*models.WasteStats\) error](<#EmailNotificationProvider.SendMonthlyWasteReport>)
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
   - [func \(e \*EmailNotificationProvider\) SendStreakMilestone\(milestone int, recipient string\) error](<#EmailNotificationProvider.SendStreakMilestone>)
 - [type NotificationController](<#NotificationController>)
-  - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface\) \*NotificationController](<#NewNotificationController>)
+  - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface, productRepo dbController.ProductRepositoryInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
   - [func \(nc \*NotificationController\) DispatchInvitations\(baseURL string\)](<#NotificationController.DispatchInvitations>)
   - [func \(nc \*NotificationController\) DispatchMonthlyWasteReports\(\)](<#NotificationController.DispatchMonthlyWasteReports>)
@@ -207,6 +212,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#NotificationController.SendInvitationEmail>)
   - [func \(nc \*NotificationController\) SendVerificationEmail\(invitation \*dbModel.HouseholdInvitation, username, baseURL string\) error](<#NotificationController.SendVerificationEmail>)
   - [func \(nc \*NotificationController\) StartAllUserTelegramPollers\(\)](<#NotificationController.StartAllUserTelegramPollers>)
+  - [func \(nc \*NotificationController\) StartMailDigestScheduler\(baseURL string\)](<#NotificationController.StartMailDigestScheduler>)
   - [func \(nc \*NotificationController\) StartTelegramPollerPool\(\)](<#NotificationController.StartTelegramPollerPool>)
   - [func \(nc \*NotificationController\) StartUserTelegramPoller\(userID uint, botToken string\)](<#NotificationController.StartUserTelegramPoller>)
   - [func \(nc \*NotificationController\) StopTelegramPollerPool\(\)](<#NotificationController.StopTelegramPollerPool>)
@@ -235,6 +241,11 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(t \*TelegramNotificationProvider\) SendMonthlyWasteReport\(chatID string, stats \*models.WasteStats\) error](<#TelegramNotificationProvider.SendMonthlyWasteReport>)
   - [func \(t \*TelegramNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#TelegramNotificationProvider.SendNotification>)
   - [func \(t \*TelegramNotificationProvider\) SendStreakMilestone\(milestone int, chatID string\) error](<#TelegramNotificationProvider.SendStreakMilestone>)
+- [type WebPushKeyProvider](<#WebPushKeyProvider>)
+- [type WebPushNotificationProvider](<#WebPushNotificationProvider>)
+  - [func \(p \*WebPushNotificationProvider\) GetProviderType\(\) string](<#WebPushNotificationProvider.GetProviderType>)
+  - [func \(p \*WebPushNotificationProvider\) IsConfigured\(\) bool](<#WebPushNotificationProvider.IsConfigured>)
+  - [func \(p \*WebPushNotificationProvider\) SendNotification\(product \*database.Product, recipientInfo any\) error](<#WebPushNotificationProvider.SendNotification>)
 - [type WebhookService](<#WebhookService>)
   - [func GetWebhookService\(\) \*WebhookService](<#GetWebhookService>)
   - [func \(s \*WebhookService\) FireEvent\(event string, payload map\[string\]any\)](<#WebhookService.FireEvent>)
@@ -386,6 +397,19 @@ func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, 
 
 SendEmailVerificationEmail sends an email verification email to the recipient
 
+<a name="EmailNotificationProvider.SendExpiryDigestEmail"></a>
+### func \(\*EmailNotificationProvider\) SendExpiryDigestEmail
+
+```go
+func (e *EmailNotificationProvider) SendExpiryDigestEmail(productGroups interface {
+    GetToday() []dbModel.Product
+    GetThisWeek() []dbModel.Product
+    GetNextWeek() []dbModel.Product
+}, recipientEmail, householdName, unsubscribeURL string) error
+```
+
+SendExpiryDigestEmail sends an expiry digest email to a single recipient. Returns nil if all product groups are empty \(no email sent\).
+
 <a name="EmailNotificationProvider.SendInvitationEmail"></a>
 ### func \(\*EmailNotificationProvider\) SendInvitationEmail
 
@@ -432,6 +456,7 @@ type NotificationController struct {
     Logger           *zerolog.Logger
     Configuration    *configuration.NotificationConfiguration
     NotificationRepo dbController.NotificationRepositoryInterface
+    ProductRepo      dbController.ProductRepositoryInterface
     StreakRepo       dbController.StreakRepositoryInterface
     Providers        []NotificationProvider
     // contains filtered or unexported fields
@@ -442,7 +467,7 @@ type NotificationController struct {
 ### func NewNotificationController
 
 ```go
-func NewNotificationController(logger *zerolog.Logger, config *configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface) *NotificationController
+func NewNotificationController(logger *zerolog.Logger, config *configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface, productRepo dbController.ProductRepositoryInterface) *NotificationController
 ```
 
 
@@ -527,6 +552,15 @@ func (nc *NotificationController) StartAllUserTelegramPollers()
 ```
 
 StartAllUserTelegramPollers queries all users with a configured bot token and starts the worker pool for Telegram polling. Called once at startup.
+
+<a name="NotificationController.StartMailDigestScheduler"></a>
+### func \(\*NotificationController\) StartMailDigestScheduler
+
+```go
+func (nc *NotificationController) StartMailDigestScheduler(baseURL string)
+```
+
+StartDigestScheduler starts a goroutine that checks every minute whether any household's digest is due, and sends expiry digest emails.
 
 <a name="NotificationController.StartTelegramPollerPool"></a>
 ### func \(\*NotificationController\) StartTelegramPollerPool
@@ -820,6 +854,58 @@ func (t *TelegramNotificationProvider) SendStreakMilestone(milestone int, chatID
 ```
 
 SendStreakMilestone sends a streak milestone notification to a Telegram chat.
+
+<a name="WebPushKeyProvider"></a>
+## type WebPushKeyProvider
+
+
+
+```go
+type WebPushKeyProvider interface {
+    GetVAPIDKeys() (publicKey, privateKey string, err error)
+}
+```
+
+<a name="WebPushNotificationProvider"></a>
+## type WebPushNotificationProvider
+
+
+
+```go
+type WebPushNotificationProvider struct {
+    NotificationRepo WebPushKeyProvider
+    VAPIDPublicKey   string
+    VAPIDPrivateKey  string
+    Logger           *zerolog.Logger
+}
+```
+
+<a name="WebPushNotificationProvider.GetProviderType"></a>
+### func \(\*WebPushNotificationProvider\) GetProviderType
+
+```go
+func (p *WebPushNotificationProvider) GetProviderType() string
+```
+
+
+
+<a name="WebPushNotificationProvider.IsConfigured"></a>
+### func \(\*WebPushNotificationProvider\) IsConfigured
+
+```go
+func (p *WebPushNotificationProvider) IsConfigured() bool
+```
+
+
+
+<a name="WebPushNotificationProvider.SendNotification"></a>
+### func \(\*WebPushNotificationProvider\) SendNotification
+
+```go
+func (p *WebPushNotificationProvider) SendNotification(product *database.Product, recipientInfo any) error
+```
+
+
 
 <a name="WebhookService"></a>
 ## type WebhookService
@@ -1369,9 +1455,11 @@ import "codeberg.org/isotop7/proviant/migrations"
 
 - [func AddNotificationPreferencesMigration\(db \*gorm.DB\) error](<#AddNotificationPreferencesMigration>)
 - [func AddPerformanceIndexes\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#AddPerformanceIndexes>)
+- [func AddWebPushNotificationMigration\(db \*gorm.DB\) error](<#AddWebPushNotificationMigration>)
 - [func BackfillEmailVerification\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillEmailVerification>)
 - [func BackfillRemovalReason\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillRemovalReason>)
 - [func DropLegacyStorageLocationColumn\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#DropLegacyStorageLocationColumn>)
+- [func RenamePushNotificationColumns\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RenamePushNotificationColumns>)
 - [func RunBreakingDatabaseMigrations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RunBreakingDatabaseMigrations>)
 - [func SeedDefaultStorageLocations\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SeedDefaultStorageLocations>)
 - [func SeedProductCategoryPrices\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#SeedProductCategoryPrices>)
@@ -1395,6 +1483,15 @@ func AddPerformanceIndexes(logger *zerolog.Logger, db *gorm.DB) error
 ```
 
 AddPerformanceIndexes creates missing indexes for product and user tables to improve query performance for common access patterns.
+
+<a name="AddWebPushNotificationMigration"></a>
+## func AddWebPushNotificationMigration
+
+```go
+func AddWebPushNotificationMigration(db *gorm.DB) error
+```
+
+AddWebPushNotificationMigration adds web push notification columns to users table
 
 <a name="BackfillEmailVerification"></a>
 ## func BackfillEmailVerification
@@ -1422,6 +1519,15 @@ func DropLegacyStorageLocationColumn(logger *zerolog.Logger, db *gorm.DB) error
 ```
 
 DropLegacyStorageLocationColumn removes the old free\-text storage\_location column from products. GORM AutoMigrate never drops columns, so this must be done explicitly. SQLite does not support IF EXISTS on DROP COLUMN, so we attempt the drop and swallow any error that indicates the column is already absent.
+
+<a name="RenamePushNotificationColumns"></a>
+## func RenamePushNotificationColumns
+
+```go
+func RenamePushNotificationColumns(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+RenamePushNotificationColumns renames legacy push columns to web\_push prefix
 
 <a name="RunBreakingDatabaseMigrations"></a>
 ## func RunBreakingDatabaseMigrations
@@ -1467,11 +1573,26 @@ import "codeberg.org/isotop7/proviant/models"
 
 ## Index
 
+- [type HouseholdMailDigestTarget](<#HouseholdMailDigestTarget>)
 - [type HouseholdReportTarget](<#HouseholdReportTarget>)
+- [type MailDigestUser](<#MailDigestUser>)
 - [type NotificationRecipientInfo](<#NotificationRecipientInfo>)
 - [type TelegramRecipient](<#TelegramRecipient>)
 - [type WasteStats](<#WasteStats>)
 
+
+<a name="HouseholdMailDigestTarget"></a>
+## type HouseholdMailDigestTarget
+
+HouseholdMailDigestTarget pairs a household with users that have digest enabled.
+
+```go
+type HouseholdMailDigestTarget struct {
+    HouseholdID   uint
+    HouseholdName string
+    Users         []MailDigestUser
+}
+```
 
 <a name="HouseholdReportTarget"></a>
 ## type HouseholdReportTarget
@@ -1484,6 +1605,20 @@ type HouseholdReportTarget struct {
     HouseholdName      string
     Recipients         []string            // email addresses
     TelegramRecipients []TelegramRecipient // per-user bot token + chat ID pairs
+}
+```
+
+<a name="MailDigestUser"></a>
+## type MailDigestUser
+
+MailDigestUser holds user info for digest email delivery.
+
+```go
+type MailDigestUser struct {
+    UserID              uint
+    Email               string
+    MailDigestFrequency string
+    MailDigestToken     string
 }
 ```
 
@@ -1504,6 +1639,8 @@ type NotificationRecipientInfo struct {
     TelegramChatID            string
     TelegramBotToken          string
     NotificationThresholdDays int
+    WebPushEnabled            bool
+    WebPushSubscriptionJSON   string
 }
 ```
 
@@ -1554,6 +1691,7 @@ router contains the gin router definitions and maps requests to handlers
 
 - [Constants](<#constants>)
 - [func AuthorizatorNotUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorNotUserAware>)
+- [func AuthorizatorShoppingListItem\(data any, ctx \*gin.Context\) bool](<#AuthorizatorShoppingListItem>)
 - [func AuthorizatorUserAware\(data any, ctx \*gin.Context\) bool](<#AuthorizatorUserAware>)
 - [func CSRFMiddleware\(cfg \*configuration.ProviantConfiguration\) gin.HandlerFunc](<#CSRFMiddleware>)
 - [func InitRateLimits\(cfg configuration.RateLimitConfiguration\)](<#InitRateLimits>)
@@ -1582,6 +1720,15 @@ const MsgInvalidCredentials = "Invalid credentials"
 
 ```go
 func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool
+```
+
+
+
+<a name="AuthorizatorShoppingListItem"></a>
+## func AuthorizatorShoppingListItem
+
+```go
+func AuthorizatorShoppingListItem(data any, ctx *gin.Context) bool
 ```
 
 
@@ -2066,6 +2213,12 @@ const (
     QueryWebhookId        = "webhook_id = ?"
     WhereDeletedIsNotNull = "deleted_at IS NOT NULL"
     WhereDeletedIsNull    = "deleted_at IS NULL"
+
+    // Mail digest
+    LabelMailDigest       = "mailDigest"
+    LabelMailDigestDot    = "mail_digest"
+    LabelMailDigestPascal = "MailDigest"
+    RouteUnsubscribe      = "/web/unsubscribe"
 )
 ```
 
@@ -2088,6 +2241,8 @@ import "codeberg.org/isotop7/proviant/web"
   - [func \(frontend \*Frontend\) ProductsView\(ctx \*gin.Context\)](<#Frontend.ProductsView>)
   - [func \(frontend \*Frontend\) Recipes\(ctx \*gin.Context\)](<#Frontend.Recipes>)
   - [func \(frontend \*Frontend\) Root\(ctx \*gin.Context\)](<#Frontend.Root>)
+  - [func \(frontend \*Frontend\) ShoppingList\(ctx \*gin.Context\)](<#Frontend.ShoppingList>)
+  - [func \(frontend \*Frontend\) Unsubscribe\(ctx \*gin.Context\)](<#Frontend.Unsubscribe>)
   - [func \(frontend \*Frontend\) User\(ctx \*gin.Context\)](<#Frontend.User>)
   - [func \(frontend \*Frontend\) UserSettings\(ctx \*gin.Context\)](<#Frontend.UserSettings>)
   - [func \(frontend \*Frontend\) VerifyEmail\(ctx \*gin.Context\)](<#Frontend.VerifyEmail>)
@@ -2195,6 +2350,24 @@ func (frontend *Frontend) Root(ctx *gin.Context)
 ```
 
 Root renders the home page for authenticated users @Summary Home page @Description Renders the home page showing product dashboard @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web \[get\]
+
+<a name="Frontend.ShoppingList"></a>
+### func \(\*Frontend\) ShoppingList
+
+```go
+func (frontend *Frontend) ShoppingList(ctx *gin.Context)
+```
+
+ShoppingList renders the shopping list page @Summary Shopping List page @Description Renders the shared household shopping list with custom items and import banner @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/shopping\-list \[get\]
+
+<a name="Frontend.Unsubscribe"></a>
+### func \(\*Frontend\) Unsubscribe
+
+```go
+func (frontend *Frontend) Unsubscribe(ctx *gin.Context)
+```
+
+Unsubscribe handles one\-click unsubscribe from email digests. @Summary Unsubscribe from email digests @Description Handles unsubscribe token and disables digest for user @Tags web @Produce html @Param token query string true "Unsubscribe token" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Router /web/unsubscribe \[get\]
 
 <a name="Frontend.User"></a>
 ### func \(\*Frontend\) User
@@ -2441,12 +2614,14 @@ v1 implements version 1 of the proviant API
 - [func CreateHousehold\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateHousehold>)
 - [func CreateInvitation\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateInvitation>)
 - [func CreateProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateProduct>)
+- [func CreateShoppingListItem\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateShoppingListItem>)
 - [func CreateStorageLocation\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateStorageLocation>)
 - [func CreateUserToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateUserToken>)
 - [func CreateWebhook\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateWebhook>)
 - [func DeleteCalendarToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteCalendarToken>)
 - [func DeleteHouseholdUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteHouseholdUser>)
 - [func DeleteProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteProduct>)
+- [func DeleteShoppingListItem\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteShoppingListItem>)
 - [func DeleteStorageLocation\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteStorageLocation>)
 - [func DeleteUserToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteUserToken>)
 - [func DeleteWebhook\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteWebhook>)
@@ -2458,6 +2633,7 @@ v1 implements version 1 of the proviant API
 - [func GenerateTelegramLinkToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#GenerateTelegramLinkToken>)
 - [func GetArchivedProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetArchivedProducts>)
 - [func GetAuditLogs\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetAuditLogs>)
+- [func GetAutoShoppingList\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetAutoShoppingList>)
 - [func GetCalendarTokenStatus\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetCalendarTokenStatus>)
 - [func GetExpired\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetExpired>)
 - [func GetHouseholdApplications\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdApplications>)
@@ -2474,9 +2650,12 @@ v1 implements version 1 of the proviant API
 - [func GetSavingsStats\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetSavingsStats>)
 - [func GetStreak\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetStreak>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetUserNotificationPreferences>)
+- [func GetWebPushVAPIDPublicKey\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWebPushVAPIDPublicKey>)
 - [func GetWebhook\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWebhook>)
 - [func GetWebhookDeliveries\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWebhookDeliveries>)
+- [func ImportAutoListToShoppingList\(ctx \*gin.Context, appCtx \*AppContext\)](<#ImportAutoListToShoppingList>)
 - [func LeaveHousehold\(ctx \*gin.Context, appCtx \*AppContext\)](<#LeaveHousehold>)
+- [func ListShoppingListItems\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListShoppingListItems>)
 - [func ListStorageLocations\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListStorageLocations>)
 - [func ListUserTokens\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListUserTokens>)
 - [func ListWebhooks\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListWebhooks>)
@@ -2489,10 +2668,14 @@ v1 implements version 1 of the proviant API
 - [func ScanProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#ScanProduct>)
 - [func SearchProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#SearchProducts>)
 - [func SetExpireAt\(ctx \*gin.Context, appCtx \*AppContext\)](<#SetExpireAt>)
+- [func SubscribeWebPushNotifications\(ctx \*gin.Context, appCtx \*AppContext\)](<#SubscribeWebPushNotifications>)
+- [func ToggleShoppingListItem\(ctx \*gin.Context, appCtx \*AppContext\)](<#ToggleShoppingListItem>)
+- [func UnsubscribeWebPushNotifications\(ctx \*gin.Context, appCtx \*AppContext\)](<#UnsubscribeWebPushNotifications>)
 - [func UpdateHouseholdName\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdName>)
 - [func UpdateHouseholdUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdUser>)
 - [func UpdateProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateProduct>)
 - [func UpdateProductAmount\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateProductAmount>)
+- [func UpdateShoppingListItem\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateShoppingListItem>)
 - [func UpdateStorageLocation\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateStorageLocation>)
 - [func UpdateUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateUser>)
 - [func UpdateUserNotificationPreferences\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateUserNotificationPreferences>)
@@ -2515,6 +2698,8 @@ v1 implements version 1 of the proviant API
   - [func ParseProductSearchQuery\(ctx \*gin.Context\) \(ProductSearchQuery, bool\)](<#ParseProductSearchQuery>)
 - [type ProductSortQuery](<#ProductSortQuery>)
   - [func ParseProductSortQuery\(ctx \*gin.Context\) \(ProductSortQuery, bool\)](<#ParseProductSortQuery>)
+- [type WebPushSubscriptionRequest](<#WebPushSubscriptionRequest>)
+- [type WebPushVAPIDPublicKeyResponse](<#WebPushVAPIDPublicKeyResponse>)
 
 
 ## Constants
@@ -2708,6 +2893,15 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext)
 
 CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
 
+<a name="CreateShoppingListItem"></a>
+## func CreateShoppingListItem
+
+```go
+func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext)
+```
+
+
+
 <a name="CreateStorageLocation"></a>
 ## func CreateStorageLocation
 
@@ -2761,6 +2955,15 @@ func DeleteProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param archiveOnly query bool false "Archive only" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
+
+<a name="DeleteShoppingListItem"></a>
+## func DeleteShoppingListItem
+
+```go
+func DeleteShoppingListItem(ctx *gin.Context, appCtx *AppContext)
+```
+
+
 
 <a name="DeleteStorageLocation"></a>
 ## func DeleteStorageLocation
@@ -2860,6 +3063,15 @@ func GetAuditLogs(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetAuditLogs returns the audit log entries. @Summary Get audit logs @Description Returns paginated audit log entries \(admin only\) @Tags admin @Produce json @Param limit query int false "Maximum number of logs to return \(default 100, max 1000\)" @Param date query string false "Filter by date \(YYYY\-MM\-DD format\)" @Success 200 \{array\} database.AuditLog @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/admin/audit\-log \[get\]
+
+<a name="GetAutoShoppingList"></a>
+## func GetAutoShoppingList
+
+```go
+func GetAutoShoppingList(ctx *gin.Context, appCtx *AppContext)
+```
+
+
 
 <a name="GetCalendarTokenStatus"></a>
 ## func GetCalendarTokenStatus
@@ -3007,6 +3219,15 @@ func GetUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext)
 
 GetUserNotificationPreferences gets a user's notification preferences @Summary Gets a user's notification preferences @Description Retrieves notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} authentication.NotificationPreferences @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[get\]
 
+<a name="GetWebPushVAPIDPublicKey"></a>
+## func GetWebPushVAPIDPublicKey
+
+```go
+func GetWebPushVAPIDPublicKey(ctx *gin.Context, appCtx *AppContext)
+```
+
+
+
 <a name="GetWebhook"></a>
 ## func GetWebhook
 
@@ -3025,6 +3246,15 @@ func GetWebhookDeliveries(ctx *gin.Context, appCtx *AppContext)
 
 
 
+<a name="ImportAutoListToShoppingList"></a>
+## func ImportAutoListToShoppingList
+
+```go
+func ImportAutoListToShoppingList(ctx *gin.Context, appCtx *AppContext)
+```
+
+
+
 <a name="LeaveHousehold"></a>
 ## func LeaveHousehold
 
@@ -3033,6 +3263,15 @@ func LeaveHousehold(ctx *gin.Context, appCtx *AppContext)
 ```
 
 LeaveHousehold removes the calling user from their current household and assigns them a new personal one. @Summary Leave current household @Description Creates a new personal household for the user. Products are moved if they were the sole member. @Tags household @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/household/leave \[post\]
+
+<a name="ListShoppingListItems"></a>
+## func ListShoppingListItems
+
+```go
+func ListShoppingListItems(ctx *gin.Context, appCtx *AppContext)
+```
+
+
 
 <a name="ListStorageLocations"></a>
 ## func ListStorageLocations
@@ -3142,6 +3381,33 @@ func SetExpireAt(ctx *gin.Context, appCtx *AppContext)
 
 SetExpireAt updates the expire date of a product of a user @Summary Updates the expire date @Description Updates the expire date of a product @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param timestamp body database.Timestamp true "Timestamp" @Success 200 \{object\} database.ProductDTOExpire @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\}/expire \[post\]
 
+<a name="SubscribeWebPushNotifications"></a>
+## func SubscribeWebPushNotifications
+
+```go
+func SubscribeWebPushNotifications(ctx *gin.Context, appCtx *AppContext)
+```
+
+
+
+<a name="ToggleShoppingListItem"></a>
+## func ToggleShoppingListItem
+
+```go
+func ToggleShoppingListItem(ctx *gin.Context, appCtx *AppContext)
+```
+
+
+
+<a name="UnsubscribeWebPushNotifications"></a>
+## func UnsubscribeWebPushNotifications
+
+```go
+func UnsubscribeWebPushNotifications(ctx *gin.Context, appCtx *AppContext)
+```
+
+
+
 <a name="UpdateHouseholdName"></a>
 ## func UpdateHouseholdName
 
@@ -3177,6 +3443,15 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext)
 ```
 
 UpdateProductAmount updates the amount of a product by a given delta. If the resulting amount is \<= 0, the product is hard\-deleted. @Summary Update product amount @Description Applies a delta to a product's amount. Hard\-deletes the product when amount reaches 0. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param delta body api.ProductAmountDTO true "Amount delta" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/amount \[patch\]
+
+<a name="UpdateShoppingListItem"></a>
+## func UpdateShoppingListItem
+
+```go
+func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext)
+```
+
+
 
 <a name="UpdateStorageLocation"></a>
 ## func UpdateStorageLocation
@@ -3413,6 +3688,32 @@ func ParseProductSortQuery(ctx *gin.Context) (ProductSortQuery, bool)
 
 
 
+<a name="WebPushSubscriptionRequest"></a>
+## type WebPushSubscriptionRequest
+
+
+
+```go
+type WebPushSubscriptionRequest struct {
+    Endpoint string `json:"endpoint" binding:"required"`
+    Keys     struct {
+        P256dh string `json:"p256dh" binding:"required"`
+        Auth   string `json:"auth" binding:"required"`
+    }   `json:"keys" binding:"required"`
+}
+```
+
+<a name="WebPushVAPIDPublicKeyResponse"></a>
+## type WebPushVAPIDPublicKeyResponse
+
+
+
+```go
+type WebPushVAPIDPublicKeyResponse struct {
+    PublicKey string `json:"publicKey"`
+}
+```
+
 # database
 
 ```go
@@ -3474,16 +3775,22 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*InvitationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#InvitationRepository.MarkInvitationSendFailed>)
   - [func \(r \*InvitationRepository\) MarkInvitationSent\(invitationID uint\) error](<#InvitationRepository.MarkInvitationSent>)
 - [type InvitationRepositoryInterface](<#InvitationRepositoryInterface>)
+- [type MailDigestProductGroup](<#MailDigestProductGroup>)
 - [type NotificationRepository](<#NotificationRepository>)
   - [func NewNotificationRepository\(db \*gorm.DB\) \*NotificationRepository](<#NewNotificationRepository>)
+  - [func NewNotificationRepositoryWithLogger\(db \*gorm.DB, logger \*zerolog.Logger\) \*NotificationRepository](<#NewNotificationRepositoryWithLogger>)
   - [func \(r \*NotificationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#NotificationRepository.AcceptInvitation>)
   - [func \(r \*NotificationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#NotificationRepository.CancelInvitation>)
   - [func \(r \*NotificationRepository\) CreateInvitation\(householdID, inviterID uint, email string\) \(database.HouseholdInvitation, error\)](<#NotificationRepository.CreateInvitation>)
+  - [func \(r \*NotificationRepository\) DeleteMailDigestUnsubscribeToken\(tokenStr string\) error](<#NotificationRepository.DeleteMailDigestUnsubscribeToken>)
+  - [func \(r \*NotificationRepository\) DeleteWebPushSubscription\(userID uint\) error](<#NotificationRepository.DeleteWebPushSubscription>)
   - [func \(r \*NotificationRepository\) FindUserByTelegramLinkToken\(token string\) \(authentication.User, error\)](<#NotificationRepository.FindUserByTelegramLinkToken>)
+  - [func \(r \*NotificationRepository\) GenerateMailDigestUnsubscribeToken\(userID uint\) \(string, error\)](<#NotificationRepository.GenerateMailDigestUnsubscribeToken>)
   - [func \(r \*NotificationRepository\) GetAllUsersWithTelegramBotToken\(\) \(\[\]authentication.User, error\)](<#NotificationRepository.GetAllUsersWithTelegramBotToken>)
   - [func \(r \*NotificationRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#NotificationRepository.GetHouseholdByID>)
   - [func \(r \*NotificationRepository\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#NotificationRepository.GetHouseholdMembersMailAddressesByID>)
   - [func \(r \*NotificationRepository\) GetHouseholdMembersNotificationPreferences\(householdID uint\) \(\[\]models.NotificationRecipientInfo, error\)](<#NotificationRepository.GetHouseholdMembersNotificationPreferences>)
+  - [func \(r \*NotificationRepository\) GetHouseholdsWithMailDigestEnabled\(\) \(\[\]models.HouseholdMailDigestTarget, error\)](<#NotificationRepository.GetHouseholdsWithMailDigestEnabled>)
   - [func \(r \*NotificationRepository\) GetHouseholdsWithMonthlyWasteReportEnabled\(\) \(\[\]models.HouseholdReportTarget, error\)](<#NotificationRepository.GetHouseholdsWithMonthlyWasteReportEnabled>)
   - [func \(r \*NotificationRepository\) GetInvitationByToken\(token string\) \(database.HouseholdInvitation, error\)](<#NotificationRepository.GetInvitationByToken>)
   - [func \(r \*NotificationRepository\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]database.HouseholdInvitation, error\)](<#NotificationRepository.GetInvitationsForHousehold>)
@@ -3493,12 +3800,15 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*NotificationRepository\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration, maxLookAheadDays int\) \(\[\]database.Product, error\)](<#NotificationRepository.GetProductsExpiredAndNotificationPending>)
   - [func \(r \*NotificationRepository\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]database.HouseholdWithMemberCount, error\)](<#NotificationRepository.GetPublicHouseholds>)
   - [func \(r \*NotificationRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#NotificationRepository.GetUserByID>)
+  - [func \(r \*NotificationRepository\) GetUserByMailDigestUnsubscribeToken\(tokenStr string\) \(authentication.User, error\)](<#NotificationRepository.GetUserByMailDigestUnsubscribeToken>)
+  - [func \(r \*NotificationRepository\) GetVAPIDKeys\(\) \(publicKey, privateKey string, err error\)](<#NotificationRepository.GetVAPIDKeys>)
   - [func \(r \*NotificationRepository\) GetWasteStatsForHousehold\(householdID uint, month time.Time\) \(models.WasteStats, error\)](<#NotificationRepository.GetWasteStatsForHousehold>)
   - [func \(r \*NotificationRepository\) MarkHouseholdStepDone\(userID uint\) error](<#NotificationRepository.MarkHouseholdStepDone>)
   - [func \(r \*NotificationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#NotificationRepository.MarkInvitationSendFailed>)
   - [func \(r \*NotificationRepository\) MarkInvitationSent\(invitationID uint\) error](<#NotificationRepository.MarkInvitationSent>)
   - [func \(r \*NotificationRepository\) MarkNotificationsSetup\(userID uint\) error](<#NotificationRepository.MarkNotificationsSetup>)
   - [func \(r \*NotificationRepository\) MarkOnboardingComplete\(userID uint\) error](<#NotificationRepository.MarkOnboardingComplete>)
+  - [func \(r \*NotificationRepository\) SaveWebPushSubscription\(userID uint, subscriptionJSON string\) error](<#NotificationRepository.SaveWebPushSubscription>)
   - [func \(r \*NotificationRepository\) SetProductNotifiedAt\(productID uint\) error](<#NotificationRepository.SetProductNotifiedAt>)
   - [func \(r \*NotificationRepository\) SetTelegramBotUsername\(userID uint, username string\) error](<#NotificationRepository.SetTelegramBotUsername>)
   - [func \(r \*NotificationRepository\) SetTelegramChatID\(userID uint, chatID string\) error](<#NotificationRepository.SetTelegramChatID>)
@@ -3528,6 +3838,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetExpiredProductsCount>)
   - [func \(r \*ProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringInDays>)
   - [func \(r \*ProductRepository\) GetExpiringProductsByHousehold\(householdID uint, daysAhead int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringProductsByHousehold>)
+  - [func \(r \*ProductRepository\) GetExpiringProductsForMailDigest\(householdID uint\) \(MailDigestProductGroup, error\)](<#ProductRepository.GetExpiringProductsForMailDigest>)
   - [func \(r \*ProductRepository\) GetExpiringSoonCount\(userID uint, days int\) \(int, error\)](<#ProductRepository.GetExpiringSoonCount>)
   - [func \(r \*ProductRepository\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#ProductRepository.GetExpiringSoonProducts>)
   - [func \(r \*ProductRepository\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#ProductRepository.GetExpiryTrend>)
@@ -3541,6 +3852,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetProductCategoryBreakdown>)
   - [func \(r \*ProductRepository\) GetProductsByHousehold\(householdID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetProductsByHousehold>)
   - [func \(r \*ProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#ProductRepository.GetProductsExpired>)
+  - [func \(r \*ProductRepository\) GetSubThresholdProducts\(userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetSubThresholdProducts>)
   - [func \(r \*ProductRepository\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetTopArchivedProducts>)
   - [func \(r \*ProductRepository\) GetUserActiveProductsFiltered\(userID uint, from, to \*time.Time\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserActiveProductsFiltered>)
   - [func \(r \*ProductRepository\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserArchivedProductsBulk>)
@@ -3580,6 +3892,15 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 - [type SavingsRepositoryInterface](<#SavingsRepositoryInterface>)
 - [type SearchParameterEnum](<#SearchParameterEnum>)
   - [func SearchParameterEnumFromString\(str string\) SearchParameterEnum](<#SearchParameterEnumFromString>)
+- [type ShoppingListItemRepository](<#ShoppingListItemRepository>)
+- [type ShoppingListItemRepositoryImpl](<#ShoppingListItemRepositoryImpl>)
+  - [func NewShoppingListItemRepository\(db \*gorm.DB\) \*ShoppingListItemRepositoryImpl](<#NewShoppingListItemRepository>)
+  - [func \(r \*ShoppingListItemRepositoryImpl\) Create\(item \*database.ShoppingListItem\) error](<#ShoppingListItemRepositoryImpl.Create>)
+  - [func \(r \*ShoppingListItemRepositoryImpl\) Delete\(id, householdID uint\) error](<#ShoppingListItemRepositoryImpl.Delete>)
+  - [func \(r \*ShoppingListItemRepositoryImpl\) GetByID\(id, householdID uint\) \(\*database.ShoppingListItem, error\)](<#ShoppingListItemRepositoryImpl.GetByID>)
+  - [func \(r \*ShoppingListItemRepositoryImpl\) ListByHousehold\(householdID uint\) \(\[\]database.ShoppingListItem, error\)](<#ShoppingListItemRepositoryImpl.ListByHousehold>)
+  - [func \(r \*ShoppingListItemRepositoryImpl\) ToggleChecked\(id, householdID uint\) error](<#ShoppingListItemRepositoryImpl.ToggleChecked>)
+  - [func \(r \*ShoppingListItemRepositoryImpl\) Update\(item \*database.ShoppingListItem\) error](<#ShoppingListItemRepositoryImpl.Update>)
 - [type StorageLocationRepository](<#StorageLocationRepository>)
   - [func NewStorageLocationRepository\(db \*gorm.DB\) \*StorageLocationRepository](<#NewStorageLocationRepository>)
   - [func \(r \*StorageLocationRepository\) Create\(userID uint, name, icon string, sortOrder int\) \(database.StorageLocation, error\)](<#StorageLocationRepository.Create>)
@@ -4174,6 +4495,19 @@ type InvitationRepositoryInterface interface {
 }
 ```
 
+<a name="MailDigestProductGroup"></a>
+## type MailDigestProductGroup
+
+
+
+```go
+type MailDigestProductGroup struct {
+    Today    []database.Product
+    ThisWeek []database.Product
+    NextWeek []database.Product
+}
+```
+
 <a name="NotificationRepository"></a>
 ## type NotificationRepository
 
@@ -4181,7 +4515,8 @@ type InvitationRepositoryInterface interface {
 
 ```go
 type NotificationRepository struct {
-    DB *gorm.DB
+    DB     *gorm.DB
+    Logger *zerolog.Logger
 }
 ```
 
@@ -4190,6 +4525,15 @@ type NotificationRepository struct {
 
 ```go
 func NewNotificationRepository(db *gorm.DB) *NotificationRepository
+```
+
+
+
+<a name="NewNotificationRepositoryWithLogger"></a>
+### func NewNotificationRepositoryWithLogger
+
+```go
+func NewNotificationRepositoryWithLogger(db *gorm.DB, logger *zerolog.Logger) *NotificationRepository
 ```
 
 
@@ -4221,11 +4565,38 @@ func (r *NotificationRepository) CreateInvitation(householdID, inviterID uint, e
 
 
 
+<a name="NotificationRepository.DeleteMailDigestUnsubscribeToken"></a>
+### func \(\*NotificationRepository\) DeleteMailDigestUnsubscribeToken
+
+```go
+func (r *NotificationRepository) DeleteMailDigestUnsubscribeToken(tokenStr string) error
+```
+
+
+
+<a name="NotificationRepository.DeleteWebPushSubscription"></a>
+### func \(\*NotificationRepository\) DeleteWebPushSubscription
+
+```go
+func (r *NotificationRepository) DeleteWebPushSubscription(userID uint) error
+```
+
+
+
 <a name="NotificationRepository.FindUserByTelegramLinkToken"></a>
 ### func \(\*NotificationRepository\) FindUserByTelegramLinkToken
 
 ```go
 func (r *NotificationRepository) FindUserByTelegramLinkToken(token string) (authentication.User, error)
+```
+
+
+
+<a name="NotificationRepository.GenerateMailDigestUnsubscribeToken"></a>
+### func \(\*NotificationRepository\) GenerateMailDigestUnsubscribeToken
+
+```go
+func (r *NotificationRepository) GenerateMailDigestUnsubscribeToken(userID uint) (string, error)
 ```
 
 
@@ -4262,6 +4633,15 @@ func (r *NotificationRepository) GetHouseholdMembersMailAddressesByID(householdI
 
 ```go
 func (r *NotificationRepository) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
+```
+
+
+
+<a name="NotificationRepository.GetHouseholdsWithMailDigestEnabled"></a>
+### func \(\*NotificationRepository\) GetHouseholdsWithMailDigestEnabled
+
+```go
+func (r *NotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error)
 ```
 
 
@@ -4347,6 +4727,24 @@ func (r *NotificationRepository) GetUserByID(userID uint) (authentication.User, 
 
 
 
+<a name="NotificationRepository.GetUserByMailDigestUnsubscribeToken"></a>
+### func \(\*NotificationRepository\) GetUserByMailDigestUnsubscribeToken
+
+```go
+func (r *NotificationRepository) GetUserByMailDigestUnsubscribeToken(tokenStr string) (authentication.User, error)
+```
+
+
+
+<a name="NotificationRepository.GetVAPIDKeys"></a>
+### func \(\*NotificationRepository\) GetVAPIDKeys
+
+```go
+func (r *NotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, err error)
+```
+
+
+
 <a name="NotificationRepository.GetWasteStatsForHousehold"></a>
 ### func \(\*NotificationRepository\) GetWasteStatsForHousehold
 
@@ -4397,6 +4795,15 @@ func (r *NotificationRepository) MarkNotificationsSetup(userID uint) error
 
 ```go
 func (r *NotificationRepository) MarkOnboardingComplete(userID uint) error
+```
+
+
+
+<a name="NotificationRepository.SaveWebPushSubscription"></a>
+### func \(\*NotificationRepository\) SaveWebPushSubscription
+
+```go
+func (r *NotificationRepository) SaveWebPushSubscription(userID uint, subscriptionJSON string) error
 ```
 
 
@@ -4460,6 +4867,7 @@ type NotificationRepositoryInterface interface {
     MarkInvitationSent(invitationID uint) error
     MarkInvitationSendFailed(invitationID uint) error
     GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error)
+    GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error)
     GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error)
     GetOnboardingState(userID uint) (database.OnboardingState, error)
     MarkNotificationsSetup(userID uint) error
@@ -4471,6 +4879,12 @@ type NotificationRepositoryInterface interface {
     SetTelegramLinkToken(userID uint, token string) error
     SetTelegramBotUsername(userID uint, username string) error
     GetAllUsersWithTelegramBotToken() ([]authentication.User, error)
+    SaveWebPushSubscription(userID uint, subscriptionJSON string) error
+    DeleteWebPushSubscription(userID uint) error
+    GetVAPIDKeys() (publicKey, privateKey string, err error)
+    GenerateMailDigestUnsubscribeToken(userID uint) (string, error)
+    GetUserByMailDigestUnsubscribeToken(token string) (authentication.User, error)
+    DeleteMailDigestUnsubscribeToken(token string) error
 }
 ```
 
@@ -4701,6 +5115,15 @@ func (r *ProductRepository) GetExpiringProductsByHousehold(householdID uint, day
 
 GetExpiringProductsByHousehold returns products for a household that expire within daysAhead.
 
+<a name="ProductRepository.GetExpiringProductsForMailDigest"></a>
+### func \(\*ProductRepository\) GetExpiringProductsForMailDigest
+
+```go
+func (r *ProductRepository) GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
+```
+
+
+
 <a name="ProductRepository.GetExpiringSoonCount"></a>
 ### func \(\*ProductRepository\) GetExpiringSoonCount
 
@@ -4814,6 +5237,15 @@ GetProductsByHousehold returns all non\-deleted products for a household.
 
 ```go
 func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product, error)
+```
+
+
+
+<a name="ProductRepository.GetSubThresholdProducts"></a>
+### func \(\*ProductRepository\) GetSubThresholdProducts
+
+```go
+func (r *ProductRepository) GetSubThresholdProducts(userID uint) ([]database.Product, error)
 ```
 
 
@@ -5057,10 +5489,12 @@ type ProductRepositoryInterface interface {
     GetWasteThisMonth(userID uint) (int, error)
     GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
     GetProductsByHousehold(householdID uint) ([]database.Product, error)
+    GetSubThresholdProducts(userID uint) ([]database.Product, error)
     ConsumeProduct(productID, userID uint) error
     WasteProduct(productID, userID uint) error
     BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
     BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
+    GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
 }
 ```
 
@@ -5141,20 +5575,21 @@ RepositoryContainer holds all repository interfaces. Injected into the Gin conte
 
 ```go
 type RepositoryContainer struct {
-    Products         ProductRepositoryInterface
-    Users            UserRepositoryInterface
-    Households       HouseholdRepositoryInterface
-    Invitations      InvitationRepositoryInterface
-    StorageLocations StorageLocationRepositoryInterface
-    Webhooks         WebhookRepositoryInterface
-    PATs             PATRepositoryInterface
-    Recipes          RecipeRepositoryInterface
-    Savings          SavingsRepositoryInterface
-    Notifications    NotificationRepositoryInterface
-    Streaks          StreakRepositoryInterface
-    ExpiryScan       ExpiryScanRepositoryInterface
-    CalendarTokens   CalendarTokenRepositoryInterface
-    AuditLogs        AuditLogRepositoryInterface
+    Products          ProductRepositoryInterface
+    Users             UserRepositoryInterface
+    Households        HouseholdRepositoryInterface
+    Invitations       InvitationRepositoryInterface
+    StorageLocations  StorageLocationRepositoryInterface
+    Webhooks          WebhookRepositoryInterface
+    PATs              PATRepositoryInterface
+    Recipes           RecipeRepositoryInterface
+    Savings           SavingsRepositoryInterface
+    Notifications     NotificationRepositoryInterface
+    Streaks           StreakRepositoryInterface
+    ExpiryScan        ExpiryScanRepositoryInterface
+    CalendarTokens    CalendarTokenRepositoryInterface
+    AuditLogs         AuditLogRepositoryInterface
+    ShoppingListItems ShoppingListItemRepository
 }
 ```
 
@@ -5251,6 +5686,96 @@ const (
 
 ```go
 func SearchParameterEnumFromString(str string) SearchParameterEnum
+```
+
+
+
+<a name="ShoppingListItemRepository"></a>
+## type ShoppingListItemRepository
+
+
+
+```go
+type ShoppingListItemRepository interface {
+    Create(item *database.ShoppingListItem) error
+    GetByID(id, householdID uint) (*database.ShoppingListItem, error)
+    ListByHousehold(householdID uint) ([]database.ShoppingListItem, error)
+    Update(item *database.ShoppingListItem) error
+    Delete(id, householdID uint) error
+    ToggleChecked(id, householdID uint) error
+}
+```
+
+<a name="ShoppingListItemRepositoryImpl"></a>
+## type ShoppingListItemRepositoryImpl
+
+
+
+```go
+type ShoppingListItemRepositoryImpl struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewShoppingListItemRepository"></a>
+### func NewShoppingListItemRepository
+
+```go
+func NewShoppingListItemRepository(db *gorm.DB) *ShoppingListItemRepositoryImpl
+```
+
+
+
+<a name="ShoppingListItemRepositoryImpl.Create"></a>
+### func \(\*ShoppingListItemRepositoryImpl\) Create
+
+```go
+func (r *ShoppingListItemRepositoryImpl) Create(item *database.ShoppingListItem) error
+```
+
+
+
+<a name="ShoppingListItemRepositoryImpl.Delete"></a>
+### func \(\*ShoppingListItemRepositoryImpl\) Delete
+
+```go
+func (r *ShoppingListItemRepositoryImpl) Delete(id, householdID uint) error
+```
+
+
+
+<a name="ShoppingListItemRepositoryImpl.GetByID"></a>
+### func \(\*ShoppingListItemRepositoryImpl\) GetByID
+
+```go
+func (r *ShoppingListItemRepositoryImpl) GetByID(id, householdID uint) (*database.ShoppingListItem, error)
+```
+
+
+
+<a name="ShoppingListItemRepositoryImpl.ListByHousehold"></a>
+### func \(\*ShoppingListItemRepositoryImpl\) ListByHousehold
+
+```go
+func (r *ShoppingListItemRepositoryImpl) ListByHousehold(householdID uint) ([]database.ShoppingListItem, error)
+```
+
+
+
+<a name="ShoppingListItemRepositoryImpl.ToggleChecked"></a>
+### func \(\*ShoppingListItemRepositoryImpl\) ToggleChecked
+
+```go
+func (r *ShoppingListItemRepositoryImpl) ToggleChecked(id, householdID uint) error
+```
+
+
+
+<a name="ShoppingListItemRepositoryImpl.Update"></a>
+### func \(\*ShoppingListItemRepositoryImpl\) Update
+
+```go
+func (r *ShoppingListItemRepositoryImpl) Update(item *database.ShoppingListItem) error
 ```
 
 
@@ -6265,6 +6790,7 @@ import "codeberg.org/isotop7/proviant/models/authentication"
 
 ## Index
 
+- [Constants](<#constants>)
 - [type CalendarToken](<#CalendarToken>)
 - [type Login](<#Login>)
   - [func \(login \*Login\) IsValid\(\) error](<#Login.IsValid>)
@@ -6287,6 +6813,18 @@ import "codeberg.org/isotop7/proviant/models/authentication"
   - [func \(user \*User\) IsValid\(skipPassword bool\) error](<#User.IsValid>)
   - [func \(user \*User\) IsValidWithValidator\(skipPassword bool, validator \*PasswordValidator\) error](<#User.IsValidWithValidator>)
 
+
+## Constants
+
+<a name="MailDigestFrequencyDisabled"></a>NotificationPreferences contains user\-specific notification settings
+
+```go
+const (
+    MailDigestFrequencyDisabled = "disabled"
+    MailDigestFrequencyDaily    = "daily"
+    MailDigestFrequencyWeekly   = "weekly"
+)
+```
 
 <a name="CalendarToken"></a>
 ## type CalendarToken
@@ -6335,7 +6873,7 @@ IsValidWithValidator checks if the given login instance is valid using a custom 
 <a name="NotificationPreferences"></a>
 ## type NotificationPreferences
 
-NotificationPreferences contains user\-specific notification settings
+
 
 ```go
 type NotificationPreferences struct {
@@ -6353,6 +6891,9 @@ type NotificationPreferences struct {
     TelegramBotUsername       string `json:"-"`
     TelegramLinked            bool   `json:"telegramLinked" gorm:"-"`
     TelegramBotConfigured     bool   `json:"telegramBotConfigured" gorm:"-"`
+    WebPushEnabled            bool   `json:"webPushEnabled" gorm:"column:web_push_enabled;default:false"`
+    WebPushSubscriptionJSON   string `json:"-" gorm:"column:web_push_subscription_json;type:text"`
+    MailDigestFrequency       string `json:"mailDigestFrequency" gorm:"column:mail_digest_frequency;default:'disabled'"`
 }
 ```
 
@@ -6549,12 +7090,14 @@ configuration defines structs and methods for proviants configuration and specif
 ## Index
 
 - [type AuthenticationConfiguration](<#AuthenticationConfiguration>)
+- [type CalendarConfiguration](<#CalendarConfiguration>)
 - [type CorsConfiguration](<#CorsConfiguration>)
 - [type DatabaseConfiguration](<#DatabaseConfiguration>)
 - [type DatabaseMariaDBConfiguration](<#DatabaseMariaDBConfiguration>)
 - [type DatabaseSQLiteConfiguration](<#DatabaseSQLiteConfiguration>)
 - [type ExpiryConfiguration](<#ExpiryConfiguration>)
 - [type LoggingConfiguration](<#LoggingConfiguration>)
+- [type MailDigestConfiguration](<#MailDigestConfiguration>)
 - [type MonthlyWasteReportConfiguration](<#MonthlyWasteReportConfiguration>)
 - [type NotificationConfiguration](<#NotificationConfiguration>)
 - [type NtfyConfiguration](<#NtfyConfiguration>)
@@ -6591,6 +7134,18 @@ type AuthenticationConfiguration struct {
     PasswordRequireSpecial   bool   `mapstructure:"password_require_special"`
     PasswordCheckBreached    bool   `mapstructure:"password_check_breached"`
     SkipEmailVerification    bool   `mapstructure:"skip_email_verification"`
+}
+```
+
+<a name="CalendarConfiguration"></a>
+## type CalendarConfiguration
+
+CalendarConfiguration contains settings for calendar token expiry and warnings.
+
+```go
+type CalendarConfiguration struct {
+    TokenExpiryDays  int `mapstructure:"tokenExpiryDays"`  // days until calendar token expires, default 365
+    ExpiringSoonDays int `mapstructure:"expiringSoonDays"` // days before expiry to show warning, default 30
 }
 ```
 
@@ -6671,6 +7226,18 @@ type LoggingConfiguration struct {
 }
 ```
 
+<a name="MailDigestConfiguration"></a>
+## type MailDigestConfiguration
+
+MailDigestConfiguration controls when the expiry digest email is sent.
+
+```go
+type MailDigestConfiguration struct {
+    Enabled     bool
+    DefaultTime string `mapstructure:"defaultTime"` // "08:00"
+}
+```
+
 <a name="MonthlyWasteReportConfiguration"></a>
 ## type MonthlyWasteReportConfiguration
 
@@ -6696,6 +7263,7 @@ type NotificationConfiguration struct {
     Ntfy               NtfyConfiguration
     MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
     Telegram           TelegramConfiguration           `mapstructure:"telegram"`
+    MailDigest         MailDigestConfiguration         `mapstructure:"mailDigest"`
 }
 ```
 
@@ -6753,6 +7321,7 @@ ProviantConfiguration is the configuration wrapper struct
 type ProviantConfiguration struct {
     Database      DatabaseConfiguration
     Server        ServerConfiguration
+    Calendar      CalendarConfiguration `mapstructure:"calendar"`
     Logging       LoggingConfiguration
     Notification  NotificationConfiguration
     OpenFoodFacts OpenFoodFactsConfiguration
@@ -6874,17 +7443,16 @@ ServerConfiguration contains all properties regarding the proviant server
 
 ```go
 type ServerConfiguration struct {
-    Port                    int
-    Authentication          AuthenticationConfiguration
-    CORS                    CorsConfiguration
-    BaseURL                 string
-    SecurityHeaders         SecurityHeadersConfiguration
-    RateLimit               RateLimitConfiguration `mapstructure:"rateLimit"`
-    TrustedProxies          []string               `mapstructure:"trustedProxies"`
-    MaxUploadSizeMB         int                    `mapstructure:"maxUploadSizeMB"`
-    Debug                   bool                   `mapstructure:"debug"`
-    DemoMode                bool                   `mapstructure:"demoMode"`
-    CalendarTokenExpiryDays int                    `mapstructure:"calendarTokenExpiryDays"` // days until calendar token expires, default 365
+    Port            int
+    Authentication  AuthenticationConfiguration
+    CORS            CorsConfiguration
+    BaseURL         string
+    SecurityHeaders SecurityHeadersConfiguration
+    RateLimit       RateLimitConfiguration `mapstructure:"rateLimit"`
+    TrustedProxies  []string               `mapstructure:"trustedProxies"`
+    MaxUploadSizeMB int                    `mapstructure:"maxUploadSizeMB"`
+    Debug           bool                   `mapstructure:"debug"`
+    DemoMode        bool                   `mapstructure:"demoMode"`
 }
 ```
 
@@ -6921,6 +7489,7 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type HouseholdApplication](<#HouseholdApplication>)
 - [type HouseholdInvitation](<#HouseholdInvitation>)
 - [type HouseholdWithMemberCount](<#HouseholdWithMemberCount>)
+- [type MailDigestUnsubscribeToken](<#MailDigestUnsubscribeToken>)
 - [type OnboardingState](<#OnboardingState>)
 - [type OpenFoodFactsCache](<#OpenFoodFactsCache>)
 - [type Product](<#Product>)
@@ -6931,9 +7500,11 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type RecipeCache](<#RecipeCache>)
   - [func \(r \*RecipeCache\) IsExpired\(\) bool](<#RecipeCache.IsExpired>)
 - [type SavingsRecord](<#SavingsRecord>)
+- [type ShoppingListItem](<#ShoppingListItem>)
 - [type StorageLocation](<#StorageLocation>)
 - [type Timestamp](<#Timestamp>)
 - [type WasteStreak](<#WasteStreak>)
+- [type WebPushConfig](<#WebPushConfig>)
 - [type Webhook](<#Webhook>)
 - [type WebhookDeliveryLog](<#WebhookDeliveryLog>)
 
@@ -7151,6 +7722,20 @@ type HouseholdWithMemberCount struct {
 }
 ```
 
+<a name="MailDigestUnsubscribeToken"></a>
+## type MailDigestUnsubscribeToken
+
+
+
+```go
+type MailDigestUnsubscribeToken struct {
+    gorm.Model
+    MailDigestToken string    `gorm:"uniqueIndex, not null"`
+    UserID          uint      `gorm:"index, not null"`
+    CreatedAt       time.Time `json:"createdAt"`
+}
+```
+
 <a name="OnboardingState"></a>
 ## type OnboardingState
 
@@ -7193,25 +7778,27 @@ Product is the database model of a product
 ```go
 type Product struct {
     gorm.Model
-    Barcode           string           `gorm:"index:idx_products_barcode_household,priority:1" json:"barcode"`
-    ProductName       string           `json:"productName"`
-    Categories        string           `json:"categories"`
-    Countries         string           `json:"countries"`
-    ImageURL          string           `json:"imageUrl"`
-    ExpireAt          time.Time        `gorm:"index" json:"expireAt"`
-    ScannedAt         time.Time        `json:"scannedAt"`
-    NotifiedAt        time.Time        `json:"notifiedAt"`
-    DeletedAt         gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
-    HouseholdID       uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;not null" json:"-"`
-    Household         Household        `json:"-"`
-    Amount            int              `json:"amount"`
-    Unit              string           `json:"unit"`
-    StorageLocationID *uint            `gorm:"index"                        json:"storageLocationId"`
-    StorageLocation   *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
-    PriceOverride     *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
-    CO2KgPerKg        *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`
-    RemovalReason     string           `gorm:"default:''"                   json:"removalReason"`
-    StorageHint       string           `gorm:"-"                            json:"-"`
+    Barcode              string           `gorm:"index:idx_products_barcode_household,priority:1" json:"barcode"`
+    ProductName          string           `json:"productName"`
+    Categories           string           `json:"categories"`
+    Countries            string           `json:"countries"`
+    ImageURL             string           `json:"imageUrl"`
+    ExpireAt             time.Time        `gorm:"index" json:"expireAt"`
+    ScannedAt            time.Time        `json:"scannedAt"`
+    NotifiedAt           time.Time        `json:"notifiedAt"`
+    DeletedAt            gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
+    HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;not null" json:"-"`
+    Household            Household        `json:"-"`
+    Amount               int              `json:"amount"`
+    Unit                 string           `json:"unit"`
+    StorageLocationID    *uint            `gorm:"index"                        json:"storageLocationId"`
+    StorageLocation      *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
+    PriceOverride        *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
+    CO2KgPerKg           *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`
+    RemovalReason        string           `gorm:"default:''"                   json:"removalReason"`
+    StorageHint          string           `gorm:"-"                            json:"-"`
+    NotificationLeadDays *int             `gorm:"default:null"                 json:"notificationLeadDays,omitempty"`
+    MinStockAmount       int              `gorm:"default:0"                   json:"minStockAmount"`
 }
 ```
 
@@ -7262,15 +7849,17 @@ ProductDTOPatch is a simplified DTO only containing the patchable elements
 
 ```go
 type ProductDTOPatch struct {
-    ID                uint      `json:"ID"`
-    ProductName       string    `json:"productName"`
-    Categories        string    `json:"categories"`
-    Countries         string    `json:"countries"`
-    ImageURL          string    `json:"imageUrl"`
-    ExpireAt          time.Time `json:"expireAt"`
-    Amount            int       `json:"amount"`
-    Unit              string    `json:"unit"`
-    StorageLocationID *uint     `json:"storageLocationId"`
+    ID                   uint      `json:"ID"`
+    ProductName          string    `json:"productName"`
+    Categories           string    `json:"categories"`
+    Countries            string    `json:"countries"`
+    ImageURL             string    `json:"imageUrl"`
+    ExpireAt             time.Time `json:"expireAt"`
+    Amount               int       `json:"amount"`
+    Unit                 string    `json:"unit"`
+    StorageLocationID    *uint     `json:"storageLocationId"`
+    NotificationLeadDays *int      `json:"notificationLeadDays,omitempty"`
+    MinStockAmount       int       `json:"minStockAmount"`
 }
 ```
 
@@ -7317,6 +7906,26 @@ type SavingsRecord struct {
 }
 ```
 
+<a name="ShoppingListItem"></a>
+## type ShoppingListItem
+
+ShoppingListItem represents a user\-created shopping list entry.
+
+```go
+type ShoppingListItem struct {
+    gorm.Model
+    HouseholdID uint   `gorm:"index, not null"`
+    ProductID   *uint  `gorm:"index"`
+    Name        string `json:"name"`
+    Category    string `json:"category"`
+    Quantity    int    `json:"quantity"`
+    Unit        string `json:"unit"`
+    Checked     bool   `gorm:"default:false" json:"checked"`
+    Notes       string `json:"notes"`
+    CreatedBy   uint   `gorm:"not null;default:0" json:"createdBy"`
+}
+```
+
 <a name="StorageLocation"></a>
 ## type StorageLocation
 
@@ -7357,6 +7966,21 @@ type WasteStreak struct {
     LongestStreak   int  `gorm:"default:0"`
     LastCheckedDate time.Time
     LastWastedDate  *time.Time
+}
+```
+
+<a name="WebPushConfig"></a>
+## type WebPushConfig
+
+
+
+```go
+type WebPushConfig struct {
+    ID         uint   `gorm:"primaryKey"`
+    PublicKey  string `gorm:"not null"`
+    PrivateKey string `gorm:"not null"`
+    CreatedAt  time.Time
+    UpdatedAt  time.Time
 }
 ```
 
@@ -7517,11 +8141,15 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockNotificationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#MockNotificationRepository.AcceptInvitation>)
   - [func \(m \*MockNotificationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#MockNotificationRepository.CancelInvitation>)
   - [func \(m \*MockNotificationRepository\) CreateInvitation\(householdID, inviterID uint, email string\) \(dbModel.HouseholdInvitation, error\)](<#MockNotificationRepository.CreateInvitation>)
+  - [func \(m \*MockNotificationRepository\) DeleteMailDigestUnsubscribeToken\(token string\) error](<#MockNotificationRepository.DeleteMailDigestUnsubscribeToken>)
+  - [func \(m \*MockNotificationRepository\) DeleteWebPushSubscription\(userID uint\) error](<#MockNotificationRepository.DeleteWebPushSubscription>)
   - [func \(m \*MockNotificationRepository\) FindUserByTelegramLinkToken\(token string\) \(authentication.User, error\)](<#MockNotificationRepository.FindUserByTelegramLinkToken>)
+  - [func \(m \*MockNotificationRepository\) GenerateMailDigestUnsubscribeToken\(userID uint\) \(string, error\)](<#MockNotificationRepository.GenerateMailDigestUnsubscribeToken>)
   - [func \(m \*MockNotificationRepository\) GetAllUsersWithTelegramBotToken\(\) \(\[\]authentication.User, error\)](<#MockNotificationRepository.GetAllUsersWithTelegramBotToken>)
   - [func \(m \*MockNotificationRepository\) GetHouseholdByID\(householdID uint\) \(dbModel.Household, error\)](<#MockNotificationRepository.GetHouseholdByID>)
   - [func \(m \*MockNotificationRepository\) GetHouseholdMembersMailAddressesByID\(householdID uint\) \(\[\]string, error\)](<#MockNotificationRepository.GetHouseholdMembersMailAddressesByID>)
   - [func \(m \*MockNotificationRepository\) GetHouseholdMembersNotificationPreferences\(householdID uint\) \(\[\]models.NotificationRecipientInfo, error\)](<#MockNotificationRepository.GetHouseholdMembersNotificationPreferences>)
+  - [func \(m \*MockNotificationRepository\) GetHouseholdsWithMailDigestEnabled\(\) \(\[\]models.HouseholdMailDigestTarget, error\)](<#MockNotificationRepository.GetHouseholdsWithMailDigestEnabled>)
   - [func \(m \*MockNotificationRepository\) GetHouseholdsWithMonthlyWasteReportEnabled\(\) \(\[\]models.HouseholdReportTarget, error\)](<#MockNotificationRepository.GetHouseholdsWithMonthlyWasteReportEnabled>)
   - [func \(m \*MockNotificationRepository\) GetInvitationByToken\(token string\) \(dbModel.HouseholdInvitation, error\)](<#MockNotificationRepository.GetInvitationByToken>)
   - [func \(m \*MockNotificationRepository\) GetInvitationsForHousehold\(householdID, inviterID uint\) \(\[\]dbModel.HouseholdInvitation, error\)](<#MockNotificationRepository.GetInvitationsForHousehold>)
@@ -7531,12 +8159,15 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockNotificationRepository\) GetProductsExpiredAndNotificationPending\(sleepInterval time.Duration, maxLookAheadDays int\) \(\[\]dbModel.Product, error\)](<#MockNotificationRepository.GetProductsExpiredAndNotificationPending>)
   - [func \(m \*MockNotificationRepository\) GetPublicHouseholds\(excludeHouseholdID uint\) \(\[\]dbModel.HouseholdWithMemberCount, error\)](<#MockNotificationRepository.GetPublicHouseholds>)
   - [func \(m \*MockNotificationRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#MockNotificationRepository.GetUserByID>)
+  - [func \(m \*MockNotificationRepository\) GetUserByMailDigestUnsubscribeToken\(token string\) \(authentication.User, error\)](<#MockNotificationRepository.GetUserByMailDigestUnsubscribeToken>)
+  - [func \(m \*MockNotificationRepository\) GetVAPIDKeys\(\) \(publicKey, privateKey string, err error\)](<#MockNotificationRepository.GetVAPIDKeys>)
   - [func \(m \*MockNotificationRepository\) GetWasteStatsForHousehold\(householdID uint, month time.Time\) \(models.WasteStats, error\)](<#MockNotificationRepository.GetWasteStatsForHousehold>)
   - [func \(m \*MockNotificationRepository\) MarkHouseholdStepDone\(userID uint\) error](<#MockNotificationRepository.MarkHouseholdStepDone>)
   - [func \(m \*MockNotificationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#MockNotificationRepository.MarkInvitationSendFailed>)
   - [func \(m \*MockNotificationRepository\) MarkInvitationSent\(invitationID uint\) error](<#MockNotificationRepository.MarkInvitationSent>)
   - [func \(m \*MockNotificationRepository\) MarkNotificationsSetup\(userID uint\) error](<#MockNotificationRepository.MarkNotificationsSetup>)
   - [func \(m \*MockNotificationRepository\) MarkOnboardingComplete\(userID uint\) error](<#MockNotificationRepository.MarkOnboardingComplete>)
+  - [func \(m \*MockNotificationRepository\) SaveWebPushSubscription\(userID uint, subscriptionJSON string\) error](<#MockNotificationRepository.SaveWebPushSubscription>)
   - [func \(m \*MockNotificationRepository\) SetProductNotifiedAt\(productID uint\) error](<#MockNotificationRepository.SetProductNotifiedAt>)
   - [func \(m \*MockNotificationRepository\) SetTelegramBotUsername\(userID uint, username string\) error](<#MockNotificationRepository.SetTelegramBotUsername>)
   - [func \(m \*MockNotificationRepository\) SetTelegramChatID\(userID uint, chatID string\) error](<#MockNotificationRepository.SetTelegramChatID>)
@@ -7562,6 +8193,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#MockProductRepository.GetExpiredProductsCount>)
   - [func \(m \*MockProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetExpiringInDays>)
   - [func \(m \*MockProductRepository\) GetExpiringProductsByHousehold\(householdID uint, daysAhead int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetExpiringProductsByHousehold>)
+  - [func \(m \*MockProductRepository\) GetExpiringProductsForMailDigest\(householdID uint\) \(database.MailDigestProductGroup, error\)](<#MockProductRepository.GetExpiringProductsForMailDigest>)
   - [func \(m \*MockProductRepository\) GetExpiringSoonCount\(userID uint, days int\) \(int, error\)](<#MockProductRepository.GetExpiringSoonCount>)
   - [func \(m \*MockProductRepository\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#MockProductRepository.GetExpiringSoonProducts>)
   - [func \(m \*MockProductRepository\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#MockProductRepository.GetExpiryTrend>)
@@ -7575,6 +8207,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#MockProductRepository.GetProductCategoryBreakdown>)
   - [func \(m \*MockProductRepository\) GetProductsByHousehold\(householdID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetProductsByHousehold>)
   - [func \(m \*MockProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*dbModel.Product, error\)](<#MockProductRepository.GetProductsExpired>)
+  - [func \(m \*MockProductRepository\) GetSubThresholdProducts\(userID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetSubThresholdProducts>)
   - [func \(m \*MockProductRepository\) GetTopArchivedProducts\(userID uint, limit int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetTopArchivedProducts>)
   - [func \(m \*MockProductRepository\) GetUserActiveProductsFiltered\(userID uint, from, to \*time.Time\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserActiveProductsFiltered>)
   - [func \(m \*MockProductRepository\) GetUserArchivedProductsBulk\(userID uint, limit int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserArchivedProductsBulk>)
@@ -8071,11 +8704,38 @@ func (m *MockNotificationRepository) CreateInvitation(householdID, inviterID uin
 
 
 
+<a name="MockNotificationRepository.DeleteMailDigestUnsubscribeToken"></a>
+### func \(\*MockNotificationRepository\) DeleteMailDigestUnsubscribeToken
+
+```go
+func (m *MockNotificationRepository) DeleteMailDigestUnsubscribeToken(token string) error
+```
+
+
+
+<a name="MockNotificationRepository.DeleteWebPushSubscription"></a>
+### func \(\*MockNotificationRepository\) DeleteWebPushSubscription
+
+```go
+func (m *MockNotificationRepository) DeleteWebPushSubscription(userID uint) error
+```
+
+
+
 <a name="MockNotificationRepository.FindUserByTelegramLinkToken"></a>
 ### func \(\*MockNotificationRepository\) FindUserByTelegramLinkToken
 
 ```go
 func (m *MockNotificationRepository) FindUserByTelegramLinkToken(token string) (authentication.User, error)
+```
+
+
+
+<a name="MockNotificationRepository.GenerateMailDigestUnsubscribeToken"></a>
+### func \(\*MockNotificationRepository\) GenerateMailDigestUnsubscribeToken
+
+```go
+func (m *MockNotificationRepository) GenerateMailDigestUnsubscribeToken(userID uint) (string, error)
 ```
 
 
@@ -8112,6 +8772,15 @@ func (m *MockNotificationRepository) GetHouseholdMembersMailAddressesByID(househ
 
 ```go
 func (m *MockNotificationRepository) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetHouseholdsWithMailDigestEnabled"></a>
+### func \(\*MockNotificationRepository\) GetHouseholdsWithMailDigestEnabled
+
+```go
+func (m *MockNotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error)
 ```
 
 
@@ -8197,6 +8866,24 @@ func (m *MockNotificationRepository) GetUserByID(userID uint) (authentication.Us
 
 
 
+<a name="MockNotificationRepository.GetUserByMailDigestUnsubscribeToken"></a>
+### func \(\*MockNotificationRepository\) GetUserByMailDigestUnsubscribeToken
+
+```go
+func (m *MockNotificationRepository) GetUserByMailDigestUnsubscribeToken(token string) (authentication.User, error)
+```
+
+
+
+<a name="MockNotificationRepository.GetVAPIDKeys"></a>
+### func \(\*MockNotificationRepository\) GetVAPIDKeys
+
+```go
+func (m *MockNotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, err error)
+```
+
+
+
 <a name="MockNotificationRepository.GetWasteStatsForHousehold"></a>
 ### func \(\*MockNotificationRepository\) GetWasteStatsForHousehold
 
@@ -8247,6 +8934,15 @@ func (m *MockNotificationRepository) MarkNotificationsSetup(userID uint) error
 
 ```go
 func (m *MockNotificationRepository) MarkOnboardingComplete(userID uint) error
+```
+
+
+
+<a name="MockNotificationRepository.SaveWebPushSubscription"></a>
+### func \(\*MockNotificationRepository\) SaveWebPushSubscription
+
+```go
+func (m *MockNotificationRepository) SaveWebPushSubscription(userID uint, subscriptionJSON string) error
 ```
 
 
@@ -8493,6 +9189,15 @@ func (m *MockProductRepository) GetExpiringProductsByHousehold(householdID uint,
 
 
 
+<a name="MockProductRepository.GetExpiringProductsForMailDigest"></a>
+### func \(\*MockProductRepository\) GetExpiringProductsForMailDigest
+
+```go
+func (m *MockProductRepository) GetExpiringProductsForMailDigest(householdID uint) (database.MailDigestProductGroup, error)
+```
+
+
+
 <a name="MockProductRepository.GetExpiringSoonCount"></a>
 ### func \(\*MockProductRepository\) GetExpiringSoonCount
 
@@ -8606,6 +9311,15 @@ func (m *MockProductRepository) GetProductsByHousehold(householdID uint) ([]dbMo
 
 ```go
 func (m *MockProductRepository) GetProductsExpired(userID uint) ([]*dbModel.Product, error)
+```
+
+
+
+<a name="MockProductRepository.GetSubThresholdProducts"></a>
+### func \(\*MockProductRepository\) GetSubThresholdProducts
+
+```go
+func (m *MockProductRepository) GetSubThresholdProducts(userID uint) ([]dbModel.Product, error)
 ```
 
 
@@ -9432,7 +10146,7 @@ static implements "constants" used in proviant
 ```go
 const (
     // Version is the current proviant version
-    Version = "v0.14.0"
+    Version = "v0.16.0"
 
     // TokenRealm is the realm of tokens
     TokenRealm = "proviant"

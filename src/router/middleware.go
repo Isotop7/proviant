@@ -226,7 +226,40 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
 	return productRepo.UserHasProductAccess(user.ID, productID)
 }
 
-// isTokenRevoked checks if the current token's JTI is in the revoked tokens list
+func AuthorizatorShoppingListItem(data any, ctx *gin.Context) bool {
+	if isTokenRevoked(ctx) {
+		return false
+	}
+
+	user, ok := data.(*authentication.User)
+	if !ok {
+		return false
+	}
+
+	idParam := ctx.Param("id")
+	itemID, err := strconv.Atoi(idParam)
+	if err != nil || itemID < 0 {
+		return false
+	}
+
+	reposVal, exists := ctx.Get(util.ContextKeyRepos)
+	if !exists {
+		return false
+	}
+	repos, ok := reposVal.(*database.RepositoryContainer)
+	if !ok {
+		return false
+	}
+
+	householdID, err := repos.Users.GetUserHouseholdByID(user.ID)
+	if err != nil {
+		return false
+	}
+
+	_, err = repos.ShoppingListItems.GetByID(uint(itemID), householdID)
+	return err == nil
+}
+
 func isTokenRevoked(ctx *gin.Context) bool {
 	claims := jwt.ExtractClaims(ctx)
 	jti, exists := claims[static.TokenJTIKey]

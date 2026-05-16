@@ -317,6 +317,11 @@
             </div>
             {{ end }}
         </div>
+        <div class="col-actions">
+            <button type="button" class="btn-add-to-shopping-list" data-product-id="{{ .Model.ID }}" title="Add to shopping list">
+                <i class="bi bi-cart-plus"></i>
+            </button>
+        </div>
     </div>
     {{ end }}
 </div>

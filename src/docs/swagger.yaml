@@ -247,6 +247,8 @@ definitions:
     properties:
       emailEnabled:
         type: boolean
+      mailDigestFrequency:
+        type: string
       monthlyWasteReportEnabled:
         type: boolean
       notificationThresholdDays:
@@ -266,6 +268,8 @@ definitions:
       telegramEnabled:
         type: boolean
       telegramLinked:
+        type: boolean
+      webPushEnabled:
         type: boolean
     type: object
   authentication.Signup:
@@ -437,6 +441,10 @@ definitions:
         type: integer
       imageUrl:
         type: string
+      minStockAmount:
+        type: integer
+      notificationLeadDays:
+        type: integer
       notifiedAt:
         type: string
       priceOverride:
@@ -2971,6 +2979,55 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Recipes page
+      tags:
+      - web
+  /web/shopping-list:
+    get:
+      description: Renders the shared household shopping list with custom items and
+        import banner
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Shopping List page
+      tags:
+      - web
+  /web/unsubscribe:
+    get:
+      description: Handles unsubscribe token and disables digest for user
+      parameters:
+      - description: Unsubscribe token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Unsubscribe from email digests
       tags:
       - web
   /web/user:

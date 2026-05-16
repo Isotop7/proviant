@@ -3576,6 +3576,79 @@ const docTemplate = `{
                 }
             }
         },
+        "/web/shopping-list": {
+            "get": {
+                "description": "Renders the shared household shopping list with custom items and import banner",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Shopping List page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/unsubscribe": {
+            "get": {
+                "description": "Handles unsubscribe token and disables digest for user",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Unsubscribe from email digests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unsubscribe token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/web/user": {
             "get": {
                 "description": "Renders the user page showing user info",
@@ -4049,6 +4122,9 @@ const docTemplate = `{
                 "emailEnabled": {
                     "type": "boolean"
                 },
+                "mailDigestFrequency": {
+                    "type": "string"
+                },
                 "monthlyWasteReportEnabled": {
                     "type": "boolean"
                 },
@@ -4077,6 +4153,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "telegramLinked": {
+                    "type": "boolean"
+                },
+                "webPushEnabled": {
                     "type": "boolean"
                 }
             }
@@ -4336,6 +4415,12 @@ const docTemplate = `{
                 },
                 "imageUrl": {
                     "type": "string"
+                },
+                "minStockAmount": {
+                    "type": "integer"
+                },
+                "notificationLeadDays": {
+                    "type": "integer"
                 },
                 "notifiedAt": {
                     "type": "string"

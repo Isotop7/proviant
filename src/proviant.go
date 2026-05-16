@@ -260,6 +260,7 @@ func main() {
 		&dbModel.AuditLog{},
 		&dbModel.WebPushConfig{},
 		&dbModel.MailDigestUnsubscribeToken{},
+		&dbModel.ShoppingListItem{},
 	)
 	if migrationError != nil {
 		panic(migrationError)

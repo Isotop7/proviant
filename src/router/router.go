@@ -194,6 +194,9 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Wrap JWT middlewares with PAT support
 	jwtAPIMiddlewareWithPAT := PATMiddleware(jwtAPIMiddleware)
 	jwtAPIUserAwareMiddlewareWithPAT := PATMiddleware(jwtAPIUserAwareMiddleware)
+	jwtAPIShoppingListAwareMiddlewareWithPAT := PATMiddleware(
+		mustInitJWT(logger, proviantConfiguration, dbHandle, AuthorizatorShoppingListItem, UnauthorizedAPIFunc),
+	)
 
 	// Map routes to handlers
 	// Health routes
@@ -356,8 +359,17 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Auto shopping list routes
 	shoppingListAPI := engine.Group("/api/v1/shopping-list")
-	shoppingListAPI.Use(jwtAPIUserAwareMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
+	shoppingListAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	shoppingListAPI.GET("/auto", v1.WrapHandler(v1.GetAutoShoppingList))
+	shoppingListAPI.POST("", v1.WrapHandler(v1.CreateShoppingListItem))
+	shoppingListAPI.GET("", v1.WrapHandler(v1.ListShoppingListItems))
+	shoppingListAPI.POST("/import-auto", v1.WrapHandler(v1.ImportAutoListToShoppingList))
+
+	shoppingListItemAPI := engine.Group("/api/v1/shopping-list")
+	shoppingListItemAPI.Use(jwtAPIShoppingListAwareMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
+	shoppingListItemAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateShoppingListItem))
+	shoppingListItemAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteShoppingListItem))
+	shoppingListItemAPI.POST("/:id/toggle", v1.WrapHandler(v1.ToggleShoppingListItem))
 
 	// PWA — serve manifest and service worker at root scope (no auth required)
 	engine.GET("/manifest.json", func(ctx *gin.Context) {

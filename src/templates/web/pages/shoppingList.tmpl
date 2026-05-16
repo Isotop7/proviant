@@ -3,92 +3,106 @@
 <div class="page-header">
     <div>
         <h1 class="page-header-title">Shopping List</h1>
-        <p class="page-header-subtitle">{{ .ProductCount }} items below stock threshold</p>
+        <p class="page-header-subtitle">{{ .ItemCount }} items in your list</p>
     </div>
     <button class="btn btn-proviant-secondary d-none d-md-flex align-items-center gap-2" id="btnPrintShoppingList" type="button">
         <i class="bi bi-printer"></i> Print list
     </button>
 </div>
 
-{{ if .Products }}
-<div id="productList">
-    <div class="list-header">
-        <div class="list-checkbox-col">
-            <input type="checkbox" id="selectAll" class="list-checkbox">
+{{ if .HasAutoItems }}
+<div class="shopping-list-import-banner mb-3" id="importBanner">
+    <div class="import-banner-header" data-bs-toggle="collapse" data-bs-target="#importCollapse" aria-expanded="false">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-cart-plus"></i>
+            <span>{{ .AutoItemCount }} products below stock threshold</span>
         </div>
-        <div class="col-product">Product</div>
-        <div class="col-status">Status</div>
-        <div class="col-location">Location</div>
-        <div class="col-qty">Qty</div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-proviant-primary" id="btnImportAll">
+                Import all
+            </button>
+            <i class="bi bi-chevron-down"></i>
+        </div>
     </div>
-    <div id="productRows">
-    {{ range .Products }}
-    <div class="list-row" data-id="{{ .Model.ID }}" id="card-{{ .Model.ID }}">
-        <div class="list-checkbox-col">
-            <input type="checkbox" class="row-checkbox list-checkbox" value="{{ .Model.ID }}">
-        </div>
-        <div class="col-product">
-            <a href="/web/products/{{ .Model.ID }}/edit" class="list-thumb">
-                {{ if .ImageURL }}
-                <img src="{{ .ImageURL }}" alt="{{ .ProductName }}" class="list-thumb-img" loading="lazy">
+    <div class="collapse" id="importCollapse">
+        <div class="import-banner-body">
+            <p class="mb-2 small text-secondary-custom">These products are below their minimum stock threshold. Import them to your shopping list.</p>
+            <div class="d-flex flex-wrap gap-2">
+                {{ range .AutoItems }}
+                <span class="filter-pill">{{ .ProductName }}</span>
                 {{ end }}
-                <div class="list-thumb-fallback">
-                    <i class="bi bi-box-seam list-thumb-icon"></i>
-                </div>
-                <div class="list-status-dot status-lowstock"></div>
-            </a>
-            <div class="list-product-text">
-                <a href="/web/products/{{ .Model.ID }}/edit" class="list-product-name">
-                    {{ .ProductName }}
-                </a>
-                <div class="list-product-meta">
-                    #{{ .Model.ID }} · {{ .Barcode }}
-                </div>
-            </div>
-        </div>
-        <div class="col-status">
-            <span class="badge-status badge-lowstock">
-                <i class="bi bi-exclamation-triangle-fill"></i>
-                Low stock
-            </span>
-            <div class="small text-secondary-custom mt-1">
-                <span class="text-nowrap">{{ .Amount }}</span>
-                <span class="text-nowrap"> / </span>
-                <span class="text-nowrap">{{ .MinStockAmount }}</span>
-            </div>
-        </div>
-        <div class="col-location">
-            {{ if .StorageLocation }}{{ .StorageLocation.Name }}{{ else }}—{{ end }}
-        </div>
-        <div class="col-qty">
-            <div class="qty-stepper">
-                <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}">-</button>
-                <span id="qty-{{ .Model.ID }}">{{ .Amount }}</span>
-                <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}">+</button>
             </div>
         </div>
     </div>
-    {{ end }}
+</div>
+{{ end }}
+
+<div class="shopping-list-add-form mb-3" id="addItemForm">
+    <div class="add-item-form-inner">
+        <input type="text" class="form-control" id="inputItemName" placeholder="Item name">
+        <input type="number" class="form-control" id="inputItemQuantity" value="1" min="1" placeholder="Qty">
+        <input type="text" class="form-control" id="inputItemUnit" placeholder="Unit">
+        <button type="button" class="btn btn-proviant-primary" id="btnAddItem">
+            <i class="bi bi-plus-lg"></i>
+        </button>
     </div>
 </div>
 
-<script type="application/json" id="shoppingListData">
-[
-{{ range $i, $p := .Products }}{{ if $i }},{{ end }}
-{"id":{{ $p.Model.ID }},"name":"{{ $p.ProductName }}","amount":{{ $p.Amount }},"minAmount":{{ $p.MinStockAmount }}}
-{{ end }}
-]
-</script>
+{{ if .Items }}
+<div id="shoppingListContainer">
+    <div class="sl-list-header">
+        <div class="sl-checkbox-col">
+            <input type="checkbox" id="selectAll" class="list-checkbox">
+        </div>
+        <div class="sl-product-col">Item</div>
+        <div class="sl-qty-col">Qty</div>
+        <div class="sl-actions-col"></div>
+    </div>
+
+    {{ range $item := .ItemsSorted }}
+    <div class="sl-list-row{{ if $item.Checked }} checked{{ end }}" data-id="{{ $item.ID }}" id="item-{{ $item.ID }}">
+        <div class="sl-checkbox-col">
+            <input type="checkbox" class="item-checkbox list-checkbox"{{ if $item.Checked }} checked{{ end }} data-item-id="{{ $item.ID }}">
+        </div>
+        <div class="sl-product-col">
+            <div class="sl-item-content">
+                <span class="sl-item-name{{ if $item.Checked }} text-decoration-line-through text-secondary-custom{{ end }}">{{ $item.Name }}</span>
+            </div>
+        </div>
+        <div class="sl-qty-col">
+            <div class="qty-stepper">
+                <button type="button" data-qty-action="dec" data-item-id="{{ $item.ID }}">−</button>
+                <span id="qty-{{ $item.ID }}">{{ $item.Quantity }}</span>
+                <button type="button" data-qty-action="inc" data-item-id="{{ $item.ID }}">+</button>
+            </div>
+        </div>
+        <div class="sl-actions-col">
+            <button type="button" class="btn-icon text-secondary-custom" data-notes-toggle="{{ $item.ID }}" title="Notes">
+                <i class="bi bi-chat-left-text"></i>
+            </button>
+            <button type="button" class="btn-icon text-danger" data-delete-item="{{ $item.ID }}" title="Delete">
+                <i class="bi bi-trash3"></i>
+            </button>
+        </div>
+    </div>
+    <div class="sl-notes-row" id="notes-{{ $item.ID }}">
+        <input type="text" class="form-control form-control-sm" placeholder="Add notes..." value="{{ $item.Notes }}" data-notes-input="{{ $item.ID }}">
+    </div>
+    {{ end }}
+</div>
 {{ else }}
 <div class="text-center py-5">
     <div class="mb-4">
         <i class="bi bi-cart3 fs-1 text-secondary-custom"></i>
     </div>
     <h2 class="h4 mb-2">Your shopping list is empty</h2>
-    <p class="text-secondary-custom mb-4">All products are above their minimum stock threshold.</p>
-    <a href="/web/products" class="btn btn-proviant-primary">Browse products</a>
+    <p class="text-secondary-custom mb-4">Add items manually or import from low-stock products.</p>
 </div>
 {{ end }}
+
+<script type="application/json" id="shoppingListData">
+{{ .ItemsJSON }}
+</script>
 
 <script src="/assets/js/shoppingList.js"></script>
 

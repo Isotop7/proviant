@@ -148,6 +148,35 @@ document.addEventListener("click", function (event) {
         return;
     }
 
+    // Add to shopping list button
+    var addToListBtn = target.closest('.btn-add-to-shopping-list');
+    if (addToListBtn) {
+        event.preventDefault();
+        var productId = addToListBtn.dataset.productId;
+        var btn = addToListBtn;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+        fetch('/api/v1/shopping-list', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId: parseInt(productId, 10) })
+        }).then(function(res) {
+            return res.json();
+        }).then(function() {
+            btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+            setTimeout(function() {
+                btn.innerHTML = '<i class="bi bi-cart-plus"></i>';
+                btn.disabled = false;
+            }, 1500);
+            proviant.showFeedback('success', 'Added to shopping list');
+        }).catch(function() {
+            btn.innerHTML = '<i class="bi bi-cart-plus"></i>';
+            btn.disabled = false;
+            proviant.showFeedback('error', 'Failed to add to list');
+        });
+        return;
+    }
+
     // Show All button
     if (target.closest("#show-all-btn")) {
         event.preventDefault();
