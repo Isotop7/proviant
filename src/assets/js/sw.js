@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v76';
+const CACHE_NAME = 'proviant-v79';
 
 const PRECACHE_URLS = [
   '/manifest.json',
