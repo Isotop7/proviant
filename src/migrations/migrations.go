@@ -208,6 +208,12 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 		return err
 	}
 
+	// Backfill household roles for existing users
+	logger.Debug().Msg("Backfill household roles")
+	if err := BackfillHouseholdRoles(logger, db); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -275,5 +281,34 @@ func RenamePushNotificationColumns(logger *zerolog.Logger, db *gorm.DB) error {
 		}
 	}
 	logger.Info().Msg("Renamed push columns to web_push columns")
+	return nil
+}
+
+// BackfillHouseholdRoles sets role='admin' for household admins and role='member' for all others.
+// This migration ensures existing users get appropriate roles after the role field is added.
+func BackfillHouseholdRoles(logger *zerolog.Logger, db *gorm.DB) error {
+	result := db.Exec(`
+		UPDATE users
+		SET role = 'admin'
+		WHERE EXISTS (
+			SELECT 1 FROM households WHERE households.id = users.household_id AND households.admin_id = users.id
+		)
+	`)
+	if result.Error != nil {
+		return result.Error
+	}
+	logger.Info().Int64("admins", result.RowsAffected).Msg("Backfilled admin roles")
+
+	result = db.Exec(`
+		UPDATE users
+		SET role = 'member'
+		WHERE (role IS NULL OR role = '')
+		AND household_id IS NOT NULL AND household_id != 0
+	`)
+	if result.Error != nil {
+		return result.Error
+	}
+	logger.Info().Int64("members", result.RowsAffected).Msg("Backfilled member roles")
+
 	return nil
 }

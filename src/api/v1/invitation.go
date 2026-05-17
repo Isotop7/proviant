@@ -67,7 +67,7 @@ func CreateInvitation(ctx *gin.Context, appCtx *AppContext) {
 			if household, householdErr := appCtx.Repos.Users.GetHouseholdByID(user.HouseholdID); householdErr == nil {
 				householdName = household.Name
 			}
-			if emailErr := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL); emailErr != nil {
+			if emailErr := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL, tx); emailErr != nil {
 				return emailErr
 			}
 		}

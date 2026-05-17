@@ -25,6 +25,7 @@ type HouseholdRepositoryInterface interface {
 	CancelApplication(applicationID, applicantUserID uint) error
 	UpdateHouseholdName(householdID, adminUserID uint, name string) error
 	RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
+	SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error
 	GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
 }
 
@@ -208,7 +209,10 @@ func (r *HouseholdRepository) ApproveApplication(applicationID, adminUserID uint
 	if err != nil {
 		return err
 	}
-	if err := tx.Model(&authentication.User{}).Where(util.QueryId, application.ApplicantID).Update("household_id", application.HouseholdID).Error; err != nil {
+	if err := tx.Model(&authentication.User{}).Where(util.QueryId, application.ApplicantID).Updates(map[string]interface{}{
+		"household_id": application.HouseholdID,
+		"role":         authentication.RoleMember,
+	}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -312,6 +316,42 @@ func (r *HouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserI
 	}
 
 	return tx.Commit().Error
+}
+
+func (r *HouseholdRepository) SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error {
+	var adminUser authentication.User
+	if err := r.DB.First(&adminUser, adminUserID).Error; err != nil {
+		return err
+	}
+
+	var household database.Household
+	if err := r.DB.First(&household, adminUser.HouseholdID).Error; err != nil {
+		return err
+	}
+	if household.AdminID != adminUserID {
+		return errors.ErrNotHouseholdAdmin
+	}
+
+	var memberUser authentication.User
+	if err := r.DB.First(&memberUser, memberUserID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrMemberNotInHousehold
+		}
+		return err
+	}
+	if memberUser.HouseholdID != household.ID {
+		return errors.ErrMemberNotInHousehold
+	}
+
+	if memberUserID == adminUserID && role != authentication.RoleAdmin {
+		adminCount := int64(0)
+		r.DB.Model(&authentication.User{}).Where("household_id = ? AND role = ?", household.ID, authentication.RoleAdmin).Count(&adminCount)
+		if adminCount <= 1 {
+			return errors.ErrInsufficientRole
+		}
+	}
+
+	return r.DB.Model(&memberUser).Update("role", role).Error
 }
 
 func (r *HouseholdRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error) {

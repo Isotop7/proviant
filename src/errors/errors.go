@@ -182,6 +182,9 @@ var (
 	// ErrNotHouseholdAdmin is thrown when a user attempts an admin action on a household they do not administrate
 	ErrNotHouseholdAdmin = errors.New("user is not the admin of this household")
 
+	// ErrInsufficientRole is thrown when a user attempts an action that requires a higher role
+	ErrInsufficientRole = errors.New("insufficient role for this action")
+
 	// ErrApplicationAlreadyPending is thrown when a user already has a pending application for a household
 	ErrApplicationAlreadyPending = errors.New("a pending application for this household already exists")
 

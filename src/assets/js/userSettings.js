@@ -499,27 +499,36 @@ function handleSendInvitation() {
 
 /* ── Admin User Management ─────────────────────────────────────── */
 
-function renderAdminUserRow(user, currentUserID) {
+function renderAdminUserRow(user, currentUserID, currentUserIsAdmin, householdAdminID) {
   if (!user || !user.username) return "";
   const isSelf = user.id === currentUserID;
+  const isAdmin = user.id === householdAdminID;
+
+  const roleLabel = isAdmin ? "Admin" : (user.role === "viewer" ? "Viewer" : (user.role === "member" ? "Member" : user.role || "Member"));
+  const roleBadgeClass = isAdmin ? "bg-primary" : (user.role === "viewer" ? "bg-warning" : "bg-secondary");
+  const roleIcon = isAdmin ? "bi-shield-check" : (user.role === "viewer" ? "bi-eye" : "bi-person");
+
   return `
     <li class="list-group-item d-flex justify-content-between align-items-center" id="admin-user-${user.id}">
       <span>
         <i class="bi bi-person me-2"></i>${user.username}
         <span class="text-secondary-custom ms-1">&lt;${user.mailAddress || ""}&gt;</span>
         ${isSelf ? '<span class="badge bg-secondary ms-1">You</span>' : ""}
+        <span class="badge ${roleBadgeClass} ms-1"><i class="bi ${roleIcon} me-1"></i>${roleLabel}</span>
       </span>
-      <div class="btn-group btn-group-sm">
-        <button type="button" class="btn btn-outline-primary btn-edit-user" data-id="${user.id}" data-username="${user.username}" data-email="${user.mailAddress || ""}" title="Edit user">
-          <i class="bi bi-pencil"></i>
-        </button>
-        <button type="button" class="btn btn-outline-warning btn-reset-password" data-id="${user.id}" title="Reset password">
-          <i class="bi bi-key"></i>
-        </button>
+      <div class="d-flex align-items-center gap-2">
         ${!isSelf ? `
-        <button type="button" class="btn btn-outline-danger btn-delete-user" data-id="${user.id}" title="Delete user">
-          <i class="bi bi-trash"></i>
-        </button>` : ""}
+          <button type="button" class="btn btn-outline-primary btn-edit-user" data-id="${user.id}" data-username="${user.username}" data-email="${user.mailAddress || ""}" data-role="${user.role || 'member'}" data-is-admin="${isAdmin}" data-is-self="${isSelf}" title="Edit user">
+            <i class="bi bi-pencil"></i>
+          </button>` : ""}
+          <button type="button" class="btn btn-outline-warning btn-reset-password" data-id="${user.id}" title="Reset password">
+            <i class="bi bi-key"></i>
+          </button>
+          ${!isSelf ? `
+          <button type="button" class="btn btn-outline-danger btn-delete-user" data-id="${user.id}" title="Delete user">
+            <i class="bi bi-trash"></i>
+          </button>` : ""}
+        </div>
       </div>
     </li>
   `;
@@ -540,8 +549,9 @@ function loadAdminUsers() {
         list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">No users in household.</li>';
         return;
       }
-      const currentUserID = parseInt(document.querySelector('span.badge.bg-primary[ID]')?.textContent?.replace("#", "") || "0", 10);
-      const rendered = users.map((u) => renderAdminUserRow(u, currentUserID)).join("");
+      const currentUserID = parseInt(list.dataset.currentUserId || "0", 10) || 0;
+      const householdAdminID = parseInt(list.dataset.adminId || "0", 10) || 0;
+      const rendered = users.map((u) => renderAdminUserRow(u, currentUserID, currentUserID === householdAdminID, householdAdminID)).join("");
       if (!rendered) {
         list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">No users in household.</li>';
         return;
@@ -563,9 +573,20 @@ function handleEditUser(btn) {
   const userID = btn.dataset.id;
   const username = btn.dataset.username;
   const email = btn.dataset.email;
+  const role = btn.dataset.role;
+  const isAdmin = btn.dataset.isAdmin === 'true';
+  const isSelf = btn.dataset.isSelf === 'true';
   document.getElementById("editUserID").value = userID;
   document.getElementById("editUsername").value = username;
   document.getElementById("editMailAddress").value = email;
+  const roleSelect = document.getElementById("editUserRoleSelect");
+  roleSelect.value = role || 'member';
+  roleSelect.dataset.currentRole = role || 'member';
+  const roleRow = document.getElementById("editUserRoleRow");
+  if (roleRow) {
+    roleRow.classList.toggle('d-none', isAdmin || isSelf);
+    roleRow.dataset.isSelf = isSelf ? 'true' : 'false';
+  }
   const modalEl = document.getElementById("editUserModal");
   if (window.bootstrap) {
     const modal = new bootstrap.Modal(modalEl);
@@ -577,6 +598,9 @@ function handleSaveUserEdit() {
   const userID = document.getElementById("editUserID").value;
   const username = document.getElementById("editUsername").value.trim();
   const email = document.getElementById("editMailAddress").value.trim();
+  const newRole = document.getElementById("editUserRoleSelect").value;
+  const roleRow = document.getElementById("editUserRoleRow");
+  const isSelf = roleRow && roleRow.dataset.isSelf === 'true';
   let formValid = true;
   const usernameInput = document.getElementById("editUsername");
   const emailInput = document.getElementById("editMailAddress");
@@ -595,18 +619,49 @@ function handleSaveUserEdit() {
   }
   if (!formValid) return;
 
+  const currentRole = document.getElementById("editUserRoleSelect").dataset.currentRole || newRole;
+  if (isSelf && newRole !== 'admin' && newRole !== currentRole) {
+    proviant.showConfirm(
+      'Change Your Role',
+      `You are about to change your own role from ${currentRole} to ${newRole}. You will lose admin privileges. Continue?`,
+      function () { doSaveUserEdit(userID, username, email, newRole); },
+      'Change Role',
+      'warning'
+    );
+  } else {
+    doSaveUserEdit(userID, username, email, newRole);
+  }
+}
+
+function doSaveUserEdit(userID, username, email, newRole) {
   const btn = document.getElementById("btnSaveUserEdit");
   setButtonLoading(btn, true);
 
   proviant.updateHouseholdUser(userID, username, email).then((response) => {
-    setButtonLoading(btn, false);
     if (response.code === 200) {
-      const modalEl = document.getElementById("editUserModal");
-      if (window.bootstrap) {
-        bootstrap.Modal.getInstance(modalEl)?.hide();
+      if (newRole) {
+        proviant.updateMemberRole(userID, newRole).then((roleResponse) => {
+          setButtonLoading(btn, false);
+          if (roleResponse.code === 200) {
+            const modalEl = document.getElementById("editUserModal");
+            if (window.bootstrap) {
+              bootstrap.Modal.getInstance(modalEl)?.hide();
+            }
+            loadAdminUsers();
+          } else {
+            proviant.showFeedback('error', 'Error', `User updated but role change failed: ${roleResponse.message}`);
+          }
+        });
+      } else {
+        setButtonLoading(btn, false);
+        const modalEl = document.getElementById("editUserModal");
+        if (window.bootstrap) {
+          bootstrap.Modal.getInstance(modalEl)?.hide();
+        }
+        loadAdminUsers();
       }
-      loadAdminUsers();
     } else {
+      setButtonLoading(btn, false);
       proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
     }
   });
@@ -1451,6 +1506,7 @@ document.addEventListener("change", function (event) {
     toggleWebPushSettings();
     handleWebPushToggle();
   }
+
 });
 
 /* ── Auto-load admin users on page load ─────────────────────────── */

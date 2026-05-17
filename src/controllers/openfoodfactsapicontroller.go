@@ -70,9 +70,18 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 			}
 		}()
 
+		// Check for HTTP errors before parsing
+		if resp.StatusCode >= 400 {
+			offacntrl.Logger.Warn().Msgf("OpenFoodFacts API error: status %d, body: %s", resp.StatusCode, string(body))
+			queryChannel <- false
+			return
+		}
+
 		// Parse the response and populate the dataset struct
 		if err := json.Unmarshal(body, &dataset); err != nil {
 			offacntrl.Logger.Error().Msgf("Error decoding response: %s", err)
+			queryChannel <- false
+			return
 		}
 		queryChannel <- true
 	}()

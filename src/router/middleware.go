@@ -5,6 +5,7 @@ import (
 	"errors"
 	"html/template"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -30,8 +31,11 @@ const MsgInvalidCredentials = "Invalid credentials"
 var errEmailNotVerified = errors.New("email not verified")
 
 func RequireHouseholdAdmin() gin.HandlerFunc {
+	return RequireHouseholdRole(authentication.RoleAdmin)
+}
+
+func RequireHouseholdRole(roles ...string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 		dbHandle, _ := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 
 		userIDVal, exists := ctx.Get(util.ContextKeyUserID)
@@ -49,19 +53,15 @@ func RequireHouseholdAdmin() gin.HandlerFunc {
 			ctx.Abort()
 			return
 		}
-		household, err := userRepo.GetHouseholdByID(user.HouseholdID)
-		if err != nil {
-			logger.Error().Msgf("Error fetching household: %s", err)
-			api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
+
+		hasRole := slices.Contains(roles, user.Role)
+		if !hasRole {
+			api.RespondError(ctx, http.StatusForbidden, apperrors.ErrInsufficientRole)
 			ctx.Abort()
 			return
 		}
-		if household.AdminID != userID {
-			api.RespondError(ctx, http.StatusForbidden, apperrors.ErrNotHouseholdAdmin)
-			ctx.Abort()
-			return
-		}
-		ctx.Set(util.ContextKeyHouseholdID, household.ID)
+
+		ctx.Set(util.ContextKeyHouseholdID, user.HouseholdID)
 		ctx.Next()
 	}
 }

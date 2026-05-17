@@ -375,6 +375,12 @@ proviant.resetHouseholdUserPassword = async function (userID) {
   return { code: res.status, message: body.message };
 };
 
+proviant.updateMemberRole = async function (userID, role) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/members/${userID}/role`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
 /* ── Invitation API ──────────────────────────────────────────────────────────── */
 proviant.createInvitation = async function (email) {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });

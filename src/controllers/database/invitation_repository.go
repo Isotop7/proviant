@@ -22,6 +22,7 @@ type InvitationRepositoryInterface interface {
 	CancelInvitation(invitationID, userID uint) error
 	GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
 	MarkInvitationSent(invitationID uint) error
+	MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
 	MarkInvitationSendFailed(invitationID uint) error
 	MarkInvitationExpired(invitationID uint) error
 }
@@ -162,7 +163,10 @@ func (r *InvitationRepository) AcceptInvitation(token, email string, userID uint
 	}
 
 	tx := r.DB.Begin()
-	if err := tx.Model(&authentication.User{}).Where(util.QueryId, userID).Update("household_id", invitation.HouseholdID).Error; err != nil {
+	if err := tx.Model(&authentication.User{}).Where(util.QueryId, userID).Updates(map[string]any{
+		"household_id": invitation.HouseholdID,
+		"role":         authentication.RoleMember,
+	}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -208,8 +212,12 @@ func (r *InvitationRepository) GetPendingInvitationsNotSent(retryInterval time.D
 }
 
 func (r *InvitationRepository) MarkInvitationSent(invitationID uint) error {
+	return r.MarkInvitationSentTx(r.DB, invitationID)
+}
+
+func (r *InvitationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error {
 	now := time.Now()
-	return r.DB.Model(&database.HouseholdInvitation{}).
+	return tx.Model(&database.HouseholdInvitation{}).
 		Where(util.QueryId, invitationID).
 		Updates(map[string]any{
 			"sent_at":       now,

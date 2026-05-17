@@ -10,6 +10,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
@@ -374,6 +375,53 @@ func RemoveHouseholdMember(ctx *gin.Context, appCtx *AppContext) {
 	}
 }
 
+// UpdateHouseholdMemberRole changes a member's role in the household. Caller must be the admin.
+// @Summary      Update household member role
+// @Tags         household
+// @Accept       json
+// @Produce      json
+// @Param        userId  path      int  true  "User ID"
+// @Param        role    body      updateHouseholdMemberRoleRequest  true  "New role"
+// @Success      200  {object}  api.APIResponse
+// @Failure      400  {object}  api.APIResponse
+// @Failure      403  {object}  api.APIResponse
+// @Failure      404  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/household/members/{userId}/role [patch]
+func UpdateHouseholdMemberRole(ctx *gin.Context, appCtx *AppContext) {
+	memberID, ok := parseUintParam(ctx, appCtx.Logger, "userId", apperrors.ErrInvalidUserID.Error())
+	if !ok {
+		return
+	}
+
+	var req updateHouseholdMemberRoleRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		appCtx.Logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
+		return
+	}
+
+	if req.Role != authentication.RoleAdmin && req.Role != authentication.RoleMember && req.Role != authentication.RoleViewer {
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("invalid role"))
+		return
+	}
+
+	updateErr := appCtx.Repos.Households.SetHouseholdMemberRole(memberID, appCtx.UserID, req.Role)
+	switch updateErr {
+	case nil:
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Member role updated"})
+	case apperrors.ErrNotHouseholdAdmin:
+		api.RespondError(ctx, http.StatusForbidden, updateErr)
+	case apperrors.ErrMemberNotInHousehold:
+		api.RespondError(ctx, http.StatusNotFound, updateErr)
+	case apperrors.ErrInsufficientRole:
+		api.RespondError(ctx, http.StatusBadRequest, updateErr)
+	default:
+		appCtx.Logger.Error().Msgf("Error updating member role: %s", updateErr)
+		api.RespondError(ctx, http.StatusInternalServerError, updateErr)
+	}
+}
+
 func parseUintParam(ctx *gin.Context, logger *zerolog.Logger, paramName, invalidMsg string) (uint, bool) {
 	param := ctx.Param(paramName)
 	val, err := strconv.ParseUint(param, 10, 64)
@@ -391,6 +439,10 @@ type createHouseholdRequest struct {
 
 type updateHouseholdNameRequest struct {
 	Name string `json:"name" binding:"required,min=1,max=100"`
+}
+
+type updateHouseholdMemberRoleRequest struct {
+	Role string `json:"role" binding:"required"`
 }
 
 func recordMemberLeft(ctx *gin.Context, userID uint, householdID uint) {

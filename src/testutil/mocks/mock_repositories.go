@@ -198,6 +198,12 @@ func (m *MockUserRepository) GetUserByID(userID uint) (authentication.User, erro
 func (m *MockUserRepository) GetUserHouseholdByID(userID uint) (uint, error) {
 	return m.HouseholdID, m.Err
 }
+func (m *MockUserRepository) GetUserHouseholdRole(userID uint) (string, error) {
+	return m.User.Role, m.Err
+}
+func (m *MockUserRepository) UpdateUserHouseholdRole(userID, householdID uint, role string) error {
+	return m.Err
+}
 func (m *MockUserRepository) UserExistsByUsername(user *authentication.User) bool {
 	return m.UsernameExistsResult
 }
@@ -303,6 +309,9 @@ func (m *MockHouseholdRepository) UpdateHouseholdName(householdID, adminUserID u
 func (m *MockHouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error {
 	return m.Err
 }
+func (m *MockHouseholdRepository) SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error {
+	return m.Err
+}
 func (m *MockHouseholdRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]dbModel.HouseholdWithMemberCount, error) {
 	return m.Households, m.Err
 }
@@ -338,7 +347,10 @@ func (m *MockInvitationRepository) CancelInvitation(invitationID, userID uint) e
 func (m *MockInvitationRepository) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]dbModel.HouseholdInvitation, error) {
 	return m.Invitations, m.Err
 }
-func (m *MockInvitationRepository) MarkInvitationSent(invitationID uint) error       { return m.Err }
+func (m *MockInvitationRepository) MarkInvitationSent(invitationID uint) error { return m.Err }
+func (m *MockInvitationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error {
+	return m.Err
+}
 func (m *MockInvitationRepository) MarkInvitationSendFailed(invitationID uint) error { return m.Err }
 func (m *MockInvitationRepository) MarkInvitationExpired(invitationID uint) error    { return m.Err }
 
@@ -510,6 +522,9 @@ func (m *MockNotificationRepository) GetPendingInvitationsNotSent(retryInterval 
 	return m.Invitations, m.Err
 }
 func (m *MockNotificationRepository) MarkInvitationSent(invitationID uint) error { return m.Err }
+func (m *MockNotificationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error {
+	return m.Err
+}
 func (m *MockNotificationRepository) MarkInvitationSendFailed(invitationID uint) error {
 	return m.Err
 }

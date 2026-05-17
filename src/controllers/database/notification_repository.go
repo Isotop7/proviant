@@ -46,6 +46,7 @@ type NotificationRepositoryInterface interface {
 	GetHouseholdByID(householdID uint) (database.Household, error)
 	GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
 	MarkInvitationSent(invitationID uint) error
+	MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
 	MarkInvitationSendFailed(invitationID uint) error
 	GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error)
 	GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error)
@@ -202,6 +203,11 @@ func (r *NotificationRepository) GetPendingInvitationsNotSent(retryInterval time
 func (r *NotificationRepository) MarkInvitationSent(invitationID uint) error {
 	invRepo := NewInvitationRepository(r.DB)
 	return invRepo.MarkInvitationSent(invitationID)
+}
+
+func (r *NotificationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error {
+	invRepo := NewInvitationRepository(r.DB)
+	return invRepo.MarkInvitationSentTx(tx, invitationID)
 }
 
 func (r *NotificationRepository) MarkInvitationSendFailed(invitationID uint) error {

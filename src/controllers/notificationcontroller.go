@@ -20,6 +20,7 @@ import (
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
 // pollerState holds the polling state for a single user.
@@ -376,7 +377,9 @@ func (nc *NotificationController) DispatchInvitations(baseURL string) {
 }
 
 // SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database.
-func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
+// If tx is provided (non-nil), the "mark as sent" update will run within that transaction to avoid
+// SQLite "database is locked" conflicts when the transaction holds a write lock.
+func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, tx *gorm.DB) error {
 	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
@@ -391,9 +394,16 @@ func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.Househ
 		return err
 	}
 
-	if err := nc.NotificationRepo.MarkInvitationSent(invitation.ID); err != nil {
-		nc.Logger.Error().Msgf("Failed to mark invitation %d as sent: %s", invitation.ID, err)
-		return err
+	if tx != nil {
+		if err := nc.NotificationRepo.MarkInvitationSentTx(tx, invitation.ID); err != nil {
+			nc.Logger.Error().Msgf("Failed to mark invitation %d as sent: %s", invitation.ID, err)
+			return err
+		}
+	} else {
+		if err := nc.NotificationRepo.MarkInvitationSent(invitation.ID); err != nil {
+			nc.Logger.Error().Msgf("Failed to mark invitation %d as sent: %s", invitation.ID, err)
+			return err
+		}
 	}
 
 	nc.Logger.Info().Msgf("Invitation email sent successfully to %s", invitation.Email)
