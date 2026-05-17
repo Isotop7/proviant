@@ -116,6 +116,12 @@ func (r *ProductRepository) getUserHouseholdID(userID uint) (uint, error) {
 	return user.HouseholdID, nil
 }
 
+func (r *ProductRepository) privacyScope(userID uint) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("(is_private = 0 OR user_id = ?)", userID)
+	}
+}
+
 func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
@@ -123,7 +129,7 @@ func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]datab
 	}
 
 	var products []database.Product
-	query := r.DB.Preload("StorageLocation").Where(util.QueryHouseholdId, householdID)
+	query := r.DB.Preload("StorageLocation").Where(util.QueryHouseholdId, householdID).Scopes(r.privacyScope(userID))
 
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -158,7 +164,7 @@ func (r *ProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) 
 	}
 
 	var products []database.Product
-	query := r.DB.Preload("StorageLocation").Unscoped().Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, householdID)
+	query := r.DB.Preload("StorageLocation").Unscoped().Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, householdID).Scopes(r.privacyScope(userID))
 
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -178,7 +184,7 @@ func (r *ProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode in
 	}
 
 	var products []database.Product
-	queryErr := r.DB.Where("household_id = ? and barcode = ?", householdID, barcode).Find(&products).Error
+	queryErr := r.DB.Scopes(r.privacyScope(userID)).Where("household_id = ? and barcode = ?", householdID, barcode).Find(&products).Error
 	if queryErr != nil {
 		return []database.Product{}, queryErr
 	}
@@ -205,6 +211,9 @@ func (r *ProductRepository) GetProductByID(productID, userID uint) (database.Pro
 	if product.HouseholdID != user.HouseholdID {
 		return database.Product{}, errors.ErrMismatcherUserID
 	}
+	if product.IsPrivate && product.UserID != userID {
+		return database.Product{}, errors.ErrMismatcherUserID
+	}
 	return product, nil
 }
 
@@ -228,6 +237,9 @@ func (r *ProductRepository) GetArchivedProductByID(productID, userID uint) (data
 	if product.HouseholdID != user.HouseholdID {
 		return database.Product{}, errors.ErrMismatcherUserID
 	}
+	if product.IsPrivate && product.UserID != userID {
+		return database.Product{}, errors.ErrMismatcherUserID
+	}
 	return product, nil
 }
 
@@ -239,6 +251,7 @@ func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, query
 
 	var foundProducts []database.Product
 	preloadedDataset := r.DB.Preload("StorageLocation").
+		Scopes(r.privacyScope(userID)).
 		Where(util.QueryHouseholdId, user.HouseholdID).
 		Where(util.WhereDeletedIsNull)
 
@@ -275,6 +288,7 @@ func (r *ProductRepository) GetUserProductsByLocation(userID, locationID uint) (
 	}
 	var products []database.Product
 	err = r.DB.Preload("StorageLocation").
+		Scopes(r.privacyScope(userID)).
 		Where("household_id = ? AND storage_location_id = ?", householdID, locationID).
 		Find(&products).Error
 	if err != nil {
@@ -303,6 +317,7 @@ func (r *ProductRepository) CreateProduct(userID uint, product *database.Product
 	}
 
 	product.HouseholdID = user.HouseholdID
+	product.UserID = userID
 	createErr := r.DB.Create(&product)
 	return createErr.Error
 }
@@ -328,6 +343,10 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 		return errors.ErrMismatcherUserID
 	}
 
+	if dbProduct.UserID == 0 {
+		dbProduct.UserID = userID
+	}
+
 	dbProduct.ProductName = product.ProductName
 	dbProduct.Categories = product.Categories
 	dbProduct.Countries = product.Countries
@@ -338,6 +357,7 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 	dbProduct.StorageLocationID = product.StorageLocationID
 	dbProduct.NotificationLeadDays = product.NotificationLeadDays
 	dbProduct.MinStockAmount = product.MinStockAmount
+	dbProduct.IsPrivate = product.IsPrivate
 
 	saveResult := r.DB.Save(&dbProduct)
 	return saveResult.Error
@@ -675,6 +695,7 @@ func (r *ProductRepository) GetLastNotifiedProduct(householdID uint) (database.P
 	getNotifiedError := r.DB.
 		Where(util.QueryHouseholdId, householdID).
 		Where(util.WhereDeletedIsNull).
+		Where("(is_private = 0 OR user_id = (SELECT id FROM users WHERE household_id = ? LIMIT 1))", householdID).
 		Order("notified_at DESC").
 		Limit(1).
 		Find(&lastNotifiedProduct)
@@ -693,7 +714,7 @@ func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database
 	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
 
 	var products []database.Product
-	err = r.DB.
+	err = r.DB.Scopes(r.privacyScope(userID)).
 		Where(util.QueryHouseholdId, householdID).
 		Where(util.WhereDeletedIsNull).
 		Where("expire_at >= ?", startOfToday).
@@ -711,6 +732,7 @@ func (r *ProductRepository) GetLastInsertedProduct(householdID uint) (database.P
 	getError := r.DB.
 		Where(util.QueryHouseholdId, householdID).
 		Where(util.WhereDeletedIsNull).
+		Where("(is_private = 0 OR user_id = (SELECT id FROM users WHERE household_id = ? LIMIT 1))", householdID).
 		Order("created_at DESC").
 		Limit(1).
 		Find(&lastProduct)
@@ -735,7 +757,13 @@ func (r *ProductRepository) UserHasProductAccess(userID uint, productID int) boo
 		return false
 	}
 
-	return user.HouseholdID == product.HouseholdID
+	if product.HouseholdID != user.HouseholdID {
+		return false
+	}
+	if product.IsPrivate && product.UserID != userID {
+		return false
+	}
+	return true
 }
 
 func (r *ProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error) {
@@ -793,7 +821,7 @@ func (r *ProductRepository) GetUserActiveProductsFiltered(userID uint, from, to 
 	}
 
 	var products []database.Product
-	query := r.DB.Where(util.QueryHouseholdId, householdID).Where(util.WhereDeletedIsNull)
+	query := r.DB.Scopes(r.privacyScope(userID)).Where(util.QueryHouseholdId, householdID).Where(util.WhereDeletedIsNull)
 
 	if from != nil {
 		query = query.Where("created_at >= ?", *from)
@@ -816,7 +844,7 @@ func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, t
 	}
 
 	var products []database.Product
-	query := r.DB.Unscoped().Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, householdID)
+	query := r.DB.Unscoped().Scopes(r.privacyScope(userID)).Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, householdID)
 
 	if from != nil {
 		query = query.Where("deleted_at >= ?", *from)
@@ -850,6 +878,7 @@ func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, er
 
 	var count int64
 	err = r.DB.Model(&database.Product{}).
+		Scopes(r.privacyScope(userID)).
 		Where(util.QueryHouseholdId, householdID).
 		Where(util.WhereDeletedIsNull).
 		Where("expire_at >= ?", startOfToday).
@@ -873,6 +902,7 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 
 	var count int64
 	err = r.DB.Unscoped().Model(&database.Product{}).
+		Scopes(r.privacyScope(userID)).
 		Where(util.QueryHouseholdId, householdID).
 		Where(util.WhereDeletedIsNotNull).
 		Where("deleted_at >= ?", monthStart).
@@ -889,7 +919,7 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 func (r *ProductRepository) GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error) {
 	cutoff := time.Now().AddDate(0, 0, daysAhead)
 	var products []database.Product
-	result := r.DB.Where("household_id = ? AND expire_at <= ? AND deleted_at IS NULL", householdID, cutoff).
+	result := r.DB.Where("household_id = ? AND expire_at <= ? AND deleted_at IS NULL AND is_private = 0", householdID, cutoff).
 		Order("expire_at ASC").
 		Find(&products)
 	return products, result.Error
@@ -898,7 +928,7 @@ func (r *ProductRepository) GetExpiringProductsByHousehold(householdID uint, day
 // GetProductsByHousehold returns all non-deleted products for a household.
 func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database.Product, error) {
 	var products []database.Product
-	result := r.DB.Where("household_id = ? AND deleted_at IS NULL", householdID).Find(&products)
+	result := r.DB.Where("household_id = ? AND deleted_at IS NULL AND is_private = 0", householdID).Find(&products)
 	return products, result.Error
 }
 
@@ -910,6 +940,7 @@ func (r *ProductRepository) GetSubThresholdProducts(userID uint) ([]database.Pro
 
 	var products []database.Product
 	err = r.DB.Preload("StorageLocation").
+		Scopes(r.privacyScope(userID)).
 		Where("household_id = ? AND deleted_at IS NULL AND amount < min_stock_amount AND min_stock_amount > 0", householdID).
 		Find(&products).Error
 	if err != nil {
@@ -933,7 +964,7 @@ func (r *ProductRepository) GetExpiringProductsForMailDigest(householdID uint) (
 
 	var allProducts []database.Product
 	if err := r.DB.
-		Where("household_id = ? AND deleted_at IS NULL", householdID).
+		Where("household_id = ? AND deleted_at IS NULL AND is_private = 0", householdID).
 		Where("expire_at > ?", startOfToday).
 		Where("expire_at <= ?", endOfNextWeek).
 		Order("expire_at ASC").

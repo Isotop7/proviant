@@ -277,6 +277,9 @@
             <div class="list-product-text">
                 <a href="/web/products/{{ .Model.ID }}/edit" class="list-product-name">
                     {{ .ProductName }}
+                    {{ if and .IsPrivate (eq .UserID $.CurrentUserID) }}
+                    <i class="bi bi-lock" title="Private product"></i>
+                    {{ end }}
                 </a>
                 <div class="list-product-meta">
                     #{{ .Model.ID }} · {{ .Barcode }}

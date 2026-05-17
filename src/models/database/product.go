@@ -25,6 +25,8 @@ type Product struct {
 	DeletedAt            gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
 	HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;not null" json:"-"`
 	Household            Household        `json:"-"`
+	UserID               uint             `gorm:"index, not null" json:"-"`
+	IsPrivate            bool             `gorm:"default:false" json:"isPrivate"`
 	Amount               int              `json:"amount"`
 	Unit                 string           `json:"unit"`
 	StorageLocationID    *uint            `gorm:"index"                        json:"storageLocationId"`
@@ -62,4 +64,5 @@ type ProductDTOPatch struct {
 	StorageLocationID    *uint     `json:"storageLocationId"`
 	NotificationLeadDays *int      `json:"notificationLeadDays,omitempty"`
 	MinStockAmount       int       `json:"minStockAmount"`
+	IsPrivate            bool      `json:"isPrivate"`
 }

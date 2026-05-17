@@ -152,9 +152,9 @@ proviant.updateProductAmount = async function (productID, delta) {
 };
 
 /* ── Product API ─────────────────────────────────────────────────────────────── */
-proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId) {
+proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate = false) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null }) });
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null, isPrivate }) });
   const body = await res.json();
   return { code: res.status, message: body.message };
 };

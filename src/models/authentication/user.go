@@ -55,7 +55,7 @@ type User struct {
 	EmailVerifiedAt         *time.Time `json:"emailVerifiedAt,omitempty"`
 	HouseholdID             uint       `gorm:"index"`
 	Household               database.Household
-	Role                    string     `gorm:"default:'member'" json:"role"`
+	Role                    string                  `gorm:"default:'member'" json:"role"`
 	NotificationPreferences NotificationPreferences `gorm:"embedded"`
 	FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`
 	LockedUntil             gorm.DeletedAt          `json:"-"`

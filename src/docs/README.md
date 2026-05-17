@@ -209,7 +209,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(nc \*NotificationController\) DispatchStreakUpdates\(\)](<#NotificationController.DispatchStreakUpdates>)
   - [func \(nc \*NotificationController\) GetUserTelegramBotUsername\(userID uint\) string](<#NotificationController.GetUserTelegramBotUsername>)
   - [func \(nc \*NotificationController\) SendEmailVerification\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendEmailVerification>)
-  - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#NotificationController.SendInvitationEmail>)
+  - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, tx \*gorm.DB\) error](<#NotificationController.SendInvitationEmail>)
   - [func \(nc \*NotificationController\) SendVerificationEmail\(invitation \*dbModel.HouseholdInvitation, username, baseURL string\) error](<#NotificationController.SendVerificationEmail>)
   - [func \(nc \*NotificationController\) StartAllUserTelegramPollers\(\)](<#NotificationController.StartAllUserTelegramPollers>)
   - [func \(nc \*NotificationController\) StartMailDigestScheduler\(baseURL string\)](<#NotificationController.StartMailDigestScheduler>)
@@ -530,10 +530,10 @@ SendEmailVerification sends a verification email directly to the user with a ver
 ### func \(\*NotificationController\) SendInvitationEmail
 
 ```go
-func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error
+func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, tx *gorm.DB) error
 ```
 
-SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database.
+SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database. If tx is provided \(non\-nil\), the "mark as sent" update will run within that transaction to avoid SQLite "database is locked" conflicts when the transaction holds a write lock.
 
 <a name="NotificationController.SendVerificationEmail"></a>
 ### func \(\*NotificationController\) SendVerificationEmail
@@ -1177,6 +1177,9 @@ var (
     // ErrNotHouseholdAdmin is thrown when a user attempts an admin action on a household they do not administrate
     ErrNotHouseholdAdmin = errors.New("user is not the admin of this household")
 
+    // ErrInsufficientRole is thrown when a user attempts an action that requires a higher role
+    ErrInsufficientRole = errors.New("insufficient role for this action")
+
     // ErrApplicationAlreadyPending is thrown when a user already has a pending application for a household
     ErrApplicationAlreadyPending = errors.New("a pending application for this household already exists")
 
@@ -1457,6 +1460,7 @@ import "codeberg.org/isotop7/proviant/migrations"
 - [func AddPerformanceIndexes\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#AddPerformanceIndexes>)
 - [func AddWebPushNotificationMigration\(db \*gorm.DB\) error](<#AddWebPushNotificationMigration>)
 - [func BackfillEmailVerification\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillEmailVerification>)
+- [func BackfillHouseholdRoles\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillHouseholdRoles>)
 - [func BackfillRemovalReason\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillRemovalReason>)
 - [func DropLegacyStorageLocationColumn\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#DropLegacyStorageLocationColumn>)
 - [func RenamePushNotificationColumns\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RenamePushNotificationColumns>)
@@ -1501,6 +1505,15 @@ func BackfillEmailVerification(logger *zerolog.Logger, db *gorm.DB) error
 ```
 
 BackfillEmailVerification sets EmailVerifiedAt for all existing users that don't have it set. This is a one\-time migration to ensure existing users aren't locked out after email verification is introduced.
+
+<a name="BackfillHouseholdRoles"></a>
+## func BackfillHouseholdRoles
+
+```go
+func BackfillHouseholdRoles(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+BackfillHouseholdRoles sets role='admin' for household admins and role='member' for all others. This migration ensures existing users get appropriate roles after the role field is added.
 
 <a name="BackfillRemovalReason"></a>
 ## func BackfillRemovalReason
@@ -1699,6 +1712,7 @@ router contains the gin router definitions and maps requests to handlers
 - [func PATMiddleware\(jwtMiddleware \*jwt.GinJWTMiddleware\) gin.HandlerFunc](<#PATMiddleware>)
 - [func RequestIDMiddleware\(baseLogger \*zerolog.Logger\) gin.HandlerFunc](<#RequestIDMiddleware>)
 - [func RequireHouseholdAdmin\(\) gin.HandlerFunc](<#RequireHouseholdAdmin>)
+- [func RequireHouseholdRole\(roles ...string\) gin.HandlerFunc](<#RequireHouseholdRole>)
 - [func SecurityHeadersMiddleware\(proviantConfig \*configuration.ProviantConfiguration\) gin.HandlerFunc](<#SecurityHeadersMiddleware>)
 - [func SetupRouter\(logger \*zerolog.Logger, proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, offacntrl \*controllers.OpenFoodFactsAPIController, notificationController \*controllers.NotificationController, ocrController \*controllers.OCRControllerImpl\) \*gin.Engine](<#SetupRouter>)
 - [func UnauthorizedAPIFunc\(ctx \*gin.Context, code int, message string\)](<#UnauthorizedAPIFunc>)
@@ -1792,6 +1806,15 @@ RequestIDMiddleware mints a UUID per request, stashes it in gin.Context, sets th
 
 ```go
 func RequireHouseholdAdmin() gin.HandlerFunc
+```
+
+
+
+<a name="RequireHouseholdRole"></a>
+## func RequireHouseholdRole
+
+```go
+func RequireHouseholdRole(roles ...string) gin.HandlerFunc
 ```
 
 
@@ -2024,7 +2047,7 @@ import "codeberg.org/isotop7/proviant/testutil"
 - [func CreateTestEmailVerification\(db \*gorm.DB, userID uint, token string\) \*dbModel.EmailVerification](<#CreateTestEmailVerification>)
 - [func CreateTestHousehold\(db \*gorm.DB, adminID uint\) \*dbModel.Household](<#CreateTestHousehold>)
 - [func CreateTestInvitation\(db \*gorm.DB, householdID, inviterID uint, email string\) \*dbModel.HouseholdInvitation](<#CreateTestInvitation>)
-- [func CreateTestProduct\(db \*gorm.DB, householdID uint\) \*dbModel.Product](<#CreateTestProduct>)
+- [func CreateTestProduct\(db \*gorm.DB, householdID uint, userID ...uint\) \*dbModel.Product](<#CreateTestProduct>)
 - [func CreateTestRequest\(ctx \*gin.Context, body interface\{\}\)](<#CreateTestRequest>)
 - [func CreateTestStorageLocation\(db \*gorm.DB, householdID uint\) \*dbModel.StorageLocation](<#CreateTestStorageLocation>)
 - [func CreateTestUser\(db \*gorm.DB, householdID uint\) \*authentication.User](<#CreateTestUser>)
@@ -2084,7 +2107,7 @@ func CreateTestInvitation(db *gorm.DB, householdID, inviterID uint, email string
 ## func CreateTestProduct
 
 ```go
-func CreateTestProduct(db *gorm.DB, householdID uint) *dbModel.Product
+func CreateTestProduct(db *gorm.DB, householdID uint, userID ...uint) *dbModel.Product
 ```
 
 
@@ -2636,6 +2659,7 @@ v1 implements version 1 of the proviant API
 - [func GetAutoShoppingList\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetAutoShoppingList>)
 - [func GetCalendarTokenStatus\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetCalendarTokenStatus>)
 - [func GetExpired\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetExpired>)
+- [func GetHouseholdActivity\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdActivity>)
 - [func GetHouseholdApplications\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdApplications>)
 - [func GetHouseholdUsers\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdUsers>)
 - [func GetInvitations\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetInvitations>)
@@ -2671,6 +2695,7 @@ v1 implements version 1 of the proviant API
 - [func SubscribeWebPushNotifications\(ctx \*gin.Context, appCtx \*AppContext\)](<#SubscribeWebPushNotifications>)
 - [func ToggleShoppingListItem\(ctx \*gin.Context, appCtx \*AppContext\)](<#ToggleShoppingListItem>)
 - [func UnsubscribeWebPushNotifications\(ctx \*gin.Context, appCtx \*AppContext\)](<#UnsubscribeWebPushNotifications>)
+- [func UpdateHouseholdMemberRole\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdMemberRole>)
 - [func UpdateHouseholdName\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdName>)
 - [func UpdateHouseholdUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdUser>)
 - [func UpdateProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateProduct>)
@@ -3091,6 +3116,15 @@ func GetExpired(ctx *gin.Context, appCtx *AppContext)
 
 GetExpired returns the list of all expired products of a user @Summary Gets expired products @Description Gets a list of expired products of a user @Tags product @Accept json @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/expired \[get\]
 
+<a name="GetHouseholdActivity"></a>
+## func GetHouseholdActivity
+
+```go
+func GetHouseholdActivity(ctx *gin.Context, appCtx *AppContext)
+```
+
+GetHouseholdActivity returns the activity feed for the caller's household. @Summary Get household activity feed @Description Returns paginated activity log entries for the household the caller belongs to. @Tags household @Produce json @Param limit query int false "Max entries to return \(default 50, max 100\)" @Param offset query int false "Number of entries to skip \(default 0\)" @Success 200 \{object\} api.ActivityLogResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/activity \[get\]
+
 <a name="GetHouseholdApplications"></a>
 ## func GetHouseholdApplications
 
@@ -3408,6 +3442,15 @@ func UnsubscribeWebPushNotifications(ctx *gin.Context, appCtx *AppContext)
 
 
 
+<a name="UpdateHouseholdMemberRole"></a>
+## func UpdateHouseholdMemberRole
+
+```go
+func UpdateHouseholdMemberRole(ctx *gin.Context, appCtx *AppContext)
+```
+
+UpdateHouseholdMemberRole changes a member's role in the household. Caller must be the admin. @Summary Update household member role @Tags household @Accept json @Produce json @Param userId path int true "User ID" @Param role body updateHouseholdMemberRoleRequest true "New role" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/members/\{userId\}/role \[patch\]
+
 <a name="UpdateHouseholdName"></a>
 ## func UpdateHouseholdName
 
@@ -3723,6 +3766,12 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 ## Index
 
 - [Constants](<#constants>)
+- [type ActivityLogRepository](<#ActivityLogRepository>)
+  - [func NewActivityLogRepository\(db \*gorm.DB\) \*ActivityLogRepository](<#NewActivityLogRepository>)
+  - [func \(r \*ActivityLogRepository\) Create\(ctx context.Context, log \*database.ActivityLog\) error](<#ActivityLogRepository.Create>)
+  - [func \(r \*ActivityLogRepository\) GetByHousehold\(ctx context.Context, householdID uint, limit, offset int\) \(\[\]database.ActivityLog, error\)](<#ActivityLogRepository.GetByHousehold>)
+  - [func \(r \*ActivityLogRepository\) GetByHouseholdCount\(ctx context.Context, householdID uint\) \(int, error\)](<#ActivityLogRepository.GetByHouseholdCount>)
+- [type ActivityLogRepositoryInterface](<#ActivityLogRepositoryInterface>)
 - [type AuditLogRepository](<#AuditLogRepository>)
   - [func NewAuditLogRepository\(db \*gorm.DB\) \*AuditLogRepository](<#NewAuditLogRepository>)
   - [func \(r \*AuditLogRepository\) Create\(ctx context.Context, log \*database.AuditLog\) error](<#AuditLogRepository.Create>)
@@ -3759,6 +3808,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*HouseholdRepository\) LeaveHousehold\(userID uint\) error](<#HouseholdRepository.LeaveHousehold>)
   - [func \(r \*HouseholdRepository\) RejectApplication\(applicationID, adminUserID uint\) error](<#HouseholdRepository.RejectApplication>)
   - [func \(r \*HouseholdRepository\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#HouseholdRepository.RemoveMemberFromHousehold>)
+  - [func \(r \*HouseholdRepository\) SetHouseholdMemberRole\(memberUserID, adminUserID uint, role string\) error](<#HouseholdRepository.SetHouseholdMemberRole>)
   - [func \(r \*HouseholdRepository\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#HouseholdRepository.UpdateHouseholdName>)
 - [type HouseholdRepositoryInterface](<#HouseholdRepositoryInterface>)
 - [type InvitationRepository](<#InvitationRepository>)
@@ -3774,6 +3824,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*InvitationRepository\) MarkInvitationExpired\(invitationID uint\) error](<#InvitationRepository.MarkInvitationExpired>)
   - [func \(r \*InvitationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#InvitationRepository.MarkInvitationSendFailed>)
   - [func \(r \*InvitationRepository\) MarkInvitationSent\(invitationID uint\) error](<#InvitationRepository.MarkInvitationSent>)
+  - [func \(r \*InvitationRepository\) MarkInvitationSentTx\(tx \*gorm.DB, invitationID uint\) error](<#InvitationRepository.MarkInvitationSentTx>)
 - [type InvitationRepositoryInterface](<#InvitationRepositoryInterface>)
 - [type MailDigestProductGroup](<#MailDigestProductGroup>)
 - [type NotificationRepository](<#NotificationRepository>)
@@ -3806,6 +3857,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*NotificationRepository\) MarkHouseholdStepDone\(userID uint\) error](<#NotificationRepository.MarkHouseholdStepDone>)
   - [func \(r \*NotificationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#NotificationRepository.MarkInvitationSendFailed>)
   - [func \(r \*NotificationRepository\) MarkInvitationSent\(invitationID uint\) error](<#NotificationRepository.MarkInvitationSent>)
+  - [func \(r \*NotificationRepository\) MarkInvitationSentTx\(tx \*gorm.DB, invitationID uint\) error](<#NotificationRepository.MarkInvitationSentTx>)
   - [func \(r \*NotificationRepository\) MarkNotificationsSetup\(userID uint\) error](<#NotificationRepository.MarkNotificationsSetup>)
   - [func \(r \*NotificationRepository\) MarkOnboardingComplete\(userID uint\) error](<#NotificationRepository.MarkOnboardingComplete>)
   - [func \(r \*NotificationRepository\) SaveWebPushSubscription\(userID uint, subscriptionJSON string\) error](<#NotificationRepository.SaveWebPushSubscription>)
@@ -3930,6 +3982,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*UserRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#UserRepository.GetUserByID>)
   - [func \(r \*UserRepository\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#UserRepository.GetUserByUsername>)
   - [func \(r \*UserRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#UserRepository.GetUserHouseholdByID>)
+  - [func \(r \*UserRepository\) GetUserHouseholdRole\(userID uint\) \(string, error\)](<#UserRepository.GetUserHouseholdRole>)
   - [func \(r \*UserRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#UserRepository.GetUsersByHouseholdID>)
   - [func \(r \*UserRepository\) IsAccountLocked\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) \(bool, time.Duration\)](<#UserRepository.IsAccountLocked>)
   - [func \(r \*UserRepository\) MarkHouseholdStepDone\(userID uint\) error](<#UserRepository.MarkHouseholdStepDone>)
@@ -3944,6 +3997,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*UserRepository\) UpdateEmailVerificationStatus\(token, status string\) error](<#UserRepository.UpdateEmailVerificationStatus>)
   - [func \(r \*UserRepository\) UpdateUser\(userID uint, user \*authentication.User\) error](<#UserRepository.UpdateUser>)
   - [func \(r \*UserRepository\) UpdateUserEmailVerified\(userID uint, verifiedAt time.Time\) error](<#UserRepository.UpdateUserEmailVerified>)
+  - [func \(r \*UserRepository\) UpdateUserHouseholdRole\(userID, householdID uint, role string\) error](<#UserRepository.UpdateUserHouseholdRole>)
   - [func \(r \*UserRepository\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#UserRepository.UpdateUserPassword>)
   - [func \(r \*UserRepository\) UpdateUsername\(userID uint, username string\) error](<#UserRepository.UpdateUsername>)
   - [func \(r \*UserRepository\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#UserRepository.UserExistsByMailAddress>)
@@ -3973,6 +4027,66 @@ const (
     DefaultMaxLoginAttempts    = 10
     DefaultLockoutDurationMins = 15
 )
+```
+
+<a name="ActivityLogRepository"></a>
+## type ActivityLogRepository
+
+
+
+```go
+type ActivityLogRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewActivityLogRepository"></a>
+### func NewActivityLogRepository
+
+```go
+func NewActivityLogRepository(db *gorm.DB) *ActivityLogRepository
+```
+
+
+
+<a name="ActivityLogRepository.Create"></a>
+### func \(\*ActivityLogRepository\) Create
+
+```go
+func (r *ActivityLogRepository) Create(ctx context.Context, log *database.ActivityLog) error
+```
+
+
+
+<a name="ActivityLogRepository.GetByHousehold"></a>
+### func \(\*ActivityLogRepository\) GetByHousehold
+
+```go
+func (r *ActivityLogRepository) GetByHousehold(ctx context.Context, householdID uint, limit, offset int) ([]database.ActivityLog, error)
+```
+
+
+
+<a name="ActivityLogRepository.GetByHouseholdCount"></a>
+### func \(\*ActivityLogRepository\) GetByHouseholdCount
+
+```go
+func (r *ActivityLogRepository) GetByHouseholdCount(ctx context.Context, householdID uint) (int, error)
+```
+
+
+
+<a name="ActivityLogRepositoryInterface"></a>
+## type ActivityLogRepositoryInterface
+
+
+
+```go
+type ActivityLogRepositoryInterface interface {
+    Create(ctx context.Context, log *database.ActivityLog) error
+    GetByHousehold(ctx context.Context, householdID uint, limit, offset int) ([]database.ActivityLog, error)
+    GetByHouseholdCount(ctx context.Context, householdID uint) (int, error)
+}
 ```
 
 <a name="AuditLogRepository"></a>
@@ -4322,6 +4436,15 @@ func (r *HouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserI
 
 
 
+<a name="HouseholdRepository.SetHouseholdMemberRole"></a>
+### func \(\*HouseholdRepository\) SetHouseholdMemberRole
+
+```go
+func (r *HouseholdRepository) SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error
+```
+
+
+
 <a name="HouseholdRepository.UpdateHouseholdName"></a>
 ### func \(\*HouseholdRepository\) UpdateHouseholdName
 
@@ -4351,6 +4474,7 @@ type HouseholdRepositoryInterface interface {
     CancelApplication(applicationID, applicantUserID uint) error
     UpdateHouseholdName(householdID, adminUserID uint, name string) error
     RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
+    SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error
     GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
 }
 ```
@@ -4474,6 +4598,15 @@ func (r *InvitationRepository) MarkInvitationSent(invitationID uint) error
 
 
 
+<a name="InvitationRepository.MarkInvitationSentTx"></a>
+### func \(\*InvitationRepository\) MarkInvitationSentTx
+
+```go
+func (r *InvitationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
+```
+
+
+
 <a name="InvitationRepositoryInterface"></a>
 ## type InvitationRepositoryInterface
 
@@ -4490,6 +4623,7 @@ type InvitationRepositoryInterface interface {
     CancelInvitation(invitationID, userID uint) error
     GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
     MarkInvitationSent(invitationID uint) error
+    MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
     MarkInvitationSendFailed(invitationID uint) error
     MarkInvitationExpired(invitationID uint) error
 }
@@ -4781,6 +4915,15 @@ func (r *NotificationRepository) MarkInvitationSent(invitationID uint) error
 
 
 
+<a name="NotificationRepository.MarkInvitationSentTx"></a>
+### func \(\*NotificationRepository\) MarkInvitationSentTx
+
+```go
+func (r *NotificationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
+```
+
+
+
 <a name="NotificationRepository.MarkNotificationsSetup"></a>
 ### func \(\*NotificationRepository\) MarkNotificationsSetup
 
@@ -4865,6 +5008,7 @@ type NotificationRepositoryInterface interface {
     GetHouseholdByID(householdID uint) (database.Household, error)
     GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
     MarkInvitationSent(invitationID uint) error
+    MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
     MarkInvitationSendFailed(invitationID uint) error
     GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error)
     GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error)
@@ -5589,6 +5733,7 @@ type RepositoryContainer struct {
     ExpiryScan        ExpiryScanRepositoryInterface
     CalendarTokens    CalendarTokenRepositoryInterface
     AuditLogs         AuditLogRepositoryInterface
+    ActivityLogs      ActivityLogRepositoryInterface
     ShoppingListItems ShoppingListItemRepository
 }
 ```
@@ -6068,6 +6213,15 @@ func (r *UserRepository) GetUserHouseholdByID(userID uint) (uint, error)
 
 
 
+<a name="UserRepository.GetUserHouseholdRole"></a>
+### func \(\*UserRepository\) GetUserHouseholdRole
+
+```go
+func (r *UserRepository) GetUserHouseholdRole(userID uint) (string, error)
+```
+
+
+
 <a name="UserRepository.GetUsersByHouseholdID"></a>
 ### func \(\*UserRepository\) GetUsersByHouseholdID
 
@@ -6194,6 +6348,15 @@ func (r *UserRepository) UpdateUserEmailVerified(userID uint, verifiedAt time.Ti
 
 
 
+<a name="UserRepository.UpdateUserHouseholdRole"></a>
+### func \(\*UserRepository\) UpdateUserHouseholdRole
+
+```go
+func (r *UserRepository) UpdateUserHouseholdRole(userID, householdID uint, role string) error
+```
+
+
+
 <a name="UserRepository.UpdateUserPassword"></a>
 ### func \(\*UserRepository\) UpdateUserPassword
 
@@ -6240,6 +6403,8 @@ type UserRepositoryInterface interface {
     GetUserByUsername(username string) (authentication.User, error)
     GetUserByID(userID uint) (authentication.User, error)
     GetUserHouseholdByID(userID uint) (uint, error)
+    GetUserHouseholdRole(userID uint) (string, error)
+    UpdateUserHouseholdRole(userID, householdID uint, role string) error
     UserExistsByUsername(user *authentication.User) bool
     UserExistsByMailAddress(user *authentication.User) bool
     CreateUser(user *authentication.User) error
@@ -6407,6 +6572,8 @@ import "codeberg.org/isotop7/proviant/models/api"
 ## Index
 
 - [Variables](<#variables>)
+- [type ActivityEntry](<#ActivityEntry>)
+- [type ActivityLogResponse](<#ActivityLogResponse>)
 - [type BulkProductsAPIModel](<#BulkProductsAPIModel>)
 - [type CreateTokenRequest](<#CreateTokenRequest>)
 - [type CreateTokenResponse](<#CreateTokenResponse>)
@@ -6444,6 +6611,37 @@ var ValidWebhookEvents = []string{
     "product.created",
     "product.wasted",
     "household.member_joined",
+}
+```
+
+<a name="ActivityEntry"></a>
+## type ActivityEntry
+
+
+
+```go
+type ActivityEntry struct {
+    UserID      *uint  `json:"userId"`
+    UserName    string `json:"userName"`
+    Action      string `json:"action"`
+    ProductID   uint   `json:"productId"`
+    ProductName string `json:"productName"`
+    Quantity    int    `json:"quantity"`
+    Timestamp   string `json:"timestamp"`
+}
+```
+
+<a name="ActivityLogResponse"></a>
+## type ActivityLogResponse
+
+
+
+```go
+type ActivityLogResponse struct {
+    Activities []ActivityEntry `json:"activities"`
+    Total      int             `json:"total"`
+    Limit      int             `json:"limit"`
+    Offset     int             `json:"offset"`
 }
 ```
 
@@ -6826,6 +7024,16 @@ const (
 )
 ```
 
+<a name="RoleAdmin"></a>
+
+```go
+const (
+    RoleAdmin  = "admin"
+    RoleMember = "member"
+    RoleViewer = "viewer"
+)
+```
+
 <a name="CalendarToken"></a>
 ## type CalendarToken
 
@@ -7038,7 +7246,7 @@ User is the struct for the database definition and the JWT claims A single user 
 ```go
 type User struct {
     gorm.Model
-    ID                      uint       `gorm:"primaryKey,unique"`
+    ID                      uint       `gorm:"primaryKey,unique" json:"id"`
     Username                string     `gorm:"index" json:"username"`
     DisplayName             string     `json:"displayName"`
     MailAddress             string     `gorm:"index" json:"mailAddress"`
@@ -7046,6 +7254,7 @@ type User struct {
     EmailVerifiedAt         *time.Time `json:"emailVerifiedAt,omitempty"`
     HouseholdID             uint       `gorm:"index"`
     Household               database.Household
+    Role                    string                  `gorm:"default:'member'" json:"role"`
     NotificationPreferences NotificationPreferences `gorm:"embedded"`
     FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`
     LockedUntil             gorm.DeletedAt          `json:"-"`
@@ -7478,6 +7687,7 @@ import "codeberg.org/isotop7/proviant/models/database"
 
 - [Constants](<#constants>)
 - [func GenerateCacheKey\(provider string, productIDs \[\]uint\) string](<#GenerateCacheKey>)
+- [type ActivityLog](<#ActivityLog>)
 - [type AuditLog](<#AuditLog>)
 - [type Date](<#Date>)
   - [func \(d Date\) Format\(s string\) string](<#Date.Format>)
@@ -7510,6 +7720,18 @@ import "codeberg.org/isotop7/proviant/models/database"
 
 
 ## Constants
+
+<a name="ActivityActionAdd"></a>
+
+```go
+const (
+    ActivityActionAdd          = "add"
+    ActivityActionConsume      = "consume"
+    ActivityActionWaste        = "waste"
+    ActivityActionRestore      = "restore"
+    ActivityActionAmountChange = "amount_change"
+)
+```
 
 <a name="AuditActionLoginSuccess"></a>
 
@@ -7575,6 +7797,25 @@ func GenerateCacheKey(provider string, productIDs []uint) string
 ```
 
 GenerateCacheKey creates a deterministic SHA256 hash from provider name and sorted product IDs.
+
+<a name="ActivityLog"></a>
+## type ActivityLog
+
+
+
+```go
+type ActivityLog struct {
+    gorm.Model
+    HouseholdID uint      `gorm:"index;not null" json:"householdId"`
+    UserID      *uint     `gorm:"index" json:"userId"`
+    UserName    string    `gorm:"not null" json:"userName"`
+    Action      string    `gorm:"index;not null" json:"action"`
+    ProductID   uint      `gorm:"index" json:"productId"`
+    ProductName string    `gorm:"not null" json:"productName"`
+    Quantity    int       `json:"quantity"`
+    Timestamp   time.Time `gorm:"index;not null" json:"timestamp"`
+}
+```
 
 <a name="AuditLog"></a>
 ## type AuditLog
@@ -7789,6 +8030,8 @@ type Product struct {
     DeletedAt            gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
     HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;not null" json:"-"`
     Household            Household        `json:"-"`
+    UserID               uint             `gorm:"index, not null" json:"-"`
+    IsPrivate            bool             `gorm:"default:false" json:"isPrivate"`
     Amount               int              `json:"amount"`
     Unit                 string           `json:"unit"`
     StorageLocationID    *uint            `gorm:"index"                        json:"storageLocationId"`
@@ -7860,6 +8103,7 @@ type ProductDTOPatch struct {
     StorageLocationID    *uint     `json:"storageLocationId"`
     NotificationLeadDays *int      `json:"notificationLeadDays,omitempty"`
     MinStockAmount       int       `json:"minStockAmount"`
+    IsPrivate            bool      `json:"isPrivate"`
 }
 ```
 
@@ -8124,6 +8368,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockHouseholdRepository\) LeaveHousehold\(userID uint\) error](<#MockHouseholdRepository.LeaveHousehold>)
   - [func \(m \*MockHouseholdRepository\) RejectApplication\(applicationID, adminUserID uint\) error](<#MockHouseholdRepository.RejectApplication>)
   - [func \(m \*MockHouseholdRepository\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#MockHouseholdRepository.RemoveMemberFromHousehold>)
+  - [func \(m \*MockHouseholdRepository\) SetHouseholdMemberRole\(memberUserID, adminUserID uint, role string\) error](<#MockHouseholdRepository.SetHouseholdMemberRole>)
   - [func \(m \*MockHouseholdRepository\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#MockHouseholdRepository.UpdateHouseholdName>)
 - [type MockInvitationRepository](<#MockInvitationRepository>)
   - [func \(m \*MockInvitationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#MockInvitationRepository.AcceptInvitation>)
@@ -8137,6 +8382,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockInvitationRepository\) MarkInvitationExpired\(invitationID uint\) error](<#MockInvitationRepository.MarkInvitationExpired>)
   - [func \(m \*MockInvitationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#MockInvitationRepository.MarkInvitationSendFailed>)
   - [func \(m \*MockInvitationRepository\) MarkInvitationSent\(invitationID uint\) error](<#MockInvitationRepository.MarkInvitationSent>)
+  - [func \(m \*MockInvitationRepository\) MarkInvitationSentTx\(tx \*gorm.DB, invitationID uint\) error](<#MockInvitationRepository.MarkInvitationSentTx>)
 - [type MockNotificationRepository](<#MockNotificationRepository>)
   - [func \(m \*MockNotificationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#MockNotificationRepository.AcceptInvitation>)
   - [func \(m \*MockNotificationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#MockNotificationRepository.CancelInvitation>)
@@ -8165,6 +8411,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockNotificationRepository\) MarkHouseholdStepDone\(userID uint\) error](<#MockNotificationRepository.MarkHouseholdStepDone>)
   - [func \(m \*MockNotificationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#MockNotificationRepository.MarkInvitationSendFailed>)
   - [func \(m \*MockNotificationRepository\) MarkInvitationSent\(invitationID uint\) error](<#MockNotificationRepository.MarkInvitationSent>)
+  - [func \(m \*MockNotificationRepository\) MarkInvitationSentTx\(tx \*gorm.DB, invitationID uint\) error](<#MockNotificationRepository.MarkInvitationSentTx>)
   - [func \(m \*MockNotificationRepository\) MarkNotificationsSetup\(userID uint\) error](<#MockNotificationRepository.MarkNotificationsSetup>)
   - [func \(m \*MockNotificationRepository\) MarkOnboardingComplete\(userID uint\) error](<#MockNotificationRepository.MarkOnboardingComplete>)
   - [func \(m \*MockNotificationRepository\) SaveWebPushSubscription\(userID uint, subscriptionJSON string\) error](<#MockNotificationRepository.SaveWebPushSubscription>)
@@ -8263,6 +8510,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockUserRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#MockUserRepository.GetUserByID>)
   - [func \(m \*MockUserRepository\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#MockUserRepository.GetUserByUsername>)
   - [func \(m \*MockUserRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#MockUserRepository.GetUserHouseholdByID>)
+  - [func \(m \*MockUserRepository\) GetUserHouseholdRole\(userID uint\) \(string, error\)](<#MockUserRepository.GetUserHouseholdRole>)
   - [func \(m \*MockUserRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#MockUserRepository.GetUsersByHouseholdID>)
   - [func \(m \*MockUserRepository\) IsAccountLocked\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) \(bool, time.Duration\)](<#MockUserRepository.IsAccountLocked>)
   - [func \(m \*MockUserRepository\) MarkHouseholdStepDone\(userID uint\) error](<#MockUserRepository.MarkHouseholdStepDone>)
@@ -8277,6 +8525,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockUserRepository\) UpdateEmailVerificationStatus\(token, status string\) error](<#MockUserRepository.UpdateEmailVerificationStatus>)
   - [func \(m \*MockUserRepository\) UpdateUser\(userID uint, user \*authentication.User\) error](<#MockUserRepository.UpdateUser>)
   - [func \(m \*MockUserRepository\) UpdateUserEmailVerified\(userID uint, verifiedAt time.Time\) error](<#MockUserRepository.UpdateUserEmailVerified>)
+  - [func \(m \*MockUserRepository\) UpdateUserHouseholdRole\(userID, householdID uint, role string\) error](<#MockUserRepository.UpdateUserHouseholdRole>)
   - [func \(m \*MockUserRepository\) UpdateUserPassword\(userID uint, login \*authentication.Login\) error](<#MockUserRepository.UpdateUserPassword>)
   - [func \(m \*MockUserRepository\) UpdateUsername\(userID uint, username string\) error](<#MockUserRepository.UpdateUsername>)
   - [func \(m \*MockUserRepository\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#MockUserRepository.UserExistsByMailAddress>)
@@ -8532,6 +8781,15 @@ func (m *MockHouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminU
 
 
 
+<a name="MockHouseholdRepository.SetHouseholdMemberRole"></a>
+### func \(\*MockHouseholdRepository\) SetHouseholdMemberRole
+
+```go
+func (m *MockHouseholdRepository) SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error
+```
+
+
+
 <a name="MockHouseholdRepository.UpdateHouseholdName"></a>
 ### func \(\*MockHouseholdRepository\) UpdateHouseholdName
 
@@ -8649,6 +8907,15 @@ func (m *MockInvitationRepository) MarkInvitationSendFailed(invitationID uint) e
 
 ```go
 func (m *MockInvitationRepository) MarkInvitationSent(invitationID uint) error
+```
+
+
+
+<a name="MockInvitationRepository.MarkInvitationSentTx"></a>
+### func \(\*MockInvitationRepository\) MarkInvitationSentTx
+
+```go
+func (m *MockInvitationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
 ```
 
 
@@ -8916,6 +9183,15 @@ func (m *MockNotificationRepository) MarkInvitationSendFailed(invitationID uint)
 
 ```go
 func (m *MockNotificationRepository) MarkInvitationSent(invitationID uint) error
+```
+
+
+
+<a name="MockNotificationRepository.MarkInvitationSentTx"></a>
+### func \(\*MockNotificationRepository\) MarkInvitationSentTx
+
+```go
+func (m *MockNotificationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
 ```
 
 
@@ -9860,6 +10136,15 @@ func (m *MockUserRepository) GetUserHouseholdByID(userID uint) (uint, error)
 
 
 
+<a name="MockUserRepository.GetUserHouseholdRole"></a>
+### func \(\*MockUserRepository\) GetUserHouseholdRole
+
+```go
+func (m *MockUserRepository) GetUserHouseholdRole(userID uint) (string, error)
+```
+
+
+
 <a name="MockUserRepository.GetUsersByHouseholdID"></a>
 ### func \(\*MockUserRepository\) GetUsersByHouseholdID
 
@@ -9982,6 +10267,15 @@ func (m *MockUserRepository) UpdateUser(userID uint, user *authentication.User) 
 
 ```go
 func (m *MockUserRepository) UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
+```
+
+
+
+<a name="MockUserRepository.UpdateUserHouseholdRole"></a>
+### func \(\*MockUserRepository\) UpdateUserHouseholdRole
+
+```go
+func (m *MockUserRepository) UpdateUserHouseholdRole(userID, householdID uint, role string) error
 ```
 
 

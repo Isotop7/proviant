@@ -152,14 +152,14 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 			userName = user.DisplayName
 		}
 		logEntry := &dbModel.ActivityLog{
-			HouseholdID:  householdID,
-			UserID:       &userID,
-			UserName:     userName,
-			Action:       dbModel.ActivityActionAdd,
-			ProductID:    product.ID,
-			ProductName:  product.ProductName,
-			Quantity:     1,
-			Timestamp:    time.Now(),
+			HouseholdID: householdID,
+			UserID:      &userID,
+			UserName:    userName,
+			Action:      dbModel.ActivityActionAdd,
+			ProductID:   product.ID,
+			ProductName: product.ProductName,
+			Quantity:    1,
+			Timestamp:   time.Now(),
 		}
 		if repos.ActivityLogs == nil {
 			return
@@ -285,14 +285,14 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 				quantity = -quantity
 			}
 			logEntry := &dbModel.ActivityLog{
-				HouseholdID:  householdID,
-				UserID:       &appCtx.UserID,
-				UserName:     userName,
-				Action:       dbModel.ActivityActionAmountChange,
-				ProductID:    productID,
-				ProductName:  product.ProductName,
-				Quantity:     quantity,
-				Timestamp:    time.Now(),
+				HouseholdID: householdID,
+				UserID:      &appCtx.UserID,
+				UserName:    userName,
+				Action:      dbModel.ActivityActionAmountChange,
+				ProductID:   productID,
+				ProductName: product.ProductName,
+				Quantity:    quantity,
+				Timestamp:   time.Now(),
 			}
 			if appCtx.Repos.ActivityLogs == nil {
 				return

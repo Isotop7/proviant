@@ -41,14 +41,14 @@ func (s *ProductService) recordActivityLog(userID uint, householdID uint, action
 		userName = user.DisplayName
 	}
 	logEntry := &dbModel.ActivityLog{
-		HouseholdID:  householdID,
-		UserID:       &userID,
-		UserName:     userName,
-		Action:       action,
-		ProductID:    productID,
-		ProductName:  productName,
-		Quantity:     quantity,
-		Timestamp:    time.Now(),
+		HouseholdID: householdID,
+		UserID:      &userID,
+		UserName:    userName,
+		Action:      action,
+		ProductID:   productID,
+		ProductName: productName,
+		Quantity:    quantity,
+		Timestamp:   time.Now(),
 	}
 	go func() {
 		if s.repos.ActivityLogs == nil {

@@ -403,6 +403,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		"CriticalCount":    criticalCount,
 		"UrgentCount":      expiredCount + criticalCount,
 		"Params":           params,
+		"CurrentUserID":    userID,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }

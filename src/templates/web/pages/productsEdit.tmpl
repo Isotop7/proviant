@@ -52,7 +52,7 @@
         {{ expiryStatusLabel .Product.ExpireAt }}
       </span>
       <button type="button" class="btn btn-proviant-secondary btn-sm btn-add-to-shopping-list" data-product-id="{{ .Product.ID }}" title="Add to shopping list">
-        <i class="bi bi-cart-plus"></i> Add to list
+        <i class="bi bi-cart-plus"></i>
       </button>
     </div>
   </div>
@@ -79,6 +79,19 @@
                 <i class="bi bi-upc-scan" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--fg-3);font-size:15px;pointer-events:none;"></i>
                 <input type="text" class="pv-field-input mono" value="{{ .Product.Barcode }}" style="padding-left:34px;" readonly>
               </div>
+            </div>
+            <div class="pv-field">
+              <label class="pv-field-label">
+                <i class="bi bi-lock"></i> Private product
+              </label>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="inputIsPrivate"
+                  {{ if .Product.IsPrivate }}checked{{ end }}>
+                <label class="form-check-label" for="inputIsPrivate">
+                  Only visible to you
+                </label>
+              </div>
+              <div class="pv-field-hint">Private products are hidden from other household members.</div>
             </div>
           </div>
         </div>

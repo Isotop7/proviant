@@ -29,11 +29,16 @@ func CreateTestHousehold(db *gorm.DB, adminID uint) *dbModel.Household {
 	return &household
 }
 
-func CreateTestProduct(db *gorm.DB, householdID uint) *dbModel.Product {
+func CreateTestProduct(db *gorm.DB, householdID uint, userID ...uint) *dbModel.Product {
+	uid := uint(0)
+	if len(userID) > 0 {
+		uid = userID[0]
+	}
 	product := dbModel.Product{
 		ProductName: "Test Product",
 		Barcode:     "1234567890123",
 		HouseholdID: householdID,
+		UserID:      uid,
 		ExpireAt:    time.Now().Add(7 * 24 * time.Hour),
 	}
 	db.Create(&product)
