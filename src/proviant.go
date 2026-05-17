@@ -258,8 +258,10 @@ func main() {
 		&dbModel.SavingsRecord{},
 		&dbModel.ExpiryScan{},
 		&dbModel.AuditLog{},
+		&dbModel.ActivityLog{},
 		&dbModel.WebPushConfig{},
 		&dbModel.MailDigestUnsubscribeToken{},
+		&dbModel.ShoppingListItem{},
 	)
 	if migrationError != nil {
 		panic(migrationError)

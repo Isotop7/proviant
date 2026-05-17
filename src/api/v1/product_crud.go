@@ -2,6 +2,7 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -145,6 +146,30 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	go func() {
+		householdID, _ := repos.Users.GetUserHouseholdByID(userID)
+		userName := ""
+		if user, err := repos.Users.GetUserByID(userID); err == nil {
+			userName = user.DisplayName
+		}
+		logEntry := &dbModel.ActivityLog{
+			HouseholdID: householdID,
+			UserID:      &userID,
+			UserName:    userName,
+			Action:      dbModel.ActivityActionAdd,
+			ProductID:   product.ID,
+			ProductName: product.ProductName,
+			Quantity:    1,
+			Timestamp:   time.Now(),
+		}
+		if repos.ActivityLogs == nil {
+			return
+		}
+		ctxBg, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = repos.ActivityLogs.Create(ctxBg, logEntry)
+	}()
+
+	go func() {
 		if ws := controllers.GetWebhookService(); ws != nil {
 			ws.FireEvent("product.created", map[string]any{
 				"id":          product.ID,
@@ -230,10 +255,52 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
+	product, err := appCtx.Repos.Products.GetProductByID(productID, appCtx.UserID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			appCtx.Logger.Warn().Msgf(errors.FormatProductNotFound, productID)
+			ctx.JSON(http.StatusNotFound, api.APIResponse{
+				Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+				Action:  MsgCheckProductIdTryAgain,
+			})
+			return
+		}
+		appCtx.Logger.Error().Msgf("Error fetching product before amount update: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
+		return
+	}
+
 	deleted, updateErr := appCtx.Repos.Products.UpdateProductAmount(productID, appCtx.UserID, amountDTO.Delta)
 
 	switch updateErr {
 	case nil:
+		householdID, _ := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
+		userName := ""
+		if user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID); err == nil {
+			userName = user.DisplayName
+		}
+		go func() {
+			quantity := amountDTO.Delta
+			if quantity < 0 {
+				quantity = -quantity
+			}
+			logEntry := &dbModel.ActivityLog{
+				HouseholdID: householdID,
+				UserID:      &appCtx.UserID,
+				UserName:    userName,
+				Action:      dbModel.ActivityActionAmountChange,
+				ProductID:   productID,
+				ProductName: product.ProductName,
+				Quantity:    quantity,
+				Timestamp:   time.Now(),
+			}
+			if appCtx.Repos.ActivityLogs == nil {
+				return
+			}
+			ctxBg, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = appCtx.Repos.ActivityLogs.Create(ctxBg, logEntry)
+		}()
 		if deleted {
 			go func() {
 				if ws := controllers.GetWebhookService(); ws != nil {

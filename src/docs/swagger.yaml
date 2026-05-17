@@ -7,6 +7,36 @@ definitions:
       message:
         type: string
     type: object
+  api.ActivityEntry:
+    properties:
+      action:
+        type: string
+      productId:
+        type: integer
+      productName:
+        type: string
+      quantity:
+        type: integer
+      timestamp:
+        type: string
+      userId:
+        type: integer
+      userName:
+        type: string
+    type: object
+  api.ActivityLogResponse:
+    properties:
+      activities:
+        items:
+          $ref: '#/definitions/api.ActivityEntry'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
   api.CreateWebhookRequest:
     properties:
       active:
@@ -247,6 +277,8 @@ definitions:
     properties:
       emailEnabled:
         type: boolean
+      mailDigestFrequency:
+        type: string
       monthlyWasteReportEnabled:
         type: boolean
       notificationThresholdDays:
@@ -266,6 +298,8 @@ definitions:
       telegramEnabled:
         type: boolean
       telegramLinked:
+        type: boolean
+      webPushEnabled:
         type: boolean
     type: object
   authentication.Signup:
@@ -303,6 +337,8 @@ definitions:
         type: string
       notificationPreferences:
         $ref: '#/definitions/authentication.NotificationPreferences'
+      role:
+        type: string
       updatedAt:
         type: string
       username:
@@ -437,6 +473,12 @@ definitions:
         type: integer
       imageUrl:
         type: string
+      isPrivate:
+        type: boolean
+      minStockAmount:
+        type: integer
+      notificationLeadDays:
+        type: integer
       notifiedAt:
         type: string
       priceOverride:
@@ -586,6 +628,13 @@ definitions:
         type: string
       username:
         type: string
+    type: object
+  v1.updateHouseholdMemberRoleRequest:
+    properties:
+      role:
+        type: string
+    required:
+    - role
     type: object
   v1.updateHouseholdNameRequest:
     properties:
@@ -841,6 +890,37 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Apply to join a household
+      tags:
+      - household
+  /api/v1/household/activity:
+    get:
+      description: Returns paginated activity log entries for the household the caller
+        belongs to.
+      parameters:
+      - description: Max entries to return (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Number of entries to skip (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ActivityLogResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get household activity feed
       tags:
       - household
   /api/v1/household/applications:
@@ -1108,6 +1188,48 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Remove a household member
+      tags:
+      - household
+  /api/v1/household/members/{userId}/role:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: New role
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/v1.updateHouseholdMemberRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Update household member role
       tags:
       - household
   /api/v1/household/name:
@@ -2971,6 +3093,55 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Recipes page
+      tags:
+      - web
+  /web/shopping-list:
+    get:
+      description: Renders the shared household shopping list with custom items and
+        import banner
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Shopping List page
+      tags:
+      - web
+  /web/unsubscribe:
+    get:
+      description: Handles unsubscribe token and disables digest for user
+      parameters:
+      - description: Unsubscribe token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Unsubscribe from email digests
       tags:
       - web
   /web/user:

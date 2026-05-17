@@ -153,6 +153,26 @@ func AddPerformanceIndexes(logger *zerolog.Logger, db *gorm.DB) error {
 	return nil
 }
 
+// BackfillProductUserID sets user_id for existing products that are marked private but have no owner.
+// For private products without an owner, assigns the household admin as the owner so they remain visible.
+func BackfillProductUserID(logger *zerolog.Logger, db *gorm.DB) error {
+	result := db.Exec(`
+		UPDATE products
+		SET user_id = (
+			SELECT users.id FROM users
+			WHERE users.household_id = products.household_id
+			AND users.role = 'admin'
+			LIMIT 1
+		)
+		WHERE is_private = 1 AND user_id = 0
+	`)
+	if result.Error != nil {
+		return result.Error
+	}
+	logger.Info().Int64("count", result.RowsAffected).Msg("Backfilled product owners for private products")
+	return nil
+}
+
 func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 	logger.Info().Msg("Running database migrations")
 
@@ -205,6 +225,18 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 	// Backfill removal_reason for existing consumed products
 	logger.Debug().Msg("Backfill removal_reason for consumed products")
 	if err := BackfillRemovalReason(logger, db); err != nil {
+		return err
+	}
+
+	// Backfill household roles for existing users
+	logger.Debug().Msg("Backfill household roles")
+	if err := BackfillHouseholdRoles(logger, db); err != nil {
+		return err
+	}
+
+	// Backfill product owners for private products
+	logger.Debug().Msg("Backfill product owners for private products")
+	if err := BackfillProductUserID(logger, db); err != nil {
 		return err
 	}
 
@@ -275,5 +307,34 @@ func RenamePushNotificationColumns(logger *zerolog.Logger, db *gorm.DB) error {
 		}
 	}
 	logger.Info().Msg("Renamed push columns to web_push columns")
+	return nil
+}
+
+// BackfillHouseholdRoles sets role='admin' for household admins and role='member' for all others.
+// This migration ensures existing users get appropriate roles after the role field is added.
+func BackfillHouseholdRoles(logger *zerolog.Logger, db *gorm.DB) error {
+	result := db.Exec(`
+		UPDATE users
+		SET role = 'admin'
+		WHERE EXISTS (
+			SELECT 1 FROM households WHERE households.id = users.household_id AND households.admin_id = users.id
+		)
+	`)
+	if result.Error != nil {
+		return result.Error
+	}
+	logger.Info().Int64("admins", result.RowsAffected).Msg("Backfilled admin roles")
+
+	result = db.Exec(`
+		UPDATE users
+		SET role = 'member'
+		WHERE (role IS NULL OR role = '')
+		AND household_id IS NOT NULL AND household_id != 0
+	`)
+	if result.Error != nil {
+		return result.Error
+	}
+	logger.Info().Int64("members", result.RowsAffected).Msg("Backfilled member roles")
+
 	return nil
 }

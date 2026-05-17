@@ -1265,19 +1265,19 @@ th a {
 
 .bottom-nav-scan {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
+  align-self: flex-end;
   justify-content: center;
   width: 64px;
   height: 64px;
+  margin-bottom: 4px;
   color: var(--accent-fg);
   text-decoration: none;
   background: var(--accent);
   border-radius: 50%;
   box-shadow: 0 4px 12px oklch(50% .12 162deg / .4);
   transition: transform var(--duration-base), box-shadow var(--duration-base);
-  flex-shrink: 0;
-  align-self: flex-end;
-  margin-bottom: 4px;
 
   i {
     font-size: 24px;
@@ -1299,15 +1299,15 @@ th a {
   gap: 3px;
   align-items: center;
   justify-content: center;
-  padding: 8px 8px;
+  padding: 8px;
   font-size: 10px;
   font-weight: 400;
   color: var(--fg-3);
   text-decoration: none;
-  transition: color 120ms;
+  cursor: pointer;
   background: none;
   border: none;
-  cursor: pointer;
+  transition: color 120ms;
 
   i {
     display: block;
@@ -1342,12 +1342,12 @@ th a {
   width: 40px;
   height: 40px;
   color: var(--fg-3);
+  cursor: pointer;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 50%;
-  cursor: pointer;
-  transition: color 120ms;
   box-shadow: 0 2px 8px oklch(18% .022 70deg / .12);
+  transition: color 120ms;
 
   i {
     font-size: 18px;
@@ -1360,15 +1360,15 @@ th a {
 }
 
 .mobile-top-more-dropdown {
-  margin-top: 8px;
   min-width: 160px;
+  margin-top: 8px;
 
   .dropdown-item {
-    font-size: 12px;
     font-family: var(--font-ui);
+    font-size: 12px;
   }
 
-  .dropdown-item--danger {
+  .dropdown-item-danger {
     color: var(--bs-danger);
 
     &:hover {
@@ -2707,7 +2707,7 @@ select.pv-field-input {
 
 .list-header {
   display: grid;
-  grid-template-columns: 32px 1fr 120px 140px 90px 80px;
+  grid-template-columns: 32px 1fr 120px 140px 90px 80px 50px;
   gap: 10px;
   padding: 8px 16px;
   background: var(--bg-subtle);
@@ -2724,10 +2724,11 @@ select.pv-field-input {
 
 .list-row {
   display: grid;
-  grid-template-columns: 32px 1fr 120px 140px 90px 80px;
+  grid-template-columns: 32px 1fr 120px 140px 90px 80px 50px;
   gap: 10px;
   align-items: center;
   padding: 9px 16px;
+  overflow: hidden;
   cursor: default;
   border-bottom: 1px solid var(--border-subtle);
   transition: background 120ms;
@@ -2752,6 +2753,39 @@ select.pv-field-input {
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--fg-3);
+}
+
+.col-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-add-to-shopping-list {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--fg-3);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  transition: all 120ms;
+
+  &:hover {
+    color: var(--accent);
+    background: var(--accent-subtle);
+    border-color: var(--accent-border);
+  }
+
+  &:disabled {
+    color: var(--fg-3);
+    cursor: default;
+    opacity: .5;
+  }
 }
 
 .qty-stepper {
@@ -2911,7 +2945,11 @@ select.pv-field-input {
   border-radius: 7px;
   transition: all 120ms;
 
-  &:hover,
+  &:hover {
+    color: var(--fg);
+    background: var(--bg-subtle);
+  }
+
   &.active {
     color: var(--accent);
     background: var(--accent-subtle);
@@ -2977,12 +3015,36 @@ select.pv-field-input {
 @media (max-width: 767.98px) {
   .list-header,
   .list-row {
-    grid-template-columns: 18px 1fr 40px 64px;
+    grid-template-columns: 12px 1fr 60px 48px 20px;
+    overflow: hidden;
+  }
+
+  .list-header {
+    .col-qty,
+    .col-actions {
+      justify-content: flex-end;
+      text-align: right;
+    }
   }
 
   .col-status,
   .col-location {
     display: none;
+  }
+
+  .col-qty {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  .qty-stepper {
+    flex-shrink: 0;
+  }
+
+  .col-actions {
+    flex-shrink: 0;
   }
 
   // Hide desktop-only bulk actions and export divider; mobile dropdown remains visible
@@ -3075,6 +3137,246 @@ select.pv-field-input {
   }
 }
 
+/* Shopping list styles — matches product list layout */
+.sl-list-header {
+  display: grid;
+  grid-template-columns: 32px 1fr 80px 60px;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+
+  > div {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--fg-3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+}
+
+.sl-list-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 80px 60px;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 16px;
+  cursor: default;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 120ms;
+
+  &:hover {
+    background: var(--bg-subtle);
+  }
+
+  &.checked {
+    opacity: .6;
+
+    .sl-item-name {
+      color: var(--fg-3);
+      text-decoration: line-through;
+    }
+  }
+}
+
+.sl-category-header {
+  padding: 8px 16px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sl-product-col {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+
+  .sl-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sl-item-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--fg);
+  }
+}
+
+.sl-qty-col {
+  display: flex;
+  align-items: center;
+}
+
+.sl-actions-col {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+}
+
+.sl-notes-row {
+  display: none;
+  padding: 8px 16px 8px 52px;
+
+  &.expanded {
+    display: block;
+  }
+
+  input.notes-saved {
+    animation: notes-saved-animation 1.2s ease-out;
+  }
+}
+
+@keyframes notes-saved-animation {
+  0% {
+    border-color: var(--success);
+    box-shadow: 0 0 0 0 oklch(63% .2 142deg / .3);
+  }
+  30% {
+    border-color: var(--success);
+    box-shadow: 0 0 0 4px oklch(63% .2 142deg / .15);
+  }
+  100% {
+    border-color: var(--border);
+    box-shadow: 0 0 0 0 oklch(63% .2 142deg / 0);
+  }
+}
+
+/* Shopping list styles */
+.shopping-list-import-banner {
+  overflow: hidden;
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+
+  .import-banner-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      background: oklch(92% .04 162deg / .5);
+    }
+  }
+
+  .import-banner-body {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border-subtle);
+  }
+}
+
+.shopping-list-category-header {
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.shopping-list-item {
+  .item-name {
+    font-weight: 500;
+    color: var(--fg);
+  }
+
+  .item-notes {
+    display: block;
+    margin-top: 2px;
+  }
+
+  &.checked {
+    opacity: .6;
+
+    .item-name {
+      color: var(--fg-3);
+      text-decoration: line-through;
+    }
+  }
+}
+
+.shopping-list-item-notes-row {
+  display: none;
+  padding: 0 16px 8px 52px;
+
+  &.expanded {
+    display: block;
+  }
+}
+
+.add-item-form-inner {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  .form-control {
+    height: 36px;
+    font-size: 13px;
+  }
+
+  #inputItemName {
+    flex: 1;
+    min-width: 0;
+  }
+
+  #inputItemQuantity {
+    width: 60px;
+  }
+
+  #inputItemUnit {
+    width: 60px;
+  }
+
+  #inputItemCategory {
+    width: 100px;
+  }
+
+  #btnAddItem {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+  }
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  transition: all 120ms;
+
+  &:hover {
+    background: var(--bg-subtle);
+  }
+
+  &.text-danger:hover {
+    color: var(--status-expired);
+    background: var(--status-expired-subtle);
+  }
+}
+
 /* Button loading state */
 .btn-loading {
   display: none;
@@ -3088,4 +3390,3 @@ select.pv-field-input {
     align-items: center;
   }
 }
-

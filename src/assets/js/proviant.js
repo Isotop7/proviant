@@ -152,9 +152,9 @@ proviant.updateProductAmount = async function (productID, delta) {
 };
 
 /* ── Product API ─────────────────────────────────────────────────────────────── */
-proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId) {
+proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate = false) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null }) });
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null, isPrivate }) });
   const body = await res.json();
   return { code: res.status, message: body.message };
 };
@@ -375,6 +375,12 @@ proviant.resetHouseholdUserPassword = async function (userID) {
   return { code: res.status, message: body.message };
 };
 
+proviant.updateMemberRole = async function (userID, role) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/members/${userID}/role`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
 /* ── Invitation API ──────────────────────────────────────────────────────────── */
 proviant.createInvitation = async function (email) {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/invitations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
@@ -464,6 +470,13 @@ proviant.getSavingsStats = async function () {
 
 proviant.getNotifications = async function () {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/notifications`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
+/* ── Household Activity API ──────────────────────────────────────────────────── */
+proviant.getActivityFeed = async function (limit = 10, offset = 0) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/activity?limit=${limit}&offset=${offset}`, { method: "GET", headers: { "Content-Type": "application/json" } });
   const body = await res.json();
   return { code: res.status, message: body };
 };

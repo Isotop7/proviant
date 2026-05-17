@@ -5,6 +5,7 @@ import (
 	"errors"
 	"html/template"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -30,8 +31,11 @@ const MsgInvalidCredentials = "Invalid credentials"
 var errEmailNotVerified = errors.New("email not verified")
 
 func RequireHouseholdAdmin() gin.HandlerFunc {
+	return RequireHouseholdRole(authentication.RoleAdmin)
+}
+
+func RequireHouseholdRole(roles ...string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 		dbHandle, _ := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 
 		userIDVal, exists := ctx.Get(util.ContextKeyUserID)
@@ -49,19 +53,15 @@ func RequireHouseholdAdmin() gin.HandlerFunc {
 			ctx.Abort()
 			return
 		}
-		household, err := userRepo.GetHouseholdByID(user.HouseholdID)
-		if err != nil {
-			logger.Error().Msgf("Error fetching household: %s", err)
-			api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
+
+		hasRole := slices.Contains(roles, user.Role)
+		if !hasRole {
+			api.RespondError(ctx, http.StatusForbidden, apperrors.ErrInsufficientRole)
 			ctx.Abort()
 			return
 		}
-		if household.AdminID != userID {
-			api.RespondError(ctx, http.StatusForbidden, apperrors.ErrNotHouseholdAdmin)
-			ctx.Abort()
-			return
-		}
-		ctx.Set(util.ContextKeyHouseholdID, household.ID)
+
+		ctx.Set(util.ContextKeyHouseholdID, user.HouseholdID)
 		ctx.Next()
 	}
 }
@@ -226,7 +226,40 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
 	return productRepo.UserHasProductAccess(user.ID, productID)
 }
 
-// isTokenRevoked checks if the current token's JTI is in the revoked tokens list
+func AuthorizatorShoppingListItem(data any, ctx *gin.Context) bool {
+	if isTokenRevoked(ctx) {
+		return false
+	}
+
+	user, ok := data.(*authentication.User)
+	if !ok {
+		return false
+	}
+
+	idParam := ctx.Param("id")
+	itemID, err := strconv.Atoi(idParam)
+	if err != nil || itemID < 0 {
+		return false
+	}
+
+	reposVal, exists := ctx.Get(util.ContextKeyRepos)
+	if !exists {
+		return false
+	}
+	repos, ok := reposVal.(*database.RepositoryContainer)
+	if !ok {
+		return false
+	}
+
+	householdID, err := repos.Users.GetUserHouseholdByID(user.ID)
+	if err != nil {
+		return false
+	}
+
+	_, err = repos.ShoppingListItems.GetByID(uint(itemID), householdID)
+	return err == nil
+}
+
 func isTokenRevoked(ctx *gin.Context) bool {
 	claims := jwt.ExtractClaims(ctx)
 	jti, exists := claims[static.TokenJTIKey]

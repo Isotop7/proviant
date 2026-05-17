@@ -17,6 +17,12 @@ const (
 	MailDigestFrequencyWeekly   = "weekly"
 )
 
+const (
+	RoleAdmin  = "admin"
+	RoleMember = "member"
+	RoleViewer = "viewer"
+)
+
 type NotificationPreferences struct {
 	EmailEnabled              bool   `json:"emailEnabled" gorm:"default:true"`
 	NtfyEnabled               bool   `json:"ntfyEnabled" gorm:"default:false"`
@@ -41,7 +47,7 @@ type NotificationPreferences struct {
 // A single user can own many products
 type User struct {
 	gorm.Model
-	ID                      uint       `gorm:"primaryKey,unique"`
+	ID                      uint       `gorm:"primaryKey,unique" json:"id"`
 	Username                string     `gorm:"index" json:"username"`
 	DisplayName             string     `json:"displayName"`
 	MailAddress             string     `gorm:"index" json:"mailAddress"`
@@ -49,6 +55,7 @@ type User struct {
 	EmailVerifiedAt         *time.Time `json:"emailVerifiedAt,omitempty"`
 	HouseholdID             uint       `gorm:"index"`
 	Household               database.Household
+	Role                    string                  `gorm:"default:'member'" json:"role"`
 	NotificationPreferences NotificationPreferences `gorm:"embedded"`
 	FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`
 	LockedUntil             gorm.DeletedAt          `json:"-"`

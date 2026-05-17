@@ -32,6 +32,36 @@ func (s *ProductService) recordSavingsEvent(userID uint, product *dbModel.Produc
 	}
 }
 
+func (s *ProductService) recordActivityLog(userID uint, householdID uint, action string, productID uint, productName string, quantity int) {
+	if householdID == 0 {
+		return
+	}
+	userName := ""
+	if user, err := s.repos.Users.GetUserByID(userID); err == nil {
+		userName = user.DisplayName
+	}
+	logEntry := &dbModel.ActivityLog{
+		HouseholdID: householdID,
+		UserID:      &userID,
+		UserName:    userName,
+		Action:      action,
+		ProductID:   productID,
+		ProductName: productName,
+		Quantity:    quantity,
+		Timestamp:   time.Now(),
+	}
+	go func() {
+		if s.repos.ActivityLogs == nil {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := s.repos.ActivityLogs.Create(ctx, logEntry); err != nil {
+			s.logger.Error().Msgf("recordActivityLog: %s", err)
+		}
+	}()
+}
+
 func (s *ProductService) ConsumeProduct(productID, userID uint) error {
 	product, err := s.repos.Products.GetProductByID(productID, userID)
 	if err != nil {
@@ -43,6 +73,10 @@ func (s *ProductService) ConsumeProduct(productID, userID uint) error {
 	}
 
 	go s.recordSavingsEvent(userID, &product, "consumed")
+
+	if householdID, err := s.repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
+		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, 1)
+	}
 	return nil
 }
 
@@ -60,6 +94,7 @@ func (s *ProductService) WasteProduct(productID, userID uint) error {
 		if err := s.repos.Streaks.RecordWasteEvent(householdID); err != nil {
 			s.logger.Error().Msgf("WasteProduct: failed to record waste event for streak: %s", err)
 		}
+		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionWaste, productID, product.ProductName, 1)
 	}
 
 	go func() {
@@ -77,6 +112,8 @@ func (s *ProductService) WasteProduct(productID, userID uint) error {
 }
 
 func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) error {
+	householdID, _ := s.repos.Users.GetUserHouseholdByID(userID)
+
 	for _, productID := range productIDs {
 		product, err := s.repos.Products.GetProductByID(productID, userID)
 		if err != nil {
@@ -94,6 +131,9 @@ func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) err
 		}
 
 		go s.recordSavingsEvent(userID, &product, "consumed")
+		if householdID > 0 {
+			go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, 1)
+		}
 	}
 	return nil
 }
@@ -121,6 +161,7 @@ func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) error
 			if err := s.repos.Streaks.RecordWasteEvent(householdID); err != nil {
 				s.logger.Error().Msgf("BulkWasteProducts: failed to record waste event for streak: %s", err)
 			}
+			go s.recordActivityLog(userID, householdID, dbModel.ActivityActionWaste, productID, product.ProductName, 1)
 		}
 
 		go func(pid uint) {
@@ -137,14 +178,32 @@ func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) error
 }
 
 func (s *ProductService) RestoreProduct(productID, userID uint) error {
-	return s.repos.Products.RestoreProduct(productID, userID)
+	product, err := s.repos.Products.GetArchivedProductByID(productID, userID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repos.Products.RestoreProduct(productID, userID); err != nil {
+		return err
+	}
+
+	if householdID, err := s.repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
+		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionRestore, productID, product.ProductName, 1)
+	}
+	return nil
 }
 
 func (s *ProductService) BulkRestoreProducts(productIDs []uint, userID uint) error {
+	householdID, _ := s.repos.Users.GetUserHouseholdByID(userID)
 	errs := s.repos.Products.BulkRestoreProducts(productIDs, userID)
-	if len(errs) > 0 {
-		for _, e := range errs {
-			s.logger.Error().Msg(e.Error())
+	for idx, err := range errs {
+		s.logger.Error().Msg(err.Error())
+		if idx < len(productIDs) {
+			productID := productIDs[idx]
+			product, err := s.repos.Products.GetArchivedProductByID(productID, userID)
+			if err == nil && householdID > 0 {
+				go s.recordActivityLog(userID, householdID, dbModel.ActivityActionRestore, productID, product.ProductName, 1)
+			}
 		}
 	}
 	return nil

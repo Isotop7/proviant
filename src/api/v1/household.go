@@ -10,6 +10,8 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 
@@ -269,6 +271,76 @@ func CancelHouseholdApplication(ctx *gin.Context, appCtx *AppContext) {
 	}
 }
 
+// GetHouseholdActivity returns the activity feed for the caller's household.
+// @Summary      Get household activity feed
+// @Description  Returns paginated activity log entries for the household the caller belongs to.
+// @Tags         household
+// @Produce      json
+// @Param        limit  query     int  false  "Max entries to return (default 50, max 100)"
+// @Param        offset query     int  false  "Number of entries to skip (default 0)"
+// @Success      200    {object}  api.ActivityLogResponse
+// @Failure      400    {object}  api.APIResponse
+// @Failure      500    {object}  api.APIResponse
+// @Router       /api/v1/household/activity [get]
+func GetHouseholdActivity(ctx *gin.Context, appCtx *AppContext) {
+	limit := 50
+	if l := ctx.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
+			limit = parsed
+			limit = min(limit, 100)
+		}
+	}
+
+	offset := 0
+	if o := ctx.Query("offset"); o != "" {
+		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
+			offset = parsed
+		}
+	}
+
+	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
+	if err != nil {
+		appCtx.Logger.Error().Msgf("GetHouseholdActivity: failed to get user: %s", err)
+		api.RespondError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	logs, err := appCtx.Repos.ActivityLogs.GetByHousehold(ctx, user.HouseholdID, limit, offset)
+	if err != nil {
+		appCtx.Logger.Error().Msgf("GetHouseholdActivity: failed to get activity logs: %s", err)
+		api.RespondError(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	total, countErr := appCtx.Repos.ActivityLogs.GetByHouseholdCount(ctx, user.HouseholdID)
+	if countErr != nil {
+		appCtx.Logger.Error().Msgf("GetHouseholdActivity: failed to count activity logs: %s", countErr)
+		api.RespondError(ctx, http.StatusInternalServerError, countErr)
+		return
+	}
+
+	entries := make([]apiModel.ActivityEntry, 0, len(logs))
+	for i := range logs {
+		log := &logs[i]
+		entries = append(entries, apiModel.ActivityEntry{
+			UserID:      log.UserID,
+			UserName:    log.UserName,
+			Action:      log.Action,
+			ProductID:   log.ProductID,
+			ProductName: log.ProductName,
+			Quantity:    log.Quantity,
+			Timestamp:   log.Timestamp.Format(time.RFC3339),
+		})
+	}
+
+	ctx.JSON(http.StatusOK, apiModel.ActivityLogResponse{
+		Activities: entries,
+		Total:      total,
+		Limit:      limit,
+		Offset:     offset,
+	})
+}
+
 // RemoveHouseholdMember removes a member from the caller's household. Caller must be the admin.
 // @Summary      Remove a household member
 // @Tags         household
@@ -303,6 +375,53 @@ func RemoveHouseholdMember(ctx *gin.Context, appCtx *AppContext) {
 	}
 }
 
+// UpdateHouseholdMemberRole changes a member's role in the household. Caller must be the admin.
+// @Summary      Update household member role
+// @Tags         household
+// @Accept       json
+// @Produce      json
+// @Param        userId  path      int  true  "User ID"
+// @Param        role    body      updateHouseholdMemberRoleRequest  true  "New role"
+// @Success      200  {object}  api.APIResponse
+// @Failure      400  {object}  api.APIResponse
+// @Failure      403  {object}  api.APIResponse
+// @Failure      404  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /api/v1/household/members/{userId}/role [patch]
+func UpdateHouseholdMemberRole(ctx *gin.Context, appCtx *AppContext) {
+	memberID, ok := parseUintParam(ctx, appCtx.Logger, "userId", apperrors.ErrInvalidUserID.Error())
+	if !ok {
+		return
+	}
+
+	var req updateHouseholdMemberRoleRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		appCtx.Logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
+		return
+	}
+
+	if req.Role != authentication.RoleAdmin && req.Role != authentication.RoleMember && req.Role != authentication.RoleViewer {
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("invalid role"))
+		return
+	}
+
+	updateErr := appCtx.Repos.Households.SetHouseholdMemberRole(memberID, appCtx.UserID, req.Role)
+	switch updateErr {
+	case nil:
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Member role updated"})
+	case apperrors.ErrNotHouseholdAdmin:
+		api.RespondError(ctx, http.StatusForbidden, updateErr)
+	case apperrors.ErrMemberNotInHousehold:
+		api.RespondError(ctx, http.StatusNotFound, updateErr)
+	case apperrors.ErrInsufficientRole:
+		api.RespondError(ctx, http.StatusBadRequest, updateErr)
+	default:
+		appCtx.Logger.Error().Msgf("Error updating member role: %s", updateErr)
+		api.RespondError(ctx, http.StatusInternalServerError, updateErr)
+	}
+}
+
 func parseUintParam(ctx *gin.Context, logger *zerolog.Logger, paramName, invalidMsg string) (uint, bool) {
 	param := ctx.Param(paramName)
 	val, err := strconv.ParseUint(param, 10, 64)
@@ -320,6 +439,10 @@ type createHouseholdRequest struct {
 
 type updateHouseholdNameRequest struct {
 	Name string `json:"name" binding:"required,min=1,max=100"`
+}
+
+type updateHouseholdMemberRoleRequest struct {
+	Role string `json:"role" binding:"required"`
 }
 
 func recordMemberLeft(ctx *gin.Context, userID uint, householdID uint) {

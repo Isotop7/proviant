@@ -1,11 +1,15 @@
 package web
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
@@ -399,6 +403,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		"CriticalCount":    criticalCount,
 		"UrgentCount":      expiredCount + criticalCount,
 		"Params":           params,
+		"CurrentUserID":    userID,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }
@@ -731,9 +736,9 @@ func (frontend *Frontend) Recipes(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "recipes.tmpl", pageData)
 }
 
-// ShoppingList renders the auto-generated shopping list page
+// ShoppingList renders the shopping list page
 // @Summary      Shopping List page
-// @Description  Renders products below minimum stock threshold
+// @Description  Renders the shared household shopping list with custom items and import banner
 // @Tags         web
 // @Produce      html
 // @Success      200  {string}  html
@@ -746,20 +751,70 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context) {
 		return
 	}
 
-	products, prodErr := repos.Products.GetSubThresholdProducts(userID)
-	if prodErr != nil {
-		logger.Error().Msgf("Error getting shopping list: %s", prodErr)
+	householdID, err := repos.Users.GetUserHouseholdByID(userID)
+	if err != nil {
+		logger.Error().Msgf("Error getting household: %s", err)
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, "Error loading shopping list")
 		return
 	}
 
+	items, _ := repos.ShoppingListItems.ListByHousehold(householdID)
+
+	autoProducts, _ := repos.Products.GetSubThresholdProducts(userID)
+
+	autoProductIDs := make(map[uint]bool)
+	for i := range items {
+		if items[i].ProductID != nil {
+			autoProductIDs[*items[i].ProductID] = true
+		}
+	}
+
+	var filteredAutoProducts []dbModel.Product
+	for i := range autoProducts {
+		if !autoProductIDs[autoProducts[i].ID] {
+			filteredAutoProducts = append(filteredAutoProducts, autoProducts[i])
+		}
+	}
+
+	unchecked := make([]dbModel.ShoppingListItem, 0)
+	checked := make([]dbModel.ShoppingListItem, 0)
+	for i := range items {
+		if items[i].Checked {
+			checked = append(checked, items[i])
+		} else {
+			unchecked = append(unchecked, items[i])
+		}
+	}
+
+	sort.Slice(unchecked, func(i, j int) bool {
+		return unchecked[i].Name < unchecked[j].Name
+	})
+	sort.Slice(checked, func(i, j int) bool {
+		return checked[i].Name < checked[j].Name
+	})
+
+	unchecked = append(unchecked, checked...)
+
 	pageData := map[string]any{
-		"InviteToken":  ctx.Query("invite_token"),
-		"Title":        "Shopping List",
-		"Products":     products,
-		"ProductCount": len(products),
+		"InviteToken":   ctx.Query("invite_token"),
+		"Title":         "Shopping List",
+		"Items":         items,
+		"ItemsSorted":   unchecked,
+		"ItemCount":     len(items),
+		"AutoItems":     filteredAutoProducts,
+		"AutoItemCount": len(filteredAutoProducts),
+		"HasAutoItems":  len(filteredAutoProducts) > 0,
+		"ItemsJSON":     toJSON(unchecked),
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "shoppingList.tmpl", pageData)
+}
+
+func toJSON(v any) string {
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetEscapeHTML(true)
+	_ = enc.Encode(v)
+	return strings.TrimSpace(buf.String())
 }
 
 // Unsubscribe handles one-click unsubscribe from email digests.

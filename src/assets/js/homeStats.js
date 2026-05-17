@@ -158,6 +158,74 @@ document.addEventListener('DOMContentLoaded', async function () {
       }
       dashboard.appendChild(streakCol);
 
+      // Activity feed tile
+      const activityResponse = await proviant.getActivityFeed(10);
+      if (activityResponse.code === 200 && activityResponse.message && activityResponse.message.activities) {
+        const activities = activityResponse.message.activities;
+        const activityCol = document.createElement('div');
+        activityCol.className = 'col-12';
+
+        const actionIconMap = {
+          add: 'bi-plus-circle',
+          consume: 'bi-check-circle',
+          waste: 'bi-trash3',
+          restore: 'bi-arrow-counterclockwise',
+          amount_change: 'bi-pencil',
+        };
+        const actionLabelMap = {
+          add: 'added',
+          consume: 'consumed',
+          waste: 'wasted',
+          restore: 'restored',
+          amount_change: 'adjusted',
+        };
+
+        function relativeTime(timestamp) {
+          const now = Date.now();
+          const then = new Date(timestamp).getTime();
+          const diff = Math.floor((now - then) / 1000);
+          if (diff < 60) return 'just now';
+          if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+          if (diff < 86400) return `${Math.floor(diff / 3600)} hour${Math.floor(diff / 3600) !== 1 ? 's' : ''} ago`;
+          return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) !== 1 ? 's' : ''} ago`;
+        }
+
+        let listHtml;
+        if (activities.length === 0) {
+          listHtml = `<li class="list-group-item text-secondary-custom small py-2">No recent activity in this household</li>`;
+        } else {
+          listHtml = activities.map((a) => {
+            const icon = actionIconMap[a.action] || 'bi-circle';
+            const label = actionLabelMap[a.action] || a.action;
+            return `<li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
+              <span class="d-flex align-items-center gap-2 text-truncate me-2 small">
+                <i class="bi ${icon}" style="font-size:12px;color:var(--accent);flex-shrink:0;"></i>
+                <span class="text-truncate"><strong>${a.userName || 'Someone'}</strong> ${label} ${a.productName || 'a product'}</span>
+              </span>
+              <span class="text-nowrap text-secondary-custom small" style="flex-shrink:0;">${relativeTime(a.timestamp)}</span>
+            </li>`;
+          }).join('');
+        }
+
+        activityCol.innerHTML = `
+          <div class="card h-100" style="overflow:hidden;">
+            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+              <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
+                <i class="bi bi-activity" style="font-size:12px;color:var(--accent);"></i>
+              </div>
+              <span class="flex-grow-1">Recent Activity</span>
+            </div>
+            <div class="tile-scroll-body">
+              <ul class="list-group list-group-flush">${listHtml}</ul>
+            </div>
+          </div>`;
+
+        const activityRow = document.createElement('div');
+        activityRow.className = 'col-12';
+        activityRow.appendChild(activityCol);
+        dashboard.appendChild(activityRow);
+      }
+
       // Savings tiles
       const savings = (savingsResponse.code === 200 && savingsResponse.message) ? savingsResponse.message : null;
       if (savings) {

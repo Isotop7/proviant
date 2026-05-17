@@ -317,6 +317,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/household/activity": {
+            "get": {
+                "description": "Returns paginated activity log entries for the household the caller belongs to.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Get household activity feed",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max entries to return (default 50, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of entries to skip (default 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ActivityLogResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/household/applications": {
             "get": {
                 "description": "Returns pending join applications for the household the calling user is admin of.",
@@ -682,6 +728,70 @@ const docTemplate = `{
                         "name": "userId",
                         "in": "path",
                         "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/members/{userId}/role": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Update household member role",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New role",
+                        "name": "role",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.updateHouseholdMemberRoleRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -3576,6 +3686,79 @@ const docTemplate = `{
                 }
             }
         },
+        "/web/shopping-list": {
+            "get": {
+                "description": "Renders the shared household shopping list with custom items and import banner",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Shopping List page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/unsubscribe": {
+            "get": {
+                "description": "Handles unsubscribe token and disables digest for user",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Unsubscribe from email digests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unsubscribe token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/web/user": {
             "get": {
                 "description": "Renders the user page showing user info",
@@ -3684,6 +3867,52 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "api.ActivityEntry": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "integer"
+                },
+                "userName": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.ActivityLogResponse": {
+            "type": "object",
+            "properties": {
+                "activities": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ActivityEntry"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },
@@ -4049,6 +4278,9 @@ const docTemplate = `{
                 "emailEnabled": {
                     "type": "boolean"
                 },
+                "mailDigestFrequency": {
+                    "type": "string"
+                },
                 "monthlyWasteReportEnabled": {
                     "type": "boolean"
                 },
@@ -4077,6 +4309,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "telegramLinked": {
+                    "type": "boolean"
+                },
+                "webPushEnabled": {
                     "type": "boolean"
                 }
             }
@@ -4132,6 +4367,9 @@ const docTemplate = `{
                 },
                 "notificationPreferences": {
                     "$ref": "#/definitions/authentication.NotificationPreferences"
+                },
+                "role": {
+                    "type": "string"
                 },
                 "updatedAt": {
                     "type": "string"
@@ -4336,6 +4574,15 @@ const docTemplate = `{
                 },
                 "imageUrl": {
                     "type": "string"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "minStockAmount": {
+                    "type": "integer"
+                },
+                "notificationLeadDays": {
+                    "type": "integer"
                 },
                 "notifiedAt": {
                     "type": "string"
@@ -4564,6 +4811,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.updateHouseholdMemberRoleRequest": {
+            "type": "object",
+            "required": [
+                "role"
+            ],
+            "properties": {
+                "role": {
                     "type": "string"
                 }
             }

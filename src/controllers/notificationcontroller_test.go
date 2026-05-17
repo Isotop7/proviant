@@ -262,7 +262,7 @@ func TestSendInvitationEmail(t *testing.T) {
 			NotificationRepo: mockRepos.Notifications,
 			ProductRepo:      mockRepos.Products,
 		}
-		err := ncBad.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com")
+		err := ncBad.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com", nil)
 		assert.Error(t, err)
 	})
 
@@ -273,7 +273,7 @@ func TestSendInvitationEmail(t *testing.T) {
 		}
 		defer func() { emailSendFunc = origFunc }()
 
-		err := nc.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com")
+		err := nc.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com", nil)
 		assert.NoError(t, err)
 	})
 
@@ -284,7 +284,7 @@ func TestSendInvitationEmail(t *testing.T) {
 		}
 		defer func() { emailSendFunc = origFunc }()
 
-		err := nc.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com")
+		err := nc.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com", nil)
 		assert.Error(t, err)
 	})
 }

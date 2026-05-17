@@ -101,36 +101,6 @@
         </div>
         {{ end }}
 
-        {{/* Members list */}}
-        <div class="mb-4">
-            <h3 class="h6 fw-semibold mb-2"><i class="bi bi-people me-1"></i>Members</h3>
-            {{ if .Members }}
-            <ul class="list-group" id="memberList">
-                {{ range .Members }}
-                <li class="list-group-item d-flex justify-content-between align-items-center" id="member-{{ .ID }}">
-                    <span>
-                        <i class="bi bi-person me-2"></i>{{ .EffectiveName }}
-                        {{ if eq .ID $.User.ID }}<span class="badge bg-secondary ms-1">You</span>{{ end }}
-                        {{ if eq .ID $.Household.AdminID }}<span class="badge bg-primary ms-1"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
-                    </span>
-                    {{ if and $.IsAdmin (ne .ID $.Household.AdminID) }}
-                    <button type="button" class="btn btn-sm btn-proviant-danger btn-remove-member"
-                            data-id="{{ .ID }}" aria-label="Remove {{ .EffectiveName }}">
-                        <i class="bi bi-person-dash"></i>
-                    </button>
-                    {{ end }}
-                </li>
-                {{ end }}
-            </ul>
-        {{ else }}
-            <div class="text-center py-4 text-secondary-custom">
-                <i class="bi bi-people fs-1 mb-2 d-block"></i>
-                <p class="mb-1">You're the only one here.</p>
-                <p class="small mb-0">Use the invite form below to add members to this household.</p>
-            </div>
-            {{ end }}
-        </div>
-
         {{/* ── Join & Invite ───────────────────────────────── */}}
         <div class="mt-4 pt-4 border-top">
             <h3 class="h6 fw-semibold text-secondary-custom mb-3"><i class="bi bi-person-plus me-1"></i>Join &amp; Invite</h3>
@@ -269,15 +239,15 @@
         {{/* Admin: User Management ──────────────────────────────── */}}
         {{ if .IsAdmin }}
         <div class="mt-4 pt-4 border-top">
-            <h3 class="h6 fw-semibold mb-1"><i class="bi bi-person-gear me-1"></i>User Management</h3>
-            <p class="text-secondary-custom small mb-3">Manage household members. Click edit to update username or email, reset password to send a password reset link, or remove to delete the user.</p>
+            <h3 class="h6 fw-semibold mb-1"><i class="bi bi-person-gear me-1"></i>Members</h3>
+            <p class="text-secondary-custom small mb-3">Manage household members. Change role, edit username or email, reset password, or remove.</p>
 
             <div class="mb-3">
                 <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnRefreshUsers">
                     <i class="bi bi-arrow-clockwise me-1"></i>Refresh
                 </button>
             </div>
-            <ul class="list-group" id="adminUserList">
+            <ul class="list-group" id="adminUserList" data-admin-id="{{ .Household.AdminID }}" data-current-user-id="{{ .User.ID }}">
                 <li class="list-group-item text-center text-secondary-custom py-3" id="adminUserLoading">
                     <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…
                 </li>
@@ -293,6 +263,7 @@
                         <div class="modal-body">
                             <form id="editUserForm" novalidate>
                                 <input type="hidden" id="editUserID">
+                                <input type="hidden" id="editUserRole">
                                 <div class="mb-3">
                                     <label for="editUsername" class="form-label fw-medium">Username</label>
                                     <input type="text" class="form-control" id="editUsername" required>
@@ -302,6 +273,14 @@
                                     <label for="editMailAddress" class="form-label fw-medium">Email Address</label>
                                     <input type="email" class="form-control" id="editMailAddress" required>
                                     <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Valid email is required.</div>
+                                </div>
+                                <div class="mb-3" id="editUserRoleRow">
+                                    <label for="editUserRole" class="form-label fw-medium">Role</label>
+                                    <select class="form-select" id="editUserRoleSelect">
+                                        <option value="admin">Admin</option>
+                                        <option value="member">Member</option>
+                                        <option value="viewer">Viewer</option>
+                                    </select>
                                 </div>
                             </form>
                         </div>
