@@ -1,9 +1,27 @@
 # Changelog
 
-## [unreleased]
+## [0.16.0] - 2026-05-17
+
+### Added
+- (0c5c8778): Feat(shopping): add household shopping list
+Closes: #308
+- (db547c0a): Feat(shopping): add household shopping list
+Closes: #309
+- (5ad8e404): **products:** Add actions column to list view
+- (a76b4132): Feat(household): add member role management
+Closes: #310
+- (0b926654): Feat(products): add per-product privacy
+Closes: #311
+
+
+### Fixed
+- (7ec708dc): **assets:** Repair product selection and checkbox handling
+
 
 ### Miscellaneous
 - (4ad75a58): Update CHANGELOG.md for v0.15.0
+- (05233ef0): Update CHANGELOG.md for v0.15.0
+- (eadae823): **templates:** Use hyphen instead of unicode minus
 
 
 ## [0.15.0] - 2026-05-15
