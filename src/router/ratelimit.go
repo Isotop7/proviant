@@ -105,21 +105,42 @@ func exportRateLimitMiddleware(ctx *gin.Context) {
 	ctx.Next()
 }
 
+// passwordRateLimitMiddleware rate-limits password-change traffic. When a
+// JWT identity is present (authenticated user changing their own password)
+// it keys on user ID; otherwise it falls back to client IP for the public
+// forgot-password / reset-password routes.
 func passwordRateLimitMiddleware(ctx *gin.Context) {
+	key := ctx.ClientIP()
 	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		api.RespondError(ctx, http.StatusUnauthorized, errors.New("Unauthorized"))
-		return
+	if claims != nil {
+		if raw, ok := claims[static.TokenIdentityKey].(float64); ok && raw > 0 {
+			key = strconv.FormatUint(uint64(uint(raw)), 10)
+		}
 	}
-
-	key := strconv.FormatUint(uint64(userID), 10)
 	limiter := getLimiter(passwordLimiters, key, passwordRate)
 	reservation := limiter.Reserve()
 	if delay := reservation.Delay(); delay > 0 {
 		reservation.Cancel()
 		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many password change attempts, please try again later"))
+		return
+	}
+	ctx.Next()
+}
+
+// publicPasswordRateLimitMiddleware is the IP-only variant used on the
+// unauthenticated POST /auth/forgot-password and /auth/reset-password
+// routes. It is separate from passwordRateLimitMiddleware so that an
+// attacker spraying public reset attempts from a shared egress IP cannot
+// lock out legitimate authenticated users on POST /api/v1/user/password.
+func publicPasswordRateLimitMiddleware(ctx *gin.Context) {
+	key := ctx.ClientIP()
+	limiter := getLimiter(passwordLimiters, key, passwordRate)
+	reservation := limiter.Reserve()
+	if delay := reservation.Delay(); delay > 0 {
+		reservation.Cancel()
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
+		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many password reset attempts, please try again later"))
 		return
 	}
 	ctx.Next()

@@ -34,6 +34,24 @@ type UserRepositoryInterface interface {
 	UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
 	UpdateEmailVerification(userID uint, verifiedAt *time.Time) error
 	UpdateEmailVerificationStatus(token, status string) error
+	GetUserByMailAddress(mailAddress string) (authentication.User, error)
+	CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error
+	GetPasswordResetByToken(token string) (database.PasswordReset, error)
+	MarkPasswordResetUsed(resetID uint, usedAt time.Time) error
+	// ConsumePasswordReset atomically marks the reset row as used only if it
+	// is still pending and not expired. Returns (true, nil) on success,
+	// (false, nil) if the token is missing/already-used/expired, and
+	// (false, err) on DB error. Callers should treat false as "token is not
+	// consumable" and not proceed with the password update.
+	ConsumePasswordReset(tokenHash string, usedAt time.Time) (bool, error)
+	// ApplyPasswordReset atomically (a) sets the user's password hash,
+	// (b) consumes the reset token, and (c) invalidates all other pending
+	// resets for the user. Returns the same semantics as ConsumePasswordReset
+	// for the token-consumed flag, plus any DB error.
+	ApplyPasswordReset(userID uint, tokenHash, hashedPassword string, usedAt time.Time) (bool, error)
+	DeleteExpiredPasswordResets(before time.Time) error
+	InvalidatePendingPasswordResetsForUser(userID uint) error
+	SetUserPasswordHash(userID uint, hashedPassword string) error
 	GetOnboardingState(userID uint) (database.OnboardingState, error)
 	MarkNotificationsSetup(userID uint) error
 	UpdateUsername(userID uint, username string) error
@@ -357,6 +375,124 @@ func (r *UserRepository) GetUsersByHouseholdID(householdID uint) ([]authenticati
 
 func (r *UserRepository) DeleteUser(userID uint) error {
 	return r.DB.Delete(&authentication.User{}, userID).Error
+}
+
+func (r *UserRepository) GetUserByMailAddress(mailAddress string) (authentication.User, error) {
+	var user authentication.User
+	selectErr := r.DB.First(&user, "mail_address = ?", mailAddress)
+	return user, selectErr.Error
+}
+
+// CreatePasswordReset persists a new password-reset row. The raw token is
+// SHA-256 hashed before storage; only the hash is written to the database.
+func (r *UserRepository) CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error {
+	reset := database.PasswordReset{
+		UserID:    userID,
+		TokenHash: database.HashPasswordResetToken(token),
+		ExpiresAt: expiresAt,
+		IPAddress: ipAddress,
+	}
+	return r.DB.Create(&reset).Error
+}
+
+// GetPasswordResetByToken looks up a reset by the raw token submitted by the
+// client (form POST or API body). The raw token is hashed before the lookup.
+func (r *UserRepository) GetPasswordResetByToken(token string) (database.PasswordReset, error) {
+	var reset database.PasswordReset
+	result := r.DB.Where("token_hash = ?", database.HashPasswordResetToken(token)).First(&reset)
+	return reset, result.Error
+}
+
+func (r *UserRepository) MarkPasswordResetUsed(resetID uint, usedAt time.Time) error {
+	return r.DB.Model(&database.PasswordReset{}).
+		Where(util.QueryId, resetID).
+		Updates(map[string]interface{}{
+			"used_at": usedAt,
+		}).Error
+}
+
+// ConsumePasswordReset atomically marks a reset row as used only if it is
+// still pending and not expired. The conditional WHERE makes this safe under
+// concurrent use: the second concurrent caller sees zero rows affected.
+func (r *UserRepository) ConsumePasswordReset(tokenHash string, usedAt time.Time) (bool, error) {
+	result := r.DB.Model(&database.PasswordReset{}).
+		Where("token_hash = ?", tokenHash).
+		Where("used_at IS NULL").
+		Where("expires_at > ?", usedAt).
+		Update("used_at", usedAt)
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected == 1, nil
+}
+
+// ApplyPasswordReset runs the password update, token consumption, and
+// invalidation of other pending resets in a single transaction. It returns
+// (consumed, err) where consumed is true only if the token was the one
+// that actually got consumed — i.e. was pending, unexpired, and the update
+// succeeded. On consumed=false the password has NOT been changed and the
+// caller should respond with the appropriate token-invalid error.
+func (r *UserRepository) ApplyPasswordReset(userID uint, tokenHash, hashedPassword string, usedAt time.Time) (bool, error) {
+	var consumed bool
+	txErr := r.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&authentication.User{}).
+			Where(util.QueryId, userID).
+			Update("password", hashedPassword).Error; err != nil {
+			return err
+		}
+		result := tx.Model(&database.PasswordReset{}).
+			Where("token_hash = ?", tokenHash).
+			Where("user_id = ?", userID).
+			Where("used_at IS NULL").
+			Where("expires_at > ?", usedAt).
+			Update("used_at", usedAt)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			// Token was already used, expired, or unknown for this user.
+			// Aborting the transaction rolls back the password update.
+			consumed = false
+			return nil
+		}
+		consumed = true
+		// Invalidate every other still-pending reset for this user, so a
+		// token issued before this successful reset cannot be replayed.
+		if err := tx.Model(&database.PasswordReset{}).
+			Where(util.QueryUserId, userID).
+			Where("used_at IS NULL").
+			Update("used_at", usedAt).Error; err != nil {
+			return err
+		}
+		// Reset failed-login counter on successful password change.
+		if err := tx.Model(&authentication.User{}).
+			Where(util.QueryId, userID).
+			Update("failed_login_attempts", 0).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if txErr != nil {
+		return false, txErr
+	}
+	return consumed, nil
+}
+
+func (r *UserRepository) DeleteExpiredPasswordResets(before time.Time) error {
+	return r.DB.Where("expires_at < ?", before).Delete(&database.PasswordReset{}).Error
+}
+
+func (r *UserRepository) InvalidatePendingPasswordResetsForUser(userID uint) error {
+	return r.DB.Model(&database.PasswordReset{}).
+		Where(util.QueryUserId, userID).
+		Where("used_at IS NULL").
+		Update("used_at", time.Now()).Error
+}
+
+func (r *UserRepository) SetUserPasswordHash(userID uint, hashedPassword string) error {
+	return r.DB.Model(&authentication.User{}).
+		Where(util.QueryId, userID).
+		Update("password", hashedPassword).Error
 }
 
 var _ = (*UserRepository)(nil)

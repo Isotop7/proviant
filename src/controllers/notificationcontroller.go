@@ -452,6 +452,23 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 	return nil
 }
 
+// SendPasswordReset sends a password reset email directly to the user.
+func (nc *NotificationController) SendPasswordReset(email, username, token, baseURL string, expiresAt time.Time) error {
+	emailProvider := nc.newEmailProvider()
+
+	if !emailProvider.IsConfigured() {
+		return errors.New(MsgEmailProviderNotConfigured)
+	}
+
+	if err := emailProvider.SendPasswordResetEmail(email, username, token, baseURL, expiresAt); err != nil {
+		nc.Logger.Error().Msgf("Failed to send password reset email to %s: %s", email, err)
+		return err
+	}
+
+	nc.Logger.Info().Msgf("Password reset email sent successfully to %s", email)
+	return nil
+}
+
 // DispatchMonthlyWasteReports starts a goroutine that sends household waste reports
 // on the configured day/hour (UTC) of each month to opted-in members via all enabled providers.
 func (nc *NotificationController) DispatchMonthlyWasteReports() {

@@ -32,4 +32,9 @@ const (
 	LabelMailDigestDot    = "mail_digest"
 	LabelMailDigestPascal = "MailDigest"
 	RouteUnsubscribe      = "/web/unsubscribe"
+
+	// Password reset
+	RouteAuth           = "/web/auth"
+	RouteForgotPassword = "/web/forgot-password"
+	RouteResetPassword  = "/web/reset-password" //nolint:gosec // G101: route path constant, not a credential
 )

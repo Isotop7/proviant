@@ -183,6 +183,7 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [Constants](<#constants>)
 - [func GenerateEmailVerificationToken\(\) \(string, time.Time, error\)](<#GenerateEmailVerificationToken>)
 - [func GeneratePAT\(\) \(string, error\)](<#GeneratePAT>)
+- [func GeneratePasswordResetToken\(\) \(string, time.Time, error\)](<#GeneratePasswordResetToken>)
 - [func HashToken\(token string\) string](<#HashToken>)
 - [func InitWebhookService\(db \*gorm.DB, logger \*zerolog.Logger\)](<#InitWebhookService>)
 - [func ParseWebhookEvents\(eventsJSON string\) \[\]string](<#ParseWebhookEvents>)
@@ -200,6 +201,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(e \*EmailNotificationProvider\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#EmailNotificationProvider.SendInvitationEmail>)
   - [func \(e \*EmailNotificationProvider\) SendMonthlyWasteReport\(recipient string, stats \*models.WasteStats\) error](<#EmailNotificationProvider.SendMonthlyWasteReport>)
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
+  - [func \(e \*EmailNotificationProvider\) SendPasswordResetEmail\(email, username, token, baseURL string, expiresAt time.Time\) error](<#EmailNotificationProvider.SendPasswordResetEmail>)
   - [func \(e \*EmailNotificationProvider\) SendStreakMilestone\(milestone int, recipient string\) error](<#EmailNotificationProvider.SendStreakMilestone>)
 - [type NotificationController](<#NotificationController>)
   - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface, productRepo dbController.ProductRepositoryInterface\) \*NotificationController](<#NewNotificationController>)
@@ -210,6 +212,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(nc \*NotificationController\) GetUserTelegramBotUsername\(userID uint\) string](<#NotificationController.GetUserTelegramBotUsername>)
   - [func \(nc \*NotificationController\) SendEmailVerification\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendEmailVerification>)
   - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, tx \*gorm.DB\) error](<#NotificationController.SendInvitationEmail>)
+  - [func \(nc \*NotificationController\) SendPasswordReset\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendPasswordReset>)
   - [func \(nc \*NotificationController\) SendVerificationEmail\(invitation \*dbModel.HouseholdInvitation, username, baseURL string\) error](<#NotificationController.SendVerificationEmail>)
   - [func \(nc \*NotificationController\) StartAllUserTelegramPollers\(\)](<#NotificationController.StartAllUserTelegramPollers>)
   - [func \(nc \*NotificationController\) StartMailDigestScheduler\(baseURL string\)](<#NotificationController.StartMailDigestScheduler>)
@@ -281,6 +284,18 @@ const EmailVerificationTokenLength = 32
 const MsgEmailProviderNotConfigured = "email provider not configured"
 ```
 
+<a name="PasswordResetTokenDuration"></a>
+
+```go
+const PasswordResetTokenDuration = 1 * time.Hour
+```
+
+<a name="PasswordResetTokenLength"></a>
+
+```go
+const PasswordResetTokenLength = 32
+```
+
 <a name="TokenLength"></a>
 
 ```go
@@ -307,6 +322,15 @@ func GenerateEmailVerificationToken() (string, time.Time, error)
 
 ```go
 func GeneratePAT() (string, error)
+```
+
+
+
+<a name="GeneratePasswordResetToken"></a>
+## func GeneratePasswordResetToken
+
+```go
+func GeneratePasswordResetToken() (string, time.Time, error)
 ```
 
 
@@ -437,6 +461,15 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 
 
 
+<a name="EmailNotificationProvider.SendPasswordResetEmail"></a>
+### func \(\*EmailNotificationProvider\) SendPasswordResetEmail
+
+```go
+func (e *EmailNotificationProvider) SendPasswordResetEmail(email, username, token, baseURL string, expiresAt time.Time) error
+```
+
+SendPasswordResetEmail sends a password reset email to the recipient
+
 <a name="EmailNotificationProvider.SendStreakMilestone"></a>
 ### func \(\*EmailNotificationProvider\) SendStreakMilestone
 
@@ -534,6 +567,15 @@ func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.Househ
 ```
 
 SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database. If tx is provided \(non\-nil\), the "mark as sent" update will run within that transaction to avoid SQLite "database is locked" conflicts when the transaction holds a write lock.
+
+<a name="NotificationController.SendPasswordReset"></a>
+### func \(\*NotificationController\) SendPasswordReset
+
+```go
+func (nc *NotificationController) SendPasswordReset(email, username, token, baseURL string, expiresAt time.Time) error
+```
+
+SendPasswordReset sends a password reset email directly to the user.
 
 <a name="NotificationController.SendVerificationEmail"></a>
 ### func \(\*NotificationController\) SendVerificationEmail
@@ -1229,6 +1271,18 @@ var (
     ErrEmailNotVerified = errors.New("email address not verified")
 
     /*
+     * Password reset related errors
+     */
+    // ErrPasswordResetTokenInvalid is thrown when a password reset token is missing, unknown, expired, or already used
+    ErrPasswordResetTokenInvalid = errors.New("password reset link is invalid or has expired")
+
+    // ErrPasswordResetTokenExpired is thrown when a password reset token has passed its expiry
+    ErrPasswordResetTokenExpired = errors.New("password reset link has expired")
+
+    // ErrPasswordResetTokenUsed is thrown when a password reset token has already been consumed
+    ErrPasswordResetTokenUsed = errors.New("password reset link has already been used")
+
+    /*
      * Personal Access Token related errors
      */
     // ErrPATNotFound is thrown when a PAT does not exist
@@ -1461,6 +1515,7 @@ import "codeberg.org/isotop7/proviant/migrations"
 - [func AddWebPushNotificationMigration\(db \*gorm.DB\) error](<#AddWebPushNotificationMigration>)
 - [func BackfillEmailVerification\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillEmailVerification>)
 - [func BackfillHouseholdRoles\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillHouseholdRoles>)
+- [func BackfillProductUserID\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillProductUserID>)
 - [func BackfillRemovalReason\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillRemovalReason>)
 - [func DropLegacyStorageLocationColumn\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#DropLegacyStorageLocationColumn>)
 - [func RenamePushNotificationColumns\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RenamePushNotificationColumns>)
@@ -1514,6 +1569,15 @@ func BackfillHouseholdRoles(logger *zerolog.Logger, db *gorm.DB) error
 ```
 
 BackfillHouseholdRoles sets role='admin' for household admins and role='member' for all others. This migration ensures existing users get appropriate roles after the role field is added.
+
+<a name="BackfillProductUserID"></a>
+## func BackfillProductUserID
+
+```go
+func BackfillProductUserID(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+BackfillProductUserID sets user\_id for existing products that are marked private but have no owner. For private products without an owner, assigns the household admin as the owner so they remain visible.
 
 <a name="BackfillRemovalReason"></a>
 ## func BackfillRemovalReason
@@ -2242,6 +2306,10 @@ const (
     LabelMailDigestDot    = "mail_digest"
     LabelMailDigestPascal = "MailDigest"
     RouteUnsubscribe      = "/web/unsubscribe"
+
+    // Password reset
+    RouteForgotPassword = "/forgot-password"
+    RouteResetPassword  = "/web/reset-password" //nolint:gosec // G101: route path constant, not a credential
 )
 ```
 
@@ -2257,12 +2325,14 @@ import "codeberg.org/isotop7/proviant/web"
 - [type Frontend](<#Frontend>)
   - [func \(frontend \*Frontend\) AcceptInvite\(ctx \*gin.Context\)](<#Frontend.AcceptInvite>)
   - [func \(frontend \*Frontend\) Auth\(ctx \*gin.Context\)](<#Frontend.Auth>)
+  - [func \(frontend \*Frontend\) ForgotPassword\(ctx \*gin.Context\)](<#Frontend.ForgotPassword>)
   - [func \(frontend \*Frontend\) Onboarding\(ctx \*gin.Context\)](<#Frontend.Onboarding>)
   - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
   - [func \(frontend \*Frontend\) ProductsEdit\(ctx \*gin.Context\)](<#Frontend.ProductsEdit>)
   - [func \(frontend \*Frontend\) ProductsScan\(ctx \*gin.Context\)](<#Frontend.ProductsScan>)
   - [func \(frontend \*Frontend\) ProductsView\(ctx \*gin.Context\)](<#Frontend.ProductsView>)
   - [func \(frontend \*Frontend\) Recipes\(ctx \*gin.Context\)](<#Frontend.Recipes>)
+  - [func \(frontend \*Frontend\) ResetPassword\(ctx \*gin.Context\)](<#Frontend.ResetPassword>)
   - [func \(frontend \*Frontend\) Root\(ctx \*gin.Context\)](<#Frontend.Root>)
   - [func \(frontend \*Frontend\) ShoppingList\(ctx \*gin.Context\)](<#Frontend.ShoppingList>)
   - [func \(frontend \*Frontend\) Unsubscribe\(ctx \*gin.Context\)](<#Frontend.Unsubscribe>)
@@ -2310,6 +2380,15 @@ func (frontend *Frontend) Auth(ctx *gin.Context)
 ```
 
 Auth renders the authentication page @Summary Auth page @Description Renders the authentication page for login/signup @Tags web @Produce html @Success 200 \{string\} html @Router /web/auth \[get\]
+
+<a name="Frontend.ForgotPassword"></a>
+### func \(\*Frontend\) ForgotPassword
+
+```go
+func (frontend *Frontend) ForgotPassword(ctx *gin.Context)
+```
+
+ForgotPassword renders the forgot\-password page \(form to request a reset link\). @Summary Forgot password page @Description Renders the page that lets users request a password reset link via email. @Tags web @Produce html @Success 200 \{string\} html @Router /forgot\-password \[get\]
 
 <a name="Frontend.Onboarding"></a>
 ### func \(\*Frontend\) Onboarding
@@ -2364,6 +2443,15 @@ func (frontend *Frontend) Recipes(ctx *gin.Context)
 ```
 
 Recipes renders the recipe suggestions page @Summary Recipes page @Description Shows recipe suggestions for expiring products @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/recipes \[get\]
+
+<a name="Frontend.ResetPassword"></a>
+### func \(\*Frontend\) ResetPassword
+
+```go
+func (frontend *Frontend) ResetPassword(ctx *gin.Context)
+```
+
+ResetPassword renders the password reset page \(form to set a new password via token\). @Summary Reset password page @Description Renders the page that lets users set a new password using a reset token. @Tags web @Produce html @Param token query string false "Reset token" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Router /web/reset\-password \[get\]
 
 <a name="Frontend.Root"></a>
 ### func \(\*Frontend\) Root
@@ -2431,7 +2519,9 @@ auth contains authentication method handlers
 
 - [Constants](<#constants>)
 - [func AcceptInvitation\(ctx \*gin.Context\)](<#AcceptInvitation>)
+- [func ForgotPassword\(ctx \*gin.Context\)](<#ForgotPassword>)
 - [func Logout\(ctx \*gin.Context\)](<#Logout>)
+- [func ResetPassword\(ctx \*gin.Context\)](<#ResetPassword>)
 - [func Signup\(ctx \*gin.Context\)](<#Signup>)
 - [func VerifyEmail\(ctx \*gin.Context\)](<#VerifyEmail>)
 
@@ -2453,6 +2543,15 @@ func AcceptInvitation(ctx *gin.Context)
 
 AcceptInvitation accepts a household invitation for the authenticated user. @Summary Accept invitation @Description Accepts a household invitation using a token @Tags Invitation @Accept json @Produce json @Param request body acceptInvitationRequest true "Accept invitation request" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/invite/accept \[post\]
 
+<a name="ForgotPassword"></a>
+## func ForgotPassword
+
+```go
+func ForgotPassword(ctx *gin.Context)
+```
+
+ForgotPassword starts a self\-service password reset by emailing a reset link. Always returns the same response to avoid leaking which addresses are registered. @Summary Request a password reset @Description Accepts an email address; if a matching user exists, a password reset link is emailed. @Tags auth @Accept json @Produce json @Param request body forgotPasswordRequest true "Forgot password request" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 429 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/forgot\-password \[post\]
+
 <a name="Logout"></a>
 ## func Logout
 
@@ -2461,6 +2560,15 @@ func Logout(ctx *gin.Context)
 ```
 
 Logout revokes the current JWT token @Summary Logout user by revoking token @Description Revokes the current JWT token by adding its JTI to the blocklist @Tags auth @Accept json @Produce json @Security BearerAuth @Success 200 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/logout \[post\]
+
+<a name="ResetPassword"></a>
+## func ResetPassword
+
+```go
+func ResetPassword(ctx *gin.Context)
+```
+
+ResetPassword consumes a password reset token and updates the user's password. @Summary Reset password using token @Description Validates a password reset token and sets a new password for the user. @Tags auth @Accept json @Produce json @Param request body resetPasswordRequest true "Reset password request" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 429 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/reset\-password \[post\]
 
 <a name="Signup"></a>
 ## func Signup
@@ -3973,24 +4081,31 @@ import "codeberg.org/isotop7/proviant/controllers/database"
 - [type UserRepository](<#UserRepository>)
   - [func NewUserRepository\(db \*gorm.DB\) \*UserRepository](<#NewUserRepository>)
   - [func \(r \*UserRepository\) CreateEmailVerification\(userID uint, token string, expiresAt time.Time\) error](<#UserRepository.CreateEmailVerification>)
+  - [func \(r \*UserRepository\) CreatePasswordReset\(userID uint, token string, expiresAt time.Time, ipAddress string\) error](<#UserRepository.CreatePasswordReset>)
   - [func \(r \*UserRepository\) CreateUser\(user \*authentication.User\) error](<#UserRepository.CreateUser>)
+  - [func \(r \*UserRepository\) DeleteExpiredPasswordResets\(before time.Time\) error](<#UserRepository.DeleteExpiredPasswordResets>)
   - [func \(r \*UserRepository\) DeleteUser\(userID uint\) error](<#UserRepository.DeleteUser>)
   - [func \(r \*UserRepository\) EnsureOnboardingState\(userID uint\) error](<#UserRepository.EnsureOnboardingState>)
   - [func \(r \*UserRepository\) GetEmailVerificationByToken\(token string\) \(database.EmailVerification, error\)](<#UserRepository.GetEmailVerificationByToken>)
   - [func \(r \*UserRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#UserRepository.GetHouseholdByID>)
   - [func \(r \*UserRepository\) GetOnboardingState\(userID uint\) \(database.OnboardingState, error\)](<#UserRepository.GetOnboardingState>)
+  - [func \(r \*UserRepository\) GetPasswordResetByToken\(token string\) \(database.PasswordReset, error\)](<#UserRepository.GetPasswordResetByToken>)
   - [func \(r \*UserRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#UserRepository.GetUserByID>)
+  - [func \(r \*UserRepository\) GetUserByMailAddress\(mailAddress string\) \(authentication.User, error\)](<#UserRepository.GetUserByMailAddress>)
   - [func \(r \*UserRepository\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#UserRepository.GetUserByUsername>)
   - [func \(r \*UserRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#UserRepository.GetUserHouseholdByID>)
   - [func \(r \*UserRepository\) GetUserHouseholdRole\(userID uint\) \(string, error\)](<#UserRepository.GetUserHouseholdRole>)
   - [func \(r \*UserRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#UserRepository.GetUsersByHouseholdID>)
+  - [func \(r \*UserRepository\) InvalidatePendingPasswordResetsForUser\(userID uint\) error](<#UserRepository.InvalidatePendingPasswordResetsForUser>)
   - [func \(r \*UserRepository\) IsAccountLocked\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) \(bool, time.Duration\)](<#UserRepository.IsAccountLocked>)
   - [func \(r \*UserRepository\) MarkHouseholdStepDone\(userID uint\) error](<#UserRepository.MarkHouseholdStepDone>)
   - [func \(r \*UserRepository\) MarkNotificationsSetup\(userID uint\) error](<#UserRepository.MarkNotificationsSetup>)
   - [func \(r \*UserRepository\) MarkOnboardingComplete\(userID uint\) error](<#UserRepository.MarkOnboardingComplete>)
+  - [func \(r \*UserRepository\) MarkPasswordResetUsed\(resetID uint, usedAt time.Time\) error](<#UserRepository.MarkPasswordResetUsed>)
   - [func \(r \*UserRepository\) MarkProfileStepDone\(userID uint\) error](<#UserRepository.MarkProfileStepDone>)
   - [func \(r \*UserRepository\) RecordFailedLoginAttempt\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) error](<#UserRepository.RecordFailedLoginAttempt>)
   - [func \(r \*UserRepository\) ResetFailedLoginAttempts\(userID uint\) error](<#UserRepository.ResetFailedLoginAttempts>)
+  - [func \(r \*UserRepository\) SetUserPasswordHash\(userID uint, hashedPassword string\) error](<#UserRepository.SetUserPasswordHash>)
   - [func \(r \*UserRepository\) UpdateAdminUserFields\(userID uint, username, mailAddress string\) error](<#UserRepository.UpdateAdminUserFields>)
   - [func \(r \*UserRepository\) UpdateDisplayName\(userID uint, displayName string\) error](<#UserRepository.UpdateDisplayName>)
   - [func \(r \*UserRepository\) UpdateEmailVerification\(userID uint, verifiedAt \*time.Time\) error](<#UserRepository.UpdateEmailVerification>)
@@ -6132,11 +6247,29 @@ func (r *UserRepository) CreateEmailVerification(userID uint, token string, expi
 
 
 
+<a name="UserRepository.CreatePasswordReset"></a>
+### func \(\*UserRepository\) CreatePasswordReset
+
+```go
+func (r *UserRepository) CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error
+```
+
+
+
 <a name="UserRepository.CreateUser"></a>
 ### func \(\*UserRepository\) CreateUser
 
 ```go
 func (r *UserRepository) CreateUser(user *authentication.User) error
+```
+
+
+
+<a name="UserRepository.DeleteExpiredPasswordResets"></a>
+### func \(\*UserRepository\) DeleteExpiredPasswordResets
+
+```go
+func (r *UserRepository) DeleteExpiredPasswordResets(before time.Time) error
 ```
 
 
@@ -6186,11 +6319,29 @@ func (r *UserRepository) GetOnboardingState(userID uint) (database.OnboardingSta
 
 
 
+<a name="UserRepository.GetPasswordResetByToken"></a>
+### func \(\*UserRepository\) GetPasswordResetByToken
+
+```go
+func (r *UserRepository) GetPasswordResetByToken(token string) (database.PasswordReset, error)
+```
+
+
+
 <a name="UserRepository.GetUserByID"></a>
 ### func \(\*UserRepository\) GetUserByID
 
 ```go
 func (r *UserRepository) GetUserByID(userID uint) (authentication.User, error)
+```
+
+
+
+<a name="UserRepository.GetUserByMailAddress"></a>
+### func \(\*UserRepository\) GetUserByMailAddress
+
+```go
+func (r *UserRepository) GetUserByMailAddress(mailAddress string) (authentication.User, error)
 ```
 
 
@@ -6231,6 +6382,15 @@ func (r *UserRepository) GetUsersByHouseholdID(householdID uint) ([]authenticati
 
 
 
+<a name="UserRepository.InvalidatePendingPasswordResetsForUser"></a>
+### func \(\*UserRepository\) InvalidatePendingPasswordResetsForUser
+
+```go
+func (r *UserRepository) InvalidatePendingPasswordResetsForUser(userID uint) error
+```
+
+
+
 <a name="UserRepository.IsAccountLocked"></a>
 ### func \(\*UserRepository\) IsAccountLocked
 
@@ -6267,6 +6427,15 @@ func (r *UserRepository) MarkOnboardingComplete(userID uint) error
 
 
 
+<a name="UserRepository.MarkPasswordResetUsed"></a>
+### func \(\*UserRepository\) MarkPasswordResetUsed
+
+```go
+func (r *UserRepository) MarkPasswordResetUsed(resetID uint, usedAt time.Time) error
+```
+
+
+
 <a name="UserRepository.MarkProfileStepDone"></a>
 ### func \(\*UserRepository\) MarkProfileStepDone
 
@@ -6290,6 +6459,15 @@ func (r *UserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttempts 
 
 ```go
 func (r *UserRepository) ResetFailedLoginAttempts(userID uint) error
+```
+
+
+
+<a name="UserRepository.SetUserPasswordHash"></a>
+### func \(\*UserRepository\) SetUserPasswordHash
+
+```go
+func (r *UserRepository) SetUserPasswordHash(userID uint, hashedPassword string) error
 ```
 
 
@@ -6420,6 +6598,13 @@ type UserRepositoryInterface interface {
     UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
     UpdateEmailVerification(userID uint, verifiedAt *time.Time) error
     UpdateEmailVerificationStatus(token, status string) error
+    GetUserByMailAddress(mailAddress string) (authentication.User, error)
+    CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error
+    GetPasswordResetByToken(token string) (database.PasswordReset, error)
+    MarkPasswordResetUsed(resetID uint, usedAt time.Time) error
+    DeleteExpiredPasswordResets(before time.Time) error
+    InvalidatePendingPasswordResetsForUser(userID uint) error
+    SetUserPasswordHash(userID uint, hashedPassword string) error
     GetOnboardingState(userID uint) (database.OnboardingState, error)
     MarkNotificationsSetup(userID uint) error
     UpdateUsername(userID uint, username string) error
@@ -7702,6 +7887,7 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type MailDigestUnsubscribeToken](<#MailDigestUnsubscribeToken>)
 - [type OnboardingState](<#OnboardingState>)
 - [type OpenFoodFactsCache](<#OpenFoodFactsCache>)
+- [type PasswordReset](<#PasswordReset>)
 - [type Product](<#Product>)
 - [type ProductCategoryPrice](<#ProductCategoryPrice>)
 - [type ProductDTOBarcode](<#ProductDTOBarcode>)
@@ -7777,6 +7963,16 @@ const (
     InvitationStatusAccepted  = "accepted"
     InvitationStatusExpired   = "expired"
     InvitationStatusCancelled = "cancelled"
+)
+```
+
+<a name="PasswordResetStatusPending"></a>
+
+```go
+const (
+    PasswordResetStatusPending = "pending"
+    PasswordResetStatusUsed    = "used"
+    PasswordResetStatusExpired = "expired"
 )
 ```
 
@@ -8008,6 +8204,22 @@ type OpenFoodFactsCache struct {
     ImageURL    string   `json:"imageUrl"`
     CO2KgPerKg  *float64 `gorm:"default:null" json:"co2KgPerKg,omitempty"`
     StorageHint string   `json:"storageHint,omitempty"`
+}
+```
+
+<a name="PasswordReset"></a>
+## type PasswordReset
+
+
+
+```go
+type PasswordReset struct {
+    gorm.Model
+    UserID    uint      `gorm:"index,not null"`
+    Token     string    `gorm:"uniqueIndex,not null"`
+    ExpiresAt time.Time `gorm:"not null"`
+    UsedAt    *time.Time
+    IPAddress string `gorm:"size:64"`
 }
 ```
 
@@ -8501,24 +8713,31 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockStreakRepository\) UpdateStreak\(streak \*dbModel.WasteStreak\) error](<#MockStreakRepository.UpdateStreak>)
 - [type MockUserRepository](<#MockUserRepository>)
   - [func \(m \*MockUserRepository\) CreateEmailVerification\(userID uint, token string, expiresAt time.Time\) error](<#MockUserRepository.CreateEmailVerification>)
+  - [func \(m \*MockUserRepository\) CreatePasswordReset\(userID uint, token string, expiresAt time.Time, ipAddress string\) error](<#MockUserRepository.CreatePasswordReset>)
   - [func \(m \*MockUserRepository\) CreateUser\(user \*authentication.User\) error](<#MockUserRepository.CreateUser>)
+  - [func \(m \*MockUserRepository\) DeleteExpiredPasswordResets\(before time.Time\) error](<#MockUserRepository.DeleteExpiredPasswordResets>)
   - [func \(m \*MockUserRepository\) DeleteUser\(userID uint\) error](<#MockUserRepository.DeleteUser>)
   - [func \(m \*MockUserRepository\) EnsureOnboardingState\(userID uint\) error](<#MockUserRepository.EnsureOnboardingState>)
   - [func \(m \*MockUserRepository\) GetEmailVerificationByToken\(token string\) \(dbModel.EmailVerification, error\)](<#MockUserRepository.GetEmailVerificationByToken>)
   - [func \(m \*MockUserRepository\) GetHouseholdByID\(householdID uint\) \(dbModel.Household, error\)](<#MockUserRepository.GetHouseholdByID>)
   - [func \(m \*MockUserRepository\) GetOnboardingState\(userID uint\) \(dbModel.OnboardingState, error\)](<#MockUserRepository.GetOnboardingState>)
+  - [func \(m \*MockUserRepository\) GetPasswordResetByToken\(token string\) \(dbModel.PasswordReset, error\)](<#MockUserRepository.GetPasswordResetByToken>)
   - [func \(m \*MockUserRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#MockUserRepository.GetUserByID>)
+  - [func \(m \*MockUserRepository\) GetUserByMailAddress\(mailAddress string\) \(authentication.User, error\)](<#MockUserRepository.GetUserByMailAddress>)
   - [func \(m \*MockUserRepository\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#MockUserRepository.GetUserByUsername>)
   - [func \(m \*MockUserRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#MockUserRepository.GetUserHouseholdByID>)
   - [func \(m \*MockUserRepository\) GetUserHouseholdRole\(userID uint\) \(string, error\)](<#MockUserRepository.GetUserHouseholdRole>)
   - [func \(m \*MockUserRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#MockUserRepository.GetUsersByHouseholdID>)
+  - [func \(m \*MockUserRepository\) InvalidatePendingPasswordResetsForUser\(userID uint\) error](<#MockUserRepository.InvalidatePendingPasswordResetsForUser>)
   - [func \(m \*MockUserRepository\) IsAccountLocked\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) \(bool, time.Duration\)](<#MockUserRepository.IsAccountLocked>)
   - [func \(m \*MockUserRepository\) MarkHouseholdStepDone\(userID uint\) error](<#MockUserRepository.MarkHouseholdStepDone>)
   - [func \(m \*MockUserRepository\) MarkNotificationsSetup\(userID uint\) error](<#MockUserRepository.MarkNotificationsSetup>)
   - [func \(m \*MockUserRepository\) MarkOnboardingComplete\(userID uint\) error](<#MockUserRepository.MarkOnboardingComplete>)
+  - [func \(m \*MockUserRepository\) MarkPasswordResetUsed\(resetID uint, usedAt time.Time\) error](<#MockUserRepository.MarkPasswordResetUsed>)
   - [func \(m \*MockUserRepository\) MarkProfileStepDone\(userID uint\) error](<#MockUserRepository.MarkProfileStepDone>)
   - [func \(m \*MockUserRepository\) RecordFailedLoginAttempt\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) error](<#MockUserRepository.RecordFailedLoginAttempt>)
   - [func \(m \*MockUserRepository\) ResetFailedLoginAttempts\(userID uint\) error](<#MockUserRepository.ResetFailedLoginAttempts>)
+  - [func \(m \*MockUserRepository\) SetUserPasswordHash\(userID uint, hashedPassword string\) error](<#MockUserRepository.SetUserPasswordHash>)
   - [func \(m \*MockUserRepository\) UpdateAdminUserFields\(userID uint, username, mailAddress string\) error](<#MockUserRepository.UpdateAdminUserFields>)
   - [func \(m \*MockUserRepository\) UpdateDisplayName\(userID uint, displayName string\) error](<#MockUserRepository.UpdateDisplayName>)
   - [func \(m \*MockUserRepository\) UpdateEmailVerification\(userID uint, verifiedAt \*time.Time\) error](<#MockUserRepository.UpdateEmailVerification>)
@@ -10037,6 +10256,7 @@ type MockUserRepository struct {
     Household               dbModel.Household
     OnboardingState         dbModel.OnboardingState
     EmailVerification       dbModel.EmailVerification
+    PasswordReset           dbModel.PasswordReset
     HouseholdID             uint
     UsernameExistsResult    bool
     MailAddressExistsResult bool
@@ -10055,11 +10275,29 @@ func (m *MockUserRepository) CreateEmailVerification(userID uint, token string, 
 
 
 
+<a name="MockUserRepository.CreatePasswordReset"></a>
+### func \(\*MockUserRepository\) CreatePasswordReset
+
+```go
+func (m *MockUserRepository) CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error
+```
+
+
+
 <a name="MockUserRepository.CreateUser"></a>
 ### func \(\*MockUserRepository\) CreateUser
 
 ```go
 func (m *MockUserRepository) CreateUser(user *authentication.User) error
+```
+
+
+
+<a name="MockUserRepository.DeleteExpiredPasswordResets"></a>
+### func \(\*MockUserRepository\) DeleteExpiredPasswordResets
+
+```go
+func (m *MockUserRepository) DeleteExpiredPasswordResets(before time.Time) error
 ```
 
 
@@ -10109,11 +10347,29 @@ func (m *MockUserRepository) GetOnboardingState(userID uint) (dbModel.Onboarding
 
 
 
+<a name="MockUserRepository.GetPasswordResetByToken"></a>
+### func \(\*MockUserRepository\) GetPasswordResetByToken
+
+```go
+func (m *MockUserRepository) GetPasswordResetByToken(token string) (dbModel.PasswordReset, error)
+```
+
+
+
 <a name="MockUserRepository.GetUserByID"></a>
 ### func \(\*MockUserRepository\) GetUserByID
 
 ```go
 func (m *MockUserRepository) GetUserByID(userID uint) (authentication.User, error)
+```
+
+
+
+<a name="MockUserRepository.GetUserByMailAddress"></a>
+### func \(\*MockUserRepository\) GetUserByMailAddress
+
+```go
+func (m *MockUserRepository) GetUserByMailAddress(mailAddress string) (authentication.User, error)
 ```
 
 
@@ -10154,6 +10410,15 @@ func (m *MockUserRepository) GetUsersByHouseholdID(householdID uint) ([]authenti
 
 
 
+<a name="MockUserRepository.InvalidatePendingPasswordResetsForUser"></a>
+### func \(\*MockUserRepository\) InvalidatePendingPasswordResetsForUser
+
+```go
+func (m *MockUserRepository) InvalidatePendingPasswordResetsForUser(userID uint) error
+```
+
+
+
 <a name="MockUserRepository.IsAccountLocked"></a>
 ### func \(\*MockUserRepository\) IsAccountLocked
 
@@ -10190,6 +10455,15 @@ func (m *MockUserRepository) MarkOnboardingComplete(userID uint) error
 
 
 
+<a name="MockUserRepository.MarkPasswordResetUsed"></a>
+### func \(\*MockUserRepository\) MarkPasswordResetUsed
+
+```go
+func (m *MockUserRepository) MarkPasswordResetUsed(resetID uint, usedAt time.Time) error
+```
+
+
+
 <a name="MockUserRepository.MarkProfileStepDone"></a>
 ### func \(\*MockUserRepository\) MarkProfileStepDone
 
@@ -10213,6 +10487,15 @@ func (m *MockUserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttem
 
 ```go
 func (m *MockUserRepository) ResetFailedLoginAttempts(userID uint) error
+```
+
+
+
+<a name="MockUserRepository.SetUserPasswordHash"></a>
+### func \(\*MockUserRepository\) SetUserPasswordHash
+
+```go
+func (m *MockUserRepository) SetUserPasswordHash(userID uint, hashedPassword string) error
 ```
 
 

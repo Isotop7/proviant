@@ -181,6 +181,7 @@ type MockUserRepository struct {
 	Household               dbModel.Household
 	OnboardingState         dbModel.OnboardingState
 	EmailVerification       dbModel.EmailVerification
+	PasswordReset           dbModel.PasswordReset
 	HouseholdID             uint
 	UsernameExistsResult    bool
 	MailAddressExistsResult bool
@@ -241,6 +242,33 @@ func (m *MockUserRepository) UpdateEmailVerification(userID uint, verifiedAt *ti
 	return m.Err
 }
 func (m *MockUserRepository) UpdateEmailVerificationStatus(token, status string) error {
+	return m.Err
+}
+func (m *MockUserRepository) GetUserByMailAddress(mailAddress string) (authentication.User, error) {
+	return m.User, m.Err
+}
+func (m *MockUserRepository) CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error {
+	return m.Err
+}
+func (m *MockUserRepository) GetPasswordResetByToken(token string) (dbModel.PasswordReset, error) {
+	return m.PasswordReset, m.Err
+}
+func (m *MockUserRepository) MarkPasswordResetUsed(resetID uint, usedAt time.Time) error {
+	return m.Err
+}
+func (m *MockUserRepository) ConsumePasswordReset(tokenHash string, usedAt time.Time) (bool, error) {
+	return true, m.Err
+}
+func (m *MockUserRepository) ApplyPasswordReset(userID uint, tokenHash, hashedPassword string, usedAt time.Time) (bool, error) {
+	return true, m.Err
+}
+func (m *MockUserRepository) DeleteExpiredPasswordResets(before time.Time) error {
+	return m.Err
+}
+func (m *MockUserRepository) InvalidatePendingPasswordResetsForUser(userID uint) error {
+	return m.Err
+}
+func (m *MockUserRepository) SetUserPasswordHash(userID uint, hashedPassword string) error {
 	return m.Err
 }
 func (m *MockUserRepository) GetOnboardingState(userID uint) (dbModel.OnboardingState, error) {

@@ -26,6 +26,39 @@ var emailSendFunc = func(d *gomail.Dialer, m *gomail.Message) error {
 	return d.DialAndSend(m)
 }
 
+// sendHTML renders the named template from templates.TemplateFiles, executes
+// it with data, and sends the result as an HTML email. It centralizes the
+// From/To/Subject/Body header setup and the SMTP dialer construction so the
+// per-feature senders (verification, password reset, invitation, etc.) only
+// need to provide the subject, template path, and template data.
+func (e *EmailNotificationProvider) sendHTML(recipient, subject, templatePath string, data any) error {
+	templ, err := template.ParseFS(templates.TemplateFiles, templatePath)
+	if err != nil {
+		return err
+	}
+	var bodyBuf bytes.Buffer
+	if execErr := templ.Execute(&bodyBuf, data); execErr != nil {
+		return execErr
+	}
+
+	mail := gomail.NewMessage()
+	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
+	mail.SetHeader(headerTo, recipient)
+	mail.SetHeader(headerSubject, subject)
+	mail.SetBody(mimeTypeHTML, bodyBuf.String())
+
+	dialer := gomail.Dialer{
+		Host: e.Configuration.Host,
+		Port: e.Configuration.Port,
+		SSL:  e.Configuration.SSL,
+	}
+	if e.Configuration.User != "" && e.Configuration.Password != "" {
+		dialer.Username = e.Configuration.User
+		dialer.Password = e.Configuration.Password
+	}
+	return emailSendFunc(&dialer, mail)
+}
+
 type EmailNotificationProvider struct {
 	Configuration configuration.SMTPConfiguration
 	Logger        *zerolog.Logger
@@ -142,13 +175,7 @@ func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient
 // SendEmailVerificationEmail sends an email verification email to the recipient
 func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, token, baseURL string, expiresAt time.Time) error {
 	magicLink := fmt.Sprintf("%s/web/verify-email?token=%s", baseURL, token)
-
-	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/verification.html")
-	if templErr != nil {
-		return templErr
-	}
-	var bodyBuf bytes.Buffer
-	templExecErr := templ.Execute(&bodyBuf, struct {
+	return e.sendHTML(email, "Verify your email address for Proviant", "notification/verification.html", struct {
 		Username  string
 		MagicLink string
 		ExpiresAt string
@@ -159,28 +186,22 @@ func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, 
 		ExpiresAt: expiresAt.Format("2006-01-02 15:04"),
 		Email:     email,
 	})
-	if templExecErr != nil {
-		return templExecErr
-	}
+}
 
-	mail := gomail.NewMessage()
-	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
-	mail.SetHeader(headerTo, email)
-	mail.SetHeader(headerSubject, "Verify your email address for Proviant")
-	mail.SetBody(mimeTypeHTML, bodyBuf.String())
-
-	mailDialer := gomail.Dialer{
-		Host: e.Configuration.Host,
-		Port: e.Configuration.Port,
-		SSL:  e.Configuration.SSL,
-	}
-
-	if e.Configuration.User != "" && e.Configuration.Password != "" {
-		mailDialer.Username = e.Configuration.User
-		mailDialer.Password = e.Configuration.Password
-	}
-
-	return emailSendFunc(&mailDialer, mail)
+// SendPasswordResetEmail sends a password reset email to the recipient
+func (e *EmailNotificationProvider) SendPasswordResetEmail(email, username, token, baseURL string, expiresAt time.Time) error {
+	resetLink := fmt.Sprintf("%s/web/reset-password?token=%s", baseURL, token)
+	return e.sendHTML(email, "Reset your Proviant password", "notification/password_reset.html", struct {
+		Username  string
+		ResetLink string
+		ExpiresAt string
+		Email     string
+	}{
+		Username:  username,
+		ResetLink: resetLink,
+		ExpiresAt: expiresAt.Format("2006-01-02 15:04"),
+		Email:     email,
+	})
 }
 
 // SendExpiryDigestEmail sends an expiry digest email to a single recipient.
@@ -238,13 +259,7 @@ func (e *EmailNotificationProvider) SendExpiryDigestEmail(productGroups interfac
 // SendInvitationEmail sends an invitation email to the recipient
 func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
 	magicLink := fmt.Sprintf("%s/web/invite/accept?token=%s", baseURL, invitation.Token)
-
-	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/invitation.html")
-	if templErr != nil {
-		return templErr
-	}
-	var bodyBuf bytes.Buffer
-	templExecErr := templ.Execute(&bodyBuf, struct {
+	return e.sendHTML(invitation.Email, fmt.Sprintf("You're invited to join '%s' on Proviant", householdName), "notification/invitation.html", struct {
 		InviterName   string
 		HouseholdName string
 		MagicLink     string
@@ -257,26 +272,4 @@ func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.Hous
 		ExpiresAt:     invitation.ExpiresAt.Format("2006-01-02 15:04"),
 		Email:         invitation.Email,
 	})
-	if templExecErr != nil {
-		return templExecErr
-	}
-
-	mail := gomail.NewMessage()
-	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
-	mail.SetHeader(headerTo, invitation.Email)
-	mail.SetHeader(headerSubject, fmt.Sprintf("You're invited to join '%s' on Proviant", householdName))
-	mail.SetBody(mimeTypeHTML, bodyBuf.String())
-
-	mailDialer := gomail.Dialer{
-		Host: e.Configuration.Host,
-		Port: e.Configuration.Port,
-		SSL:  e.Configuration.SSL,
-	}
-
-	if e.Configuration.User != "" && e.Configuration.Password != "" {
-		mailDialer.Username = e.Configuration.User
-		mailDialer.Password = e.Configuration.Password
-	}
-
-	return emailSendFunc(&mailDialer, mail)
 }

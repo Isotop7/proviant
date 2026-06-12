@@ -214,6 +214,8 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	engine.POST("/auth/signup", signupRateLimitMiddleware, auth.Signup)
 	engine.POST("/auth/verify-email", auth.VerifyEmail)
 	engine.POST("/auth/invite/accept", auth.AcceptInvitation)
+	engine.POST("/auth/forgot-password", publicPasswordRateLimitMiddleware, auth.ForgotPassword)
+	engine.POST("/auth/reset-password", publicPasswordRateLimitMiddleware, auth.ResetPassword)
 	engine.GET("/auth/refresh_token", jwtAPIMiddleware.RefreshHandler)
 
 	// Logout route (requires authentication)
@@ -434,6 +436,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Public email verification page (no auth required)
 	engine.GET("/web/verify-email", webFrontendHandler.VerifyEmail)
+
+	// Public forgot-password page (no auth required)
+	engine.GET("/web/forgot-password", webFrontendHandler.ForgotPassword)
+
+	// Public password reset page (no auth required)
+	engine.GET("/web/reset-password", webFrontendHandler.ResetPassword)
 
 	// Public unsubscribe page (no auth required)
 	engine.GET("/web/unsubscribe", webFrontendHandler.Unsubscribe)

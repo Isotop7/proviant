@@ -234,6 +234,18 @@ var (
 	ErrEmailNotVerified = errors.New("email address not verified")
 
 	/*
+	 * Password reset related errors
+	 */
+	// ErrPasswordResetTokenInvalid is thrown when a password reset token is missing, unknown, expired, or already used
+	ErrPasswordResetTokenInvalid = errors.New("password reset link is invalid or has expired")
+
+	// ErrPasswordResetTokenExpired is thrown when a password reset token has passed its expiry
+	ErrPasswordResetTokenExpired = errors.New("password reset link has expired")
+
+	// ErrPasswordResetTokenUsed is thrown when a password reset token has already been consumed
+	ErrPasswordResetTokenUsed = errors.New("password reset link has already been used")
+
+	/*
 	 * Personal Access Token related errors
 	 */
 	// ErrPATNotFound is thrown when a PAT does not exist
