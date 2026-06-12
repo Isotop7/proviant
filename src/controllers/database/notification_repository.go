@@ -362,7 +362,7 @@ func (r *NotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, e
 func (r *NotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error) {
 	var users []authentication.User
 	if err := r.DB.
-		Where("digest_frequency IN ?", []string{authentication.MailDigestFrequencyDaily, authentication.MailDigestFrequencyWeekly}).
+		Where("mail_digest_frequency IN ?", []string{authentication.MailDigestFrequencyDaily, authentication.MailDigestFrequencyWeekly}).
 		Where("email_enabled = ?", true).
 		Where("mail_address != ''").
 		Find(&users).Error; err != nil {
