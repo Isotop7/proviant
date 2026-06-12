@@ -3248,58 +3248,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/forgot-password": {
-            "post": {
-                "description": "Accepts an email address; if a matching user exists, a password reset link is emailed.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Request a password reset",
-                "parameters": [
-                    {
-                        "description": "Forgot password request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/auth.forgotPasswordRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "429": {
-                        "description": "Too Many Requests",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/auth/invite/accept": {
             "post": {
                 "description": "Accepts a household invitation using a token",
@@ -3385,58 +3333,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/reset-password": {
-            "post": {
-                "description": "Validates a password reset token and sets a new password for the user.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Reset password using token",
-                "parameters": [
-                    {
-                        "description": "Reset password request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/auth.resetPasswordRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "429": {
-                        "description": "Too Many Requests",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -3540,26 +3436,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/forgot-password": {
-            "get": {
-                "description": "Renders the page that lets users request a password reset link via email.",
-                "produces": [
-                    "text/html"
-                ],
-                "tags": [
-                    "web"
-                ],
-                "summary": "Forgot password page",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/web": {
             "get": {
                 "description": "Renders the home page showing product dashboard",
@@ -3602,6 +3478,26 @@ const docTemplate = `{
                     "web"
                 ],
                 "summary": "Auth page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/forgot-password": {
+            "get": {
+                "description": "Renders the page that lets users request a password reset link via email.",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Forgot password page",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3833,12 +3729,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
                         }
                     }
                 }
@@ -4410,32 +4300,6 @@ const docTemplate = `{
                 "token"
             ],
             "properties": {
-                "token": {
-                    "type": "string"
-                }
-            }
-        },
-        "auth.forgotPasswordRequest": {
-            "type": "object",
-            "required": [
-                "mailAddress"
-            ],
-            "properties": {
-                "mailAddress": {
-                    "type": "string"
-                }
-            }
-        },
-        "auth.resetPasswordRequest": {
-            "type": "object",
-            "required": [
-                "password",
-                "token"
-            ],
-            "properties": {
-                "password": {
-                    "type": "string"
-                },
                 "token": {
                     "type": "string"
                 }

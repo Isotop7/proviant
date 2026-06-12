@@ -263,23 +263,6 @@ definitions:
     required:
     - token
     type: object
-  auth.forgotPasswordRequest:
-    properties:
-      mailAddress:
-        type: string
-    required:
-    - mailAddress
-    type: object
-  auth.resetPasswordRequest:
-    properties:
-      password:
-        type: string
-      token:
-        type: string
-    required:
-    - password
-    - token
-    type: object
   authentication.Login:
     properties:
       password:
@@ -2825,41 +2808,6 @@ paths:
       summary: Create a webhook
       tags:
       - webhook
-  /auth/forgot-password:
-    post:
-      consumes:
-      - application/json
-      description: Accepts an email address; if a matching user exists, a password
-        reset link is emailed.
-      parameters:
-      - description: Forgot password request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/auth.forgotPasswordRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "429":
-          description: Too Many Requests
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Request a password reset
-      tags:
-      - auth
   /auth/invite/accept:
     post:
       consumes:
@@ -2923,41 +2871,6 @@ paths:
       summary: Logout user by revoking token
       tags:
       - auth
-  /auth/reset-password:
-    post:
-      consumes:
-      - application/json
-      description: Validates a password reset token and sets a new password for the
-        user.
-      parameters:
-      - description: Reset password request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/auth.resetPasswordRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "429":
-          description: Too Many Requests
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Reset password using token
-      tags:
-      - auth
   /auth/signup:
     post:
       consumes:
@@ -3018,20 +2931,6 @@ paths:
       summary: Verify email
       tags:
       - auth
-  /forgot-password:
-    get:
-      description: Renders the page that lets users request a password reset link
-        via email.
-      produces:
-      - text/html
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-      summary: Forgot password page
-      tags:
-      - web
   /web:
     get:
       description: Renders the home page showing product dashboard
@@ -3064,6 +2963,20 @@ paths:
           schema:
             type: string
       summary: Auth page
+      tags:
+      - web
+  /web/forgot-password:
+    get:
+      description: Renders the page that lets users request a password reset link
+        via email.
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Forgot password page
       tags:
       - web
   /web/invite/accept:
@@ -3212,10 +3125,6 @@ paths:
           description: OK
           schema:
             type: string
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
       summary: Reset password page
       tags:
       - web

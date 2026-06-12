@@ -2308,7 +2308,8 @@ const (
     RouteUnsubscribe      = "/web/unsubscribe"
 
     // Password reset
-    RouteForgotPassword = "/forgot-password"
+    RouteAuth           = "/web/auth"
+    RouteForgotPassword = "/web/forgot-password"
     RouteResetPassword  = "/web/reset-password" //nolint:gosec // G101: route path constant, not a credential
 )
 ```
@@ -2322,6 +2323,7 @@ import "codeberg.org/isotop7/proviant/web"
 ## Index
 
 - [Constants](<#constants>)
+- [type BrandFeature](<#BrandFeature>)
 - [type Frontend](<#Frontend>)
   - [func \(frontend \*Frontend\) AcceptInvite\(ctx \*gin.Context\)](<#Frontend.AcceptInvite>)
   - [func \(frontend \*Frontend\) Auth\(ctx \*gin.Context\)](<#Frontend.Auth>)
@@ -2350,6 +2352,18 @@ const (
     AcceptInviteFileName  = "acceptInvite.tmpl"
     AcceptInvitationTitle = "Accept Invitation"
 )
+```
+
+<a name="BrandFeature"></a>
+## type BrandFeature
+
+BrandFeature is a single icon\+text row in the brand panel of the split\-panel auth pages. Consumed by the partials/loginBrand.tmpl template.
+
+```go
+type BrandFeature struct {
+    Icon string
+    Text string
+}
 ```
 
 <a name="Frontend"></a>
@@ -2388,7 +2402,7 @@ Auth renders the authentication page @Summary Auth page @Description Renders the
 func (frontend *Frontend) ForgotPassword(ctx *gin.Context)
 ```
 
-ForgotPassword renders the forgot\-password page \(form to request a reset link\). @Summary Forgot password page @Description Renders the page that lets users request a password reset link via email. @Tags web @Produce html @Success 200 \{string\} html @Router /forgot\-password \[get\]
+ForgotPassword renders the forgot\-password page \(form to request a reset link\). @Summary Forgot password page @Description Renders the page that lets users request a password reset link via email. @Tags web @Produce html @Success 200 \{string\} html @Router /web/forgot\-password \[get\]
 
 <a name="Frontend.Onboarding"></a>
 ### func \(\*Frontend\) Onboarding
@@ -2451,7 +2465,7 @@ Recipes renders the recipe suggestions page @Summary Recipes page @Description S
 func (frontend *Frontend) ResetPassword(ctx *gin.Context)
 ```
 
-ResetPassword renders the password reset page \(form to set a new password via token\). @Summary Reset password page @Description Renders the page that lets users set a new password using a reset token. @Tags web @Produce html @Param token query string false "Reset token" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Router /web/reset\-password \[get\]
+ResetPassword renders the password reset page \(form to set a new password via token\). @Summary Reset password page @Description Renders the page that lets users set a new password using a reset token. @Tags web @Produce html @Param token query string false "Reset token" @Success 200 \{string\} html @Router /web/reset\-password \[get\]
 
 <a name="Frontend.Root"></a>
 ### func \(\*Frontend\) Root
@@ -2550,7 +2564,7 @@ AcceptInvitation accepts a household invitation for the authenticated user. @Sum
 func ForgotPassword(ctx *gin.Context)
 ```
 
-ForgotPassword starts a self\-service password reset by emailing a reset link. Always returns the same response to avoid leaking which addresses are registered. @Summary Request a password reset @Description Accepts an email address; if a matching user exists, a password reset link is emailed. @Tags auth @Accept json @Produce json @Param request body forgotPasswordRequest true "Forgot password request" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 429 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/forgot\-password \[post\]
+ForgotPassword starts a self\-service password reset by emailing a reset link. Always returns the same response to avoid leaking which addresses are registered, and silently skips users with unverified email addresses.
 
 <a name="Logout"></a>
 ## func Logout
@@ -2568,7 +2582,7 @@ Logout revokes the current JWT token @Summary Logout user by revoking token @Des
 func ResetPassword(ctx *gin.Context)
 ```
 
-ResetPassword consumes a password reset token and updates the user's password. @Summary Reset password using token @Description Validates a password reset token and sets a new password for the user. @Tags auth @Accept json @Produce json @Param request body resetPasswordRequest true "Reset password request" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 429 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/reset\-password \[post\]
+ResetPassword consumes a password reset token and updates the user's password. The token is validated and consumed atomically: bcrypt and password policy checks only run after the token has been confirmed valid and not already consumed, so unauthenticated callers cannot force the server to do expensive CPU work.
 
 <a name="Signup"></a>
 ## func Signup
@@ -4080,6 +4094,8 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func SupportedEnginesFromString\(str string\) SupportedEngines](<#SupportedEnginesFromString>)
 - [type UserRepository](<#UserRepository>)
   - [func NewUserRepository\(db \*gorm.DB\) \*UserRepository](<#NewUserRepository>)
+  - [func \(r \*UserRepository\) ApplyPasswordReset\(userID uint, tokenHash, hashedPassword string, usedAt time.Time\) \(bool, error\)](<#UserRepository.ApplyPasswordReset>)
+  - [func \(r \*UserRepository\) ConsumePasswordReset\(tokenHash string, usedAt time.Time\) \(bool, error\)](<#UserRepository.ConsumePasswordReset>)
   - [func \(r \*UserRepository\) CreateEmailVerification\(userID uint, token string, expiresAt time.Time\) error](<#UserRepository.CreateEmailVerification>)
   - [func \(r \*UserRepository\) CreatePasswordReset\(userID uint, token string, expiresAt time.Time, ipAddress string\) error](<#UserRepository.CreatePasswordReset>)
   - [func \(r \*UserRepository\) CreateUser\(user \*authentication.User\) error](<#UserRepository.CreateUser>)
@@ -6238,6 +6254,24 @@ func NewUserRepository(db *gorm.DB) *UserRepository
 
 
 
+<a name="UserRepository.ApplyPasswordReset"></a>
+### func \(\*UserRepository\) ApplyPasswordReset
+
+```go
+func (r *UserRepository) ApplyPasswordReset(userID uint, tokenHash, hashedPassword string, usedAt time.Time) (bool, error)
+```
+
+ApplyPasswordReset runs the password update, token consumption, and invalidation of other pending resets in a single transaction. It returns \(consumed, err\) where consumed is true only if the token was the one that actually got consumed — i.e. was pending, unexpired, and the update succeeded. On consumed=false the password has NOT been changed and the caller should respond with the appropriate token\-invalid error.
+
+<a name="UserRepository.ConsumePasswordReset"></a>
+### func \(\*UserRepository\) ConsumePasswordReset
+
+```go
+func (r *UserRepository) ConsumePasswordReset(tokenHash string, usedAt time.Time) (bool, error)
+```
+
+ConsumePasswordReset atomically marks a reset row as used only if it is still pending and not expired. The conditional WHERE makes this safe under concurrent use: the second concurrent caller sees zero rows affected.
+
 <a name="UserRepository.CreateEmailVerification"></a>
 ### func \(\*UserRepository\) CreateEmailVerification
 
@@ -6254,7 +6288,7 @@ func (r *UserRepository) CreateEmailVerification(userID uint, token string, expi
 func (r *UserRepository) CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error
 ```
 
-
+CreatePasswordReset persists a new password\-reset row. The raw token is SHA\-256 hashed before storage; only the hash is written to the database.
 
 <a name="UserRepository.CreateUser"></a>
 ### func \(\*UserRepository\) CreateUser
@@ -6326,7 +6360,7 @@ func (r *UserRepository) GetOnboardingState(userID uint) (database.OnboardingSta
 func (r *UserRepository) GetPasswordResetByToken(token string) (database.PasswordReset, error)
 ```
 
-
+GetPasswordResetByToken looks up a reset by the raw token submitted by the client \(form POST or API body\). The raw token is hashed before the lookup.
 
 <a name="UserRepository.GetUserByID"></a>
 ### func \(\*UserRepository\) GetUserByID
@@ -6602,6 +6636,17 @@ type UserRepositoryInterface interface {
     CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error
     GetPasswordResetByToken(token string) (database.PasswordReset, error)
     MarkPasswordResetUsed(resetID uint, usedAt time.Time) error
+    // ConsumePasswordReset atomically marks the reset row as used only if it
+    // is still pending and not expired. Returns (true, nil) on success,
+    // (false, nil) if the token is missing/already-used/expired, and
+    // (false, err) on DB error. Callers should treat false as "token is not
+    // consumable" and not proceed with the password update.
+    ConsumePasswordReset(tokenHash string, usedAt time.Time) (bool, error)
+    // ApplyPasswordReset atomically (a) sets the user's password hash,
+    // (b) consumes the reset token, and (c) invalidates all other pending
+    // resets for the user. Returns the same semantics as ConsumePasswordReset
+    // for the token-consumed flag, plus any DB error.
+    ApplyPasswordReset(userID uint, tokenHash, hashedPassword string, usedAt time.Time) (bool, error)
     DeleteExpiredPasswordResets(before time.Time) error
     InvalidatePendingPasswordResetsForUser(userID uint) error
     SetUserPasswordHash(userID uint, hashedPassword string) error
@@ -7872,6 +7917,7 @@ import "codeberg.org/isotop7/proviant/models/database"
 
 - [Constants](<#constants>)
 - [func GenerateCacheKey\(provider string, productIDs \[\]uint\) string](<#GenerateCacheKey>)
+- [func HashPasswordResetToken\(raw string\) string](<#HashPasswordResetToken>)
 - [type ActivityLog](<#ActivityLog>)
 - [type AuditLog](<#AuditLog>)
 - [type Date](<#Date>)
@@ -7966,16 +8012,6 @@ const (
 )
 ```
 
-<a name="PasswordResetStatusPending"></a>
-
-```go
-const (
-    PasswordResetStatusPending = "pending"
-    PasswordResetStatusUsed    = "used"
-    PasswordResetStatusExpired = "expired"
-)
-```
-
 <a name="RemovalReasonConsumed"></a>
 
 ```go
@@ -7993,6 +8029,15 @@ func GenerateCacheKey(provider string, productIDs []uint) string
 ```
 
 GenerateCacheKey creates a deterministic SHA256 hash from provider name and sorted product IDs.
+
+<a name="HashPasswordResetToken"></a>
+## func HashPasswordResetToken
+
+```go
+func HashPasswordResetToken(raw string) string
+```
+
+HashPasswordResetToken returns the SHA\-256 hex digest of a raw reset token. Use this when persisting a new PasswordReset or looking one up by token.
 
 <a name="ActivityLog"></a>
 ## type ActivityLog
@@ -8210,13 +8255,15 @@ type OpenFoodFactsCache struct {
 <a name="PasswordReset"></a>
 ## type PasswordReset
 
+PasswordReset stores a one\-time password\-reset token for a user.
 
+Unlike the older EmailVerification flow, the raw token is NEVER persisted — only its SHA\-256 hex digest \(TokenHash\) is stored. The raw value is sent to the user via email and posted back on the reset form, and is hashed on the server before lookup. This way a DB dump or backup never yields valid reset tokens.
 
 ```go
 type PasswordReset struct {
     gorm.Model
     UserID    uint      `gorm:"index,not null"`
-    Token     string    `gorm:"uniqueIndex,not null"`
+    TokenHash string    `gorm:"uniqueIndex,not null"`
     ExpiresAt time.Time `gorm:"not null"`
     UsedAt    *time.Time
     IPAddress string `gorm:"size:64"`
@@ -8712,6 +8759,8 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockStreakRepository\) RecordWasteEvent\(householdID uint\) error](<#MockStreakRepository.RecordWasteEvent>)
   - [func \(m \*MockStreakRepository\) UpdateStreak\(streak \*dbModel.WasteStreak\) error](<#MockStreakRepository.UpdateStreak>)
 - [type MockUserRepository](<#MockUserRepository>)
+  - [func \(m \*MockUserRepository\) ApplyPasswordReset\(userID uint, tokenHash, hashedPassword string, usedAt time.Time\) \(bool, error\)](<#MockUserRepository.ApplyPasswordReset>)
+  - [func \(m \*MockUserRepository\) ConsumePasswordReset\(tokenHash string, usedAt time.Time\) \(bool, error\)](<#MockUserRepository.ConsumePasswordReset>)
   - [func \(m \*MockUserRepository\) CreateEmailVerification\(userID uint, token string, expiresAt time.Time\) error](<#MockUserRepository.CreateEmailVerification>)
   - [func \(m \*MockUserRepository\) CreatePasswordReset\(userID uint, token string, expiresAt time.Time, ipAddress string\) error](<#MockUserRepository.CreatePasswordReset>)
   - [func \(m \*MockUserRepository\) CreateUser\(user \*authentication.User\) error](<#MockUserRepository.CreateUser>)
@@ -10266,6 +10315,24 @@ type MockUserRepository struct {
 }
 ```
 
+<a name="MockUserRepository.ApplyPasswordReset"></a>
+### func \(\*MockUserRepository\) ApplyPasswordReset
+
+```go
+func (m *MockUserRepository) ApplyPasswordReset(userID uint, tokenHash, hashedPassword string, usedAt time.Time) (bool, error)
+```
+
+
+
+<a name="MockUserRepository.ConsumePasswordReset"></a>
+### func \(\*MockUserRepository\) ConsumePasswordReset
+
+```go
+func (m *MockUserRepository) ConsumePasswordReset(tokenHash string, usedAt time.Time) (bool, error)
+```
+
+
+
 <a name="MockUserRepository.CreateEmailVerification"></a>
 ### func \(\*MockUserRepository\) CreateEmailVerification
 
@@ -10723,7 +10790,7 @@ static implements "constants" used in proviant
 ```go
 const (
     // Version is the current proviant version
-    Version = "v0.16.0"
+    Version = "v0.17.0"
 
     // TokenRealm is the realm of tokens
     TokenRealm = "proviant"
