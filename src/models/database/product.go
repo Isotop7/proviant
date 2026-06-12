@@ -65,4 +65,5 @@ type ProductDTOPatch struct {
 	NotificationLeadDays *int      `json:"notificationLeadDays,omitempty"`
 	MinStockAmount       int       `json:"minStockAmount"`
 	IsPrivate            bool      `json:"isPrivate"`
+	PriceOverride        *float64  `json:"priceOverride,omitempty"`
 }

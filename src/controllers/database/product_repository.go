@@ -358,6 +358,7 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 	dbProduct.NotificationLeadDays = product.NotificationLeadDays
 	dbProduct.MinStockAmount = product.MinStockAmount
 	dbProduct.IsPrivate = product.IsPrivate
+	dbProduct.PriceOverride = product.PriceOverride
 
 	saveResult := r.DB.Save(&dbProduct)
 	return saveResult.Error

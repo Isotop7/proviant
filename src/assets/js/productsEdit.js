@@ -51,6 +51,10 @@ function editProduct() {
     const inputIsPrivate = document.getElementById('inputIsPrivate');
     const isPrivate = inputIsPrivate && inputIsPrivate.checked;
 
+    const inputPriceOverride = document.getElementById('inputPriceOverride');
+    const priceOverride = inputPriceOverride && inputPriceOverride.value !== ''
+        ? Number.parseFloat(inputPriceOverride.value) : null;
+
     const product = {
         "ID": productID,
         "productName": els.inputProductName.value.trim(),
@@ -63,6 +67,7 @@ function editProduct() {
         "notificationLeadDays": notificationLeadDays,
         "minStockAmount": minStockAmount,
         "isPrivate": isPrivate,
+        "priceOverride": priceOverride,
     };
 
     proviant.editProduct(product).then((response) => {

@@ -15,6 +15,7 @@ type RepositoryContainer struct {
 	PATs              PATRepositoryInterface
 	Recipes           RecipeRepositoryInterface
 	Savings           SavingsRepositoryInterface
+	WasteAnalytics    *WasteAnalyticsRepository
 	Notifications     NotificationRepositoryInterface
 	Streaks           StreakRepositoryInterface
 	ExpiryScan        ExpiryScanRepositoryInterface
@@ -36,6 +37,7 @@ func NewRepositoryContainer(db *gorm.DB) *RepositoryContainer {
 		PATs:              NewPATRepository(db),
 		Recipes:           NewRecipeRepository(db),
 		Savings:           NewSavingsRepository(db),
+		WasteAnalytics:    NewWasteAnalyticsRepository(db),
 		Notifications:     NewNotificationRepository(db),
 		Streaks:           NewStreakRepository(db),
 		ExpiryScan:        NewExpiryScanRepository(db),

@@ -283,6 +283,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	savingsAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	savingsAPI.GET("/stats", v1.WrapHandler(v1.GetSavingsStats))
 
+	// Waste analytics routes
+	wasteAPI := engine.Group("/api/v1/stats/waste")
+	wasteAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
+	wasteAPI.GET("", v1.WrapHandler(v1.GetWasteAnalytics))
+
 	// Recipe suggestion routes
 	recipeAPI := engine.Group("/api/v1/recipes")
 	recipeAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
@@ -429,6 +434,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products/scan", webFrontendHandler.ProductsScan)
 	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
 	publicWebFrontend.GET("/recipes", webFrontendHandler.Recipes)
+	publicWebFrontend.GET("/waste-analytics", webFrontendHandler.WasteAnalytics)
 	publicWebFrontend.GET("/shopping-list", webFrontendHandler.ShoppingList)
 
 	// Public invite acceptance page (no auth required)

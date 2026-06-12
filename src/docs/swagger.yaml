@@ -239,6 +239,65 @@ definitions:
       longestStreak:
         type: integer
     type: object
+  api.WasteAnalyticsResponse:
+    properties:
+      co2Source:
+        type: string
+      consumedCount:
+        type: integer
+      monthly:
+        items:
+          $ref: '#/definitions/api.WasteMonthly'
+        type: array
+      mostWastedCategories:
+        items:
+          $ref: '#/definitions/api.WasteCategoryStat'
+        type: array
+      period:
+        description: '"month" | "3months" | "6months"'
+        type: string
+      totalRemoved:
+        type: integer
+      trend:
+        items:
+          $ref: '#/definitions/api.StatsMonthlyCount'
+        type: array
+      wastedCo2Kg:
+        type: number
+      wastedCount:
+        type: integer
+      wastedEur:
+        type: number
+      wastedPercent:
+        type: number
+    type: object
+  api.WasteCategoryStat:
+    properties:
+      categoryKey:
+        type: string
+      co2Kg:
+        type: number
+      costEur:
+        type: number
+      count:
+        type: integer
+      displayName:
+        type: string
+    type: object
+  api.WasteMonthly:
+    properties:
+      consumedCount:
+        type: integer
+      month:
+        description: 'format: "2006-01"'
+        type: string
+      wastedCo2Kg:
+        type: number
+      wastedCount:
+        type: integer
+      wastedEur:
+        type: number
+    type: object
   api.WebhookResponse:
     properties:
       active:
@@ -2579,6 +2638,32 @@ paths:
       summary: Get savings statistics
       tags:
       - savings
+  /api/v1/stats/waste:
+    get:
+      description: |-
+        Returns per-month consumed vs. wasted metrics, top wasted categories
+        with monetary and CO2 impact, and a 6-month trend. EUR prices come from
+        per-product overrides (if set) or category averages; CO2 is sourced
+        from the Agribalyse LCA database via Open Food Facts ecoscore_data.
+      parameters:
+      - description: 'Period window: month | 3months | 6months (default 6months)'
+        in: query
+        name: period
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.WasteAnalyticsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get waste analytics
+      tags:
+      - stats
   /api/v1/streak:
     get:
       description: Returns the current and longest waste-free streak for the caller's
@@ -3239,6 +3324,28 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Verify email page
+      tags:
+      - web
+  /web/waste-analytics:
+    get:
+      description: Renders consumed-vs-wasted metrics, monthly breakdown, and most-wasted
+        categories
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Waste Analytics page
       tags:
       - web
 securityDefinitions:

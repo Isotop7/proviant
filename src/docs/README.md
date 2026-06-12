@@ -2341,6 +2341,7 @@ import "codeberg.org/isotop7/proviant/web"
   - [func \(frontend \*Frontend\) User\(ctx \*gin.Context\)](<#Frontend.User>)
   - [func \(frontend \*Frontend\) UserSettings\(ctx \*gin.Context\)](<#Frontend.UserSettings>)
   - [func \(frontend \*Frontend\) VerifyEmail\(ctx \*gin.Context\)](<#Frontend.VerifyEmail>)
+  - [func \(frontend \*Frontend\) WasteAnalytics\(ctx \*gin.Context\)](<#Frontend.WasteAnalytics>)
 
 
 ## Constants
@@ -2520,6 +2521,15 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context)
 ```
 
 VerifyEmail renders the email verification page @Summary Verify email page @Description Renders the email verification status page @Tags web @Produce html @Param token query string false "Verification token" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Router /web/verify\-email \[get\]
+
+<a name="Frontend.WasteAnalytics"></a>
+### func \(\*Frontend\) WasteAnalytics
+
+```go
+func (frontend *Frontend) WasteAnalytics(ctx *gin.Context)
+```
+
+WasteAnalytics renders the waste analytics dashboard @Summary Waste Analytics page @Description Renders consumed\-vs\-wasted metrics, monthly breakdown, and most\-wasted categories @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/waste\-analytics \[get\]
 
 # auth
 
@@ -2742,6 +2752,8 @@ v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
+v1 implements version 1 of the proviant API
+
 ## Index
 
 - [Constants](<#constants>)
@@ -2796,6 +2808,7 @@ v1 implements version 1 of the proviant API
 - [func GetSavingsStats\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetSavingsStats>)
 - [func GetStreak\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetStreak>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetUserNotificationPreferences>)
+- [func GetWasteAnalytics\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWasteAnalytics>)
 - [func GetWebPushVAPIDPublicKey\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWebPushVAPIDPublicKey>)
 - [func GetWebhook\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWebhook>)
 - [func GetWebhookDeliveries\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWebhookDeliveries>)
@@ -3375,6 +3388,15 @@ func GetUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext)
 
 GetUserNotificationPreferences gets a user's notification preferences @Summary Gets a user's notification preferences @Description Retrieves notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} authentication.NotificationPreferences @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[get\]
 
+<a name="GetWasteAnalytics"></a>
+## func GetWasteAnalytics
+
+```go
+func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext)
+```
+
+GetWasteAnalytics returns consumed vs. wasted aggregations, monthly breakdown, most\-wasted categories, and a trend for the authenticated user's household. @Summary Get waste analytics @Description Returns per\-month consumed vs. wasted metrics, top wasted categories @Description with monetary and CO2 impact, and a 6\-month trend. EUR prices come from @Description per\-product overrides \(if set\) or category averages; CO2 is sourced @Description from the Agribalyse LCA database via Open Food Facts ecoscore\_data. @Tags stats @Produce json @Param period query string false "Period window: month | 3months | 6months \(default 6months\)" @Success 200 \{object\} apiModel.WasteAnalyticsResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/stats/waste \[get\]
+
 <a name="GetWebPushVAPIDPublicKey"></a>
 ## func GetWebPushVAPIDPublicKey
 
@@ -3910,6 +3932,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*CalendarTokenRepository\) GetByUserID\(userID uint\) \(authentication.CalendarToken, error\)](<#CalendarTokenRepository.GetByUserID>)
   - [func \(r \*CalendarTokenRepository\) Update\(ct \*authentication.CalendarToken\) error](<#CalendarTokenRepository.Update>)
 - [type CalendarTokenRepositoryInterface](<#CalendarTokenRepositoryInterface>)
+- [type ConsumedVsWastedRow](<#ConsumedVsWastedRow>)
 - [type ExpiryScanRepository](<#ExpiryScanRepository>)
   - [func NewExpiryScanRepository\(db \*gorm.DB\) \*ExpiryScanRepository](<#NewExpiryScanRepository>)
   - [func \(r \*ExpiryScanRepository\) Create\(scan \*database.ExpiryScan\) error](<#ExpiryScanRepository.Create>)
@@ -4134,6 +4157,12 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*UserRepository\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#UserRepository.UserExistsByMailAddress>)
   - [func \(r \*UserRepository\) UserExistsByUsername\(user \*authentication.User\) bool](<#UserRepository.UserExistsByUsername>)
 - [type UserRepositoryInterface](<#UserRepositoryInterface>)
+- [type WasteAnalyticsRepository](<#WasteAnalyticsRepository>)
+  - [func NewWasteAnalyticsRepository\(db \*gorm.DB\) \*WasteAnalyticsRepository](<#NewWasteAnalyticsRepository>)
+  - [func \(r \*WasteAnalyticsRepository\) GetConsumedVsWasted\(householdID uint, since time.Time\) \(ConsumedVsWastedRow, error\)](<#WasteAnalyticsRepository.GetConsumedVsWasted>)
+  - [func \(r \*WasteAnalyticsRepository\) GetMonthlyBreakdown\(householdID uint, since time.Time, months int\) \(\[\]apiModel.WasteMonthly, error\)](<#WasteAnalyticsRepository.GetMonthlyBreakdown>)
+  - [func \(r \*WasteAnalyticsRepository\) GetMostWastedCategories\(householdID uint, since time.Time, limit int\) \(\[\]apiModel.WasteCategoryStat, error\)](<#WasteAnalyticsRepository.GetMostWastedCategories>)
+  - [func \(r \*WasteAnalyticsRepository\) GetTrendMonths\(householdID uint, months int\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#WasteAnalyticsRepository.GetTrendMonths>)
 - [type WebhookRepository](<#WebhookRepository>)
   - [func NewWebhookRepository\(db \*gorm.DB\) \*WebhookRepository](<#NewWebhookRepository>)
   - [func \(r \*WebhookRepository\) CheckOwnership\(webhookID, userID uint\) error](<#WebhookRepository.CheckOwnership>)
@@ -4377,6 +4406,22 @@ type CalendarTokenRepositoryInterface interface {
     GetByUserID(userID uint) (authentication.CalendarToken, error)
     Create(ct *authentication.CalendarToken) error
     Update(ct *authentication.CalendarToken) error
+}
+```
+
+<a name="ConsumedVsWastedRow"></a>
+## type ConsumedVsWastedRow
+
+ConsumedVsWastedRow is the aggregate over a time window.
+
+```go
+type ConsumedVsWastedRow struct {
+    ConsumedCount int
+    ConsumedEUR   float64
+    ConsumedCO2Kg float64
+    WastedCount   int
+    WastedEUR     float64
+    WastedCO2Kg   float64
 }
 ```
 
@@ -5859,6 +5904,7 @@ type RepositoryContainer struct {
     PATs              PATRepositoryInterface
     Recipes           RecipeRepositoryInterface
     Savings           SavingsRepositoryInterface
+    WasteAnalytics    *WasteAnalyticsRepository
     Notifications     NotificationRepositoryInterface
     Streaks           StreakRepositoryInterface
     ExpiryScan        ExpiryScanRepositoryInterface
@@ -6663,6 +6709,62 @@ type UserRepositoryInterface interface {
 }
 ```
 
+<a name="WasteAnalyticsRepository"></a>
+## type WasteAnalyticsRepository
+
+WasteAnalyticsRepository handles aggregations of consume/waste events for analytics.
+
+```go
+type WasteAnalyticsRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewWasteAnalyticsRepository"></a>
+### func NewWasteAnalyticsRepository
+
+```go
+func NewWasteAnalyticsRepository(db *gorm.DB) *WasteAnalyticsRepository
+```
+
+NewWasteAnalyticsRepository creates a new WasteAnalyticsRepository.
+
+<a name="WasteAnalyticsRepository.GetConsumedVsWasted"></a>
+### func \(\*WasteAnalyticsRepository\) GetConsumedVsWasted
+
+```go
+func (r *WasteAnalyticsRepository) GetConsumedVsWasted(householdID uint, since time.Time) (ConsumedVsWastedRow, error)
+```
+
+GetConsumedVsWasted returns the aggregate count/EUR/CO2 for consumed and wasted events in the window \[since, now\].
+
+<a name="WasteAnalyticsRepository.GetMonthlyBreakdown"></a>
+### func \(\*WasteAnalyticsRepository\) GetMonthlyBreakdown
+
+```go
+func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since time.Time, months int) ([]apiModel.WasteMonthly, error)
+```
+
+GetMonthlyBreakdown returns per\-month consumed and wasted aggregates, padded with zero buckets for months that have no data so the response is contiguous from \`since\`.
+
+<a name="WasteAnalyticsRepository.GetMostWastedCategories"></a>
+### func \(\*WasteAnalyticsRepository\) GetMostWastedCategories
+
+```go
+func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, since time.Time, limit int) ([]apiModel.WasteCategoryStat, error)
+```
+
+GetMostWastedCategories returns the top \`limit\` categories of wasted products for the household in the window \[since, now\]. Categories are resolved from the still\-existing Product row; if a wasted product has been hard\-deleted it falls into the "Other" bucket.
+
+<a name="WasteAnalyticsRepository.GetTrendMonths"></a>
+### func \(\*WasteAnalyticsRepository\) GetTrendMonths
+
+```go
+func (r *WasteAnalyticsRepository) GetTrendMonths(householdID uint, months int) ([]apiModel.StatsMonthlyCount, error)
+```
+
+GetTrendMonths returns wasted\-count\-per\-month for the last \`months\` months \(ascending\).
+
 <a name="WebhookRepository"></a>
 ## type WebhookRepository
 
@@ -6826,6 +6928,9 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type StreakResponse](<#StreakResponse>)
 - [type TokenResponse](<#TokenResponse>)
 - [type UpdateWebhookRequest](<#UpdateWebhookRequest>)
+- [type WasteAnalyticsResponse](<#WasteAnalyticsResponse>)
+- [type WasteCategoryStat](<#WasteCategoryStat>)
+- [type WasteMonthly](<#WasteMonthly>)
 - [type WebhookListResponse](<#WebhookListResponse>)
 - [type WebhookResponse](<#WebhookResponse>)
 
@@ -7180,6 +7285,57 @@ type UpdateWebhookRequest struct {
     Secret string   `json:"secret" binding:"omitempty,min=16"`
     Events []string `json:"events" binding:"omitempty,min=1"`
     Active *bool    `json:"active"`
+}
+```
+
+<a name="WasteAnalyticsResponse"></a>
+## type WasteAnalyticsResponse
+
+WasteAnalyticsResponse is the response body for GET /api/v1/stats/waste
+
+```go
+type WasteAnalyticsResponse struct {
+    Period               string              `json:"period"` // "month" | "3months" | "6months"
+    ConsumedCount        int                 `json:"consumedCount"`
+    WastedCount          int                 `json:"wastedCount"`
+    TotalRemoved         int                 `json:"totalRemoved"`
+    WastedPercent        float64             `json:"wastedPercent"`
+    WastedEUR            float64             `json:"wastedEur"`
+    WastedCO2Kg          float64             `json:"wastedCo2Kg"`
+    Monthly              []WasteMonthly      `json:"monthly"`
+    MostWastedCategories []WasteCategoryStat `json:"mostWastedCategories"`
+    Trend                []StatsMonthlyCount `json:"trend"`
+    CO2Source            string              `json:"co2Source"`
+}
+```
+
+<a name="WasteCategoryStat"></a>
+## type WasteCategoryStat
+
+WasteCategoryStat represents the aggregate waste impact for a single product category.
+
+```go
+type WasteCategoryStat struct {
+    CategoryKey string  `json:"categoryKey"`
+    DisplayName string  `json:"displayName"`
+    Count       int     `json:"count"`
+    CostEUR     float64 `json:"costEur"`
+    CO2Kg       float64 `json:"co2Kg"`
+}
+```
+
+<a name="WasteMonthly"></a>
+## type WasteMonthly
+
+WasteMonthly represents the per\-month consumed vs. wasted breakdown.
+
+```go
+type WasteMonthly struct {
+    Month         string  `json:"month"` // format: "2006-01"
+    ConsumedCount int     `json:"consumedCount"`
+    WastedCount   int     `json:"wastedCount"`
+    WastedEUR     float64 `json:"wastedEur"`
+    WastedCO2Kg   float64 `json:"wastedCo2Kg"`
 }
 ```
 
@@ -8363,6 +8519,7 @@ type ProductDTOPatch struct {
     NotificationLeadDays *int      `json:"notificationLeadDays,omitempty"`
     MinStockAmount       int       `json:"minStockAmount"`
     IsPrivate            bool      `json:"isPrivate"`
+    PriceOverride        *float64  `json:"priceOverride,omitempty"`
 }
 ```
 

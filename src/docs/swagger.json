@@ -2897,6 +2897,40 @@
                 }
             }
         },
+        "/api/v1/stats/waste": {
+            "get": {
+                "description": "Returns per-month consumed vs. wasted metrics, top wasted categories\nwith monetary and CO2 impact, and a 6-month trend. EUR prices come from\nper-product overrides (if set) or category averages; CO2 is sourced\nfrom the Agribalyse LCA database via Open Food Facts ecoscore_data.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stats"
+                ],
+                "summary": "Get waste analytics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Period window: month | 3months | 6months (default 6months)",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.WasteAnalyticsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/streak": {
             "get": {
                 "description": "Returns the current and longest waste-free streak for the caller's household",
@@ -3898,6 +3932,38 @@
                     }
                 }
             }
+        },
+        "/web/waste-analytics": {
+            "get": {
+                "description": "Renders consumed-vs-wasted metrics, monthly breakdown, and most-wasted categories",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Waste Analytics page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -4259,6 +4325,95 @@
                 },
                 "longestStreak": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.WasteAnalyticsResponse": {
+            "type": "object",
+            "properties": {
+                "co2Source": {
+                    "type": "string"
+                },
+                "consumedCount": {
+                    "type": "integer"
+                },
+                "monthly": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.WasteMonthly"
+                    }
+                },
+                "mostWastedCategories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.WasteCategoryStat"
+                    }
+                },
+                "period": {
+                    "description": "\"month\" | \"3months\" | \"6months\"",
+                    "type": "string"
+                },
+                "totalRemoved": {
+                    "type": "integer"
+                },
+                "trend": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.StatsMonthlyCount"
+                    }
+                },
+                "wastedCo2Kg": {
+                    "type": "number"
+                },
+                "wastedCount": {
+                    "type": "integer"
+                },
+                "wastedEur": {
+                    "type": "number"
+                },
+                "wastedPercent": {
+                    "type": "number"
+                }
+            }
+        },
+        "api.WasteCategoryStat": {
+            "type": "object",
+            "properties": {
+                "categoryKey": {
+                    "type": "string"
+                },
+                "co2Kg": {
+                    "type": "number"
+                },
+                "costEur": {
+                    "type": "number"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "displayName": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.WasteMonthly": {
+            "type": "object",
+            "properties": {
+                "consumedCount": {
+                    "type": "integer"
+                },
+                "month": {
+                    "description": "format: \"2006-01\"",
+                    "type": "string"
+                },
+                "wastedCo2Kg": {
+                    "type": "number"
+                },
+                "wastedCount": {
+                    "type": "integer"
+                },
+                "wastedEur": {
+                    "type": "number"
                 }
             }
         },

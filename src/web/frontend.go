@@ -740,6 +740,35 @@ func (frontend *Frontend) Recipes(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "recipes.tmpl", pageData)
 }
 
+// WasteAnalytics renders the waste analytics dashboard
+// @Summary      Waste Analytics page
+// @Description  Renders consumed-vs-wasted metrics, monthly breakdown, and most-wasted categories
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/waste-analytics [get]
+func (frontend *Frontend) WasteAnalytics(ctx *gin.Context) {
+	_, repos, userID, ok := frontend.mustGetPageContext(ctx)
+	if !ok {
+		return
+	}
+
+	householdID, err := repos.Users.GetUserHouseholdByID(userID)
+	if err != nil || householdID == 0 {
+		householdID = 0
+	}
+
+	pageData := map[string]any{
+		"Title":        "Waste Analytics",
+		"HasHousehold": householdID > 0,
+		"HouseholdID":  householdID,
+	}
+
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "wasteAnalytics.tmpl", pageData)
+}
+
 // ShoppingList renders the shopping list page
 // @Summary      Shopping List page
 // @Description  Renders the shared household shopping list with custom items and import banner
