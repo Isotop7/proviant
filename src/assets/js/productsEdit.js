@@ -167,6 +167,19 @@ document.addEventListener("click", function (event) {
         consumeProduct();
     }
 
+    // Add to shopping list — used on the product detail and edit pages.
+    // The button is event-delegated so the listener survives DOM updates.
+    var addToListBtn = event.target.closest('.btn-add-to-shopping-list');
+    if (addToListBtn) {
+        // Edit page: the button is inside an <a> wrapper that would
+        // otherwise navigate. The detail page has the button on its own
+        // and uses the same delegation.
+        if (event.target.closest('a')) return;
+        event.preventDefault();
+        handleAddToShoppingList(addToListBtn);
+        return;
+    }
+
     // Set expiry date to today
     if (event.target.closest('#btnTodayExpiry')) {
         var expireInput = document.getElementById('inputExpireAt');
@@ -238,3 +251,103 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 });
+
+/* Add-to-shopping-list flow. The button may live on the product detail
+   page (productsView.tmpl) or the product edit page (productsEdit.tmpl);
+   both render a button with class .btn-add-to-shopping-list and a
+   data-product-id attribute. The modal markup (#restockSuggestionModal)
+   is provided by the host template. */
+function handleAddToShoppingList(btn) {
+    var productId = btn.dataset.productId;
+    if (!productId) return;
+
+    proviant.runWithButtonBusyState(
+        btn,
+        async function () {
+            var response = await proviant.getRestockSuggestion(productId);
+            if (response.code !== 200) {
+                // Fall back to a direct add with default quantity (also
+                // covers the "no suggestion available" case).
+                await proviant.addToShoppingList(productId, 1, '');
+                return;
+            }
+            var suggestion = response.message;
+            if (suggestion && suggestion.hasSuggestion && suggestion.suggestedQty > 0) {
+                var choice = await openRestockModal(suggestion);
+                if (choice === proviant.CANCEL) return proviant.CANCEL;
+                await proviant.addToShoppingList(productId, choice.qty, choice.unit);
+            } else {
+                await proviant.addToShoppingList(productId, 1, '');
+            }
+        },
+        'Added to shopping list',
+        function (err) {
+            proviant.showFeedback('error', 'Failed to add', err.message || 'Could not add to shopping list');
+        }
+    );
+}
+
+// Returns a Promise that resolves with {qty, unit} on confirm, or with
+// proviant.CANCEL when the user dismisses the modal (Cancel, X, backdrop,
+// Escape). runWithButtonBusyState treats CANCEL as a no-op.
+function openRestockModal(suggestion) {
+    return new Promise(function (resolve) {
+        var modalEl = document.getElementById('restockSuggestionModal');
+        if (!modalEl || typeof bootstrap === 'undefined') {
+            resolve({ qty: suggestion.suggestedQty, unit: suggestion.unit || '' });
+            return;
+        }
+
+        var qtyEl = document.getElementById('restockQty');
+        var unitEl = document.getElementById('restockUnit');
+        var reasonEl = document.getElementById('restockReason');
+        var productEl = document.getElementById('restockProductName');
+        var confirmBtn = document.getElementById('restockConfirmBtn');
+
+        if (qtyEl) qtyEl.value = suggestion.suggestedQty;
+        if (unitEl) unitEl.value = suggestion.unit || '';
+        if (productEl) {
+            productEl.textContent = suggestion.productName || suggestion.display || 'Suggested quantity';
+        }
+        if (reasonEl) {
+            // Single source of truth: the server pre-formats this in
+            // formatRateTemplateMessage / formatMinStockTemplateMessage.
+            reasonEl.textContent = buildModalReason(suggestion);
+        }
+
+        var resolved = false;
+        var onHidden = function () { finish(proviant.CANCEL); };
+        var finish = function (result) {
+            if (resolved) return;
+            resolved = true;
+            modalEl.removeEventListener('hidden.bs.modal', onHidden);
+            resolve(result);
+        };
+
+        modalEl.addEventListener('hidden.bs.modal', onHidden);
+
+        if (confirmBtn) {
+            var newBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+            newBtn.addEventListener('click', function () {
+                var qty = qtyEl ? Math.max(1, parseInt(qtyEl.value, 10) || 1) : 1;
+                var unit = unitEl ? unitEl.value.trim() : '';
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                finish({ qty: qty, unit: unit });
+            });
+        }
+
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+}
+
+function buildModalReason(suggestion) {
+    if (suggestion.source === 'consumption_rate' && suggestion.perWeekDisplay) {
+        return 'Based on your usage (' + suggestion.perWeekDisplay + ').';
+    }
+    if (suggestion.source === 'min_stock') {
+        return 'Based on your minimum stock level.';
+    }
+    return 'Suggested quantity.';
+}

@@ -1945,6 +1945,11 @@ import "codeberg.org/isotop7/proviant/services"
 
 ## Index
 
+- [type ConsumptionRate](<#ConsumptionRate>)
+- [type ConsumptionService](<#ConsumptionService>)
+  - [func NewConsumptionService\(repos \*database.RepositoryContainer, logger \*zerolog.Logger\) \*ConsumptionService](<#NewConsumptionService>)
+  - [func \(s \*ConsumptionService\) ComputeConsumptionRate\(householdID, userID uint, barcode, name string\) \(ConsumptionRate, error\)](<#ConsumptionService.ComputeConsumptionRate>)
+  - [func \(s \*ConsumptionService\) ComputeRestockSuggestionFromProduct\(householdID, userID uint, product \*dbModel.Product\) RestockSuggestion](<#ConsumptionService.ComputeRestockSuggestionFromProduct>)
 - [type ProductService](<#ProductService>)
   - [func NewProductService\(repos \*database.RepositoryContainer, logger \*zerolog.Logger\) \*ProductService](<#NewProductService>)
   - [func \(s \*ProductService\) BulkConsumeProducts\(productIDs \[\]uint, userID uint\) error](<#ProductService.BulkConsumeProducts>)
@@ -1954,7 +1959,64 @@ import "codeberg.org/isotop7/proviant/services"
   - [func \(s \*ProductService\) DeleteProduct\(productID, userID uint, archiveOnly bool\) error](<#ProductService.DeleteProduct>)
   - [func \(s \*ProductService\) RestoreProduct\(productID, userID uint\) error](<#ProductService.RestoreProduct>)
   - [func \(s \*ProductService\) WasteProduct\(productID, userID uint\) error](<#ProductService.WasteProduct>)
+- [type RestockSuggestion](<#RestockSuggestion>)
 
+
+<a name="ConsumptionRate"></a>
+## type ConsumptionRate
+
+ConsumptionRate is the consumption\-rate estimate for one product, derived from the household's archived consumed samples. Display is a pre\-formatted sentence for the API/UI; TemplateMessage is the same sentence for the server\-rendered product detail alert.
+
+```go
+type ConsumptionRate struct {
+    Unit            string
+    PerWeek         float64
+    SampleCount     int
+    HasEstimate     bool
+    DaysCovered     int
+    LastConsumed    *time.Time
+    Display         string
+    TemplateMessage string
+}
+```
+
+<a name="ConsumptionService"></a>
+## type ConsumptionService
+
+
+
+```go
+type ConsumptionService struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewConsumptionService"></a>
+### func NewConsumptionService
+
+```go
+func NewConsumptionService(repos *database.RepositoryContainer, logger *zerolog.Logger) *ConsumptionService
+```
+
+
+
+<a name="ConsumptionService.ComputeConsumptionRate"></a>
+### func \(\*ConsumptionService\) ComputeConsumptionRate
+
+```go
+func (s *ConsumptionService) ComputeConsumptionRate(householdID, userID uint, barcode, name string) (ConsumptionRate, error)
+```
+
+ComputeConsumptionRate estimates the weekly consumption rate for a product \(matched by barcode when present, otherwise by product name\) based on the household's consumed samples in the last 90 days. Requires at least 2 samples spread over at least 7 days to produce a stable "per week" rate.
+
+<a name="ConsumptionService.ComputeRestockSuggestionFromProduct"></a>
+### func \(\*ConsumptionService\) ComputeRestockSuggestionFromProduct
+
+```go
+func (s *ConsumptionService) ComputeRestockSuggestionFromProduct(householdID, userID uint, product *dbModel.Product) RestockSuggestion
+```
+
+ComputeRestockSuggestionFromProduct returns a restock suggestion for an already\-loaded product. If a stable consumption rate is available it is preferred \(ceil\(PerWeek\)\). Otherwise, when the current amount is below the configured minimum stock, the deficit is suggested. When the minimum is already met \(or not configured\) no suggestion is produced.
 
 <a name="ProductService"></a>
 ## type ProductService
@@ -2039,6 +2101,26 @@ func (s *ProductService) WasteProduct(productID, userID uint) error
 
 
 
+<a name="RestockSuggestion"></a>
+## type RestockSuggestion
+
+RestockSuggestion is the suggested quantity to add to the shopping list for a product, plus the source of the suggestion and human\-readable copy for the API and template.
+
+```go
+type RestockSuggestion struct {
+    ProductName     string
+    SuggestedQty    int
+    Unit            string
+    Source          string
+    WeeklyRate      float64
+    SampleCount     int
+    HasEstimate     bool
+    Display         string
+    TemplateMessage string
+    PerWeekDisplay  string
+}
+```
+
 # templates
 
 ```go
@@ -2119,6 +2201,7 @@ import "codeberg.org/isotop7/proviant/testutil"
 - [func MigrateAllModels\(db \*gorm.DB\) error](<#MigrateAllModels>)
 - [func MockJWTClaims\(ctx \*gin.Context, userID uint\)](<#MockJWTClaims>)
 - [func MockJWTClaimsWithKey\(ctx \*gin.Context, userID uint, key string\)](<#MockJWTClaimsWithKey>)
+- [func SeedConsumedProduct\(t \*testing.T, db \*gorm.DB, householdID, userID uint, isPrivate bool, barcode, name, unit string, amount int, deletedAt time.Time\)](<#SeedConsumedProduct>)
 - [func SetupGinContext\(db \*gorm.DB\) \(\*gin.Context, \*httptest.ResponseRecorder\)](<#SetupGinContext>)
 - [func SetupTestDB\(t \*testing.T\) \*gorm.DB](<#SetupTestDB>)
 
@@ -2239,6 +2322,15 @@ func MockJWTClaimsWithKey(ctx *gin.Context, userID uint, key string)
 
 
 
+<a name="SeedConsumedProduct"></a>
+## func SeedConsumedProduct
+
+```go
+func SeedConsumedProduct(t *testing.T, db *gorm.DB, householdID, userID uint, isPrivate bool, barcode, name, unit string, amount int, deletedAt time.Time)
+```
+
+SeedConsumedProduct creates a product, soft\-deletes it with the given removalReason, and pins the deleted\_at to a specific timestamp. It is shared by the consumption\-service and consumption\-handler test suites.
+
 <a name="SetupGinContext"></a>
 ## func SetupGinContext
 
@@ -2311,6 +2403,19 @@ const (
     RouteAuth           = "/web/auth"
     RouteForgotPassword = "/web/forgot-password"
     RouteResetPassword  = "/web/reset-password" //nolint:gosec // G101: route path constant, not a credential
+
+    // Consumption rate estimation
+    ConsumptionHistoryWindowDays = 90
+    ConsumptionMinSamples        = 2
+    // ConsumptionMinSpanDays is the minimum observed time between the
+    // first and last consumed sample required to produce a "per week"
+    // estimate. Below this, the perWeek denominator (spanDays/7) is
+    // not stable enough to label as a weekly rate.
+    ConsumptionMinSpanDays    = 7
+    ConsumptionSpanFloorDays  = 1
+    ConsumptionSourceRate     = "consumption_rate"
+    ConsumptionSourceMinStock = "min_stock"
+    ConsumptionSourceNone     = "none"
 )
 ```
 
@@ -2754,6 +2859,8 @@ v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
+v1 implements version 1 of the proviant API
+
 ## Index
 
 - [Constants](<#constants>)
@@ -2792,6 +2899,7 @@ v1 implements version 1 of the proviant API
 - [func GetAuditLogs\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetAuditLogs>)
 - [func GetAutoShoppingList\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetAutoShoppingList>)
 - [func GetCalendarTokenStatus\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetCalendarTokenStatus>)
+- [func GetConsumptionRate\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetConsumptionRate>)
 - [func GetExpired\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetExpired>)
 - [func GetHouseholdActivity\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdActivity>)
 - [func GetHouseholdApplications\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdApplications>)
@@ -2805,6 +2913,7 @@ v1 implements version 1 of the proviant API
 - [func GetProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProductsByBarcode>)
 - [func GetRecipeSuggestions\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetRecipeSuggestions>)
+- [func GetRestockSuggestion\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetRestockSuggestion>)
 - [func GetSavingsStats\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetSavingsStats>)
 - [func GetStreak\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetStreak>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetUserNotificationPreferences>)
@@ -3242,6 +3351,15 @@ func GetCalendarTokenStatus(ctx *gin.Context, appCtx *AppContext)
 
 GetCalendarTokenStatus returns the user's calendar token status and subscription URL @Summary Get calendar token status @Description Returns whether the user has a calendar token and the subscription URL for iCal/CalDAV. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 200 \{object\} map\[string\]interface\{\} @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token \[get\]
 
+<a name="GetConsumptionRate"></a>
+## func GetConsumptionRate
+
+```go
+func GetConsumptionRate(ctx *gin.Context, appCtx *AppContext)
+```
+
+GetConsumptionRate returns the estimated weekly consumption rate for a product, based on the last 90 days of consumed \(archived\) products with the same barcode \(or product name as fallback\). Requires at least 2 samples spread over at least 7 days. @Summary Get consumption rate estimate @Description Returns the household's average weekly consumption for a product @Description based on archived consumed samples within the last 90 days. @Description Requires at least 2 samples spanning at least 7 days; otherwise @Description HasEstimate is false. @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} apiModel.ConsumptionRateResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/consumption\-rate \[get\]
+
 <a name="GetExpired"></a>
 ## func GetExpired
 
@@ -3360,6 +3478,15 @@ func GetRecipeSuggestions(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetRecipeSuggestions returns recipe suggestions based on expiring products @Summary Recipe suggestions @Description Returns up to 6 recipe suggestions matching products expiring within 7 days @Tags recipes @Produce json @Param limit query int false "Number of suggestions \(default 6, max 10\)" @Success 200 \{array\} apiModel.RecipeSuggestionResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes/suggestions \[get\]
+
+<a name="GetRestockSuggestion"></a>
+## func GetRestockSuggestion
+
+```go
+func GetRestockSuggestion(ctx *gin.Context, appCtx *AppContext)
+```
+
+GetRestockSuggestion returns a suggested restock quantity for a product, preferring the consumption rate \(when enough history exists\) and falling back to the min\-stock deficit. Returns "none" when no real deficit exists. @Summary Get restock quantity suggestion @Description Returns a suggested quantity to add to the shopping list for a @Description product. Source is "consumption\_rate" when at least 2 consumed @Description samples spanning at least 7 days exist within the last 90 days, @Description otherwise "min\_stock" \(minStockAmount \- currentAmount\) when @Description the current amount is below the minimum, or "none". @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} apiModel.RestockSuggestionResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/restock\-suggestion \[get\]
 
 <a name="GetSavingsStats"></a>
 ## func GetSavingsStats
@@ -3719,11 +3846,12 @@ type APIHandler func(*gin.Context, *AppContext)
 
 ```go
 type AppContext struct {
-    Logger   *zerolog.Logger
-    DB       *gorm.DB
-    Repos    *database.RepositoryContainer
-    UserID   uint
-    Products *services.ProductService
+    Logger      *zerolog.Logger
+    DB          *gorm.DB
+    Repos       *database.RepositoryContainer
+    UserID      uint
+    Products    *services.ProductService
+    Consumption *services.ConsumptionService
 }
 ```
 
@@ -4032,6 +4160,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetActiveProductsCount>)
   - [func \(r \*ProductRepository\) GetArchivedProductByID\(productID, userID uint\) \(database.Product, error\)](<#ProductRepository.GetArchivedProductByID>)
   - [func \(r \*ProductRepository\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetArchivedProductsGroupedByBarcode>)
+  - [func \(r \*ProductRepository\) GetConsumedSamples\(householdID, userID uint, barcode, name string, since time.Time\) \(\[\]database.Product, error\)](<#ProductRepository.GetConsumedSamples>)
   - [func \(r \*ProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetExpiredProductsCount>)
   - [func \(r \*ProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringInDays>)
   - [func \(r \*ProductRepository\) GetExpiringProductsByHousehold\(householdID uint, daysAhead int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringProductsByHousehold>)
@@ -4047,6 +4176,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetOpenFoodFactsCacheWithoutStorageHint\(\) \(\[\]database.OpenFoodFactsCache, error\)](<#ProductRepository.GetOpenFoodFactsCacheWithoutStorageHint>)
   - [func \(r \*ProductRepository\) GetProductByID\(productID, userID uint\) \(database.Product, error\)](<#ProductRepository.GetProductByID>)
   - [func \(r \*ProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetProductCategoryBreakdown>)
+  - [func \(r \*ProductRepository\) GetProductIdentity\(productID, userID uint\) \(database.Product, error\)](<#ProductRepository.GetProductIdentity>)
   - [func \(r \*ProductRepository\) GetProductsByHousehold\(householdID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetProductsByHousehold>)
   - [func \(r \*ProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#ProductRepository.GetProductsExpired>)
   - [func \(r \*ProductRepository\) GetSubThresholdProducts\(userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetSubThresholdProducts>)
@@ -5408,6 +5538,15 @@ func (r *ProductRepository) GetArchivedProductsGroupedByBarcode(userID uint) (ma
 
 
 
+<a name="ProductRepository.GetConsumedSamples"></a>
+### func \(\*ProductRepository\) GetConsumedSamples
+
+```go
+func (r *ProductRepository) GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error)
+```
+
+
+
 <a name="ProductRepository.GetExpiredProductsCount"></a>
 ### func \(\*ProductRepository\) GetExpiredProductsCount
 
@@ -5542,6 +5681,15 @@ func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string
 ```
 
 
+
+<a name="ProductRepository.GetProductIdentity"></a>
+### func \(\*ProductRepository\) GetProductIdentity
+
+```go
+func (r *ProductRepository) GetProductIdentity(productID, userID uint) (database.Product, error)
+```
+
+GetProductIdentity returns a product's identity \(household \+ barcode \+ name \+ amount \+ unit \+ min stock \+ private flag \+ owner\) without the StorageLocation preload. It exists for hot read paths that only need those fields and would otherwise pay for a useless JOIN.
 
 <a name="ProductRepository.GetProductsByHousehold"></a>
 ### func \(\*ProductRepository\) GetProductsByHousehold
@@ -5770,6 +5918,7 @@ type ProductRepositoryInterface interface {
     GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
     GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
     GetProductByID(productID, userID uint) (database.Product, error)
+    GetProductIdentity(productID, userID uint) (database.Product, error)
     GetArchivedProductByID(productID, userID uint) (database.Product, error)
     SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
     GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
@@ -5815,6 +5964,7 @@ type ProductRepositoryInterface interface {
     BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
     BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
     GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
+    GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error)
 }
 ```
 
@@ -6907,6 +7057,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ActivityEntry](<#ActivityEntry>)
 - [type ActivityLogResponse](<#ActivityLogResponse>)
 - [type BulkProductsAPIModel](<#BulkProductsAPIModel>)
+- [type ConsumptionRateResponse](<#ConsumptionRateResponse>)
 - [type CreateTokenRequest](<#CreateTokenRequest>)
 - [type CreateTokenResponse](<#CreateTokenResponse>)
 - [type CreateWebhookRequest](<#CreateWebhookRequest>)
@@ -6922,6 +7073,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ProductStatsResponse](<#ProductStatsResponse>)
 - [type ProductSummaryResponse](<#ProductSummaryResponse>)
 - [type RecipeSuggestionResponse](<#RecipeSuggestionResponse>)
+- [type RestockSuggestionResponse](<#RestockSuggestionResponse>)
 - [type SavingsStatsResponse](<#SavingsStatsResponse>)
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
@@ -6988,6 +7140,24 @@ BulkProductsAPIModel represents a bulk product operation request
 ```go
 type BulkProductsAPIModel struct {
     ProductIDs []uint `json:"productIDs"`
+}
+```
+
+<a name="ConsumptionRateResponse"></a>
+## type ConsumptionRateResponse
+
+
+
+```go
+type ConsumptionRateResponse struct {
+    ProductID    uint       `json:"productId"`
+    HasEstimate  bool       `json:"hasEstimate"`
+    PerWeek      float64    `json:"perWeek"`
+    Unit         string     `json:"unit"`
+    SampleCount  int        `json:"sampleCount"`
+    DaysCovered  int        `json:"daysCovered"`
+    LastConsumed *time.Time `json:"lastConsumed,omitempty"`
+    Display      string     `json:"display"`
 }
 ```
 
@@ -7200,6 +7370,27 @@ type RecipeSuggestionResponse struct {
     MissingCount     int               `json:"missingCount"`
     TotalIngredients int               `json:"totalIngredients"`
     MatchPercent     float64           `json:"matchPercent"` // 0-100
+}
+```
+
+<a name="RestockSuggestionResponse"></a>
+## type RestockSuggestionResponse
+
+
+
+```go
+type RestockSuggestionResponse struct {
+    ProductID      uint    `json:"productId"`
+    ProductName    string  `json:"productName"`
+    HasSuggestion  bool    `json:"hasSuggestion"`
+    HasEstimate    bool    `json:"hasEstimate"`
+    SuggestedQty   int     `json:"suggestedQty"`
+    Unit           string  `json:"unit"`
+    Source         string  `json:"source"`
+    WeeklyRate     float64 `json:"weeklyRate"`
+    SampleCount    int     `json:"sampleCount"`
+    Display        string  `json:"display"`
+    PerWeekDisplay string  `json:"perWeekDisplay"`
 }
 ```
 
@@ -8435,7 +8626,7 @@ Product is the database model of a product
 type Product struct {
     gorm.Model
     Barcode              string           `gorm:"index:idx_products_barcode_household,priority:1" json:"barcode"`
-    ProductName          string           `json:"productName"`
+    ProductName          string           `gorm:"index:idx_products_household_name_deleted,priority:1" json:"productName"`
     Categories           string           `json:"categories"`
     Countries            string           `json:"countries"`
     ImageURL             string           `json:"imageUrl"`
@@ -8443,7 +8634,7 @@ type Product struct {
     ScannedAt            time.Time        `json:"scannedAt"`
     NotifiedAt           time.Time        `json:"notifiedAt"`
     DeletedAt            gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
-    HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;not null" json:"-"`
+    HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;index:idx_products_household_name_deleted,priority:2;not null" json:"-"`
     Household            Household        `json:"-"`
     UserID               uint             `gorm:"index, not null" json:"-"`
     IsPrivate            bool             `gorm:"default:false" json:"isPrivate"`
@@ -8853,6 +9044,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#MockProductRepository.GetActiveProductsCount>)
   - [func \(m \*MockProductRepository\) GetArchivedProductByID\(productID, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetArchivedProductByID>)
   - [func \(m \*MockProductRepository\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#MockProductRepository.GetArchivedProductsGroupedByBarcode>)
+  - [func \(m \*MockProductRepository\) GetConsumedSamples\(householdID, userID uint, barcode, name string, since time.Time\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetConsumedSamples>)
   - [func \(m \*MockProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#MockProductRepository.GetExpiredProductsCount>)
   - [func \(m \*MockProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetExpiringInDays>)
   - [func \(m \*MockProductRepository\) GetExpiringProductsByHousehold\(householdID uint, daysAhead int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetExpiringProductsByHousehold>)
@@ -8868,6 +9060,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) GetOpenFoodFactsCacheWithoutStorageHint\(\) \(\[\]dbModel.OpenFoodFactsCache, error\)](<#MockProductRepository.GetOpenFoodFactsCacheWithoutStorageHint>)
   - [func \(m \*MockProductRepository\) GetProductByID\(productID, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetProductByID>)
   - [func \(m \*MockProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#MockProductRepository.GetProductCategoryBreakdown>)
+  - [func \(m \*MockProductRepository\) GetProductIdentity\(productID, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetProductIdentity>)
   - [func \(m \*MockProductRepository\) GetProductsByHousehold\(householdID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetProductsByHousehold>)
   - [func \(m \*MockProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*dbModel.Product, error\)](<#MockProductRepository.GetProductsExpired>)
   - [func \(m \*MockProductRepository\) GetSubThresholdProducts\(userID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetSubThresholdProducts>)
@@ -9863,6 +10056,15 @@ func (m *MockProductRepository) GetArchivedProductsGroupedByBarcode(userID uint)
 
 
 
+<a name="MockProductRepository.GetConsumedSamples"></a>
+### func \(\*MockProductRepository\) GetConsumedSamples
+
+```go
+func (m *MockProductRepository) GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]dbModel.Product, error)
+```
+
+
+
 <a name="MockProductRepository.GetExpiredProductsCount"></a>
 ### func \(\*MockProductRepository\) GetExpiredProductsCount
 
@@ -9994,6 +10196,15 @@ func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.
 
 ```go
 func (m *MockProductRepository) GetProductCategoryBreakdown(userID uint) (map[string]int, error)
+```
+
+
+
+<a name="MockProductRepository.GetProductIdentity"></a>
+### func \(\*MockProductRepository\) GetProductIdentity
+
+```go
+func (m *MockProductRepository) GetProductIdentity(productID, userID uint) (dbModel.Product, error)
 ```
 
 

@@ -60,6 +60,12 @@
             </details>
         </div>
     </div>
+    {{ if and .Consumption .Consumption.TemplateMessage }}
+    <div class="alert alert-info d-flex align-items-center mt-3" role="status" data-consumption-source="{{ .Consumption.Source }}">
+        <i class="bi bi-graph-up-arrow me-2"></i>
+        <span>{{ .Consumption.TemplateMessage }}</span>
+    </div>
+    {{ end }}
     <div class="d-flex justify-content-end mt-3 gap-2">
         <button type="button" class="btn btn-proviant-secondary btn-add-to-shopping-list" data-product-id="{{ .Product.ID }}">
             <i class="bi bi-cart-plus me-2"></i>Add to list
@@ -69,4 +75,6 @@
         </a>
     </div>
 </div>
+
+{{ template "restockSuggestionModal" . }}
 {{ end }}

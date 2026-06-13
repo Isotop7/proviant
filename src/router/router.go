@@ -343,6 +343,8 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedProductAPI := engine.Group("/api/v1/products")
 	protectedProductAPI.Use(jwtAPIUserAwareMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	protectedProductAPI.GET("/:id", v1.WrapHandler(v1.GetProduct))
+	protectedProductAPI.GET("/:id/consumption-rate", v1.WrapHandler(v1.GetConsumptionRate))
+	protectedProductAPI.GET("/:id/restock-suggestion", v1.WrapHandler(v1.GetRestockSuggestion))
 	protectedProductMemberAPI := protectedProductAPI.Group("")
 	protectedProductMemberAPI.Use(RequireHouseholdRole(authentication.RoleAdmin, authentication.RoleMember))
 	protectedProductMemberAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateProduct))

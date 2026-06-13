@@ -22,11 +22,12 @@ import (
 )
 
 type AppContext struct {
-	Logger   *zerolog.Logger
-	DB       *gorm.DB
-	Repos    *database.RepositoryContainer
-	UserID   uint
-	Products *services.ProductService
+	Logger      *zerolog.Logger
+	DB          *gorm.DB
+	Repos       *database.RepositoryContainer
+	UserID      uint
+	Products    *services.ProductService
+	Consumption *services.ConsumptionService
 }
 
 func mustGetAppContext(ctx *gin.Context, logger *zerolog.Logger) *AppContext {
@@ -43,11 +44,12 @@ func mustGetAppContext(ctx *gin.Context, logger *zerolog.Logger) *AppContext {
 		return nil
 	}
 	return &AppContext{
-		Logger:   logger,
-		DB:       db,
-		Repos:    repos,
-		UserID:   userID,
-		Products: services.NewProductService(repos, logger),
+		Logger:      logger,
+		DB:          db,
+		Repos:       repos,
+		UserID:      userID,
+		Products:    services.NewProductService(repos, logger),
+		Consumption: services.NewConsumptionService(repos, logger),
 	}
 }
 

@@ -37,6 +37,25 @@ definitions:
       total:
         type: integer
     type: object
+  api.ConsumptionRateResponse:
+    properties:
+      daysCovered:
+        type: integer
+      display:
+        type: string
+      hasEstimate:
+        type: boolean
+      lastConsumed:
+        type: string
+      perWeek:
+        type: number
+      productId:
+        type: integer
+      sampleCount:
+        type: integer
+      unit:
+        type: string
+    type: object
   api.CreateWebhookRequest:
     properties:
       active:
@@ -194,6 +213,31 @@ definitions:
         type: string
       totalIngredients:
         type: integer
+    type: object
+  api.RestockSuggestionResponse:
+    properties:
+      display:
+        type: string
+      hasEstimate:
+        type: boolean
+      hasSuggestion:
+        type: boolean
+      perWeekDisplay:
+        type: string
+      productId:
+        type: integer
+      productName:
+        type: string
+      sampleCount:
+        type: integer
+      source:
+        type: string
+      suggestedQty:
+        type: integer
+      unit:
+        type: string
+      weeklyRate:
+        type: number
     type: object
   api.SavingsStatsResponse:
     properties:
@@ -2130,6 +2174,77 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Mark product as consumed
+      tags:
+      - product
+  /api/v1/products/{id}/consumption-rate:
+    get:
+      description: |-
+        Returns the household's average weekly consumption for a product
+        based on archived consumed samples within the last 90 days.
+        Requires at least 2 samples spanning at least 7 days; otherwise
+        HasEstimate is false.
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ConsumptionRateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get consumption rate estimate
+      tags:
+      - product
+  /api/v1/products/{id}/restock-suggestion:
+    get:
+      description: |-
+        Returns a suggested quantity to add to the shopping list for a
+        product. Source is "consumption_rate" when at least 2 consumed
+        samples spanning at least 7 days exist within the last 90 days,
+        otherwise "min_stock" (minStockAmount - currentAmount) when
+        the current amount is below the minimum, or "none".
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.RestockSuggestionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get restock quantity suggestion
       tags:
       - product
   /api/v1/products/{id}/waste:

@@ -32,10 +32,11 @@ func (m *MockOpenFoodFactsAPIController) GetDataset(barcode string) (dbModel.Pro
 func newTestAppContext(m *repomocks.MockRepositoryContainer, userID uint) *AppContext {
 	logger := zerolog.Nop()
 	return &AppContext{
-		Logger:   &logger,
-		Repos:    m.ToRepositoryContainer(),
-		UserID:   userID,
-		Products: services.NewProductService(m.ToRepositoryContainer(), &logger),
+		Logger:      &logger,
+		Repos:       m.ToRepositoryContainer(),
+		UserID:      userID,
+		Products:    services.NewProductService(m.ToRepositoryContainer(), &logger),
+		Consumption: services.NewConsumptionService(m.ToRepositoryContainer(), &logger),
 	}
 }
 

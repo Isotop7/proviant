@@ -2743,6 +2743,100 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/{id}/consumption-rate": {
+            "get": {
+                "description": "Returns the household's average weekly consumption for a product\nbased on archived consumed samples within the last 90 days.\nRequires at least 2 samples spanning at least 7 days; otherwise\nHasEstimate is false.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Get consumption rate estimate",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ConsumptionRateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/{id}/restock-suggestion": {
+            "get": {
+                "description": "Returns a suggested quantity to add to the shopping list for a\nproduct. Source is \"consumption_rate\" when at least 2 consumed\nsamples spanning at least 7 days exist within the last 90 days,\notherwise \"min_stock\" (minStockAmount - currentAmount) when\nthe current amount is below the minimum, or \"none\".",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Get restock quantity suggestion",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.RestockSuggestionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/{id}/waste": {
             "post": {
                 "description": "Hard-deletes a product and fires the product.wasted webhook event",
@@ -4030,6 +4124,35 @@ const docTemplate = `{
                 }
             }
         },
+        "api.ConsumptionRateResponse": {
+            "type": "object",
+            "properties": {
+                "daysCovered": {
+                    "type": "integer"
+                },
+                "display": {
+                    "type": "string"
+                },
+                "hasEstimate": {
+                    "type": "boolean"
+                },
+                "lastConsumed": {
+                    "type": "string"
+                },
+                "perWeek": {
+                    "type": "number"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "sampleCount": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
         "api.CreateWebhookRequest": {
             "type": "object",
             "required": [
@@ -4264,6 +4387,44 @@ const docTemplate = `{
                 },
                 "totalIngredients": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.RestockSuggestionResponse": {
+            "type": "object",
+            "properties": {
+                "display": {
+                    "type": "string"
+                },
+                "hasEstimate": {
+                    "type": "boolean"
+                },
+                "hasSuggestion": {
+                    "type": "boolean"
+                },
+                "perWeekDisplay": {
+                    "type": "string"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "sampleCount": {
+                    "type": "integer"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "suggestedQty": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "weeklyRate": {
+                    "type": "number"
                 }
             }
         },

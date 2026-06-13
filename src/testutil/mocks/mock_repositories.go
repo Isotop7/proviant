@@ -40,6 +40,9 @@ func (m *MockProductRepository) GetUserProductsBulkByBarcode(userID uint, barcod
 func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.Product, error) {
 	return m.Product, m.Err
 }
+func (m *MockProductRepository) GetProductIdentity(productID, userID uint) (dbModel.Product, error) {
+	return m.Product, m.Err
+}
 func (m *MockProductRepository) GetArchivedProductByID(productID, userID uint) (dbModel.Product, error) {
 	return m.Product, m.Err
 }
@@ -162,6 +165,9 @@ func (m *MockProductRepository) GetSubThresholdProducts(userID uint) ([]dbModel.
 }
 func (m *MockProductRepository) GetExpiringProductsForMailDigest(householdID uint) (database.MailDigestProductGroup, error) {
 	return database.MailDigestProductGroup{}, m.Err
+}
+func (m *MockProductRepository) GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]dbModel.Product, error) {
+	return nil, m.Err
 }
 func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error { return m.Err }
 func (m *MockProductRepository) WasteProduct(productID, userID uint) error   { return m.Err }

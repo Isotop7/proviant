@@ -35,10 +35,30 @@ function showEmptyChart(canvasId, message) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   canvas.style.display = 'none';
+  // Remove any previous empty message inserted after this canvas to avoid accumulation
+  // across period-selector clicks.
+  let next = canvas.nextElementSibling;
+  while (next && next.classList && next.classList.contains('chart-empty-msg')) {
+    const toRemove = next;
+    next = next.nextElementSibling;
+    toRemove.remove();
+  }
   canvas.insertAdjacentHTML(
     'afterend',
-    `<p class="text-secondary-custom small text-center my-auto py-4">${message}</p>`,
+    `<p class="text-secondary-custom small text-center my-auto py-4 chart-empty-msg">${message}</p>`,
   );
+}
+
+function clearEmptyChart(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  canvas.style.display = '';
+  let next = canvas.nextElementSibling;
+  while (next && next.classList && next.classList.contains('chart-empty-msg')) {
+    const toRemove = next;
+    next = next.nextElementSibling;
+    toRemove.remove();
+  }
 }
 
 function fmtEur(n) {
@@ -64,6 +84,7 @@ function renderTiles(s) {
 function renderMonthlyChart(s) {
   const canvas = document.getElementById('chartMonthly');
   if (!canvas) return;
+  clearEmptyChart('chartMonthly');
   if (monthlyChart) {
     monthlyChart.destroy();
     monthlyChart = null;
@@ -96,6 +117,7 @@ function renderMonthlyChart(s) {
 function renderTrendChart(s) {
   const canvas = document.getElementById('chartTrend');
   if (!canvas) return;
+  clearEmptyChart('chartTrend');
   if (trendChart) {
     trendChart.destroy();
     trendChart = null;

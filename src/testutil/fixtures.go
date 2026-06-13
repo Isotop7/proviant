@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"testing"
 	"time"
 
 	"codeberg.org/isotop7/proviant/models/authentication"
@@ -88,4 +89,32 @@ func CreateTestEmailVerification(db *gorm.DB, userID uint, token string) *dbMode
 	}
 	db.Create(&verification)
 	return &verification
+}
+
+// SeedConsumedProduct creates a product, soft-deletes it with the given
+// removalReason, and pins the deleted_at to a specific timestamp. It is
+// shared by the consumption-service and consumption-handler test suites.
+func SeedConsumedProduct(t *testing.T, db *gorm.DB, householdID, userID uint, isPrivate bool, barcode, name, unit string, amount int, deletedAt time.Time) {
+	t.Helper()
+	p := dbModel.Product{
+		ProductName:   name,
+		Barcode:       barcode,
+		HouseholdID:   householdID,
+		UserID:        userID,
+		IsPrivate:     isPrivate,
+		Amount:        amount,
+		Unit:          unit,
+		RemovalReason: dbModel.RemovalReasonConsumed,
+	}
+	if err := db.Create(&p).Error; err != nil {
+		t.Fatalf("seed create: %v", err)
+	}
+	if err := db.Delete(&p).Error; err != nil {
+		t.Fatalf("seed delete: %v", err)
+	}
+	if err := db.Model(&dbModel.Product{}).Unscoped().
+		Where("id = ?", p.ID).
+		Update("deleted_at", deletedAt).Error; err != nil {
+		t.Fatalf("seed update deleted_at: %v", err)
+	}
 }

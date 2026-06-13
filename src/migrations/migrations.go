@@ -138,14 +138,24 @@ func SeedDefaultStorageLocations(logger *zerolog.Logger, db *gorm.DB) error {
 // AddPerformanceIndexes creates missing indexes for product and user tables
 // to improve query performance for common access patterns.
 func AddPerformanceIndexes(logger *zerolog.Logger, db *gorm.DB) error {
+	// On MariaDB/MySQL, hint online DDL for new composite indexes so the
+	// migration does not take a long table lock or stall replication on
+	// large `products` tables. SQLite ignores ALGORITHM/LOCK clauses, so
+	// the bare CREATE INDEX works there.
+	isMariaDB := db.Dialector != nil && db.Dialector.Name() == "mysql"
+
 	statements := []string{
 		"CREATE INDEX IF NOT EXISTS idx_products_household_deleted ON products(household_id, deleted_at)",
 		"CREATE INDEX IF NOT EXISTS idx_products_expire_at ON products(expire_at)",
 		"CREATE INDEX IF NOT EXISTS idx_products_barcode_household ON products(barcode, household_id)",
+		"CREATE INDEX IF NOT EXISTS idx_products_household_name_deleted ON products(household_id, product_name, deleted_at)",
 		"CREATE INDEX IF NOT EXISTS idx_users_mail_address ON users(mail_address)",
 		"CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
 	}
 	for _, sql := range statements {
+		if isMariaDB && strings.Contains(sql, "products(household_id, product_name, deleted_at)") {
+			sql = sql + " ALGORITHM=INPLACE, LOCK=NONE"
+		}
 		if err := db.Exec(sql).Error; err != nil {
 			return fmt.Errorf("creating index: %w (sql: %s)", err, sql)
 		}

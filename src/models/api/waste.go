@@ -20,15 +20,15 @@ type WasteMonthly struct {
 
 // WasteAnalyticsResponse is the response body for GET /api/v1/stats/waste
 type WasteAnalyticsResponse struct {
-	Period               string               `json:"period"` // "month" | "3months" | "6months"
-	ConsumedCount        int                  `json:"consumedCount"`
-	WastedCount          int                  `json:"wastedCount"`
-	TotalRemoved         int                  `json:"totalRemoved"`
-	WastedPercent        float64              `json:"wastedPercent"`
-	WastedEUR            float64              `json:"wastedEur"`
-	WastedCO2Kg          float64              `json:"wastedCo2Kg"`
-	Monthly              []WasteMonthly       `json:"monthly"`
-	MostWastedCategories []WasteCategoryStat  `json:"mostWastedCategories"`
-	Trend                []StatsMonthlyCount  `json:"trend"`
-	CO2Source            string               `json:"co2Source"`
+	Period               string              `json:"period"` // "month" | "3months" | "6months"
+	ConsumedCount        int                 `json:"consumedCount"`
+	WastedCount          int                 `json:"wastedCount"`
+	TotalRemoved         int                 `json:"totalRemoved"`
+	WastedPercent        float64             `json:"wastedPercent"`
+	WastedEUR            float64             `json:"wastedEur"`
+	WastedCO2Kg          float64             `json:"wastedCo2Kg"`
+	Monthly              []WasteMonthly      `json:"monthly"`
+	MostWastedCategories []WasteCategoryStat `json:"mostWastedCategories"`
+	Trend                []StatsMonthlyCount `json:"trend"`
+	CO2Source            string              `json:"co2Source"`
 }
