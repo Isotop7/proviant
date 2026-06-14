@@ -15,6 +15,63 @@ import (
 	"gorm.io/gorm"
 )
 
+// maxDaysAfterOpening is the upper bound enforced on the DaysAfterOpening
+// field on PATCH. It is also used to bound the "opened-shelf-life" OR branch
+// in effectiveExpiryCandidateScope so the planner can prune candidate rows
+// whose opened date is far outside the requested window.
+const maxDaysAfterOpening = 365
+
+// effectiveExpiryCandidateScope returns a GORM scope that selects product
+// rows whose effective expiry (printed ExpireAt, OR OpenedAt + DaysAfterOpening)
+// could fall within [start, end]. The "opened-shelf-life present" branch
+// is bounded by maxDaysAfterOpening on the OpenedAt side: any row whose
+// OpenedAt is more than maxDaysAfterOpening before start cannot possibly
+// fall into the window, even with the smallest positive days-after-opening
+// value, so the planner can prune it. The Go caller MUST still filter
+// using EffectiveExpireAt() as a correctness safety net (the bound is a
+// safe upper, not a tight lower).
+//
+// The OR clause prevents the planner from using the expire_at index alone,
+// so this scope trades index-friendliness for correctness across both
+// expiry sources. It is intentional; see the comment on
+// Product.EffectiveExpireAt.
+func effectiveExpiryCandidateScope(start, end time.Time) func(*gorm.DB) *gorm.DB {
+	return func(tx *gorm.DB) *gorm.DB {
+		// A row can only enter the window via the opened branch if
+		// OpenedAt + days_after_opening is in [start, end]. The
+		// smallest possible days_after_opening is 1, so any row with
+		// OpenedAt < start - maxDaysAfterOpening cannot qualify.
+		// Similarly OpenedAt > end can never qualify (days >= 1).
+		openedFloor := start.AddDate(0, 0, -maxDaysAfterOpening)
+		return tx.Where(
+			"(expire_at >= ? AND expire_at <= ?) OR "+
+				"(opened_at IS NOT NULL AND days_after_opening > 0 "+
+				"AND opened_at >= ? AND opened_at <= ?)",
+			start, end, openedFloor, end,
+		)
+	}
+}
+
+// filterByEffectiveExpiryWindow returns the subset of products whose
+// effective expiry (earlier of printed ExpireAt and OpenedAt+DaysAfterOpening)
+// is in the closed window [start, end]. Rows with a zero effective expiry
+// are dropped. The slice header is reused to avoid an allocation when
+// the input is empty.
+func filterByEffectiveExpiryWindow(products []database.Product, start, end time.Time) []database.Product {
+	filtered := products[:0]
+	for i := range products {
+		eff := products[i].EffectiveExpireAt()
+		if eff.IsZero() {
+			continue
+		}
+		if eff.Before(start) || eff.After(end) {
+			continue
+		}
+		filtered = append(filtered, products[i])
+	}
+	return filtered
+}
+
 type ProductRepositoryInterface interface {
 	GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
 	GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
@@ -63,6 +120,7 @@ type ProductRepositoryInterface interface {
 	GetSubThresholdProducts(userID uint) ([]database.Product, error)
 	ConsumeProduct(productID, userID uint) error
 	WasteProduct(productID, userID uint) error
+	MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (database.Product, *time.Time, bool, error)
 	BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
 	BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
 	GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
@@ -143,7 +201,7 @@ func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]datab
 	}
 
 	sort.Slice(products, func(i, j int) bool {
-		ti, tj := products[i].ExpireAt, products[j].ExpireAt
+		ti, tj := products[i].EffectiveExpireAt(), products[j].EffectiveExpireAt()
 		if ti.IsZero() && tj.IsZero() {
 			return false
 		}
@@ -329,7 +387,7 @@ func (r *ProductRepository) GetUserProductsByLocation(userID, locationID uint) (
 		return []database.Product{}, err
 	}
 	sort.Slice(products, func(i, j int) bool {
-		ti, tj := products[i].ExpireAt, products[j].ExpireAt
+		ti, tj := products[i].EffectiveExpireAt(), products[j].EffectiveExpireAt()
 		if ti.IsZero() && tj.IsZero() {
 			return false
 		}
@@ -361,6 +419,10 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 		return gorm.ErrNotImplemented
 	}
 
+	if err := validateOpenedLifecycle(product.OpenedAt, product.DaysAfterOpening); err != nil {
+		return err
+	}
+
 	var dbProduct database.Product
 	getError := r.DB.First(&dbProduct, productID)
 	if getError.Error != nil {
@@ -374,6 +436,9 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 	}
 
 	if dbProduct.HouseholdID != user.HouseholdID {
+		return errors.ErrMismatcherUserID
+	}
+	if dbProduct.IsPrivate && dbProduct.UserID != userID {
 		return errors.ErrMismatcherUserID
 	}
 
@@ -393,9 +458,26 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 	dbProduct.MinStockAmount = product.MinStockAmount
 	dbProduct.IsPrivate = product.IsPrivate
 	dbProduct.PriceOverride = product.PriceOverride
+	dbProduct.OpenedAt = product.OpenedAt
+	dbProduct.DaysAfterOpening = product.DaysAfterOpening
 
 	saveResult := r.DB.Save(&dbProduct)
 	return saveResult.Error
+}
+
+// validateOpenedLifecycle enforces bounds on the OpenedAt / DaysAfterOpening
+// fields supplied by the client on PATCH. A future OpenedAt would let a user
+// push a product's effective expiry arbitrarily far into the future and
+// suppress notifications; an out-of-range DaysAfterOpening would either be
+// ignored silently (when <= 0) or produce a nonsense shelf life.
+func validateOpenedLifecycle(openedAt *time.Time, daysAfterOpening *int) error {
+	if openedAt != nil && openedAt.After(time.Now().Add(24*time.Hour)) {
+		return errors.ErrInvalidRequest
+	}
+	if daysAfterOpening != nil && (*daysAfterOpening < 0 || *daysAfterOpening > maxDaysAfterOpening) {
+		return errors.ErrInvalidRequest
+	}
+	return nil
 }
 
 func (r *ProductRepository) UpdateProductAmount(productID uint, userID uint, delta int) (bool, error) {
@@ -516,6 +598,62 @@ func (r *ProductRepository) SetProductNotifiedAt(productID uint) error {
 	return saveResult.Error
 }
 
+// MarkProductOpened sets the OpenedAt timestamp on a product. Returns the
+// current product, the previous OpenedAt value (nil if unset), a `changed`
+// flag (true if the DB row was updated by this call, false if the open
+// was rejected by the conflict guard or auth check), and any error.
+// When `changed` is false and `err` is nil, the row is unchanged from its
+// pre-call state and the caller should surface a 409 to the user; only
+// re-invoke with force=true after the user confirms.
+//
+// The write is a single conditional UPDATE keyed on (id, household, and
+// (opened_at IS NULL OR force)) so two concurrent first-time opens cannot
+// both return 200, and so authorization is re-checked at the SQL layer
+// rather than trusting a stale read. On RowsAffected=0 we re-SELECT to
+// distinguish "already opened" (return changed=false) from "not found /
+// not authorized" (return ErrMismatcherUserID or gorm.ErrRecordNotFound).
+func (r *ProductRepository) MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (database.Product, *time.Time, bool, error) {
+	var user authentication.User
+	if userErr := r.DB.First(&user, userID); userErr.Error != nil {
+		return database.Product{}, nil, false, userErr.Error
+	}
+
+	conditionClause := "opened_at IS NULL"
+	if force {
+		conditionClause = "1 = 1"
+	}
+
+	tx := r.DB.Exec(
+		"UPDATE products SET opened_at = ? WHERE id = ? AND household_id = ? "+
+			"AND (is_private = 0 OR user_id = ?) AND "+conditionClause,
+		openedAt, productID, user.HouseholdID, userID,
+	)
+	if tx.Error != nil {
+		return database.Product{}, nil, false, tx.Error
+	}
+
+	if tx.RowsAffected == 0 {
+		// Either the row is not visible to this user (not in household,
+		// or private and not owned), or the open-conflict guard rejected
+		// the write. Re-read to tell the two cases apart.
+		var dbProduct database.Product
+		if getError := r.DB.First(&dbProduct, productID); getError.Error != nil {
+			return database.Product{}, nil, false, getError.Error
+		}
+		if dbProduct.HouseholdID != user.HouseholdID ||
+			(dbProduct.IsPrivate && dbProduct.UserID != userID) {
+			return database.Product{}, nil, false, errors.ErrMismatcherUserID
+		}
+		return dbProduct, dbProduct.OpenedAt, false, nil
+	}
+
+	var updated database.Product
+	if getError := r.DB.First(&updated, productID); getError.Error != nil {
+		return database.Product{}, nil, false, getError.Error
+	}
+	return updated, updated.OpenedAt, true, nil
+}
+
 func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product, error) {
 	userProducts, getBulkErr := r.GetUserProductsBulk(userID, 0)
 	if getBulkErr != nil {
@@ -525,7 +663,7 @@ func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product
 	var expiredProducts []*database.Product
 	timestamp := time.Now()
 	for idx := range userProducts {
-		if userProducts[idx].ExpireAt.After(timestamp) {
+		if userProducts[idx].EffectiveExpireAt().After(timestamp) {
 			expiredProducts = append(expiredProducts, &userProducts[idx])
 		}
 	}
@@ -541,7 +679,7 @@ func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error) {
 	count := 0
 	timestamp := time.Now()
 	for i := range userProducts {
-		if userProducts[i].ExpireAt.Before(timestamp) {
+		if userProducts[i].EffectiveExpireAt().Before(timestamp) {
 			count++
 		}
 	}
@@ -685,7 +823,11 @@ func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthly
 		monthCounts[now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)] = 0
 	}
 	for i := range products {
-		month := products[i].ExpireAt.Format(util.DefaultDateFormatMonthStr)
+		expiry := products[i].EffectiveExpireAt()
+		if expiry.IsZero() {
+			continue
+		}
+		month := expiry.Format(util.DefaultDateFormatMonthStr)
 		if _, ok := monthCounts[month]; ok {
 			monthCounts[month]++
 		}
@@ -711,7 +853,10 @@ func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]ap
 
 	var result []apiModel.StatsExpiringProduct
 	for i := range products {
-		expirationTime := products[i].ExpireAt
+		expirationTime := products[i].EffectiveExpireAt()
+		if expirationTime.IsZero() {
+			continue
+		}
 		if !expirationTime.Before(startOfToday) && !expirationTime.After(endOfWindow) {
 			result = append(result, apiModel.StatsExpiringProduct{
 				ProductName: products[i].ProductName,
@@ -748,18 +893,37 @@ func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database
 	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
 
+	// SQL filter: a row qualifies if either its printed expiry is within
+	// the window, OR it has an opened-shelf-life rule (OpenedAt + days).
+	// The latter is the small residual that lets a product with a later
+	// printed date but an earlier opened+days date still be considered.
+	// The exact effective-date filter is applied in Go below to keep the
+	// query portable across SQLite and MariaDB.
 	var products []database.Product
 	err = r.DB.Scopes(r.privacyScope(userID)).
 		Where(util.QueryHouseholdId, householdID).
 		Where(util.WhereDeletedIsNull).
-		Where("expire_at >= ?", startOfToday).
-		Where("expire_at <= ?", endOfWindow).
-		Order("expire_at ASC").
+		Scopes(effectiveExpiryCandidateScope(startOfToday, endOfWindow)).
 		Find(&products).Error
 	if err != nil {
 		return []database.Product{}, err
 	}
-	return products, nil
+
+	filtered := filterByEffectiveExpiryWindow(products, startOfToday, endOfWindow)
+	sort.Slice(filtered, func(i, j int) bool {
+		ti, tj := filtered[i].EffectiveExpireAt(), filtered[j].EffectiveExpireAt()
+		if ti.IsZero() && tj.IsZero() {
+			return false
+		}
+		if ti.IsZero() {
+			return false
+		}
+		if tj.IsZero() {
+			return true
+		}
+		return ti.Before(tj)
+	})
+	return filtered, nil
 }
 
 func (r *ProductRepository) GetLastInsertedProduct(householdID uint) (database.Product, error) {
@@ -911,18 +1075,21 @@ func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, er
 	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
 
-	var count int64
+	// SQL filter mirrors GetExpiringInDays: either printed expiry is in the
+	// window, or the row has an opened-shelf-life rule. Final effective-date
+	// filter is applied in Go to keep the query portable.
+	var rows []database.Product
 	err = r.DB.Model(&database.Product{}).
 		Scopes(r.privacyScope(userID)).
 		Where(util.QueryHouseholdId, householdID).
 		Where(util.WhereDeletedIsNull).
-		Where("expire_at >= ?", startOfToday).
-		Where("expire_at <= ?", endOfWindow).
-		Count(&count).Error
+		Scopes(effectiveExpiryCandidateScope(startOfToday, endOfWindow)).
+		Find(&rows).Error
 	if err != nil {
 		return 0, err
 	}
-	return int(count), nil
+
+	return len(filterByEffectiveExpiryWindow(rows, startOfToday, endOfWindow)), nil
 }
 
 func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
@@ -950,14 +1117,38 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 	return int(count), nil
 }
 
-// GetExpiringProductsByHousehold returns products for a household that expire within daysAhead.
+// GetExpiringProductsByHousehold returns non-private products for a household
+// whose effective expiry (earlier of printed ExpireAt and OpenedAt+DaysAfterOpening)
+// falls in the window [startOfToday, endOfWindow].
 func (r *ProductRepository) GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error) {
-	cutoff := time.Now().AddDate(0, 0, daysAhead)
+	now := time.Now()
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+daysAhead, 23, 59, 59, 999999999, now.Location())
+
 	var products []database.Product
-	result := r.DB.Where("household_id = ? AND expire_at <= ? AND deleted_at IS NULL AND is_private = 0", householdID, cutoff).
-		Order("expire_at ASC").
+	result := r.DB.
+		Where("household_id = ? AND deleted_at IS NULL AND is_private = 0", householdID).
+		Scopes(effectiveExpiryCandidateScope(startOfToday, endOfWindow)).
 		Find(&products)
-	return products, result.Error
+	if result.Error != nil {
+		return []database.Product{}, result.Error
+	}
+
+	filtered := filterByEffectiveExpiryWindow(products, startOfToday, endOfWindow)
+	sort.Slice(filtered, func(i, j int) bool {
+		ti, tj := filtered[i].EffectiveExpireAt(), filtered[j].EffectiveExpireAt()
+		if ti.IsZero() && tj.IsZero() {
+			return false
+		}
+		if ti.IsZero() {
+			return false
+		}
+		if tj.IsZero() {
+			return true
+		}
+		return ti.Before(tj)
+	})
+	return filtered, nil
 }
 
 // GetProductsByHousehold returns all non-deleted products for a household.
@@ -998,11 +1189,13 @@ func (r *ProductRepository) GetExpiringProductsForMailDigest(householdID uint) (
 	endOfNextWeek := startOfToday.AddDate(0, 0, 14).Add(-time.Nanosecond)
 
 	var allProducts []database.Product
+	// SQL filter: either the printed expiry is within the 2-week window,
+	// or the row has an opened-shelf-life rule. Final bucketing is done
+	// in Go using EffectiveExpireAt() to keep the query portable across
+	// SQLite and MariaDB.
 	if err := r.DB.
 		Where("household_id = ? AND deleted_at IS NULL AND is_private = 0", householdID).
-		Where("expire_at > ?", startOfToday).
-		Where("expire_at <= ?", endOfNextWeek).
-		Order("expire_at ASC").
+		Scopes(effectiveExpiryCandidateScope(startOfToday, endOfNextWeek)).
 		Find(&allProducts).Error; err != nil {
 		return MailDigestProductGroup{}, err
 	}
@@ -1010,15 +1203,38 @@ func (r *ProductRepository) GetExpiringProductsForMailDigest(householdID uint) (
 	var group MailDigestProductGroup
 	for i := range allProducts {
 		p := &allProducts[i]
+		eff := p.EffectiveExpireAt()
+		if eff.IsZero() || eff.Before(startOfToday) {
+			continue
+		}
 		switch {
-		case !p.ExpireAt.After(endOfToday):
+		case !eff.After(endOfToday):
 			group.Today = append(group.Today, *p)
-		case !p.ExpireAt.After(endOfWeek):
+		case !eff.After(endOfWeek):
 			group.ThisWeek = append(group.ThisWeek, *p)
 		default:
 			group.NextWeek = append(group.NextWeek, *p)
 		}
 	}
+
+	sortEffectiveExpire := func(s []database.Product) {
+		sort.Slice(s, func(i, j int) bool {
+			ti, tj := s[i].EffectiveExpireAt(), s[j].EffectiveExpireAt()
+			if ti.IsZero() && tj.IsZero() {
+				return false
+			}
+			if ti.IsZero() {
+				return false
+			}
+			if tj.IsZero() {
+				return true
+			}
+			return ti.Before(tj)
+		})
+	}
+	sortEffectiveExpire(group.Today)
+	sortEffectiveExpire(group.ThisWeek)
+	sortEffectiveExpire(group.NextWeek)
 
 	return group, nil
 }

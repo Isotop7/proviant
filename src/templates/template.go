@@ -18,6 +18,7 @@ import (
 	"gorm.io/gorm"
 
 	"codeberg.org/isotop7/proviant/models/configuration/static"
+	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 )
 
@@ -298,6 +299,14 @@ func derefUint(p *uint) uint {
 	return *p
 }
 
+// effectiveExpireAt returns the effective expiry date for a product
+// (earlier of printed ExpireAt and OpenedAt + DaysAfterOpening days).
+// Used by templates to drive status badges and urgency text so the UI
+// reflects the earlier of the two dates.
+func effectiveExpireAt(p *dbModel.Product) time.Time {
+	return p.EffectiveExpireAt()
+}
+
 func flagReplace(source string) template.HTML {
 	var output strings.Builder
 	for elements := range strings.SplitSeq(source, ",") {
@@ -328,6 +337,7 @@ var customTemplateFunctions = template.FuncMap{
 	"splitString":          splitString,
 	"flagReplace":          flagReplace,
 	"derefUint":            derefUint,
+	"effectiveExpireAt":    effectiveExpireAt,
 }
 
 func NewTemplateCache() (map[string]*template.Template, error) {

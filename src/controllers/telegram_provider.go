@@ -37,7 +37,7 @@ func (t *TelegramNotificationProvider) SendNotification(product *dbModel.Product
 		return fmt.Errorf("empty chat ID for telegram notification")
 	}
 
-	daysUntilExpiry := int(time.Until(product.ExpireAt).Hours() / 24)
+	daysUntilExpiry := int(time.Until(product.EffectiveExpireAt()).Hours() / 24)
 	var text string
 	switch {
 	case daysUntilExpiry < 0:

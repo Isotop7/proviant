@@ -70,17 +70,45 @@ type NotificationRepositoryInterface interface {
 }
 
 func (r *NotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error) {
+	now := time.Now()
+	// SQL filter: include any product whose printed expiry is in the
+	// window, OR whose opened-shelf-life rule could put it in the window.
+	// The exact effective-date filter is applied in Go below to keep the
+	// query portable across SQLite and MariaDB.
+	//
+	// The lower bound for the SQL candidate set is now - maxDaysAfterOpening
+	// (with a 1-day safety margin) rather than the zero time. Without this
+	// bound, effectiveExpiryCandidateScope's opened branch would admit
+	// every product that has ever been opened (a near-full-table scan on
+	// the scheduler's hot path). The Go fine-filter below still drops any
+	// row whose effective expiry is actually outside the window.
+	horizon := now.AddDate(0, 0, maxLookAheadDays)
+	candidateStart := now.AddDate(0, 0, -(maxDaysAfterOpening + 1))
 	var notificationProducts []database.Product
 	getError := r.DB.
-		Where("expire_at > ?", time.Time{}).
-		Where("expire_at <= ?", time.Now().AddDate(0, 0, maxLookAheadDays)).
-		Where("notified_at < ?", time.Now().Add(-(sleepInterval))).
+		Scopes(effectiveExpiryCandidateScope(candidateStart, horizon)).
+		Where("notified_at < ?", now.Add(-(sleepInterval))).
 		Find(&notificationProducts)
 
 	if getError.Error != nil {
 		return []database.Product{}, getError.Error
 	}
-	return notificationProducts, nil
+
+	// Fine filter: only keep products whose effective expiry (printed or
+	// opened+days) is actually within the window. This is where the secondary
+	// expiry rule takes effect for the scheduler. The `notified_at < sleepInterval`
+	// cooldown is already enforced by the SQL filter above, so no extra
+	// notified_at check is needed here.
+	filtered := make([]database.Product, 0, len(notificationProducts))
+	for i := range notificationProducts {
+		p := &notificationProducts[i]
+		eff := p.EffectiveExpireAt()
+		if eff.IsZero() || eff.After(horizon) {
+			continue
+		}
+		filtered = append(filtered, *p)
+	}
+	return filtered, nil
 }
 
 func (r *NotificationRepository) GetMaxNotificationThresholdDays() int {

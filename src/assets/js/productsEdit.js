@@ -55,6 +55,15 @@ function editProduct() {
     const priceOverride = inputPriceOverride && inputPriceOverride.value !== ''
         ? Number.parseFloat(inputPriceOverride.value) : null;
 
+    const inputOpenedAt = document.getElementById('inputOpenedAt');
+    const openedAtValue = inputOpenedAt && inputOpenedAt.value ? inputOpenedAt.value : null;
+    const openedAtDate = openedAtValue ? new Date(openedAtValue + 'T00:00:00') : null;
+    const openedAt = openedAtDate && !isNaN(openedAtDate.getTime()) ? openedAtDate.toISOString() : null;
+
+    const inputDaysAfterOpening = document.getElementById('inputDaysAfterOpening');
+    const daysAfterOpening = inputDaysAfterOpening && inputDaysAfterOpening.value !== ''
+        ? Number.parseInt(inputDaysAfterOpening.value, 10) : null;
+
     const product = {
         "ID": productID,
         "productName": els.inputProductName.value.trim(),
@@ -68,6 +77,8 @@ function editProduct() {
         "minStockAmount": minStockAmount,
         "isPrivate": isPrivate,
         "priceOverride": priceOverride,
+        "openedAt": openedAt,
+        "daysAfterOpening": daysAfterOpening,
     };
 
     proviant.editProduct(product).then((response) => {
@@ -115,6 +126,17 @@ function restoreProduct() {
         }
     });
 }
+
+/* Clear opened date button */
+document.addEventListener("click", function (event) {
+    const btn = event.target.closest("#btnClearOpenedAt");
+    if (!btn) return;
+    event.preventDefault();
+    const input = document.getElementById('inputOpenedAt');
+    if (input) input.value = '';
+    const daysInput = document.getElementById('inputDaysAfterOpening');
+    if (daysInput) daysInput.value = '';
+});
 
 /* Form submission */
 document.addEventListener("submit", function (event) {

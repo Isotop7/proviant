@@ -2790,6 +2790,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/{id}/open": {
+            "post": {
+                "description": "Sets the OpenedAt timestamp on a product. Returns 409 with the existing OpenedAt if the product is already opened, prompting the frontend to confirm. Re-submit with ` + "`" + `force: true` + "`" + ` to overwrite.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Mark product as opened",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Force overwrite flag",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/v1.OpenProductRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.Product"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/v1.OpenProductResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/{id}/restock-suggestion": {
             "get": {
                 "description": "Returns a suggested quantity to add to the shopping list for a\nproduct. Source is \"consumption_rate\" when at least 2 consumed\nsamples spanning at least 7 days exist within the last 90 days,\notherwise \"min_stock\" (minStockAmount - currentAmount) when\nthe current amount is below the minimum, or \"none\".",
@@ -4984,6 +5048,9 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "string"
                 },
+                "daysAfterOpening": {
+                    "type": "integer"
+                },
                 "deletedAt": {
                     "$ref": "#/definitions/gorm.DeletedAt"
                 },
@@ -5006,6 +5073,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "notifiedAt": {
+                    "type": "string"
+                },
+                "openedAt": {
                     "type": "string"
                 },
                 "priceOverride": {
@@ -5181,6 +5251,26 @@ const docTemplate = `{
                 },
                 "stats": {
                     "$ref": "#/definitions/api.ProductStatsResponse"
+                }
+            }
+        },
+        "v1.OpenProductRequest": {
+            "type": "object",
+            "properties": {
+                "force": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "v1.OpenProductResponse": {
+            "type": "object",
+            "properties": {
+                "openedAt": {
+                    "type": "string"
+                },
+                "product": {},
+                "triggeredBy": {
+                    "type": "string"
                 }
             }
         },

@@ -595,6 +595,8 @@ definitions:
         type: string
       createdAt:
         type: string
+      daysAfterOpening:
+        type: integer
       deletedAt:
         $ref: '#/definitions/gorm.DeletedAt'
       expireAt:
@@ -610,6 +612,8 @@ definitions:
       notificationLeadDays:
         type: integer
       notifiedAt:
+        type: string
+      openedAt:
         type: string
       priceOverride:
         type: number
@@ -724,6 +728,19 @@ definitions:
         $ref: '#/definitions/v1.FullExportProducts'
       stats:
         $ref: '#/definitions/api.ProductStatsResponse'
+    type: object
+  v1.OpenProductRequest:
+    properties:
+      force:
+        type: boolean
+    type: object
+  v1.OpenProductResponse:
+    properties:
+      openedAt:
+        type: string
+      product: {}
+      triggeredBy:
+        type: string
     type: object
   v1.createHouseholdRequest:
     properties:
@@ -2236,6 +2253,50 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Get consumption rate estimate
+      tags:
+      - product
+  /api/v1/products/{id}/open:
+    post:
+      consumes:
+      - application/json
+      description: 'Sets the OpenedAt timestamp on a product. Returns 409 with the
+        existing OpenedAt if the product is already opened, prompting the frontend
+        to confirm. Re-submit with `force: true` to overwrite.'
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Force overwrite flag
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/v1.OpenProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/database.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/v1.OpenProductResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Mark product as opened
       tags:
       - product
   /api/v1/products/{id}/restock-suggestion:

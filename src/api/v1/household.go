@@ -295,7 +295,7 @@ func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 	)
 	switch updateErr {
 	case nil:
-		ctx.JSON(http.StatusOK, 		apiModel.HouseholdSettingsResponse(req))
+		ctx.JSON(http.StatusOK, apiModel.HouseholdSettingsResponse(req))
 	case apperrors.ErrHouseholdNotFound:
 		api.RespondError(ctx, http.StatusNotFound, updateErr)
 	case apperrors.ErrNotHouseholdAdmin:

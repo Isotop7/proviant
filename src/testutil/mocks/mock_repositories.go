@@ -171,6 +171,14 @@ func (m *MockProductRepository) GetConsumedSamples(householdID, userID uint, bar
 }
 func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error { return m.Err }
 func (m *MockProductRepository) WasteProduct(productID, userID uint) error   { return m.Err }
+func (m *MockProductRepository) MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (dbModel.Product, *time.Time, bool, error) {
+	previous := m.Product.OpenedAt
+	if previous != nil && !force {
+		return m.Product, previous, false, m.Err
+	}
+	m.Product.OpenedAt = &openedAt
+	return m.Product, previous, true, m.Err
+}
 func (m *MockProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []database.BulkOperationError {
 	return nil
 }

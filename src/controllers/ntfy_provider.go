@@ -73,7 +73,7 @@ func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, re
 		ProductName: product.ProductName,
 		ID:          product.ID,
 		Barcode:     product.Barcode,
-		ExpireAt:    product.ExpireAt,
+		ExpireAt:    product.EffectiveExpireAt(),
 	})
 
 	if templExecErr != nil {

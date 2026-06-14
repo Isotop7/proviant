@@ -42,6 +42,28 @@
                     {{- flagReplace .Product.Countries -}}
                 </div>
             </div>
+            {{ if .Product.OpenedAt }}
+            <div class="row my-2">
+                <div class="col-4 fw-bold">
+                    Opened on
+                </div>
+                <div class="col col-auto">
+                    <span class="badge bg-info-subtle text-info-emphasis border">{{ .Product.OpenedAt | humanDate }}</span>
+                    {{ if .Product.DaysAfterOpening }}
+                    <span class="text-secondary-custom small ms-2">shelf life after opening: {{ .Product.DaysAfterOpening }} day(s)</span>
+                    {{ end }}
+                </div>
+            </div>
+            <div class="row my-2">
+                <div class="col-4 fw-bold">
+                    Effective expiry
+                </div>
+                <div class="col col-auto">
+                    {{ effectiveExpireAt .Product | humanDate }}
+                    <span class="text-secondary-custom small ms-1">(use-by)</span>
+                </div>
+            </div>
+            {{ end }}
             <details class="mt-3">
                 <summary class="text-secondary-custom" style="cursor:pointer;list-style:none;">
                     <i class="bi bi-clock-history me-1"></i>Metadata

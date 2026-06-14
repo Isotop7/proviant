@@ -42,7 +42,7 @@ func formatICALTimestamp(t time.Time) string {
 func generateVEVENT(product *database.Product) string {
 	uid := strings.TrimSpace(strconv.FormatUint(uint64(product.ID), 10)) + "@proviant"
 	dtstamp := formatICALTimestamp(time.Now())
-	dtstart := formatICALDate(product.ExpireAt)
+	dtstart := formatICALDate(product.EffectiveExpireAt())
 	summary := escapeICalText(product.ProductName)
 	description := escapeICalText(formatProductDescription(product))
 

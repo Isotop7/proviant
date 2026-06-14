@@ -553,6 +553,11 @@ $bootstrap-icons-font-dir: "../fonts";
   background: oklch(97% .05 80deg);
   border-color: oklch(85% .1 80deg);
 }
+.badge-opened {
+  color: oklch(40% .12 280deg);
+  background: oklch(94% .03 280deg);
+  border-color: oklch(78% .08 280deg);
+}
 
 // Sidebar nav
 .pv-sidebar {

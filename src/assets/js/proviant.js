@@ -202,6 +202,18 @@ proviant.getRestockSuggestion = async function (productID) {
   return { code: res.status, message: body };
 };
 
+proviant.markProductOpened = async function (productID, force = false) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/open`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ force }),
+  });
+  let body = {};
+  try { body = await res.json(); } catch (_) {}
+  return { code: res.status, product: body, conflict: res.status === 409, openedAt: body.openedAt };
+};
+
 proviant.addToShoppingList = async function (productId, quantity, unit) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/shopping-list`;
   const res = await fetch(url, {

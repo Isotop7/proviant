@@ -126,6 +126,35 @@ document.addEventListener("click", function (event) {
         return;
     }
 
+    // Mark as opened button
+    if (target.closest(".btn-mark-opened")) {
+        event.preventDefault();
+        event.stopPropagation();
+        const btn = target.closest(".btn-mark-opened");
+        const productID = btn.dataset.productId;
+        if (!productID) return;
+        const sendOpen = (force) => proviant.markProductOpened(productID, force).then((response) => {
+            if (response.code === 200) {
+                // Reload to re-render card with opened badge and updated effective expiry
+                location.reload();
+            } else if (response.conflict && response.openedAt) {
+                const previous = new Date(response.openedAt);
+                const formatted = isNaN(previous.getTime()) ? response.openedAt : previous.toLocaleString();
+                proviant.showConfirm(
+                    'Already opened',
+                    `This product was already marked as opened on ${formatted}. Reset the opened date to now?`,
+                    () => sendOpen(true),
+                    'Reset',
+                    'warning'
+                );
+            } else {
+                proviant.showFeedback('error', 'Could not mark as opened', 'Please try again.');
+            }
+        });
+        sendOpen(false);
+        return;
+    }
+
     // Card click
     const card = target.closest('.card');
     if (card) {

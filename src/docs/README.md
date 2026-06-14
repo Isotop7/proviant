@@ -2908,6 +2908,8 @@ v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
+v1 implements version 1 of the proviant API
+
 ## Index
 
 - [Constants](<#constants>)
@@ -2975,6 +2977,7 @@ v1 implements version 1 of the proviant API
 - [func ListStorageLocations\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListStorageLocations>)
 - [func ListUserTokens\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListUserTokens>)
 - [func ListWebhooks\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListWebhooks>)
+- [func OpenProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#OpenProduct>)
 - [func ParseArchiveOnly\(ctx \*gin.Context\) \(bool, bool\)](<#ParseArchiveOnly>)
 - [func RejectHouseholdApplication\(ctx \*gin.Context, appCtx \*AppContext\)](<#RejectHouseholdApplication>)
 - [func RemoveHouseholdMember\(ctx \*gin.Context, appCtx \*AppContext\)](<#RemoveHouseholdMember>)
@@ -3010,6 +3013,8 @@ v1 implements version 1 of the proviant API
 - [type FullExportMember](<#FullExportMember>)
 - [type FullExportProducts](<#FullExportProducts>)
 - [type FullExportResponse](<#FullExportResponse>)
+- [type OpenProductRequest](<#OpenProductRequest>)
+- [type OpenProductResponse](<#OpenProductResponse>)
 - [type ProductListQuery](<#ProductListQuery>)
   - [func ParseProductListQuery\(ctx \*gin.Context\) \(ProductListQuery, bool\)](<#ParseProductListQuery>)
 - [type ProductSearchQuery](<#ProductSearchQuery>)
@@ -3663,6 +3668,22 @@ func ListWebhooks(ctx *gin.Context, appCtx *AppContext)
 
 
 
+<a name="OpenProduct"></a>
+## func OpenProduct
+
+```go
+func OpenProduct(ctx *gin.Context, appCtx *AppContext)
+```
+
+OpenProduct marks a product as opened \(sets OpenedAt to now\).
+
+Behaviour:
+
+- First call returns 200 with the updated product.
+- If the product is already opened and the request does NOT include \`force: true\`, returns 409 with the previous OpenedAt and the current product. The frontend shows a confirm dialog; the user confirms by re\-submitting with \`force: true\`, which overwrites OpenedAt to the new "now" value.
+
+@Summary Mark product as opened @Description Sets the OpenedAt timestamp on a product. Returns 409 with the existing OpenedAt if the product is already opened, prompting the frontend to confirm. Re\-submit with \`force: true\` to overwrite. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param body body OpenProductRequest false "Force overwrite flag" @Success 200 \{object\} database.Product @Success 409 \{object\} OpenProductResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/open \[post\]
+
 <a name="ParseArchiveOnly"></a>
 ## func ParseArchiveOnly
 
@@ -4006,6 +4027,30 @@ type FullExportResponse struct {
 }
 ```
 
+<a name="OpenProductRequest"></a>
+## type OpenProductRequest
+
+OpenProductRequest is the body for POST /api/v1/products/\{id\}/open. Force=true overwrites an existing OpenedAt timestamp after confirmation.
+
+```go
+type OpenProductRequest struct {
+    Force bool `json:"force"`
+}
+```
+
+<a name="OpenProductResponse"></a>
+## type OpenProductResponse
+
+OpenProductResponse is returned on success \(200\) or on the "already opened" confirmation prompt \(409\).
+
+```go
+type OpenProductResponse struct {
+    Product     any       `json:"product"`
+    OpenedAt    time.Time `json:"openedAt"`
+    TriggeredBy string    `json:"triggeredBy,omitempty"`
+}
+```
+
 <a name="ProductListQuery"></a>
 ## type ProductListQuery
 
@@ -4259,6 +4304,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetUserProductsByLocation\(userID, locationID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsByLocation>)
   - [func \(r \*ProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#ProductRepository.GetUsersByHouseholdID>)
   - [func \(r \*ProductRepository\) GetWasteThisMonth\(userID uint\) \(int, error\)](<#ProductRepository.GetWasteThisMonth>)
+  - [func \(r \*ProductRepository\) MarkProductOpened\(productID, userID uint, openedAt time.Time, force bool\) \(database.Product, \*time.Time, bool, error\)](<#ProductRepository.MarkProductOpened>)
   - [func \(r \*ProductRepository\) RestoreProduct\(productID, userID uint\) error](<#ProductRepository.RestoreProduct>)
   - [func \(r \*ProductRepository\) SearchProducts\(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.SearchProducts>)
   - [func \(r \*ProductRepository\) SetProductExpireAt\(productID uint, userID uint, expireAt database.Timestamp\) error](<#ProductRepository.SetProductExpireAt>)
@@ -5651,7 +5697,7 @@ func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database
 func (r *ProductRepository) GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
 ```
 
-GetExpiringProductsByHousehold returns products for a household that expire within daysAhead.
+GetExpiringProductsByHousehold returns non\-private products for a household whose effective expiry \(earlier of printed ExpireAt and OpenedAt\+DaysAfterOpening\) falls in the window \[startOfToday, endOfWindow\].
 
 <a name="ProductRepository.GetExpiringProductsForMailDigest"></a>
 ### func \(\*ProductRepository\) GetExpiringProductsForMailDigest
@@ -5896,6 +5942,17 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error)
 
 
 
+<a name="ProductRepository.MarkProductOpened"></a>
+### func \(\*ProductRepository\) MarkProductOpened
+
+```go
+func (r *ProductRepository) MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (database.Product, *time.Time, bool, error)
+```
+
+MarkProductOpened sets the OpenedAt timestamp on a product. Returns the current product, the previous OpenedAt value \(nil if unset\), a \`changed\` flag \(true if the DB row was updated by this call, false if the open was rejected by the conflict guard or auth check\), and any error. When \`changed\` is false and \`err\` is nil, the row is unchanged from its pre\-call state and the caller should surface a 409 to the user; only re\-invoke with force=true after the user confirms.
+
+The write is a single conditional UPDATE keyed on \(id, household, and \(opened\_at IS NULL OR force\)\) so two concurrent first\-time opens cannot both return 200, and so authorization is re\-checked at the SQL layer rather than trusting a stale read. On RowsAffected=0 we re\-SELECT to distinguish "already opened" \(return changed=false\) from "not found / not authorized" \(return ErrMismatcherUserID or gorm.ErrRecordNotFound\).
+
 <a name="ProductRepository.RestoreProduct"></a>
 ### func \(\*ProductRepository\) RestoreProduct
 
@@ -6040,6 +6097,7 @@ type ProductRepositoryInterface interface {
     GetSubThresholdProducts(userID uint) ([]database.Product, error)
     ConsumeProduct(productID, userID uint) error
     WasteProduct(productID, userID uint) error
+    MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (database.Product, *time.Time, bool, error)
     BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
     BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
     GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
@@ -8406,6 +8464,7 @@ import "codeberg.org/isotop7/proviant/models/database"
   - [func \(d \*Date\) UnmarshalJSON\(b \[\]byte\) error](<#Date.UnmarshalJSON>)
 - [type EmailVerification](<#EmailVerification>)
 - [type ExpiryScan](<#ExpiryScan>)
+- [type ExpiryTrigger](<#ExpiryTrigger>)
 - [type Household](<#Household>)
 - [type HouseholdApplication](<#HouseholdApplication>)
 - [type HouseholdInvitation](<#HouseholdInvitation>)
@@ -8415,6 +8474,8 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type OpenFoodFactsCache](<#OpenFoodFactsCache>)
 - [type PasswordReset](<#PasswordReset>)
 - [type Product](<#Product>)
+  - [func \(p \*Product\) EffectiveExpireAt\(\) time.Time](<#Product.EffectiveExpireAt>)
+  - [func \(p \*Product\) TriggerForExpireAt\(\) ExpiryTrigger](<#Product.TriggerForExpireAt>)
 - [type ProductCategoryPrice](<#ProductCategoryPrice>)
 - [type ProductDTOBarcode](<#ProductDTOBarcode>)
 - [type ProductDTOExpire](<#ProductDTOExpire>)
@@ -8626,6 +8687,24 @@ type ExpiryScan struct {
 }
 ```
 
+<a name="ExpiryTrigger"></a>
+## type ExpiryTrigger
+
+ExpiryTrigger indicates which date fired the notification/status check.
+
+```go
+type ExpiryTrigger string
+```
+
+<a name="ExpiryTriggerPrinted"></a>
+
+```go
+const (
+    ExpiryTriggerPrinted ExpiryTrigger = "printed"
+    ExpiryTriggerOpened  ExpiryTrigger = "opened"
+)
+```
+
 <a name="Household"></a>
 ## type Household
 
@@ -8786,8 +8865,30 @@ type Product struct {
     StorageHint          string           `gorm:"-"                            json:"-"`
     NotificationLeadDays *int             `gorm:"default:null"                 json:"notificationLeadDays,omitempty"`
     MinStockAmount       int              `gorm:"default:0"                   json:"minStockAmount"`
+    OpenedAt             *time.Time       `gorm:"default:null"                 json:"openedAt,omitempty"`
+    DaysAfterOpening     *int             `gorm:"default:null"                 json:"daysAfterOpening,omitempty"`
 }
 ```
+
+<a name="Product.EffectiveExpireAt"></a>
+### func \(\*Product\) EffectiveExpireAt
+
+```go
+func (p *Product) EffectiveExpireAt() time.Time
+```
+
+EffectiveExpireAt returns the earlier of the printed ExpireAt and OpenedAt \+ DaysAfterOpening days. Returns the zero time if neither is set.
+
+If OpenedAt is set but DaysAfterOpening is nil/\<= 0, only ExpireAt is used. If DaysAfterOpening is set but OpenedAt is nil, only ExpireAt is used \(a shelf\-life\-without\-open\-date is meaningless\).
+
+<a name="Product.TriggerForExpireAt"></a>
+### func \(\*Product\) TriggerForExpireAt
+
+```go
+func (p *Product) TriggerForExpireAt() ExpiryTrigger
+```
+
+TriggerForExpireAt returns which trigger \(printed or opened\) is the effective expiry for the product. Returns ExpiryTriggerOpened only when the opened\-shelf\-life date is strictly earlier than the printed date \(or the printed date is zero\). Useful for webhook payloads and analytics.
 
 <a name="ProductCategoryPrice"></a>
 ## type ProductCategoryPrice
@@ -8836,19 +8937,21 @@ ProductDTOPatch is a simplified DTO only containing the patchable elements
 
 ```go
 type ProductDTOPatch struct {
-    ID                   uint      `json:"ID"`
-    ProductName          string    `json:"productName"`
-    Categories           string    `json:"categories"`
-    Countries            string    `json:"countries"`
-    ImageURL             string    `json:"imageUrl"`
-    ExpireAt             time.Time `json:"expireAt"`
-    Amount               int       `json:"amount"`
-    Unit                 string    `json:"unit"`
-    StorageLocationID    *uint     `json:"storageLocationId"`
-    NotificationLeadDays *int      `json:"notificationLeadDays,omitempty"`
-    MinStockAmount       int       `json:"minStockAmount"`
-    IsPrivate            bool      `json:"isPrivate"`
-    PriceOverride        *float64  `json:"priceOverride,omitempty"`
+    ID                   uint       `json:"ID"`
+    ProductName          string     `json:"productName"`
+    Categories           string     `json:"categories"`
+    Countries            string     `json:"countries"`
+    ImageURL             string     `json:"imageUrl"`
+    ExpireAt             time.Time  `json:"expireAt"`
+    Amount               int        `json:"amount"`
+    Unit                 string     `json:"unit"`
+    StorageLocationID    *uint      `json:"storageLocationId"`
+    NotificationLeadDays *int       `json:"notificationLeadDays,omitempty"`
+    MinStockAmount       int        `json:"minStockAmount"`
+    IsPrivate            bool       `json:"isPrivate"`
+    PriceOverride        *float64   `json:"priceOverride,omitempty"`
+    OpenedAt             *time.Time `json:"openedAt,omitempty"`
+    DaysAfterOpening     *int       `json:"daysAfterOpening,omitempty"`
 }
 ```
 
@@ -9214,6 +9317,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) GetUserProductsByLocation\(userID, locationID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserProductsByLocation>)
   - [func \(m \*MockProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#MockProductRepository.GetUsersByHouseholdID>)
   - [func \(m \*MockProductRepository\) GetWasteThisMonth\(userID uint\) \(int, error\)](<#MockProductRepository.GetWasteThisMonth>)
+  - [func \(m \*MockProductRepository\) MarkProductOpened\(productID, userID uint, openedAt time.Time, force bool\) \(dbModel.Product, \*time.Time, bool, error\)](<#MockProductRepository.MarkProductOpened>)
   - [func \(m \*MockProductRepository\) RestoreProduct\(productID, userID uint\) error](<#MockProductRepository.RestoreProduct>)
   - [func \(m \*MockProductRepository\) SearchProducts\(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.SearchProducts>)
   - [func \(m \*MockProductRepository\) SetProductExpireAt\(productID uint, userID uint, expireAt dbModel.Timestamp\) error](<#MockProductRepository.SetProductExpireAt>)
@@ -10479,6 +10583,15 @@ func (m *MockProductRepository) GetUsersByHouseholdID(householdID uint) ([]authe
 
 ```go
 func (m *MockProductRepository) GetWasteThisMonth(userID uint) (int, error)
+```
+
+
+
+<a name="MockProductRepository.MarkProductOpened"></a>
+### func \(\*MockProductRepository\) MarkProductOpened
+
+```go
+func (m *MockProductRepository) MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (dbModel.Product, *time.Time, bool, error)
 ```
 
 

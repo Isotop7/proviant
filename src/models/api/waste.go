@@ -2,11 +2,11 @@ package api
 
 // WasteCategoryStat represents the aggregate waste impact for a single product category.
 type WasteCategoryStat struct {
-	CategoryKey string  `json:"categoryKey"`
-	DisplayName string  `json:"displayName"`
-	Count       int     `json:"count"`
-	CostEUR     float64 `json:"costEur"`
-	CO2Kg       float64 `json:"co2Kg"`
+	CategoryKey string             `json:"categoryKey"`
+	DisplayName string             `json:"displayName"`
+	Count       int                `json:"count"`
+	CostEUR     float64            `json:"costEur"`
+	CO2Kg       float64            `json:"co2Kg"`
 	Products    []WasteProductStat `json:"products,omitempty"`
 }
 

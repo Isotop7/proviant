@@ -98,7 +98,7 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 		ProductName: product.ProductName,
 		ID:          product.ID,
 		Barcode:     product.Barcode,
-		ExpireAt:    product.ExpireAt,
+		ExpireAt:    product.EffectiveExpireAt(),
 	})
 	if templExecErr != nil {
 		return templExecErr

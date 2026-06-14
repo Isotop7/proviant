@@ -279,14 +279,15 @@ func fetchProducts(
 }
 
 func productExpiryStatus(p *dbModel.Product, now time.Time, criticalDur, soonDur time.Duration) string {
+	effective := p.EffectiveExpireAt()
 	switch {
-	case p.ExpireAt.IsZero():
+	case effective.IsZero():
 		return "nodate"
-	case p.ExpireAt.Before(now):
+	case effective.Before(now):
 		return "expired"
-	case p.ExpireAt.Before(now.Add(criticalDur)):
+	case effective.Before(now.Add(criticalDur)):
 		return "critical"
-	case p.ExpireAt.Before(now.Add(soonDur)):
+	case effective.Before(now.Add(soonDur)):
 		return "soon"
 	default:
 		return "fresh"
@@ -296,9 +297,10 @@ func productExpiryStatus(p *dbModel.Product, now time.Time, criticalDur, soonDur
 func computeExpiryStats(products []dbModel.Product, now time.Time, criticalDur time.Duration) (expired, critical int) {
 	for i := range products {
 		p := &products[i]
-		if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now) {
+		effective := p.EffectiveExpireAt()
+		if !effective.IsZero() && effective.Before(now) {
 			expired++
-		} else if !p.ExpireAt.IsZero() && p.ExpireAt.Before(now.Add(criticalDur)) {
+		} else if !effective.IsZero() && effective.Before(now.Add(criticalDur)) {
 			critical++
 		}
 	}
