@@ -172,6 +172,31 @@ func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient
 	return emailSendFunc(&dialer, mail)
 }
 
+// SendStreakReset sends a streak-reset notification email.
+func (e *EmailNotificationProvider) SendStreakReset(previousStreak int, recipient string) error {
+	templ, err := template.ParseFS(templates.TemplateFiles, "notification/streak_reset.html")
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	if err := templ.Execute(&buf, struct{ PreviousStreak int }{PreviousStreak: previousStreak}); err != nil {
+		return err
+	}
+
+	mail := gomail.NewMessage()
+	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
+	mail.SetHeader(headerTo, recipient)
+	mail.SetHeader(headerSubject, "proviant - waste-free streak reset")
+	mail.SetBody(mimeTypeHTML, buf.String())
+
+	dialer := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
+	if e.Configuration.User != "" && e.Configuration.Password != "" {
+		dialer.Username = e.Configuration.User
+		dialer.Password = e.Configuration.Password
+	}
+	return emailSendFunc(&dialer, mail)
+}
+
 // SendEmailVerificationEmail sends an email verification email to the recipient
 func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, token, baseURL string, expiresAt time.Time) error {
 	magicLink := fmt.Sprintf("%s/web/verify-email?token=%s", baseURL, token)

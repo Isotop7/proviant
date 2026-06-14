@@ -159,3 +159,47 @@ func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient 
 	}
 	return nil
 }
+
+// SendStreakReset sends a streak-reset push notification via ntfy.
+func (n *NtfyNotificationProvider) SendStreakReset(previousStreak int, recipient *models.NotificationRecipientInfo) error {
+	ntfyURL := n.Configuration.URL
+	ntfyTopic := n.Configuration.Topic
+	if recipient.NtfyURL != "" {
+		ntfyURL = recipient.NtfyURL
+	}
+	if recipient.NtfyTopic != "" {
+		ntfyTopic = recipient.NtfyTopic
+	}
+
+	parsedURL, err := url.Parse(ntfyURL)
+	if err != nil {
+		return fmt.Errorf("invalid ntfy URL: %w", err)
+	}
+	endpoint := fmt.Sprintf("%s://%s/%s", parsedURL.Scheme, parsedURL.Host, ntfyTopic)
+
+	body := fmt.Sprintf("Your %d-day waste-free streak has been reset. Time to start a new one!", previousStreak)
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBufferString(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set(util.RequestHeaderContentType, "text/plain")
+	req.Header.Set("Title", "proviant - waste-free streak reset")
+	req.Header.Set("Tags", "warning")
+	if recipient.NtfyToken != "" {
+		req.Header.Set("Authorization", "Bearer "+recipient.NtfyToken)
+	}
+
+	resp, err := n.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			n.Logger.Error().Msgf("Error closing response body: %v", closeErr)
+		}
+	}()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("ntfy.sh request failed with status: %s", resp.Status)
+	}
+	return nil
+}

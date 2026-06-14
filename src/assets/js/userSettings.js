@@ -145,6 +145,62 @@ function UpdatePassword() {
   });
 }
 
+/* ── Monthly waste goal ──────────────────────────────────────────── */
+
+function updateMonthlyGoalVisibility() {
+  const countRow = document.getElementById("monthlyGoalCountRow");
+  const percentRow = document.getElementById("monthlyGoalPercentRow");
+  const countChecked = document.getElementById("monthlyGoalTypeCount")?.checked;
+  const percentChecked = document.getElementById("monthlyGoalTypePercent")?.checked;
+  if (countRow) countRow.style.display = countChecked ? "" : "none";
+  if (percentRow) percentRow.style.display = percentChecked ? "" : "none";
+}
+
+function saveMonthlyGoal() {
+  const typeEl = document.querySelector('input[name="monthlyGoalType"]:checked');
+  const type = typeEl ? typeEl.value : "";
+  let count = null;
+  let percent = null;
+  if (type === "count") {
+    const raw = document.getElementById("inputMonthlyGoalCount")?.value;
+    const parsed = raw === undefined || raw === "" ? NaN : parseInt(raw, 10);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      proviant.showFeedback("error", "Invalid goal", "Count must be a non-negative integer.");
+      return;
+    }
+    count = parsed;
+  } else if (type === "percent") {
+    const raw = document.getElementById("inputMonthlyGoalPercent")?.value;
+    const parsed = raw === undefined || raw === "" ? NaN : parseFloat(raw);
+    if (Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
+      proviant.showFeedback("error", "Invalid goal", "Percent must be between 0 and 100.");
+      return;
+    }
+    percent = parsed;
+  }
+
+  const btn = document.getElementById("btnSaveMonthlyGoal");
+  setButtonLoading(btn, true);
+  proviant.updateHouseholdSettings({
+    monthlyWasteGoalType: type,
+    monthlyWasteGoalCount: count,
+    monthlyWasteGoalPercent: percent,
+  }).then((response) => {
+    setButtonLoading(btn, false);
+    if (response.code === 200) {
+      ShowSuccessModal("Monthly waste goal updated.", function (e) {
+        e.preventDefault();
+        location.reload();
+      });
+    } else {
+      proviant.showFeedback("error", "Update Failed", response.message || "Could not save goal.");
+    }
+  }).catch((err) => {
+    setButtonLoading(btn, false);
+    proviant.showFeedback("error", "Network error", err.message);
+  });
+}
+
 /* ── Notification settings ───────────────────────────────────────── */
 function toggleNtfySettings() {
   const toggleNtfyNotifications = document.getElementById("toggleNtfyNotifications");
@@ -1214,6 +1270,12 @@ document.addEventListener("click", function (event) {
     return;
   }
 
+  if (target.closest("#btnSaveMonthlyGoal")) {
+    event.preventDefault();
+    saveMonthlyGoal();
+    return;
+  }
+
   if (target.closest("#btnSendInvitation")) {
     event.preventDefault();
     handleSendInvitation();
@@ -1477,11 +1539,22 @@ document.addEventListener("input", function (event) {
     case "inputWebhookSecret":
       clearInvalid(target);
       break;
+    case "inputMonthlyGoalCount":
+    case "inputMonthlyGoalPercent":
+      clearInvalid(target);
       break;
     case "editUsername":
     case "editMailAddress":
       clearInvalid(target);
       break;
+  }
+});
+
+/* ── Event delegation — radio changes ────────────────────────────── */
+document.addEventListener("change", function (event) {
+  const target = event.target;
+  if (target && target.name === "monthlyGoalType") {
+    updateMonthlyGoalVisibility();
   }
 });
 

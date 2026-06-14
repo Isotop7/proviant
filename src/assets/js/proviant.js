@@ -529,6 +529,22 @@ proviant.getStreak = async function () {
   return { code: res.status, message: body };
 };
 
+proviant.getHouseholdSettings = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/settings`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
+proviant.updateHouseholdSettings = async function (settings) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/settings`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
 proviant.getSavingsStats = async function () {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/savings/stats`, { method: "GET", headers: { "Content-Type": "application/json" } });
   const body = await res.json();

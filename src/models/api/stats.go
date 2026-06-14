@@ -26,6 +26,20 @@ type StreakResponse struct {
 	LongestStreak int `json:"longestStreak"`
 }
 
+// HouseholdSettingsResponse is the response body for GET /api/v1/household/settings
+type HouseholdSettingsResponse struct {
+	MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType"`
+	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
+	MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
+}
+
+// UpdateHouseholdSettingsRequest is the request body for PATCH /api/v1/household/settings
+type UpdateHouseholdSettingsRequest struct {
+	MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType"`
+	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
+	MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
+}
+
 // ProductStatsResponse is the response body for GET /api/v1/products/stats
 type ProductStatsResponse struct {
 	WasteCount          int                    `json:"wasteCount"`

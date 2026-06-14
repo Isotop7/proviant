@@ -111,15 +111,15 @@ func GetRestockSuggestion(ctx *gin.Context, appCtx *AppContext) {
 	suggestion := appCtx.Consumption.ComputeRestockSuggestionFromProduct(product.HouseholdID, appCtx.UserID, &product)
 
 	ctx.JSON(http.StatusOK, apiModel.RestockSuggestionResponse{
-		ProductID:     productID,
-		ProductName:   suggestion.ProductName,
-		HasSuggestion: suggestion.Source != util.ConsumptionSourceNone,
-		HasEstimate:   suggestion.HasEstimate,
-		SuggestedQty:  suggestion.SuggestedQty,
-		Unit:          suggestion.Unit,
-		Source:        suggestion.Source,
-		WeeklyRate:    suggestion.WeeklyRate,
-		SampleCount:   suggestion.SampleCount,
+		ProductID:      productID,
+		ProductName:    suggestion.ProductName,
+		HasSuggestion:  suggestion.Source != util.ConsumptionSourceNone,
+		HasEstimate:    suggestion.HasEstimate,
+		SuggestedQty:   suggestion.SuggestedQty,
+		Unit:           suggestion.Unit,
+		Source:         suggestion.Source,
+		WeeklyRate:     suggestion.WeeklyRate,
+		SampleCount:    suggestion.SampleCount,
 		Display:        suggestion.Display,
 		PerWeekDisplay: suggestion.PerWeekDisplay,
 	})

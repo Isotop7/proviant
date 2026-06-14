@@ -307,6 +307,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAPI.POST("/:id/apply", v1.WrapHandler(v1.ApplyForHousehold))
 	householdAPI.GET("/applications", v1.WrapHandler(v1.GetHouseholdApplications))
 	householdAPI.GET("/activity", v1.WrapHandler(v1.GetHouseholdActivity))
+	householdAPI.GET("/settings", v1.WrapHandler(v1.GetHouseholdSettings))
 
 	householdAdminAPI := householdAPI.Group("")
 	householdAdminAPI.Use(RequireHouseholdAdmin())
@@ -314,6 +315,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAdminAPI.POST("/applications/:id/reject", v1.WrapHandler(v1.RejectHouseholdApplication))
 	householdAdminAPI.DELETE("/applications/:id", v1.WrapHandler(v1.CancelHouseholdApplication))
 	householdAdminAPI.PATCH("/name", v1.WrapHandler(v1.UpdateHouseholdName))
+	householdAdminAPI.PATCH("/settings", v1.WrapHandler(v1.UpdateHouseholdSettings))
 	householdAdminAPI.DELETE("/members/:userId", v1.WrapHandler(v1.RemoveHouseholdMember))
 	householdAdminAPI.PATCH("/members/:userId/role", v1.WrapHandler(v1.UpdateHouseholdMemberRole))
 	householdAdminAPI.POST("/invitations", v1.WrapHandler(v1.CreateInvitation))

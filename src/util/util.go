@@ -45,9 +45,9 @@ const (
 	// first and last consumed sample required to produce a "per week"
 	// estimate. Below this, the perWeek denominator (spanDays/7) is
 	// not stable enough to label as a weekly rate.
-	ConsumptionMinSpanDays     = 7
-	ConsumptionSpanFloorDays   = 1
-	ConsumptionSourceRate      = "consumption_rate"
-	ConsumptionSourceMinStock  = "min_stock"
-	ConsumptionSourceNone      = "none"
+	ConsumptionMinSpanDays    = 7
+	ConsumptionSpanFloorDays  = 1
+	ConsumptionSourceRate     = "consumption_rate"
+	ConsumptionSourceMinStock = "min_stock"
+	ConsumptionSourceNone     = "none"
 )

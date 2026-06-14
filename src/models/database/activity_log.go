@@ -24,4 +24,5 @@ const (
 	ActivityActionWaste        = "waste"
 	ActivityActionRestore      = "restore"
 	ActivityActionAmountChange = "amount_change"
+	ActivityActionStreakReset  = "streak_reset"
 )

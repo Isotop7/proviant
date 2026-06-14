@@ -240,6 +240,72 @@ func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext) {
 	}
 }
 
+// GetHouseholdSettings returns the caller's household settings.
+func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
+	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
+	if err != nil {
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserData)
+		return
+	}
+	household, hErr := appCtx.Repos.Households.GetHouseholdByID(user.HouseholdID)
+	if hErr != nil {
+		appCtx.Logger.Error().Msgf("GetHouseholdSettings: %s", hErr)
+		api.RespondError(ctx, http.StatusInternalServerError, hErr)
+		return
+	}
+	ctx.JSON(http.StatusOK, apiModel.HouseholdSettingsResponse{
+		MonthlyWasteGoalType:    household.MonthlyWasteGoalType,
+		MonthlyWasteGoalCount:   household.MonthlyWasteGoalCount,
+		MonthlyWasteGoalPercent: household.MonthlyWasteGoalPercent,
+	})
+}
+
+// UpdateHouseholdSettings updates monthly waste goal for the caller's household (admin only).
+func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
+	var req apiModel.UpdateHouseholdSettingsRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		appCtx.Logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
+		return
+	}
+	if req.MonthlyWasteGoalType != "" && req.MonthlyWasteGoalType != "count" && req.MonthlyWasteGoalType != "percent" {
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("invalid monthlyWasteGoalType"))
+		return
+	}
+	if req.MonthlyWasteGoalType == "count" && (req.MonthlyWasteGoalCount == nil || *req.MonthlyWasteGoalCount < 0) {
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("monthlyWasteGoalCount must be a non-negative integer when type is 'count'"))
+		return
+	}
+	if req.MonthlyWasteGoalType == "percent" && (req.MonthlyWasteGoalPercent == nil || *req.MonthlyWasteGoalPercent < 0 || *req.MonthlyWasteGoalPercent > 100) {
+		api.RespondError(ctx, http.StatusBadRequest, errors.New("monthlyWasteGoalPercent must be between 0 and 100 when type is 'percent'"))
+		return
+	}
+	if req.MonthlyWasteGoalType == "" {
+		req.MonthlyWasteGoalCount = nil
+		req.MonthlyWasteGoalPercent = nil
+	}
+	user, userErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
+	if userErr != nil {
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserData)
+		return
+	}
+	updateErr := appCtx.Repos.Households.UpdateHouseholdSettings(
+		user.HouseholdID, appCtx.UserID,
+		req.MonthlyWasteGoalType, req.MonthlyWasteGoalCount, req.MonthlyWasteGoalPercent,
+	)
+	switch updateErr {
+	case nil:
+		ctx.JSON(http.StatusOK, 		apiModel.HouseholdSettingsResponse(req))
+	case apperrors.ErrHouseholdNotFound:
+		api.RespondError(ctx, http.StatusNotFound, updateErr)
+	case apperrors.ErrNotHouseholdAdmin:
+		api.RespondError(ctx, http.StatusForbidden, updateErr)
+	default:
+		appCtx.Logger.Error().Msgf("Error updating household settings: %s", updateErr)
+		api.RespondError(ctx, http.StatusInternalServerError, updateErr)
+	}
+}
+
 // CancelHouseholdApplication cancels a pending application submitted by the caller.
 // @Summary      Cancel own household application
 // @Tags         household

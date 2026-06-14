@@ -80,6 +80,7 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 		productRepo,
 	)
 	notificationController.StreakRepo = dbController.NewStreakRepository(dbHandle)
+	notificationController.SetActivityLogRepo(dbController.NewActivityLogRepository(dbHandle))
 	// Dispatch notification handler goroutine
 	notificationController.Dispatch()
 	// Dispatch invitation email retry goroutine (uses same Interval config)

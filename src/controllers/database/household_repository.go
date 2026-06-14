@@ -24,6 +24,7 @@ type HouseholdRepositoryInterface interface {
 	GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error)
 	CancelApplication(applicationID, applicantUserID uint) error
 	UpdateHouseholdName(householdID, adminUserID uint, name string) error
+	UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64) error
 	RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
 	SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error
 	GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
@@ -273,6 +274,24 @@ func (r *HouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint,
 		return errors.ErrNotHouseholdAdmin
 	}
 	return r.DB.Model(&household).Update("name", name).Error
+}
+
+func (r *HouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64) error {
+	var household database.Household
+	if err := r.DB.First(&household, householdID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrHouseholdNotFound
+		}
+		return err
+	}
+	if household.AdminID != adminUserID {
+		return errors.ErrNotHouseholdAdmin
+	}
+	return r.DB.Model(&household).Updates(map[string]interface{}{
+		"monthly_waste_goal_type":    goalType,
+		"monthly_waste_goal_count":   goalCount,
+		"monthly_waste_goal_percent": goalPercent,
+	}).Error
 }
 
 func (r *HouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error {

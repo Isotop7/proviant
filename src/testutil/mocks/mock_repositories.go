@@ -340,6 +340,9 @@ func (m *MockHouseholdRepository) CancelApplication(applicationID, applicantUser
 func (m *MockHouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint, name string) error {
 	return m.Err
 }
+func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64) error {
+	return m.Err
+}
 func (m *MockHouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error {
 	return m.Err
 }
