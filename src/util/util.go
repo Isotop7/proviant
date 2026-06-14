@@ -50,4 +50,10 @@ const (
 	ConsumptionSourceRate     = "consumption_rate"
 	ConsumptionSourceMinStock = "min_stock"
 	ConsumptionSourceNone     = "none"
+
+	// Waste analytics period identifiers
+	PeriodValueMonth    = "month"
+	PeriodValue3Months  = "3months"
+	PeriodValue6Months  = "6months"
+	PeriodValue12Months = "12months"
 )

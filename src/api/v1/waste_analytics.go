@@ -8,6 +8,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,13 +17,17 @@ import (
 // most-wasted categories, and a trend for the authenticated user's household.
 // @Summary      Get waste analytics
 // @Description  Returns per-month consumed vs. wasted metrics, top wasted categories
-// @Description  with monetary and CO2 impact, and a 6-month trend. EUR prices come from
-// @Description  per-product overrides (if set) or category averages; CO2 is sourced
-// @Description  from the Agribalyse LCA database via Open Food Facts ecoscore_data.
+// @Description  with monetary and CO2 impact (each category nests its top wasted products),
+// @Description  and a 6-month trend. EUR prices come from per-product overrides (if set)
+// @Description  or category averages; CO2 is sourced from the Agribalyse LCA database via
+// @Description  Open Food Facts ecoscore_data.
 // @Tags         stats
 // @Produce      json
-// @Param        period  query     string  false  "Period window: month | 3months | 6months (default 6months)"
+// @Param        period  query     string  false  "Period window: month | 3months | 6months | 12months (default 6months). The window is floored to the first of the month for monthly-breakdown contiguity."
+// @Param        sort    query     string  false  "Sort mostWastedCategories by: count | cost (default count)"
+// @Param        limit   query     int     false  "Max number of categories to return (default 5, max 50)"
 // @Success      200  {object}  apiModel.WasteAnalyticsResponse
+// @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/stats/waste [get]
 func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
@@ -31,6 +36,7 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 		// No household: return zeroed response, do not error.
 		ctx.JSON(http.StatusOK, apiModel.WasteAnalyticsResponse{
 			Period:    "6months",
+			Sort:      "count",
 			Monthly:   []apiModel.WasteMonthly{},
 			Trend:     []apiModel.StatsMonthlyCount{},
 			CO2Source: "Agribalyse LCA database via Open Food Facts ecoscore_data",
@@ -41,8 +47,28 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 	period := ctx.DefaultQuery("period", "6months")
 	months, ok := periodToMonths(period)
 	if !ok {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid period (allowed: month, 3months, 6months)"})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid period (allowed: month, 3months, 6months, 12months)"})
 		return
+	}
+
+	sortBy := ctx.DefaultQuery("sort", "count")
+	if sortBy != "count" && sortBy != "cost" {
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid sort (allowed: count, cost)"})
+		return
+	}
+
+	limit := 5
+	if v := ctx.Query("limit"); v != "" {
+		parsed, parseErr := strconv.Atoi(v)
+		if parseErr != nil || parsed <= 0 {
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid limit (must be a positive integer)"})
+			return
+		}
+		if parsed > 50 {
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "limit must be 1..50"})
+			return
+		}
+		limit = parsed
 	}
 
 	now := time.Now()
@@ -62,11 +88,23 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	categories, err := appCtx.Repos.WasteAnalytics.GetMostWastedCategories(householdID, since, 5)
+	categories, err := appCtx.Repos.WasteAnalytics.GetMostWastedCategories(householdID, since, limit, sortBy)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetMostWastedCategories: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing most-wasted categories"})
 		return
+	}
+
+	products, err := appCtx.Repos.WasteAnalytics.GetMostWastedProducts(householdID, since, 3)
+	if err != nil {
+		appCtx.Logger.Error().Msgf("GetMostWastedProducts: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing most-wasted products"})
+		return
+	}
+	for i := range categories {
+		if p, ok := products[categories[i].CategoryKey]; ok {
+			categories[i].Products = p
+		}
 	}
 
 	trend, err := appCtx.Repos.WasteAnalytics.GetTrendMonths(householdID, 6)
@@ -94,6 +132,7 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 
 	ctx.JSON(http.StatusOK, apiModel.WasteAnalyticsResponse{
 		Period:               period,
+		Sort:                 sortBy,
 		ConsumedCount:        row.ConsumedCount,
 		WastedCount:          row.WastedCount,
 		TotalRemoved:         totalRemoved,
@@ -109,15 +148,14 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 
 func periodToMonths(p string) (int, bool) {
 	switch p {
-	case "", "6months":
+	case "", util.PeriodValue6Months:
 		return 6, true
-	case "month":
+	case util.PeriodValueMonth:
 		return 1, true
-	case "3months":
+	case util.PeriodValue3Months:
 		return 3, true
-	}
-	if n, err := strconv.Atoi(p); err == nil && n > 0 && n <= 24 {
-		return n, true
+	case util.PeriodValue12Months:
+		return 12, true
 	}
 	return 0, false
 }

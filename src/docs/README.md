@@ -203,6 +203,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
   - [func \(e \*EmailNotificationProvider\) SendPasswordResetEmail\(email, username, token, baseURL string, expiresAt time.Time\) error](<#EmailNotificationProvider.SendPasswordResetEmail>)
   - [func \(e \*EmailNotificationProvider\) SendStreakMilestone\(milestone int, recipient string\) error](<#EmailNotificationProvider.SendStreakMilestone>)
+  - [func \(e \*EmailNotificationProvider\) SendStreakReset\(previousStreak int, recipient string\) error](<#EmailNotificationProvider.SendStreakReset>)
 - [type NotificationController](<#NotificationController>)
   - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface, productRepo dbController.ProductRepositoryInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
@@ -214,6 +215,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, tx \*gorm.DB\) error](<#NotificationController.SendInvitationEmail>)
   - [func \(nc \*NotificationController\) SendPasswordReset\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendPasswordReset>)
   - [func \(nc \*NotificationController\) SendVerificationEmail\(invitation \*dbModel.HouseholdInvitation, username, baseURL string\) error](<#NotificationController.SendVerificationEmail>)
+  - [func \(nc \*NotificationController\) SetActivityLogRepo\(repo dbController.ActivityLogRepositoryInterface\)](<#NotificationController.SetActivityLogRepo>)
   - [func \(nc \*NotificationController\) StartAllUserTelegramPollers\(\)](<#NotificationController.StartAllUserTelegramPollers>)
   - [func \(nc \*NotificationController\) StartMailDigestScheduler\(baseURL string\)](<#NotificationController.StartMailDigestScheduler>)
   - [func \(nc \*NotificationController\) StartTelegramPollerPool\(\)](<#NotificationController.StartTelegramPollerPool>)
@@ -226,6 +228,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(n \*NtfyNotificationProvider\) IsConfigured\(\) bool](<#NtfyNotificationProvider.IsConfigured>)
   - [func \(n \*NtfyNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#NtfyNotificationProvider.SendNotification>)
   - [func \(n \*NtfyNotificationProvider\) SendStreakMilestone\(milestone int, recipient \*models.NotificationRecipientInfo\) error](<#NtfyNotificationProvider.SendStreakMilestone>)
+  - [func \(n \*NtfyNotificationProvider\) SendStreakReset\(previousStreak int, recipient \*models.NotificationRecipientInfo\) error](<#NtfyNotificationProvider.SendStreakReset>)
 - [type OCRController](<#OCRController>)
 - [type OCRControllerImpl](<#OCRControllerImpl>)
   - [func NewOCRController\(logger \*zerolog.Logger, config \*configuration.OCRConfiguration\) \*OCRControllerImpl](<#NewOCRController>)
@@ -244,6 +247,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(t \*TelegramNotificationProvider\) SendMonthlyWasteReport\(chatID string, stats \*models.WasteStats\) error](<#TelegramNotificationProvider.SendMonthlyWasteReport>)
   - [func \(t \*TelegramNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#TelegramNotificationProvider.SendNotification>)
   - [func \(t \*TelegramNotificationProvider\) SendStreakMilestone\(milestone int, chatID string\) error](<#TelegramNotificationProvider.SendStreakMilestone>)
+  - [func \(t \*TelegramNotificationProvider\) SendStreakReset\(previousStreak int, chatID string\) error](<#TelegramNotificationProvider.SendStreakReset>)
 - [type WebPushKeyProvider](<#WebPushKeyProvider>)
 - [type WebPushNotificationProvider](<#WebPushNotificationProvider>)
   - [func \(p \*WebPushNotificationProvider\) GetProviderType\(\) string](<#WebPushNotificationProvider.GetProviderType>)
@@ -479,6 +483,15 @@ func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient
 
 SendStreakMilestone sends a streak milestone notification email.
 
+<a name="EmailNotificationProvider.SendStreakReset"></a>
+### func \(\*EmailNotificationProvider\) SendStreakReset
+
+```go
+func (e *EmailNotificationProvider) SendStreakReset(previousStreak int, recipient string) error
+```
+
+SendStreakReset sends a streak\-reset notification email.
+
 <a name="NotificationController"></a>
 ## type NotificationController
 
@@ -491,6 +504,7 @@ type NotificationController struct {
     NotificationRepo dbController.NotificationRepositoryInterface
     ProductRepo      dbController.ProductRepositoryInterface
     StreakRepo       dbController.StreakRepositoryInterface
+    ActivityLogRepo  dbController.ActivityLogRepositoryInterface
     Providers        []NotificationProvider
     // contains filtered or unexported fields
 }
@@ -585,6 +599,15 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 ```
 
 SendVerificationEmail sends an email verification link using the invitation email system.
+
+<a name="NotificationController.SetActivityLogRepo"></a>
+### func \(\*NotificationController\) SetActivityLogRepo
+
+```go
+func (nc *NotificationController) SetActivityLogRepo(repo dbController.ActivityLogRepositoryInterface)
+```
+
+SetActivityLogRepo attaches the activity log repository used for streak\-reset entries.
 
 <a name="NotificationController.StartAllUserTelegramPollers"></a>
 ### func \(\*NotificationController\) StartAllUserTelegramPollers
@@ -701,6 +724,15 @@ func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient 
 ```
 
 SendStreakMilestone sends a streak milestone push notification via ntfy.
+
+<a name="NtfyNotificationProvider.SendStreakReset"></a>
+### func \(\*NtfyNotificationProvider\) SendStreakReset
+
+```go
+func (n *NtfyNotificationProvider) SendStreakReset(previousStreak int, recipient *models.NotificationRecipientInfo) error
+```
+
+SendStreakReset sends a streak\-reset push notification via ntfy.
 
 <a name="OCRController"></a>
 ## type OCRController
@@ -896,6 +928,15 @@ func (t *TelegramNotificationProvider) SendStreakMilestone(milestone int, chatID
 ```
 
 SendStreakMilestone sends a streak milestone notification to a Telegram chat.
+
+<a name="TelegramNotificationProvider.SendStreakReset"></a>
+### func \(\*TelegramNotificationProvider\) SendStreakReset
+
+```go
+func (t *TelegramNotificationProvider) SendStreakReset(previousStreak int, chatID string) error
+```
+
+SendStreakReset sends a streak\-reset notification to a Telegram chat.
 
 <a name="WebPushKeyProvider"></a>
 ## type WebPushKeyProvider
@@ -2416,6 +2457,12 @@ const (
     ConsumptionSourceRate     = "consumption_rate"
     ConsumptionSourceMinStock = "min_stock"
     ConsumptionSourceNone     = "none"
+
+    // Waste analytics period identifiers
+    PeriodValueMonth    = "month"
+    PeriodValue3Months  = "3months"
+    PeriodValue6Months  = "6months"
+    PeriodValue12Months = "12months"
 )
 ```
 
@@ -2903,6 +2950,7 @@ v1 implements version 1 of the proviant API
 - [func GetExpired\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetExpired>)
 - [func GetHouseholdActivity\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdActivity>)
 - [func GetHouseholdApplications\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdApplications>)
+- [func GetHouseholdSettings\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdSettings>)
 - [func GetHouseholdUsers\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdUsers>)
 - [func GetInvitations\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetInvitations>)
 - [func GetNotifications\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetNotifications>)
@@ -2941,6 +2989,7 @@ v1 implements version 1 of the proviant API
 - [func UnsubscribeWebPushNotifications\(ctx \*gin.Context, appCtx \*AppContext\)](<#UnsubscribeWebPushNotifications>)
 - [func UpdateHouseholdMemberRole\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdMemberRole>)
 - [func UpdateHouseholdName\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdName>)
+- [func UpdateHouseholdSettings\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdSettings>)
 - [func UpdateHouseholdUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdUser>)
 - [func UpdateProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateProduct>)
 - [func UpdateProductAmount\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateProductAmount>)
@@ -3387,6 +3436,15 @@ func GetHouseholdApplications(ctx *gin.Context, appCtx *AppContext)
 
 GetHouseholdApplications returns all pending applications for the household the caller administrates. @Summary List pending household applications @Description Returns pending join applications for the household the calling user is admin of. @Tags household @Produce json @Success 200 \{array\} database.HouseholdApplication @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications \[get\]
 
+<a name="GetHouseholdSettings"></a>
+## func GetHouseholdSettings
+
+```go
+func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext)
+```
+
+GetHouseholdSettings returns the caller's household settings.
+
 <a name="GetHouseholdUsers"></a>
 ## func GetHouseholdUsers
 
@@ -3522,7 +3580,7 @@ GetUserNotificationPreferences gets a user's notification preferences @Summary G
 func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetWasteAnalytics returns consumed vs. wasted aggregations, monthly breakdown, most\-wasted categories, and a trend for the authenticated user's household. @Summary Get waste analytics @Description Returns per\-month consumed vs. wasted metrics, top wasted categories @Description with monetary and CO2 impact, and a 6\-month trend. EUR prices come from @Description per\-product overrides \(if set\) or category averages; CO2 is sourced @Description from the Agribalyse LCA database via Open Food Facts ecoscore\_data. @Tags stats @Produce json @Param period query string false "Period window: month | 3months | 6months \(default 6months\)" @Success 200 \{object\} apiModel.WasteAnalyticsResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/stats/waste \[get\]
+GetWasteAnalytics returns consumed vs. wasted aggregations, monthly breakdown, most\-wasted categories, and a trend for the authenticated user's household. @Summary Get waste analytics @Description Returns per\-month consumed vs. wasted metrics, top wasted categories @Description with monetary and CO2 impact \(each category nests its top wasted products\), @Description and a 6\-month trend. EUR prices come from per\-product overrides \(if set\) @Description or category averages; CO2 is sourced from the Agribalyse LCA database via @Description Open Food Facts ecoscore\_data. @Tags stats @Produce json @Param period query string false "Period window: month | 3months | 6months | 12months \(default 6months\). The window is floored to the first of the month for monthly\-breakdown contiguity." @Param sort query string false "Sort mostWastedCategories by: count | cost \(default count\)" @Param limit query int false "Max number of categories to return \(default 5, max 50\)" @Success 200 \{object\} apiModel.WasteAnalyticsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/stats/waste \[get\]
 
 <a name="GetWebPushVAPIDPublicKey"></a>
 ## func GetWebPushVAPIDPublicKey
@@ -3730,6 +3788,15 @@ func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext)
 ```
 
 UpdateHouseholdName renames the caller's household. Caller must be the household admin. @Summary Rename household @Tags household @Accept json @Produce json @Param household body updateHouseholdNameRequest true "Name" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/name \[patch\]
+
+<a name="UpdateHouseholdSettings"></a>
+## func UpdateHouseholdSettings
+
+```go
+func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext)
+```
+
+UpdateHouseholdSettings updates monthly waste goal for the caller's household \(admin only\).
 
 <a name="UpdateHouseholdUser"></a>
 ## func UpdateHouseholdUser
@@ -4083,6 +4150,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*HouseholdRepository\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#HouseholdRepository.RemoveMemberFromHousehold>)
   - [func \(r \*HouseholdRepository\) SetHouseholdMemberRole\(memberUserID, adminUserID uint, role string\) error](<#HouseholdRepository.SetHouseholdMemberRole>)
   - [func \(r \*HouseholdRepository\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#HouseholdRepository.UpdateHouseholdName>)
+  - [func \(r \*HouseholdRepository\) UpdateHouseholdSettings\(householdID, adminUserID uint, goalType string, goalCount \*int, goalPercent \*float64\) error](<#HouseholdRepository.UpdateHouseholdSettings>)
 - [type HouseholdRepositoryInterface](<#HouseholdRepositoryInterface>)
 - [type InvitationRepository](<#InvitationRepository>)
   - [func NewInvitationRepository\(db \*gorm.DB\) \*InvitationRepository](<#NewInvitationRepository>)
@@ -4291,7 +4359,8 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func NewWasteAnalyticsRepository\(db \*gorm.DB\) \*WasteAnalyticsRepository](<#NewWasteAnalyticsRepository>)
   - [func \(r \*WasteAnalyticsRepository\) GetConsumedVsWasted\(householdID uint, since time.Time\) \(ConsumedVsWastedRow, error\)](<#WasteAnalyticsRepository.GetConsumedVsWasted>)
   - [func \(r \*WasteAnalyticsRepository\) GetMonthlyBreakdown\(householdID uint, since time.Time, months int\) \(\[\]apiModel.WasteMonthly, error\)](<#WasteAnalyticsRepository.GetMonthlyBreakdown>)
-  - [func \(r \*WasteAnalyticsRepository\) GetMostWastedCategories\(householdID uint, since time.Time, limit int\) \(\[\]apiModel.WasteCategoryStat, error\)](<#WasteAnalyticsRepository.GetMostWastedCategories>)
+  - [func \(r \*WasteAnalyticsRepository\) GetMostWastedCategories\(householdID uint, since time.Time, limit int, by string\) \(\[\]apiModel.WasteCategoryStat, error\)](<#WasteAnalyticsRepository.GetMostWastedCategories>)
+  - [func \(r \*WasteAnalyticsRepository\) GetMostWastedProducts\(householdID uint, since time.Time, perCategoryLimit int\) \(map\[string\]\[\]apiModel.WasteProductStat, error\)](<#WasteAnalyticsRepository.GetMostWastedProducts>)
   - [func \(r \*WasteAnalyticsRepository\) GetTrendMonths\(householdID uint, months int\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#WasteAnalyticsRepository.GetTrendMonths>)
 - [type WebhookRepository](<#WebhookRepository>)
   - [func NewWebhookRepository\(db \*gorm.DB\) \*WebhookRepository](<#NewWebhookRepository>)
@@ -4760,6 +4829,15 @@ func (r *HouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint,
 
 
 
+<a name="HouseholdRepository.UpdateHouseholdSettings"></a>
+### func \(\*HouseholdRepository\) UpdateHouseholdSettings
+
+```go
+func (r *HouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64) error
+```
+
+
+
 <a name="HouseholdRepositoryInterface"></a>
 ## type HouseholdRepositoryInterface
 
@@ -4779,6 +4857,7 @@ type HouseholdRepositoryInterface interface {
     GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error)
     CancelApplication(applicationID, applicantUserID uint) error
     UpdateHouseholdName(householdID, adminUserID uint, name string) error
+    UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64) error
     RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
     SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error
     GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
@@ -6901,10 +6980,19 @@ GetMonthlyBreakdown returns per\-month consumed and wasted aggregates, padded wi
 ### func \(\*WasteAnalyticsRepository\) GetMostWastedCategories
 
 ```go
-func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, since time.Time, limit int) ([]apiModel.WasteCategoryStat, error)
+func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, since time.Time, limit int, by string) ([]apiModel.WasteCategoryStat, error)
 ```
 
-GetMostWastedCategories returns the top \`limit\` categories of wasted products for the household in the window \[since, now\]. Categories are resolved from the still\-existing Product row; if a wasted product has been hard\-deleted it falls into the "Other" bucket.
+GetMostWastedCategories returns the top \`limit\` categories of wasted products for the household in the window \[since, now\]. Categories are resolved from the still\-existing Product row; if a wasted product has been hard\-deleted it falls into the "Other" bucket. Results are sorted by \`by\` — "count" \(default\) or "cost".
+
+<a name="WasteAnalyticsRepository.GetMostWastedProducts"></a>
+### func \(\*WasteAnalyticsRepository\) GetMostWastedProducts
+
+```go
+func (r *WasteAnalyticsRepository) GetMostWastedProducts(householdID uint, since time.Time, perCategoryLimit int) (map[string][]apiModel.WasteProductStat, error)
+```
+
+GetMostWastedProducts returns the top wasted products grouped by category for the household in the window \[since, now\]. Each category's slice is capped at perCategoryLimit. The category key is resolved from the still\-existing Product row; if a wasted product has been hard\-deleted it falls into the "Other" bucket.
 
 <a name="WasteAnalyticsRepository.GetTrendMonths"></a>
 ### func \(\*WasteAnalyticsRepository\) GetTrendMonths
@@ -7065,6 +7153,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type DeliveryLogResponse](<#DeliveryLogResponse>)
 - [type ExpiryScanResponse](<#ExpiryScanResponse>)
 - [type HouseholdListItem](<#HouseholdListItem>)
+- [type HouseholdSettingsResponse](<#HouseholdSettingsResponse>)
 - [type IngredientMatch](<#IngredientMatch>)
 - [type NotificationItem](<#NotificationItem>)
 - [type NotificationsResponse](<#NotificationsResponse>)
@@ -7079,10 +7168,12 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
 - [type StreakResponse](<#StreakResponse>)
 - [type TokenResponse](<#TokenResponse>)
+- [type UpdateHouseholdSettingsRequest](<#UpdateHouseholdSettingsRequest>)
 - [type UpdateWebhookRequest](<#UpdateWebhookRequest>)
 - [type WasteAnalyticsResponse](<#WasteAnalyticsResponse>)
 - [type WasteCategoryStat](<#WasteCategoryStat>)
 - [type WasteMonthly](<#WasteMonthly>)
+- [type WasteProductStat](<#WasteProductStat>)
 - [type WebhookListResponse](<#WebhookListResponse>)
 - [type WebhookResponse](<#WebhookResponse>)
 
@@ -7254,6 +7345,19 @@ type HouseholdListItem struct {
     Name        string `json:"name"`
     Description string `json:"description"`
     MemberCount int    `json:"memberCount"`
+}
+```
+
+<a name="HouseholdSettingsResponse"></a>
+## type HouseholdSettingsResponse
+
+HouseholdSettingsResponse is the response body for GET /api/v1/household/settings
+
+```go
+type HouseholdSettingsResponse struct {
+    MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType"`
+    MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
+    MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
 }
 ```
 
@@ -7465,6 +7569,19 @@ type TokenResponse struct {
 }
 ```
 
+<a name="UpdateHouseholdSettingsRequest"></a>
+## type UpdateHouseholdSettingsRequest
+
+UpdateHouseholdSettingsRequest is the request body for PATCH /api/v1/household/settings
+
+```go
+type UpdateHouseholdSettingsRequest struct {
+    MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType"`
+    MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
+    MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
+}
+```
+
 <a name="UpdateWebhookRequest"></a>
 ## type UpdateWebhookRequest
 
@@ -7486,7 +7603,8 @@ WasteAnalyticsResponse is the response body for GET /api/v1/stats/waste
 
 ```go
 type WasteAnalyticsResponse struct {
-    Period               string              `json:"period"` // "month" | "3months" | "6months"
+    Period               string              `json:"period"` // "month" | "3months" | "6months" | "12months"
+    Sort                 string              `json:"sort"`   // "count" | "cost" — applied to mostWastedCategories
     ConsumedCount        int                 `json:"consumedCount"`
     WastedCount          int                 `json:"wastedCount"`
     TotalRemoved         int                 `json:"totalRemoved"`
@@ -7507,11 +7625,12 @@ WasteCategoryStat represents the aggregate waste impact for a single product cat
 
 ```go
 type WasteCategoryStat struct {
-    CategoryKey string  `json:"categoryKey"`
-    DisplayName string  `json:"displayName"`
-    Count       int     `json:"count"`
-    CostEUR     float64 `json:"costEur"`
-    CO2Kg       float64 `json:"co2Kg"`
+    CategoryKey string             `json:"categoryKey"`
+    DisplayName string             `json:"displayName"`
+    Count       int                `json:"count"`
+    CostEUR     float64            `json:"costEur"`
+    CO2Kg       float64            `json:"co2Kg"`
+    Products    []WasteProductStat `json:"products,omitempty"`
 }
 ```
 
@@ -7527,6 +7646,20 @@ type WasteMonthly struct {
     WastedCount   int     `json:"wastedCount"`
     WastedEUR     float64 `json:"wastedEur"`
     WastedCO2Kg   float64 `json:"wastedCo2Kg"`
+}
+```
+
+<a name="WasteProductStat"></a>
+## type WasteProductStat
+
+WasteProductStat represents the aggregate waste impact for a single product within a category.
+
+```go
+type WasteProductStat struct {
+    ProductName string  `json:"productName"`
+    Count       int     `json:"count"`
+    CostEUR     float64 `json:"costEur"`
+    CO2Kg       float64 `json:"co2Kg"`
 }
 ```
 
@@ -8309,6 +8442,7 @@ const (
     ActivityActionWaste        = "waste"
     ActivityActionRestore      = "restore"
     ActivityActionAmountChange = "amount_change"
+    ActivityActionStreakReset  = "streak_reset"
 )
 ```
 
@@ -8503,6 +8637,10 @@ type Household struct {
     Name        string `gorm:"not null"`
     Description string
     AdminID     uint `gorm:"not null"`
+
+    MonthlyWasteGoalType    string   `gorm:"default:''"`   // "", "count", or "percent"
+    MonthlyWasteGoalCount   *int     `gorm:"default:null"` // nil = disabled
+    MonthlyWasteGoalPercent *float64 `gorm:"default:null"` // nil = disabled
 }
 ```
 
@@ -8977,6 +9115,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockHouseholdRepository\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#MockHouseholdRepository.RemoveMemberFromHousehold>)
   - [func \(m \*MockHouseholdRepository\) SetHouseholdMemberRole\(memberUserID, adminUserID uint, role string\) error](<#MockHouseholdRepository.SetHouseholdMemberRole>)
   - [func \(m \*MockHouseholdRepository\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#MockHouseholdRepository.UpdateHouseholdName>)
+  - [func \(m \*MockHouseholdRepository\) UpdateHouseholdSettings\(householdID, adminUserID uint, goalType string, goalCount \*int, goalPercent \*float64\) error](<#MockHouseholdRepository.UpdateHouseholdSettings>)
 - [type MockInvitationRepository](<#MockInvitationRepository>)
   - [func \(m \*MockInvitationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#MockInvitationRepository.AcceptInvitation>)
   - [func \(m \*MockInvitationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#MockInvitationRepository.CancelInvitation>)
@@ -9413,6 +9552,15 @@ func (m *MockHouseholdRepository) SetHouseholdMemberRole(memberUserID, adminUser
 
 ```go
 func (m *MockHouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint, name string) error
+```
+
+
+
+<a name="MockHouseholdRepository.UpdateHouseholdSettings"></a>
+### func \(\*MockHouseholdRepository\) UpdateHouseholdSettings
+
+```go
+func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64) error
 ```
 
 

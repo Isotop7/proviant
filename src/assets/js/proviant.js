@@ -551,8 +551,11 @@ proviant.getSavingsStats = async function () {
   return { code: res.status, message: body };
 };
 
-proviant.getWasteAnalytics = async function (period) {
-  const q = period ? `?period=${encodeURIComponent(period)}` : "";
+proviant.getWasteAnalytics = async function (period, sort) {
+  const params = new URLSearchParams();
+  if (period) params.set("period", period);
+  if (sort) params.set("sort", sort);
+  const q = params.toString() ? `?${params.toString()}` : "";
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/stats/waste${q}`, { method: "GET", headers: { "Content-Type": "application/json" } });
   const body = await res.json();
   return { code: res.status, message: body };

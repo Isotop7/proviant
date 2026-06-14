@@ -2999,7 +2999,7 @@ const docTemplate = `{
         },
         "/api/v1/stats/waste": {
             "get": {
-                "description": "Returns per-month consumed vs. wasted metrics, top wasted categories\nwith monetary and CO2 impact, and a 6-month trend. EUR prices come from\nper-product overrides (if set) or category averages; CO2 is sourced\nfrom the Agribalyse LCA database via Open Food Facts ecoscore_data.",
+                "description": "Returns per-month consumed vs. wasted metrics, top wasted categories\nwith monetary and CO2 impact (each category nests its top wasted products),\nand a 6-month trend. EUR prices come from per-product overrides (if set)\nor category averages; CO2 is sourced from the Agribalyse LCA database via\nOpen Food Facts ecoscore_data.",
                 "produces": [
                     "application/json"
                 ],
@@ -3010,8 +3010,20 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Period window: month | 3months | 6months (default 6months)",
+                        "description": "Period window: month | 3months | 6months | 12months (default 6months). The window is floored to the first of the month for monthly-breakdown contiguity.",
                         "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort mostWastedCategories by: count | cost (default count)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max number of categories to return (default 5, max 50)",
+                        "name": "limit",
                         "in": "query"
                     }
                 ],
@@ -3020,6 +3032,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.WasteAnalyticsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
                         }
                     },
                     "500": {
@@ -4517,7 +4535,11 @@ const docTemplate = `{
                     }
                 },
                 "period": {
-                    "description": "\"month\" | \"3months\" | \"6months\"",
+                    "description": "\"month\" | \"3months\" | \"6months\" | \"12months\"",
+                    "type": "string"
+                },
+                "sort": {
+                    "description": "\"count\" | \"cost\" — applied to mostWastedCategories",
                     "type": "string"
                 },
                 "totalRemoved": {
@@ -4560,6 +4582,12 @@ const docTemplate = `{
                 },
                 "displayName": {
                     "type": "string"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.WasteProductStat"
+                    }
                 }
             }
         },
@@ -4581,6 +4609,23 @@ const docTemplate = `{
                 },
                 "wastedEur": {
                     "type": "number"
+                }
+            }
+        },
+        "api.WasteProductStat": {
+            "type": "object",
+            "properties": {
+                "co2Kg": {
+                    "type": "number"
+                },
+                "costEur": {
+                    "type": "number"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "productName": {
+                    "type": "string"
                 }
             }
         },
@@ -4795,6 +4840,18 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "monthlyWasteGoalCount": {
+                    "description": "nil = disabled",
+                    "type": "integer"
+                },
+                "monthlyWasteGoalPercent": {
+                    "description": "nil = disabled",
+                    "type": "number"
+                },
+                "monthlyWasteGoalType": {
+                    "description": "\"\", \"count\", or \"percent\"",
+                    "type": "string"
                 },
                 "name": {
                     "type": "string"

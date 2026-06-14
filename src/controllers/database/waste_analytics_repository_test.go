@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/models/authentication"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
 )
@@ -112,7 +113,7 @@ func TestWasteAnalyticsRepository_Aggregations(t *testing.T) {
 	})
 
 	t.Run("most wasted categories", func(t *testing.T) {
-		cats, err := repo.GetMostWastedCategories(hhA.ID, since, 5)
+		cats, err := repo.GetMostWastedCategories(hhA.ID, since, 5, "count")
 		if err != nil {
 			t.Fatalf("GetMostWastedCategories: %v", err)
 		}
@@ -127,6 +128,53 @@ func TestWasteAnalyticsRepository_Aggregations(t *testing.T) {
 		}
 		if cats[1].CategoryKey != "bakery" {
 			t.Errorf("second category = %q, want bakery", cats[1].CategoryKey)
+		}
+	})
+
+	t.Run("most wasted categories sorted by cost", func(t *testing.T) {
+		// Dairy cost = 1.99*2 = 3.98 EUR, bakery cost = 0.99 EUR. Cost sort → dairy first.
+		cats, err := repo.GetMostWastedCategories(hhA.ID, since, 5, "cost")
+		if err != nil {
+			t.Fatalf("GetMostWastedCategories(cost): %v", err)
+		}
+		if len(cats) != 2 {
+			t.Fatalf("expected 2 categories, got %d", len(cats))
+		}
+		if cats[0].CategoryKey != "dairy" {
+			t.Errorf("top by cost = %q, want dairy", cats[0].CategoryKey)
+		}
+		if cats[1].CategoryKey != "bakery" {
+			t.Errorf("second by cost = %q, want bakery", cats[1].CategoryKey)
+		}
+	})
+
+	t.Run("most wasted products grouped by category", func(t *testing.T) {
+		prods, err := repo.GetMostWastedProducts(hhA.ID, since, 3)
+		if err != nil {
+			t.Fatalf("GetMostWastedProducts: %v", err)
+		}
+		dairy, ok := prods["dairy"]
+		if !ok {
+			t.Fatalf("dairy bucket missing; got keys %v", keysOfProducts(prods))
+		}
+		if len(dairy) != 1 {
+			t.Fatalf("dairy products = %d, want 1 (Yogurt)", len(dairy))
+		}
+		if dairy[0].ProductName != "Yogurt" {
+			t.Errorf("dairy product name = %q, want Yogurt", dairy[0].ProductName)
+		}
+		if dairy[0].Count != 2 {
+			t.Errorf("Yogurt wasted count = %d, want 2", dairy[0].Count)
+		}
+		if got, want := dairy[0].CostEUR, 1.99*2; got != want {
+			t.Errorf("Yogurt wasted EUR = %v, want %v", got, want)
+		}
+		bakery, ok := prods["bakery"]
+		if !ok {
+			t.Fatalf("bakery bucket missing")
+		}
+		if len(bakery) != 1 || bakery[0].ProductName != "Bread" {
+			t.Errorf("bakery products = %+v, want single Bread", bakery)
 		}
 	})
 
@@ -147,6 +195,30 @@ func TestWasteAnalyticsRepository_Aggregations(t *testing.T) {
 		}
 	})
 
+	t.Run("most wasted products capped per category", func(t *testing.T) {
+		// Add 2 more distinct product names in dairy, then cap at 2 → 2 returned.
+		extraProd := dbModel.Product{
+			ProductName: "Cheese", Categories: "en:dairy", HouseholdID: hhA.ID, UserID: adminA.ID, ExpireAt: now,
+			Amount: 1, PriceOverride: float64Ptr(3.0), CO2KgPerKg: float64Ptr(2.0),
+		}
+		db.Create(&extraProd)
+		insertSavings(extraProd.ID, hhA.ID, "Cheese", "wasted", 3.0, 2.0, now.Add(-5*time.Hour))
+		insertSavings(extraProd.ID, hhA.ID, "Cheese", "wasted", 3.0, 2.0, now.Add(-6*time.Hour))
+
+		prods, err := repo.GetMostWastedProducts(hhA.ID, since, 2)
+		if err != nil {
+			t.Fatalf("GetMostWastedProducts: %v", err)
+		}
+		dairy := prods["dairy"]
+		if len(dairy) != 2 {
+			t.Fatalf("dairy products with cap=2 = %d, want 2", len(dairy))
+		}
+		// Sorted by count desc; both Cheese entries merge into a single row of 2.
+		if dairy[0].Count != 2 {
+			t.Errorf("top dairy product count = %d, want 2", dairy[0].Count)
+		}
+	})
+
 	t.Run("household scoping", func(t *testing.T) {
 		row, err := repo.GetConsumedVsWasted(hhB.ID, since)
 		if err != nil {
@@ -164,3 +236,11 @@ func TestWasteAnalyticsRepository_Aggregations(t *testing.T) {
 }
 
 func float64Ptr(v float64) *float64 { return &v }
+
+func keysOfProducts(m map[string][]apiModel.WasteProductStat) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}

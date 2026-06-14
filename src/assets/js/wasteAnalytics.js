@@ -183,27 +183,71 @@ function renderCategories(s) {
   list.innerHTML = '';
   const cats = s.mostWastedCategories || [];
   if (cats.length === 0) {
-    const li = document.createElement('li');
-    li.className = 'list-group-item text-center text-secondary-custom py-3';
-    li.textContent = 'No wasted categories yet';
-    list.appendChild(li);
+    const empty = document.createElement('div');
+    empty.className = 'text-center text-secondary-custom py-3';
+    empty.textContent = 'No wasted categories yet';
+    list.appendChild(empty);
     return;
   }
-  for (const c of cats) {
-    const li = document.createElement('li');
-    li.className = 'list-group-item d-flex justify-content-between align-items-center';
-    li.innerHTML = `
+  cats.forEach((c, idx) => {
+    const prods = Array.isArray(c.products) ? c.products : [];
+    const hasProducts = prods.length > 0;
+    if (!hasProducts) {
+      const item = document.createElement('div');
+      item.className = 'list-group-item d-flex justify-content-between align-items-center';
+      item.innerHTML = `
+        <span class="d-flex align-items-center gap-2">
+          <i class="bi bi-tag-fill" style="color:var(--accent);"></i>
+          <span>${c.displayName || c.categoryKey}</span>
+        </span>
+        <span class="d-flex align-items-center gap-3 small">
+          <span class="badge bg-secondary-subtle text-secondary-emphasis">${c.count || 0}</span>
+          <span class="text-secondary-custom">${fmtEur(c.costEur)}</span>
+          <span class="text-secondary-custom">${fmtKg(c.co2Kg)}</span>
+        </span>`;
+      list.appendChild(item);
+      return;
+    }
+    const item = document.createElement('div');
+    item.className = 'accordion-item';
+    const targetId = `waste-cat-${idx}`;
+    item.innerHTML = `
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${targetId}" aria-expanded="false" aria-controls="${targetId}">
+          <span class="d-flex align-items-center gap-2 flex-grow-1">
+            <i class="bi bi-tag-fill" style="color:var(--accent);"></i>
+            <span>${c.displayName || c.categoryKey}</span>
+          </span>
+          <span class="d-flex align-items-center gap-3 small">
+            <span class="badge bg-secondary-subtle text-secondary-emphasis">${c.count || 0}</span>
+            <span class="text-secondary-custom">${fmtEur(c.costEur)}</span>
+            <span class="text-secondary-custom">${fmtKg(c.co2Kg)}</span>
+          </span>
+        </button>
+      </h2>
+      <div id="${targetId}" class="accordion-collapse collapse" data-bs-parent="#categoryList">
+        <div class="accordion-body p-2">
+          ${renderCategoryProducts(prods)}
+        </div>
+      </div>`;
+    list.appendChild(item);
+  });
+}
+
+function renderCategoryProducts(products) {
+  const rows = products.map((p) => `
+    <li class="waste-category-product-list-item d-flex justify-content-between align-items-center">
       <span class="d-flex align-items-center gap-2">
-        <i class="bi bi-tag-fill" style="color:var(--accent);"></i>
-        <span>${c.displayName || c.categoryKey}</span>
+        <i class="bi bi-box" style="color:var(--accent);"></i>
+        <span>${p.productName || 'Unknown'}</span>
       </span>
       <span class="d-flex align-items-center gap-3 small">
-        <span class="badge bg-secondary-subtle text-secondary-emphasis">${c.count || 0}</span>
-        <span class="text-secondary-custom">${fmtEur(c.costEur)}</span>
-        <span class="text-secondary-custom">${fmtKg(c.co2Kg)}</span>
-      </span>`;
-    list.appendChild(li);
-  }
+        <span class="badge bg-secondary-subtle text-secondary-emphasis">${p.count || 0}</span>
+        <span class="text-secondary-custom">${fmtEur(p.costEur)}</span>
+        <span class="text-secondary-custom">${fmtKg(p.co2Kg)}</span>
+      </span>
+    </li>`).join('');
+  return `<ul class="waste-category-product-list list-unstyled mb-0">${rows}</ul>`;
 }
 
 function setActivePeriod(period) {
@@ -214,18 +258,32 @@ function setActivePeriod(period) {
   });
 }
 
+function setActiveSort(sort) {
+  document.querySelectorAll('#sortToggle button').forEach((b) => {
+    const isActive = b.dataset.sort === sort;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
+let currentSort = 'count';
+let currentPeriod = '6months';
+
 async function load(period) {
+  if (period) currentPeriod = period;
   const tiles = document.getElementById('wasteTiles');
   if (tiles) tiles.innerHTML = '<div class="col-12 text-center text-secondary-custom py-3"><div class="spinner-border spinner-border-sm" role="status"></div> Loading…</div>';
 
-  const resp = await proviant.getWasteAnalytics(period);
+  const resp = await proviant.getWasteAnalytics(currentPeriod, currentSort);
   if (resp.code !== 200 || !resp.message) {
     if (tiles) tiles.innerHTML = '';
     proviant.showFeedback('error', 'Failed to load', 'Could not load waste analytics. Please try again.');
     return;
   }
   const s = resp.message;
-  setActivePeriod(s.period || period);
+  if (s.sort) currentSort = s.sort;
+  setActivePeriod(s.period || currentPeriod);
+  setActiveSort(currentSort);
   renderTiles(s);
   renderMonthlyChart(s);
   renderTrendChart(s);
@@ -237,11 +295,20 @@ async function load(period) {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', (event) => {
-    const btn = event.target.closest('#periodSelector button');
-    if (!btn) return;
-    const period = btn.dataset.period;
-    if (!period) return;
-    load(period);
+    const periodBtn = event.target.closest('#periodSelector button');
+    if (periodBtn) {
+      const period = periodBtn.dataset.period;
+      if (period) load(period);
+      return;
+    }
+    const sortBtn = event.target.closest('#sortToggle button');
+    if (sortBtn) {
+      const sort = sortBtn.dataset.sort;
+      if (sort && sort !== currentSort) {
+        currentSort = sort;
+        load();
+      }
+    }
   });
   load('6months');
 });

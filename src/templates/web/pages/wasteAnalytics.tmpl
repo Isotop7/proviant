@@ -14,6 +14,7 @@
             <button type="button" class="btn btn-outline-secondary" data-period="month">This Month</button>
             <button type="button" class="btn btn-outline-secondary" data-period="3months">3 Months</button>
             <button type="button" class="btn btn-outline-secondary active" data-period="6months" aria-pressed="true">6 Months</button>
+            <button type="button" class="btn btn-outline-secondary" data-period="12months">12 Months</button>
         </div>
     </div>
 
@@ -74,9 +75,13 @@
             <div class="card h-100">
                 <div class="card-header d-flex align-items-center gap-2 fw-bold">
                     <div class="icon-chip" aria-hidden="true"><i class="bi bi-tags-fill"></i></div>
-                    Most Wasted Categories
+                    <span class="flex-grow-1">Most Wasted Categories</span>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Sort by" id="sortToggle">
+                        <button type="button" class="btn btn-outline-secondary active" data-sort="count" aria-pressed="true">Count</button>
+                        <button type="button" class="btn btn-outline-secondary" data-sort="cost" aria-pressed="false">Cost</button>
+                    </div>
                 </div>
-                <ul class="list-group list-group-flush" id="categoryList"></ul>
+                <div class="accordion accordion-flush" id="categoryList"></div>
             </div>
         </div>
     </div>

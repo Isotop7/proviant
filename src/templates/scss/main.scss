@@ -3390,3 +3390,65 @@ select.pv-field-input {
     align-items: center;
   }
 }
+
+/* Waste analytics — nested products list inside expanded category accordion items */
+.waste-category-product-list {
+  padding-left: 1.25rem;
+  font-size: .875rem;
+}
+
+.waste-category-product-list-item {
+  padding: .25rem 0;
+  border-bottom: 1px solid var(--bs-border-color-translucent, rgba(0, 0, 0, .06));
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+/* Waste analytics — make accordion headers look like the site's list-group-item pattern */
+#categoryList .accordion-item,
+#categoryList > .list-group-item {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--bs-list-group-border-color);
+  border-radius: 0;
+  padding: .5rem 1rem;
+}
+
+#categoryList .accordion-header {
+  margin: 0;
+}
+
+#categoryList .accordion-button {
+  padding: .5rem 1rem;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--bs-body-color);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+
+  &:hover,
+  &:focus {
+    background: var(--bs-tertiary-bg);
+    box-shadow: none;
+  }
+
+  &:not(.collapsed)::after {
+    transform: rotate(-180deg);
+  }
+
+  &::after {
+    width: .75rem;
+    height: .75rem;
+    margin-left: .5rem;
+    background-size: .75rem;
+  }
+}
+
+#categoryList .accordion-body {
+  padding: 0 1rem .75rem;
+}

@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
@@ -123,7 +124,8 @@ func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since t
 // GetMostWastedCategories returns the top `limit` categories of wasted products for the
 // household in the window [since, now]. Categories are resolved from the still-existing
 // Product row; if a wasted product has been hard-deleted it falls into the "Other" bucket.
-func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, since time.Time, limit int) ([]apiModel.WasteCategoryStat, error) {
+// Results are sorted by `by` — "count" (default) or "cost".
+func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, since time.Time, limit int, by string) ([]apiModel.WasteCategoryStat, error) {
 	// Pre-load category price table for display name lookup. Do this in Go rather than SQL
 	// to keep the query portable across SQLite and MariaDB.
 	var prices []dbModel.ProductCategoryPrice
@@ -179,8 +181,8 @@ func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, sin
 		out = append(out, *v)
 	}
 
-	// sort by count desc, then cost desc
-	sortCategoryStats(out)
+	// sort by requested key, then by the secondary key
+	sortCategoryStats(out, by)
 
 	if limit > 0 && len(out) > limit {
 		out = out[:limit]
@@ -252,8 +254,37 @@ func resolveCategoryKey(categories string, prices map[string]dbModel.ProductCate
 	return "Other"
 }
 
-func sortCategoryStats(s []apiModel.WasteCategoryStat) {
-	// simple insertion sort, n is small (<= handful of categories)
+// sortCategoryStats sorts in place by the given key. Recognised keys: "count", "cost".
+// Unknown keys fall back to "count" ordering. n is small (<= handful of categories).
+func sortCategoryStats(s []apiModel.WasteCategoryStat, by string) {
+	if by != "cost" {
+		by = "count"
+	}
+	for i := 1; i < len(s); i++ {
+		for j := i; j > 0; j-- {
+			a, b := s[j-1], s[j]
+			swap := false
+			switch by {
+			case "cost":
+				if a.CostEUR < b.CostEUR || (a.CostEUR == b.CostEUR && a.Count < b.Count) {
+					swap = true
+				}
+			default: // "count"
+				if a.Count < b.Count || (a.Count == b.Count && a.CostEUR < b.CostEUR) {
+					swap = true
+				}
+			}
+			if swap {
+				s[j-1], s[j] = b, a
+				continue
+			}
+			break
+		}
+	}
+}
+
+// sortWasteProductStats sorts in place by count desc, then cost desc.
+func sortWasteProductStats(s []apiModel.WasteProductStat) {
 	for i := 1; i < len(s); i++ {
 		for j := i; j > 0; j-- {
 			a, b := s[j-1], s[j]
@@ -264,4 +295,77 @@ func sortCategoryStats(s []apiModel.WasteCategoryStat) {
 			break
 		}
 	}
+}
+
+// GetMostWastedProducts returns the top wasted products grouped by category for the
+// household in the window [since, now]. Each category's slice is capped at perCategoryLimit.
+// The category key is resolved from the still-existing Product row; if a wasted product
+// has been hard-deleted it falls into the "Other" bucket.
+func (r *WasteAnalyticsRepository) GetMostWastedProducts(householdID uint, since time.Time, perCategoryLimit int) (map[string][]apiModel.WasteProductStat, error) {
+	var prices []dbModel.ProductCategoryPrice
+	if err := r.DB.Find(&prices).Error; err != nil {
+		return nil, err
+	}
+	catByKey := make(map[string]dbModel.ProductCategoryPrice, len(prices))
+	for i := range prices {
+		catByKey[prices[i].CategoryKey] = prices[i]
+	}
+
+	type rawRow struct {
+		ProductID   uint
+		ProductName string
+		PriceEUR    float64
+		CO2Kg       float64
+		Categories  sql.NullString
+	}
+
+	var raws []rawRow
+	if err := r.DB.
+		Table("savings_records AS s").
+		Select("s.product_id AS product_id, s.product_name AS product_name, s.price_eur AS price_eur, s.co2_kg AS co2_kg, p.categories AS categories").
+		Joins("LEFT JOIN products p ON p.id = s.product_id").
+		Where("s.household_id = ? AND s.event_type = 'wasted' AND s.created_at >= ?", householdID, since).
+		Scan(&raws).Error; err != nil {
+		return nil, err
+	}
+
+	// Two-level aggregation: outer by category, inner by product name (fallback to product id).
+	byCategory := make(map[string]map[string]*apiModel.WasteProductStat)
+	for _, row := range raws {
+		catKey := resolveCategoryKey(row.Categories.String, catByKey)
+		prodKey := row.ProductName
+		if prodKey == "" {
+			prodKey = fmt.Sprintf("product-%d", row.ProductID)
+		}
+		prods, ok := byCategory[catKey]
+		if !ok {
+			prods = make(map[string]*apiModel.WasteProductStat)
+			byCategory[catKey] = prods
+		}
+		bucket, ok := prods[prodKey]
+		if !ok {
+			bucket = &apiModel.WasteProductStat{ProductName: row.ProductName}
+			if row.ProductName == "" {
+				bucket.ProductName = fmt.Sprintf("Product #%d", row.ProductID)
+			}
+			prods[prodKey] = bucket
+		}
+		bucket.Count++
+		bucket.CostEUR += row.PriceEUR
+		bucket.CO2Kg += row.CO2Kg
+	}
+
+	out := make(map[string][]apiModel.WasteProductStat, len(byCategory))
+	for catKey, prods := range byCategory {
+		flat := make([]apiModel.WasteProductStat, 0, len(prods))
+		for _, p := range prods {
+			flat = append(flat, *p)
+		}
+		sortWasteProductStats(flat)
+		if perCategoryLimit > 0 && len(flat) > perCategoryLimit {
+			flat = flat[:perCategoryLimit]
+		}
+		out[catKey] = flat
+	}
+	return out, nil
 }
