@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.17.0] - 2026-06-14
+
+### Added
+- (7a44fe88): Add password reset flow and frontend
+- (8b17dfd6): Feat(stats): add waste analytics
+Closes: #312
+- (f56c0869): Feat(consumption): add restock suggestion service
+Closes: #313
+- (86b6abc8): Feat(notifications): notify household on streak reset
+Closes: #314
+- (e92223a8): Feat(stats): add 12months, sort, limit, top products
+Closes: #315
+
+
+### Changed
+- (3b84b6f4): Update docs
+- (94e60364): Update packages
+
+
+### Fixed
+- (eb7b0256): Fix mail digest frequency
+- (adb1351e): Fix css and golangci-lint
+
+
+### Miscellaneous
+- (c622a464): Update CHANGELOG.md for v0.16.0
+
+
 ## [0.16.0] - 2026-05-17
 
 ### Added
