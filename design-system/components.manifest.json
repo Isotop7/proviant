@@ -1,0 +1,344 @@
+{
+  "$schema": "https://opendesign.dev/schemas/components.manifest/v1",
+  "name": "proviant",
+  "version": "2026-06",
+  "description": "Komponenten-Inventar für proviant-Frontend. Bootstrap 5.3 als Basis; Marken-Palette wird über --bs-*-Variablen eingespielt, eigene Helper-Klassen nur dort, wo Bootstrap keine passende Komponente bietet.",
+  "tokenFile": "tokens.css",
+  "tokenContract": "tokens.json",
+  "base": {
+    "framework": "Bootstrap 5.3",
+    "cdn": "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
+    "iconLibrary": "bootstrap-icons 1.11.3",
+    "colorBinding": "Salwei-Palette ist in --bs-primary, --bs-success, --bs-warning, --bs-danger, --bs-info, --bs-body-bg, --bs-body-color, --bs-border-color, --bs-border-radius-* gespiegelt. Komponenten erben daraus automatisch."
+  },
+  "classMapping": {
+    "_comment": "Mapping eigener Klassen (alte Spec-Sheet) → Bootstrap-5.3-Klassen. Eigene Klassen sind NICHT 1:1 weiterzuführen, sondern durch Bootstrap-Klassen zu ersetzen.",
+    "buttons": {
+      "btn btn--primary":    "btn btn-primary",
+      "btn btn--secondary":  "btn btn-outline-secondary",
+      "btn btn--ghost":      "btn btn-link",
+      "btn btn--danger":     "btn btn-danger",
+      "btn btn--sm":         "btn btn-sm",
+      "btn btn--lg":         "btn btn-lg"
+    },
+    "forms": {
+      "field__label":         "form-label",
+      "field__input":         "form-control",
+      "field__select":        "form-select",
+      "field__textarea":      "form-control (mit rows=…)",
+      "field__error":         "invalid-feedback (zusammen mit .is-invalid auf .form-control)",
+      "field__success":       "valid-feedback (zusammen mit .is-valid auf .form-control)",
+      "field__hint":          "form-text",
+      "field--code":          "field--code (eigene Helfer-Klasse, da Bootstrap keine 6-stelligen Code-Inputs kennt)"
+    },
+    "lists": {
+      "list":                 "list-group",
+      "list__item":           "list-group-item",
+      "list__item--active":   "list-group-item active"
+    },
+    "chips": {
+      "chip":                 "badge",
+      "chip--fresh":          "badge badge--fresh",
+      "chip--soon":           "badge badge--soon",
+      "chip--critical":       "badge badge--critical",
+      "chip--expired":        "badge badge--expired",
+      "chip--neutral":        "badge badge--neutral"
+    },
+    "cards": {
+      "card":                 "card",
+      "card--hero":           "card card--hero (Klasse bleibt für Hero-Padding-Variante)",
+      "card__header":         "card-header (optional) ODER eigene card__header-Klasse",
+      "card__body":           "card-body",
+      "card__footer":         "card-footer (optional) ODER eigene card__footer-Klasse"
+    },
+    "tables": {
+      "table":                "table",
+      "table--dense":         "table table-sm",
+      "table-wrap":           "card > table-responsive",
+      "table tr.is-selected": "table-active (Bootstrap-Default) ODER eigene tr.is-selected",
+      "pagination":           "d-flex justify-content-between"
+    },
+    "app-layout": {
+      "app":                  "app (eigene Grid-Klasse, da Bootstrap-Default-Container für App-Shells ungeeignet)",
+      "app__sidebar":         "app__sidebar (eigene Komponente)",
+      "sidebar__item":        "nav-link in nav.flex-column",
+      "topbar__title":        "h5/h6 in app__topbar",
+      "bottom-nav__item":     "nav-link in nav (innerhalb .bottom-nav)"
+    },
+    "modals": {
+      "modal":                "modal (Bootstrap-Standard; in echter App via Bootstrap-JS aktiviert)",
+      "modal__dialog":        "modal-dialog > modal-content",
+      "modal__header":        "modal-header",
+      "modal__body":          "modal-body",
+      "modal__footer":        "modal-footer"
+    },
+    "toasts": {
+      "toast":                "toast",
+      "toast--info":          "toast toast--info",
+      "toast--success":       "toast toast--success",
+      "toast--warn":          "toast toast--warn",
+      "toast--danger":        "toast toast--danger"
+    },
+    "feedback": {
+      "spinner":              "spinner-border (Bootstrap) ODER eigene .spinner (für Inline-Buttons)",
+      "skeleton":             "skeleton (eigene Klasse, Bootstrap hat keinen Skeleton-Primitive)"
+    },
+    "icons": {
+      "icon":                 "bi <name> (Bootstrap-Icons, CDN)"
+    }
+  },
+  "selectors": 64,
+  "classes": 28,
+  "declaredTokens": 60,
+  "referencedTokens": 52,
+  "groups": [
+    {
+      "id": "buttons",
+      "title": "Buttons",
+      "description": "Bootstrap-`.btn` mit Salwei-Politur (Pill, Uppercase, Salwei-Fokus). Primärfarbe Salwei, funktional.",
+      "selectors": [
+        ".btn",
+        ".btn:focus-visible",
+        ".btn[aria-busy='true']",
+        ".btn-primary",
+        ".btn-primary:hover",
+        ".btn-primary:disabled",
+        ".btn-outline-secondary",
+        ".btn-outline-secondary:hover",
+        ".btn-outline-secondary:disabled",
+        ".btn-link",
+        ".btn-link:hover",
+        ".btn-link:disabled",
+        ".btn-danger",
+        ".btn-danger:hover",
+        ".btn-danger:disabled",
+        ".btn-sm",
+        ".btn-lg",
+        ".btn-group",
+        ".btn-close"
+      ],
+      "tokens": ["--bs-primary", "--accent", "--accent-on", "--accent-soft", "--surface", "--fg", "--muted", "--border", "--status-expired", "--radius-pill", "--field-height", "--field-height-compact", "--field-height-hero", "--tracking-button", "--weight-semibold"]
+    },
+    {
+      "id": "forms",
+      "title": "Formulare & Eingaben",
+      "description": "Bootstrap-`.form-control` / `.form-label` / `.form-select` / `.form-text` mit Salwei-Fokus. Status via `.is-invalid` + `.invalid-feedback` und `.is-valid` + `.valid-feedback`.",
+      "selectors": [
+        ".form-label",
+        ".form-control",
+        ".form-control:focus",
+        ".form-control.is-invalid",
+        ".form-control.is-invalid:focus",
+        ".form-control.is-valid",
+        ".form-select",
+        ".form-text",
+        ".invalid-feedback",
+        ".valid-feedback",
+        ".field--search",
+        ".field--search .form-control",
+        ".field--search .clear",
+        ".field--code",
+        ".field--code input",
+        ".field--code input:focus-visible"
+      ],
+      "tokens": ["--bs-body-bg", "--bs-body-color", "--bs-border-color", "--surface", "--fg", "--muted", "--meta", "--border", "--border-strong", "--accent", "--accent-soft", "--status-expired", "--status-fresh", "--radius-md", "--field-height", "--space-2", "--space-3", "--text-sm", "--text-base", "--font-mono"]
+    },
+    {
+      "id": "cards",
+      "title": "Karten & Panels",
+      "description": "Bootstrap-`.card` mit Marken-Politur. BG --surface, 1 px Border, radius-md, Hover elev-raised. Kein Left-Border-Akzent.",
+      "selectors": [
+        ".card",
+        ".card:hover",
+        ".card-body",
+        ".card__header",
+        ".card__footer",
+        ".card--hero"
+      ],
+      "tokens": ["--bs-card-bg", "--bs-card-border-color", "--surface", "--border", "--fg", "--muted", "--radius-md", "--space-4", "--space-5", "--elev-raised"]
+    },
+    {
+      "id": "lists",
+      "title": "Listen",
+      "description": "Bootstrap-`.list-group` mit Custom-Geometrie (56 px Min-Höhe, 40 px Leading-Avatar).",
+      "selectors": [
+        ".list-group",
+        ".list-group-item",
+        ".list-group-item.active",
+        ".list-group-item__leading",
+        ".list-group-item__body",
+        ".list-group-item__title",
+        ".list-group-item__meta",
+        ".list-group-item__trailing"
+      ],
+      "tokens": ["--bs-list-group-bg", "--bs-list-group-border-color", "--bs-list-group-action-hover-bg", "--bs-list-group-active-bg", "--surface", "--fg", "--fg-2", "--muted", "--meta", "--border", "--accent-soft", "--accent", "--space-3", "--space-4", "--text-base", "--text-sm", "--weight-semibold"]
+    },
+    {
+      "id": "tables",
+      "title": "Tabellen & Datentabellen",
+      "description": "Bootstrap-`.table` mit Marken-Politur. Trennlinien 1 px --border, Header uppercase xs, Mono-Spalten rechtsbündig.",
+      "selectors": [
+        ".table",
+        ".table > thead",
+        ".table > thead > th",
+        ".table > tbody > tr:hover",
+        ".table tr.is-selected > *",
+        ".table .num",
+        ".table-sm",
+        ".table-responsive",
+        ".table-empty"
+      ],
+      "tokens": ["--bs-table-bg", "--bs-table-color", "--bs-table-border-color", "--bs-table-hover-bg", "--surface", "--bg", "--fg", "--muted", "--meta", "--border", "--accent-soft", "--accent", "--space-2", "--space-3", "--space-4", "--text-sm", "--text-xs", "--text-mono", "--font-mono", "--weight-semibold"]
+    },
+    {
+      "id": "app-layout",
+      "title": "App-Layout, Sidebar, Topbar, Bottom-Nav",
+      "description": "Sidebar 240 px + Topbar 56 px auf ≥ 1024 px. Darunter ersetzt eine Bottom-Nav mit 4 Hauptpunkten die Sidebar (env(safe-area-inset-bottom) für iOS).",
+      "selectors": [
+        ".app",
+        ".app__sidebar",
+        ".app__main",
+        ".app__topbar",
+        ".sidebar__section",
+        ".sidebar__section-label",
+        ".sidebar .nav-link",
+        ".sidebar .nav-link:hover",
+        ".sidebar .nav-link.active",
+        ".topbar__title",
+        ".topbar__actions",
+        ".bottom-nav",
+        ".bottom-nav .nav",
+        ".bottom-nav .nav-link",
+        ".bottom-nav .nav-link.active",
+        ".bottom-nav .nav-link:focus-visible"
+      ],
+      "tokens": ["--surface-warm", "--surface", "--bg", "--fg", "--fg-2", "--muted", "--border", "--accent", "--accent-soft", "--sidebar-width", "--topbar-height", "--container-max", "--container-gutter-desktop", "--container-gutter-phone", "--text-eyebrow", "--tracking-eyebrow", "--space-3", "--space-4", "--weight-semibold", "--weight-regular"]
+    },
+    {
+      "id": "modals-toasts",
+      "title": "Modals, Toasts, Feedback",
+      "description": "Bootstrap-`.modal` und `.toast` mit Salwei-Politur. Modals radius-lg mit elev-overlay, Toasts radius-md mit Status-Border links.",
+      "selectors": [
+        ".modal-content",
+        ".modal-header",
+        ".modal-body",
+        ".modal-footer",
+        ".modal--demo",
+        ".toast",
+        ".toast--info",
+        ".toast--success",
+        ".toast--warn",
+        ".toast--danger",
+        ".toast__title",
+        ".toast__body",
+        ".empty",
+        ".empty__icon",
+        ".spinner-border",
+        ".spinner",
+        ".skeleton"
+      ],
+      "tokens": ["--bs-modal-bg", "--bs-modal-border-color", "--surface", "--bg", "--fg", "--muted", "--meta", "--border", "--status-fresh", "--status-soon", "--status-expired", "--info", "--radius-md", "--radius-lg", "--elev-overlay", "--elev-raised", "--space-6", "--text-display", "--text-h2", "--text-sm", "--text-base", "--weight-semibold"]
+    },
+    {
+      "id": "status-chips",
+      "title": "Vorratsstatus (Bootstrap-Badges)",
+      "description": "Bootstrap-`.badge` mit Status-Modifiern. Vierstufig: fresh, soon, critical, expired. Farbe + Icon + Text, niemals nur Farbe.",
+      "selectors": [
+        ".badge",
+        ".badge--fresh",
+        ".badge--soon",
+        ".badge--critical",
+        ".badge--expired",
+        ".badge--neutral"
+      ],
+      "tokens": ["--status-fresh", "--status-soon", "--status-critical", "--status-expired", "--muted", "--surface", "--fg", "--radius-sm", "--space-1", "--space-2", "--text-xs", "--weight-semibold", "--leading-tight"]
+    },
+    {
+      "id": "dashboard",
+      "title": "Dashboard / Kennzahlen-Kacheln",
+      "description": "Bootstrap-`.card` + KPI-Pattern. Eyebrow + große Zahl + Delta. Eine Kachel darf Salwei-Soft als BG haben.",
+      "selectors": [
+        ".kpi",
+        ".kpi__label",
+        ".kpi__value",
+        ".kpi__delta",
+        ".kpi__delta--up",
+        ".kpi__delta--down",
+        ".kpi__sparkline",
+        ".kpi--focus"
+      ],
+      "tokens": ["--surface", "--accent-soft", "--border", "--fg", "--muted", "--accent", "--status-critical", "--radius-md", "--space-4", "--space-5", "--text-display", "--text-eyebrow", "--text-sm", "--weight-semibold", "--tracking-eyebrow"]
+    },
+    {
+      "id": "charts",
+      "title": "Diagramme / Charts",
+      "description": "Chart.js / ApexCharts. Primärfarbe --accent, Sekundärfarben Status-Quadrupel. Achsen --muted, Trennlinien --border.",
+      "selectors": [
+        ".chart",
+        ".chart__legend",
+        ".chart__tooltip",
+        ".chart__axis",
+        ".chart__grid"
+      ],
+      "tokens": ["--accent", "--status-fresh", "--status-soon", "--status-critical", "--status-expired", "--fg", "--muted", "--meta", "--border", "--surface", "--text-sm", "--text-xs", "--weight-regular", "--leading-tight"]
+    },
+    {
+      "id": "auth",
+      "title": "Auth-Bereich",
+      "description": "Brand-Panel links (surface-warm), Form-Panel rechts (bg). Mobile nur Form-Panel. Form nutzt Bootstrap-`.form-control`.",
+      "selectors": [
+        ".auth",
+        ".auth__brand",
+        ".auth__brand__logo",
+        ".auth__brand__headline",
+        ".auth__brand__art",
+        ".auth__form",
+        ".auth__title",
+        ".auth__sub",
+        ".auth__footer",
+        ".auth__switch"
+      ],
+      "tokens": ["--surface-warm", "--surface", "--bg", "--fg", "--muted", "--accent", "--accent-soft", "--border", "--radius-md", "--radius-lg", "--space-12", "--text-display", "--text-h2", "--text-sm", "--text-base", "--weight-semibold"]
+    }
+  ],
+  "utilities": {
+    "_comment": "Eigene Helper-Klassen, die nicht durch Bootstrap-Standard-Utilities abgedeckt sind.",
+    "stack-2": "gap: var(--space-2); display: flex; flex-direction: column;",
+    "stack-3": "gap: var(--space-3); display: flex; flex-direction: column;",
+    "stack-4": "gap: var(--space-4); display: flex; flex-direction: column;",
+    "stack-6": "gap: var(--space-6); display: flex; flex-direction: column;",
+    "eyebrow": "font: var(--weight-semibold) var(--text-eyebrow)/var(--leading-tight) var(--font-body); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--muted);",
+    "page-header": "page-header (eigene Klasse, da Bootstrap keine Brand-Pattern-Header kennt)",
+    "page-header__brand": "page-header__brand (Wortmarke, kein h1)",
+    "page-nav": "page-nav (eigene Klasse, sticky Anker-Sektion-Navigation)",
+    "app": "app (eigene Grid-Klasse für App-Shell)",
+    "app__sidebar": "app__sidebar (eigene Komponente)",
+    "bottom-nav": "bottom-nav (eigene Komponente, sticky mobile)",
+    "modal--demo": "modal--demo (Demo-Modal ohne JS im Spec-Sheet sichtbar)",
+    "skeleton": "skeleton (eigene Klasse, Bootstrap hat keinen Skeleton-Primitive)",
+    "kpi": "kpi (Layout-Pattern auf .card)",
+    "kpi__label": "kpi__label",
+    "kpi__value": "kpi__value",
+    "kpi__delta": "kpi__delta",
+    "kpi__sparkline": "kpi__sparkline",
+    "kpi--focus": "kpi--focus",
+    "auth": "auth (eigene Grid-Klasse für Split-Screen)",
+    "auth__brand": "auth__brand",
+    "auth__form": "auth__form",
+    "field--code": "field--code (6-stellige Code-Inputs, Mono, 48×56 px)",
+    "toast-stack": "toast-stack (vertikaler Stapel-Container)"
+  },
+  "bootstrapReplaced": {
+    "_comment": "Bootstrap-Komponenten, die wir NICHT verwenden, weil proviant eine andere visuelle Sprache hat.",
+    "dropdown-menu": "Wir nutzen stattdessen Sidebar-Lists + Modals; Bootstrap-Dropdown passt visuell nicht zur Pill-/Crème-Sprache.",
+    "navbar": "Wir nutzen die eigene .app__topbar + .sidebar; Bootstrap-Navbar überschreibt die Marken-Geometrie zu stark.",
+    "carousel": "Nicht im Scope; Charts und Karten tragen die Information.",
+    "btn-toolbar": "Nicht im Scope; wir nutzen .btn-group und Layout-Utilities direkt.",
+    "form-floating": "Die Labels sind in der Vorrats-Domain hilfreicher als Floating; daher klassisches Label über Input."
+  },
+  "iconSystem": {
+    "library": "bootstrap-icons 1.11.3 (CDN)",
+    "usage": "Nur als Klassen-Name, z. B. <i class='bi bi-search'></i>. Niemals Emojis als UI-Icon.",
+    "common": ["bi-basket", "bi-bell", "bi-check-circle", "bi-chevron-expand", "bi-chevron-right", "bi-clock", "bi-exclamation-triangle", "bi-info-circle", "bi-search", "bi-x-circle", "bi-x-lg"]
+  }
+}

@@ -1,0 +1,147 @@
+/* ─────────────────────────────────────────────────────────────────────────
+ * design-system/tokens.css
+ * proviant — Design Tokens, verbindlich für src/templates/web und
+ * src/components. Single Source of Truth neben DESIGN.md.
+ *
+ * Schema-Slots: --bg, --surface, --fg, --muted, --border, --accent.
+ * Schema-Zusätze (semantisch): --surface-warm, --fg-2, --meta,
+ *   --border-strong, --accent-soft, --accent-on, --shadow-warm,
+ *   --success, --warn, --danger, --info, --focus-ring.
+ * Status-Quadrupel (Vorratssprache): --status-fresh, --status-soon,
+ *   --status-critical, --status-expired.
+ * Typografie: VendSans (Variable 300–700) + DMMono.
+ *
+ * Bootstrap 5.3-Bindung: Im HTML-Markup, das diese Tokens konsumiert, werden
+ * die Markenfarben zusätzlich in die Bootstrap-Theme-Variablen gespiegelt
+ * (`--bs-primary`, `--bs-body-bg`, `--bs-body-color`, `--bs-border-color`,
+ * `--bs-border-radius-*`, etc.). Dadurch erbt jede Bootstrap-Komponente
+ * (`.btn-primary`, `.form-control`, `.card`, `.table`, `.modal`, `.toast`,
+ * `.badge`, `.nav`, `.spinner-border`) konsistent die proviant-Palette,
+ * ohne dass pro Komponente BG/FG neu gesetzt werden müssen. Siehe
+ * DESIGN.md § 2.5 und `components.html` Bootstrap-Bindings.
+ * ─────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ─── Schema-Slots ─────────────────────────────────────────────── */
+  --bg:           #FAF7F1;             /* Crème-Papier, App-Hintergrund */
+  --surface:      #FFFFFF;             /* Karten, Panels, Inset-Container */
+  --fg:           #2A2A2A;             /* Primäre Tinte, Überschriften */
+  --muted:        #6B6B6B;             /* Sekundärtext, Meta, Labels */
+  --border:       #E5DFD3;             /* Standard-Rahmen, Trennlinien */
+  --accent:       #5A8A7A;             /* Salwei — primäre Aktion */
+
+  /* ─── Erweiterte Slots (semantisch) ───────────────────────────── */
+  --surface-warm: #F1ECE0;             /* Auth-Brand-Panel, Hervorhebung */
+  --fg-2:         #4A4A4A;             /* Sekundäre Tinte, leicht heller */
+  --meta:         #8A8A8A;             /* Tertiärer Text, Zeitstempel */
+  --border-strong:#D5CDB8;             /* Verstärkter Rahmen, Fokus-Feld */
+  --accent-soft:  #DDE7E0;             /* Salwei getintet, Hover-BG, Chips */
+  --accent-on:    #FFFFFF;             /* Text auf Salwei */
+  --shadow-warm:  rgba(80, 60, 30, 0.08);
+
+  /* ─── Vorratsstatus (eigene Sprache) ──────────────────────────── */
+  --status-fresh:   #5A8A7A;           /* Haltbarkeit > 7 Tage */
+  --status-soon:    #C2A24A;           /* 3 – 7 Tage */
+  --status-critical:#C26A3F;           /* 1 – 2 Tage */
+  --status-expired: #A24A4A;           /* abgelaufen */
+
+  /* ─── Semantische Aliase ──────────────────────────────────────── */
+  --success: #5A8A7A;                  /* = --status-fresh */
+  --warn:    #C2A24A;                  /* = --status-soon */
+  --danger:  #A24A4A;                  /* = --status-expired */
+  --info:    #5A7A8A;                  /* Hinweise, gedeckt */
+
+  /* ─── Typografie ─────────────────────────────────────────────── */
+  --font-display: "VendSans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-body:    "VendSans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono:    "DMMono", ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
+
+  /* Type-Skala (VendSans, falls nicht geladen: System-Fallback) */
+  --text-display:    32px;
+  --text-h1:         24px;
+  --text-h2:         20px;
+  --text-h3:         18px;
+  --text-base:       15px;
+  --text-base-bold:  15px;
+  --text-sm:         13px;
+  --text-xs:         11px;
+  --text-eyebrow:    11px;
+  --text-mono:       13px;
+
+  --leading-tight:  1.20;
+  --leading-snug:   1.30;
+  --leading-body:   1.55;
+  --leading-mono:   1.40;
+
+  --tracking-tight:  -0.01em;
+  --tracking-flat:   0;
+  --tracking-button: 0.04em;           /* uppercase Buttons */
+  --tracking-eyebrow:0.10em;           /* uppercase Sektions-Label */
+
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* ─── Spacing (4-px-Basis) ────────────────────────────────────── */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+
+  /* ─── Radius ─────────────────────────────────────────────────── */
+  --radius-sm:   4px;                  /* Badges, Tags, kleine Chips */
+  --radius-md:   8px;                  /* Standard-Karten, Inputs */
+  --radius-lg:   12px;                 /* Hero-Karten, Modals */
+  --radius-pill: 999px;                /* Pill-Buttons, Tag-Filter */
+
+  /* ─── Schatten (Sepia, nicht neutral) ────────────────────────── */
+  --elev-flat:    none;
+  --elev-raised:  0 1px 2px rgba(80, 60, 30, 0.06), 0 4px 12px rgba(80, 60, 30, 0.08);
+  --elev-overlay: 0 8px 24px rgba(80, 60, 30, 0.12), 0 24px 48px rgba(80, 60, 30, 0.10);
+  --elev-inset:   inset 0 0 0 1px var(--border);
+  --elev-focus:   inset 0 0 0 1px var(--accent);
+
+  /* ─── Focus-Ring ─────────────────────────────────────────────── */
+  --focus-ring: 0 0 0 3px var(--accent-soft);
+
+  /* ─── Motion ─────────────────────────────────────────────────── */
+  --motion-fast:   120ms;
+  --motion-base:   180ms;
+  --motion-slow:   240ms;
+  --ease-out:      cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* ─── Layout ─────────────────────────────────────────────────── */
+  --container-max:            1120px;
+  --container-gutter-desktop: 48px;
+  --container-gutter-tablet:  24px;
+  --container-gutter-phone:   16px;
+
+  --sidebar-width:            240px;
+  --topbar-height:            56px;
+  --field-height:             40px;
+  --field-height-hero:        48px;
+  --field-height-compact:     32px;
+
+  /* ─── Breakpoints (zur Dokumentation; nutze @media in Komponenten) ─
+   * --bp-phone:  360px;
+   * --bp-tablet: 768px;
+   * --bp-desktop:1024px;
+   * --bp-wide:   1440px;
+   * ───────────────────────────────────────────────────────────── */
+}
+
+/* Reduce-Motion: alle Dauern auf 0, Loops deaktivieren */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
+}
