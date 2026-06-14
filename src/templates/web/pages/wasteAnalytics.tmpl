@@ -1,0 +1,121 @@
+{{ define "content" }}
+
+{{ if .HasHousehold }}
+
+<div aria-live="polite" aria-atomic="true" class="visually-hidden" id="waste-status"></div>
+
+<div class="px-3 pt-3">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <div>
+            <h1 class="h3 mb-1">Waste Analytics</h1>
+            <div class="text-secondary-custom small">Track what you consume versus what you throw away, and the cost of waste.</div>
+        </div>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Period selector" id="periodSelector">
+            <button type="button" class="btn btn-outline-secondary" data-period="month">This Month</button>
+            <button type="button" class="btn btn-outline-secondary" data-period="3months">3 Months</button>
+            <button type="button" class="btn btn-outline-secondary active" data-period="6months" aria-pressed="true">6 Months</button>
+            <button type="button" class="btn btn-outline-secondary" data-period="12months">12 Months</button>
+        </div>
+    </div>
+
+    <div class="row row-cols-2 row-cols-md-5 g-3 mb-2" id="wasteTiles"></div>
+
+    <div class="row g-3">
+        <div class="col-md-7">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                    <div class="icon-chip" aria-hidden="true"><i class="bi bi-bar-chart-line-fill"></i></div>
+                    Monthly Breakdown
+                </div>
+                <div class="card-body">
+                    <canvas id="chartMonthly" role="img" aria-label="Bar chart: consumed versus wasted products per month"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                    <div class="icon-chip" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></div>
+                    Waste Trend (last 6 months)
+                </div>
+                <div class="card-body">
+                    <canvas id="chartTrend" role="img" aria-label="Line chart: wasted products trend over the last 6 months"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-md-7">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                    <div class="icon-chip" aria-hidden="true"><i class="bi bi-table"></i></div>
+                    Monthly Details
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle" id="monthlyTable">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Month</th>
+                                    <th scope="col" class="text-end">Consumed</th>
+                                    <th scope="col" class="text-end">Wasted</th>
+                                    <th scope="col" class="text-end">Waste %</th>
+                                    <th scope="col" class="text-end">Wasted €</th>
+                                    <th scope="col" class="text-end">CO₂ kg</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                    <div class="icon-chip" aria-hidden="true"><i class="bi bi-tags-fill"></i></div>
+                    <span class="flex-grow-1">Most Wasted Categories</span>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Sort by" id="sortToggle">
+                        <button type="button" class="btn btn-outline-secondary active" data-sort="count" aria-pressed="true">Count</button>
+                        <button type="button" class="btn btn-outline-secondary" data-sort="cost" aria-pressed="false">Cost</button>
+                    </div>
+                </div>
+                <div class="accordion accordion-flush" id="categoryList"></div>
+            </div>
+        </div>
+    </div>
+
+    <p class="text-secondary-custom small mt-3 mb-0">
+        <i class="bi bi-info-circle"></i>
+        CO₂ values use the Agribalyse LCA database via Open Food Facts ecoscore_data. EUR values use per-product overrides when set, otherwise category averages. Hard-deleted products fall into the "Other" bucket.
+    </p>
+</div>
+
+<script src="/assets/js/chart.umd.min.js" defer></script>
+<script src="/assets/js/wasteAnalytics.js" defer></script>
+
+{{ else }}
+
+<div class="container">
+    <div class="row text-center">
+        <p class="fs-1">
+            <i class="bi bi-emoji-dizzy-fill my-5 text-primary"></i>
+        </p>
+        <p class="fs-2 my-2">
+            No household yet
+        </p>
+        <p class="my-3">
+            Connect to or create a household to see your waste analytics.
+        </p>
+        <div class="my-4">
+            <a class="btn btn-proviant-primary" href="/web/user/settings#household">
+                <i class="bi bi-people me-2"></i> Set up Household
+            </a>
+        </div>
+    </div>
+</div>
+
+{{ end }}
+
+{{ end }}

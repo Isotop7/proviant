@@ -35,6 +35,36 @@ Use Context7 MCP tools automatically (without being asked) for library/API docs,
 
 ## Build, Lint, and Test Commands
 
+**Always prefer `task` wrappers** over vanilla `npm`/`go`/`podman` calls. The Taskfile centralizes flags, paths, and side-effects (cache dirs, font/icon copying, container mounts) so the same task works identically across machines.
+
+### Task cheat sheet
+
+| Task | Use when… |
+|------|-----------|
+| `task init` | First-time setup or after pulling changes that touch `package.json` / `go.mod`. Installs npm deps, copies vendor assets, builds CSS/JS, runs `go get -u`. |
+| `task css` | You edited any `.scss` file under `src/templates/scss/`. SCSS is what gets compiled to `src/assets/css/` — edits have no effect until recompiled. |
+| `task js` | You added/changed a frontend npm dep (bootstrap, chart.js, html5-qrcode) that must be copied into `src/assets/js/`. Pure-JS source edits do not need this. |
+| `task icons` | You added/updated files under `res/icons/` and need them propagated to `src/assets/icons/`. |
+| `task fonts` | Font files changed. Usually called automatically as a dep of `task css`. |
+| `task lint` / `task lint-css` / `task lint-js` / `task lint-html` | Before committing frontend changes. Runs stylelint/eslint/htmlhint. |
+| `task vet` | Quick `go vet` pass without running the full linter container. |
+| `task tidy` | Before committing Go changes. Runs `go fmt` and `go mod tidy`. |
+| `task test` | Before committing. Runs the full Go test suite with `-race`. |
+| `task test-single` | Running a single test — use the pattern in "Quality Control" below, or invoke `go test` directly inside `src/`. |
+| `task check` | Pre-commit / pre-push Go lint via golangci-lint in a container. Replaces raw `golangci-lint run`. |
+| `task check-changed` | Lint only files changed vs. previous commit. Faster local feedback loop. |
+| `task doc` | After adding/changing exported Go symbols or Swagger annotations. Regenerates godoc + Swagger output. |
+| `task run` | Local dev server. |
+| `task containerimage` / `task runcontainer` / `task runcontainerdebug` | Building or running the containerized app. |
+| `task vuln` / `task vuln-go` / `task vuln-npm` | Security audits for Go and npm deps. |
+| `task seed` / `task seed-reset` | Populate / wipe demo products for a user. |
+
+### Do not
+- Do not run `npm install`, `npm run css`, `npm run lint-*`, or `npm test` directly — use `task init` / `task css` / `task lint` / `task test` (or a direct `go test` for the single-test case below) so deps, caches, and asset copies stay in sync.
+- Do not run `podman`/`docker build` directly — use `task containerimage`.
+- Do not run `golangci-lint run` directly — use `task check` (handles container, config mount, cache dirs).
+- Do not run `go run` for the dev server — use `task run`.
+
 ### Build and Setup
 ```bash
 # Initialize project (install dependencies, build CSS/JS, copy assets)
@@ -79,8 +109,13 @@ task css
 # Build JS
 task js
 
-# Run frontend tests
-npm test
+# Lint all frontend
+task lint
+
+# Lint a single domain
+task lint-css
+task lint-js
+task lint-html
 ```
 
 ## Code Style Guidelines

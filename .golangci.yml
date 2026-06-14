@@ -70,6 +70,10 @@ linters:
       - path: middleware\.go
         linters: [gosec]
         text: "G101:"
+      # G101: User-facing brand copy contains the word "password" but no credential
+      - path: frontend\.go
+        linters: [gosec]
+        text: "G101:"
 
 formatters:
   enable: []

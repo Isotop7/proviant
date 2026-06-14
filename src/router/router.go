@@ -214,6 +214,8 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	engine.POST("/auth/signup", signupRateLimitMiddleware, auth.Signup)
 	engine.POST("/auth/verify-email", auth.VerifyEmail)
 	engine.POST("/auth/invite/accept", auth.AcceptInvitation)
+	engine.POST("/auth/forgot-password", publicPasswordRateLimitMiddleware, auth.ForgotPassword)
+	engine.POST("/auth/reset-password", publicPasswordRateLimitMiddleware, auth.ResetPassword)
 	engine.GET("/auth/refresh_token", jwtAPIMiddleware.RefreshHandler)
 
 	// Logout route (requires authentication)
@@ -281,6 +283,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	savingsAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	savingsAPI.GET("/stats", v1.WrapHandler(v1.GetSavingsStats))
 
+	// Waste analytics routes
+	wasteAPI := engine.Group("/api/v1/stats/waste")
+	wasteAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
+	wasteAPI.GET("", v1.WrapHandler(v1.GetWasteAnalytics))
+
 	// Recipe suggestion routes
 	recipeAPI := engine.Group("/api/v1/recipes")
 	recipeAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
@@ -300,6 +307,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAPI.POST("/:id/apply", v1.WrapHandler(v1.ApplyForHousehold))
 	householdAPI.GET("/applications", v1.WrapHandler(v1.GetHouseholdApplications))
 	householdAPI.GET("/activity", v1.WrapHandler(v1.GetHouseholdActivity))
+	householdAPI.GET("/settings", v1.WrapHandler(v1.GetHouseholdSettings))
 
 	householdAdminAPI := householdAPI.Group("")
 	householdAdminAPI.Use(RequireHouseholdAdmin())
@@ -307,6 +315,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAdminAPI.POST("/applications/:id/reject", v1.WrapHandler(v1.RejectHouseholdApplication))
 	householdAdminAPI.DELETE("/applications/:id", v1.WrapHandler(v1.CancelHouseholdApplication))
 	householdAdminAPI.PATCH("/name", v1.WrapHandler(v1.UpdateHouseholdName))
+	householdAdminAPI.PATCH("/settings", v1.WrapHandler(v1.UpdateHouseholdSettings))
 	householdAdminAPI.DELETE("/members/:userId", v1.WrapHandler(v1.RemoveHouseholdMember))
 	householdAdminAPI.PATCH("/members/:userId/role", v1.WrapHandler(v1.UpdateHouseholdMemberRole))
 	householdAdminAPI.POST("/invitations", v1.WrapHandler(v1.CreateInvitation))
@@ -336,6 +345,8 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedProductAPI := engine.Group("/api/v1/products")
 	protectedProductAPI.Use(jwtAPIUserAwareMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	protectedProductAPI.GET("/:id", v1.WrapHandler(v1.GetProduct))
+	protectedProductAPI.GET("/:id/consumption-rate", v1.WrapHandler(v1.GetConsumptionRate))
+	protectedProductAPI.GET("/:id/restock-suggestion", v1.WrapHandler(v1.GetRestockSuggestion))
 	protectedProductMemberAPI := protectedProductAPI.Group("")
 	protectedProductMemberAPI.Use(RequireHouseholdRole(authentication.RoleAdmin, authentication.RoleMember))
 	protectedProductMemberAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateProduct))
@@ -427,6 +438,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products/scan", webFrontendHandler.ProductsScan)
 	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
 	publicWebFrontend.GET("/recipes", webFrontendHandler.Recipes)
+	publicWebFrontend.GET("/waste-analytics", webFrontendHandler.WasteAnalytics)
 	publicWebFrontend.GET("/shopping-list", webFrontendHandler.ShoppingList)
 
 	// Public invite acceptance page (no auth required)
@@ -434,6 +446,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Public email verification page (no auth required)
 	engine.GET("/web/verify-email", webFrontendHandler.VerifyEmail)
+
+	// Public forgot-password page (no auth required)
+	engine.GET("/web/forgot-password", webFrontendHandler.ForgotPassword)
+
+	// Public password reset page (no auth required)
+	engine.GET("/web/reset-password", webFrontendHandler.ResetPassword)
 
 	// Public unsubscribe page (no auth required)
 	engine.GET("/web/unsubscribe", webFrontendHandler.Unsubscribe)

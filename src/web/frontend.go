@@ -124,6 +124,10 @@ func (frontend *Frontend) Auth(ctx *gin.Context) {
 		"PasswordRequireUppercase": requireUppercase,
 		"PasswordRequireDigit":     requireDigit,
 		"PasswordRequireSpecial":   requireSpecial,
+		"RouteForgotPassword":      util.RouteForgotPassword,
+		"BrandHeadline":            authBrandHeadline,
+		"BrandSub":                 authBrandSub,
+		"BrandFeatures":            authBrandFeatures,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "auth.tmpl", pageData)
 }
@@ -736,6 +740,35 @@ func (frontend *Frontend) Recipes(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "recipes.tmpl", pageData)
 }
 
+// WasteAnalytics renders the waste analytics dashboard
+// @Summary      Waste Analytics page
+// @Description  Renders consumed-vs-wasted metrics, monthly breakdown, and most-wasted categories
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/waste-analytics [get]
+func (frontend *Frontend) WasteAnalytics(ctx *gin.Context) {
+	_, repos, userID, ok := frontend.mustGetPageContext(ctx)
+	if !ok {
+		return
+	}
+
+	householdID, err := repos.Users.GetUserHouseholdByID(userID)
+	if err != nil || householdID == 0 {
+		householdID = 0
+	}
+
+	pageData := map[string]any{
+		"Title":        "Waste Analytics",
+		"HasHousehold": householdID > 0,
+		"HouseholdID":  householdID,
+	}
+
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "wasteAnalytics.tmpl", pageData)
+}
+
 // ShoppingList renders the shopping list page
 // @Summary      Shopping List page
 // @Description  Renders the shared household shopping list with custom items and import banner
@@ -879,3 +912,82 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 		"HouseholdName": user.Household.Name,
 	})
 }
+
+// ForgotPassword renders the forgot-password page (form to request a reset link).
+// @Summary      Forgot password page
+// @Description  Renders the page that lets users request a password reset link via email.
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Router       /web/forgot-password [get]
+func (frontend *Frontend) ForgotPassword(ctx *gin.Context) {
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "forgotPassword.tmpl", map[string]any{
+		"Title":               "Forgot Password",
+		"RouteForgotPassword": util.RouteForgotPassword,
+		"RouteAuth":           util.RouteAuth,
+		"BrandHeadline":       forgotPasswordBrandHeadline,
+		"BrandSub":            forgotPasswordBrandSub,
+		"BrandFeatures":       forgotPasswordBrandFeatures,
+	})
+}
+
+// ResetPassword renders the password reset page (form to set a new password via token).
+// @Summary      Reset password page
+// @Description  Renders the page that lets users set a new password using a reset token.
+// @Tags         web
+// @Produce      html
+// @Param        token  query  string  false  "Reset token"
+// @Success      200    {string}  html
+// @Router       /web/reset-password [get]
+func (frontend *Frontend) ResetPassword(ctx *gin.Context) {
+	token := ctx.Query("token")
+
+	data := map[string]any{
+		"Title":               "Reset Password",
+		"RouteAuth":           util.RouteAuth,
+		"RouteForgotPassword": util.RouteForgotPassword,
+		"BrandHeadline":       resetPasswordBrandHeadline,
+		"BrandSub":            resetPasswordBrandSub,
+		"BrandFeatures":       resetPasswordBrandFeatures,
+	}
+
+	if token == "" {
+		data["Error"] = "Please request a new reset link to continue."
+	} else {
+		data["Token"] = token
+	}
+
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "resetPassword.tmpl", data)
+}
+
+// BrandFeature is a single icon+text row in the brand panel of the
+// split-panel auth pages. Consumed by the partials/loginBrand.tmpl template.
+type BrandFeature struct {
+	Icon string
+	Text string
+}
+
+var (
+	authBrandHeadline = template.HTML("Less waste.<br>More meals.")
+	authBrandSub      = "Track what's in your pantry, get notified before things expire, and discover recipes with what you already have."
+	authBrandFeatures = []BrandFeature{
+		{Icon: "bi-upc-scan", Text: "Scan barcodes to add products instantly"},
+		{Icon: "bi-bell", Text: "Get notified before items expire"},
+		{Icon: "bi-journal-richtext", Text: "Recipe suggestions from your pantry"},
+		{Icon: "bi-graph-down-arrow", Text: "Track savings and reduce food waste"},
+	}
+	forgotPasswordBrandHeadline = "Forgot your password?"
+	forgotPasswordBrandSub      = "Enter your email and we'll send you a link to choose a new password."
+	forgotPasswordBrandFeatures = []BrandFeature{
+		{Icon: "bi-shield-lock", Text: "Your account stays protected"},
+		{Icon: "bi-envelope", Text: "A secure reset link in your inbox"},
+		{Icon: "bi-arrow-counterclockwise", Text: "Back to your pantry in minutes"},
+	}
+	resetPasswordBrandHeadline = "Choose a new password"
+	resetPasswordBrandSub      = "Pick something strong. We'll get you back to your pantry in no time."
+	resetPasswordBrandFeatures = []BrandFeature{
+		{Icon: "bi-shield-check", Text: "Encrypted in transit and at rest"},
+		{Icon: "bi-key", Text: "12+ characters keeps it strong"},
+		{Icon: "bi-check2-circle", Text: "Then you're back in"},
+	}
+)

@@ -145,18 +145,75 @@ document.addEventListener('DOMContentLoaded', async function () {
       const longestStreak = streak ? streak.longestStreak : 0;
       const streakHero = `${currentStreak} day${currentStreak !== 1 ? 's' : ''}`;
       const streakHeroClass = currentStreak > 0 ? 'metric-value' : 'metric-value text-secondary-custom';
-      const streakSub = longestStreak > 0 ? `Best: ${longestStreak} day${longestStreak !== 1 ? 's' : ''}` : null;
       const streakCol = renderTile('<i class="bi bi-fire"></i> Waste-free streak', streakHero, null, streakHeroClass);
-      if (streakSub) {
-        const tile = streakCol.querySelector('.metric-tile');
-        if (tile) {
+      const streakTile = streakCol.querySelector('.metric-tile');
+      if (streakTile) {
+        if (longestStreak > 0) {
           const sub = document.createElement('div');
           sub.style.cssText = 'font-size:var(--text-xs);color:var(--fg-3);margin-top:var(--space-1)';
-          sub.textContent = streakSub;
-          tile.appendChild(sub);
+          sub.textContent = `Best: ${longestStreak} day${longestStreak !== 1 ? 's' : ''}`;
+          streakTile.appendChild(sub);
+        }
+        // Milestone progress: next milestone = 7, 30, 100, 365
+        const milestones = [7, 30, 100, 365];
+        const nextMilestone = milestones.find((m) => m > currentStreak);
+        if (nextMilestone) {
+          const prevMilestone = [...milestones].reverse().find((m) => m <= currentStreak) || 0;
+          const intoMilestone = currentStreak - prevMilestone;
+          const span = Math.max(1, nextMilestone - prevMilestone);
+          const milestonePct = Math.min(100, Math.round((intoMilestone / span) * 100));
+          const prog = document.createElement('div');
+          prog.style.cssText = 'margin-top:var(--space-2);font-size:var(--text-xs);color:var(--fg-3);';
+          prog.innerHTML = `
+            <div class="d-flex justify-content-between mb-1">
+              <span>Next milestone: ${nextMilestone}d</span>
+              <span>${intoMilestone}/${nextMilestone - prevMilestone}d</span>
+            </div>
+            <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${milestonePct}" style="height:6px;">
+              <div class="progress-bar" style="width:${milestonePct}%;background:var(--status-fresh);"></div>
+            </div>`;
+          streakTile.appendChild(prog);
+        } else {
+          const prog = document.createElement('div');
+          prog.style.cssText = 'margin-top:var(--space-2);font-size:var(--text-xs);color:var(--status-fresh);';
+          prog.innerHTML = `<i class="bi bi-trophy-fill me-1"></i>All milestones reached`;
+          streakTile.appendChild(prog);
         }
       }
       dashboard.appendChild(streakCol);
+
+      // Monthly waste goal tile
+      const settingsResponse = await proviant.getHouseholdSettings();
+      if (settingsResponse.code === 200 && settingsResponse.message) {
+        const hs = settingsResponse.message;
+        if (hs.monthlyWasteGoalType === 'count' || hs.monthlyWasteGoalType === 'percent') {
+          const goalCol = document.createElement('div');
+          goalCol.className = 'col';
+          const wasteThisMonth = s.wasteCount;
+          let pct = 0;
+          let label = '';
+          if (hs.monthlyWasteGoalType === 'count') {
+            const goal = hs.monthlyWasteGoalCount || 0;
+            pct = goal > 0 ? Math.min(100, Math.round((wasteThisMonth / goal) * 100)) : 0;
+            label = `${wasteThisMonth} / ${goal} wasted`;
+          } else {
+            const goal = hs.monthlyWasteGoalPercent || 0;
+            pct = goal > 0 ? Math.min(100, Math.round((s.wastePercent / goal) * 100)) : 0;
+            label = `${s.wastePercent.toFixed(1)}% / ${goal}%`;
+          }
+          const exceeded = pct >= 100;
+          const barColor = exceeded ? 'var(--status-expired)' : (pct >= 75 ? 'var(--status-soon)' : 'var(--status-fresh)');
+          goalCol.innerHTML = `
+            <div class="metric-tile h-100">
+              <div class="metric-label"><i class="bi bi-bullseye me-1"></i>Monthly goal</div>
+              <div class="metric-value" title="${label}" style="color:${exceeded ? 'var(--status-expired)' : 'var(--fg)'}">${label}</div>
+              <div class="progress mt-2" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" style="height:6px;">
+                <div class="progress-bar" style="width:${pct}%;background:${barColor};"></div>
+              </div>
+            </div>`;
+          dashboard.appendChild(goalCol);
+        }
+      }
 
       // Activity feed tile
       const activityResponse = await proviant.getActivityFeed(10);

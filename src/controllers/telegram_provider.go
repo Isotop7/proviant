@@ -74,6 +74,12 @@ func (t *TelegramNotificationProvider) SendStreakMilestone(milestone int, chatID
 	return t.sendMessage(chatID, text)
 }
 
+// SendStreakReset sends a streak-reset notification to a Telegram chat.
+func (t *TelegramNotificationProvider) SendStreakReset(previousStreak int, chatID string) error {
+	text := fmt.Sprintf("*Waste-free streak reset*\n\nYour previous streak of %d day%s has ended. Start a new one today!", previousStreak, pluralS(previousStreak))
+	return t.sendMessage(chatID, text)
+}
+
 func (t *TelegramNotificationProvider) sendMessage(chatID, text string) error {
 	payload := map[string]any{
 		"chat_id":    chatID,

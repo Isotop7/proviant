@@ -80,6 +80,7 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 		productRepo,
 	)
 	notificationController.StreakRepo = dbController.NewStreakRepository(dbHandle)
+	notificationController.SetActivityLogRepo(dbController.NewActivityLogRepository(dbHandle))
 	// Dispatch notification handler goroutine
 	notificationController.Dispatch()
 	// Dispatch invitation email retry goroutine (uses same Interval config)
@@ -251,6 +252,7 @@ func main() {
 		&dbModel.OpenFoodFactsCache{},
 		&dbModel.RecipeCache{},
 		&dbModel.EmailVerification{},
+		&dbModel.PasswordReset{},
 		&dbModel.Webhook{},
 		&dbModel.WebhookDeliveryLog{},
 		&dbModel.WasteStreak{},
@@ -321,6 +323,9 @@ func main() {
 	// Start background cleanup of expired recipe caches
 	go startRecipeCacheCleanup(logger, dbHandle)
 
+	// Start background cleanup of expired password-reset rows
+	go startPasswordResetCleanup(logger, dbHandle)
+
 	// Backfill storage hints and images for existing cache entries
 	if proviantConfiguration.OpenFoodFacts.CacheEnabled {
 		go backfillOpenFoodFactsCache(logger, dbHandle, offacntrl)
@@ -336,6 +341,24 @@ func startRevokedTokenCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
 
 	for range ticker.C {
 		cleanupExpiredRevokedTokens(logger, dbHandle)
+	}
+}
+
+// startPasswordResetCleanup runs a goroutine that periodically deletes
+// expired password-reset rows so the table does not grow unbounded.
+func startPasswordResetCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		result := dbHandle.Where("expires_at < ?", time.Now()).Delete(&dbModel.PasswordReset{})
+		if result.Error != nil {
+			logger.Warn().Msgf("Failed to cleanup expired password resets: %s", result.Error.Error())
+			continue
+		}
+		if result.RowsAffected > 0 {
+			logger.Info().Msgf("Cleaned up %d expired password resets", result.RowsAffected)
+		}
 	}
 }
 

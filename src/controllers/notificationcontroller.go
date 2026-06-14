@@ -48,6 +48,7 @@ type NotificationController struct {
 	NotificationRepo dbController.NotificationRepositoryInterface
 	ProductRepo      dbController.ProductRepositoryInterface
 	StreakRepo       dbController.StreakRepositoryInterface
+	ActivityLogRepo  dbController.ActivityLogRepositoryInterface
 	Providers        []NotificationProvider
 	telegramClient   *http.Client
 	telegramAPIBase  string
@@ -94,6 +95,11 @@ func NewNotificationController(
 	notificationController.initializeProviders()
 
 	return notificationController
+}
+
+// SetActivityLogRepo attaches the activity log repository used for streak-reset entries.
+func (nc *NotificationController) SetActivityLogRepo(repo dbController.ActivityLogRepositoryInterface) {
+	nc.ActivityLogRepo = repo
 }
 
 func telegramTimeout(config *configuration.NotificationConfiguration) int {
@@ -452,6 +458,23 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 	return nil
 }
 
+// SendPasswordReset sends a password reset email directly to the user.
+func (nc *NotificationController) SendPasswordReset(email, username, token, baseURL string, expiresAt time.Time) error {
+	emailProvider := nc.newEmailProvider()
+
+	if !emailProvider.IsConfigured() {
+		return errors.New(MsgEmailProviderNotConfigured)
+	}
+
+	if err := emailProvider.SendPasswordResetEmail(email, username, token, baseURL, expiresAt); err != nil {
+		nc.Logger.Error().Msgf("Failed to send password reset email to %s: %s", email, err)
+		return err
+	}
+
+	nc.Logger.Info().Msgf("Password reset email sent successfully to %s", email)
+	return nil
+}
+
 // DispatchMonthlyWasteReports starts a goroutine that sends household waste reports
 // on the configured day/hour (UTC) of each month to opted-in members via all enabled providers.
 func (nc *NotificationController) DispatchMonthlyWasteReports() {
@@ -571,8 +594,12 @@ func (nc *NotificationController) processStreakUpdates() {
 
 func (nc *NotificationController) processHouseholdStreak(streak *dbModel.WasteStreak, now time.Time, milestones []int) {
 	if streak.LastWastedDate != nil && !streak.LastWastedDate.Before(streak.LastCheckedDate) {
+		previousStreak := streak.CurrentStreak
 		streak.CurrentStreak = 0
 		streak.LastWastedDate = nil
+		if previousStreak > 0 {
+			nc.handleStreakReset(streak.HouseholdID, previousStreak)
+		}
 	} else {
 		streak.CurrentStreak++
 		if streak.CurrentStreak > streak.LongestStreak {
@@ -585,6 +612,81 @@ func (nc *NotificationController) processHouseholdStreak(streak *dbModel.WasteSt
 		}
 	}
 	streak.LastCheckedDate = now
+}
+
+// handleStreakReset records the streak reset in the activity feed and notifies
+// household members who have enabled notifications.
+func (nc *NotificationController) handleStreakReset(householdID uint, previousStreak int) {
+	if nc.ActivityLogRepo != nil {
+		_ = nc.ActivityLogRepo.Create(context.Background(), &dbModel.ActivityLog{
+			HouseholdID: householdID,
+			Action:      dbModel.ActivityActionStreakReset,
+			ProductName: fmt.Sprintf("Streak of %d day%s lost", previousStreak, pluralS(previousStreak)),
+			Quantity:    previousStreak,
+			Timestamp:   time.Now().UTC(),
+		})
+	}
+	nc.sendStreakResetNotifications(householdID, previousStreak)
+}
+
+func pluralS(n int) string {
+	if n == 1 {
+		return ""
+	}
+	return "s"
+}
+
+func (nc *NotificationController) sendStreakResetNotifications(householdID uint, previousStreak int) {
+	preferences, err := nc.NotificationRepo.GetHouseholdMembersNotificationPreferences(householdID)
+	if err != nil {
+		nc.Logger.Error().Msgf("Streak reset: failed to get preferences for household %d: %s", householdID, err)
+		return
+	}
+
+	emailProvider := nc.newEmailProvider()
+	ntfyProvider := nc.newNtfyProvider()
+
+	for i := range preferences {
+		nc.sendStreakResetEmailIfEnabled(previousStreak, &preferences[i], emailProvider)
+		nc.sendStreakResetNtfyIfEnabled(previousStreak, &preferences[i], ntfyProvider)
+		nc.sendStreakResetTelegramIfEnabled(previousStreak, &preferences[i])
+	}
+}
+
+func (nc *NotificationController) sendStreakResetEmailIfEnabled(
+	previousStreak int,
+	pref *models.NotificationRecipientInfo,
+	provider *EmailNotificationProvider,
+) {
+	if pref.EmailEnabled && pref.EmailAddress != "" && provider.IsConfigured() {
+		if sendErr := provider.SendStreakReset(previousStreak, pref.EmailAddress); sendErr != nil {
+			nc.Logger.Error().Msgf("Streak reset: email failed: %s", sendErr)
+		}
+	}
+}
+
+func (nc *NotificationController) sendStreakResetNtfyIfEnabled(
+	previousStreak int,
+	pref *models.NotificationRecipientInfo,
+	provider *NtfyNotificationProvider,
+) {
+	if pref.NtfyEnabled && provider.IsConfigured() {
+		if sendErr := provider.SendStreakReset(previousStreak, pref); sendErr != nil {
+			nc.Logger.Error().Msgf("Streak reset: ntfy failed: %s", sendErr)
+		}
+	}
+}
+
+func (nc *NotificationController) sendStreakResetTelegramIfEnabled(
+	previousStreak int,
+	pref *models.NotificationRecipientInfo,
+) {
+	if pref.TelegramEnabled && pref.TelegramChatID != "" && pref.TelegramBotToken != "" {
+		telegramProvider := nc.newTelegramProvider(pref.TelegramBotToken)
+		if sendErr := telegramProvider.SendStreakReset(previousStreak, pref.TelegramChatID); sendErr != nil {
+			nc.Logger.Error().Msgf("Streak reset: telegram failed: %s", sendErr)
+		}
+	}
 }
 
 func (nc *NotificationController) sendStreakMilestoneNotifications(householdID uint, milestone int) {

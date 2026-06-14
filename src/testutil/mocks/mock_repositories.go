@@ -40,6 +40,9 @@ func (m *MockProductRepository) GetUserProductsBulkByBarcode(userID uint, barcod
 func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.Product, error) {
 	return m.Product, m.Err
 }
+func (m *MockProductRepository) GetProductIdentity(productID, userID uint) (dbModel.Product, error) {
+	return m.Product, m.Err
+}
 func (m *MockProductRepository) GetArchivedProductByID(productID, userID uint) (dbModel.Product, error) {
 	return m.Product, m.Err
 }
@@ -163,6 +166,9 @@ func (m *MockProductRepository) GetSubThresholdProducts(userID uint) ([]dbModel.
 func (m *MockProductRepository) GetExpiringProductsForMailDigest(householdID uint) (database.MailDigestProductGroup, error) {
 	return database.MailDigestProductGroup{}, m.Err
 }
+func (m *MockProductRepository) GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]dbModel.Product, error) {
+	return nil, m.Err
+}
 func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error { return m.Err }
 func (m *MockProductRepository) WasteProduct(productID, userID uint) error   { return m.Err }
 func (m *MockProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []database.BulkOperationError {
@@ -181,6 +187,7 @@ type MockUserRepository struct {
 	Household               dbModel.Household
 	OnboardingState         dbModel.OnboardingState
 	EmailVerification       dbModel.EmailVerification
+	PasswordReset           dbModel.PasswordReset
 	HouseholdID             uint
 	UsernameExistsResult    bool
 	MailAddressExistsResult bool
@@ -241,6 +248,33 @@ func (m *MockUserRepository) UpdateEmailVerification(userID uint, verifiedAt *ti
 	return m.Err
 }
 func (m *MockUserRepository) UpdateEmailVerificationStatus(token, status string) error {
+	return m.Err
+}
+func (m *MockUserRepository) GetUserByMailAddress(mailAddress string) (authentication.User, error) {
+	return m.User, m.Err
+}
+func (m *MockUserRepository) CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error {
+	return m.Err
+}
+func (m *MockUserRepository) GetPasswordResetByToken(token string) (dbModel.PasswordReset, error) {
+	return m.PasswordReset, m.Err
+}
+func (m *MockUserRepository) MarkPasswordResetUsed(resetID uint, usedAt time.Time) error {
+	return m.Err
+}
+func (m *MockUserRepository) ConsumePasswordReset(tokenHash string, usedAt time.Time) (bool, error) {
+	return true, m.Err
+}
+func (m *MockUserRepository) ApplyPasswordReset(userID uint, tokenHash, hashedPassword string, usedAt time.Time) (bool, error) {
+	return true, m.Err
+}
+func (m *MockUserRepository) DeleteExpiredPasswordResets(before time.Time) error {
+	return m.Err
+}
+func (m *MockUserRepository) InvalidatePendingPasswordResetsForUser(userID uint) error {
+	return m.Err
+}
+func (m *MockUserRepository) SetUserPasswordHash(userID uint, hashedPassword string) error {
 	return m.Err
 }
 func (m *MockUserRepository) GetOnboardingState(userID uint) (dbModel.OnboardingState, error) {
@@ -304,6 +338,9 @@ func (m *MockHouseholdRepository) CancelApplication(applicationID, applicantUser
 	return m.Err
 }
 func (m *MockHouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint, name string) error {
+	return m.Err
+}
+func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64) error {
 	return m.Err
 }
 func (m *MockHouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error {

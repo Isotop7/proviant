@@ -27,6 +27,7 @@ var testModels = []any{
 	&dbModel.ExpiryScan{},
 	&dbModel.HouseholdApplication{},
 	&dbModel.EmailVerification{},
+	&dbModel.PasswordReset{},
 	&dbModel.ProductCategoryPrice{},
 	&dbModel.ActivityLog{},
 }

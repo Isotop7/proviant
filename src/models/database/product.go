@@ -15,7 +15,7 @@ const (
 type Product struct {
 	gorm.Model
 	Barcode              string           `gorm:"index:idx_products_barcode_household,priority:1" json:"barcode"`
-	ProductName          string           `json:"productName"`
+	ProductName          string           `gorm:"index:idx_products_household_name_deleted,priority:1" json:"productName"`
 	Categories           string           `json:"categories"`
 	Countries            string           `json:"countries"`
 	ImageURL             string           `json:"imageUrl"`
@@ -23,7 +23,7 @@ type Product struct {
 	ScannedAt            time.Time        `json:"scannedAt"`
 	NotifiedAt           time.Time        `json:"notifiedAt"`
 	DeletedAt            gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
-	HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;not null" json:"-"`
+	HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;index:idx_products_household_name_deleted,priority:2;not null" json:"-"`
 	Household            Household        `json:"-"`
 	UserID               uint             `gorm:"index, not null" json:"-"`
 	IsPrivate            bool             `gorm:"default:false" json:"isPrivate"`
@@ -65,4 +65,5 @@ type ProductDTOPatch struct {
 	NotificationLeadDays *int      `json:"notificationLeadDays,omitempty"`
 	MinStockAmount       int       `json:"minStockAmount"`
 	IsPrivate            bool      `json:"isPrivate"`
+	PriceOverride        *float64  `json:"priceOverride,omitempty"`
 }

@@ -172,6 +172,13 @@
                 value="{{ .Product.MinStockAmount }}" min="0">
               <div class="pv-field-hint">Auto-add to shopping list when amount drops below this threshold.</div>
             </div>
+            <div class="pv-field">
+              <label class="pv-field-label">Purchase price (EUR, optional)</label>
+              <input type="number" class="pv-field-input" id="inputPriceOverride"
+                value="{{ if .Product.PriceOverride }}{{ .Product.PriceOverride }}{{ end }}"
+                min="0" step="0.01" placeholder="e.g. 1.99">
+              <div class="pv-field-hint">Used to compute waste savings. Leave blank to use category average.</div>
+            </div>
           </div>
         </div>
 
@@ -397,6 +404,8 @@
     </div>
   </div>
 </div>
+
+{{ template "restockSuggestionModal" . }}
 
 <script src="/assets/js/html5-qrcode.min.js"></script>
 <script src="/assets/js/tag-input.js"></script>

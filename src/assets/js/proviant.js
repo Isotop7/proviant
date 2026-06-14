@@ -195,6 +195,73 @@ proviant.restoreProduct = async function (productID) {
   return { code: res.status, message: body.message };
 };
 
+proviant.getRestockSuggestion = async function (productID) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/restock-suggestion`;
+  const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
+proviant.addToShoppingList = async function (productId, quantity, unit) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/shopping-list`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      productId: parseInt(productId, 10),
+      quantity: quantity || 1,
+      unit: unit || "",
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(function () { return {}; });
+    throw new Error(body.message || "Could not add to shopping list");
+  }
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
+/* runWithButtonBusyState runs `work` while showing a spinner on `btn`,
+   then briefly shows a success check, and finally restores the original
+   button HTML. If `work` throws/rejects with a `cancelled` sentinel
+   (see proviant.CANCEL) the work is treated as a no-op: the button is
+   restored and no feedback is shown. Any other error invokes `onError`
+   and restores the button immediately. */
+proviant.CANCEL = Symbol('cancel');
+proviant.runWithButtonBusyState = async function (btn, work, successMessage, onError) {
+  if (!btn) return;
+  const originalHtml = btn.innerHTML;
+  const setBusy = (busy) => {
+    btn.disabled = busy;
+    btn.innerHTML = busy
+      ? '<i class="bi bi-hourglass-split"></i>'
+      : originalHtml;
+  };
+
+  setBusy(true);
+  let result;
+  try {
+    result = await work();
+  } catch (err) {
+    setBusy(false);
+    if (err === proviant.CANCEL) return;
+    if (onError) onError(err);
+    return;
+  }
+
+  if (result === proviant.CANCEL) {
+    setBusy(false);
+    return;
+  }
+
+  btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+  setTimeout(() => { setBusy(false); }, 1500);
+
+  if (successMessage) {
+    proviant.showFeedback('success', 'Added', successMessage);
+  }
+};
+
 /* ── Bulk product operations ─────────────────────────────────────────────────── */
 proviant.bulkDeleteProducts = async function (productIDs) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkDelete`;
@@ -462,8 +529,34 @@ proviant.getStreak = async function () {
   return { code: res.status, message: body };
 };
 
+proviant.getHouseholdSettings = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/settings`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
+proviant.updateHouseholdSettings = async function (settings) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/settings`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
 proviant.getSavingsStats = async function () {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/savings/stats`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
+proviant.getWasteAnalytics = async function (period, sort) {
+  const params = new URLSearchParams();
+  if (period) params.set("period", period);
+  if (sort) params.set("sort", sort);
+  const q = params.toString() ? `?${params.toString()}` : "";
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/stats/waste${q}`, { method: "GET", headers: { "Content-Type": "application/json" } });
   const body = await res.json();
   return { code: res.status, message: body };
 };

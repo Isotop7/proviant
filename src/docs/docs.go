@@ -2743,6 +2743,100 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/{id}/consumption-rate": {
+            "get": {
+                "description": "Returns the household's average weekly consumption for a product\nbased on archived consumed samples within the last 90 days.\nRequires at least 2 samples spanning at least 7 days; otherwise\nHasEstimate is false.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Get consumption rate estimate",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ConsumptionRateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/{id}/restock-suggestion": {
+            "get": {
+                "description": "Returns a suggested quantity to add to the shopping list for a\nproduct. Source is \"consumption_rate\" when at least 2 consumed\nsamples spanning at least 7 days exist within the last 90 days,\notherwise \"min_stock\" (minStockAmount - currentAmount) when\nthe current amount is below the minimum, or \"none\".",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Get restock quantity suggestion",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.RestockSuggestionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/{id}/waste": {
             "post": {
                 "description": "Hard-deletes a product and fires the product.wasted webhook event",
@@ -2892,6 +2986,58 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.SavingsStatsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/stats/waste": {
+            "get": {
+                "description": "Returns per-month consumed vs. wasted metrics, top wasted categories\nwith monetary and CO2 impact (each category nests its top wasted products),\nand a 6-month trend. EUR prices come from per-product overrides (if set)\nor category averages; CO2 is sourced from the Agribalyse LCA database via\nOpen Food Facts ecoscore_data.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stats"
+                ],
+                "summary": "Get waste analytics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Period window: month | 3months | 6months | 12months (default 6months). The window is floored to the first of the month for monthly-breakdown contiguity.",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort mostWastedCategories by: count | cost (default count)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max number of categories to return (default 5, max 50)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.WasteAnalyticsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
                         }
                     },
                     "500": {
@@ -3488,6 +3634,26 @@ const docTemplate = `{
                 }
             }
         },
+        "/web/forgot-password": {
+            "get": {
+                "description": "Renders the page that lets users request a password reset link via email.",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Forgot password page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/web/invite/accept": {
             "get": {
                 "description": "Renders the page for accepting a household invitation",
@@ -3686,6 +3852,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/web/reset-password": {
+            "get": {
+                "description": "Renders the page that lets users set a new password using a reset token.",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Reset password page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Reset token",
+                        "name": "token",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/web/shopping-list": {
             "get": {
                 "description": "Renders the shared household shopping list with custom items and import banner",
@@ -3856,6 +4050,38 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/web/waste-analytics": {
+            "get": {
+                "description": "Renders consumed-vs-wasted metrics, monthly breakdown, and most-wasted categories",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Waste Analytics page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -3913,6 +4139,35 @@ const docTemplate = `{
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.ConsumptionRateResponse": {
+            "type": "object",
+            "properties": {
+                "daysCovered": {
+                    "type": "integer"
+                },
+                "display": {
+                    "type": "string"
+                },
+                "hasEstimate": {
+                    "type": "boolean"
+                },
+                "lastConsumed": {
+                    "type": "string"
+                },
+                "perWeek": {
+                    "type": "number"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "sampleCount": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
                 }
             }
         },
@@ -4153,6 +4408,44 @@ const docTemplate = `{
                 }
             }
         },
+        "api.RestockSuggestionResponse": {
+            "type": "object",
+            "properties": {
+                "display": {
+                    "type": "string"
+                },
+                "hasEstimate": {
+                    "type": "boolean"
+                },
+                "hasSuggestion": {
+                    "type": "boolean"
+                },
+                "perWeekDisplay": {
+                    "type": "string"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "sampleCount": {
+                    "type": "integer"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "suggestedQty": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "weeklyRate": {
+                    "type": "number"
+                }
+            }
+        },
         "api.SavingsStatsResponse": {
             "type": "object",
             "properties": {
@@ -4217,6 +4510,122 @@ const docTemplate = `{
                 },
                 "longestStreak": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.WasteAnalyticsResponse": {
+            "type": "object",
+            "properties": {
+                "co2Source": {
+                    "type": "string"
+                },
+                "consumedCount": {
+                    "type": "integer"
+                },
+                "monthly": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.WasteMonthly"
+                    }
+                },
+                "mostWastedCategories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.WasteCategoryStat"
+                    }
+                },
+                "period": {
+                    "description": "\"month\" | \"3months\" | \"6months\" | \"12months\"",
+                    "type": "string"
+                },
+                "sort": {
+                    "description": "\"count\" | \"cost\" — applied to mostWastedCategories",
+                    "type": "string"
+                },
+                "totalRemoved": {
+                    "type": "integer"
+                },
+                "trend": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.StatsMonthlyCount"
+                    }
+                },
+                "wastedCo2Kg": {
+                    "type": "number"
+                },
+                "wastedCount": {
+                    "type": "integer"
+                },
+                "wastedEur": {
+                    "type": "number"
+                },
+                "wastedPercent": {
+                    "type": "number"
+                }
+            }
+        },
+        "api.WasteCategoryStat": {
+            "type": "object",
+            "properties": {
+                "categoryKey": {
+                    "type": "string"
+                },
+                "co2Kg": {
+                    "type": "number"
+                },
+                "costEur": {
+                    "type": "number"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.WasteProductStat"
+                    }
+                }
+            }
+        },
+        "api.WasteMonthly": {
+            "type": "object",
+            "properties": {
+                "consumedCount": {
+                    "type": "integer"
+                },
+                "month": {
+                    "description": "format: \"2006-01\"",
+                    "type": "string"
+                },
+                "wastedCo2Kg": {
+                    "type": "number"
+                },
+                "wastedCount": {
+                    "type": "integer"
+                },
+                "wastedEur": {
+                    "type": "number"
+                }
+            }
+        },
+        "api.WasteProductStat": {
+            "type": "object",
+            "properties": {
+                "co2Kg": {
+                    "type": "number"
+                },
+                "costEur": {
+                    "type": "number"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "productName": {
+                    "type": "string"
                 }
             }
         },
@@ -4431,6 +4840,18 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "monthlyWasteGoalCount": {
+                    "description": "nil = disabled",
+                    "type": "integer"
+                },
+                "monthlyWasteGoalPercent": {
+                    "description": "nil = disabled",
+                    "type": "number"
+                },
+                "monthlyWasteGoalType": {
+                    "description": "\"\", \"count\", or \"percent\"",
+                    "type": "string"
                 },
                 "name": {
                     "type": "string"

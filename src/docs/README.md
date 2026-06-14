@@ -183,6 +183,7 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [Constants](<#constants>)
 - [func GenerateEmailVerificationToken\(\) \(string, time.Time, error\)](<#GenerateEmailVerificationToken>)
 - [func GeneratePAT\(\) \(string, error\)](<#GeneratePAT>)
+- [func GeneratePasswordResetToken\(\) \(string, time.Time, error\)](<#GeneratePasswordResetToken>)
 - [func HashToken\(token string\) string](<#HashToken>)
 - [func InitWebhookService\(db \*gorm.DB, logger \*zerolog.Logger\)](<#InitWebhookService>)
 - [func ParseWebhookEvents\(eventsJSON string\) \[\]string](<#ParseWebhookEvents>)
@@ -200,7 +201,9 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(e \*EmailNotificationProvider\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string\) error](<#EmailNotificationProvider.SendInvitationEmail>)
   - [func \(e \*EmailNotificationProvider\) SendMonthlyWasteReport\(recipient string, stats \*models.WasteStats\) error](<#EmailNotificationProvider.SendMonthlyWasteReport>)
   - [func \(e \*EmailNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo interface\{\}\) error](<#EmailNotificationProvider.SendNotification>)
+  - [func \(e \*EmailNotificationProvider\) SendPasswordResetEmail\(email, username, token, baseURL string, expiresAt time.Time\) error](<#EmailNotificationProvider.SendPasswordResetEmail>)
   - [func \(e \*EmailNotificationProvider\) SendStreakMilestone\(milestone int, recipient string\) error](<#EmailNotificationProvider.SendStreakMilestone>)
+  - [func \(e \*EmailNotificationProvider\) SendStreakReset\(previousStreak int, recipient string\) error](<#EmailNotificationProvider.SendStreakReset>)
 - [type NotificationController](<#NotificationController>)
   - [func NewNotificationController\(logger \*zerolog.Logger, config \*configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface, productRepo dbController.ProductRepositoryInterface\) \*NotificationController](<#NewNotificationController>)
   - [func \(nc \*NotificationController\) Dispatch\(\)](<#NotificationController.Dispatch>)
@@ -210,7 +213,9 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(nc \*NotificationController\) GetUserTelegramBotUsername\(userID uint\) string](<#NotificationController.GetUserTelegramBotUsername>)
   - [func \(nc \*NotificationController\) SendEmailVerification\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendEmailVerification>)
   - [func \(nc \*NotificationController\) SendInvitationEmail\(invitation \*dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, tx \*gorm.DB\) error](<#NotificationController.SendInvitationEmail>)
+  - [func \(nc \*NotificationController\) SendPasswordReset\(email, username, token, baseURL string, expiresAt time.Time\) error](<#NotificationController.SendPasswordReset>)
   - [func \(nc \*NotificationController\) SendVerificationEmail\(invitation \*dbModel.HouseholdInvitation, username, baseURL string\) error](<#NotificationController.SendVerificationEmail>)
+  - [func \(nc \*NotificationController\) SetActivityLogRepo\(repo dbController.ActivityLogRepositoryInterface\)](<#NotificationController.SetActivityLogRepo>)
   - [func \(nc \*NotificationController\) StartAllUserTelegramPollers\(\)](<#NotificationController.StartAllUserTelegramPollers>)
   - [func \(nc \*NotificationController\) StartMailDigestScheduler\(baseURL string\)](<#NotificationController.StartMailDigestScheduler>)
   - [func \(nc \*NotificationController\) StartTelegramPollerPool\(\)](<#NotificationController.StartTelegramPollerPool>)
@@ -223,6 +228,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(n \*NtfyNotificationProvider\) IsConfigured\(\) bool](<#NtfyNotificationProvider.IsConfigured>)
   - [func \(n \*NtfyNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#NtfyNotificationProvider.SendNotification>)
   - [func \(n \*NtfyNotificationProvider\) SendStreakMilestone\(milestone int, recipient \*models.NotificationRecipientInfo\) error](<#NtfyNotificationProvider.SendStreakMilestone>)
+  - [func \(n \*NtfyNotificationProvider\) SendStreakReset\(previousStreak int, recipient \*models.NotificationRecipientInfo\) error](<#NtfyNotificationProvider.SendStreakReset>)
 - [type OCRController](<#OCRController>)
 - [type OCRControllerImpl](<#OCRControllerImpl>)
   - [func NewOCRController\(logger \*zerolog.Logger, config \*configuration.OCRConfiguration\) \*OCRControllerImpl](<#NewOCRController>)
@@ -241,6 +247,7 @@ import "codeberg.org/isotop7/proviant/controllers"
   - [func \(t \*TelegramNotificationProvider\) SendMonthlyWasteReport\(chatID string, stats \*models.WasteStats\) error](<#TelegramNotificationProvider.SendMonthlyWasteReport>)
   - [func \(t \*TelegramNotificationProvider\) SendNotification\(product \*dbModel.Product, recipientInfo any\) error](<#TelegramNotificationProvider.SendNotification>)
   - [func \(t \*TelegramNotificationProvider\) SendStreakMilestone\(milestone int, chatID string\) error](<#TelegramNotificationProvider.SendStreakMilestone>)
+  - [func \(t \*TelegramNotificationProvider\) SendStreakReset\(previousStreak int, chatID string\) error](<#TelegramNotificationProvider.SendStreakReset>)
 - [type WebPushKeyProvider](<#WebPushKeyProvider>)
 - [type WebPushNotificationProvider](<#WebPushNotificationProvider>)
   - [func \(p \*WebPushNotificationProvider\) GetProviderType\(\) string](<#WebPushNotificationProvider.GetProviderType>)
@@ -281,6 +288,18 @@ const EmailVerificationTokenLength = 32
 const MsgEmailProviderNotConfigured = "email provider not configured"
 ```
 
+<a name="PasswordResetTokenDuration"></a>
+
+```go
+const PasswordResetTokenDuration = 1 * time.Hour
+```
+
+<a name="PasswordResetTokenLength"></a>
+
+```go
+const PasswordResetTokenLength = 32
+```
+
 <a name="TokenLength"></a>
 
 ```go
@@ -307,6 +326,15 @@ func GenerateEmailVerificationToken() (string, time.Time, error)
 
 ```go
 func GeneratePAT() (string, error)
+```
+
+
+
+<a name="GeneratePasswordResetToken"></a>
+## func GeneratePasswordResetToken
+
+```go
+func GeneratePasswordResetToken() (string, time.Time, error)
 ```
 
 
@@ -437,6 +465,15 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 
 
 
+<a name="EmailNotificationProvider.SendPasswordResetEmail"></a>
+### func \(\*EmailNotificationProvider\) SendPasswordResetEmail
+
+```go
+func (e *EmailNotificationProvider) SendPasswordResetEmail(email, username, token, baseURL string, expiresAt time.Time) error
+```
+
+SendPasswordResetEmail sends a password reset email to the recipient
+
 <a name="EmailNotificationProvider.SendStreakMilestone"></a>
 ### func \(\*EmailNotificationProvider\) SendStreakMilestone
 
@@ -445,6 +482,15 @@ func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient
 ```
 
 SendStreakMilestone sends a streak milestone notification email.
+
+<a name="EmailNotificationProvider.SendStreakReset"></a>
+### func \(\*EmailNotificationProvider\) SendStreakReset
+
+```go
+func (e *EmailNotificationProvider) SendStreakReset(previousStreak int, recipient string) error
+```
+
+SendStreakReset sends a streak\-reset notification email.
 
 <a name="NotificationController"></a>
 ## type NotificationController
@@ -458,6 +504,7 @@ type NotificationController struct {
     NotificationRepo dbController.NotificationRepositoryInterface
     ProductRepo      dbController.ProductRepositoryInterface
     StreakRepo       dbController.StreakRepositoryInterface
+    ActivityLogRepo  dbController.ActivityLogRepositoryInterface
     Providers        []NotificationProvider
     // contains filtered or unexported fields
 }
@@ -535,6 +582,15 @@ func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.Househ
 
 SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database. If tx is provided \(non\-nil\), the "mark as sent" update will run within that transaction to avoid SQLite "database is locked" conflicts when the transaction holds a write lock.
 
+<a name="NotificationController.SendPasswordReset"></a>
+### func \(\*NotificationController\) SendPasswordReset
+
+```go
+func (nc *NotificationController) SendPasswordReset(email, username, token, baseURL string, expiresAt time.Time) error
+```
+
+SendPasswordReset sends a password reset email directly to the user.
+
 <a name="NotificationController.SendVerificationEmail"></a>
 ### func \(\*NotificationController\) SendVerificationEmail
 
@@ -543,6 +599,15 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 ```
 
 SendVerificationEmail sends an email verification link using the invitation email system.
+
+<a name="NotificationController.SetActivityLogRepo"></a>
+### func \(\*NotificationController\) SetActivityLogRepo
+
+```go
+func (nc *NotificationController) SetActivityLogRepo(repo dbController.ActivityLogRepositoryInterface)
+```
+
+SetActivityLogRepo attaches the activity log repository used for streak\-reset entries.
 
 <a name="NotificationController.StartAllUserTelegramPollers"></a>
 ### func \(\*NotificationController\) StartAllUserTelegramPollers
@@ -659,6 +724,15 @@ func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient 
 ```
 
 SendStreakMilestone sends a streak milestone push notification via ntfy.
+
+<a name="NtfyNotificationProvider.SendStreakReset"></a>
+### func \(\*NtfyNotificationProvider\) SendStreakReset
+
+```go
+func (n *NtfyNotificationProvider) SendStreakReset(previousStreak int, recipient *models.NotificationRecipientInfo) error
+```
+
+SendStreakReset sends a streak\-reset push notification via ntfy.
 
 <a name="OCRController"></a>
 ## type OCRController
@@ -854,6 +928,15 @@ func (t *TelegramNotificationProvider) SendStreakMilestone(milestone int, chatID
 ```
 
 SendStreakMilestone sends a streak milestone notification to a Telegram chat.
+
+<a name="TelegramNotificationProvider.SendStreakReset"></a>
+### func \(\*TelegramNotificationProvider\) SendStreakReset
+
+```go
+func (t *TelegramNotificationProvider) SendStreakReset(previousStreak int, chatID string) error
+```
+
+SendStreakReset sends a streak\-reset notification to a Telegram chat.
 
 <a name="WebPushKeyProvider"></a>
 ## type WebPushKeyProvider
@@ -1229,6 +1312,18 @@ var (
     ErrEmailNotVerified = errors.New("email address not verified")
 
     /*
+     * Password reset related errors
+     */
+    // ErrPasswordResetTokenInvalid is thrown when a password reset token is missing, unknown, expired, or already used
+    ErrPasswordResetTokenInvalid = errors.New("password reset link is invalid or has expired")
+
+    // ErrPasswordResetTokenExpired is thrown when a password reset token has passed its expiry
+    ErrPasswordResetTokenExpired = errors.New("password reset link has expired")
+
+    // ErrPasswordResetTokenUsed is thrown when a password reset token has already been consumed
+    ErrPasswordResetTokenUsed = errors.New("password reset link has already been used")
+
+    /*
      * Personal Access Token related errors
      */
     // ErrPATNotFound is thrown when a PAT does not exist
@@ -1461,6 +1556,7 @@ import "codeberg.org/isotop7/proviant/migrations"
 - [func AddWebPushNotificationMigration\(db \*gorm.DB\) error](<#AddWebPushNotificationMigration>)
 - [func BackfillEmailVerification\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillEmailVerification>)
 - [func BackfillHouseholdRoles\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillHouseholdRoles>)
+- [func BackfillProductUserID\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillProductUserID>)
 - [func BackfillRemovalReason\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillRemovalReason>)
 - [func DropLegacyStorageLocationColumn\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#DropLegacyStorageLocationColumn>)
 - [func RenamePushNotificationColumns\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#RenamePushNotificationColumns>)
@@ -1514,6 +1610,15 @@ func BackfillHouseholdRoles(logger *zerolog.Logger, db *gorm.DB) error
 ```
 
 BackfillHouseholdRoles sets role='admin' for household admins and role='member' for all others. This migration ensures existing users get appropriate roles after the role field is added.
+
+<a name="BackfillProductUserID"></a>
+## func BackfillProductUserID
+
+```go
+func BackfillProductUserID(logger *zerolog.Logger, db *gorm.DB) error
+```
+
+BackfillProductUserID sets user\_id for existing products that are marked private but have no owner. For private products without an owner, assigns the household admin as the owner so they remain visible.
 
 <a name="BackfillRemovalReason"></a>
 ## func BackfillRemovalReason
@@ -1881,6 +1986,11 @@ import "codeberg.org/isotop7/proviant/services"
 
 ## Index
 
+- [type ConsumptionRate](<#ConsumptionRate>)
+- [type ConsumptionService](<#ConsumptionService>)
+  - [func NewConsumptionService\(repos \*database.RepositoryContainer, logger \*zerolog.Logger\) \*ConsumptionService](<#NewConsumptionService>)
+  - [func \(s \*ConsumptionService\) ComputeConsumptionRate\(householdID, userID uint, barcode, name string\) \(ConsumptionRate, error\)](<#ConsumptionService.ComputeConsumptionRate>)
+  - [func \(s \*ConsumptionService\) ComputeRestockSuggestionFromProduct\(householdID, userID uint, product \*dbModel.Product\) RestockSuggestion](<#ConsumptionService.ComputeRestockSuggestionFromProduct>)
 - [type ProductService](<#ProductService>)
   - [func NewProductService\(repos \*database.RepositoryContainer, logger \*zerolog.Logger\) \*ProductService](<#NewProductService>)
   - [func \(s \*ProductService\) BulkConsumeProducts\(productIDs \[\]uint, userID uint\) error](<#ProductService.BulkConsumeProducts>)
@@ -1890,7 +2000,64 @@ import "codeberg.org/isotop7/proviant/services"
   - [func \(s \*ProductService\) DeleteProduct\(productID, userID uint, archiveOnly bool\) error](<#ProductService.DeleteProduct>)
   - [func \(s \*ProductService\) RestoreProduct\(productID, userID uint\) error](<#ProductService.RestoreProduct>)
   - [func \(s \*ProductService\) WasteProduct\(productID, userID uint\) error](<#ProductService.WasteProduct>)
+- [type RestockSuggestion](<#RestockSuggestion>)
 
+
+<a name="ConsumptionRate"></a>
+## type ConsumptionRate
+
+ConsumptionRate is the consumption\-rate estimate for one product, derived from the household's archived consumed samples. Display is a pre\-formatted sentence for the API/UI; TemplateMessage is the same sentence for the server\-rendered product detail alert.
+
+```go
+type ConsumptionRate struct {
+    Unit            string
+    PerWeek         float64
+    SampleCount     int
+    HasEstimate     bool
+    DaysCovered     int
+    LastConsumed    *time.Time
+    Display         string
+    TemplateMessage string
+}
+```
+
+<a name="ConsumptionService"></a>
+## type ConsumptionService
+
+
+
+```go
+type ConsumptionService struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewConsumptionService"></a>
+### func NewConsumptionService
+
+```go
+func NewConsumptionService(repos *database.RepositoryContainer, logger *zerolog.Logger) *ConsumptionService
+```
+
+
+
+<a name="ConsumptionService.ComputeConsumptionRate"></a>
+### func \(\*ConsumptionService\) ComputeConsumptionRate
+
+```go
+func (s *ConsumptionService) ComputeConsumptionRate(householdID, userID uint, barcode, name string) (ConsumptionRate, error)
+```
+
+ComputeConsumptionRate estimates the weekly consumption rate for a product \(matched by barcode when present, otherwise by product name\) based on the household's consumed samples in the last 90 days. Requires at least 2 samples spread over at least 7 days to produce a stable "per week" rate.
+
+<a name="ConsumptionService.ComputeRestockSuggestionFromProduct"></a>
+### func \(\*ConsumptionService\) ComputeRestockSuggestionFromProduct
+
+```go
+func (s *ConsumptionService) ComputeRestockSuggestionFromProduct(householdID, userID uint, product *dbModel.Product) RestockSuggestion
+```
+
+ComputeRestockSuggestionFromProduct returns a restock suggestion for an already\-loaded product. If a stable consumption rate is available it is preferred \(ceil\(PerWeek\)\). Otherwise, when the current amount is below the configured minimum stock, the deficit is suggested. When the minimum is already met \(or not configured\) no suggestion is produced.
 
 <a name="ProductService"></a>
 ## type ProductService
@@ -1975,6 +2142,26 @@ func (s *ProductService) WasteProduct(productID, userID uint) error
 
 
 
+<a name="RestockSuggestion"></a>
+## type RestockSuggestion
+
+RestockSuggestion is the suggested quantity to add to the shopping list for a product, plus the source of the suggestion and human\-readable copy for the API and template.
+
+```go
+type RestockSuggestion struct {
+    ProductName     string
+    SuggestedQty    int
+    Unit            string
+    Source          string
+    WeeklyRate      float64
+    SampleCount     int
+    HasEstimate     bool
+    Display         string
+    TemplateMessage string
+    PerWeekDisplay  string
+}
+```
+
 # templates
 
 ```go
@@ -2055,6 +2242,7 @@ import "codeberg.org/isotop7/proviant/testutil"
 - [func MigrateAllModels\(db \*gorm.DB\) error](<#MigrateAllModels>)
 - [func MockJWTClaims\(ctx \*gin.Context, userID uint\)](<#MockJWTClaims>)
 - [func MockJWTClaimsWithKey\(ctx \*gin.Context, userID uint, key string\)](<#MockJWTClaimsWithKey>)
+- [func SeedConsumedProduct\(t \*testing.T, db \*gorm.DB, householdID, userID uint, isPrivate bool, barcode, name, unit string, amount int, deletedAt time.Time\)](<#SeedConsumedProduct>)
 - [func SetupGinContext\(db \*gorm.DB\) \(\*gin.Context, \*httptest.ResponseRecorder\)](<#SetupGinContext>)
 - [func SetupTestDB\(t \*testing.T\) \*gorm.DB](<#SetupTestDB>)
 
@@ -2175,6 +2363,15 @@ func MockJWTClaimsWithKey(ctx *gin.Context, userID uint, key string)
 
 
 
+<a name="SeedConsumedProduct"></a>
+## func SeedConsumedProduct
+
+```go
+func SeedConsumedProduct(t *testing.T, db *gorm.DB, householdID, userID uint, isPrivate bool, barcode, name, unit string, amount int, deletedAt time.Time)
+```
+
+SeedConsumedProduct creates a product, soft\-deletes it with the given removalReason, and pins the deleted\_at to a specific timestamp. It is shared by the consumption\-service and consumption\-handler test suites.
+
 <a name="SetupGinContext"></a>
 ## func SetupGinContext
 
@@ -2242,6 +2439,30 @@ const (
     LabelMailDigestDot    = "mail_digest"
     LabelMailDigestPascal = "MailDigest"
     RouteUnsubscribe      = "/web/unsubscribe"
+
+    // Password reset
+    RouteAuth           = "/web/auth"
+    RouteForgotPassword = "/web/forgot-password"
+    RouteResetPassword  = "/web/reset-password" //nolint:gosec // G101: route path constant, not a credential
+
+    // Consumption rate estimation
+    ConsumptionHistoryWindowDays = 90
+    ConsumptionMinSamples        = 2
+    // ConsumptionMinSpanDays is the minimum observed time between the
+    // first and last consumed sample required to produce a "per week"
+    // estimate. Below this, the perWeek denominator (spanDays/7) is
+    // not stable enough to label as a weekly rate.
+    ConsumptionMinSpanDays    = 7
+    ConsumptionSpanFloorDays  = 1
+    ConsumptionSourceRate     = "consumption_rate"
+    ConsumptionSourceMinStock = "min_stock"
+    ConsumptionSourceNone     = "none"
+
+    // Waste analytics period identifiers
+    PeriodValueMonth    = "month"
+    PeriodValue3Months  = "3months"
+    PeriodValue6Months  = "6months"
+    PeriodValue12Months = "12months"
 )
 ```
 
@@ -2254,21 +2475,25 @@ import "codeberg.org/isotop7/proviant/web"
 ## Index
 
 - [Constants](<#constants>)
+- [type BrandFeature](<#BrandFeature>)
 - [type Frontend](<#Frontend>)
   - [func \(frontend \*Frontend\) AcceptInvite\(ctx \*gin.Context\)](<#Frontend.AcceptInvite>)
   - [func \(frontend \*Frontend\) Auth\(ctx \*gin.Context\)](<#Frontend.Auth>)
+  - [func \(frontend \*Frontend\) ForgotPassword\(ctx \*gin.Context\)](<#Frontend.ForgotPassword>)
   - [func \(frontend \*Frontend\) Onboarding\(ctx \*gin.Context\)](<#Frontend.Onboarding>)
   - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
   - [func \(frontend \*Frontend\) ProductsEdit\(ctx \*gin.Context\)](<#Frontend.ProductsEdit>)
   - [func \(frontend \*Frontend\) ProductsScan\(ctx \*gin.Context\)](<#Frontend.ProductsScan>)
   - [func \(frontend \*Frontend\) ProductsView\(ctx \*gin.Context\)](<#Frontend.ProductsView>)
   - [func \(frontend \*Frontend\) Recipes\(ctx \*gin.Context\)](<#Frontend.Recipes>)
+  - [func \(frontend \*Frontend\) ResetPassword\(ctx \*gin.Context\)](<#Frontend.ResetPassword>)
   - [func \(frontend \*Frontend\) Root\(ctx \*gin.Context\)](<#Frontend.Root>)
   - [func \(frontend \*Frontend\) ShoppingList\(ctx \*gin.Context\)](<#Frontend.ShoppingList>)
   - [func \(frontend \*Frontend\) Unsubscribe\(ctx \*gin.Context\)](<#Frontend.Unsubscribe>)
   - [func \(frontend \*Frontend\) User\(ctx \*gin.Context\)](<#Frontend.User>)
   - [func \(frontend \*Frontend\) UserSettings\(ctx \*gin.Context\)](<#Frontend.UserSettings>)
   - [func \(frontend \*Frontend\) VerifyEmail\(ctx \*gin.Context\)](<#Frontend.VerifyEmail>)
+  - [func \(frontend \*Frontend\) WasteAnalytics\(ctx \*gin.Context\)](<#Frontend.WasteAnalytics>)
 
 
 ## Constants
@@ -2280,6 +2505,18 @@ const (
     AcceptInviteFileName  = "acceptInvite.tmpl"
     AcceptInvitationTitle = "Accept Invitation"
 )
+```
+
+<a name="BrandFeature"></a>
+## type BrandFeature
+
+BrandFeature is a single icon\+text row in the brand panel of the split\-panel auth pages. Consumed by the partials/loginBrand.tmpl template.
+
+```go
+type BrandFeature struct {
+    Icon string
+    Text string
+}
 ```
 
 <a name="Frontend"></a>
@@ -2310,6 +2547,15 @@ func (frontend *Frontend) Auth(ctx *gin.Context)
 ```
 
 Auth renders the authentication page @Summary Auth page @Description Renders the authentication page for login/signup @Tags web @Produce html @Success 200 \{string\} html @Router /web/auth \[get\]
+
+<a name="Frontend.ForgotPassword"></a>
+### func \(\*Frontend\) ForgotPassword
+
+```go
+func (frontend *Frontend) ForgotPassword(ctx *gin.Context)
+```
+
+ForgotPassword renders the forgot\-password page \(form to request a reset link\). @Summary Forgot password page @Description Renders the page that lets users request a password reset link via email. @Tags web @Produce html @Success 200 \{string\} html @Router /web/forgot\-password \[get\]
 
 <a name="Frontend.Onboarding"></a>
 ### func \(\*Frontend\) Onboarding
@@ -2365,6 +2611,15 @@ func (frontend *Frontend) Recipes(ctx *gin.Context)
 
 Recipes renders the recipe suggestions page @Summary Recipes page @Description Shows recipe suggestions for expiring products @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/recipes \[get\]
 
+<a name="Frontend.ResetPassword"></a>
+### func \(\*Frontend\) ResetPassword
+
+```go
+func (frontend *Frontend) ResetPassword(ctx *gin.Context)
+```
+
+ResetPassword renders the password reset page \(form to set a new password via token\). @Summary Reset password page @Description Renders the page that lets users set a new password using a reset token. @Tags web @Produce html @Param token query string false "Reset token" @Success 200 \{string\} html @Router /web/reset\-password \[get\]
+
 <a name="Frontend.Root"></a>
 ### func \(\*Frontend\) Root
 
@@ -2419,6 +2674,15 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context)
 
 VerifyEmail renders the email verification page @Summary Verify email page @Description Renders the email verification status page @Tags web @Produce html @Param token query string false "Verification token" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Router /web/verify\-email \[get\]
 
+<a name="Frontend.WasteAnalytics"></a>
+### func \(\*Frontend\) WasteAnalytics
+
+```go
+func (frontend *Frontend) WasteAnalytics(ctx *gin.Context)
+```
+
+WasteAnalytics renders the waste analytics dashboard @Summary Waste Analytics page @Description Renders consumed\-vs\-wasted metrics, monthly breakdown, and most\-wasted categories @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/waste\-analytics \[get\]
+
 # auth
 
 ```go
@@ -2431,7 +2695,9 @@ auth contains authentication method handlers
 
 - [Constants](<#constants>)
 - [func AcceptInvitation\(ctx \*gin.Context\)](<#AcceptInvitation>)
+- [func ForgotPassword\(ctx \*gin.Context\)](<#ForgotPassword>)
 - [func Logout\(ctx \*gin.Context\)](<#Logout>)
+- [func ResetPassword\(ctx \*gin.Context\)](<#ResetPassword>)
 - [func Signup\(ctx \*gin.Context\)](<#Signup>)
 - [func VerifyEmail\(ctx \*gin.Context\)](<#VerifyEmail>)
 
@@ -2453,6 +2719,15 @@ func AcceptInvitation(ctx *gin.Context)
 
 AcceptInvitation accepts a household invitation for the authenticated user. @Summary Accept invitation @Description Accepts a household invitation using a token @Tags Invitation @Accept json @Produce json @Param request body acceptInvitationRequest true "Accept invitation request" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/invite/accept \[post\]
 
+<a name="ForgotPassword"></a>
+## func ForgotPassword
+
+```go
+func ForgotPassword(ctx *gin.Context)
+```
+
+ForgotPassword starts a self\-service password reset by emailing a reset link. Always returns the same response to avoid leaking which addresses are registered, and silently skips users with unverified email addresses.
+
 <a name="Logout"></a>
 ## func Logout
 
@@ -2461,6 +2736,15 @@ func Logout(ctx *gin.Context)
 ```
 
 Logout revokes the current JWT token @Summary Logout user by revoking token @Description Revokes the current JWT token by adding its JTI to the blocklist @Tags auth @Accept json @Produce json @Security BearerAuth @Success 200 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /auth/logout \[post\]
+
+<a name="ResetPassword"></a>
+## func ResetPassword
+
+```go
+func ResetPassword(ctx *gin.Context)
+```
+
+ResetPassword consumes a password reset token and updates the user's password. The token is validated and consumed atomically: bcrypt and password policy checks only run after the token has been confirmed valid and not already consumed, so unauthenticated callers cannot force the server to do expensive CPU work.
 
 <a name="Signup"></a>
 ## func Signup
@@ -2620,6 +2904,10 @@ v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
+v1 implements version 1 of the proviant API
+
+v1 implements version 1 of the proviant API
+
 ## Index
 
 - [Constants](<#constants>)
@@ -2658,9 +2946,11 @@ v1 implements version 1 of the proviant API
 - [func GetAuditLogs\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetAuditLogs>)
 - [func GetAutoShoppingList\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetAutoShoppingList>)
 - [func GetCalendarTokenStatus\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetCalendarTokenStatus>)
+- [func GetConsumptionRate\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetConsumptionRate>)
 - [func GetExpired\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetExpired>)
 - [func GetHouseholdActivity\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdActivity>)
 - [func GetHouseholdApplications\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdApplications>)
+- [func GetHouseholdSettings\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdSettings>)
 - [func GetHouseholdUsers\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetHouseholdUsers>)
 - [func GetInvitations\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetInvitations>)
 - [func GetNotifications\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetNotifications>)
@@ -2671,9 +2961,11 @@ v1 implements version 1 of the proviant API
 - [func GetProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProductsByBarcode>)
 - [func GetRecipeSuggestions\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetRecipeSuggestions>)
+- [func GetRestockSuggestion\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetRestockSuggestion>)
 - [func GetSavingsStats\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetSavingsStats>)
 - [func GetStreak\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetStreak>)
 - [func GetUserNotificationPreferences\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetUserNotificationPreferences>)
+- [func GetWasteAnalytics\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWasteAnalytics>)
 - [func GetWebPushVAPIDPublicKey\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWebPushVAPIDPublicKey>)
 - [func GetWebhook\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWebhook>)
 - [func GetWebhookDeliveries\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetWebhookDeliveries>)
@@ -2697,6 +2989,7 @@ v1 implements version 1 of the proviant API
 - [func UnsubscribeWebPushNotifications\(ctx \*gin.Context, appCtx \*AppContext\)](<#UnsubscribeWebPushNotifications>)
 - [func UpdateHouseholdMemberRole\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdMemberRole>)
 - [func UpdateHouseholdName\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdName>)
+- [func UpdateHouseholdSettings\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdSettings>)
 - [func UpdateHouseholdUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdUser>)
 - [func UpdateProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateProduct>)
 - [func UpdateProductAmount\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateProductAmount>)
@@ -3107,6 +3400,15 @@ func GetCalendarTokenStatus(ctx *gin.Context, appCtx *AppContext)
 
 GetCalendarTokenStatus returns the user's calendar token status and subscription URL @Summary Get calendar token status @Description Returns whether the user has a calendar token and the subscription URL for iCal/CalDAV. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 200 \{object\} map\[string\]interface\{\} @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token \[get\]
 
+<a name="GetConsumptionRate"></a>
+## func GetConsumptionRate
+
+```go
+func GetConsumptionRate(ctx *gin.Context, appCtx *AppContext)
+```
+
+GetConsumptionRate returns the estimated weekly consumption rate for a product, based on the last 90 days of consumed \(archived\) products with the same barcode \(or product name as fallback\). Requires at least 2 samples spread over at least 7 days. @Summary Get consumption rate estimate @Description Returns the household's average weekly consumption for a product @Description based on archived consumed samples within the last 90 days. @Description Requires at least 2 samples spanning at least 7 days; otherwise @Description HasEstimate is false. @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} apiModel.ConsumptionRateResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/consumption\-rate \[get\]
+
 <a name="GetExpired"></a>
 ## func GetExpired
 
@@ -3133,6 +3435,15 @@ func GetHouseholdApplications(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetHouseholdApplications returns all pending applications for the household the caller administrates. @Summary List pending household applications @Description Returns pending join applications for the household the calling user is admin of. @Tags household @Produce json @Success 200 \{array\} database.HouseholdApplication @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications \[get\]
+
+<a name="GetHouseholdSettings"></a>
+## func GetHouseholdSettings
+
+```go
+func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext)
+```
+
+GetHouseholdSettings returns the caller's household settings.
 
 <a name="GetHouseholdUsers"></a>
 ## func GetHouseholdUsers
@@ -3226,6 +3537,15 @@ func GetRecipeSuggestions(ctx *gin.Context, appCtx *AppContext)
 
 GetRecipeSuggestions returns recipe suggestions based on expiring products @Summary Recipe suggestions @Description Returns up to 6 recipe suggestions matching products expiring within 7 days @Tags recipes @Produce json @Param limit query int false "Number of suggestions \(default 6, max 10\)" @Success 200 \{array\} apiModel.RecipeSuggestionResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes/suggestions \[get\]
 
+<a name="GetRestockSuggestion"></a>
+## func GetRestockSuggestion
+
+```go
+func GetRestockSuggestion(ctx *gin.Context, appCtx *AppContext)
+```
+
+GetRestockSuggestion returns a suggested restock quantity for a product, preferring the consumption rate \(when enough history exists\) and falling back to the min\-stock deficit. Returns "none" when no real deficit exists. @Summary Get restock quantity suggestion @Description Returns a suggested quantity to add to the shopping list for a @Description product. Source is "consumption\_rate" when at least 2 consumed @Description samples spanning at least 7 days exist within the last 90 days, @Description otherwise "min\_stock" \(minStockAmount \- currentAmount\) when @Description the current amount is below the minimum, or "none". @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} apiModel.RestockSuggestionResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/restock\-suggestion \[get\]
+
 <a name="GetSavingsStats"></a>
 ## func GetSavingsStats
 
@@ -3252,6 +3572,15 @@ func GetUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext)
 ```
 
 GetUserNotificationPreferences gets a user's notification preferences @Summary Gets a user's notification preferences @Description Retrieves notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} authentication.NotificationPreferences @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[get\]
+
+<a name="GetWasteAnalytics"></a>
+## func GetWasteAnalytics
+
+```go
+func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext)
+```
+
+GetWasteAnalytics returns consumed vs. wasted aggregations, monthly breakdown, most\-wasted categories, and a trend for the authenticated user's household. @Summary Get waste analytics @Description Returns per\-month consumed vs. wasted metrics, top wasted categories @Description with monetary and CO2 impact \(each category nests its top wasted products\), @Description and a 6\-month trend. EUR prices come from per\-product overrides \(if set\) @Description or category averages; CO2 is sourced from the Agribalyse LCA database via @Description Open Food Facts ecoscore\_data. @Tags stats @Produce json @Param period query string false "Period window: month | 3months | 6months | 12months \(default 6months\). The window is floored to the first of the month for monthly\-breakdown contiguity." @Param sort query string false "Sort mostWastedCategories by: count | cost \(default count\)" @Param limit query int false "Max number of categories to return \(default 5, max 50\)" @Success 200 \{object\} apiModel.WasteAnalyticsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/stats/waste \[get\]
 
 <a name="GetWebPushVAPIDPublicKey"></a>
 ## func GetWebPushVAPIDPublicKey
@@ -3460,6 +3789,15 @@ func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext)
 
 UpdateHouseholdName renames the caller's household. Caller must be the household admin. @Summary Rename household @Tags household @Accept json @Produce json @Param household body updateHouseholdNameRequest true "Name" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/name \[patch\]
 
+<a name="UpdateHouseholdSettings"></a>
+## func UpdateHouseholdSettings
+
+```go
+func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext)
+```
+
+UpdateHouseholdSettings updates monthly waste goal for the caller's household \(admin only\).
+
 <a name="UpdateHouseholdUser"></a>
 ## func UpdateHouseholdUser
 
@@ -3575,11 +3913,12 @@ type APIHandler func(*gin.Context, *AppContext)
 
 ```go
 type AppContext struct {
-    Logger   *zerolog.Logger
-    DB       *gorm.DB
-    Repos    *database.RepositoryContainer
-    UserID   uint
-    Products *services.ProductService
+    Logger      *zerolog.Logger
+    DB          *gorm.DB
+    Repos       *database.RepositoryContainer
+    UserID      uint
+    Products    *services.ProductService
+    Consumption *services.ConsumptionService
 }
 ```
 
@@ -3788,6 +4127,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*CalendarTokenRepository\) GetByUserID\(userID uint\) \(authentication.CalendarToken, error\)](<#CalendarTokenRepository.GetByUserID>)
   - [func \(r \*CalendarTokenRepository\) Update\(ct \*authentication.CalendarToken\) error](<#CalendarTokenRepository.Update>)
 - [type CalendarTokenRepositoryInterface](<#CalendarTokenRepositoryInterface>)
+- [type ConsumedVsWastedRow](<#ConsumedVsWastedRow>)
 - [type ExpiryScanRepository](<#ExpiryScanRepository>)
   - [func NewExpiryScanRepository\(db \*gorm.DB\) \*ExpiryScanRepository](<#NewExpiryScanRepository>)
   - [func \(r \*ExpiryScanRepository\) Create\(scan \*database.ExpiryScan\) error](<#ExpiryScanRepository.Create>)
@@ -3810,6 +4150,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*HouseholdRepository\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#HouseholdRepository.RemoveMemberFromHousehold>)
   - [func \(r \*HouseholdRepository\) SetHouseholdMemberRole\(memberUserID, adminUserID uint, role string\) error](<#HouseholdRepository.SetHouseholdMemberRole>)
   - [func \(r \*HouseholdRepository\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#HouseholdRepository.UpdateHouseholdName>)
+  - [func \(r \*HouseholdRepository\) UpdateHouseholdSettings\(householdID, adminUserID uint, goalType string, goalCount \*int, goalPercent \*float64\) error](<#HouseholdRepository.UpdateHouseholdSettings>)
 - [type HouseholdRepositoryInterface](<#HouseholdRepositoryInterface>)
 - [type InvitationRepository](<#InvitationRepository>)
   - [func NewInvitationRepository\(db \*gorm.DB\) \*InvitationRepository](<#NewInvitationRepository>)
@@ -3887,6 +4228,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetActiveProductsCount>)
   - [func \(r \*ProductRepository\) GetArchivedProductByID\(productID, userID uint\) \(database.Product, error\)](<#ProductRepository.GetArchivedProductByID>)
   - [func \(r \*ProductRepository\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetArchivedProductsGroupedByBarcode>)
+  - [func \(r \*ProductRepository\) GetConsumedSamples\(householdID, userID uint, barcode, name string, since time.Time\) \(\[\]database.Product, error\)](<#ProductRepository.GetConsumedSamples>)
   - [func \(r \*ProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetExpiredProductsCount>)
   - [func \(r \*ProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringInDays>)
   - [func \(r \*ProductRepository\) GetExpiringProductsByHousehold\(householdID uint, daysAhead int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringProductsByHousehold>)
@@ -3902,6 +4244,7 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetOpenFoodFactsCacheWithoutStorageHint\(\) \(\[\]database.OpenFoodFactsCache, error\)](<#ProductRepository.GetOpenFoodFactsCacheWithoutStorageHint>)
   - [func \(r \*ProductRepository\) GetProductByID\(productID, userID uint\) \(database.Product, error\)](<#ProductRepository.GetProductByID>)
   - [func \(r \*ProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#ProductRepository.GetProductCategoryBreakdown>)
+  - [func \(r \*ProductRepository\) GetProductIdentity\(productID, userID uint\) \(database.Product, error\)](<#ProductRepository.GetProductIdentity>)
   - [func \(r \*ProductRepository\) GetProductsByHousehold\(householdID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetProductsByHousehold>)
   - [func \(r \*ProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*database.Product, error\)](<#ProductRepository.GetProductsExpired>)
   - [func \(r \*ProductRepository\) GetSubThresholdProducts\(userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetSubThresholdProducts>)
@@ -3972,25 +4315,34 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func SupportedEnginesFromString\(str string\) SupportedEngines](<#SupportedEnginesFromString>)
 - [type UserRepository](<#UserRepository>)
   - [func NewUserRepository\(db \*gorm.DB\) \*UserRepository](<#NewUserRepository>)
+  - [func \(r \*UserRepository\) ApplyPasswordReset\(userID uint, tokenHash, hashedPassword string, usedAt time.Time\) \(bool, error\)](<#UserRepository.ApplyPasswordReset>)
+  - [func \(r \*UserRepository\) ConsumePasswordReset\(tokenHash string, usedAt time.Time\) \(bool, error\)](<#UserRepository.ConsumePasswordReset>)
   - [func \(r \*UserRepository\) CreateEmailVerification\(userID uint, token string, expiresAt time.Time\) error](<#UserRepository.CreateEmailVerification>)
+  - [func \(r \*UserRepository\) CreatePasswordReset\(userID uint, token string, expiresAt time.Time, ipAddress string\) error](<#UserRepository.CreatePasswordReset>)
   - [func \(r \*UserRepository\) CreateUser\(user \*authentication.User\) error](<#UserRepository.CreateUser>)
+  - [func \(r \*UserRepository\) DeleteExpiredPasswordResets\(before time.Time\) error](<#UserRepository.DeleteExpiredPasswordResets>)
   - [func \(r \*UserRepository\) DeleteUser\(userID uint\) error](<#UserRepository.DeleteUser>)
   - [func \(r \*UserRepository\) EnsureOnboardingState\(userID uint\) error](<#UserRepository.EnsureOnboardingState>)
   - [func \(r \*UserRepository\) GetEmailVerificationByToken\(token string\) \(database.EmailVerification, error\)](<#UserRepository.GetEmailVerificationByToken>)
   - [func \(r \*UserRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#UserRepository.GetHouseholdByID>)
   - [func \(r \*UserRepository\) GetOnboardingState\(userID uint\) \(database.OnboardingState, error\)](<#UserRepository.GetOnboardingState>)
+  - [func \(r \*UserRepository\) GetPasswordResetByToken\(token string\) \(database.PasswordReset, error\)](<#UserRepository.GetPasswordResetByToken>)
   - [func \(r \*UserRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#UserRepository.GetUserByID>)
+  - [func \(r \*UserRepository\) GetUserByMailAddress\(mailAddress string\) \(authentication.User, error\)](<#UserRepository.GetUserByMailAddress>)
   - [func \(r \*UserRepository\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#UserRepository.GetUserByUsername>)
   - [func \(r \*UserRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#UserRepository.GetUserHouseholdByID>)
   - [func \(r \*UserRepository\) GetUserHouseholdRole\(userID uint\) \(string, error\)](<#UserRepository.GetUserHouseholdRole>)
   - [func \(r \*UserRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#UserRepository.GetUsersByHouseholdID>)
+  - [func \(r \*UserRepository\) InvalidatePendingPasswordResetsForUser\(userID uint\) error](<#UserRepository.InvalidatePendingPasswordResetsForUser>)
   - [func \(r \*UserRepository\) IsAccountLocked\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) \(bool, time.Duration\)](<#UserRepository.IsAccountLocked>)
   - [func \(r \*UserRepository\) MarkHouseholdStepDone\(userID uint\) error](<#UserRepository.MarkHouseholdStepDone>)
   - [func \(r \*UserRepository\) MarkNotificationsSetup\(userID uint\) error](<#UserRepository.MarkNotificationsSetup>)
   - [func \(r \*UserRepository\) MarkOnboardingComplete\(userID uint\) error](<#UserRepository.MarkOnboardingComplete>)
+  - [func \(r \*UserRepository\) MarkPasswordResetUsed\(resetID uint, usedAt time.Time\) error](<#UserRepository.MarkPasswordResetUsed>)
   - [func \(r \*UserRepository\) MarkProfileStepDone\(userID uint\) error](<#UserRepository.MarkProfileStepDone>)
   - [func \(r \*UserRepository\) RecordFailedLoginAttempt\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) error](<#UserRepository.RecordFailedLoginAttempt>)
   - [func \(r \*UserRepository\) ResetFailedLoginAttempts\(userID uint\) error](<#UserRepository.ResetFailedLoginAttempts>)
+  - [func \(r \*UserRepository\) SetUserPasswordHash\(userID uint, hashedPassword string\) error](<#UserRepository.SetUserPasswordHash>)
   - [func \(r \*UserRepository\) UpdateAdminUserFields\(userID uint, username, mailAddress string\) error](<#UserRepository.UpdateAdminUserFields>)
   - [func \(r \*UserRepository\) UpdateDisplayName\(userID uint, displayName string\) error](<#UserRepository.UpdateDisplayName>)
   - [func \(r \*UserRepository\) UpdateEmailVerification\(userID uint, verifiedAt \*time.Time\) error](<#UserRepository.UpdateEmailVerification>)
@@ -4003,6 +4355,13 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*UserRepository\) UserExistsByMailAddress\(user \*authentication.User\) bool](<#UserRepository.UserExistsByMailAddress>)
   - [func \(r \*UserRepository\) UserExistsByUsername\(user \*authentication.User\) bool](<#UserRepository.UserExistsByUsername>)
 - [type UserRepositoryInterface](<#UserRepositoryInterface>)
+- [type WasteAnalyticsRepository](<#WasteAnalyticsRepository>)
+  - [func NewWasteAnalyticsRepository\(db \*gorm.DB\) \*WasteAnalyticsRepository](<#NewWasteAnalyticsRepository>)
+  - [func \(r \*WasteAnalyticsRepository\) GetConsumedVsWasted\(householdID uint, since time.Time\) \(ConsumedVsWastedRow, error\)](<#WasteAnalyticsRepository.GetConsumedVsWasted>)
+  - [func \(r \*WasteAnalyticsRepository\) GetMonthlyBreakdown\(householdID uint, since time.Time, months int\) \(\[\]apiModel.WasteMonthly, error\)](<#WasteAnalyticsRepository.GetMonthlyBreakdown>)
+  - [func \(r \*WasteAnalyticsRepository\) GetMostWastedCategories\(householdID uint, since time.Time, limit int, by string\) \(\[\]apiModel.WasteCategoryStat, error\)](<#WasteAnalyticsRepository.GetMostWastedCategories>)
+  - [func \(r \*WasteAnalyticsRepository\) GetMostWastedProducts\(householdID uint, since time.Time, perCategoryLimit int\) \(map\[string\]\[\]apiModel.WasteProductStat, error\)](<#WasteAnalyticsRepository.GetMostWastedProducts>)
+  - [func \(r \*WasteAnalyticsRepository\) GetTrendMonths\(householdID uint, months int\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#WasteAnalyticsRepository.GetTrendMonths>)
 - [type WebhookRepository](<#WebhookRepository>)
   - [func NewWebhookRepository\(db \*gorm.DB\) \*WebhookRepository](<#NewWebhookRepository>)
   - [func \(r \*WebhookRepository\) CheckOwnership\(webhookID, userID uint\) error](<#WebhookRepository.CheckOwnership>)
@@ -4249,6 +4608,22 @@ type CalendarTokenRepositoryInterface interface {
 }
 ```
 
+<a name="ConsumedVsWastedRow"></a>
+## type ConsumedVsWastedRow
+
+ConsumedVsWastedRow is the aggregate over a time window.
+
+```go
+type ConsumedVsWastedRow struct {
+    ConsumedCount int
+    ConsumedEUR   float64
+    ConsumedCO2Kg float64
+    WastedCount   int
+    WastedEUR     float64
+    WastedCO2Kg   float64
+}
+```
+
 <a name="ExpiryScanRepository"></a>
 ## type ExpiryScanRepository
 
@@ -4454,6 +4829,15 @@ func (r *HouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint,
 
 
 
+<a name="HouseholdRepository.UpdateHouseholdSettings"></a>
+### func \(\*HouseholdRepository\) UpdateHouseholdSettings
+
+```go
+func (r *HouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64) error
+```
+
+
+
 <a name="HouseholdRepositoryInterface"></a>
 ## type HouseholdRepositoryInterface
 
@@ -4473,6 +4857,7 @@ type HouseholdRepositoryInterface interface {
     GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error)
     CancelApplication(applicationID, applicantUserID uint) error
     UpdateHouseholdName(householdID, adminUserID uint, name string) error
+    UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64) error
     RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
     SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error
     GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
@@ -5232,6 +5617,15 @@ func (r *ProductRepository) GetArchivedProductsGroupedByBarcode(userID uint) (ma
 
 
 
+<a name="ProductRepository.GetConsumedSamples"></a>
+### func \(\*ProductRepository\) GetConsumedSamples
+
+```go
+func (r *ProductRepository) GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error)
+```
+
+
+
 <a name="ProductRepository.GetExpiredProductsCount"></a>
 ### func \(\*ProductRepository\) GetExpiredProductsCount
 
@@ -5366,6 +5760,15 @@ func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string
 ```
 
 
+
+<a name="ProductRepository.GetProductIdentity"></a>
+### func \(\*ProductRepository\) GetProductIdentity
+
+```go
+func (r *ProductRepository) GetProductIdentity(productID, userID uint) (database.Product, error)
+```
+
+GetProductIdentity returns a product's identity \(household \+ barcode \+ name \+ amount \+ unit \+ min stock \+ private flag \+ owner\) without the StorageLocation preload. It exists for hot read paths that only need those fields and would otherwise pay for a useless JOIN.
 
 <a name="ProductRepository.GetProductsByHousehold"></a>
 ### func \(\*ProductRepository\) GetProductsByHousehold
@@ -5594,6 +5997,7 @@ type ProductRepositoryInterface interface {
     GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
     GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
     GetProductByID(productID, userID uint) (database.Product, error)
+    GetProductIdentity(productID, userID uint) (database.Product, error)
     GetArchivedProductByID(productID, userID uint) (database.Product, error)
     SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
     GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
@@ -5639,6 +6043,7 @@ type ProductRepositoryInterface interface {
     BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
     BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
     GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
+    GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error)
 }
 ```
 
@@ -5728,6 +6133,7 @@ type RepositoryContainer struct {
     PATs              PATRepositoryInterface
     Recipes           RecipeRepositoryInterface
     Savings           SavingsRepositoryInterface
+    WasteAnalytics    *WasteAnalyticsRepository
     Notifications     NotificationRepositoryInterface
     Streaks           StreakRepositoryInterface
     ExpiryScan        ExpiryScanRepositoryInterface
@@ -6123,6 +6529,24 @@ func NewUserRepository(db *gorm.DB) *UserRepository
 
 
 
+<a name="UserRepository.ApplyPasswordReset"></a>
+### func \(\*UserRepository\) ApplyPasswordReset
+
+```go
+func (r *UserRepository) ApplyPasswordReset(userID uint, tokenHash, hashedPassword string, usedAt time.Time) (bool, error)
+```
+
+ApplyPasswordReset runs the password update, token consumption, and invalidation of other pending resets in a single transaction. It returns \(consumed, err\) where consumed is true only if the token was the one that actually got consumed — i.e. was pending, unexpired, and the update succeeded. On consumed=false the password has NOT been changed and the caller should respond with the appropriate token\-invalid error.
+
+<a name="UserRepository.ConsumePasswordReset"></a>
+### func \(\*UserRepository\) ConsumePasswordReset
+
+```go
+func (r *UserRepository) ConsumePasswordReset(tokenHash string, usedAt time.Time) (bool, error)
+```
+
+ConsumePasswordReset atomically marks a reset row as used only if it is still pending and not expired. The conditional WHERE makes this safe under concurrent use: the second concurrent caller sees zero rows affected.
+
 <a name="UserRepository.CreateEmailVerification"></a>
 ### func \(\*UserRepository\) CreateEmailVerification
 
@@ -6132,11 +6556,29 @@ func (r *UserRepository) CreateEmailVerification(userID uint, token string, expi
 
 
 
+<a name="UserRepository.CreatePasswordReset"></a>
+### func \(\*UserRepository\) CreatePasswordReset
+
+```go
+func (r *UserRepository) CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error
+```
+
+CreatePasswordReset persists a new password\-reset row. The raw token is SHA\-256 hashed before storage; only the hash is written to the database.
+
 <a name="UserRepository.CreateUser"></a>
 ### func \(\*UserRepository\) CreateUser
 
 ```go
 func (r *UserRepository) CreateUser(user *authentication.User) error
+```
+
+
+
+<a name="UserRepository.DeleteExpiredPasswordResets"></a>
+### func \(\*UserRepository\) DeleteExpiredPasswordResets
+
+```go
+func (r *UserRepository) DeleteExpiredPasswordResets(before time.Time) error
 ```
 
 
@@ -6186,11 +6628,29 @@ func (r *UserRepository) GetOnboardingState(userID uint) (database.OnboardingSta
 
 
 
+<a name="UserRepository.GetPasswordResetByToken"></a>
+### func \(\*UserRepository\) GetPasswordResetByToken
+
+```go
+func (r *UserRepository) GetPasswordResetByToken(token string) (database.PasswordReset, error)
+```
+
+GetPasswordResetByToken looks up a reset by the raw token submitted by the client \(form POST or API body\). The raw token is hashed before the lookup.
+
 <a name="UserRepository.GetUserByID"></a>
 ### func \(\*UserRepository\) GetUserByID
 
 ```go
 func (r *UserRepository) GetUserByID(userID uint) (authentication.User, error)
+```
+
+
+
+<a name="UserRepository.GetUserByMailAddress"></a>
+### func \(\*UserRepository\) GetUserByMailAddress
+
+```go
+func (r *UserRepository) GetUserByMailAddress(mailAddress string) (authentication.User, error)
 ```
 
 
@@ -6231,6 +6691,15 @@ func (r *UserRepository) GetUsersByHouseholdID(householdID uint) ([]authenticati
 
 
 
+<a name="UserRepository.InvalidatePendingPasswordResetsForUser"></a>
+### func \(\*UserRepository\) InvalidatePendingPasswordResetsForUser
+
+```go
+func (r *UserRepository) InvalidatePendingPasswordResetsForUser(userID uint) error
+```
+
+
+
 <a name="UserRepository.IsAccountLocked"></a>
 ### func \(\*UserRepository\) IsAccountLocked
 
@@ -6267,6 +6736,15 @@ func (r *UserRepository) MarkOnboardingComplete(userID uint) error
 
 
 
+<a name="UserRepository.MarkPasswordResetUsed"></a>
+### func \(\*UserRepository\) MarkPasswordResetUsed
+
+```go
+func (r *UserRepository) MarkPasswordResetUsed(resetID uint, usedAt time.Time) error
+```
+
+
+
 <a name="UserRepository.MarkProfileStepDone"></a>
 ### func \(\*UserRepository\) MarkProfileStepDone
 
@@ -6290,6 +6768,15 @@ func (r *UserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttempts 
 
 ```go
 func (r *UserRepository) ResetFailedLoginAttempts(userID uint) error
+```
+
+
+
+<a name="UserRepository.SetUserPasswordHash"></a>
+### func \(\*UserRepository\) SetUserPasswordHash
+
+```go
+func (r *UserRepository) SetUserPasswordHash(userID uint, hashedPassword string) error
 ```
 
 
@@ -6420,6 +6907,24 @@ type UserRepositoryInterface interface {
     UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
     UpdateEmailVerification(userID uint, verifiedAt *time.Time) error
     UpdateEmailVerificationStatus(token, status string) error
+    GetUserByMailAddress(mailAddress string) (authentication.User, error)
+    CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error
+    GetPasswordResetByToken(token string) (database.PasswordReset, error)
+    MarkPasswordResetUsed(resetID uint, usedAt time.Time) error
+    // ConsumePasswordReset atomically marks the reset row as used only if it
+    // is still pending and not expired. Returns (true, nil) on success,
+    // (false, nil) if the token is missing/already-used/expired, and
+    // (false, err) on DB error. Callers should treat false as "token is not
+    // consumable" and not proceed with the password update.
+    ConsumePasswordReset(tokenHash string, usedAt time.Time) (bool, error)
+    // ApplyPasswordReset atomically (a) sets the user's password hash,
+    // (b) consumes the reset token, and (c) invalidates all other pending
+    // resets for the user. Returns the same semantics as ConsumePasswordReset
+    // for the token-consumed flag, plus any DB error.
+    ApplyPasswordReset(userID uint, tokenHash, hashedPassword string, usedAt time.Time) (bool, error)
+    DeleteExpiredPasswordResets(before time.Time) error
+    InvalidatePendingPasswordResetsForUser(userID uint) error
+    SetUserPasswordHash(userID uint, hashedPassword string) error
     GetOnboardingState(userID uint) (database.OnboardingState, error)
     MarkNotificationsSetup(userID uint) error
     UpdateUsername(userID uint, username string) error
@@ -6432,6 +6937,71 @@ type UserRepositoryInterface interface {
     DeleteUser(userID uint) error
 }
 ```
+
+<a name="WasteAnalyticsRepository"></a>
+## type WasteAnalyticsRepository
+
+WasteAnalyticsRepository handles aggregations of consume/waste events for analytics.
+
+```go
+type WasteAnalyticsRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewWasteAnalyticsRepository"></a>
+### func NewWasteAnalyticsRepository
+
+```go
+func NewWasteAnalyticsRepository(db *gorm.DB) *WasteAnalyticsRepository
+```
+
+NewWasteAnalyticsRepository creates a new WasteAnalyticsRepository.
+
+<a name="WasteAnalyticsRepository.GetConsumedVsWasted"></a>
+### func \(\*WasteAnalyticsRepository\) GetConsumedVsWasted
+
+```go
+func (r *WasteAnalyticsRepository) GetConsumedVsWasted(householdID uint, since time.Time) (ConsumedVsWastedRow, error)
+```
+
+GetConsumedVsWasted returns the aggregate count/EUR/CO2 for consumed and wasted events in the window \[since, now\].
+
+<a name="WasteAnalyticsRepository.GetMonthlyBreakdown"></a>
+### func \(\*WasteAnalyticsRepository\) GetMonthlyBreakdown
+
+```go
+func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since time.Time, months int) ([]apiModel.WasteMonthly, error)
+```
+
+GetMonthlyBreakdown returns per\-month consumed and wasted aggregates, padded with zero buckets for months that have no data so the response is contiguous from \`since\`.
+
+<a name="WasteAnalyticsRepository.GetMostWastedCategories"></a>
+### func \(\*WasteAnalyticsRepository\) GetMostWastedCategories
+
+```go
+func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, since time.Time, limit int, by string) ([]apiModel.WasteCategoryStat, error)
+```
+
+GetMostWastedCategories returns the top \`limit\` categories of wasted products for the household in the window \[since, now\]. Categories are resolved from the still\-existing Product row; if a wasted product has been hard\-deleted it falls into the "Other" bucket. Results are sorted by \`by\` — "count" \(default\) or "cost".
+
+<a name="WasteAnalyticsRepository.GetMostWastedProducts"></a>
+### func \(\*WasteAnalyticsRepository\) GetMostWastedProducts
+
+```go
+func (r *WasteAnalyticsRepository) GetMostWastedProducts(householdID uint, since time.Time, perCategoryLimit int) (map[string][]apiModel.WasteProductStat, error)
+```
+
+GetMostWastedProducts returns the top wasted products grouped by category for the household in the window \[since, now\]. Each category's slice is capped at perCategoryLimit. The category key is resolved from the still\-existing Product row; if a wasted product has been hard\-deleted it falls into the "Other" bucket.
+
+<a name="WasteAnalyticsRepository.GetTrendMonths"></a>
+### func \(\*WasteAnalyticsRepository\) GetTrendMonths
+
+```go
+func (r *WasteAnalyticsRepository) GetTrendMonths(householdID uint, months int) ([]apiModel.StatsMonthlyCount, error)
+```
+
+GetTrendMonths returns wasted\-count\-per\-month for the last \`months\` months \(ascending\).
 
 <a name="WebhookRepository"></a>
 ## type WebhookRepository
@@ -6575,6 +7145,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ActivityEntry](<#ActivityEntry>)
 - [type ActivityLogResponse](<#ActivityLogResponse>)
 - [type BulkProductsAPIModel](<#BulkProductsAPIModel>)
+- [type ConsumptionRateResponse](<#ConsumptionRateResponse>)
 - [type CreateTokenRequest](<#CreateTokenRequest>)
 - [type CreateTokenResponse](<#CreateTokenResponse>)
 - [type CreateWebhookRequest](<#CreateWebhookRequest>)
@@ -6582,6 +7153,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type DeliveryLogResponse](<#DeliveryLogResponse>)
 - [type ExpiryScanResponse](<#ExpiryScanResponse>)
 - [type HouseholdListItem](<#HouseholdListItem>)
+- [type HouseholdSettingsResponse](<#HouseholdSettingsResponse>)
 - [type IngredientMatch](<#IngredientMatch>)
 - [type NotificationItem](<#NotificationItem>)
 - [type NotificationsResponse](<#NotificationsResponse>)
@@ -6590,12 +7162,18 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ProductStatsResponse](<#ProductStatsResponse>)
 - [type ProductSummaryResponse](<#ProductSummaryResponse>)
 - [type RecipeSuggestionResponse](<#RecipeSuggestionResponse>)
+- [type RestockSuggestionResponse](<#RestockSuggestionResponse>)
 - [type SavingsStatsResponse](<#SavingsStatsResponse>)
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
 - [type StreakResponse](<#StreakResponse>)
 - [type TokenResponse](<#TokenResponse>)
+- [type UpdateHouseholdSettingsRequest](<#UpdateHouseholdSettingsRequest>)
 - [type UpdateWebhookRequest](<#UpdateWebhookRequest>)
+- [type WasteAnalyticsResponse](<#WasteAnalyticsResponse>)
+- [type WasteCategoryStat](<#WasteCategoryStat>)
+- [type WasteMonthly](<#WasteMonthly>)
+- [type WasteProductStat](<#WasteProductStat>)
 - [type WebhookListResponse](<#WebhookListResponse>)
 - [type WebhookResponse](<#WebhookResponse>)
 
@@ -6653,6 +7231,24 @@ BulkProductsAPIModel represents a bulk product operation request
 ```go
 type BulkProductsAPIModel struct {
     ProductIDs []uint `json:"productIDs"`
+}
+```
+
+<a name="ConsumptionRateResponse"></a>
+## type ConsumptionRateResponse
+
+
+
+```go
+type ConsumptionRateResponse struct {
+    ProductID    uint       `json:"productId"`
+    HasEstimate  bool       `json:"hasEstimate"`
+    PerWeek      float64    `json:"perWeek"`
+    Unit         string     `json:"unit"`
+    SampleCount  int        `json:"sampleCount"`
+    DaysCovered  int        `json:"daysCovered"`
+    LastConsumed *time.Time `json:"lastConsumed,omitempty"`
+    Display      string     `json:"display"`
 }
 ```
 
@@ -6749,6 +7345,19 @@ type HouseholdListItem struct {
     Name        string `json:"name"`
     Description string `json:"description"`
     MemberCount int    `json:"memberCount"`
+}
+```
+
+<a name="HouseholdSettingsResponse"></a>
+## type HouseholdSettingsResponse
+
+HouseholdSettingsResponse is the response body for GET /api/v1/household/settings
+
+```go
+type HouseholdSettingsResponse struct {
+    MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType"`
+    MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
+    MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
 }
 ```
 
@@ -6868,6 +7477,27 @@ type RecipeSuggestionResponse struct {
 }
 ```
 
+<a name="RestockSuggestionResponse"></a>
+## type RestockSuggestionResponse
+
+
+
+```go
+type RestockSuggestionResponse struct {
+    ProductID      uint    `json:"productId"`
+    ProductName    string  `json:"productName"`
+    HasSuggestion  bool    `json:"hasSuggestion"`
+    HasEstimate    bool    `json:"hasEstimate"`
+    SuggestedQty   int     `json:"suggestedQty"`
+    Unit           string  `json:"unit"`
+    Source         string  `json:"source"`
+    WeeklyRate     float64 `json:"weeklyRate"`
+    SampleCount    int     `json:"sampleCount"`
+    Display        string  `json:"display"`
+    PerWeekDisplay string  `json:"perWeekDisplay"`
+}
+```
+
 <a name="SavingsStatsResponse"></a>
 ## type SavingsStatsResponse
 
@@ -6939,6 +7569,19 @@ type TokenResponse struct {
 }
 ```
 
+<a name="UpdateHouseholdSettingsRequest"></a>
+## type UpdateHouseholdSettingsRequest
+
+UpdateHouseholdSettingsRequest is the request body for PATCH /api/v1/household/settings
+
+```go
+type UpdateHouseholdSettingsRequest struct {
+    MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType"`
+    MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
+    MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
+}
+```
+
 <a name="UpdateWebhookRequest"></a>
 ## type UpdateWebhookRequest
 
@@ -6950,6 +7593,73 @@ type UpdateWebhookRequest struct {
     Secret string   `json:"secret" binding:"omitempty,min=16"`
     Events []string `json:"events" binding:"omitempty,min=1"`
     Active *bool    `json:"active"`
+}
+```
+
+<a name="WasteAnalyticsResponse"></a>
+## type WasteAnalyticsResponse
+
+WasteAnalyticsResponse is the response body for GET /api/v1/stats/waste
+
+```go
+type WasteAnalyticsResponse struct {
+    Period               string              `json:"period"` // "month" | "3months" | "6months" | "12months"
+    Sort                 string              `json:"sort"`   // "count" | "cost" — applied to mostWastedCategories
+    ConsumedCount        int                 `json:"consumedCount"`
+    WastedCount          int                 `json:"wastedCount"`
+    TotalRemoved         int                 `json:"totalRemoved"`
+    WastedPercent        float64             `json:"wastedPercent"`
+    WastedEUR            float64             `json:"wastedEur"`
+    WastedCO2Kg          float64             `json:"wastedCo2Kg"`
+    Monthly              []WasteMonthly      `json:"monthly"`
+    MostWastedCategories []WasteCategoryStat `json:"mostWastedCategories"`
+    Trend                []StatsMonthlyCount `json:"trend"`
+    CO2Source            string              `json:"co2Source"`
+}
+```
+
+<a name="WasteCategoryStat"></a>
+## type WasteCategoryStat
+
+WasteCategoryStat represents the aggregate waste impact for a single product category.
+
+```go
+type WasteCategoryStat struct {
+    CategoryKey string             `json:"categoryKey"`
+    DisplayName string             `json:"displayName"`
+    Count       int                `json:"count"`
+    CostEUR     float64            `json:"costEur"`
+    CO2Kg       float64            `json:"co2Kg"`
+    Products    []WasteProductStat `json:"products,omitempty"`
+}
+```
+
+<a name="WasteMonthly"></a>
+## type WasteMonthly
+
+WasteMonthly represents the per\-month consumed vs. wasted breakdown.
+
+```go
+type WasteMonthly struct {
+    Month         string  `json:"month"` // format: "2006-01"
+    ConsumedCount int     `json:"consumedCount"`
+    WastedCount   int     `json:"wastedCount"`
+    WastedEUR     float64 `json:"wastedEur"`
+    WastedCO2Kg   float64 `json:"wastedCo2Kg"`
+}
+```
+
+<a name="WasteProductStat"></a>
+## type WasteProductStat
+
+WasteProductStat represents the aggregate waste impact for a single product within a category.
+
+```go
+type WasteProductStat struct {
+    ProductName string  `json:"productName"`
+    Count       int     `json:"count"`
+    CostEUR     float64 `json:"costEur"`
+    CO2Kg       float64 `json:"co2Kg"`
 }
 ```
 
@@ -7687,6 +8397,7 @@ import "codeberg.org/isotop7/proviant/models/database"
 
 - [Constants](<#constants>)
 - [func GenerateCacheKey\(provider string, productIDs \[\]uint\) string](<#GenerateCacheKey>)
+- [func HashPasswordResetToken\(raw string\) string](<#HashPasswordResetToken>)
 - [type ActivityLog](<#ActivityLog>)
 - [type AuditLog](<#AuditLog>)
 - [type Date](<#Date>)
@@ -7702,6 +8413,7 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type MailDigestUnsubscribeToken](<#MailDigestUnsubscribeToken>)
 - [type OnboardingState](<#OnboardingState>)
 - [type OpenFoodFactsCache](<#OpenFoodFactsCache>)
+- [type PasswordReset](<#PasswordReset>)
 - [type Product](<#Product>)
 - [type ProductCategoryPrice](<#ProductCategoryPrice>)
 - [type ProductDTOBarcode](<#ProductDTOBarcode>)
@@ -7730,6 +8442,7 @@ const (
     ActivityActionWaste        = "waste"
     ActivityActionRestore      = "restore"
     ActivityActionAmountChange = "amount_change"
+    ActivityActionStreakReset  = "streak_reset"
 )
 ```
 
@@ -7797,6 +8510,15 @@ func GenerateCacheKey(provider string, productIDs []uint) string
 ```
 
 GenerateCacheKey creates a deterministic SHA256 hash from provider name and sorted product IDs.
+
+<a name="HashPasswordResetToken"></a>
+## func HashPasswordResetToken
+
+```go
+func HashPasswordResetToken(raw string) string
+```
+
+HashPasswordResetToken returns the SHA\-256 hex digest of a raw reset token. Use this when persisting a new PasswordReset or looking one up by token.
 
 <a name="ActivityLog"></a>
 ## type ActivityLog
@@ -7915,6 +8637,10 @@ type Household struct {
     Name        string `gorm:"not null"`
     Description string
     AdminID     uint `gorm:"not null"`
+
+    MonthlyWasteGoalType    string   `gorm:"default:''"`   // "", "count", or "percent"
+    MonthlyWasteGoalCount   *int     `gorm:"default:null"` // nil = disabled
+    MonthlyWasteGoalPercent *float64 `gorm:"default:null"` // nil = disabled
 }
 ```
 
@@ -8011,6 +8737,24 @@ type OpenFoodFactsCache struct {
 }
 ```
 
+<a name="PasswordReset"></a>
+## type PasswordReset
+
+PasswordReset stores a one\-time password\-reset token for a user.
+
+Unlike the older EmailVerification flow, the raw token is NEVER persisted — only its SHA\-256 hex digest \(TokenHash\) is stored. The raw value is sent to the user via email and posted back on the reset form, and is hashed on the server before lookup. This way a DB dump or backup never yields valid reset tokens.
+
+```go
+type PasswordReset struct {
+    gorm.Model
+    UserID    uint      `gorm:"index,not null"`
+    TokenHash string    `gorm:"uniqueIndex,not null"`
+    ExpiresAt time.Time `gorm:"not null"`
+    UsedAt    *time.Time
+    IPAddress string `gorm:"size:64"`
+}
+```
+
 <a name="Product"></a>
 ## type Product
 
@@ -8020,7 +8764,7 @@ Product is the database model of a product
 type Product struct {
     gorm.Model
     Barcode              string           `gorm:"index:idx_products_barcode_household,priority:1" json:"barcode"`
-    ProductName          string           `json:"productName"`
+    ProductName          string           `gorm:"index:idx_products_household_name_deleted,priority:1" json:"productName"`
     Categories           string           `json:"categories"`
     Countries            string           `json:"countries"`
     ImageURL             string           `json:"imageUrl"`
@@ -8028,7 +8772,7 @@ type Product struct {
     ScannedAt            time.Time        `json:"scannedAt"`
     NotifiedAt           time.Time        `json:"notifiedAt"`
     DeletedAt            gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
-    HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;not null" json:"-"`
+    HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;index:idx_products_household_name_deleted,priority:2;not null" json:"-"`
     Household            Household        `json:"-"`
     UserID               uint             `gorm:"index, not null" json:"-"`
     IsPrivate            bool             `gorm:"default:false" json:"isPrivate"`
@@ -8104,6 +8848,7 @@ type ProductDTOPatch struct {
     NotificationLeadDays *int      `json:"notificationLeadDays,omitempty"`
     MinStockAmount       int       `json:"minStockAmount"`
     IsPrivate            bool      `json:"isPrivate"`
+    PriceOverride        *float64  `json:"priceOverride,omitempty"`
 }
 ```
 
@@ -8370,6 +9115,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockHouseholdRepository\) RemoveMemberFromHousehold\(memberUserID, adminUserID uint\) error](<#MockHouseholdRepository.RemoveMemberFromHousehold>)
   - [func \(m \*MockHouseholdRepository\) SetHouseholdMemberRole\(memberUserID, adminUserID uint, role string\) error](<#MockHouseholdRepository.SetHouseholdMemberRole>)
   - [func \(m \*MockHouseholdRepository\) UpdateHouseholdName\(householdID, adminUserID uint, name string\) error](<#MockHouseholdRepository.UpdateHouseholdName>)
+  - [func \(m \*MockHouseholdRepository\) UpdateHouseholdSettings\(householdID, adminUserID uint, goalType string, goalCount \*int, goalPercent \*float64\) error](<#MockHouseholdRepository.UpdateHouseholdSettings>)
 - [type MockInvitationRepository](<#MockInvitationRepository>)
   - [func \(m \*MockInvitationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#MockInvitationRepository.AcceptInvitation>)
   - [func \(m \*MockInvitationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#MockInvitationRepository.CancelInvitation>)
@@ -8437,6 +9183,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) GetActiveProductsCount\(userID uint\) \(int, error\)](<#MockProductRepository.GetActiveProductsCount>)
   - [func \(m \*MockProductRepository\) GetArchivedProductByID\(productID, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetArchivedProductByID>)
   - [func \(m \*MockProductRepository\) GetArchivedProductsGroupedByBarcode\(userID uint\) \(map\[string\]int, error\)](<#MockProductRepository.GetArchivedProductsGroupedByBarcode>)
+  - [func \(m \*MockProductRepository\) GetConsumedSamples\(householdID, userID uint, barcode, name string, since time.Time\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetConsumedSamples>)
   - [func \(m \*MockProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#MockProductRepository.GetExpiredProductsCount>)
   - [func \(m \*MockProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetExpiringInDays>)
   - [func \(m \*MockProductRepository\) GetExpiringProductsByHousehold\(householdID uint, daysAhead int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetExpiringProductsByHousehold>)
@@ -8452,6 +9199,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) GetOpenFoodFactsCacheWithoutStorageHint\(\) \(\[\]dbModel.OpenFoodFactsCache, error\)](<#MockProductRepository.GetOpenFoodFactsCacheWithoutStorageHint>)
   - [func \(m \*MockProductRepository\) GetProductByID\(productID, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetProductByID>)
   - [func \(m \*MockProductRepository\) GetProductCategoryBreakdown\(userID uint\) \(map\[string\]int, error\)](<#MockProductRepository.GetProductCategoryBreakdown>)
+  - [func \(m \*MockProductRepository\) GetProductIdentity\(productID, userID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetProductIdentity>)
   - [func \(m \*MockProductRepository\) GetProductsByHousehold\(householdID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetProductsByHousehold>)
   - [func \(m \*MockProductRepository\) GetProductsExpired\(userID uint\) \(\[\]\*dbModel.Product, error\)](<#MockProductRepository.GetProductsExpired>)
   - [func \(m \*MockProductRepository\) GetSubThresholdProducts\(userID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetSubThresholdProducts>)
@@ -8500,25 +9248,34 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockStreakRepository\) RecordWasteEvent\(householdID uint\) error](<#MockStreakRepository.RecordWasteEvent>)
   - [func \(m \*MockStreakRepository\) UpdateStreak\(streak \*dbModel.WasteStreak\) error](<#MockStreakRepository.UpdateStreak>)
 - [type MockUserRepository](<#MockUserRepository>)
+  - [func \(m \*MockUserRepository\) ApplyPasswordReset\(userID uint, tokenHash, hashedPassword string, usedAt time.Time\) \(bool, error\)](<#MockUserRepository.ApplyPasswordReset>)
+  - [func \(m \*MockUserRepository\) ConsumePasswordReset\(tokenHash string, usedAt time.Time\) \(bool, error\)](<#MockUserRepository.ConsumePasswordReset>)
   - [func \(m \*MockUserRepository\) CreateEmailVerification\(userID uint, token string, expiresAt time.Time\) error](<#MockUserRepository.CreateEmailVerification>)
+  - [func \(m \*MockUserRepository\) CreatePasswordReset\(userID uint, token string, expiresAt time.Time, ipAddress string\) error](<#MockUserRepository.CreatePasswordReset>)
   - [func \(m \*MockUserRepository\) CreateUser\(user \*authentication.User\) error](<#MockUserRepository.CreateUser>)
+  - [func \(m \*MockUserRepository\) DeleteExpiredPasswordResets\(before time.Time\) error](<#MockUserRepository.DeleteExpiredPasswordResets>)
   - [func \(m \*MockUserRepository\) DeleteUser\(userID uint\) error](<#MockUserRepository.DeleteUser>)
   - [func \(m \*MockUserRepository\) EnsureOnboardingState\(userID uint\) error](<#MockUserRepository.EnsureOnboardingState>)
   - [func \(m \*MockUserRepository\) GetEmailVerificationByToken\(token string\) \(dbModel.EmailVerification, error\)](<#MockUserRepository.GetEmailVerificationByToken>)
   - [func \(m \*MockUserRepository\) GetHouseholdByID\(householdID uint\) \(dbModel.Household, error\)](<#MockUserRepository.GetHouseholdByID>)
   - [func \(m \*MockUserRepository\) GetOnboardingState\(userID uint\) \(dbModel.OnboardingState, error\)](<#MockUserRepository.GetOnboardingState>)
+  - [func \(m \*MockUserRepository\) GetPasswordResetByToken\(token string\) \(dbModel.PasswordReset, error\)](<#MockUserRepository.GetPasswordResetByToken>)
   - [func \(m \*MockUserRepository\) GetUserByID\(userID uint\) \(authentication.User, error\)](<#MockUserRepository.GetUserByID>)
+  - [func \(m \*MockUserRepository\) GetUserByMailAddress\(mailAddress string\) \(authentication.User, error\)](<#MockUserRepository.GetUserByMailAddress>)
   - [func \(m \*MockUserRepository\) GetUserByUsername\(username string\) \(authentication.User, error\)](<#MockUserRepository.GetUserByUsername>)
   - [func \(m \*MockUserRepository\) GetUserHouseholdByID\(userID uint\) \(uint, error\)](<#MockUserRepository.GetUserHouseholdByID>)
   - [func \(m \*MockUserRepository\) GetUserHouseholdRole\(userID uint\) \(string, error\)](<#MockUserRepository.GetUserHouseholdRole>)
   - [func \(m \*MockUserRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#MockUserRepository.GetUsersByHouseholdID>)
+  - [func \(m \*MockUserRepository\) InvalidatePendingPasswordResetsForUser\(userID uint\) error](<#MockUserRepository.InvalidatePendingPasswordResetsForUser>)
   - [func \(m \*MockUserRepository\) IsAccountLocked\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) \(bool, time.Duration\)](<#MockUserRepository.IsAccountLocked>)
   - [func \(m \*MockUserRepository\) MarkHouseholdStepDone\(userID uint\) error](<#MockUserRepository.MarkHouseholdStepDone>)
   - [func \(m \*MockUserRepository\) MarkNotificationsSetup\(userID uint\) error](<#MockUserRepository.MarkNotificationsSetup>)
   - [func \(m \*MockUserRepository\) MarkOnboardingComplete\(userID uint\) error](<#MockUserRepository.MarkOnboardingComplete>)
+  - [func \(m \*MockUserRepository\) MarkPasswordResetUsed\(resetID uint, usedAt time.Time\) error](<#MockUserRepository.MarkPasswordResetUsed>)
   - [func \(m \*MockUserRepository\) MarkProfileStepDone\(userID uint\) error](<#MockUserRepository.MarkProfileStepDone>)
   - [func \(m \*MockUserRepository\) RecordFailedLoginAttempt\(userID uint, maxLoginAttempts int, lockoutDurationMins int\) error](<#MockUserRepository.RecordFailedLoginAttempt>)
   - [func \(m \*MockUserRepository\) ResetFailedLoginAttempts\(userID uint\) error](<#MockUserRepository.ResetFailedLoginAttempts>)
+  - [func \(m \*MockUserRepository\) SetUserPasswordHash\(userID uint, hashedPassword string\) error](<#MockUserRepository.SetUserPasswordHash>)
   - [func \(m \*MockUserRepository\) UpdateAdminUserFields\(userID uint, username, mailAddress string\) error](<#MockUserRepository.UpdateAdminUserFields>)
   - [func \(m \*MockUserRepository\) UpdateDisplayName\(userID uint, displayName string\) error](<#MockUserRepository.UpdateDisplayName>)
   - [func \(m \*MockUserRepository\) UpdateEmailVerification\(userID uint, verifiedAt \*time.Time\) error](<#MockUserRepository.UpdateEmailVerification>)
@@ -8795,6 +9552,15 @@ func (m *MockHouseholdRepository) SetHouseholdMemberRole(memberUserID, adminUser
 
 ```go
 func (m *MockHouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint, name string) error
+```
+
+
+
+<a name="MockHouseholdRepository.UpdateHouseholdSettings"></a>
+### func \(\*MockHouseholdRepository\) UpdateHouseholdSettings
+
+```go
+func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64) error
 ```
 
 
@@ -9438,6 +10204,15 @@ func (m *MockProductRepository) GetArchivedProductsGroupedByBarcode(userID uint)
 
 
 
+<a name="MockProductRepository.GetConsumedSamples"></a>
+### func \(\*MockProductRepository\) GetConsumedSamples
+
+```go
+func (m *MockProductRepository) GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]dbModel.Product, error)
+```
+
+
+
 <a name="MockProductRepository.GetExpiredProductsCount"></a>
 ### func \(\*MockProductRepository\) GetExpiredProductsCount
 
@@ -9569,6 +10344,15 @@ func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.
 
 ```go
 func (m *MockProductRepository) GetProductCategoryBreakdown(userID uint) (map[string]int, error)
+```
+
+
+
+<a name="MockProductRepository.GetProductIdentity"></a>
+### func \(\*MockProductRepository\) GetProductIdentity
+
+```go
+func (m *MockProductRepository) GetProductIdentity(productID, userID uint) (dbModel.Product, error)
 ```
 
 
@@ -10037,6 +10821,7 @@ type MockUserRepository struct {
     Household               dbModel.Household
     OnboardingState         dbModel.OnboardingState
     EmailVerification       dbModel.EmailVerification
+    PasswordReset           dbModel.PasswordReset
     HouseholdID             uint
     UsernameExistsResult    bool
     MailAddressExistsResult bool
@@ -10045,6 +10830,24 @@ type MockUserRepository struct {
     Err                     error
 }
 ```
+
+<a name="MockUserRepository.ApplyPasswordReset"></a>
+### func \(\*MockUserRepository\) ApplyPasswordReset
+
+```go
+func (m *MockUserRepository) ApplyPasswordReset(userID uint, tokenHash, hashedPassword string, usedAt time.Time) (bool, error)
+```
+
+
+
+<a name="MockUserRepository.ConsumePasswordReset"></a>
+### func \(\*MockUserRepository\) ConsumePasswordReset
+
+```go
+func (m *MockUserRepository) ConsumePasswordReset(tokenHash string, usedAt time.Time) (bool, error)
+```
+
+
 
 <a name="MockUserRepository.CreateEmailVerification"></a>
 ### func \(\*MockUserRepository\) CreateEmailVerification
@@ -10055,11 +10858,29 @@ func (m *MockUserRepository) CreateEmailVerification(userID uint, token string, 
 
 
 
+<a name="MockUserRepository.CreatePasswordReset"></a>
+### func \(\*MockUserRepository\) CreatePasswordReset
+
+```go
+func (m *MockUserRepository) CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error
+```
+
+
+
 <a name="MockUserRepository.CreateUser"></a>
 ### func \(\*MockUserRepository\) CreateUser
 
 ```go
 func (m *MockUserRepository) CreateUser(user *authentication.User) error
+```
+
+
+
+<a name="MockUserRepository.DeleteExpiredPasswordResets"></a>
+### func \(\*MockUserRepository\) DeleteExpiredPasswordResets
+
+```go
+func (m *MockUserRepository) DeleteExpiredPasswordResets(before time.Time) error
 ```
 
 
@@ -10109,11 +10930,29 @@ func (m *MockUserRepository) GetOnboardingState(userID uint) (dbModel.Onboarding
 
 
 
+<a name="MockUserRepository.GetPasswordResetByToken"></a>
+### func \(\*MockUserRepository\) GetPasswordResetByToken
+
+```go
+func (m *MockUserRepository) GetPasswordResetByToken(token string) (dbModel.PasswordReset, error)
+```
+
+
+
 <a name="MockUserRepository.GetUserByID"></a>
 ### func \(\*MockUserRepository\) GetUserByID
 
 ```go
 func (m *MockUserRepository) GetUserByID(userID uint) (authentication.User, error)
+```
+
+
+
+<a name="MockUserRepository.GetUserByMailAddress"></a>
+### func \(\*MockUserRepository\) GetUserByMailAddress
+
+```go
+func (m *MockUserRepository) GetUserByMailAddress(mailAddress string) (authentication.User, error)
 ```
 
 
@@ -10154,6 +10993,15 @@ func (m *MockUserRepository) GetUsersByHouseholdID(householdID uint) ([]authenti
 
 
 
+<a name="MockUserRepository.InvalidatePendingPasswordResetsForUser"></a>
+### func \(\*MockUserRepository\) InvalidatePendingPasswordResetsForUser
+
+```go
+func (m *MockUserRepository) InvalidatePendingPasswordResetsForUser(userID uint) error
+```
+
+
+
 <a name="MockUserRepository.IsAccountLocked"></a>
 ### func \(\*MockUserRepository\) IsAccountLocked
 
@@ -10190,6 +11038,15 @@ func (m *MockUserRepository) MarkOnboardingComplete(userID uint) error
 
 
 
+<a name="MockUserRepository.MarkPasswordResetUsed"></a>
+### func \(\*MockUserRepository\) MarkPasswordResetUsed
+
+```go
+func (m *MockUserRepository) MarkPasswordResetUsed(resetID uint, usedAt time.Time) error
+```
+
+
+
 <a name="MockUserRepository.MarkProfileStepDone"></a>
 ### func \(\*MockUserRepository\) MarkProfileStepDone
 
@@ -10213,6 +11070,15 @@ func (m *MockUserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttem
 
 ```go
 func (m *MockUserRepository) ResetFailedLoginAttempts(userID uint) error
+```
+
+
+
+<a name="MockUserRepository.SetUserPasswordHash"></a>
+### func \(\*MockUserRepository\) SetUserPasswordHash
+
+```go
+func (m *MockUserRepository) SetUserPasswordHash(userID uint, hashedPassword string) error
 ```
 
 
@@ -10440,7 +11306,7 @@ static implements "constants" used in proviant
 ```go
 const (
     // Version is the current proviant version
-    Version = "v0.16.0"
+    Version = "v0.17.0"
 
     // TokenRealm is the realm of tokens
     TokenRealm = "proviant"

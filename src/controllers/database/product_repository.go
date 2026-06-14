@@ -20,6 +20,7 @@ type ProductRepositoryInterface interface {
 	GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
 	GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
 	GetProductByID(productID, userID uint) (database.Product, error)
+	GetProductIdentity(productID, userID uint) (database.Product, error)
 	GetArchivedProductByID(productID, userID uint) (database.Product, error)
 	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
 	GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
@@ -65,6 +66,7 @@ type ProductRepositoryInterface interface {
 	BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
 	BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
 	GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
+	GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error)
 }
 
 var _ ProductRepositoryInterface = (*ProductRepository)(nil)
@@ -198,6 +200,38 @@ func (r *ProductRepository) GetProductByID(productID, userID uint) (database.Pro
 
 	var product database.Product
 	getError := r.DB.Preload("StorageLocation").First(&product, productID)
+	if getError.Error != nil {
+		return database.Product{}, getError.Error
+	}
+
+	var user authentication.User
+	userErr := r.DB.First(&user, userID)
+	if userErr.Error != nil {
+		return database.Product{}, userErr.Error
+	}
+
+	if product.HouseholdID != user.HouseholdID {
+		return database.Product{}, errors.ErrMismatcherUserID
+	}
+	if product.IsPrivate && product.UserID != userID {
+		return database.Product{}, errors.ErrMismatcherUserID
+	}
+	return product, nil
+}
+
+// GetProductIdentity returns a product's identity (household + barcode +
+// name + amount + unit + min stock + private flag + owner) without the
+// StorageLocation preload. It exists for hot read paths that only need
+// those fields and would otherwise pay for a useless JOIN.
+func (r *ProductRepository) GetProductIdentity(productID, userID uint) (database.Product, error) {
+	if productID == 0 {
+		return database.Product{}, gorm.ErrNotImplemented
+	}
+
+	var product database.Product
+	getError := r.DB.Select(
+		"id, barcode, product_name, household_id, user_id, is_private, amount, unit, min_stock_amount",
+	).First(&product, productID)
 	if getError.Error != nil {
 		return database.Product{}, getError.Error
 	}
@@ -358,6 +392,7 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 	dbProduct.NotificationLeadDays = product.NotificationLeadDays
 	dbProduct.MinStockAmount = product.MinStockAmount
 	dbProduct.IsPrivate = product.IsPrivate
+	dbProduct.PriceOverride = product.PriceOverride
 
 	saveResult := r.DB.Save(&dbProduct)
 	return saveResult.Error
@@ -1078,4 +1113,30 @@ func (r *CalendarTokenRepository) Create(ct *authentication.CalendarToken) error
 
 func (r *CalendarTokenRepository) Update(ct *authentication.CalendarToken) error {
 	return r.DB.Save(ct).Error
+}
+
+func (r *ProductRepository) GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error) {
+	if barcode == "" && name == "" {
+		return nil, fmt.Errorf("GetConsumedSamples: barcode and name are both empty")
+	}
+
+	query := r.DB.Unscoped().
+		Select("id, product_name, barcode, unit, amount, deleted_at, is_private, user_id, removal_reason").
+		Where(util.WhereDeletedIsNotNull).
+		Where(util.QueryHouseholdId, householdID).
+		Where("deleted_at >= ?", since).
+		Where("removal_reason = ?", database.RemovalReasonConsumed).
+		Where("(is_private = ? OR user_id = ?)", false, userID)
+
+	if barcode != "" {
+		query = query.Where("barcode = ?", barcode)
+	} else {
+		query = query.Where("product_name = ?", name)
+	}
+
+	var products []database.Product
+	if err := query.Order("deleted_at ASC").Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
 }

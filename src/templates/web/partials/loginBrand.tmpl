@@ -1,0 +1,34 @@
+{{ define "loginBrand" }}
+
+<aside class="login-brand" aria-hidden="true">
+  <div class="brand-circle-sm"></div>
+
+  <div class="brand-top">
+    <div class="brand-logo">
+      <div class="brand-logo-mark">P</div>
+      <div class="brand-logo-name">proviant</div>
+    </div>
+    {{ if .BrandHeadline }}<div class="brand-headline">{{ .BrandHeadline }}</div>{{ end }}
+    {{ if .BrandSub }}<p class="brand-sub">{{ .BrandSub }}</p>{{ end }}
+  </div>
+
+  {{ if .BrandFeatures }}
+  <div class="brand-features">
+    {{ range .BrandFeatures }}
+    <div class="brand-feature">
+      <div class="brand-feature-icon"><i class="bi {{ .Icon }}" aria-hidden="true"></i></div>
+      <div class="brand-feature-text">{{ .Text }}</div>
+    </div>
+    {{ end }}
+  </div>
+  {{ end }}
+
+  <div class="brand-bottom">
+    <a href="https://codeberg.org/Isotop7/proviant" class="brand-feature-text" target="_blank" rel="noopener"
+      title="View source on Codeberg">
+      <i class="bi bi-git" aria-hidden="true"></i> proviant@Codeberg
+    </a>
+  </div>
+</aside>
+
+{{ end }}

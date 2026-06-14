@@ -101,6 +101,38 @@
         </div>
         {{ end }}
 
+        {{/* Monthly waste goal — admin only */}}
+        {{ if .IsAdmin }}
+        <div class="mb-4">
+            <h3 class="h6 fw-semibold mb-2"><i class="bi bi-bullseye me-1"></i>Monthly Waste Goal</h3>
+            <p class="text-secondary-custom small mb-2">Set a target your household aims to meet each month. Choose a maximum wasted count, a maximum waste percentage, or leave disabled.</p>
+            <div class="mb-3">
+                <label class="form-label fw-medium small">Goal type</label>
+                <div class="btn-group btn-group-sm" role="group" id="monthlyGoalTypeGroup" aria-label="Monthly goal type">
+                    <input type="radio" class="btn-check" name="monthlyGoalType" id="monthlyGoalTypeDisabled" value="" {{ if not .Household.MonthlyWasteGoalType }}checked{{ end }}>
+                    <label class="btn btn-outline-secondary" for="monthlyGoalTypeDisabled">Disabled</label>
+                    <input type="radio" class="btn-check" name="monthlyGoalType" id="monthlyGoalTypeCount" value="count" {{ if eq .Household.MonthlyWasteGoalType "count" }}checked{{ end }}>
+                    <label class="btn btn-outline-secondary" for="monthlyGoalTypeCount">Max count</label>
+                    <input type="radio" class="btn-check" name="monthlyGoalType" id="monthlyGoalTypePercent" value="percent" {{ if eq .Household.MonthlyWasteGoalType "percent" }}checked{{ end }}>
+                    <label class="btn btn-outline-secondary" for="monthlyGoalTypePercent">Max percent</label>
+                </div>
+            </div>
+            <div class="mb-3" id="monthlyGoalCountRow" {{ if ne .Household.MonthlyWasteGoalType "count" }}style="display:none"{{ end }}>
+                <label for="inputMonthlyGoalCount" class="form-label fw-medium small">Maximum wasted products per month</label>
+                <input type="number" min="0" step="1" class="form-control input-width-240" id="inputMonthlyGoalCount"
+                       value="{{ if .Household.MonthlyWasteGoalCount }}{{ .Household.MonthlyWasteGoalCount }}{{ else }}0{{ end }}">
+            </div>
+            <div class="mb-3" id="monthlyGoalPercentRow" {{ if ne .Household.MonthlyWasteGoalType "percent" }}style="display:none"{{ end }}>
+                <label for="inputMonthlyGoalPercent" class="form-label fw-medium small">Maximum waste percentage (0–100)</label>
+                <input type="number" min="0" max="100" step="0.1" class="form-control input-width-240" id="inputMonthlyGoalPercent"
+                       value="{{ if .Household.MonthlyWasteGoalPercent }}{{ .Household.MonthlyWasteGoalPercent }}{{ else }}0{{ end }}">
+            </div>
+            <button type="button" class="btn btn-proviant-primary btn-sm" id="btnSaveMonthlyGoal">
+                <i class="bi bi-save me-1"></i>Save goal
+            </button>
+        </div>
+        {{ end }}
+
         {{/* ── Join & Invite ───────────────────────────────── */}}
         <div class="mt-4 pt-4 border-top">
             <h3 class="h6 fw-semibold text-secondary-custom mb-3"><i class="bi bi-person-plus me-1"></i>Join &amp; Invite</h3>

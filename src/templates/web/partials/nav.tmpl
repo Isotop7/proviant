@@ -29,6 +29,11 @@
 			data-bs-toggle="tooltip" data-bs-placement="right" title="Recipes">
 			<i class="bi bi-journal-richtext" aria-hidden="true"></i> Recipes
 		</a>
+		<a href="/web/waste-analytics" class="pv-nav-item {{ if eq .Title "Waste Analytics" }}active{{ end }}"
+			{{ if eq .Title "Waste Analytics" }}aria-current="page"{{ end }}
+			data-bs-toggle="tooltip" data-bs-placement="right" title="Waste Analytics">
+			<i class="bi bi-bar-chart-line" aria-hidden="true"></i> Waste Analytics
+		</a>
 		<a href="/web/user/settings" class="pv-nav-item {{ if eq .Title "User Settings" }}active{{ end }}"
 			{{ if eq .Title "User Settings" }}aria-current="page"{{ end }}
 			data-bs-toggle="tooltip" data-bs-placement="right" title="Settings">
