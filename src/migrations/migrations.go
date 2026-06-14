@@ -142,7 +142,7 @@ func AddPerformanceIndexes(logger *zerolog.Logger, db *gorm.DB) error {
 	// migration does not take a long table lock or stall replication on
 	// large `products` tables. SQLite ignores ALGORITHM/LOCK clauses, so
 	// the bare CREATE INDEX works there.
-	isMariaDB := db.Dialector != nil && db.Dialector.Name() == "mysql"
+	isMariaDB := db.Name() == "mysql"
 
 	statements := []string{
 		"CREATE INDEX IF NOT EXISTS idx_products_household_deleted ON products(household_id, deleted_at)",
@@ -154,7 +154,7 @@ func AddPerformanceIndexes(logger *zerolog.Logger, db *gorm.DB) error {
 	}
 	for _, sql := range statements {
 		if isMariaDB && strings.Contains(sql, "products(household_id, product_name, deleted_at)") {
-			sql = sql + " ALGORITHM=INPLACE, LOCK=NONE"
+			sql += " ALGORITHM=INPLACE, LOCK=NONE"
 		}
 		if err := db.Exec(sql).Error; err != nil {
 			return fmt.Errorf("creating index: %w (sql: %s)", err, sql)

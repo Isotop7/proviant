@@ -3409,11 +3409,11 @@ select.pv-field-input {
 /* Waste analytics — make accordion headers look like the site's list-group-item pattern */
 #categoryList .accordion-item,
 #categoryList > .list-group-item {
+  padding: .5rem 1rem;
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--bs-list-group-border-color);
   border-radius: 0;
-  padding: .5rem 1rem;
 }
 
 #categoryList .accordion-header {
