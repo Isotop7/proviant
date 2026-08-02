@@ -16,6 +16,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -28,7 +31,7 @@ jobs:
           cd ./src
           go mod verify
       - name: Lint code
-        uses: https://github.com/golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v8
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: src
@@ -36,11 +39,8 @@ jobs:
         run: |
           cd ./src
           go run golang.org/x/vuln/cmd/govulncheck@latest -json ./... > govulncheck.json
-
       - name: Create vulnerability issues
         if: failure()
-        permissions:
-          issues: write
         env:
           WORKSPACE: ${{ github.workspace }}
         run: |
@@ -96,6 +96,7 @@ jobs:
           cd ./src
           mkdir -p release
           go build -o release ./...
+
   frontend-check:
     runs-on: ubuntu-latest
     steps:
@@ -160,6 +161,7 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:demo
             ${{ env.PRIVATE_REGISTRY }}/${{ github.repository }}:demo
+
   sonarcloud-scan:
     needs: check
     if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
@@ -171,6 +173,6 @@ jobs:
           fetch-depth: 0
       - name: Run SonarCloud scan
         continue-on-error: true
-        uses: https://github.com/SonarSource/sonarqube-scan-action@v6.0.0
+        uses: SonarSource/sonarqube-scan-action@v6.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

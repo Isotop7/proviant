@@ -24,7 +24,7 @@ jobs:
           git pull origin main
 
       - name: Install git-cliff
-        uses: https://github.com/taiki-e/install-action@git-cliff
+        uses: taiki-e/install-action@git-cliff
 
       - name: Generate full changelog
         run: |
