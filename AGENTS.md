@@ -403,10 +403,9 @@ Project uses [Conventional Commits](https://www.conventionalcommits.org/) for au
 
 ## Release Automation
 
-- **CHANGELOG generation**: On `v*` tag push, `.forgejo/workflows/release.yml` triggers. Uses `git-cliff` (via `orhun/git-cliff-action@v3`) with `cliff.toml` to generate CHANGELOG from conventional commits, commits it back, attaches as release asset.
-- **RELEASE_TOKEN secret**: Must exist in Forgejo repo settings with `api` and `write` scopes. Used to:
-  1. Push updated `CHANGELOG.md` back to repo
-  2. Upload `CHANGELOG.md` as release asset via `gitea.com/actions/release-action`
+- **CHANGELOG generation**: On `v*` tag push, `.github/workflows/release.yml` triggers. Uses `git-cliff` (via `taiki-e/install-action@git-cliff`) with `cliff.toml` to generate CHANGELOG from conventional commits, commits it back, attaches as release asset.
+- **Auth**: Uses the built-in `GITHUB_TOKEN` (with `permissions: contents: write`). `RELEASE_TOKEN` secret is no longer required. The push-back to `main` uses the `x-access-token` URL form (`https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/...`). Note: branch protection requiring PR reviews will block the push-back — either exempt the release bot or allow direct pushes for releases.
+- **Release creation**: Uses `softprops/action-gh-release@v2` to create the GitHub Release and upload `CHANGELOG.md` as an asset.
 - **Tag format**: `vX.Y.Z` tags (e.g., `v0.4.0`). `cliff.toml` tag pattern `v?[0-9].*` supports both `v`-prefixed and legacy unprefixed tags.
 
 ## Important Notes
