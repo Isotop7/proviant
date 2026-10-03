@@ -56,6 +56,38 @@ definitions:
       unit:
         type: string
     type: object
+  api.CookItemAPIModel:
+    properties:
+      amount:
+        minimum: 0
+        type: integer
+      productId:
+        type: integer
+    required:
+    - productId
+    type: object
+  api.CookProductsAPIModel:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/api.CookItemAPIModel'
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
+  api.CookResponse:
+    properties:
+      consumed:
+        type: integer
+      errors:
+        items:
+          type: string
+        type: array
+      partial:
+        type: integer
+    type: object
   api.CreateWebhookRequest:
     properties:
       active:
@@ -2453,6 +2485,40 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Mark products as wasted
+      tags:
+      - product
+  /api/v1/products/cook:
+    post:
+      consumes:
+      - application/json
+      description: Consumes the given products by reducing their amounts. An amount
+        of 0 or one that reaches or exceeds the current amount fully consumes (archives)
+        the product.
+      parameters:
+      - description: Cook items
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CookProductsAPIModel'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CookResponse'
+        "400":
+          description: Returned when no item was processed (invalid body or all items
+            failed)
+          schema:
+            $ref: '#/definitions/api.CookResponse'
+        "500":
+          description: Returned when no item was processed and a server-side error
+            occurred
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Cook products
       tags:
       - product
   /api/v1/products/expired:

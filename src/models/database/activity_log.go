@@ -23,6 +23,7 @@ const (
 	ActivityActionConsume      = "consume"
 	ActivityActionWaste        = "waste"
 	ActivityActionRestore      = "restore"
+	ActivityActionCook         = "cook"
 	ActivityActionAmountChange = "amount_change"
 	ActivityActionStreakReset  = "streak_reset"
 )

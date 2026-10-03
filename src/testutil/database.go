@@ -36,7 +36,13 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 	tempDir := t.TempDir()
 	tempFile := filepath.Join(tempDir, "test.db")
 
-	db, err := gorm.Open(sqlite.Open(tempFile), &gorm.Config{})
+	// Services fire activity log / savings event writes from background
+	// goroutines while test code writes on the main goroutine. Without a
+	// busy timeout those concurrent writes intermittently fail with
+	// "database is locked"; _txlock=immediate additionally avoids the
+	// deferred-transaction upgrade deadlock that busy_timeout cannot
+	// retry.
+	db, err := gorm.Open(sqlite.Open(tempFile+"?_busy_timeout=5000&_txlock=immediate&_journal_mode=WAL"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("Failed to create test database: %v", err)
 	}

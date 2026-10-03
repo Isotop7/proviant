@@ -74,6 +74,7 @@ func filterByEffectiveExpiryWindow(products []database.Product, start, end time.
 
 type ProductRepositoryInterface interface {
 	GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
+	GetUserProductsByIDs(userID uint, ids []uint) ([]database.Product, error)
 	GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
 	GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
 	GetProductByID(productID, userID uint) (database.Product, error)
@@ -119,6 +120,7 @@ type ProductRepositoryInterface interface {
 	GetProductsByHousehold(householdID uint) ([]database.Product, error)
 	GetSubThresholdProducts(userID uint) ([]database.Product, error)
 	ConsumeProduct(productID, userID uint) error
+	ConsumeProductPartial(product *database.Product, amount int) (int, bool, error)
 	WasteProduct(productID, userID uint) error
 	MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (database.Product, *time.Time, bool, error)
 	BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
@@ -214,6 +216,22 @@ func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]datab
 		return ti.Before(tj)
 	})
 
+	return products, nil
+}
+
+// GetUserProductsByIDs returns the active products with the given IDs that belong to the user's household.
+// Used for lightweight lookups of a small, known set of products (e.g. cook workflow).
+func (r *ProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([]database.Product, error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return []database.Product{}, err
+	}
+
+	var products []database.Product
+	queryErr := r.DB.Preload("StorageLocation").Where(util.QueryHouseholdId, householdID).Scopes(r.privacyScope(userID)).Where("id IN ?", ids).Order("id").Find(&products).Error
+	if queryErr != nil {
+		return []database.Product{}, queryErr
+	}
 	return products, nil
 }
 
@@ -1245,10 +1263,114 @@ func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
 		return err
 	}
 	product.RemovalReason = database.RemovalReasonConsumed
-	if err := r.DB.Save(&product).Error; err != nil {
-		return err
+	// Save and delete must succeed together — a non-transactional failure in
+	// between would leave an active product already marked as consumed.
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(&product).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&database.Product{}, productID).Error
+	})
+}
+
+// ConsumeProductPartial reduces an active product's amount by the given
+// amount, based on the product state read by the caller. A partial reduce
+// is a single guarded UPDATE on the still-active row scoped to the product's
+// household. A full consume (amount of 0 or negative, or one that covers the
+// whole stock) re-reads the current amount inside a transaction before
+// deciding, so a stale caller read never archives more than actually exists:
+// if the concurrent reduction still leaves more than the requested amount,
+// it falls back to a partial reduce, otherwise it soft-deletes with
+// RemovalReasonConsumed and returns the current amount. fullyConsumed
+// reports whether the product was archived. Both transactional writes carry
+// an updated_at optimistic-lock precondition, so any concurrent row change
+// (amount, opened_at, removal_reason) fails the guarded write. When a
+// guarded precondition fails (the row changed between read and write inside
+// the transaction)
+// the transaction is retried once with a fresh read; only a second failure
+// surfaces ErrProductConcurrentModification instead of silently applying.
+func (r *ProductRepository) ConsumeProductPartial(product *database.Product, amount int) (consumed int, fullyConsumed bool, err error) {
+	// Fast path: the caller's read shows enough stock for a plain reduce.
+	// The guarded UPDATE re-validates the amount, so a concurrent change
+	// surfaces as ErrProductConcurrentModification.
+	if amount > 0 && amount < product.Amount {
+		result := r.DB.Model(&database.Product{}).
+			Where("id = ?", product.ID).
+			Where("household_id = ?", product.HouseholdID).
+			Where(util.WhereDeletedIsNull).
+			Where("amount > ?", amount).
+			Update("amount", gorm.Expr("amount - ?", amount))
+		if result.Error != nil {
+			return 0, false, result.Error
+		}
+		if result.RowsAffected > 0 {
+			return amount, false, nil
+		}
+		// RowsAffected == 0 means a concurrent change dropped the stock
+		// below the requested amount. Fall through to the transactional
+		// path, which re-reads and resolves full vs partial consume.
 	}
-	return r.DB.Delete(&database.Product{}, productID).Error
+
+	// Full-consume path: the caller's read may be stale, so re-check the
+	// current amount before deciding between full consume and partial
+	// reduce. A guarded precondition failure rolls back and is retried
+	// once with fresh reads before giving up.
+	var txErr error
+	for attempt := 0; attempt < 2; attempt++ {
+		consumed, fullyConsumed = 0, false
+		txErr = r.DB.Transaction(func(tx *gorm.DB) error {
+			var current database.Product
+			// Household-scoped re-read: a stale caller read must never let a
+			// product from another household be re-read and archived here.
+			if getErr := tx.Where("id = ? AND household_id = ?", product.ID, product.HouseholdID).First(&current).Error; getErr != nil {
+				return getErr
+			}
+			if amount > 0 && amount < current.Amount {
+				result := tx.Model(&database.Product{}).
+					Where("id = ?", current.ID).
+					Where("household_id = ?", current.HouseholdID).
+					Where(util.WhereDeletedIsNull).
+					Where("amount > ?", amount).
+					Where("updated_at = ?", current.UpdatedAt).
+					Update("amount", gorm.Expr("amount - ?", amount))
+				if result.Error != nil {
+					return result.Error
+				}
+				if result.RowsAffected == 0 {
+					return errors.ErrProductConcurrentModification
+				}
+				consumed = amount
+				return nil
+			}
+			consumed = current.Amount
+			fullyConsumed = true
+			// Guarded flag-and-archive: the amount and updated_at preconditions
+			// make the write fail if the row changed in any way since the read
+			// (amount, opened_at, removal_reason), so a concurrent full consume
+			// cannot be applied twice (double savings/activity entries).
+			result := tx.Model(&database.Product{}).
+				Where("id = ?", current.ID).
+				Where("household_id = ?", current.HouseholdID).
+				Where(util.WhereDeletedIsNull).
+				Where("amount = ?", current.Amount).
+				Where("updated_at = ?", current.UpdatedAt).
+				Update("removal_reason", database.RemovalReasonConsumed)
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 0 {
+				return errors.ErrProductConcurrentModification
+			}
+			return tx.Delete(&database.Product{}, current.ID).Error
+		})
+		if txErr != errors.ErrProductConcurrentModification {
+			break
+		}
+	}
+	if txErr != nil {
+		return 0, false, txErr
+	}
+	return consumed, fullyConsumed, nil
 }
 
 func (r *ProductRepository) WasteProduct(productID, userID uint) error {

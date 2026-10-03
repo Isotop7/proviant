@@ -28,13 +28,21 @@ proviant.debug = function () {
 };
 
 /* ── UI helpers ──────────────────────────────────────────────────────────────── */
+let feedbackModalHidden = null;
+let deferredFeedbackCloses = [];
+
+function runDeferredFeedbackCloses() {
+  const pending = deferredFeedbackCloses;
+  deferredFeedbackCloses = [];
+  pending.forEach(function (fn) { fn(); });
+}
+
 proviant.showFeedback = function (type, title, message, onClose) {
   const modal = document.getElementById("proviantFeedbackModal");
   if (!modal) return;
   const iconEl = document.getElementById("proviantFeedbackIcon");
   const titleEl = document.getElementById("proviantFeedbackTitle");
   const msgEl = document.getElementById("proviantFeedbackMessage");
-  const btnEl = document.getElementById("proviantFeedbackBtn");
   const configs = {
     success: { icon: "bi-check-circle-fill",       boxBg: "oklch(0.94 0.04 145)", boxColor: "oklch(0.40 0.10 145)" },
     error:   { icon: "bi-x-circle-fill",           boxBg: "oklch(0.95 0.05 25)",  boxColor: "oklch(0.45 0.20 25)"  },
@@ -47,7 +55,37 @@ proviant.showFeedback = function (type, title, message, onClose) {
   if (boxEl) { boxEl.style.background = cfg.boxBg; boxEl.style.color = cfg.boxColor; }
   if (titleEl) titleEl.textContent = title || "";
   if (msgEl) msgEl.textContent = message || "";
-  if (btnEl) btnEl.onclick = onClose || null;
+  // Wire onClose to any dismissal path (OK button, ESC, backdrop) via a
+  // one-shot hidden listener — the OK button only carries data-bs-dismiss,
+  // so a btn.onclick assignment would fire onClose twice on click and
+  // never on ESC/backdrop. The handler removes itself when it fires.
+  // A still-pending onClose replaced by a newer toast is deferred instead
+  // of dropped or fired synchronously: firing it here would run a reload
+  // mid-render and kill the replacement toast before it is visible. The
+  // deferred callback runs after the replacement toast is dismissed
+  // (chained after a new onClose), so a state-refreshing reload is never
+  // silently lost and never swallows the currently shown message.
+  if (feedbackModalHidden) {
+    modal.removeEventListener("hidden.bs.modal", feedbackModalHidden);
+    deferredFeedbackCloses.push(feedbackModalHidden);
+    feedbackModalHidden = null;
+  }
+  if (onClose) {
+    const handler = function () {
+      modal.removeEventListener("hidden.bs.modal", handler);
+      if (feedbackModalHidden === handler) feedbackModalHidden = null;
+      onClose();
+      runDeferredFeedbackCloses();
+    };
+    feedbackModalHidden = handler;
+    modal.addEventListener("hidden.bs.modal", handler);
+  } else if (deferredFeedbackCloses.length) {
+    const deferredHandler = function () {
+      modal.removeEventListener("hidden.bs.modal", deferredHandler);
+      runDeferredFeedbackCloses();
+    };
+    modal.addEventListener("hidden.bs.modal", deferredHandler);
+  }
   bootstrap.Modal.getOrCreateInstance(modal).show();
 };
 
@@ -310,8 +348,30 @@ proviant.bulkRestoreProducts = async function (productIDs) {
   return { code: res.status, message: body.message };
 };
 
+proviant.cookProducts = async function (items) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/cook`;
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }) });
+  const body = await res.json();
+  return { code: res.status, consumed: body.consumed, partial: body.partial, errors: body.errors || [] };
+};
+
+// Clears the bulk selection before a reload. Browsers restore form control
+// state (checkbox checked states) across location.reload(); without this the
+// selection would land on the products that shifted into those table rows.
+// Defined here (not products.js) because it is the default onDone for
+// proviant.bulkAction, which pages without products.js may also call.
+function clearBulkSelectionAndReload() {
+  document.querySelectorAll('.row-checkbox:checked').forEach(function (cb) {
+    cb.checked = false;
+  });
+  const selectAll = document.getElementById('selectAll');
+  if (selectAll) selectAll.checked = false;
+  if (typeof updateBulkSelected === 'function') updateBulkSelected();
+  location.reload();
+}
+
 proviant.bulkAction = async function (type, ids, options = {}) {
-  const { confirm: needsConfirm = false, confirmTitle = '', confirmMsg = '', onDone = () => location.reload() } = options;
+  const { confirm: needsConfirm = false, confirmTitle = '', confirmMsg = '', onDone = () => clearBulkSelectionAndReload() } = options;
   const fn = { delete: proviant.bulkWasteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkConsumeProducts }[type];
   if (!fn) return;
   if (needsConfirm) {

@@ -235,6 +235,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductMemberAPI.POST("/bulkRestore", v1.WrapHandler(v1.BulkRestoreProducts))
 	publicProductMemberAPI.POST("/bulkConsume", v1.WrapHandler(v1.BulkConsumeProducts))
 	publicProductMemberAPI.POST("/bulkWaste", v1.WrapHandler(v1.BulkWasteProducts))
+	publicProductMemberAPI.POST("/cook", v1.WrapHandler(v1.CookProducts))
 	publicProductAPI.POST("/scan", scanRateLimitMiddleware, v1.WrapHandler(v1.ScanProduct))
 	publicProductAPI.POST("/scan-date", v1.WrapHandler(v1.ScanExpiryDate))
 	publicProductAPI.GET("/byBarcode/:barcode", v1.WrapHandler(v1.GetProductsByBarcode))

@@ -362,6 +362,9 @@ var (
 	// ErrDatabaseOperationFailed is thrown when a database operation fails
 	ErrDatabaseOperationFailed = errors.New("database operation failed")
 
+	// ErrProductConcurrentModification is thrown when a product was modified by another request while an update was being prepared
+	ErrProductConcurrentModification = errors.New("product was modified by another request, please retry")
+
 	/*
 	 * Export related errors
 	 */

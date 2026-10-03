@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 
+	"codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/services"
 	"codeberg.org/isotop7/proviant/testutil"
@@ -485,6 +488,236 @@ func TestGetProductsByBarcode(t *testing.T) {
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+	})
+}
+
+// TestCookProducts tests the CookProducts endpoint
+func TestCookProducts(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("cook request returns 200 with response model", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+
+		cookRequest := apiModel.CookProductsAPIModel{
+			Items: []apiModel.CookItemAPIModel{
+				{ProductID: 1, Amount: 2},
+				{ProductID: 2, Amount: 0},
+			},
+		}
+		body, _ := json.Marshal(cookRequest)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+
+		appCtx := newTestAppContext(m, 1)
+		CookProducts(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
+		}
+
+		var response apiModel.CookResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to unmarshal response: %v", err)
+		}
+		if response.Consumed != 2 {
+			t.Errorf("Consumed = %d, want 2 (mock reports full consume for every item)", response.Consumed)
+		}
+		if response.Partial != 0 {
+			t.Errorf("Partial = %d, want 0", response.Partial)
+		}
+	})
+
+	t.Run("invalid body returns 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+
+		body := []byte("{invalid")
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+
+		appCtx := newTestAppContext(m, 1)
+		CookProducts(ctx, appCtx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("empty items returns 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+
+		cookRequest := apiModel.CookProductsAPIModel{Items: []apiModel.CookItemAPIModel{}}
+		body, _ := json.Marshal(cookRequest)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+
+		appCtx := newTestAppContext(m, 1)
+		CookProducts(ctx, appCtx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("more than 100 items returns 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+
+		cookRequest := apiModel.CookProductsAPIModel{}
+		for i := 1; i <= 101; i++ {
+			cookRequest.Items = append(cookRequest.Items, apiModel.CookItemAPIModel{ProductID: uint(i), Amount: 1})
+		}
+		body, _ := json.Marshal(cookRequest)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+
+		appCtx := newTestAppContext(m, 1)
+		CookProducts(ctx, appCtx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("all items failed returns 400 with errors", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.ConsumePartialErr = errors.ErrProductConcurrentModification
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+
+		cookRequest := apiModel.CookProductsAPIModel{
+			Items: []apiModel.CookItemAPIModel{
+				{ProductID: 1, Amount: 1},
+				{ProductID: 2, Amount: 1},
+			},
+		}
+		body, _ := json.Marshal(cookRequest)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+
+		appCtx := newTestAppContext(m, 1)
+		CookProducts(ctx, appCtx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+
+		var response apiModel.CookResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to unmarshal response: %v", err)
+		}
+		if len(response.Errors) != 2 {
+			t.Errorf("Errors = %v, want 2 entries", response.Errors)
+		}
+		if response.Consumed != 0 || response.Partial != 0 {
+			t.Errorf("Consumed/Partial = %d/%d, want 0/0", response.Consumed, response.Partial)
+		}
+	})
+
+	t.Run("server-side failure returns 500", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = errors.ErrDatabaseOperationFailed
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+
+		cookRequest := apiModel.CookProductsAPIModel{
+			Items: []apiModel.CookItemAPIModel{
+				{ProductID: 1, Amount: 1},
+			},
+		}
+		body, _ := json.Marshal(cookRequest)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+
+		appCtx := newTestAppContext(m, 1)
+		CookProducts(ctx, appCtx)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusInternalServerError)
+		}
+	})
+}
+
+// TestProductListQueryIDsBinding guards the comma-separated ids query format
+// used by the cook workflow (fetchFreshProducts). gin only splits
+// comma-joined values when collection_format:"csv" is set; without it,
+// ?ids=1,2,3 fails uint parsing and the endpoint answers 400.
+func TestProductListQueryIDsBinding(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("comma-separated ids bind to the slice", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products?ids=1,2,3", nil)
+
+		var q ProductListQuery
+		if err := ctx.ShouldBindQuery(&q); err != nil {
+			t.Fatalf("ShouldBindQuery() error = %v", err)
+		}
+		if len(q.IDs) != 3 {
+			t.Fatalf("IDs = %v, want 3 elements", q.IDs)
+		}
+		if q.IDs[0] != 1 || q.IDs[1] != 2 || q.IDs[2] != 3 {
+			t.Errorf("IDs = %v, want [1 2 3]", q.IDs)
+		}
+	})
+
+	t.Run("repeated ids params still bind", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products?ids=7&ids=8", nil)
+
+		var q ProductListQuery
+		if err := ctx.ShouldBindQuery(&q); err != nil {
+			t.Fatalf("ShouldBindQuery() error = %v", err)
+		}
+		if len(q.IDs) != 2 || q.IDs[0] != 7 || q.IDs[1] != 8 {
+			t.Errorf("IDs = %v, want [7 8]", q.IDs)
+		}
+	})
+
+	t.Run("empty ids leaves slice unset", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products", nil)
+
+		var q ProductListQuery
+		if err := ctx.ShouldBindQuery(&q); err != nil {
+			t.Fatalf("ShouldBindQuery() error = %v", err)
+		}
+		if len(q.IDs) != 0 {
+			t.Errorf("IDs = %v, want empty", q.IDs)
 		}
 	})
 }

@@ -10,7 +10,8 @@ import (
 )
 
 type ProductListQuery struct {
-	Limit int `form:"limit" binding:"omitempty,min=1,max=1000"`
+	Limit int    `form:"limit" binding:"omitempty,min=1,max=1000"`
+	IDs   []uint `form:"ids" collection_format:"csv" binding:"omitempty,max=1000,dive,min=1"`
 }
 
 type ProductSortQuery struct {

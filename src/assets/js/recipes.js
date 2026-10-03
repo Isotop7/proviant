@@ -3,16 +3,28 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 document.addEventListener("click", function(e) {
-    if (e.target.closest("#refreshRecipesBtn")) {
+    if (e.target.closest("#refreshRecipesBtn") || e.target.closest("#recipesRetryBtn")) {
         e.preventDefault();
         loadRecipeSuggestions(true);
     }
 });
 
+const RECIPE_LOADING_HTML = `
+    <div class="text-center p-5">
+        <div class="spinner-border text-secondary-custom" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-secondary-custom">Loading recipe suggestions...</p>
+    </div>`;
+
 async function loadRecipeSuggestions(forceRefresh = false) {
     const container = document.getElementById("recipe-suggestions-container");
     const errorContainer = document.getElementById("recipe-error-container");
     const errorMessage = document.getElementById("error-message");
+
+    container.innerHTML = RECIPE_LOADING_HTML;
+    container.classList.remove('d-none');
+    errorContainer.classList.add('d-none');
 
     try {
         const response = await fetch('/api/v1/recipes/suggestions?limit=6' + (forceRefresh ? '&refresh=1' : ''));
@@ -75,7 +87,7 @@ function renderRecipes(recipes) {
                                 <small class="text-secondary-custom mb-1 d-block">Ingredients:</small>
                                 <div class="d-flex flex-wrap gap-1">
                                     ${ingredients.map(ing => `
-                                        <span class="badge ${ing.matched ? 'bg-success' : 'bg-warning text-dark'}" 
+                                        <span class="badge-status ${ing.matched ? 'badge-fresh' : 'badge-expired'}"
                                               title="${ing.matched ? 'You have this' : 'Missing ingredient'}">
                                             ${ing.matched ? '<i class="bi bi-check2"></i> ' : '<i class="bi bi-x"></i> '}
                                             ${escapeHtml(ing.name)}
@@ -88,7 +100,7 @@ function renderRecipes(recipes) {
 
                         </div>
                         <div class="card-footer bg-transparent border-top-0 pb-3">
-                            <a href="${escapeHtml(recipe.sourceUrl)}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm stretched-link">
+                            <a href="${escapeHtml(recipe.sourceUrl)}" target="_blank" rel="noopener" class="btn btn-proviant-primary btn-sm stretched-link">
                                 View Recipe <i class="bi bi-box-arrow-up-right"></i>
                             </a>
                         </div>

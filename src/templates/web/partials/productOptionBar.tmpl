@@ -1,29 +1,15 @@
 {{ define "productOptionBar" }}
 
-<div class="btn-group" role="group" aria-label="Product card options bar">
-    {{ if eq $.StatusFilter "archived" }}
-    <button type="button" class="btn btn-proviant-secondary" id="restore-product">
-        <i class="bi bi-arrow-counterclockwise me-2"></i>Restore
+<div class="btn-group" role="group" aria-label="Product export options bar">
+    <button type="button" class="btn-bulk dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-download"></i> Export
     </button>
-    {{ else }}
-    <button type="button" class="btn btn-proviant-secondary btn-product-archive" id="archive-product">
-        <i class="bi bi-check-circle me-2"></i>Consume
-    </button>
-    {{ end }}
-    <button type="button" class="btn btn-proviant-danger btn-product-delete" id="delete-product">
-        <i class="bi bi-trash3 me-2"></i>Waste
-    </button>
-    <div class="btn-group" role="group">
-        <button type="button" class="btn btn-proviant-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-download me-2"></i>Export
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="#" id="export-products-csv">Products (CSV)</a></li>
-            <li><a class="dropdown-item" href="#" id="export-products-json">Products (JSON)</a></li>
-            <li><a class="dropdown-item" href="#" id="export-archive-csv">Consumption History (CSV)</a></li>
-            <li><a class="dropdown-item" href="#" id="export-full-json">Full Export (JSON)</a></li>
-        </ul>
-    </div>
+    <ul class="dropdown-menu dropdown-menu-end export-menu">
+        <li><a class="dropdown-item" href="#" id="export-products-csv">Products (CSV)</a></li>
+        <li><a class="dropdown-item" href="#" id="export-products-json">Products (JSON)</a></li>
+        <li><a class="dropdown-item" href="#" id="export-archive-csv">Consumption History (CSV)</a></li>
+        <li><a class="dropdown-item" href="#" id="export-full-json">Full Export (JSON)</a></li>
+    </ul>
 </div>
 
 {{ end }}
