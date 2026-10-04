@@ -107,6 +107,35 @@ Then open http://localhost:5114
 chown -R 100:101 <path>
 ```
 
+##### Prebuilt images
+
+Official images are published to GitHub Container Registry on every release. Running one needs no
+repository checkout — unlike the compose files shipped in this repo, which always build from source
+(`build: ./`) and never reference the published image:
+
+```bash
+docker pull ghcr.io/isotop7/proviant:latest
+docker run --rm -p 5114:5114 ghcr.io/isotop7/proviant:latest
+```
+
+| Tag | Description |
+|---|---|
+| `vX.Y.Z` | Exact release version |
+| `X.Y.Z` | Same image as `vX.Y.Z`, without the `v` prefix |
+| `latest` | Newest final release (never a pre-release) |
+| `vX.Y.Z-demo` / `X.Y.Z-demo` | Matching release with demo data |
+| `main` / `develop` | Unreleased builds from the respective branch, may be broken |
+| `demo` | Demo image, rebuilt on every `main`/`develop` merge |
+
+**IMPORTANT:**
+
+- Images are built for `linux/amd64` only. On native ARM hosts (e.g. Raspberry Pi) the pull fails
+  with `no matching manifest for linux/arm64/v8` — build from source there. Runtimes with emulation
+  (Docker Desktop on Apple Silicon) can pull it with `docker run --platform linux/amd64 …`.
+- A version tag is never reused for a different release, but re-running a release workflow
+  re-pushes it. For a bit-for-bit reproducible deployment, pin the digest printed in that release's
+  notes (`ghcr.io/isotop7/proviant@sha256:…`) rather than the tag.
+
 ### Configuration
 
 Configuration is set via environment variables. The complete list of available options and their default values is below. Template configuration files are available in `src/config.yaml.sqlite.tmpl` and `src/config.yaml.mariadb.tmpl`.
@@ -216,12 +245,25 @@ Additionally, `GIN_MODE` can be set to `debug` to enable Gin's debug mode.
 
 ### Docker
 
-Pull the latest image and restart:
+When running the prebuilt image, replace the container with the version you want to upgrade to:
 
 ```bash
-docker compose pull
-docker compose up -d
+docker pull ghcr.io/isotop7/proviant:vX.Y.Z
+docker rm -f proviant
+docker run -d --name proviant --restart always -p 5114:5114 \
+  -e PROVIANT_DATABASE_ENGINE=sqlite \
+  -e PROVIANT_LOGGING_FILE=logs/proviant.log \
+  -v proviantdb:/app/data \
+  -v proviantlogs:/app/logs \
+  ghcr.io/isotop7/proviant:vX.Y.Z
 ```
+
+The container runs as the unprivileged proviant user, so the mounted volumes must be writable by
+`100:101` (`docker run --rm -v proviantdb:/data alpine chown -R 100:101 /data`).
+
+`:latest` always points at the newest final release. The compose files in this repository build from
+source (`build: ./`), so `docker compose pull` is a no-op for them — upgrade those with
+`docker compose build --pull && docker compose up -d`, or switch to the prebuilt image as above.
 
 Database migrations run automatically on startup. See the [CHANGELOG](./CHANGELOG.md) for breaking changes that may require manual intervention.
 
