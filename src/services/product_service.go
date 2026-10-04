@@ -284,10 +284,10 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 // errors are reported generically — the Error()-level log already carries
 // the details.
 func cookErrorMessage(err error) string {
-	switch {
-	case err == gorm.ErrRecordNotFound:
+	switch err {
+	case gorm.ErrRecordNotFound:
 		return "not found"
-	case err == errors.ErrProductConcurrentModification:
+	case errors.ErrProductConcurrentModification:
 		return "was changed by another request, please retry"
 	default:
 		return "internal error"

@@ -374,11 +374,16 @@ func (r *NotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, e
 		return "", "", err
 	}
 
+	rawPrivateKey, err := privateKeyBytes.Bytes()
+	if err != nil {
+		return "", "", err
+	}
+
 	publicKeyBytes := elliptic.MarshalCompressed(elliptic.P256(), privateKeyBytes.X, privateKeyBytes.Y)
 
 	config = database.WebPushConfig{
 		PublicKey:  base64.URLEncoding.EncodeToString(publicKeyBytes),
-		PrivateKey: base64.URLEncoding.EncodeToString(privateKeyBytes.D.Bytes()),
+		PrivateKey: base64.URLEncoding.EncodeToString(rawPrivateKey),
 	}
 	if saveErr := r.DB.Create(&config).Error; saveErr != nil {
 		return "", "", saveErr
