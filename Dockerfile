@@ -1,4 +1,4 @@
-FROM docker.io/golang:1.26.4-alpine AS buildenv
+FROM docker.io/golang:1.26.8-alpine AS buildenv
 WORKDIR /app
 
 RUN apk add --no-cache --update g++ gcc go npm
