@@ -18,6 +18,7 @@ import (
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/router"
 	"codeberg.org/isotop7/proviant/templates"
+	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
@@ -120,7 +121,7 @@ func setupConfig() *configuration.ProviantConfiguration {
 
 	// Set defaults for recipe API
 	viper.SetDefault("recipe_api.provider", "themealdb")
-	viper.SetDefault("recipe_api.url", "https://www.themealdb.com/api/json/v1/1")
+	viper.SetDefault("recipe_api.url", util.DefaultTheMealDBRecipeAPIURL)
 	viper.SetDefault("recipe_api.timeout", 10)
 	viper.SetDefault("recipe_api.cache_enabled", true)
 	viper.SetDefault("recipe_api.cache_ttl", 24)
@@ -135,6 +136,7 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetDefault("server.rateLimit.login_per_minute", 5)
 	viper.SetDefault("server.rateLimit.signup_per_minute", 3)
 	viper.SetDefault("server.rateLimit.export_per_minute", 1)
+	viper.SetDefault("server.rateLimit.recipes_per_minute", 6)
 	viper.SetDefault("server.demoMode", false)
 
 	// Read configuration file
@@ -177,12 +179,53 @@ func setupLogging(config *configuration.ProviantConfiguration) *zerolog.Logger {
 }
 
 // validateAPIs validates the API configurations.
-func validateAPIs(config *configuration.ProviantConfiguration) {
+func validateAPIs(config *configuration.ProviantConfiguration, logger *zerolog.Logger) {
 	if err := config.ValidateOpenFoodFactsConfiguration(); err != nil {
 		panic("URL for OpenFoodFactsAPI not set")
 	}
+	rawProvider := config.RecipeAPI.Provider
 	if err := config.ValidateRecipeAPIConfiguration(); err != nil {
+		// Both self-hosted misconfigurations degrade to RecipeAPIDisabled
+		// instead of panicking, because neither has a correct substitute URL
+		// to guess. Falling back to TheMealDB is never an option: keeping the
+		// configured URL would either issue doomed requests to an instance we
+		// cannot authenticate against (missing key) or send the operator's API
+		// key plus the household's inventory keywords to the public TheMealDB
+		// host (URL mismatch). Disabling keeps startup alive and the recipes
+		// page quiet until the config is fixed, and never leaks the key.
+		if err == errors.ErrRecipeAPIMissingAPIKey {
+			logger.Warn().Msgf(
+				"recipe API provider %q requires an api_key; recipe suggestions are disabled until one is configured",
+				rawProvider)
+			config.RecipeAPIDisabled = true
+			return
+		}
+		if err == errors.ErrRecipeAPIProviderURLMismatch {
+			logger.Warn().Msgf(
+				"recipe API provider %q is pointed at the public TheMealDB host (%q); recipe suggestions are disabled "+
+					"because every request would send your api_key and household product names to a third party. "+
+					"Set recipe_api.url to your own %s instance URL",
+				rawProvider, config.RecipeAPI.URL, rawProvider)
+			config.RecipeAPIDisabled = true
+			return
+		}
+		// Every other error (an empty provider name, an empty URL, an invalid
+		// timeout) is a malformed config file with no safe degraded reading, so
+		// startup still refuses rather than serving a half-configured feature.
 		panic("Invalid recipe API configuration: " + err.Error())
+	}
+	// A self-hosted provider authenticates with an API key and sends
+	// inventory-derived search keywords in the query string, so an http:// URL
+	// puts both on the wire in cleartext. Allowed, because a LAN-only instance
+	// is a legitimate deployment, but never silently.
+	if config.RecipeAPI.IsSelfHosted() && config.RecipeAPI.UsesInsecureTransport() {
+		logger.Warn().Msgf(
+			"recipe API provider %q uses http:// (%s); its api_key and product search keywords are sent unencrypted. "+
+				"Use https:// unless the instance is reachable only over a trusted network",
+			config.RecipeAPI.Provider, config.RecipeAPI.URL)
+	}
+	if !strings.EqualFold(strings.TrimSpace(rawProvider), config.RecipeAPI.Provider) {
+		logger.Warn().Msgf("recipe API provider %q is not supported, using %q instead", rawProvider, config.RecipeAPI.Provider)
 	}
 }
 
@@ -289,7 +332,7 @@ func main() {
 	controllers.InitWebhookService(dbHandle, logger)
 
 	// Check API controller config and create instance
-	validateAPIs(proviantConfiguration)
+	validateAPIs(proviantConfiguration, logger)
 	offacntrl := &controllers.OpenFoodFactsAPIController{
 		Configuration: proviantConfiguration.OpenFoodFacts,
 		Logger:        logger,
@@ -376,23 +419,14 @@ func cleanupExpiredRevokedTokens(logger *zerolog.Logger, dbHandle *gorm.DB) {
 
 // startRecipeCacheCleanup runs a goroutine that periodically cleans up expired recipe caches
 func startRecipeCacheCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	recipeRepository := dbController.NewRecipeRepository(dbHandle)
 	ticker := time.NewTicker(24 * time.Hour) // Clean up once per day
 	defer ticker.Stop()
 
 	for range ticker.C {
-		cleanupExpiredRecipeCaches(logger, dbHandle)
-	}
-}
-
-// cleanupExpiredRecipeCaches deletes recipe cache entries that have expired
-func cleanupExpiredRecipeCaches(logger *zerolog.Logger, dbHandle *gorm.DB) {
-	result := dbHandle.Where("expires_at < ?", time.Now()).Delete(&dbModel.RecipeCache{})
-	if result.Error != nil {
-		logger.Warn().Msgf("Failed to cleanup expired recipe caches: %s", result.Error.Error())
-		return
-	}
-	if result.RowsAffected > 0 {
-		logger.Info().Msgf("Cleaned up %d expired recipe caches", result.RowsAffected)
+		if err := recipeRepository.CleanupExpiredCaches(); err != nil {
+			logger.Warn().Msgf("Failed to cleanup expired recipe caches: %s", err.Error())
+		}
 	}
 }
 

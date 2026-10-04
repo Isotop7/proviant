@@ -181,6 +181,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 			proviantConfiguration.RecipeAPI,
 			logger,
 			dbHandle,
+			proviantConfiguration.RecipeAPIDisabled,
 		)
 		ctx.Set("recipeController", recipeCtrl)
 		ctx.Next()
@@ -292,7 +293,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Recipe suggestion routes
 	recipeAPI := engine.Group("/api/v1/recipes")
 	recipeAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
-	recipeAPI.GET("/suggestions", v1.WrapHandler(v1.GetRecipeSuggestions))
+	recipeAPI.GET("/suggestions", recipesRateLimitMiddleware, v1.WrapHandler(v1.GetRecipeSuggestions))
 
 	// Notification routes
 	notificationAPI := engine.Group("/api/v1/notifications")

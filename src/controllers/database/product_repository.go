@@ -1,8 +1,10 @@
 package database
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1174,6 +1176,110 @@ func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database
 	var products []database.Product
 	result := r.DB.Where("household_id = ? AND deleted_at IS NULL AND is_private = 0", householdID).Find(&products)
 	return products, result.Error
+}
+
+// GetMatchableProductsByHousehold returns the household's matchable products
+// with only the three columns the recipe matcher reads: ID, ProductName and
+// Categories. GetProductsByHousehold loads every Product column for the whole
+// household, and the matcher consumed three of them on a path that runs on every
+// cache miss, so the remaining columns — barcode, notes, image, storage
+// location — were materialised for nothing on an unbounded result set.
+//
+// The returned Products are a read projection, NOT fully populated rows: every
+// field other than ID, ProductName and Categories is the zero value. Callers
+// must not read anything else off them; use GetProductsByHousehold for that.
+func (r *ProductRepository) GetMatchableProductsByHousehold(householdID uint) ([]database.Product, error) {
+	var products []database.Product
+	result := r.DB.Model(&database.Product{}).
+		Select("id, product_name, categories").
+		Where("household_id = ? AND deleted_at IS NULL AND is_private = 0", householdID).
+		Find(&products)
+	return products, result.Error
+}
+
+// productIdentityRow holds the only product fields the recipe matcher and the
+// expiry ranking read. Selecting just these keeps the fingerprint query narrow
+// instead of materialising every Product column for every row of the household.
+type productIdentityRow struct {
+	ID               uint
+	ProductName      string
+	Categories       string
+	ExpireAt         time.Time
+	OpenedAt         *time.Time
+	DaysAfterOpening *int
+}
+
+// effectiveExpireAt applies the shelf-life precedence rule to the narrow row
+// above. It cannot call the Product method because the row is not a Product, so
+// it delegates to the exported free function that Product.EffectiveExpireAt
+// itself uses rather than restating the rule. A hand-written copy here would
+// bucket the cache key differently from the ranking the payload was ordered by
+// the moment the model's precedence changed.
+func (row *productIdentityRow) effectiveExpireAt() time.Time {
+	return database.EffectiveExpireAt(row.ExpireAt, row.OpenedAt, row.DaysAfterOpening)
+}
+
+// GetProductSetFingerprint returns a cheap signature of a household's
+// matchable product set: the row count plus a hash over the identity of every
+// row GetProductsByHousehold returns. It lets recipe suggestion caching notice
+// that the set changed without loading every product column, which matters
+// because cached suggestions carry product IDs that authorize an irreversible
+// "cook" action. An add, rename, recategorisation, delete or expiry change all
+// move the hash.
+//
+// The signature covers ProductName and Categories but deliberately not
+// updated_at. Every write bumps updated_at — quantity changes go through
+// Update("amount", ...) and Save, so scanning, cooking or editing a single
+// product moved it — which made the cache key change on essentially every
+// request in an actively used household and turned each one into a full
+// provider fan-out. Those writes cannot change what a recipe matched, so they
+// must not invalidate the cache.
+//
+// Expiry is included as the ranking day bucket — the whole 24-hour spans between
+// now and the effective expiry, clamped to the ranking horizon — and not as a raw
+// timestamp or a calendar date. Ranking is expiry-proximity-first and happens at
+// match time — ExpiryPoints is json:"-" — so a cached entry cannot be re-sorted on
+// read, and a bucket the ranking no longer agrees with would keep serving the stale
+// order for the whole TTL.
+//
+// The bucket is what makes the key track the ranking exactly. A calendar date does
+// not: two timestamps inside one UTC date can still straddle a 24-hour bucket
+// boundary, so encoding the date lets the order change while the key stays put, and
+// an edit that does move the order can go unnoticed. Bucketing also keeps the key
+// stable against edits that cannot move the order — a time-of-day change within one
+// bucket — which is what stops quantity and scan writes from rekeying the cache.
+// A product leaves its bucket at most once a day, the same cadence at which the
+// expiring-ID component of the key already moves.
+func (r *ProductRepository) GetProductSetFingerprint(householdID uint) (string, error) {
+	var rows []productIdentityRow
+	result := r.DB.Model(&database.Product{}).
+		Select("id, product_name, categories, expire_at, opened_at, days_after_opening").
+		Where("household_id = ? AND deleted_at IS NULL AND is_private = 0", householdID).
+		Order("id").
+		Find(&rows)
+	if result.Error != nil {
+		return "", result.Error
+	}
+	// NUL separators keep the encoding unambiguous, so moving a character
+	// across the name/categories/bucket boundary still changes the hash. Ordering
+	// by id above makes the concatenation order, and therefore the hash,
+	// deterministic.
+	now := time.Now()
+	var identity strings.Builder
+	for i := range rows {
+		identity.WriteString(strconv.FormatUint(uint64(rows[i].ID), 10))
+		identity.WriteByte(0)
+		identity.WriteString(rows[i].ProductName)
+		identity.WriteByte(0)
+		identity.WriteString(rows[i].Categories)
+		identity.WriteByte(0)
+		if expireAt := rows[i].effectiveExpireAt(); !expireAt.IsZero() {
+			identity.WriteString(strconv.Itoa(database.ExpiryRankingDaysLeft(expireAt, now)))
+		}
+		identity.WriteByte(0)
+	}
+	sum := sha256.Sum256([]byte(identity.String()))
+	return fmt.Sprintf("%d:%x", len(rows), sum), nil
 }
 
 func (r *ProductRepository) GetSubThresholdProducts(userID uint) ([]database.Product, error) {

@@ -3,10 +3,12 @@ package configuration
 
 import (
 	"html/template"
+	"net/url"
 	"strings"
 
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/util"
 )
 
 type DatabaseMariaDBConfiguration struct {
@@ -63,6 +65,7 @@ type RateLimitConfiguration struct {
 	ExportPerMinute   int `mapstructure:"export_per_minute"`
 	PasswordPerMinute int `mapstructure:"password_per_minute"`
 	ScanPerMinute     int `mapstructure:"scan_per_minute"`
+	RecipesPerMinute  int `mapstructure:"recipes_per_minute"`
 }
 
 // ServerConfiguration contains all properties regarding the proviant server
@@ -159,9 +162,9 @@ type OCRConfiguration struct {
 
 // RecipeAPIConfiguration contains settings for the recipe suggestions feature
 type RecipeAPIConfiguration struct {
-	Provider     string `mapstructure:"provider"` // "themealdb" or "spoonacular"
+	Provider     string `mapstructure:"provider"` // "themealdb", "mealie" or "tandoor"
 	URL          string `mapstructure:"url"`
-	APIKey       string `mapstructure:"api_key"` // optional, for Spoonacular
+	APIKey       string `mapstructure:"api_key"` // required for mealie and tandoor
 	Timeout      int    `mapstructure:"timeout"` // seconds
 	CacheEnabled bool   `mapstructure:"cache_enabled"`
 	CacheTTL     int    `mapstructure:"cache_ttl"` // hours, default 24
@@ -185,6 +188,15 @@ type ProviantConfiguration struct {
 	RecipeAPI     RecipeAPIConfiguration `mapstructure:"recipe_api"`
 	Expiry        ExpiryConfiguration    `mapstructure:"expiry"`
 	TemplateCache map[string]*template.Template
+
+	// RecipeAPIDisabled is set at startup when the recipe feature cannot work
+	// at all — currently only a self-hosted provider without its API key. It
+	// is runtime state derived during validation, never read from the config
+	// file. Its purpose is to make the feature degrade to "no suggestions"
+	// instead of pairing an unusable provider with a URL it cannot use, which
+	// would either 404 on every request or send the household's inventory
+	// keywords to a public third-party API.
+	RecipeAPIDisabled bool
 }
 
 // ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
@@ -291,17 +303,103 @@ func (ec *ProviantConfiguration) ValidateServerConfiguration() error {
 	}
 	rl := ec.Server.RateLimit
 	if rl.LoginPerMinute <= 0 || rl.SignupPerMinute <= 0 || rl.ExportPerMinute <= 0 ||
-		rl.PasswordPerMinute <= 0 || rl.ScanPerMinute <= 0 {
+		rl.PasswordPerMinute <= 0 || rl.ScanPerMinute <= 0 || rl.RecipesPerMinute <= 0 {
 		return errors.ErrRateLimitInvalidValue
 	}
 	return nil
 }
 
-// ValidateRecipeAPIConfiguration validates the recipe API configuration
+// IsSelfHosted reports whether the configured provider is a self-hosted
+// instance that authenticates with an API key, as opposed to the free public
+// TheMealDB API.
+//
+// It delegates to isSelfHostedRecipeProvider so the provider list that gates
+// the api_key check and the public-TheMealDB-host leak guard stays a single
+// list. Two hand-maintained copies could drift, and the failure mode is silent:
+// a provider present in one but not the other skips the guard whose whole
+// purpose is keeping the operator's key and the household's product names off a
+// third party.
+func (rc RecipeAPIConfiguration) IsSelfHosted() bool {
+	return isSelfHostedRecipeProvider(rc.Provider)
+}
+
+// themealDBHost is the apex host of the public TheMealDB API.
+const themealDBHost = "themealdb.com"
+
+// recipeAPIHost parses rawURL and returns its lowercased hostname with the DNS
+// root dot removed. The trailing dot MUST be stripped: a fully qualified name
+// that carries it resolves to the identical host, so leaving it in place lets
+// "www.themealdb.com." slip past every host comparison built on this function.
+// The second return is false when rawURL cannot be parsed.
+func recipeAPIHost(rawURL string) (string, bool) {
+	parsed, parseErr := url.Parse(strings.TrimSpace(rawURL))
+	if parseErr != nil {
+		return "", false
+	}
+	return strings.TrimSuffix(strings.ToLower(parsed.Hostname()), "."), true
+}
+
+// isPublicThemealDBHost reports whether rawURL addresses the public TheMealDB
+// API. A self-hosted provider paired with it would send the operator's API key
+// and the household's inventory-derived search keywords to a third party on
+// every request. A URL that fails to parse returns false: it can never reach a
+// host at all, so it fails closed rather than open.
+func isPublicThemealDBHost(rawURL string) bool {
+	host, parsed := recipeAPIHost(rawURL)
+	if !parsed {
+		return false
+	}
+	return host == themealDBHost || strings.HasSuffix(host, "."+themealDBHost)
+}
+
+// UsesInsecureTransport reports whether the configured provider URL is served
+// over plaintext HTTP. A self-hosted provider authenticates every request with
+// an API key and puts the household's inventory-derived search keywords in the
+// query string, so an http:// instance URL transmits both in cleartext. This is
+// surfaced as a startup warning rather than a rejection because a Mealie or
+// Tandoor instance reachable only over a trusted LAN is a legitimate
+// deployment, and refusing to start would be a worse outcome than the warning.
+func (rc RecipeAPIConfiguration) UsesInsecureTransport() bool {
+	parsed, parseErr := url.Parse(strings.TrimSpace(rc.URL))
+	if parseErr != nil {
+		return false
+	}
+	return strings.EqualFold(parsed.Scheme, "http")
+}
+
+// ValidateRecipeAPIConfiguration validates the recipe API configuration.
+//
+// Validation runs in two stages on purpose: the provider-independent checks
+// (URL, timeout, cache TTL) always run first, so the provider-specific checks
+// can never return early and skip them. The provider failure modes also need
+// deliberately different handling, which is why they are separate errors rather
+// than one "unsupported provider" case:
+//
+//   - An unknown provider name falls back to the TheMealDB dialect and KEEPS
+//     the configured URL, because that URL may be a working TheMealDB proxy
+//     and rewriting it would silently redirect inventory-derived search
+//     keywords to the public API.
+//   - A self-hosted provider without its API key keeps NEITHER the dialect
+//     nor the URL, because that URL belongs to the instance we can no longer
+//     authenticate against. There is no correct fallback URL, so the caller
+//     disables the feature instead of guessing one.
+//   - A self-hosted provider whose URL is the public TheMealDB endpoint is
+//     rejected after the key check: without a key there is nothing to leak, so
+//     the missing key is the actionable problem first. With a key present,
+//     that URL is unambiguously wrong and no substitute URL can be guessed.
+//     Both self-hosted failures are recoverable configuration errors, not
+//     programming errors, so the caller degrades the feature instead of
+//     refusing to boot.
 func (ec *ProviantConfiguration) ValidateRecipeAPIConfiguration() error {
-	if ec.RecipeAPI.Provider == "" {
+	provider := strings.ToLower(strings.TrimSpace(ec.RecipeAPI.Provider))
+	if provider == "" {
 		return errors.ErrRecipeInvalidProvider
 	}
+	if provider != util.RecipeProviderThemealDB && !isSelfHostedRecipeProvider(provider) {
+		provider = util.RecipeProviderThemealDB
+	}
+	ec.RecipeAPI.Provider = provider
+
 	if ec.RecipeAPI.URL == "" {
 		return errors.ErrRecipeAPIEmptyURL
 	}
@@ -311,5 +409,26 @@ func (ec *ProviantConfiguration) ValidateRecipeAPIConfiguration() error {
 	if ec.RecipeAPI.CacheTTL <= 0 {
 		ec.RecipeAPI.CacheTTL = 24 // default to 24 hours
 	}
+
+	// Trimmed like every other string here: mapstructure hands over quoted
+	// whitespace verbatim, so a bare == "" check would let `api_key: " "` enable
+	// a provider that then 401s on every request — silently defeating the
+	// disable path this error drives.
+	ec.RecipeAPI.APIKey = strings.TrimSpace(ec.RecipeAPI.APIKey)
+	if ec.RecipeAPI.IsSelfHosted() && ec.RecipeAPI.APIKey == "" {
+		return errors.ErrRecipeAPIMissingAPIKey
+	}
+	if ec.RecipeAPI.IsSelfHosted() && isPublicThemealDBHost(ec.RecipeAPI.URL) {
+		return errors.ErrRecipeAPIProviderURLMismatch
+	}
 	return nil
+}
+
+// isSelfHostedRecipeProvider reports whether name identifies a self-hosted
+// provider that requires an API key. This is the single source of truth for
+// that list: RecipeAPIConfiguration.IsSelfHosted delegates here, and
+// ValidateRecipeAPIConfiguration uses it to decide which provider names survive
+// normalization. Adding a self-hosted provider must touch only this function.
+func isSelfHostedRecipeProvider(name string) bool {
+	return name == util.RecipeProviderMealie || name == util.RecipeProviderTandoor
 }
