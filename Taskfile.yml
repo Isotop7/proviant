@@ -3,7 +3,7 @@ version: '3'
 vars:
   CONTAINER_RUNTIME:
     sh: command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo ""
-  GOLANGCI_VERSION: "v2.12.2"
+  GOLANGCI_VERSION: "v2.14.0"
 
 tasks:
   default:
