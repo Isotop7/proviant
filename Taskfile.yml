@@ -208,7 +208,7 @@ tasks:
   vuln-npm:
     desc: Audit frontend dependencies for vulnerabilities
     cmds:
-      - npm audit --audit-level=high
+      - bash scripts/npm-audit.sh
 
   vuln:
     desc: Scan all dependencies for vulnerabilities

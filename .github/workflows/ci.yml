@@ -109,7 +109,7 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        uses: ./.github/actions/npm-audit
       - name: Lint CSS
         run: npm run lint-css
       - name: Lint JS
