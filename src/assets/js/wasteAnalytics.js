@@ -201,7 +201,7 @@ function renderCategories(s) {
           <span>${c.displayName || c.categoryKey}</span>
         </span>
         <span class="d-flex align-items-center gap-3 small">
-          <span class="badge bg-secondary-subtle text-secondary-emphasis">${c.count || 0}</span>
+          <span class="badge-status badge-nodate">${c.count || 0}</span>
           <span class="text-secondary-custom">${fmtEur(c.costEur)}</span>
           <span class="text-secondary-custom">${fmtKg(c.co2Kg)}</span>
         </span>`;
@@ -219,7 +219,7 @@ function renderCategories(s) {
             <span>${c.displayName || c.categoryKey}</span>
           </span>
           <span class="d-flex align-items-center gap-3 small">
-            <span class="badge bg-secondary-subtle text-secondary-emphasis">${c.count || 0}</span>
+            <span class="badge-status badge-nodate">${c.count || 0}</span>
             <span class="text-secondary-custom">${fmtEur(c.costEur)}</span>
             <span class="text-secondary-custom">${fmtKg(c.co2Kg)}</span>
           </span>
@@ -242,7 +242,7 @@ function renderCategoryProducts(products) {
         <span>${p.productName || 'Unknown'}</span>
       </span>
       <span class="d-flex align-items-center gap-3 small">
-        <span class="badge bg-secondary-subtle text-secondary-emphasis">${p.count || 0}</span>
+        <span class="badge-status badge-nodate">${p.count || 0}</span>
         <span class="text-secondary-custom">${fmtEur(p.costEur)}</span>
         <span class="text-secondary-custom">${fmtKg(p.co2Kg)}</span>
       </span>

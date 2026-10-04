@@ -2174,6 +2174,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/cook": {
+            "post": {
+                "description": "Consumes the given products by reducing their amounts. An amount of 0 or one that reaches or exceeds the current amount fully consumes (archives) the product.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Cook products",
+                "parameters": [
+                    {
+                        "description": "Cook items",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.CookProductsAPIModel"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CookResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Returned when no item was processed (invalid body or all items failed)",
+                        "schema": {
+                            "$ref": "#/definitions/api.CookResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Returned when no item was processed and a server-side error occurred",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/expired": {
             "get": {
                 "description": "Gets a list of expired products of a user",
@@ -2779,6 +2825,70 @@ const docTemplate = `{
                         "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/{id}/open": {
+            "post": {
+                "description": "Sets the OpenedAt timestamp on a product. Returns 409 with the existing OpenedAt if the product is already opened, prompting the frontend to confirm. Re-submit with ` + "`" + `force: true` + "`" + ` to overwrite.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Mark product as opened",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Force overwrite flag",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/v1.OpenProductRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.Product"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/v1.OpenProductResponse"
                         }
                     },
                     "500": {
@@ -4171,6 +4281,54 @@ const docTemplate = `{
                 }
             }
         },
+        "api.CookItemAPIModel": {
+            "type": "object",
+            "required": [
+                "productId"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "productId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.CookProductsAPIModel": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/api.CookItemAPIModel"
+                    }
+                }
+            }
+        },
+        "api.CookResponse": {
+            "type": "object",
+            "properties": {
+                "consumed": {
+                    "type": "integer"
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "partial": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.CreateWebhookRequest": {
             "type": "object",
             "required": [
@@ -4984,6 +5142,9 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "string"
                 },
+                "daysAfterOpening": {
+                    "type": "integer"
+                },
                 "deletedAt": {
                     "$ref": "#/definitions/gorm.DeletedAt"
                 },
@@ -5006,6 +5167,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "notifiedAt": {
+                    "type": "string"
+                },
+                "openedAt": {
                     "type": "string"
                 },
                 "priceOverride": {
@@ -5181,6 +5345,26 @@ const docTemplate = `{
                 },
                 "stats": {
                     "$ref": "#/definitions/api.ProductStatsResponse"
+                }
+            }
+        },
+        "v1.OpenProductRequest": {
+            "type": "object",
+            "properties": {
+                "force": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "v1.OpenProductResponse": {
+            "type": "object",
+            "properties": {
+                "openedAt": {
+                    "type": "string"
+                },
+                "product": {},
+                "triggeredBy": {
+                    "type": "string"
                 }
             }
         },

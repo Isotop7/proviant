@@ -37,6 +37,8 @@ type Product struct {
 	StorageHint          string           `gorm:"-"                            json:"-"`
 	NotificationLeadDays *int             `gorm:"default:null"                 json:"notificationLeadDays,omitempty"`
 	MinStockAmount       int              `gorm:"default:0"                   json:"minStockAmount"`
+	OpenedAt             *time.Time       `gorm:"default:null"                 json:"openedAt,omitempty"`
+	DaysAfterOpening     *int             `gorm:"default:null"                 json:"daysAfterOpening,omitempty"`
 }
 
 // ProductDTOExpire is a simplified DTO for product expiration
@@ -53,17 +55,19 @@ type ProductDTOBarcode struct {
 
 // ProductDTOPatch is a simplified DTO only containing the patchable elements
 type ProductDTOPatch struct {
-	ID                   uint      `json:"ID"`
-	ProductName          string    `json:"productName"`
-	Categories           string    `json:"categories"`
-	Countries            string    `json:"countries"`
-	ImageURL             string    `json:"imageUrl"`
-	ExpireAt             time.Time `json:"expireAt"`
-	Amount               int       `json:"amount"`
-	Unit                 string    `json:"unit"`
-	StorageLocationID    *uint     `json:"storageLocationId"`
-	NotificationLeadDays *int      `json:"notificationLeadDays,omitempty"`
-	MinStockAmount       int       `json:"minStockAmount"`
-	IsPrivate            bool      `json:"isPrivate"`
-	PriceOverride        *float64  `json:"priceOverride,omitempty"`
+	ID                   uint       `json:"ID"`
+	ProductName          string     `json:"productName"`
+	Categories           string     `json:"categories"`
+	Countries            string     `json:"countries"`
+	ImageURL             string     `json:"imageUrl"`
+	ExpireAt             time.Time  `json:"expireAt"`
+	Amount               int        `json:"amount"`
+	Unit                 string     `json:"unit"`
+	StorageLocationID    *uint      `json:"storageLocationId"`
+	NotificationLeadDays *int       `json:"notificationLeadDays,omitempty"`
+	MinStockAmount       int        `json:"minStockAmount"`
+	IsPrivate            bool       `json:"isPrivate"`
+	PriceOverride        *float64   `json:"priceOverride,omitempty"`
+	OpenedAt             *time.Time `json:"openedAt,omitempty"`
+	DaysAfterOpening     *int       `json:"daysAfterOpening,omitempty"`
 }

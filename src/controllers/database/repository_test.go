@@ -8,6 +8,8 @@ import (
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	"codeberg.org/isotop7/proviant/testutil"
+
+	"gorm.io/gorm"
 )
 
 func TestProductRepository_SearchParameterEnumFromString(t *testing.T) {
@@ -63,6 +65,56 @@ func TestProductRepository_GetUserProductsBulk(t *testing.T) {
 	if len(products) != 1 {
 		t.Errorf("GetUserProductsBulk() returned %d products, want 1", len(products))
 	}
+}
+
+func TestProductRepository_GetUserProductsByIDs(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewProductRepository(db)
+
+	household := dbModel.Household{Name: "Test Household"}
+	db.Create(&household)
+
+	otherHousehold := dbModel.Household{Name: "Other Household"}
+	db.Create(&otherHousehold)
+
+	user := authentication.User{
+		Username:    "testuser",
+		Password:    "password",
+		MailAddress: "test@example.com",
+		HouseholdID: household.ID,
+	}
+	db.Create(&user)
+
+	ownProduct := dbModel.Product{ProductName: "Own", Barcode: "1234567890123", HouseholdID: household.ID}
+	db.Create(&ownProduct)
+	otherProduct := dbModel.Product{ProductName: "Other", Barcode: "1234567890124", HouseholdID: otherHousehold.ID}
+	db.Create(&otherProduct)
+	archived := dbModel.Product{ProductName: "Archived", Barcode: "1234567890125", HouseholdID: household.ID}
+	db.Create(&archived)
+	db.Delete(&archived)
+
+	t.Run("returns only requested, own household, active products", func(t *testing.T) {
+		products, err := repo.GetUserProductsByIDs(user.ID, []uint{ownProduct.ID, otherProduct.ID, archived.ID, 9999})
+		if err != nil {
+			t.Fatalf("GetUserProductsByIDs() error = %v", err)
+		}
+		if len(products) != 1 {
+			t.Fatalf("GetUserProductsByIDs() returned %d products, want 1", len(products))
+		}
+		if products[0].ID != ownProduct.ID {
+			t.Errorf("returned product ID = %d, want %d", products[0].ID, ownProduct.ID)
+		}
+	})
+
+	t.Run("empty ids returns nothing", func(t *testing.T) {
+		products, err := repo.GetUserProductsByIDs(user.ID, []uint{})
+		if err != nil {
+			t.Fatalf("GetUserProductsByIDs() error = %v", err)
+		}
+		if len(products) != 0 {
+			t.Errorf("GetUserProductsByIDs() returned %d products, want 0", len(products))
+		}
+	})
 }
 
 func TestProductRepository_GetProductByID(t *testing.T) {
@@ -395,6 +447,232 @@ func TestProductRepository_ConsumeProduct(t *testing.T) {
 	if consumed.RemovalReason != dbModel.RemovalReasonConsumed {
 		t.Errorf("ConsumeProduct() RemovalReason = %q, want %q", consumed.RemovalReason, dbModel.RemovalReasonConsumed)
 	}
+}
+
+func TestProductRepository_ConsumeProductPartial(t *testing.T) {
+	setup := func(t *testing.T) (*gorm.DB, *ProductRepository, *authentication.User) {
+		t.Helper()
+		db := testutil.SetupTestDB(t)
+		repo := NewProductRepository(db)
+
+		household := dbModel.Household{Name: "Test Household"}
+		db.Create(&household)
+
+		user := authentication.User{
+			Username:    "testuser",
+			Password:    "password",
+			MailAddress: "test@example.com",
+			HouseholdID: household.ID,
+		}
+		db.Create(&user)
+		return db, repo, &user
+	}
+
+	createProduct := func(db *gorm.DB, householdID uint, name string, amount int) dbModel.Product {
+		product := dbModel.Product{
+			ProductName: name,
+			Barcode:     "1234567890123",
+			HouseholdID: householdID,
+			Amount:      amount,
+		}
+		db.Create(&product)
+		return product
+	}
+
+	t.Run("partial reduce keeps product active", func(t *testing.T) {
+		db, repo, user := setup(t)
+		product := createProduct(db, user.HouseholdID, "Partial", 5)
+
+		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&product, 2)
+		if err != nil {
+			t.Fatalf("ConsumeProductPartial() error = %v", err)
+		}
+		if consumed != 2 {
+			t.Errorf("ConsumeProductPartial() consumed = %d, want 2", consumed)
+		}
+		if fullyConsumed {
+			t.Error("partial consume must not report fullyConsumed")
+		}
+
+		var updated dbModel.Product
+		if err := db.First(&updated, product.ID).Error; err != nil {
+			t.Fatalf("product not found after partial consume: %v", err)
+		}
+		if updated.Amount != 3 {
+			t.Errorf("Amount = %d, want 3", updated.Amount)
+		}
+		if updated.DeletedAt.Valid {
+			t.Error("partial consume must not soft-delete the product")
+		}
+	})
+
+	t.Run("amount equal to current amount fully consumes", func(t *testing.T) {
+		db, repo, user := setup(t)
+		product := createProduct(db, user.HouseholdID, "Equal", 3)
+
+		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&product, 3)
+		if err != nil {
+			t.Fatalf("ConsumeProductPartial() error = %v", err)
+		}
+		if consumed != 3 {
+			t.Errorf("ConsumeProductPartial() consumed = %d, want 3", consumed)
+		}
+		if !fullyConsumed {
+			t.Error("full consume must report fullyConsumed")
+		}
+
+		var archived dbModel.Product
+		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
+			t.Fatalf("product not found after full consume: %v", err)
+		}
+		if !archived.DeletedAt.Valid {
+			t.Error("full consume did not soft-delete the product")
+		}
+		if archived.RemovalReason != dbModel.RemovalReasonConsumed {
+			t.Errorf("RemovalReason = %q, want %q", archived.RemovalReason, dbModel.RemovalReasonConsumed)
+		}
+	})
+
+	t.Run("amount above current amount clamps to full consume", func(t *testing.T) {
+		db, repo, user := setup(t)
+		product := createProduct(db, user.HouseholdID, "Overshoot", 2)
+
+		consumed, _, err := repo.ConsumeProductPartial(&product, 5)
+		if err != nil {
+			t.Fatalf("ConsumeProductPartial() error = %v", err)
+		}
+		if consumed != 2 {
+			t.Errorf("ConsumeProductPartial() consumed = %d, want 2", consumed)
+		}
+
+		var archived dbModel.Product
+		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
+			t.Fatalf("product not found after full consume: %v", err)
+		}
+		if !archived.DeletedAt.Valid || archived.RemovalReason != dbModel.RemovalReasonConsumed {
+			t.Error("overshoot must fully consume (soft-delete with reason consumed)")
+		}
+	})
+
+	t.Run("amount zero fully consumes", func(t *testing.T) {
+		db, repo, user := setup(t)
+		product := createProduct(db, user.HouseholdID, "Zero", 4)
+
+		consumed, _, err := repo.ConsumeProductPartial(&product, 0)
+		if err != nil {
+			t.Fatalf("ConsumeProductPartial() error = %v", err)
+		}
+		if consumed != 4 {
+			t.Errorf("ConsumeProductPartial() consumed = %d, want 4", consumed)
+		}
+
+		var archived dbModel.Product
+		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
+			t.Fatalf("product not found after full consume: %v", err)
+		}
+		if !archived.DeletedAt.Valid {
+			t.Error("amount 0 must fully consume the product")
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		_, repo, _ := setup(t)
+
+		missing := dbModel.Product{Amount: 1}
+		missing.ID = 9999
+		consumed, _, err := repo.ConsumeProductPartial(&missing, 1)
+		if err != gorm.ErrRecordNotFound {
+			t.Errorf("ConsumeProductPartial() error = %v, want %v", err, gorm.ErrRecordNotFound)
+		}
+		if consumed != 0 {
+			t.Errorf("ConsumeProductPartial() consumed = %d, want 0", consumed)
+		}
+	})
+
+	t.Run("stale fast path falls back when stock dropped below requested amount", func(t *testing.T) {
+		db, repo, user := setup(t)
+		product := createProduct(db, user.HouseholdID, "Raced", 5)
+		// Simulate another request having consumed units before our update runs
+		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("amount", 1)
+
+		stale := product
+
+		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&stale, 2)
+		if err != nil {
+			t.Fatalf("ConsumeProductPartial() error = %v", err)
+		}
+		if consumed != 1 {
+			t.Errorf("ConsumeProductPartial() consumed = %d, want 1 (remaining stock)", consumed)
+		}
+		if !fullyConsumed {
+			t.Error("fallback after concurrent reduction must fully consume remaining stock")
+		}
+
+		var archived dbModel.Product
+		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
+			t.Fatalf("product not found after fallback consume: %v", err)
+		}
+		if !archived.DeletedAt.Valid || archived.RemovalReason != dbModel.RemovalReasonConsumed {
+			t.Error("fallback must soft-delete with reason consumed")
+		}
+	})
+
+	t.Run("stale read above current amount consumes remaining", func(t *testing.T) {
+		db, repo, user := setup(t)
+		product := createProduct(db, user.HouseholdID, "Stale clamp", 5)
+		// Another request reduced the stock after the caller's read
+		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("amount", 1)
+
+		stale := product
+
+		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&stale, 5)
+		if err != nil {
+			t.Fatalf("ConsumeProductPartial() error = %v", err)
+		}
+		if consumed != 1 {
+			t.Errorf("ConsumeProductPartial() consumed = %d, want 1 (current stock, not stale read)", consumed)
+		}
+		if !fullyConsumed {
+			t.Error("overshoot against current stock must fully consume")
+		}
+
+		var archived dbModel.Product
+		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
+			t.Fatalf("product not found after full consume: %v", err)
+		}
+		if !archived.DeletedAt.Valid || archived.RemovalReason != dbModel.RemovalReasonConsumed {
+			t.Error("stale overshoot must soft-delete with reason consumed")
+		}
+	})
+
+	t.Run("stale read falls back to partial reduce", func(t *testing.T) {
+		db, repo, user := setup(t)
+		product := createProduct(db, user.HouseholdID, "Stale partial", 3)
+		// Another request increased the stock after the caller's read, so
+		// the requested amount no longer covers the whole stock
+		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("amount", 5)
+
+		stale := product
+
+		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&stale, 3)
+		if err != nil {
+			t.Fatalf("ConsumeProductPartial() error = %v", err)
+		}
+		if consumed != 3 || fullyConsumed {
+			t.Errorf("ConsumeProductPartial() = (%d, %v), want (3, false)", consumed, fullyConsumed)
+		}
+
+		var updated dbModel.Product
+		if err := db.First(&updated, product.ID).Error; err != nil {
+			t.Fatalf("product not found after partial consume: %v", err)
+		}
+		if updated.Amount != 2 {
+			t.Errorf("Amount = %d, want 2", updated.Amount)
+		}
+		if updated.DeletedAt.Valid {
+			t.Error("fallback partial reduce must not soft-delete the product")
+		}
+	})
 }
 
 func TestProductRepository_WasteProduct(t *testing.T) {

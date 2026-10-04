@@ -5,6 +5,24 @@ type BulkProductsAPIModel struct {
 	ProductIDs []uint `json:"productIDs"`
 }
 
+// CookItemAPIModel is one product entry of a cook request
+type CookItemAPIModel struct {
+	ProductID uint `json:"productId" binding:"required"`
+	Amount    int  `json:"amount" binding:"gte=0"`
+}
+
+// CookProductsAPIModel represents a cook request
+type CookProductsAPIModel struct {
+	Items []CookItemAPIModel `json:"items" binding:"required,min=1,max=100"`
+}
+
+// CookResponse represents the result of a cook request
+type CookResponse struct {
+	Consumed int      `json:"consumed"`
+	Partial  int      `json:"partial"`
+	Errors   []string `json:"errors"`
+}
+
 // OnboardingStateResponse represents the current onboarding progress
 type OnboardingStateResponse struct {
 	ProfileStepDone     bool `json:"profileStepDone"`

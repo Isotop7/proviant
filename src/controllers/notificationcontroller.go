@@ -209,9 +209,12 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 		product := &(*notificationProducts)[idx]
 
 		// Determine if product is expired or expiring soon
+		// (uses the effective expiry: earlier of printed ExpireAt and OpenedAt+DaysAfterOpening)
 		now := time.Now()
-		isExpired := product.ExpireAt.Before(now)
-		isExpiringSoon := !isExpired && product.ExpireAt.Before(now.AddDate(0, 0, nc.Configuration.Interval*24))
+		effective := product.EffectiveExpireAt()
+		triggeredBy := string(product.TriggerForExpireAt())
+		isExpired := !effective.IsZero() && effective.Before(now)
+		isExpiringSoon := !isExpired && !effective.IsZero() && effective.Before(now.AddDate(0, 0, nc.Configuration.Interval*24))
 
 		// Fire webhooks asynchronously
 		go func(p *dbModel.Product, expired, expiringSoon bool) {
@@ -222,21 +225,25 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 				return
 			}
 			if expired {
-				daysUntilExpiry := int(time.Since(p.ExpireAt).Hours() / 24)
+				daysUntilExpiry := int(time.Since(effective).Hours() / 24)
 				webhookService.FireEventContext(ctx, "product.expired", map[string]any{
 					"id":              p.ID,
 					"productName":     p.ProductName,
 					"daysUntilExpiry": daysUntilExpiry,
 					"householdId":     p.HouseholdID,
+					"triggeredBy":     triggeredBy,
+					"expireAt":        effective,
 				})
 			}
 			if expiringSoon {
-				daysUntilExpiry := int(time.Until(p.ExpireAt).Hours() / 24)
+				daysUntilExpiry := int(time.Until(effective).Hours() / 24)
 				webhookService.FireEventContext(ctx, "product.expiring_soon", map[string]any{
 					"id":              p.ID,
 					"productName":     p.ProductName,
 					"daysUntilExpiry": daysUntilExpiry,
 					"householdId":     p.HouseholdID,
+					"triggeredBy":     triggeredBy,
+					"expireAt":        effective,
 				})
 			}
 		}(product, isExpired, isExpiringSoon)
@@ -295,7 +302,11 @@ func (nc *NotificationController) isWithinNotificationThreshold(product *dbModel
 		threshold = recipientInfo.NotificationThresholdDays
 	}
 	cutoff := time.Now().AddDate(0, 0, threshold)
-	if product.ExpireAt.After(cutoff) {
+	effective := product.EffectiveExpireAt()
+	if effective.IsZero() {
+		return false
+	}
+	if effective.After(cutoff) {
 		nc.Logger.Debug().Msgf("Product '%s' (ID: %d) not yet within threshold for recipient, skipping",
 			product.ProductName, product.ID)
 		return false

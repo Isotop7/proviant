@@ -179,6 +179,29 @@
                 min="0" step="0.01" placeholder="e.g. 1.99">
               <div class="pv-field-hint">Used to compute waste savings. Leave blank to use category average.</div>
             </div>
+            <div class="pv-field">
+              <label class="pv-field-label">Shelf life after opening</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div>
+                  <input type="date" class="pv-field-input mono" id="inputOpenedAt"
+                    value="{{ if .Product.OpenedAt }}{{ .Product.OpenedAt | inputDate }}{{ end }}">
+                  <div class="pv-field-hint">When the product was opened. Used to compute a secondary expiry.</div>
+                </div>
+                <div>
+                  <input type="number" class="pv-field-input" id="inputDaysAfterOpening"
+                    value="{{ if .Product.DaysAfterOpening }}{{ .Product.DaysAfterOpening }}{{ end }}"
+                    min="0" max="365" placeholder="e.g. 14">
+                  <div class="pv-field-hint">Days the product is good after opening (e.g. 5 for cream cheese, 42 for jam).</div>
+                </div>
+              </div>
+              {{ if .Product.OpenedAt }}
+              <div class="mt-2">
+                <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnClearOpenedAt" aria-label="Clear opened date">
+                  <i class="bi bi-x-circle"></i> Clear opened date
+                </button>
+              </div>
+              {{ end }}
+            </div>
           </div>
         </div>
 
@@ -337,7 +360,7 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <div class="modal-icon" style="background:var(--accent-subtle);color:var(--accent);">
+        <div class="modal-icon modal-icon-accent">
           <i class="bi bi-camera"></i>
         </div>
         <div class="modal-header-body">
@@ -369,7 +392,7 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <div class="modal-icon" style="background:var(--accent-subtle);color:var(--accent);">
+        <div class="modal-icon modal-icon-accent">
           <i class="bi bi-camera"></i>
         </div>
         <div class="modal-header-body">

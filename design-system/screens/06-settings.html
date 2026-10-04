@@ -1,0 +1,1110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<style>
+@font-face {
+  font-family: 'Vend Sans';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-normal.woff2') format('woff2-variations');
+}
+@font-face {
+  font-family: 'Vend Sans';
+  font-style: italic;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-italic.woff2') format('woff2-variations');
+}
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+</style>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — Proviant</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-family: var(--font-ui); font-size: 16px; -webkit-text-size-adjust: 100%; }
+    body { background: var(--bg); color: var(--fg); min-height: 100dvh; }
+    main { padding-bottom: calc(60px + var(--space-6)); }
+
+    a { color: inherit; text-decoration: none; }
+    a:hover { color: var(--accent); }
+
+    nav.topnav { position: sticky; top: 0; z-index: 100; height: 60px; background: oklch(97% 0.006 145deg / .85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; padding: 0 var(--space-5); gap: var(--space-4); }
+    nav.topnav .logo { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-md); font-weight: 700; color: var(--fg); letter-spacing: var(--tracking-tight); }
+    nav.topnav .logo:hover { color: var(--fg); }
+    nav.topnav .logo-mark { width: 32px; height: 32px; background: var(--accent); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: var(--text-md); flex-shrink: 0; }
+    nav.topnav .nav-link { font-size: var(--text-sm); font-weight: 500; color: var(--fg-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); transition: all var(--duration-base); }
+    nav.topnav .nav-link:hover { background: var(--bg-subtle); color: var(--fg); }
+    nav.topnav .nav-link.active { color: var(--accent); background: var(--accent-muted); font-weight: 600; }
+    nav.topnav .nav-actions { display: flex; align-items: center; gap: var(--space-1); }
+    nav.topnav .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: var(--text-sm); font-weight: 700; cursor: pointer; text-decoration: none; }
+
+    nav.bottomtab { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; height: 60px; background: oklch(97% 0.006 145deg / .92); backdrop-filter: blur(12px); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-around; padding: 0; }
+    nav.bottomtab .tab-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: var(--space-2) var(--space-4); color: var(--fg-3); font-size: 10px; font-weight: 500; transition: all var(--duration-base); flex: 1; }
+    nav.bottomtab .tab-item:hover { color: var(--accent); }
+    nav.bottomtab .tab-item.active { color: var(--accent); }
+    nav.bottomtab .tab-item i { font-size: 20px; }
+
+    .accent-gradient { background: linear-gradient(135deg, var(--accent) 0%, oklch(48% .14 155deg) 100%); border-radius: var(--radius-lg); padding: var(--space-5); color: #fff; }
+    .accent-gradient h2, .accent-gradient h3 { color: #fff; }
+
+    .input { width: 100%; height: 44px; padding: 0 var(--space-4); border: 1.5px solid var(--border); border-radius: var(--radius-md); background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: var(--text-sm); transition: border-color var(--duration-base); outline: none; }
+    .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-muted); }
+  *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .input::placeholder { color: var(--fg-4); }
+    .input-label { display: block; font-size: var(--text-sm); font-weight: 600; color: var(--fg); margin-bottom: var(--space-2); }
+    .form-select { appearance: none; background-color: var(--bg); padding-right: var(--space-8); cursor: pointer; }
+    .form-text { font-size: var(--text-xs); color: var(--fg-2); line-height: var(--leading-normal); }
+    .form-text strong { color: var(--fg); font-weight: 600; }
+
+    .card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .card-section { margin-bottom: var(--space-5); }
+    .card-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--border-subtle); background: var(--bg); }
+    .card-body { padding: var(--space-5); }
+    .section-title { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-base); font-weight: 700; color: var(--fg); }
+    .icon-chip { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--accent-muted); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-pill); font-size: var(--text-xs); font-weight: 600; }
+    .badge-blue { background: var(--brand-slate-subtle); color: var(--brand-slate); }
+    .badge-fresh { background: var(--accent-muted); color: var(--accent); }
+    .badge-soon { background: oklch(0.92 0.05 85deg); color: oklch(0.45 0.14 85deg); }
+    .badge-expired { background: oklch(0.92 0.05 25deg); color: var(--status-expired); }
+
+    .toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track { width: 44px; height: 24px; border-radius: 12px; background: var(--border-strong); position: relative; transition: background var(--duration-base); }
+    .toggle-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-xs); transition: transform var(--duration-base); }
+    .toggle input:checked + .toggle-track { background: var(--accent); }
+    .toggle input:checked + .toggle-track::after { transform: translateX(20px); }
+
+    .notif-center { position: absolute; top: calc(100% + 8px); right: 0; width: 360px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 200; display: none; overflow: hidden; }
+    .notif-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); }
+    .notif-item { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); }
+    .notif-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+
+    .setting-row { display: flex; align-items: center; gap: var(--space-3); }
+    .list-group { list-style: none; }
+    .list-group-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+
+    .hide-mobile { }
+    @media (max-width: 768px) { .hide-mobile { display: none !important; } }
+
+    :root {
+    /* ── Brand ── */
+    --accent:           oklch(42% .14 155deg);   /* forest */
+    --accent-fg:        oklch(0% 0 100deg / .9);
+    --accent-hover:     oklch(48% .14 155deg);
+    --accent-active:    oklch(36% .14 155deg);
+    --accent-subtle:    oklch(90% .06 155deg);
+    --accent-muted:     oklch(94% .03 155deg);
+
+    /* ── Text ── */
+    --fg:               oklch(16% .022 145deg);
+    --fg-2:             oklch(42% .018 145deg);
+    --fg-3:             oklch(60% .012 145deg);
+    --fg-4:             oklch(72% .008 145deg);
+
+    /* ── Backgrounds ── */
+    --bg:               oklch(97% .006 145deg);
+    --surface: var(--bg);
+    --bg-subtle:        oklch(95% .006 145deg);
+    --bg-2:             oklch(92% .006 145deg);
+
+    /* ── Borders ── */
+    --border:           oklch(87% .008 145deg);
+    --border-strong:    oklch(72% .014 145deg);
+    --border-subtle:    oklch(93% .005 145deg);
+
+    /* ── Status ── */
+    --status-expired:   oklch(55% .20 25deg);
+    --status-critical:  oklch(64% .18 45deg);
+    --status-soon:     oklch(70% .16 85deg);
+    --status-fresh:    oklch(55% .12 150deg);
+    --status-nodate:   oklch(60% .010 70deg);
+
+    /* ── Brand palette ── */
+    --brand-slate:      oklch(40% .06 240deg);
+    --brand-slate-subtle: oklch(96% .006 240deg);
+    --color-success:   oklch(60% .14 152deg);
+    --color-warning:    oklch(70% .16 85deg);
+    --color-danger:     oklch(55% .20 25deg);
+    --color-info:       oklch(55% .14 240deg);
+
+    /* ── Typography ── */
+    --font-ui:           'Vend Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-mono:         'DM Mono', ui-monospace, monospace, ui-monospace, monospace;
+    --text-xs:          0.6875rem;
+    --text-sm:          0.8125rem;
+    --text-base:        0.875rem;
+    --text-md:          1rem;
+    --text-lg:          1.125rem;
+    --text-xl:          1.25rem;
+    --text-2xl:         1.5rem;
+    --text-3xl:         1.875rem;
+    --text-4xl:         2.25rem;
+    --leading-tight:    1.25;
+    --leading-normal:   1.5;
+    --leading-relaxed:  1.625;
+    --tracking-tight:  -0.025em;
+    --tracking-normal:  0;
+    --tracking-wide:     0.04em;
+    --tracking-wider:    0.06em;
+
+    /* ── Radii ── */
+    --radius-pill:      9999px;
+    --radius-md:        0.625rem;
+    --radius-lg:        1rem;
+    --radius-sm:        0.375rem;
+
+    /* ── Shadows ── */
+    --shadow-xs:        0 1px 2px oklch(0% 0 0deg / .05);
+    --shadow-sm:        0 1px 3px oklch(0% 0 0deg / .08), 0 1px 2px oklch(0% 0 0deg / .04);
+    --shadow-md:        0 4px 12px oklch(0% 0 0deg / .10), 0 2px 4px oklch(0% 0 0deg / .06);
+    --shadow-lg:        0 12px 32px oklch(0% 0 0deg / .12), 0 4px 8px oklch(0% 0 0deg / .06);
+
+    /* ── Spacing ── */
+    --space-1:  0.25rem;
+    --space-2:  0.5rem;
+    --space-3:  0.75rem;
+    --space-4:  1rem;
+    --space-5:  1.25rem;
+    --space-6:  1.5rem;
+    --space-8:  2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-20: 5rem;
+    --space-24: 6rem;
+
+    /* ── Transitions ── */
+    --duration-fast:    100ms;
+    --duration-base:    150ms;
+    --duration-slow:    300ms;
+    --duration-slower:  450ms;
+    --ease-bounce:      cubic-bezier(.34, 1.56, .64, 1);
+    --ease-in:          cubic-bezier(.4, 0, 1, 1);
+    --ease-out:         cubic-bezier(0, 0, .2, 1);
+    --ease-in-out:      cubic-bezier(.4, 0, .2, 1);
+  }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-family: var(--font-ui); font-weight: 600; border: none; cursor: pointer; border-radius: var(--radius-md); transition: all var(--duration-base); white-space: nowrap; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #fff; padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); box-shadow: var(--shadow-sm); }
+  .btn-primary:hover { background: var(--accent-hover); color: #fff; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn-primary:active { background: var(--accent-active); color: #fff; transform: translateY(0); }
+  .btn-secondary { background: var(--bg-2); color: var(--fg); padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); border: 1.5px solid var(--border-strong); box-shadow: var(--shadow-sm); }
+  .btn-secondary:hover { background: var(--bg-subtle); border-color: var(--fg-3); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--fg-2); padding: 0 var(--space-3); height: 36px; font-size: var(--text-sm); }
+  .btn-ghost:hover { background: var(--bg-subtle); color: var(--fg); }
+  .btn-danger { background: var(--status-expired); color: #fff; padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); }
+  .btn-danger:hover { background: var(--status-critical); color: #fff; }
+  .btn-sm { height: 32px; padding: 0 var(--space-4); font-size: var(--text-xs); }
+  .btn-icon { width: 40px; height: 40px; padding: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-2); border: none; cursor: pointer; transition: all var(--duration-base); display: inline-flex; align-items: center; justify-content: center; }
+  .btn-icon:hover { background: var(--bg-subtle); color: var(--fg); }
+
+  @media (min-width: 769px) { .hide-desktop { display: none !important; } }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="02-dashboard.html" class="logo">
+    <div class="logo-mark">P</div>
+    proviant
+  </a>
+  <div class="nav-actions hide-mobile" style="margin:0 auto;position:absolute;left:50%;transform:translateX(-50%)">
+    <a href="02-dashboard.html" class="nav-link">Dashboard</a>
+    <a href="03-products.html" class="nav-link">Products</a>
+    <a href="05-recipes.html" class="nav-link">Recipes</a>
+    <a href="06-settings.html" class="nav-link active">Settings</a>
+  </div>
+  <div class="nav-actions" style="display:flex;align-items:center;gap:var(--space-2);margin-left:auto;position:relative">
+    <button class="btn-icon" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifCenter()" style="position:relative">
+      <i class="bi bi-bell" style="font-size:18px"></i>
+    </button>
+    <div class="notif-center" id="notifCenter">
+      <div class="notif-header">
+        <span style="font-size:var(--text-sm);font-weight:700;color:var(--fg)">Notifications</span>
+        <button class="btn btn-ghost btn-sm" style="height:28px;font-size:var(--text-xs);color:var(--accent)">Mark all read</button>
+      </div>
+      <div class="notif-item">
+        <div class="notif-dot" style="background:var(--status-critical)"></div>
+        <div style="flex:1">
+          <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Atlantic Salmon expires today</div>
+          <div style="font-size:var(--text-xs);color:var(--fg-2)">Tap to use it in a recipe</div>
+        </div>
+        <span style="font-size:10px;color:var(--fg-3)">now</span>
+      </div>
+      <div class="notif-item">
+        <div class="notif-dot" style="background:var(--status-soon)"></div>
+        <div style="flex:1">
+          <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Baby Spinach expires in 2 days</div>
+          <div style="font-size:var(--text-xs);color:var(--fg-2)">Great in a salad</div>
+        </div>
+        <span style="font-size:10px;color:var(--fg-3)">2h</span>
+      </div>
+      <div class="notif-item">
+        <div class="notif-dot" style="background:var(--status-fresh)"></div>
+        <div style="flex:1">
+          <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Sharp Cheddar added to pantry</div>
+          <div style="font-size:var(--text-xs);color:var(--fg-2)">Expires in 8 days</div>
+        </div>
+        <span style="font-size:10px;color:var(--fg-3)">1d</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+
+
+<main class="has-bottomtab" style="max-width:760px;margin:0 auto;padding:var(--space-6)">
+
+  <!-- Page header -->
+  <div style="margin-bottom:var(--space-6);text-align:center">
+    <h1 style="font-size:var(--text-2xl);font-weight:700;letter-spacing:-0.02em;color:var(--fg)">User Settings</h1>
+    <span class="badge badge-blue" style="margin-top:var(--space-2)">ID: #42</span>
+  </div>
+
+  <!-- ── Personal Details ───────────────────────── -->
+  <div class="card card-section">
+    <div class="card-header">
+      <div class="section-title">
+        <div class="icon-chip"><i class="bi bi-person"></i></div>
+        Personal Details
+      </div>
+      <button class="btn btn-primary btn-sm">Update</button>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4)">
+        <div>
+          <label class="input-label" for="inputDisplayName">Display Name</label>
+          <input class="input" id="inputDisplayName" type="text" value="Maya Chen" placeholder="Leave blank to use your mail address">
+          <div class="form-text" style="margin-top:4px">Shown instead of your mail address throughout the app.</div>
+        </div>
+        <div>
+          <label class="input-label" for="inputMailAddress">Email Address <span style="color:var(--status-expired)">*</span></label>
+          <input class="input" id="inputMailAddress" type="email" value="maya@household.co" autocomplete="email">
+        </div>
+        <div>
+          <label class="input-label" for="inputUsername">Username</label>
+          <input class="input" id="inputUsername" type="text" value="mayachen" readonly autocomplete="username">
+          <div class="form-text" style="margin-top:4px">Login credential — cannot be changed here.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Password ───────────────────────────────── -->
+  <div class="card card-section">
+    <div class="card-header">
+      <div class="section-title">
+        <div class="icon-chip"><i class="bi bi-lock"></i></div>
+        Password
+      </div>
+      <button class="btn btn-primary btn-sm">Update</button>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4)">
+        <div>
+          <label class="input-label" for="inputPassword">New Password <span style="color:var(--status-expired)">*</span></label>
+          <input class="input" id="inputPassword" type="password" autocomplete="new-password">
+          <ul style="list-style:none;margin-top:var(--space-2)">
+            <li id="req-length" style="font-size:var(--text-xs);color:var(--fg-3);display:flex;align-items:center;gap:5px">
+              <i class="bi bi-circle" style="font-size:10px"></i> At least 8 characters
+            </li>
+            <li id="req-upper" style="font-size:var(--text-xs);color:var(--fg-3);display:flex;align-items:center;gap:5px">
+              <i class="bi bi-circle" style="font-size:10px"></i> At least one uppercase letter
+            </li>
+            <li id="req-digit" style="font-size:var(--text-xs);color:var(--fg-3);display:flex;align-items:center;gap:5px">
+              <i class="bi bi-circle" style="font-size:10px"></i> At least one number
+            </li>
+          </ul>
+        </div>
+        <div>
+          <label class="input-label" for="inputPasswordVerification">Confirm Password <span style="color:var(--status-expired)">*</span></label>
+          <input class="input" id="inputPasswordVerification" type="password" autocomplete="new-password">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Notification Settings ────────────────────── -->
+  <div class="card card-section">
+    <div class="card-header">
+      <div class="section-title">
+        <div class="icon-chip"><i class="bi bi-bell"></i></div>
+        Notification Settings
+      </div>
+      <button class="btn btn-primary btn-sm">Update</button>
+    </div>
+    <div class="card-body">
+
+      <!-- Delivery Channels -->
+      <div style="margin-bottom:var(--space-6)">
+        <h3 style="font-size:var(--text-sm);font-weight:700;color:var(--fg);margin-bottom:var(--space-1)">Delivery Channels</h3>
+        <p class="form-text" style="margin-bottom:var(--space-3)">How you receive product expiry alerts.</p>
+        <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+          <!-- Email -->
+          <div class="setting-row" style="padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--border-subtle)">
+            <div style="flex:1">
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Email</div>
+              <div class="form-text">Expiry alerts sent to your registered email address.</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" checked id="toggleEmailNotifications">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div id="emailSettings" style="padding:var(--space-4) var(--space-5);background:var(--bg-subtle);border-bottom:1px solid var(--border-subtle)">
+            <p class="form-text" style="margin-bottom:var(--space-3)">
+              Alerts will be sent to <strong style="color:var(--fg)">maya@household.co</strong>.
+            </p>
+            <div style="display:flex;align-items:center;gap:var(--space-3)">
+              <label class="input-label" for="inputNotificationThreshold" style="margin-bottom:0;white-space:nowrap">Expiry Threshold</label>
+              <div style="display:flex;align-items:center;border:1.5px solid var(--border);border-radius:var(--radius-md);overflow:hidden;height:40px">
+                <span style="padding:0 var(--space-3);background:var(--bg-subtle);height:100%;display:flex;align-items:center;border-right:1px solid var(--border)">
+                  <i class="bi bi-clock" style="font-size:14px;color:var(--fg-3)"></i>
+                </span>
+                <input type="number" id="inputNotificationThreshold" value="2" min="0" step="1" style="width:64px;height:100%;border:none;background:transparent;padding:0 var(--space-3);font-size:var(--text-sm);text-align:center">
+                <span style="padding:0 var(--space-3);background:var(--bg-subtle);height:100%;display:flex;align-items:center;border-left:1px solid var(--border);font-size:var(--text-xs);color:var(--fg-2)">days</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ntfy.sh -->
+          <div class="setting-row" style="padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--border-subtle)">
+            <div style="flex:1">
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">ntfy.sh</div>
+              <div class="form-text">Push alerts via ntfy.sh to any subscribed device.</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="toggleNtfyNotifications">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div id="ntfySettings" style="display:none;padding:var(--space-4) var(--space-5);background:var(--bg-subtle);border-bottom:1px solid var(--border-subtle)">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3)">
+              <div>
+                <label class="input-label" for="inputNtfyUrl">ntfy.sh URL <span style="color:var(--status-expired)">*</span></label>
+                <input class="input" id="inputNtfyUrl" type="text" placeholder="https://ntfy.sh" style="height:38px;font-size:var(--text-sm)">
+              </div>
+              <div>
+                <label class="input-label" for="inputNtfyTopic">Topic <span style="color:var(--status-expired)">*</span></label>
+                <input class="input" id="inputNtfyTopic" type="text" placeholder="your_topic" style="height:38px;font-size:var(--text-sm)">
+              </div>
+            </div>
+            <div>
+              <label class="input-label" for="inputNtfyToken">Access Token <span style="font-weight:400;color:var(--fg-3)">(optional)</span></label>
+              <input class="input" id="inputNtfyToken" type="password" placeholder="Optional access token" style="height:38px;font-size:var(--text-sm);width:320px">
+            </div>
+          </div>
+
+          <!-- Telegram -->
+          <div class="setting-row" style="padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--border-subtle)">
+            <div style="flex:1">
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Telegram</div>
+              <div class="form-text">Push alerts via your own Telegram bot to any device.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--space-2)">
+              <button class="btn btn-ghost btn-sm" onclick="showModal('telegramHelpModal')" aria-label="How to set up Telegram" style="width:28px;height:28px;padding:0;border-radius:var(--radius-sm)">
+                <i class="bi bi-question-circle" style="font-size:14px"></i>
+              </button>
+              <label class="toggle">
+                <input type="checkbox" id="toggleTelegramNotifications">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+          <div id="telegramSettings" style="display:none;padding:var(--space-4) var(--space-5);background:var(--bg-subtle);border-bottom:1px solid var(--border-subtle)">
+            <div style="margin-bottom:var(--space-3)">
+              <label class="input-label" for="inputTelegramBotToken">Bot Token</label>
+              <input class="input" id="inputTelegramBotToken" type="text" placeholder="123456:ABC-DEF..." style="height:38px;font-size:var(--text-sm);width:320px">
+              <div class="form-text" style="margin-top:4px">Create a bot via <a href="https://t.me/BotFather" target="_blank">@BotFather</a> and paste the token here.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3)">
+              <span class="badge badge-fresh">
+                <i class="bi bi-check-lg" style="font-size:10px"></i> Linked
+              </span>
+              <span class="form-text">Your Telegram account is connected.</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="showModal('telegramLinkModal')">
+              <i class="bi bi-link-45deg" style="font-size:13px"></i> Relink Account
+            </button>
+          </div>
+
+          <!-- Push Notifications -->
+          <div class="setting-row" style="padding:var(--space-4) var(--space-5)">
+            <div style="flex:1">
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Push Notifications</div>
+              <div class="form-text">Browser push — works on Chrome, Firefox, Safari.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--space-2)">
+              <button class="btn btn-ghost btn-sm" onclick="showModal('pushHelpModal')" aria-label="How to set up push notifications" style="width:28px;height:28px;padding:0;border-radius:var(--radius-sm)">
+                <i class="bi bi-question-circle" style="font-size:14px"></i>
+              </button>
+              <label class="toggle">
+                <input type="checkbox" id="togglePushNotifications" checked>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+          <div id="pushSettings" style="display:none;padding:var(--space-4) var(--space-5);background:var(--bg-subtle)">
+            <p class="form-text" style="margin:0;display:flex;align-items:center;gap:var(--space-2)">
+              <i class="bi bi-bell" style="font-size:14px"></i> Push notifications active.
+              <button class="btn btn-secondary btn-sm" style="margin-left:var(--space-2);height:28px;font-size:var(--text-xs)">Disable</button>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scheduled Reports -->
+      <div>
+        <h3 style="font-size:var(--text-sm);font-weight:700;color:var(--fg);margin-bottom:var(--space-1)">Scheduled Reports</h3>
+        <p class="form-text" style="margin-bottom:var(--space-3)">Periodic email summaries sent to all opted-in household members.</p>
+        <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+          <div class="setting-row" style="padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--border-subtle)">
+            <div style="flex:1">
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Monthly Waste Report</div>
+              <div class="form-text" style="display:flex;align-items:center;gap:4px">
+                <i class="bi bi-calendar-event" style="font-size:12px"></i> Sent on the 1st of each month · items removed and expired per household
+              </div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div style="padding:var(--space-4) var(--space-5);background:var(--bg-subtle);border-bottom:1px solid var(--border-subtle)">
+            <ul class="form-text" style="margin:0;padding-left:var(--space-5)">
+              <li>Covers products <strong style="color:var(--fg)">deleted from pantry</strong> and <strong style="color:var(--fg)">past best-before date</strong> during the month</li>
+              <li>Includes waste rate and month-over-month comparison</li>
+              <li>Sent to every household member with this option enabled</li>
+            </ul>
+          </div>
+          <!-- Expiry Digest -->
+          <div style="padding:var(--space-4) var(--space-5)">
+            <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-2)">
+              <i class="bi bi-calendar-range" style="font-size:13px;color:var(--fg-2)"></i>
+              <span style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Expiry Digest</span>
+              <span class="form-text">Summary of expiring products via email</span>
+            </div>
+            <div style="display:flex;gap:var(--space-5);margin-top:var(--space-3)">
+              <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer">
+                <input type="radio" name="digestFrequency" value="disabled"> <span style="font-size:var(--text-sm)">Disabled</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer">
+                <input type="radio" name="digestFrequency" value="daily"> <span style="font-size:var(--text-sm)">Daily</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer">
+                <input type="radio" name="digestFrequency" value="weekly" checked> <span style="font-size:var(--text-sm)">Weekly (Monday)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Calendar Sync ─────────────────────────────── -->
+  <div class="card card-section">
+    <div class="card-header">
+      <div class="section-title">
+        <div class="icon-chip"><i class="bi bi-calendar-week"></i></div>
+        Calendar Sync
+      </div>
+      <button class="btn btn-secondary btn-sm">Regenerate Token</button>
+    </div>
+    <div class="card-body">
+      <p class="form-text" style="margin-bottom:var(--space-4)">Subscribe to your product expiry dates in Google Calendar, Apple Calendar, or Thunderbird using the iCal feed URL below.</p>
+      <div id="calendarHasToken">
+        <div style="margin-bottom:var(--space-4)">
+          <label class="input-label" for="calendarUrl">iCal Subscription URL</label>
+          <div style="display:flex;gap:0;height:42px;border-radius:var(--radius-md);overflow:hidden;border:1.5px solid var(--border)">
+            <input type="text" id="calendarUrl" readonly value="https://proviant.app/api/v1/calendar/ical/abc123def456" style="flex:1;height:100%;border:none;background:var(--bg);padding:0 var(--space-4);font-family:var(--font-mono);font-size:var(--text-sm)">
+            <button class="btn btn-secondary" style="height:100%;border-radius:0;border-left:1.5px solid var(--border);border-top:none;border-right:none;border-bottom:none;padding:0 var(--space-4)" onclick="copyCalendarUrl()" aria-label="Copy URL">
+              <i class="bi bi-copy" style="font-size:15px"></i>
+            </button>
+            <button class="btn btn-secondary" style="height:100%;border-radius:0;border-left:1px solid var(--border);border-top:none;border-right:none;border-bottom:none;padding:0 var(--space-4)" aria-label="Download .ics">
+              <i class="bi bi-download" style="font-size:15px"></i>
+            </button>
+          </div>
+          <div id="calendarUrlCopied" class="form-text" style="color:oklch(0.46 0.14 145);margin-top:6px;display:none">
+            <i class="bi bi-check-lg" style="font-size:12px"></i> URL copied to clipboard!
+          </div>
+        </div>
+        <div style="margin-bottom:var(--space-4)">
+          <label class="input-label">Instructions</label>
+          <ol class="form-text" style="margin:0;padding-left:var(--space-5);line-height:1.8">
+            <li>Copy the subscription URL above</li>
+            <li>Open your calendar app (Google Calendar, Apple Calendar, Thunderbird)</li>
+            <li>Add a new calendar subscription with that URL</li>
+            <li>Calendar events will appear for products expiring in the next 30 days</li>
+          </ol>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="showDangerPopover('calendar')">
+          <i class="bi bi-trash" style="font-size:13px"></i> Remove Calendar Sync
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── API Tokens ───────────────────────────────── -->
+  <div class="card card-section">
+    <div class="card-header">
+      <div class="section-title">
+        <div class="icon-chip"><i class="bi bi-key"></i></div>
+        API Tokens
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="showModal('createPatModal')">
+        <i class="bi bi-plus-lg" style="font-size:12px;font-weight:bold"></i> Create Token
+      </button>
+    </div>
+    <div class="card-body">
+      <p class="form-text" style="margin-bottom:var(--space-4)">Personal access tokens let you authenticate with the API without a browser session.</p>
+      <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+        <div class="list-group-item" style="justify-content:center;text-align:center;padding:var(--space-5)">
+          <div style="display:flex;align-items:center;justify-content:center;gap:var(--space-2)">
+            <div style="width:16px;height:16px;border:2px solid var(--border-strong);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+            <span class="form-text">Loading…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Storage Locations ────────────────────────── -->
+  <div class="card card-section">
+    <div class="card-header">
+      <div class="section-title">
+        <div class="icon-chip"><i class="bi bi-geo-alt"></i></div>
+        Storage Locations
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="showModal('addLocationModal')">
+        <i class="bi bi-plus-lg" style="font-size:12px;font-weight:bold"></i> Add Location
+      </button>
+    </div>
+    <div class="card-body" style="padding:var(--space-4) var(--space-5)">
+      <p class="form-text" style="margin-bottom:var(--space-3)">Locations are shared across all household members.</p>
+      <ul class="list-group">
+        <li class="list-group-item" style="padding:var(--space-3) var(--space-4)">
+          <span style="display:flex;align-items:center;gap:var(--space-2)">
+            <i class="bi bi-snow2" style="font-size:14px;color:var(--accent)"></i> <strong>Fridge</strong>
+          </span>
+          <div style="display:flex;gap:var(--space-1)">
+            <button class="btn btn-ghost btn-sm" style="height:28px;width:28px;padding:0;border-radius:var(--radius-sm)" aria-label="Edit Fridge">
+              <i class="bi bi-pencil-square" style="font-size:12px"></i>
+            </button>
+            <button class="btn btn-ghost btn-sm" style="height:28px;width:28px;padding:0;border-radius:var(--radius-sm)" aria-label="Delete Fridge" onclick="showDeleteLocationModal('Fridge')">
+              <i class="bi bi-trash" style="font-size:12px"></i>
+            </button>
+          </div>
+        </li>
+        <li class="list-group-item" style="padding:var(--space-3) var(--space-4)">
+          <span style="display:flex;align-items:center;gap:var(--space-2)">
+            <i class="bi bi-snow" style="font-size:14px;color:var(--fg-2)"></i> <strong>Freezer</strong>
+          </span>
+          <div style="display:flex;gap:var(--space-1)">
+            <button class="btn btn-ghost btn-sm" style="height:28px;width:28px;padding:0;border-radius:var(--radius-sm)" aria-label="Edit Freezer">
+              <i class="bi bi-pencil-square" style="font-size:12px"></i>
+            </button>
+            <button class="btn btn-ghost btn-sm" style="height:28px;width:28px;padding:0;border-radius:var(--radius-sm)" aria-label="Delete Freezer" onclick="showDeleteLocationModal('Freezer')">
+              <i class="bi bi-trash" style="font-size:12px"></i>
+            </button>
+          </div>
+        </li>
+        <li class="list-group-item" style="padding:var(--space-3) var(--space-4)">
+          <span style="display:flex;align-items:center;gap:var(--space-2)">
+            <i class="bi bi-box-seam" style="font-size:14px;color:var(--fg-2)"></i> <strong>Pantry</strong>
+          </span>
+          <div style="display:flex;gap:var(--space-1)">
+            <button class="btn btn-ghost btn-sm" style="height:28px;width:28px;padding:0;border-radius:var(--radius-sm)" aria-label="Edit Pantry">
+              <i class="bi bi-pencil-square" style="font-size:12px"></i>
+            </button>
+            <button class="btn btn-ghost btn-sm" style="height:28px;width:28px;padding:0;border-radius:var(--radius-sm)" aria-label="Delete Pantry" onclick="showDeleteLocationModal('Pantry')">
+              <i class="bi bi-trash" style="font-size:12px"></i>
+            </button>
+          </div>
+        </li>
+        <li class="list-group-item" style="padding:var(--space-3) var(--space-4)">
+          <span style="display:flex;align-items:center;gap:var(--space-2)">
+            <i class="bi bi-cup-hot" style="font-size:14px;color:var(--fg-2)"></i> <strong>Counter</strong>
+          </span>
+          <div style="display:flex;gap:var(--space-1)">
+            <button class="btn btn-ghost btn-sm" style="height:28px;width:28px;padding:0;border-radius:var(--radius-sm)" aria-label="Edit Counter">
+              <i class="bi bi-pencil-square" style="font-size:12px"></i>
+            </button>
+            <button class="btn btn-ghost btn-sm" style="height:28px;width:28px;padding:0;border-radius:var(--radius-sm)" aria-label="Delete Counter" onclick="showDeleteLocationModal('Counter')">
+              <i class="bi bi-trash" style="font-size:12px"></i>
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Household ─────────────────────────────────── -->
+  <div class="card card-section">
+    <div class="card-header">
+      <div class="section-title">
+        <div class="icon-chip"><i class="bi bi-house-door"></i></div>
+        Household
+      </div>
+    </div>
+    <div class="card-body">
+      <!-- Household info bar -->
+      <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);background:var(--bg-subtle);border-radius:var(--radius-md);margin-bottom:var(--space-5)">
+        <span class="badge badge-blue">ID: #7</span>
+        <strong style="font-size:var(--text-sm)">Chen Residence</strong>
+        <span class="badge badge-fresh" style="font-size:10px">
+          <i class="bi bi-shield-check" style="font-size:10px"></i> Admin
+        </span>
+      </div>
+
+      <!-- Rename household -->
+      <div style="margin-bottom:var(--space-5)">
+        <h3 style="font-size:var(--text-sm);font-weight:700;color:var(--fg);margin-bottom:var(--space-2);display:flex;align-items:center;gap:5px">
+          <i class="bi bi-pencil-square" style="font-size:13px;color:var(--fg-2)"></i> Rename Household
+        </h3>
+        <div style="display:flex;gap:0;height:42px;border-radius:var(--radius-md);overflow:hidden;border:1.5px solid var(--border);max-width:480px">
+          <input type="text" value="Chen Residence" style="flex:1;height:100%;border:none;background:var(--bg);padding:0 var(--space-4);font-size:var(--text-sm)">
+          <button class="btn btn-secondary" style="height:100%;border-radius:0;border-left:1.5px solid var(--border);border-top:none;border-right:none;border-bottom:none;font-size:var(--text-xs);padding:0 var(--space-4)">Rename</button>
+        </div>
+      </div>
+
+      <!-- Members -->
+      <div style="margin-bottom:var(--space-5)">
+        <h3 style="font-size:var(--text-sm);font-weight:700;color:var(--fg);margin-bottom:var(--space-2);display:flex;align-items:center;gap:5px">
+          <i class="bi bi-people" style="font-size:13px;color:var(--fg-2)"></i> Members
+        </h3>
+        <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-3)">
+          <div class="list-group-item" style="padding:var(--space-3) var(--space-4)">
+            <span style="display:flex;align-items:center;gap:var(--space-2)">
+              <span style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-fg);font-weight:700;font-size:var(--text-xs);display:flex;align-items:center;justify-content:center">M</span>
+              Maya Chen
+              <span class="badge badge-blue" style="font-size:10px">Admin</span>
+              <span class="badge" style="font-size:10px;background:var(--bg-subtle);color:var(--fg-3)">You</span>
+            </span>
+          </div>
+          <div class="list-group-item" style="padding:var(--space-3) var(--space-4)">
+            <span style="display:flex;align-items:center;gap:var(--space-2)">
+              <span style="width:28px;height:28px;border-radius:50%;background:oklch(0.88 0.04 245);color:var(--brand-slate);font-weight:700;font-size:var(--text-xs);display:flex;align-items:center;justify-content:center">J</span>
+              Jake Torres
+            </span>
+            <button class="btn btn-danger btn-sm" style="height:28px;font-size:10px;padding:0 var(--space-3)" onclick="showRemoveMemberModal('Jake Torres')">
+              <i class="bi bi-person-dash" style="font-size:11px"></i> Remove
+            </button>
+          </div>
+          <div class="list-group-item" style="padding:var(--space-3) var(--space-4)">
+            <span style="display:flex;align-items:center;gap:var(--space-2)">
+              <span style="width:28px;height:28px;border-radius:50%;background:oklch(0.94 0.03 80);color:oklch(0.55 0.14 70);font-weight:700;font-size:var(--text-xs);display:flex;align-items:center;justify-content:center">S</span>
+              Sofia Reyes
+            </span>
+            <button class="btn btn-danger btn-sm" style="height:28px;font-size:10px;padding:0 var(--space-3)" onclick="showRemoveMemberModal('Sofia Reyes')">
+              <i class="bi bi-person-dash" style="font-size:11px"></i> Remove
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Join & Invite -->
+      <div style="border-top:1px solid var(--border-subtle);padding-top:var(--space-5)">
+        <h3 style="font-size:var(--text-xs);font-weight:700;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:var(--space-4);display:flex;align-items:center;gap:5px">
+          <i class="bi bi-person-plus" style="font-size:12px"></i> Join &amp; Invite
+        </h3>
+
+        <!-- Apply to join -->
+        <div style="margin-bottom:var(--space-4)">
+          <label class="input-label" for="inputApplyHouseholdID">Apply to Join a Household</label>
+          <p class="form-text" style="margin-bottom:var(--space-2)">Enter the ID of the household you want to join. The admin will need to approve your request.</p>
+          <div style="display:flex;gap:0;height:42px;border-radius:var(--radius-md);overflow:hidden;border:1.5px solid var(--border);max-width:360px">
+            <span style="padding:0 var(--space-3);background:var(--bg-subtle);height:100%;display:flex;align-items:center;border-right:1px solid var(--border);color:var(--fg-3);font-size:var(--text-sm)">#</span>
+            <input type="number" id="inputApplyHouseholdID" placeholder="Household ID" style="flex:1;height:100%;border:none;background:var(--bg);padding:0 var(--space-3);font-size:var(--text-sm)">
+            <button class="btn btn-secondary" style="height:100%;border-radius:0;border-left:1.5px solid var(--border);border-top:none;border-right:none;border-bottom:none;font-size:var(--text-xs);padding:0 var(--space-4)">Apply</button>
+          </div>
+        </div>
+
+        <!-- Invite by email -->
+        <div style="margin-bottom:var(--space-4)">
+          <label class="input-label" for="inputInviteEmail">
+            <i class="bi bi-envelope" style="font-size:12px;display:inline;vertical-align:-1px"></i> Invite by Email
+          </label>
+          <p class="form-text" style="margin-bottom:var(--space-2)">Send an invitation to join this household. The recipient will receive an email with a magic link to accept.</p>
+          <div style="display:flex;gap:0;height:42px;border-radius:var(--radius-md);overflow:hidden;border:1.5px solid var(--border);max-width:480px">
+            <span style="padding:0 var(--space-3);background:var(--bg-subtle);height:100%;display:flex;align-items:center;border-right:1px solid var(--border);color:var(--fg-3)">@</span>
+            <input type="email" id="inputInviteEmail" placeholder="user@example.com" style="flex:1;height:100%;border:none;background:var(--bg);padding:0 var(--space-3);font-size:var(--text-sm)">
+            <button class="btn btn-secondary" style="height:100%;border-radius:0;border-left:1.5px solid var(--border);border-top:none;border-right:none;border-bottom:none;font-size:var(--text-xs);padding:0 var(--space-4)">Send Invite</button>
+          </div>
+        </div>
+
+        <!-- Sent invitations -->
+        <div style="margin-bottom:var(--space-3)">
+          <h3 style="font-size:var(--text-xs);font-weight:700;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:var(--space-2)">Sent Invitations</h3>
+          <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+            <div class="list-group-item" style="padding:var(--space-3) var(--space-4)">
+              <span style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-sm)">
+                <i class="bi bi-envelope" style="font-size:13px;color:var(--fg-3)"></i> alice@example.com
+                <span class="badge badge-soon" style="font-size:10px">pending</span>
+                <span class="form-text" style="font-size:10px">Expires: 2026-05-28</span>
+              </span>
+              <button class="btn btn-danger btn-sm" style="height:26px;font-size:10px;padding:0 var(--space-3)">Cancel</button>
+            </div>
+            <div class="list-group-item" style="padding:var(--space-3) var(--space-4)">
+              <span style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-sm)">
+                <i class="bi bi-envelope" style="font-size:13px;color:var(--fg-3)"></i> bob@example.com
+                <span class="badge badge-fresh" style="font-size:10px">accepted</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── About ────────────────────────────────────── -->
+  <div class="card card-section">
+    <div class="card-header">
+      <div class="section-title">
+        <div class="icon-chip"><i class="bi bi-info-circle"></i></div>
+        About
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="setting-row" style="padding:var(--space-3) 0;border-bottom:none">
+        <div style="flex:1">
+          <div style="font-size:var(--text-sm);font-weight:500;color:var(--fg)">Version</div>
+          <div class="form-text">v1.4.2 (build 2026-05-01)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Danger Zone ──────────────────────────────── -->
+  <div class="card card-section" style="border-color:oklch(0.88 0.03 25)">
+    <div class="card-header" style="background:oklch(0.98 0.01 25)">
+      <div class="section-title" style="color:var(--status-expired)">
+        <div class="icon-chip" style="background:oklch(0.95 0.04 25)">
+          <i class="bi bi-shield-exclamation" style="font-size:14px;color:var(--status-expired)"></i>
+        </div>
+        Danger Zone
+      </div>
+    </div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:var(--space-3)">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3)">
+        <div>
+          <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Create New Household</div>
+          <div class="form-text">Leave current household and start a fresh one</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="showDangerPopover('newHousehold')">
+          <i class="bi bi-house-add" style="font-size:13px"></i> New Household
+        </button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3)">
+        <div>
+          <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Leave Household</div>
+          <div class="form-text">Remove yourself from Chen Residence</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="showDangerPopover('leaveHousehold')">
+          <i class="bi bi-box-arrow-left" style="font-size:13px"></i> Leave
+        </button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3)">
+        <div>
+          <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Delete Account</div>
+          <div class="form-text">Permanently delete your account and all data</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="showModal('deleteAccountModal')">
+          <i class="bi bi-trash3" style="font-size:13px"></i> Delete Account
+        </button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ── MODALS ─────────────────────────────────────────── -->
+
+<!-- Generic warning modal (used for delete location, leave household, etc.) -->
+<div id="warningModal" style="position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center">
+  <div style="position:absolute;inset:0;background:oklch(0 0 0 / 0.4);backdrop-filter:blur(4px)" onclick="closeWarningModal()"></div>
+  <div style="position:relative;z-index:1;background:var(--bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:var(--space-6);width:100%;max-width:400px;margin:var(--space-4)">
+    <div style="width:48px;height:48px;background:oklch(0.95 0.04 25);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-4)">
+      <i class="bi bi-exclamation-triangle" style="font-size:22px;color:var(--status-expired)"></i>
+    </div>
+    <h3 id="warningModalTitle" style="font-size:var(--text-lg);font-weight:700;color:var(--fg);margin-bottom:var(--space-2);text-align:center"></h3>
+    <p id="warningModalText" style="font-size:var(--text-sm);color:var(--fg-2);margin-bottom:var(--space-6);line-height:1.5;text-align:center"></p>
+    <div style="display:flex;gap:var(--space-3)">
+      <button onclick="closeWarningModal()" class="btn btn-secondary" style="flex:1">Cancel</button>
+      <button id="warningModalConfirm" class="btn btn-primary" style="flex:1;background:var(--status-expired)">
+        <i class="bi bi-check-lg" style="font-size:14px"></i> Confirm
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete account modal (more severe) -->
+<div id="deleteAccountModal" style="position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center">
+  <div style="position:absolute;inset:0;background:oklch(0 0 0 / 0.5);backdrop-filter:blur(6px)" onclick="closeDeleteAccountModal()"></div>
+  <div style="position:relative;z-index:1;background:var(--bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:var(--space-6);width:100%;max-width:420px;margin:var(--space-4)">
+    <div style="width:56px;height:56px;background:oklch(0.95 0.04 25);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-4)">
+      <i class="bi bi-person-x" style="font-size:26px;color:var(--status-expired)"></i>
+    </div>
+    <h3 style="font-size:var(--text-xl);font-weight:700;color:var(--fg);margin-bottom:var(--space-2);text-align:center">Delete your account?</h3>
+    <p style="font-size:var(--text-sm);color:var(--fg-2);margin-bottom:var(--space-4);line-height:1.5;text-align:center">
+      This will permanently delete your account, remove all your products, household data, and preferences. This action <strong style="color:var(--status-expired)">cannot be undone.</strong>
+    </p>
+    <div style="margin-bottom:var(--space-4)">
+      <label class="input-label" for="deleteAccountConfirm">Type <strong>DELETE</strong> to confirm</label>
+      <input class="input" type="text" id="deleteAccountConfirm" placeholder="DELETE" style="text-align:center;font-family:var(--font-mono)">
+    </div>
+    <div style="display:flex;gap:var(--space-3)">
+      <button onclick="closeDeleteAccountModal()" class="btn btn-secondary" style="flex:1">Cancel</button>
+      <button class="btn btn-primary" id="confirmDeleteAccountBtn" style="flex:1;background:var(--status-expired);opacity:0.5;cursor:not-allowed" disabled>
+        <i class="bi bi-trash3" style="font-size:14px"></i> Delete Forever
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Create PAT modal -->
+<div id="createPatModal" style="position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center">
+  <div style="position:absolute;inset:0;background:oklch(0 0 0 / 0.4);backdrop-filter:blur(4px)" onclick="closeCreatePatModal()"></div>
+  <div style="position:relative;z-index:1;background:var(--bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:var(--space-6);width:100%;max-width:440px;margin:var(--space-4)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-5)">
+      <h3 style="font-size:var(--text-lg);font-weight:700;color:var(--fg)">Create API Token</h3>
+      <button onclick="closeCreatePatModal()" class="btn btn-ghost" style="width:32px;height:32px;padding:0;border-radius:var(--radius-sm)">
+        <i class="bi bi-x-lg" style="font-size:16px"></i>
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-5)">
+      <div>
+        <label class="input-label" for="patName">Token Name <span style="color:var(--status-expired)">*</span></label>
+        <input class="input" type="text" id="patName" placeholder="e.g. Home automation, Script" autocomplete="off">
+      </div>
+      <div>
+        <label class="input-label" for="patExpiry">Expires In</label>
+        <select class="input" id="patExpiry" style="appearance:none;background-image:url('data:image/svg+xml;utf8,<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="%23666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 4 6 8 10 4"/></svg>');background-repeat:no-repeat;background-position:right 14px center;padding-right:var(--space-8)">
+          <option value="7d">7 days</option>
+          <option value="30d" selected>30 days</option>
+          <option value="90d">90 days</option>
+          <option value="1y">1 year</option>
+          <option value="never">Never</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:var(--space-3)">
+      <button onclick="closeCreatePatModal()" class="btn btn-secondary" style="flex:1">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="generatePat()">
+        <i class="bi bi-plus-lg" style="font-size:14px;font-weight:bold"></i> Create Token
+      </button>
+    </div>
+    <!-- Token result (hidden until generated) -->
+    <div id="patResult" style="display:none;margin-top:var(--space-5);padding:var(--space-4);background:var(--bg-subtle);border-radius:var(--radius-md);border:1px solid var(--border)">
+      <label class="input-label" style="margin-bottom:var(--space-2)">Your New Token <span style="color:var(--status-expired)">— copy now, you won't see it again</span></label>
+      <div style="display:flex;gap:0;height:40px;border-radius:var(--radius-md);overflow:hidden;border:1.5px solid var(--border)">
+        <input type="text" id="patTokenValue" readonly value="pat_abc123xyz789def456ghi789jkl012" style="flex:1;height:100%;border:none;background:var(--bg);padding:0 var(--space-3);font-family:var(--font-mono);font-size:var(--text-sm)">
+        <button onclick="copyPatToken()" class="btn btn-secondary" style="height:100%;border-radius:0;border-left:1.5px solid var(--border);border-top:none;border-right:none;border-bottom:none;padding:0 var(--space-4)">
+          <i class="bi bi-copy" style="font-size:14px"></i>
+        </button>
+      </div>
+      <p class="form-text" style="margin-top:var(--space-2)">
+        <i class="bi bi-info-circle" style="font-size:11px"></i> Token created · expires in 30 days
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Add location modal -->
+<div id="addLocationModal" style="position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center">
+  <div style="position:absolute;inset:0;background:oklch(0 0 0 / 0.4);backdrop-filter:blur(4px)" onclick="closeAddLocationModal()"></div>
+  <div style="position:relative;z-index:1;background:var(--bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:var(--space-6);width:100%;max-width:380px;margin:var(--space-4)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-5)">
+      <h3 style="font-size:var(--text-lg);font-weight:700;color:var(--fg)">Add Location</h3>
+      <button onclick="closeAddLocationModal()" class="btn btn-ghost" style="width:32px;height:32px;padding:0;border-radius:var(--radius-sm)">
+        <i class="bi bi-x-lg" style="font-size:16px"></i>
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-5)">
+      <div>
+        <label class="input-label" for="newLocationName">Location Name <span style="color:var(--status-expired)">*</span></label>
+        <input class="input" type="text" id="newLocationName" placeholder="e.g. Garage Fridge, Wine Cooler" autocomplete="off">
+      </div>
+      <div>
+        <label class="input-label" for="newLocationIcon">Icon</label>
+        <select class="input" id="newLocationIcon" style="appearance:none;background-image:url('data:image/svg+xml;utf8,<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="%23666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 4 6 8 10 4"/></svg>');background-repeat:no-repeat;background-position:right 14px center;padding-right:var(--space-8)">
+          <option value="fridge">Fridge</option>
+          <option value="freezer">Freezer</option>
+          <option value="pantry">Pantry</option>
+          <option value="counter">Counter</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:var(--space-3)">
+      <button onclick="closeAddLocationModal()" class="btn btn-secondary" style="flex:1">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="addLocation()">
+        <i class="bi bi-plus-lg" style="font-size:14px;font-weight:bold"></i> Add Location
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Success popover -->
+<div id="successPopover" style="position:fixed;bottom:var(--space-6);left:50%;transform:translateX(-50%) translateY(100px);z-index:1001;opacity:0;transition:all 300ms cubic-bezier(0.16, 1, 0.3, 1)">
+  <div style="background:var(--fg);color:var(--fg-inverse);padding:var(--space-3) var(--space-5);border-radius:var(--radius-pill);font-size:var(--text-sm);font-weight:600;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:var(--space-3);white-space:nowrap">
+    <i class="bi bi-check-lg" style="font-size:16px;color:var(--status-fresh)"></i>
+    <span id="popoverText">Done</span>
+  </div>
+</div>
+
+<script>
+function showModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function closeWarningModal() { closeModal('warningModal'); }
+function closeDeleteAccountModal() { closeModal('deleteAccountModal'); }
+function closeCreatePatModal() { closeModal('createPatModal'); document.getElementById('patResult').style.display = 'none'; }
+function closeAddLocationModal() { closeModal('addLocationModal'); }
+
+function showDangerPopover(type) {
+  var title, text, confirmText;
+  if (type === 'calendar') {
+    title = 'Remove Calendar Sync?'; text = 'Your iCal subscription will stop. No more expiry events in your calendar.'; confirmText = 'Remove';
+  } else if (type === 'newHousehold') {
+    title = 'Create New Household?'; text = 'You will leave Chen Residence and create a new household. Products and settings will be cleared.'; confirmText = 'Create';
+  } else if (type === 'leaveHousehold') {
+    title = 'Leave Chen Residence?'; text = 'You will be removed from this household. Your products will be deleted.'; confirmText = 'Leave';
+  }
+  document.getElementById('warningModalTitle').textContent = title;
+  document.getElementById('warningModalText').textContent = text;
+  document.getElementById('warningModalConfirm').innerHTML = '<i class="bi bi-check-lg" style="font-size:14px"></i> ' + confirmText;
+  document.getElementById('warningModalConfirm').onclick = function() {
+    closeWarningModal();
+    showSuccessPopover('Done');
+  };
+  showModal('warningModal');
+}
+
+function showRemoveMemberModal(name) {
+  document.getElementById('warningModalTitle').textContent = 'Remove ' + name + '?';
+  document.getElementById('warningModalText').textContent = name + ' will lose access to this household and all its products.';
+  document.getElementById('warningModalConfirm').innerHTML = '<i class="bi bi-check-lg" style="font-size:14px"></i> Remove';
+  document.getElementById('warningModalConfirm').onclick = function() {
+    closeWarningModal();
+    showSuccessPopover(name + ' removed');
+  };
+  showModal('warningModal');
+}
+
+function showDeleteLocationModal(name) {
+  document.getElementById('warningModalTitle').textContent = 'Delete "' + name + '"?';
+  document.getElementById('warningModalText').textContent = 'All products in "' + name + '" will be moved to Fridge.';
+  document.getElementById('warningModalConfirm').innerHTML = '<i class="bi bi-check-lg" style="font-size:14px"></i> Delete';
+  document.getElementById('warningModalConfirm').onclick = function() {
+    closeWarningModal();
+    showSuccessPopover('"' + name + '" deleted');
+  };
+  showModal('warningModal');
+}
+
+function showSuccessPopover(msg) {
+  document.getElementById('popoverText').textContent = msg || 'Done';
+  var p = document.getElementById('successPopover');
+  p.style.opacity = '1';
+  p.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(function() {
+    p.style.opacity = '0';
+    p.style.transform = 'translateX(-50%) translateY(100px)';
+  }, 2500);
+}
+
+function copyCalendarUrl() {
+  navigator.clipboard.writeText(document.getElementById('calendarUrl').value);
+  document.getElementById('calendarUrlCopied').style.display = 'block';
+  setTimeout(function() { document.getElementById('calendarUrlCopied').style.display = 'none'; }, 3000);
+}
+
+function generatePat() {
+  document.getElementById('patResult').style.display = 'block';
+  showSuccessPopover('Token created');
+}
+
+function copyPatToken() {
+  navigator.clipboard.writeText(document.getElementById('patTokenValue').value);
+  showSuccessPopover('Token copied');
+}
+
+function addLocation() {
+  closeAddLocationModal();
+  showSuccessPopover('Location added');
+}
+
+// Delete account confirmation
+document.getElementById('deleteAccountConfirm').addEventListener('input', function(e) {
+  var btn = document.getElementById('confirmDeleteAccountBtn');
+  if (e.target.value === 'DELETE') {
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    btn.disabled = false;
+  } else {
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+    btn.disabled = true;
+  }
+});
+
+document.getElementById('confirmDeleteAccountBtn').addEventListener('click', function() {
+  if (!this.disabled) {
+    closeDeleteAccountModal();
+    showSuccessPopover('Account deleted');
+  }
+});
+
+// Toggle channel sub-settings
+document.getElementById('toggleEmailNotifications').addEventListener('change', function() {
+  document.getElementById('emailSettings').style.display = this.checked ? '' : 'none';
+});
+document.getElementById('toggleNtfyNotifications').addEventListener('change', function() {
+  document.getElementById('ntfySettings').style.display = this.checked ? '' : 'none';
+});
+document.getElementById('toggleTelegramNotifications').addEventListener('change', function() {
+  document.getElementById('telegramSettings').style.display = this.checked ? '' : 'none';
+});
+document.getElementById('togglePushNotifications').addEventListener('change', function() {
+  document.getElementById('pushSettings').style.display = this.checked ? '' : 'none';
+});
+
+function toggleNotifCenter() {
+  var nc = document.getElementById('notifCenter');
+  var btn = document.querySelector('[aria-label="Notifications"]');
+  var isOpen = nc.classList.toggle('open');
+  if (btn) btn.setAttribute('aria-expanded', isOpen);
+  if (isOpen) {
+    setTimeout(function() {
+      document.addEventListener('click', function closeNotif(e) {
+        if (nc.contains(e.target) || (btn && btn.contains(e.target))) return;
+        nc.classList.remove('open');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('click', closeNotif);
+      });
+    }, 0);
+  }
+}
+</script>
+<nav class="bottomtab">
+  <div class="tab-items">
+    <a href="02-dashboard.html" class="tab-item"><i class="bi bi-house-fill"></i>Home</a>
+    <a href="03-products.html" class="tab-item"><i class="bi bi-box-seam"></i>Products</a>
+    <a href="04-add-product.html" class="tab-item"><i class="bi bi-plus-circle-fill"></i>Add</a>
+    <a href="08-shopping-list.html" class="tab-item"><i class="bi bi-cart3"></i>Shopping</a>
+    <a href="06-settings.html" class="tab-item active"><i class="bi bi-gear"></i>Settings</a>
+  </div>
+</nav>
+</body>
+</html>

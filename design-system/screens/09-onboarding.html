@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<style>
+@font-face {
+  font-family: 'Vend Sans';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-normal.woff2') format('woff2-variations');
+}
+@font-face {
+  font-family: 'Vend Sans';
+  font-style: italic;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-italic.woff2') format('woff2-variations');
+}
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+</style>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome — Proviant</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<style>
+  :root {
+    --accent:           oklch(42% .14 155deg);
+    --accent-fg:        oklch(0% 0 100deg / .9);
+    --accent-hover:     oklch(48% .14 155deg);
+    --accent-active:    oklch(36% .14 155deg);
+    --accent-subtle:    oklch(90% .06 155deg);
+    --accent-muted:     oklch(94% .03 155deg);
+    --fg:               oklch(16% .022 145deg);
+    --fg-2:             oklch(42% .018 145deg);
+    --fg-3:             oklch(60% .012 145deg);
+    --fg-4:             oklch(72% .008 145deg);
+    --bg:               oklch(97% .006 145deg);
+    --surface: var(--bg);
+    --bg-subtle:        oklch(95% .006 145deg);
+    --bg-2:             oklch(92% .006 145deg);
+    --border:           oklch(87% .008 145deg);
+    --border-strong:    oklch(72% .014 145deg);
+    --border-subtle:    oklch(93% .005 145deg);
+    --status-expired:   oklch(55% .20 25deg);
+    --status-critical:  oklch(64% .18 45deg);
+    --status-soon:     oklch(70% .16 85deg);
+    --status-fresh:    oklch(55% .12 150deg);
+    --status-nodate:   oklch(60% .010 70deg);
+    --brand-slate:      oklch(40% .06 240deg);
+    --brand-slate-subtle: oklch(96% .006 240deg);
+    --color-success:   oklch(60% .14 152deg);
+    --color-warning:    oklch(70% .16 85deg);
+    --color-danger:     oklch(55% .20 25deg);
+    --color-info:       oklch(55% .14 240deg);
+    --font-ui:           'Vend Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-mono:         'DM Mono', ui-monospace, monospace, ui-monospace, monospace;
+    --text-xs:          0.6875rem;
+    --text-sm:          0.8125rem;
+    --text-base:        0.875rem;
+    --text-md:          1rem;
+    --text-lg:          1.125rem;
+    --text-xl:          1.25rem;
+    --text-2xl:         1.5rem;
+    --text-3xl:         1.875rem;
+    --text-4xl:         2.25rem;
+    --leading-tight:    1.25;
+    --leading-normal:   1.5;
+    --leading-relaxed:  1.625;
+    --tracking-tight:  -0.025em;
+    --tracking-normal:  0;
+    --tracking-wide:     0.04em;
+    --tracking-wider:    0.06em;
+    --radius-pill:      9999px;
+    --radius-md:        0.625rem;
+    --radius-lg:        1rem;
+    --radius-sm:        0.375rem;
+    --shadow-xs:        0 1px 2px oklch(0% 0 0deg / .05);
+    --shadow-sm:        0 1px 3px oklch(0% 0 0deg / .08), 0 1px 2px oklch(0% 0 0deg / .04);
+    --shadow-md:        0 4px 12px oklch(0% 0 0deg / .10), 0 2px 4px oklch(0% 0 0deg / .06);
+    --shadow-lg:        0 12px 32px oklch(0% 0 0deg / .12), 0 4px 8px oklch(0% 0 0deg / .06);
+    --space-1:  0.25rem;
+    --space-2:  0.5rem;
+    --space-3:  0.75rem;
+    --space-4:  1rem;
+    --space-5:  1.25rem;
+    --space-6:  1.5rem;
+    --space-8:  2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-20: 5rem;
+    --space-24: 6rem;
+    --duration-fast:    100ms;
+    --duration-base:    150ms;
+    --duration-slow:    300ms;
+    --duration-slower:  450ms;
+    --ease-bounce:      cubic-bezier(.34, 1.56, .64, 1);
+    --ease-in:          cubic-bezier(.4, 0, 1, 1);
+    --ease-out:         cubic-bezier(0, 0, .2, 1);
+    --ease-in-out:      cubic-bezier(.4, 0, .2, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-family: var(--font-ui); font-size: 16px; color: var(--fg); background: var(--bg); -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; line-height: var(--leading-normal); display: flex; flex-direction: column; }
+  *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-family: var(--font-ui); font-weight: 600; border: none; cursor: pointer; border-radius: var(--radius-md); transition: all var(--duration-base); white-space: nowrap; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #fff; padding: 0 var(--space-6); height: 48px; font-size: var(--text-base); box-shadow: var(--shadow-md); }
+  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  .btn-primary:active { background: var(--accent-active); transform: translateY(0); }
+  .btn-secondary { background: var(--bg-2); color: var(--fg); padding: 0 var(--space-6); height: 48px; font-size: var(--text-base); border: 1.5px solid var(--border-strong); }
+  .btn-secondary:hover { background: var(--bg-subtle); }
+  .btn-ghost { background: transparent; color: var(--fg-2); padding: 0 var(--space-4); height: 44px; font-size: var(--text-sm); }
+  .btn-ghost:hover { background: var(--bg-subtle); color: var(--fg); }
+
+  .input { width: 100%; height: 48px; padding: 0 var(--space-4); font-family: var(--font-ui); font-size: var(--text-base); color: var(--fg); background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-md); transition: border-color var(--duration-fast); }
+  .input:focus { border-color: var(--accent); outline: none; }
+  .input::placeholder { color: var(--fg-3); }
+  .field { margin-bottom: var(--space-5); }
+  .field-label { display: block; font-size: var(--text-xs); font-weight: 700; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-2); }
+
+  .logo { font-weight: 700; font-size: var(--text-xl); color: var(--fg); letter-spacing: -0.02em; display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-8); }
+  .logo-mark { width: 32px; height: 32px; background: var(--accent); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #fff; }
+
+  main { flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--space-8) var(--space-6); }
+  .wizard { width: 100%; max-width: 480px; }
+
+  .step-indicators { display: flex; align-items: center; justify-content: center; gap: var(--space-3); margin-bottom: var(--space-8); }
+  .step-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); transition: all var(--duration-base); }
+  .step-dot.active { background: var(--accent); width: 24px; border-radius: 5px; }
+  .step-dot.done { background: var(--accent); }
+
+  .step-card { background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-md); overflow: hidden; }
+  .step-header { padding: var(--space-6); border-bottom: 1px solid var(--border-subtle); text-align: center; }
+  .step-header h1 { font-size: var(--text-2xl); font-weight: 700; color: var(--fg); letter-spacing: -0.02em; margin-bottom: var(--space-2); }
+  .step-header p { color: var(--fg-2); font-size: var(--text-sm); }
+  .step-body { padding: var(--space-6); display: none; }
+  .step-body.active { display: block; }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) 0; }
+  .toggle-row label { font-size: var(--text-sm); font-weight: 600; color: var(--fg); }
+  .toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track { position: absolute; inset: 0; background: var(--border-strong); border-radius: 12px; cursor: pointer; transition: background var(--duration-fast); }
+  .toggle-track::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform var(--duration-base) var(--ease-out); }
+  .toggle input:checked + .toggle-track { background: var(--accent); }
+  .toggle input:checked + .toggle-track::before { transform: translateX(20px); }
+
+  .household-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); margin-bottom: var(--space-5); }
+  .household-mode-btn { padding: var(--space-4); border: 1.5px solid var(--border); border-radius: var(--radius-md); background: var(--bg); text-align: center; cursor: pointer; transition: all var(--duration-fast); }
+  .household-mode-btn:hover { border-color: var(--accent); }
+  .household-mode-btn.active { border-color: var(--accent); background: var(--accent-subtle); }
+  .household-mode-btn i { font-size: 24px; color: var(--accent); margin-bottom: var(--space-2); display: block; }
+  .household-mode-btn span { font-size: var(--text-sm); font-weight: 600; color: var(--fg); }
+
+  .household-panel { display: none; }
+  .household-panel.active { display: block; }
+
+  .step-footer { padding: var(--space-5) var(--space-6); border-top: 1px solid var(--border-subtle); display: flex; gap: var(--space-3); }
+  .step-footer-right { margin-left: auto; display: flex; gap: var(--space-3); }
+</style>
+</head>
+<body>
+
+<main>
+  <div class="wizard">
+
+    <!-- Logo -->
+    <div class="logo">
+      <div class="logo-mark">P</div>
+      proviant
+    </div>
+
+    <!-- Step indicators -->
+    <div class="step-indicators">
+      <div class="step-dot active" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+      <div class="step-dot" id="dot3"></div>
+    </div>
+
+    <!-- Step card -->
+    <div class="step-card">
+
+      <!-- Step 1: Profile -->
+      <div class="step-body active" id="step1-body">
+        <div class="step-header">
+          <h1>Tell us about yourself</h1>
+          <p>Set up your profile to get started</p>
+        </div>
+        <div class="step-body" style="display:block;padding:var(--space-6)">
+          <div class="field">
+            <label class="field-label">Display name</label>
+            <input class="input" type="text" placeholder="e.g. Maya Chen" value="Maya Chen">
+          </div>
+          <div class="field">
+            <label class="field-label">Email</label>
+            <input class="input" type="email" placeholder="you@example.com" value="maya.chen@mail.com">
+          </div>
+        </div>
+        <div class="step-footer">
+          <button class="btn btn-ghost" onclick="goToStep(2)">Skip for now</button>
+          <div class="step-footer-right">
+            <button class="btn btn-primary" onclick="goToStep(2)">Continue</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Household -->
+      <div class="step-body" id="step2-body">
+        <div class="step-header">
+          <h1>Your household</h1>
+          <p>Share your pantry with family or roommates</p>
+        </div>
+        <div class="step-body" style="display:block;padding:var(--space-6)">
+
+          <!-- Mode selector -->
+          <div class="household-modes">
+            <div class="household-mode-btn active" id="btnCreate" onclick="showHouseholdMode('create')">
+              <i class="bi bi-plus-circle"></i>
+              <span>Create new</span>
+            </div>
+            <div class="household-mode-btn" id="btnJoin" onclick="showHouseholdMode('join')">
+              <i class="bi bi-person-plus"></i>
+              <span>Join existing</span>
+            </div>
+            <div class="household-mode-btn" id="btnSolo" onclick="showHouseholdMode('solo')">
+              <i class="bi bi-person"></i>
+              <span>Solo use</span>
+            </div>
+          </div>
+
+          <!-- Create panel -->
+          <div class="household-panel active" id="panelCreate">
+            <div class="field">
+              <label class="field-label">Household name</label>
+              <input class="input" type="text" id="inputNewHouseholdName" placeholder="e.g. Chen Family" value="Chen Family">
+            </div>
+          </div>
+
+          <!-- Join panel -->
+          <div class="household-panel" id="panelJoin">
+            <div class="field">
+              <label class="field-label">Invite token</label>
+              <input class="input" type="text" id="inputInviteToken" placeholder="Paste your invite token here">
+            </div>
+          </div>
+
+          <!-- Solo panel -->
+          <div class="household-panel" id="panelSolo">
+            <p style="color:var(--fg-2);font-size:var(--text-sm)">You'll be the only member of your household. You can invite others later from Settings.</p>
+          </div>
+
+        </div>
+        <div class="step-footer">
+          <button class="btn btn-ghost" onclick="goToStep(1)">Back</button>
+          <div class="step-footer-right">
+            <button class="btn btn-secondary" onclick="finishOnboarding()">Skip</button>
+            <button class="btn btn-primary" onclick="goToStep(3)">Continue</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Notifications -->
+      <div class="step-body" id="step3-body">
+        <div class="step-header">
+          <h1>Stay on top of expiry</h1>
+          <p>Choose how you want to be notified</p>
+        </div>
+        <div class="step-body" style="display:block;padding:var(--space-6)">
+          <div class="toggle-row">
+            <div>
+              <div style="font-weight:600;font-size:var(--text-sm)">Expiry alerts</div>
+              <div style="font-size:var(--text-xs);color:var(--fg-3);margin-top:2px">Get notified 1–2 days before items expire</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-track"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div>
+              <div style="font-weight:600;font-size:var(--text-sm)">Low stock reminders</div>
+              <div style="font-size:var(--text-xs);color:var(--fg-3);margin-top:2px">Alert when items are running low</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked><span class="toggle-track"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div>
+              <div style="font-weight:600;font-size:var(--text-sm)">Weekly digest</div>
+              <div style="font-size:var(--text-xs);color:var(--fg-3);margin-top:2px">Summary of expiring items every Monday</div>
+            </div>
+            <label class="toggle"><input type="checkbox"><span class="toggle-track"></span></label>
+          </div>
+        </div>
+        <div class="step-footer">
+          <button class="btn btn-ghost" onclick="goToStep(2)">Back</button>
+          <div class="step-footer-right">
+            <button class="btn btn-secondary" onclick="finishOnboarding()">Skip</button>
+            <button class="btn btn-primary" onclick="finishOnboarding()">Finish setup</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Complete -->
+      <div class="step-body" id="stepComplete-body">
+        <div class="step-header">
+          <h1>You're all set!</h1>
+          <p>Your pantry is ready. Let's start tracking.</p>
+        </div>
+        <div class="step-body" style="display:block;padding:var(--space-6);text-align:center">
+          <div style="width:64px;height:64px;background:var(--accent-subtle);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-5)">
+            <i class="bi bi-check-lg" style="font-size:32px;color:var(--accent)"></i>
+          </div>
+          <p style="color:var(--fg-2);font-size:var(--text-sm)">Welcome to Proviant, Maya. Start adding products to your pantry.</p>
+        </div>
+        <div class="step-footer" style="justify-content:center">
+          <a href="02-dashboard.html" class="btn btn-primary" style="width:100%">Go to my pantry</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script>
+var currentStep = 1;
+
+function goToStep(n) {
+  document.querySelectorAll('.step-dot').forEach(function(d, i) {
+    d.classList.toggle('active', i + 1 === n);
+    d.classList.toggle('done', i + 1 < n);
+  });
+  document.querySelectorAll('.step-body').forEach(function(b) { b.style.display = 'none'; });
+  document.getElementById('step' + n + '-body').style.display = 'block';
+  currentStep = n;
+}
+
+function showHouseholdMode(mode) {
+  document.querySelectorAll('.household-mode-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.household-panel').forEach(function(p) { p.classList.remove('active'); });
+  if (mode === 'create') {
+    document.getElementById('btnCreate').classList.add('active');
+    document.getElementById('panelCreate').classList.add('active');
+  } else if (mode === 'join') {
+    document.getElementById('btnJoin').classList.add('active');
+    document.getElementById('panelJoin').classList.add('active');
+  } else {
+    document.getElementById('btnSolo').classList.add('active');
+    document.getElementById('panelSolo').classList.add('active');
+  }
+}
+
+function finishOnboarding() {
+  goToStep(4);
+}
+</script>
+
+
+</body>
+</html>

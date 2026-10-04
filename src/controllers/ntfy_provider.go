@@ -65,15 +65,15 @@ func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, re
 
 	var bodyBuf bytes.Buffer
 	templExecErr := templ.Execute(&bodyBuf, struct {
-		ProductName string
-		ID          uint
-		Barcode     string
-		ExpireAt    time.Time
+		ProductName     string
+		ID              uint
+		Barcode         string
+		EffectiveExpiry time.Time
 	}{
-		ProductName: product.ProductName,
-		ID:          product.ID,
-		Barcode:     product.Barcode,
-		ExpireAt:    product.ExpireAt,
+		ProductName:     product.ProductName,
+		ID:              product.ID,
+		Barcode:         product.Barcode,
+		EffectiveExpiry: product.EffectiveExpireAt(),
 	})
 
 	if templExecErr != nil {

@@ -227,6 +227,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           consume: 'bi-check-circle',
           waste: 'bi-trash3',
           restore: 'bi-arrow-counterclockwise',
+          cook: 'bi-fire',
           amount_change: 'bi-pencil',
         };
         const actionLabelMap = {
@@ -234,6 +235,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           consume: 'consumed',
           waste: 'wasted',
           restore: 'restored',
+          cook: 'cooked',
           amount_change: 'adjusted',
         };
 

@@ -26,9 +26,20 @@ type MockProductRepository struct {
 	IntResult     int
 	MapResult     map[string]int
 	Err           error
+
+	// ConsumePartialFullyConsumed overrides the fullyConsumed result of
+	// ConsumeProductPartial; nil keeps the default of true on success.
+	ConsumePartialFullyConsumed *bool
+	// ConsumePartialErr overrides the error returned by ConsumeProductPartial,
+	// independent of Err (which GetProductByID also returns); nil falls back
+	// to Err.
+	ConsumePartialErr error
 }
 
 func (m *MockProductRepository) GetUserProductsBulk(userID uint, limit int) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
+func (m *MockProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
 func (m *MockProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) ([]dbModel.Product, error) {
@@ -170,7 +181,28 @@ func (m *MockProductRepository) GetConsumedSamples(householdID, userID uint, bar
 	return nil, m.Err
 }
 func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error { return m.Err }
-func (m *MockProductRepository) WasteProduct(productID, userID uint) error   { return m.Err }
+func (m *MockProductRepository) ConsumeProductPartial(product *dbModel.Product, amount int) (int, bool, error) {
+	if m.ConsumePartialErr != nil {
+		return 0, false, m.ConsumePartialErr
+	}
+	if m.Err != nil {
+		return 0, false, m.Err
+	}
+	fullyConsumed := true
+	if m.ConsumePartialFullyConsumed != nil {
+		fullyConsumed = *m.ConsumePartialFullyConsumed
+	}
+	return amount, fullyConsumed, nil
+}
+func (m *MockProductRepository) WasteProduct(productID, userID uint) error { return m.Err }
+func (m *MockProductRepository) MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (dbModel.Product, *time.Time, bool, error) {
+	previous := m.Product.OpenedAt
+	if previous != nil && !force {
+		return m.Product, previous, false, m.Err
+	}
+	m.Product.OpenedAt = &openedAt
+	return m.Product, previous, true, m.Err
+}
 func (m *MockProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []database.BulkOperationError {
 	return nil
 }

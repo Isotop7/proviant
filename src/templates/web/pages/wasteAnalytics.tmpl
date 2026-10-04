@@ -10,11 +10,11 @@
             <h1 class="h3 mb-1">Waste Analytics</h1>
             <div class="text-secondary-custom small">Track what you consume versus what you throw away, and the cost of waste.</div>
         </div>
-        <div class="btn-group btn-group-sm" role="group" aria-label="Period selector" id="periodSelector">
-            <button type="button" class="btn btn-outline-secondary" data-period="month">This Month</button>
-            <button type="button" class="btn btn-outline-secondary" data-period="3months">3 Months</button>
-            <button type="button" class="btn btn-outline-secondary active" data-period="6months" aria-pressed="true">6 Months</button>
-            <button type="button" class="btn btn-outline-secondary" data-period="12months">12 Months</button>
+        <div class="btn-group gap-1" role="group" aria-label="Period selector" id="periodSelector">
+            <button type="button" class="btn-bulk" data-period="month">This Month</button>
+            <button type="button" class="btn-bulk" data-period="3months">3 Months</button>
+            <button type="button" class="btn-bulk active" data-period="6months" aria-pressed="true">6 Months</button>
+            <button type="button" class="btn-bulk" data-period="12months">12 Months</button>
         </div>
     </div>
 
@@ -76,9 +76,9 @@
                 <div class="card-header d-flex align-items-center gap-2 fw-bold">
                     <div class="icon-chip" aria-hidden="true"><i class="bi bi-tags-fill"></i></div>
                     <span class="flex-grow-1">Most Wasted Categories</span>
-                    <div class="btn-group btn-group-sm" role="group" aria-label="Sort by" id="sortToggle">
-                        <button type="button" class="btn btn-outline-secondary active" data-sort="count" aria-pressed="true">Count</button>
-                        <button type="button" class="btn btn-outline-secondary" data-sort="cost" aria-pressed="false">Cost</button>
+                    <div class="btn-group gap-1" role="group" aria-label="Sort by" id="sortToggle">
+                        <button type="button" class="btn-bulk active" data-sort="count" aria-pressed="true">Count</button>
+                        <button type="button" class="btn-bulk" data-sort="cost" aria-pressed="false">Cost</button>
                     </div>
                 </div>
                 <div class="accordion accordion-flush" id="categoryList"></div>

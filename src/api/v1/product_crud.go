@@ -40,6 +40,17 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 	}
 	limit := q.Limit
 
+	if len(q.IDs) > 0 {
+		products, idsErr := appCtx.Repos.Products.GetUserProductsByIDs(appCtx.UserID, q.IDs)
+		if idsErr != nil {
+			appCtx.Logger.Error().Msgf("Error getting products by IDs for user: %s", idsErr)
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+			return
+		}
+		ctx.JSON(http.StatusOK, products)
+		return
+	}
+
 	products, productBulkErr := appCtx.Repos.Products.GetUserProductsBulk(appCtx.UserID, limit)
 	if productBulkErr != nil {
 		appCtx.Logger.Error().Msgf("Error getting products of user: %s", productBulkErr)

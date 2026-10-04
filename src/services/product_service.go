@@ -2,15 +2,24 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"time"
 
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
+
+// cookMaxConsumeAttempts bounds service-level retries of ConsumeProductPartial
+// after the repo's own single optimistic-lock retry; the last attempt still
+// losing the race surfaces ErrProductConcurrentModification to the caller.
+const cookMaxConsumeAttempts = 3
 
 type ProductService struct {
 	repos  *database.RepositoryContainer
@@ -175,6 +184,114 @@ func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) error
 		go s.recordSavingsEvent(userID, &product, "wasted")
 	}
 	return nil
+}
+
+// CookProducts consumes the given products, partially or fully. errs carries
+// client-facing per-item failures; internalErr carries the first server-side
+// failure (household resolution, DB errors) so the handler can answer 5xx
+// instead of blaming the client.
+func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID uint) (consumed, partial int, errs []string, internalErr error) {
+	householdID, householdErr := s.repos.Users.GetUserHouseholdByID(userID)
+	if householdErr != nil {
+		// Without a household, activity logs and savings events would
+		// silently diverge from the other consume paths — fail the whole
+		// request instead of consuming without a trace.
+		s.logger.Error().Msgf("CookProducts: could not resolve household for user %d: %s", userID, householdErr)
+		return 0, 0, nil, householdErr
+	}
+
+	// Merge duplicate product entries by summing their amounts, so two
+	// rows for the same product cook as one combined consume instead of
+	// the second one failing with "not found" after the first archived it.
+	merged := make([]apiModel.CookItemAPIModel, 0, len(items))
+	mergedIndex := make(map[uint]int, len(items))
+	for _, item := range items {
+		if idx, ok := mergedIndex[item.ProductID]; ok {
+			// Overflow-safe sum: a merged amount can never wrap to a
+			// negative value, which the repository would treat as a
+			// full consume.
+			if merged[idx].Amount > math.MaxInt-item.Amount {
+				merged[idx].Amount = math.MaxInt
+			} else {
+				merged[idx].Amount += item.Amount
+			}
+			s.logger.Debug().Msgf("CookProducts: merged duplicate entry for product %d", item.ProductID)
+			continue
+		}
+		mergedIndex[item.ProductID] = len(merged)
+		merged = append(merged, item)
+	}
+	items = merged
+
+	for _, item := range items {
+		product, err := s.repos.Products.GetProductByID(item.ProductID, userID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				s.logger.Warn().Msgf("CookProducts: product %d not found", item.ProductID)
+				errs = append(errs, fmt.Sprintf("product %d not found", item.ProductID))
+			} else {
+				s.logger.Error().Msgf("CookProducts: product %d lookup failed: %s", item.ProductID, err)
+				errs = append(errs, fmt.Sprintf("product %d lookup failed", item.ProductID))
+				if internalErr == nil {
+					internalErr = err
+				}
+			}
+			continue
+		}
+
+		consumedAmount, fullyConsumed, cookErr := s.repos.Products.ConsumeProductPartial(&product, item.Amount)
+		// The repo retries guarded writes once internally; a second
+		// optimistic-lock failure means the row is still hot. Re-attempting
+		// against the same product pointer is safe — the repo re-reads
+		// current state inside its transaction — so a busy product fails
+		// the whole cook only after every attempt lost the race.
+		for retry := 1; cookErr == errors.ErrProductConcurrentModification && retry < cookMaxConsumeAttempts; retry++ {
+			s.logger.Debug().Msgf("CookProducts: product %d changed concurrently, retrying (%d/%d)", item.ProductID, retry, cookMaxConsumeAttempts-1)
+			consumedAmount, fullyConsumed, cookErr = s.repos.Products.ConsumeProductPartial(&product, item.Amount)
+		}
+		if cookErr != nil {
+			if cookErr == gorm.ErrRecordNotFound || cookErr == errors.ErrProductConcurrentModification {
+				s.logger.Warn().Msgf("CookProducts: %s", cookErr)
+			} else {
+				s.logger.Error().Msgf("CookProducts: %s", cookErr)
+				if internalErr == nil {
+					internalErr = cookErr
+				}
+			}
+			errs = append(errs, fmt.Sprintf("%s: %s", product.ProductName, cookErrorMessage(cookErr)))
+			continue
+		}
+
+		if fullyConsumed {
+			consumed++
+			// Record savings against the actually archived amount, not the
+			// caller's read: the repo re-reads stock inside its transaction,
+			// so a concurrent reduction would otherwise overstate the
+			// SavingsRecord amount, price and CO2 figures.
+			product.Amount = consumedAmount
+			go s.recordSavingsEvent(userID, &product, "consumed")
+		} else {
+			partial++
+		}
+
+		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionCook, item.ProductID, product.ProductName, consumedAmount)
+	}
+	return consumed, partial, errs, internalErr
+}
+
+// cookErrorMessage translates repository errors into client-facing wording
+// instead of leaking raw driver messages like "record not found". Unknown
+// errors are reported generically — the Error()-level log already carries
+// the details.
+func cookErrorMessage(err error) string {
+	switch {
+	case err == gorm.ErrRecordNotFound:
+		return "not found"
+	case err == errors.ErrProductConcurrentModification:
+		return "was changed by another request, please retry"
+	default:
+		return "internal error"
+	}
 }
 
 func (s *ProductService) RestoreProduct(productID, userID uint) error {

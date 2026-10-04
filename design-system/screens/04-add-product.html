@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<style>
+@font-face {
+  font-family: 'Vend Sans';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-normal.woff2') format('woff2-variations');
+}
+@font-face {
+  font-family: 'Vend Sans';
+  font-style: italic;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-italic.woff2') format('woff2-variations');
+}
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+</style>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Product — Proviant</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<style>
+    :root {
+    /* ── Brand ── */
+    --accent:           oklch(42% .14 155deg);   /* forest */
+    --accent-fg:        oklch(0% 0 100deg / .9);
+    --accent-hover:     oklch(48% .14 155deg);
+    --accent-active:    oklch(36% .14 155deg);
+    --accent-subtle:    oklch(90% .06 155deg);
+    --accent-muted:     oklch(94% .03 155deg);
+
+    /* ── Text ── */
+    --fg:               oklch(16% .022 145deg);
+    --fg-2:             oklch(42% .018 145deg);
+    --fg-3:             oklch(60% .012 145deg);
+    --fg-4:             oklch(72% .008 145deg);
+
+    /* ── Backgrounds ── */
+    --bg:               oklch(97% .006 145deg);
+    --surface: var(--bg);
+    --bg-subtle:        oklch(95% .006 145deg);
+    --bg-2:             oklch(92% .006 145deg);
+
+    /* ── Borders ── */
+    --border:           oklch(87% .008 145deg);
+    --border-strong:    oklch(72% .014 145deg);
+    --border-subtle:    oklch(93% .005 145deg);
+
+    /* ── Status ── */
+    --status-expired:   oklch(55% .20 25deg);
+    --status-critical:  oklch(64% .18 45deg);
+    --status-soon:     oklch(70% .16 85deg);
+    --status-fresh:    oklch(55% .12 150deg);
+    --status-nodate:   oklch(60% .010 70deg);
+
+    /* ── Brand palette ── */
+    --brand-slate:      oklch(40% .06 240deg);
+    --brand-slate-subtle: oklch(96% .006 240deg);
+    --color-success:   oklch(60% .14 152deg);
+    --color-warning:    oklch(70% .16 85deg);
+    --color-danger:     oklch(55% .20 25deg);
+    --color-info:       oklch(55% .14 240deg);
+
+    /* ── Typography ── */
+    --font-ui:           'Vend Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-mono:         'DM Mono', ui-monospace, monospace, ui-monospace, monospace;
+    --text-xs:          0.6875rem;
+    --text-sm:          0.8125rem;
+    --text-base:        0.875rem;
+    --text-md:          1rem;
+    --text-lg:          1.125rem;
+    --text-xl:          1.25rem;
+    --text-2xl:         1.5rem;
+    --text-3xl:         1.875rem;
+    --text-4xl:         2.25rem;
+    --leading-tight:    1.25;
+    --leading-normal:   1.5;
+    --leading-relaxed:  1.625;
+    --tracking-tight:  -0.025em;
+    --tracking-normal:  0;
+    --tracking-wide:     0.04em;
+    --tracking-wider:    0.06em;
+
+    /* ── Radii ── */
+    --radius-pill:      9999px;
+    --radius-md:        0.625rem;
+    --radius-lg:        1rem;
+    --radius-sm:        0.375rem;
+
+    /* ── Shadows ── */
+    --shadow-xs:        0 1px 2px oklch(0% 0 0deg / .05);
+    --shadow-sm:        0 1px 3px oklch(0% 0 0deg / .08), 0 1px 2px oklch(0% 0 0deg / .04);
+    --shadow-md:        0 4px 12px oklch(0% 0 0deg / .10), 0 2px 4px oklch(0% 0 0deg / .06);
+    --shadow-lg:        0 12px 32px oklch(0% 0 0deg / .12), 0 4px 8px oklch(0% 0 0deg / .06);
+
+    /* ── Spacing ── */
+    --space-1:  0.25rem;
+    --space-2:  0.5rem;
+    --space-3:  0.75rem;
+    --space-4:  1rem;
+    --space-5:  1.25rem;
+    --space-6:  1.5rem;
+    --space-8:  2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-20: 5rem;
+    --space-24: 6rem;
+
+    /* ── Transitions ── */
+    --duration-fast:    100ms;
+    --duration-base:    150ms;
+    --duration-slow:    300ms;
+    --duration-slower:  450ms;
+    --ease-bounce:      cubic-bezier(.34, 1.56, .64, 1);
+    --ease-in:          cubic-bezier(.4, 0, 1, 1);
+    --ease-out:         cubic-bezier(0, 0, .2, 1);
+    --ease-in-out:      cubic-bezier(.4, 0, .2, 1);
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent-hover); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-family: var(--font-ui); font-weight: 600; border: none; cursor: pointer; border-radius: var(--radius-md); transition: all var(--duration-base); white-space: nowrap; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #fff; padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); box-shadow: var(--shadow-sm); }
+  .btn-primary:hover { background: var(--accent-hover); color: #fff; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn-primary:active { background: var(--accent-active); color: #fff; transform: translateY(0); }
+  .btn-secondary { background: var(--bg-2); color: var(--fg); padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); border: 1.5px solid var(--border-strong); box-shadow: var(--shadow-sm); }
+  .btn-secondary:hover { background: var(--bg-subtle); border-color: var(--fg-3); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--fg-2); padding: 0 var(--space-3); height: 36px; font-size: var(--text-sm); }
+  .btn-ghost:hover { background: var(--bg-subtle); color: var(--fg); }
+  .btn-danger { background: var(--status-expired); color: #fff; padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); }
+  .btn-danger:hover { background: var(--status-critical); color: #fff; }
+  .btn-sm { height: 32px; padding: 0 var(--space-4); font-size: var(--text-xs); }
+  .btn-icon { width: 40px; height: 40px; padding: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-2); border: none; cursor: pointer; transition: all var(--duration-base); display: inline-flex; align-items: center; justify-content: center; }
+  .btn-icon:hover { background: var(--bg-subtle); color: var(--fg); }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; background: var(--bg); color: var(--fg); }
+  *, *:focus-visible { outline: none; }
+
+  nav.topnav { position: sticky; top: 0; z-index: 100; height: 60px; background: oklch(97% 0.006 145deg / .85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; padding: 0 var(--space-5); gap: var(--space-4); }
+  nav.topnav .logo { font-weight: 700; font-size: var(--text-lg); color: var(--fg); letter-spacing: -0.02em; display: flex; align-items: center; gap: var(--space-2); text-decoration: none; }
+  nav.topnav .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #fff; }
+  nav.topnav .nav-actions { display: flex; align-items: center; gap: var(--space-2); }
+  nav.topnav .nav-link { font-size: var(--text-sm); font-weight: 500; color: var(--fg-2); text-decoration: none; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); transition: all var(--duration-base); }
+  nav.topnav .nav-link:hover { color: var(--fg); background: var(--bg-subtle); }
+  nav.topnav .nav-link.active { color: var(--accent); font-weight: 600; }
+
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: var(--text-xs); font-weight: 700; text-decoration: none; flex-shrink: 0; }
+
+  .accent-gradient { background: linear-gradient(135deg, var(--accent-subtle) 0%, var(--bg-subtle) 100%); border: 1px solid oklch(0.88 0.04 155 / 0.3); border-radius: var(--radius-lg); padding: var(--space-5); }
+
+  .input-label { display: block; font-size: var(--text-xs); font-weight: 600; color: var(--fg-2); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: var(--space-2); }
+  .input { width: 100%; height: 44px; padding: 0 var(--space-4); font-family: var(--font-ui); font-size: var(--text-base); color: var(--fg); background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-md); transition: all var(--duration-base); }
+  .input::placeholder { color: var(--fg-3); }
+  .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+  .form-select { width: 100%; height: 44px; padding: 0 var(--space-8) 0 var(--space-4); font-family: var(--font-ui); font-size: var(--text-base); color: var(--fg); background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-md); transition: all var(--duration-base); appearance: none; cursor: pointer; background-image: url('data:image/svg+xml;utf8,<svg width="12" height="12" viewbox="0 0 12 12" fill="none" stroke="%23666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 4 6 8 10 4"></polyline></svg>'); background-repeat: no-repeat; background-position: right 12px center; }
+  .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+
+  .tab { padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--fg-2); transition: all var(--duration-base); }
+  .tab.active { background: var(--bg); color: var(--accent); box-shadow: var(--shadow-sm); }
+
+  nav.bottomtab { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; height: 56px; background: oklch(1 0 0 / 0.95); backdrop-filter: blur(16px); border-top: 1px solid var(--border-subtle); display: none; align-items: center; padding: 0 var(--space-2); }
+  nav.bottomtab .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: var(--fg-3); padding: var(--space-2) 0; border-radius: var(--radius-md); transition: all var(--duration-base); }
+  nav.bottomtab .tab-item i { font-size: 20px; }
+  nav.bottomtab .tab-item span { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; }
+  nav.bottomtab .tab-item:hover { color: var(--fg-2); }
+  nav.bottomtab .tab-item.active { color: var(--accent); }
+
+  .notif-center { position: absolute; top: calc(100% + 8px); right: 0; width: 320px; background: var(--bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-subtle); z-index: 200; overflow: hidden; display: none; }
+  .notif-center.open { display: block; }
+  .notif-center .notif-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); }
+  .notif-center .notif-item { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); transition: background var(--duration-base); }
+  .notif-center .notif-item:last-child { border-bottom: none; }
+  .notif-center .notif-item:hover { background: var(--bg-subtle); }
+  .notif-center .notif-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+
+  .modal-overlay { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: var(--space-4); }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: var(--bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); max-width: 380px; width: 100%; overflow: hidden; transform: scale(1); transition: transform 200ms ease; }
+  .modal-overlay.hidden .modal { transform: scale(0.95); }
+  .modal-header { padding: var(--space-5) var(--space-6) var(--space-4); display: flex; align-items: center; justify-content: space-between; }
+  .modal-header h3 { font-size: var(--text-md); font-weight: 700; }
+  .modal-body { padding: 0 var(--space-6) var(--space-5); color: var(--fg-2); font-size: var(--text-sm); }
+  .modal-footer { padding: var(--space-4) var(--space-6); border-top: 1px solid var(--border-subtle); display: flex; gap: var(--space-3); justify-content: flex-end; }
+  .modal-icon { width: 48px; height: 48px; border-radius: 50%; background: oklch(0.92 0.08 25 / 0.15); display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-4); }
+  .modal-icon i { font-size: 22px; color: var(--status-expired); }
+
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--fg); color: var(--bg); padding: var(--space-3) var(--space-5); border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: 500; box-shadow: var(--shadow-md); z-index: 400; opacity: 0; transition: all 300ms ease; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @keyframes scanline { from { top: 0; } to { top: 100%; } }
+
+  @media (max-width: 768px) {
+    nav.bottomtab { display: flex; }
+    main { padding-bottom: calc(var(--space-6) + 64px); }
+  }
+  @media (min-width: 769px) {
+    .hide-desktop { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="02-dashboard.html" class="logo">
+    <div class="logo-mark">P</div>
+    proviant
+  </a>
+  <div class="nav-actions hide-mobile" style="margin:0 auto;position:absolute;left:50%;transform:translateX(-50%)">
+    <a href="02-dashboard.html" class="nav-link">Dashboard</a>
+    <a href="03-products.html" class="nav-link active">Products</a>
+    <a href="05-recipes.html" class="nav-link">Recipes</a>
+    <a href="06-settings.html" class="nav-link">Settings</a>
+  </div>
+  <div class="nav-actions" style="display:flex;align-items:center;gap:var(--space-2);margin-left:auto;position:relative">
+    <button class="btn-icon" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifCenter()" style="position:relative">
+      <i class="bi bi-bell" style="font-size:18px"></i>
+    </button>
+    <div class="notif-center" id="notifCenter">
+      <div class="notif-header">
+        <span style="font-size:var(--text-sm);font-weight:700;color:var(--fg)">Notifications</span>
+        <button class="btn btn-ghost btn-sm" style="height:28px;font-size:var(--text-xs);color:var(--accent)">Mark all read</button>
+      </div>
+      <div class="notif-item">
+        <div class="notif-dot" style="background:var(--status-critical)"></div>
+        <div style="flex:1">
+          <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Atlantic Salmon expires today</div>
+          <div style="font-size:var(--text-xs);color:var(--fg-2)">Tap to use it in a recipe</div>
+        </div>
+        <span style="font-size:10px;color:var(--fg-3)">now</span>
+      </div>
+      <div class="notif-item">
+        <div class="notif-dot" style="background:var(--status-soon)"></div>
+        <div style="flex:1">
+          <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Baby Spinach expires in 2 days</div>
+          <div style="font-size:var(--text-xs);color:var(--fg-2)">Great in a salad</div>
+        </div>
+        <span style="font-size:10px;color:var(--fg-3)">2h</span>
+      </div>
+      <div class="notif-item">
+        <div class="notif-dot" style="background:var(--status-fresh)"></div>
+        <div style="flex:1">
+          <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Sharp Cheddar added to pantry</div>
+          <div style="font-size:var(--text-xs);color:var(--fg-2)">Expires in 8 days</div>
+        </div>
+        <span style="font-size:10px;color:var(--fg-3)">1d</span>
+      </div>
+    </div>
+  </div>
+    <a href="03-products.html" class="btn btn-ghost" style="color:var(--fg-2);text-decoration:none">
+      <i class="bi bi-x-lg" style="font-size:16px"></i>
+    </a>
+</nav>
+
+
+
+<main class="has-bottomtab" style="max-width:560px;margin:0 auto;padding:var(--space-6)">
+  <div style="text-align:center;margin-bottom:var(--space-6)">
+    <h1 style="font-size:var(--text-2xl);font-weight:700;letter-spacing:-0.02em;color:var(--fg);margin-bottom:var(--space-1)">Add product</h1>
+    <p style="color:var(--fg-2);font-size:var(--text-sm)">Scan a barcode or enter details manually</p>
+  </div>
+
+  <!-- Tab switcher -->
+  <div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-6);padding:var(--space-1);background:var(--bg-subtle);border-radius:var(--radius-lg);width:fit-content;margin-left:auto;margin-right:auto" id="addTabs">
+    <button class="tab active" data-tab="scan">
+      <i class="bi bi-upc-scan" style="font-size:14px"></i>
+      Scan
+    </button>
+    <button class="tab" data-tab="manual">
+      <i class="bi bi-pencil-square" style="font-size:14px"></i>
+      Manual
+    </button>
+  </div>
+
+  <!-- Scan panel -->
+  <div id="scanPanel">
+    <div style="background:var(--bg);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:var(--space-6);text-align:center;margin-bottom:var(--space-5)">
+      <div style="position:relative;display:inline-block;margin-bottom:var(--space-4)">
+        <div style="width:260px;height:160px;background:#111;border-radius:var(--radius-md);margin:0 auto;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+          <div style="width:180px;height:100px;border:2px solid var(--accent);border-radius:6px;position:relative">
+            <div style="position:absolute;top:0;left:-2px;right:-2px;height:2px;background:var(--accent);animation:scanline 2s ease-in-out infinite alternate"></div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:var(--text-sm);color:var(--fg-2);margin-bottom:var(--space-4)">Position the barcode within the frame</p>
+      <div style="display:flex;gap:var(--space-3);justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-secondary" style="height:40px;font-size:var(--text-sm)">
+          <i class="bi bi-camera" style="font-size:14px"></i>
+          Use camera
+        </button>
+        <button class="btn btn-ghost" style="height:40px;font-size:var(--text-sm)">Enter code</button>
+      </div>
+    </div>
+
+    <!-- Scanned result -->
+    <div style="background:var(--bg);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:var(--space-4);margin-bottom:var(--space-5)">
+      <div style="display:flex;align-items:center;gap:var(--space-3)">
+        <div style="width:40px;height:40px;background:var(--accent-subtle);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="bi bi-box-seam" style="font-size:18px;color:var(--accent)"></i>
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:var(--text-sm);color:var(--fg)">Organic Whole Milk</div>
+          <div style="font-size:var(--text-xs);color:var(--fg-2);font-family:var(--font-mono)">590 1234 567 8</div>
+        </div>
+        <a href="07-edit-product.html" style="font-size:var(--text-xs);color:var(--accent);font-weight:500;text-decoration:none">Edit</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual form panel -->
+  <div id="manualPanel" style="display:none">
+    <form id="addProductForm" style="display:flex;flex-direction:column;gap:var(--space-5)">
+      <div class="form-group">
+        <label class="input-label" for="productName">Product name</label>
+        <input class="input" type="text" id="productName" name="productName" placeholder="e.g. Organic Whole Milk" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label class="input-label" for="category">Category</label>
+        <select class="form-select" id="category" name="category">
+          <option value="">Select category…</option>
+          <option value="dairy">Dairy & Eggs</option>
+          <option value="produce">Produce</option>
+          <option value="meat">Meat & Fish</option>
+          <option value="bakery">Grains & Bakery</option>
+          <option value="frozen">Frozen</option>
+          <option value="beverages">Beverages</option>
+          <option value="snacks">Snacks</option>
+          <option value="condiments">Condiments & Sauces</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4)">
+        <div class="form-group">
+          <label class="input-label" for="purchaseDate">Purchased</label>
+          <input class="input" type="date" id="purchaseDate" name="purchaseDate" value="2026-05-14" style="cursor:pointer">
+        </div>
+        <div class="form-group">
+          <label class="input-label" for="expiryDate">Expires</label>
+          <input class="input" type="date" id="expiryDate" name="expiryDate" style="cursor:pointer">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="input-label" for="quantity">Quantity</label>
+        <input class="input" type="text" id="quantity" name="quantity" placeholder="e.g. 2 cartons, 500g" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label class="input-label" for="location">Storage location</label>
+        <select class="form-select" id="location" name="location">
+          <option value="fridge">Fridge</option>
+          <option value="freezer">Freezer</option>
+          <option value="pantry">Pantry</option>
+          <option value="counter">Counter</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="input-label" for="notes">Notes (optional)</label>
+        <textarea class="input" id="notes" name="notes" rows="3" placeholder="Opened, organic, best before…" style="height:auto;padding:var(--space-3) var(--space-4);resize:vertical"></textarea>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-4);background:var(--accent-subtle);border-radius:var(--radius-md)">
+        <input type="checkbox" id="notifyExpiry" name="notifyExpiry" checked style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer">
+        <label for="notifyExpiry" style="font-size:var(--text-sm);color:var(--fg);cursor:pointer">Remind me before expiry</label>
+      </div>
+    </form>
+  </div>
+
+  <!-- Actions -->
+  <div style="display:flex;gap:var(--space-3);margin-top:var(--space-6)">
+    <a href="03-products.html" class="btn btn-secondary" style="flex:1;text-align:center;text-decoration:none">
+      <i class="bi bi-x-lg" style="font-size:14px"></i>
+      Cancel
+    </a>
+    <button form="addProductForm" type="submit" class="btn btn-primary" style="flex:2" id="submitBtn">
+      <i class="bi bi-check-lg" style="font-size:15px"></i>
+      Add to pantry
+    </button>
+  </div>
+</main>
+
+<style>
+@keyframes scanline {
+  from { top: 0; }
+  to { top: 100%; }
+}
+</style>
+
+<script>
+document.querySelectorAll('#addTabs .tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('#addTabs .tab').forEach(function(t) { t.classList.remove('active'); });
+    this.classList.add('active');
+    var tabName = this.dataset.tab;
+    document.getElementById('scanPanel').style.display = tabName === 'scan' ? '' : 'none';
+    document.getElementById('manualPanel').style.display = tabName === 'manual' ? '' : 'none';
+    document.getElementById('submitBtn').innerHTML = tabName === 'scan'
+      ? '<i class="bi bi-check-lg" style="font-size:15px"></i> Add to pantry'
+      : '<i class="bi bi-check-lg" style="font-size:15px"></i> Save product';
+  });
+});
+
+document.getElementById('addProductForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var btn = document.getElementById('submitBtn');
+  btn.innerHTML = '<i class="bi bi-hourglass-split" style="font-size:14px"></i> Saving…';
+  btn.style.opacity = '0.7';
+  setTimeout(function() { window.location.href = '03-products.html'; }, 1000);
+});
+
+function toggleNotifCenter() {
+  var nc = document.getElementById('notifCenter');
+  var btn = document.querySelector('[aria-label="Notifications"]');
+  var isOpen = nc.classList.toggle('open');
+  if (btn) btn.setAttribute('aria-expanded', isOpen);
+  if (isOpen) {
+    setTimeout(function() {
+      document.addEventListener('click', function closeNotif(e) {
+        if (nc.contains(e.target) || (btn && btn.contains(e.target))) return;
+        nc.classList.remove('open');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('click', closeNotif);
+      });
+    }, 0);
+  }
+}
+</script>
+
+
+
+<nav class="bottomtab">
+  <div class="tab-items">
+    <a href="02-dashboard.html" class="tab-item"><i class="bi bi-house-fill"></i>Home</a>
+    <a href="03-products.html" class="tab-item"><i class="bi bi-box-seam"></i>Products</a>
+    <a href="04-add-product.html" class="tab-item active"><i class="bi bi-plus-circle-fill"></i>Add</a>
+    <a href="08-shopping-list.html" class="tab-item"><i class="bi bi-cart3"></i>Shopping</a>
+    <a href="06-settings.html" class="tab-item"><i class="bi bi-gear"></i>Settings</a>
+  </div>
+</nav>
+</body>
+</html>

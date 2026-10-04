@@ -4,6 +4,7 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"codeberg.org/isotop7/proviant/api"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
@@ -57,4 +58,40 @@ func BulkWasteProducts(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("%d products marked as wasted", len(products.ProductIDs))})
+}
+
+// CookProducts consumes multiple products, partially or fully (cook workflow)
+// @Summary      Cook products
+// @Description  Consumes the given products by reducing their amounts. An amount of 0 or one that reaches or exceeds the current amount fully consumes (archives) the product.
+// @Tags         product
+// @Accept       json
+// @Produce      json
+// @Param        request  body  apiModel.CookProductsAPIModel  true  "Cook items"
+// @Success      200  {object}  apiModel.CookResponse
+// @Failure      400  {object}  apiModel.CookResponse  "Returned when no item was processed (invalid body or all items failed)"
+// @Failure      500  {object}  api.APIResponse  "Returned when no item was processed and a server-side error occurred"
+// @Router       /api/v1/products/cook [post]
+func CookProducts(ctx *gin.Context, appCtx *AppContext) {
+	var cookRequest apiModel.CookProductsAPIModel
+	if !bindJSON(ctx, appCtx.Logger, &cookRequest) {
+		return
+	}
+
+	consumed, partial, errs, internalErr := appCtx.Products.CookProducts(cookRequest.Items, appCtx.UserID)
+
+	if consumed == 0 && partial == 0 {
+		if internalErr != nil {
+			if len(errs) > 0 {
+				appCtx.Logger.Warn().Msgf("CookProducts: %d item errors alongside internal error: %s", len(errs), strings.Join(errs, "; "))
+			}
+			ctx.JSON(http.StatusInternalServerError, api.InternalError())
+			return
+		}
+		if len(errs) > 0 {
+			ctx.JSON(http.StatusBadRequest, apiModel.CookResponse{Errors: errs})
+			return
+		}
+	}
+
+	ctx.JSON(http.StatusOK, apiModel.CookResponse{Consumed: consumed, Partial: partial, Errors: errs})
 }

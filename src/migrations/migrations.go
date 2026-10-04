@@ -151,9 +151,20 @@ func AddPerformanceIndexes(logger *zerolog.Logger, db *gorm.DB) error {
 		"CREATE INDEX IF NOT EXISTS idx_products_household_name_deleted ON products(household_id, product_name, deleted_at)",
 		"CREATE INDEX IF NOT EXISTS idx_users_mail_address ON users(mail_address)",
 		"CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+		// Composite indexes supporting the effectiveExpiryCandidateScope
+		// OR-across-columns predicate introduced by the "secondary expiry after opening" feature.
+		// On SQLite the OR across columns cannot use a single-column index; the
+		// composite (household_id, opened_at) / (household_id, expire_at)
+		// indexes let each branch of the OR use an index. MariaDB can use
+		// index_merge(union) on top of these; InnoDB will fall back to one
+		// index or a scan.
+		"CREATE INDEX IF NOT EXISTS idx_products_household_opened_at ON products(household_id, opened_at)",
+		"CREATE INDEX IF NOT EXISTS idx_products_household_expire_at ON products(household_id, expire_at)",
 	}
 	for _, sql := range statements {
-		if isMariaDB && strings.Contains(sql, "products(household_id, product_name, deleted_at)") {
+		if isMariaDB && (strings.Contains(sql, "products(household_id, product_name, deleted_at)") ||
+			strings.Contains(sql, "products(household_id, opened_at)") ||
+			strings.Contains(sql, "products(household_id, expire_at)")) {
 			sql += " ALGORITHM=INPLACE, LOCK=NONE"
 		}
 		if err := db.Exec(sql).Error; err != nil {

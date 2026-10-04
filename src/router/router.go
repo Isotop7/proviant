@@ -235,6 +235,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductMemberAPI.POST("/bulkRestore", v1.WrapHandler(v1.BulkRestoreProducts))
 	publicProductMemberAPI.POST("/bulkConsume", v1.WrapHandler(v1.BulkConsumeProducts))
 	publicProductMemberAPI.POST("/bulkWaste", v1.WrapHandler(v1.BulkWasteProducts))
+	publicProductMemberAPI.POST("/cook", v1.WrapHandler(v1.CookProducts))
 	publicProductAPI.POST("/scan", scanRateLimitMiddleware, v1.WrapHandler(v1.ScanProduct))
 	publicProductAPI.POST("/scan-date", v1.WrapHandler(v1.ScanExpiryDate))
 	publicProductAPI.GET("/byBarcode/:barcode", v1.WrapHandler(v1.GetProductsByBarcode))
@@ -356,6 +357,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedProductMemberAPI.POST("/:id/expire", v1.WrapHandler(v1.SetExpireAt))
 	protectedProductMemberAPI.POST("/:id/consume", v1.WrapHandler(v1.ConsumeProduct))
 	protectedProductMemberAPI.POST("/:id/waste", v1.WrapHandler(v1.WasteProduct))
+	protectedProductMemberAPI.POST("/:id/open", v1.WrapHandler(v1.OpenProduct))
 
 	// Webhook routes
 	webhookAPI := engine.Group("/api/v1/webhooks")

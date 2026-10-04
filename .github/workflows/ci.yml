@@ -3,7 +3,6 @@ name: CI
 env:
   GO_VERSION: 1.26.4
   GOLANGCI_LINT_VERSION: v2.12.2
-  CODEBERG_REGISTRY: codeberg.org
   PRIVATE_REGISTRY: registry.hr94.de
 
 on:
@@ -11,9 +10,15 @@ on:
     branches:
       - '**'
 
+permissions:
+  contents: read
+
 jobs:
   check:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -26,7 +31,7 @@ jobs:
           cd ./src
           go mod verify
       - name: Lint code
-        uses: https://github.com/golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: src
@@ -34,55 +39,38 @@ jobs:
         run: |
           cd ./src
           go run golang.org/x/vuln/cmd/govulncheck@latest -json ./... > govulncheck.json
-
       - name: Create vulnerability issues
         if: failure()
         env:
           WORKSPACE: ${{ github.workspace }}
         run: |
-          OWNER="${{ forgejo.repository_owner }}"
-          REPO="${{ forgejo.repository_name }}"
-          TOKEN="${{ secrets.RELEASE_TOKEN }}"
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.repository }}"
 
-          RESPONSE=$(curl -s -X GET \
-            "https://codeberg.org/api/v1/repos/$OWNER/$REPO/issues?state=open&labels=security" \
-            -H "Authorization: token $TOKEN")
+          EXISTING_IDS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/$OWNER/$REPO/issues?state=open&labels=vulnerability" \
+            | jq -r '.[].title | split(": ")[1] // empty | split(" ")[0]' 2>/dev/null || true)
 
-          EXISTING_IDS=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[] | select(.labels[].name == "vulnerability") | .title | split(": ")[1] // empty | split(" ")[0] else empty end' 2>/dev/null || echo "")
-
-          while IFS= read -r existing; do
-            KNOWN_VULNS="$KNOWN_VULNS $existing"
-          done <<< "$EXISTING_IDS"
-
-          jq -c '.problems[]' "$WORKSPACE/src/govulncheck.json" 2>/dev/null | while read ISSUE; do
+          jq -c '.problems[]' "$WORKSPACE/src/govulncheck.json" 2>/dev/null | while read -r ISSUE; do
             ID=$(echo "$ISSUE" | jq -r '.issueID')
-
-            if echo "$KNOWN_VULNS" | grep -qF "$ID"; then
-              echo "Issue for $ID already exists, skipping"
-              continue
-            fi
-
             PKG=$(echo "$ISSUE" | jq -r '.pkgPath')
             DESC=$(echo "$ISSUE" | jq -r '.description')
             FIXED=$(echo "$ISSUE" | jq -r '.fixedVersion // "unknown"')
 
-            BODY="## Vulnerability Detected
+            if echo "$EXISTING_IDS" | grep -qF "$ID"; then
+              echo "Issue for $ID already exists, skipping"
+              continue
+            fi
 
-            **ID:** \`$ID\`
-            **Package:** \`$PKG\`
-            **Fixed Version:** \`$FIXED\`
-
-            $DESC
-
-            ---
-            *This issue was automatically created by the CI vulnerability scanner.*"
+            BODY=$(jq -n --arg id "$ID" --arg pkg "$PKG" --arg fix "$FIXED" --arg desc "$DESC" \
+              '("## Vulnerability Detected\n\n**ID:** `" + $id + "`\n**Package:** `" + $pkg + "`\n**Fixed Version:** `" + $fix + "`\n\n" + $desc + "\n\n---\n*This issue was automatically created by the CI vulnerability scanner.*")')
 
             curl -s -X POST \
-              "https://codeberg.org/api/v1/repos/$OWNER/$REPO/issues" \
-              -H "Authorization: token $TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "$(jq -n --arg title "Vulnerability: $ID" --arg body "$BODY" '{title: $title, body: $body, labels: ["security", "vulnerability"]}')"
-
+              "https://api.github.com/repos/$OWNER/$REPO/issues" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              -d "$(jq -n --arg title "Vulnerability: $ID" --arg body "$BODY" \
+                  '{title: $title, body: $body, labels: ["security", "vulnerability"]}')"
             echo "Created issue for $ID"
           done
       - name: Test code
@@ -108,15 +96,16 @@ jobs:
           cd ./src
           mkdir -p release
           go build -o release ./...
+
   frontend-check:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Install dependencies
         run: npm install
       - name: Audit dependencies
@@ -130,8 +119,11 @@ jobs:
 
   docker-build-and-push:
     needs: check
-    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main'
-    runs-on: self-hosted
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -139,12 +131,12 @@ jobs:
           fetch-depth: 0
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Login to Codeberg registry
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.CODEBERG_REGISTRY }}
-          username: ${{ secrets.CODEBERG_REGISTRY_USERNAME }}
-          password: ${{ secrets.CODEBERG_REGISTRY_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Login to private registry
         uses: docker/login-action@v3
         with:
@@ -156,23 +148,28 @@ jobs:
         with:
           file: ./Dockerfile
           push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
-            ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:${{ forgejo.ref_name }}
-            ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:latest
-            ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:${{ forgejo.ref_name }}
-            ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:latest
+            ${{ env.PRIVATE_REGISTRY }}/${{ github.repository }}:${{ github.ref_name }}
+            ${{ env.PRIVATE_REGISTRY }}/${{ github.repository }}:latest
       - name: Build and push Demo Docker image
         uses: docker/build-push-action@v6
         with:
           file: ./Dockerfile.demo
           push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
-            ${{ env.CODEBERG_REGISTRY }}/${{ forgejo.repository }}:demo
-            ${{ env.PRIVATE_REGISTRY }}/${{ forgejo.repository }}:demo
+            ghcr.io/${{ github.repository }}:demo
+            ${{ env.PRIVATE_REGISTRY }}/${{ github.repository }}:demo
+
   sonarcloud-scan:
     needs: check
-    if: forgejo.ref == 'refs/heads/develop' || forgejo.ref == 'refs/heads/main' || forgejo.event_name == 'pull_request'
-    runs-on: self-hosted
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -180,6 +177,6 @@ jobs:
           fetch-depth: 0
       - name: Run SonarCloud scan
         continue-on-error: true
-        uses: https://github.com/SonarSource/sonarqube-scan-action@v6.0.0
+        uses: SonarSource/sonarqube-scan-action@v6.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

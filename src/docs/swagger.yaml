@@ -56,6 +56,38 @@ definitions:
       unit:
         type: string
     type: object
+  api.CookItemAPIModel:
+    properties:
+      amount:
+        minimum: 0
+        type: integer
+      productId:
+        type: integer
+    required:
+    - productId
+    type: object
+  api.CookProductsAPIModel:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/api.CookItemAPIModel'
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
+  api.CookResponse:
+    properties:
+      consumed:
+        type: integer
+      errors:
+        items:
+          type: string
+        type: array
+      partial:
+        type: integer
+    type: object
   api.CreateWebhookRequest:
     properties:
       active:
@@ -595,6 +627,8 @@ definitions:
         type: string
       createdAt:
         type: string
+      daysAfterOpening:
+        type: integer
       deletedAt:
         $ref: '#/definitions/gorm.DeletedAt'
       expireAt:
@@ -610,6 +644,8 @@ definitions:
       notificationLeadDays:
         type: integer
       notifiedAt:
+        type: string
+      openedAt:
         type: string
       priceOverride:
         type: number
@@ -724,6 +760,19 @@ definitions:
         $ref: '#/definitions/v1.FullExportProducts'
       stats:
         $ref: '#/definitions/api.ProductStatsResponse'
+    type: object
+  v1.OpenProductRequest:
+    properties:
+      force:
+        type: boolean
+    type: object
+  v1.OpenProductResponse:
+    properties:
+      openedAt:
+        type: string
+      product: {}
+      triggeredBy:
+        type: string
     type: object
   v1.createHouseholdRequest:
     properties:
@@ -2238,6 +2287,50 @@ paths:
       summary: Get consumption rate estimate
       tags:
       - product
+  /api/v1/products/{id}/open:
+    post:
+      consumes:
+      - application/json
+      description: 'Sets the OpenedAt timestamp on a product. Returns 409 with the
+        existing OpenedAt if the product is already opened, prompting the frontend
+        to confirm. Re-submit with `force: true` to overwrite.'
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Force overwrite flag
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/v1.OpenProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/database.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/v1.OpenProductResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Mark product as opened
+      tags:
+      - product
   /api/v1/products/{id}/restock-suggestion:
     get:
       description: |-
@@ -2392,6 +2485,40 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Mark products as wasted
+      tags:
+      - product
+  /api/v1/products/cook:
+    post:
+      consumes:
+      - application/json
+      description: Consumes the given products by reducing their amounts. An amount
+        of 0 or one that reaches or exceeds the current amount fully consumes (archives)
+        the product.
+      parameters:
+      - description: Cook items
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CookProductsAPIModel'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CookResponse'
+        "400":
+          description: Returned when no item was processed (invalid body or all items
+            failed)
+          schema:
+            $ref: '#/definitions/api.CookResponse'
+        "500":
+          description: Returned when no item was processed and a server-side error
+            occurred
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Cook products
       tags:
       - product
   /api/v1/products/expired:
