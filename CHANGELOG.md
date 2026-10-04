@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.19.0] - 2026-10-04
+
+### Added
+- (39e14116): Add design guidelines from open-design
+- (793fe2f3): Add ui refresh plan
+- (980ef9a1): Feat(products): track opened product shelf life
+Closes: #300
+- (88142d84): **notifications:** Show effective expiry date
+- (aeb9b281): **products:** Add cook action for partial consumption
+- (60fe069a): Add caching and use node 24
+- (2f3d84c0): Feat(controllers): add Mealie and Tandoor recipe providers
+Closes: #47
+
+
+### CI/CD
+- (5525d73e): Centralize npm audit gate in shared script
+
+
+### Changed
+- (95bc162e): Update design
+- (6d835e38): Update modules
+- (da2d754a): Update go version
+
+
+### Fixed
+- (3f3473ff): Fix github actions
+- (19bfa5dc): Satisfy staticcheck in VAPID key gen and cook error switch
+
+
+### Miscellaneous
+- (20b0fd2e): **deps:** Bump go 1.26.0 and update dependencies
+- (25af02a6): Update CHANGELOG.md for v0.17.0
+- (8d02ab66): Merge milestone/0.18.0 into milestone/0.19.0
+- (ad849437): Bump golangci-lint to v2.14.0
+
+
 ## [0.17.0] - 2026-06-14
 
 ### Added
@@ -342,6 +378,7 @@ Closes: #365
 
 
 ### Miscellaneous
+- (a2c168ea): Update CHANGELOG.md for v0.9.0-rc5
 - (254b583b): Drop kilo lock
 - (2c5d1bdf): **web:** Update product pages
 - (2562ea3e): Style(templates): update button styles
@@ -402,7 +439,6 @@ Closes: #344
 ## [0.9.0-rc1] - 2026-04-25
 
 ### Miscellaneous
-- (a2c168ea): Update CHANGELOG.md for v0.9.0-rc5
 - (36588c1c): Add recipe mobile screenshot
 
 
@@ -492,34 +528,49 @@ household APIs.
 
 ## [0.6.1] - 2026-04-15
 
+### Added
+- (20499dd7): Feat(api): add personal access tokens for headless API auth
+Users create named tokens stored as SHA-256 hashes. Tokens use
+Authorization: Bearer header with proviant_pat_ prefix. Middleware
+checks PAT before falling back to JWT. Token value shown once at
+creation.
+Closes #201
+- (bcc5211d): Feat(api): add CSV/JSON bulk export endpoints
+Add GET
+/api/v1/products/export/{products.csv,products.json,archive.csv,full.json}
+with optional date range filtering and 1 req/min rate limit per user.
+Closes #203
+- (78702508): Feat(calendar): add iCal export for product expiry dates
+Implement GET /api/v1/calendar/export.ics with token query param auth
+for calendar app subscription (Google Calendar, Apple Calendar,
+Thunderbird).
+Include POST/DELETE/GET /api/v1/calendar/token for token management.
+Refs #193
+- (ae0a2512): Add frontend controls for calendar sync
+
+
+### Documentation
+- (7b49253f): Add swagger documentation to api and web handlers
+
+
 ## [0.5.0] - 2026-04-10
+
+### Added
+- (3fb9b6aa): Add vulnerability scans
+update mods
+
+
+### Changed
+- (445c3e72): Update font to VendSans
+
+
+### Fixed
+- (18278489): Fix js lint warnings
+
 
 ## [0.4.0] - 2026-04-04
 
-## [0.3.0] - 2025-12-26
-
 ### Added
-- (9dd62232): Implement client side search
-- (c81ae763): Add ci
-- (8e5134e7): Add soft delete update docs
-- (cefb26fd): Add optional soft deletion on api call
-- (67f06922): Add zed debugging config
-- (38159c75): Add archiving on frontend
-- (7467768a): Add methods and frontend to get archived products update best before
-date icon
-- (d4d937bf): Add deletion to archive get unscoped products when checking for deletion
-- (5773bdb6): Add deletion to archive get unscoped products when checking for deletion
-- (80d36f8d): Add golangci.yml and use action
-- (b28df158): Add api model and partial
-- (84944699): Add motion effect on click make card clickable
-- (971f45ae): Add template
-- (8fb16b26): Implement option bar and card selection in archive page add API and
-database functions for bulk restore update docs
-- (469f8bc8): Add hero-icon class
-- (fabc9075): Add basic font and fix imports
-- (f2f58235): Add const strings cleanup switch statements that could be ifs
-- (590512a8): Add flagReplace function
-- (d5bd5b83): Add all country codes
 - (a3f9e59e): Add changelog
 - (85553ea4): Add interface and unit test
 - (3ce6e422): Add unit tests
@@ -548,26 +599,54 @@ reformat code
 - (2c48d08e): Add household functions in frontend, backend and database
 - (1a4eebcd): Add guard for invalid timestamps
 - (a5dbc453): Add design implementation guide
-- (3fb9b6aa): Add vulnerability scans
-update mods
-- (20499dd7): Feat(api): add personal access tokens for headless API auth
-Users create named tokens stored as SHA-256 hashes. Tokens use
-Authorization: Bearer header with proviant_pat_ prefix. Middleware
-checks PAT before falling back to JWT. Token value shown once at
-creation.
-Closes #201
-- (bcc5211d): Feat(api): add CSV/JSON bulk export endpoints
-Add GET
-/api/v1/products/export/{products.csv,products.json,archive.csv,full.json}
-with optional date range filtering and 1 req/min rate limit per user.
-Closes #203
-- (78702508): Feat(calendar): add iCal export for product expiry dates
-Implement GET /api/v1/calendar/export.ics with token query param auth
-for calendar app subscription (Google Calendar, Apple Calendar,
-Thunderbird).
-Include POST/DELETE/GET /api/v1/calendar/token for token management.
-Refs #193
-- (ae0a2512): Add frontend controls for calendar sync
+
+
+### Changed
+- (4c8b00bd): Update go modules and node modules
+- (add31e6a): Update docs and README
+- (8564c99c): Update styling
+- (10011f43): Update modules
+
+
+### Fix
+- (ddbec80c): Readd frontend handler to archive products
+
+
+### Fixed
+- (65313f63): Fix typo
+- (fe81536e): Fix tests
+- (e19f5adb): Fix saving notification preferences
+- (723ac787): Fix empty return of array
+
+
+### Removed
+- (e8ba5a40): Remove tooltips and normalize font size of input box
+
+
+## [0.3.0] - 2025-12-26
+
+### Added
+- (9dd62232): Implement client side search
+- (c81ae763): Add ci
+- (8e5134e7): Add soft delete update docs
+- (cefb26fd): Add optional soft deletion on api call
+- (67f06922): Add zed debugging config
+- (38159c75): Add archiving on frontend
+- (7467768a): Add methods and frontend to get archived products update best before
+date icon
+- (d4d937bf): Add deletion to archive get unscoped products when checking for deletion
+- (5773bdb6): Add deletion to archive get unscoped products when checking for deletion
+- (80d36f8d): Add golangci.yml and use action
+- (b28df158): Add api model and partial
+- (84944699): Add motion effect on click make card clickable
+- (971f45ae): Add template
+- (8fb16b26): Implement option bar and card selection in archive page add API and
+database functions for bulk restore update docs
+- (469f8bc8): Add hero-icon class
+- (fabc9075): Add basic font and fix imports
+- (f2f58235): Add const strings cleanup switch statements that could be ifs
+- (590512a8): Add flagReplace function
+- (d5bd5b83): Add all country codes
 
 
 ### Changed
@@ -583,19 +662,6 @@ add label for mobile menu
 - (0086fce7): Update layout
 - (225c86f6): Update button order
 - (c6484d09): Update golanci-lint update docs remove old gitlab ci files
-- (4c8b00bd): Update go modules and node modules
-- (add31e6a): Update docs and README
-- (8564c99c): Update styling
-- (10011f43): Update modules
-- (445c3e72): Update font to VendSans
-
-
-### Documentation
-- (7b49253f): Add swagger documentation to api and web handlers
-
-
-### Fix
-- (ddbec80c): Readd frontend handler to archive products
 
 
 ### Fixed
@@ -613,11 +679,6 @@ add label for mobile menu
 - (97a08787): Fix selecting and deselecting card update empty archive page
 - (408df047): Fix passing of OpenFoodFactsAPI controller
 - (7b2f4948): Fix search redirect and duplicated html element
-- (65313f63): Fix typo
-- (fe81536e): Fix tests
-- (e19f5adb): Fix saving notification preferences
-- (723ac787): Fix empty return of array
-- (18278489): Fix js lint warnings
 
 
 ### Removed
@@ -627,7 +688,6 @@ objects by reference fix shadow import
 - (c9158b74): Remove duplicated try
 - (980d674c): Remove duplicated try
 - (406c9f16): Remove search site
-- (e8ba5a40): Remove tooltips and normalize font size of input box
 
 
 ## [0.2.0] - 2024-11-30
