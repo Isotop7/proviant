@@ -1,7 +1,7 @@
 name: Weekly Vulnerability Scan
 
 env:
-  GO_VERSION: 1.26.4
+  GO_VERSION: 1.26.8
 
 on:
   schedule:
@@ -37,4 +37,4 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        uses: ./.github/actions/npm-audit

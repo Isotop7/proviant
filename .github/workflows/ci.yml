@@ -1,8 +1,8 @@
 name: CI
 
 env:
-  GO_VERSION: 1.26.4
-  GOLANGCI_LINT_VERSION: v2.12.2
+  GO_VERSION: 1.26.8
+  GOLANGCI_LINT_VERSION: v2.14.0
   PRIVATE_REGISTRY: registry.hr94.de
 
 on:
@@ -109,7 +109,7 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        uses: ./.github/actions/npm-audit
       - name: Lint CSS
         run: npm run lint-css
       - name: Lint JS

@@ -1,6 +1,6 @@
 ![Proviant](./res/icons/proviant_hero.png)
 
-![Golang version](https://img.shields.io/badge/Go-1.26.4-green)
+![Golang version](https://img.shields.io/badge/Go-1.26.8-green)
 ![CI status](https://github.com/Isotop7/proviant/actions/workflows/ci.yml/badge.svg?branch=main)
 ![Release state](https://img.shields.io/github/v/release/Isotop7/proviant)
 ![Open issues](https://img.shields.io/github/issues/Isotop7/proviant)

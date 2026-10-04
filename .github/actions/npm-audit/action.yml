@@ -1,0 +1,9 @@
+name: npm audit
+description: Audit npm dependencies — production dependencies gate the build, dev findings are informational
+
+runs:
+  using: composite
+  steps:
+    - name: Audit dependencies
+      shell: bash
+      run: bash scripts/npm-audit.sh

@@ -118,6 +118,18 @@ task lint-js
 task lint-html
 ```
 
+## Dependency Auditing
+
+`npm audit` gates on **production dependencies only** (`--omit=dev`). A second, non-blocking run reports dev-dependency findings for visibility without failing the build.
+
+The policy lives in exactly one place — `scripts/npm-audit.sh`. Both CI workflows invoke it through the composite action `.github/actions/npm-audit`, and `task vuln-npm` calls it directly, so the gate cannot drift between CI and local runs. Do not inline `npm audit` into a workflow or Taskfile; edit the script instead.
+
+**Why:** advisory GHSA-vfj7-8cjw-p6xm (CVE-2026-93687) affects `braces` through `3.0.3`, and `3.0.3` is the latest published version — there is no fix, so `npm audit fix` can never resolve it. It reaches the tree only through `stylelint` (a devDependency) → `micromatch` / `fast-glob` / `globby`. Upgrading `stylelint` does not help: current `stylelint@17.16.0` still depends on `micromatch ^4.0.8`. None of these packages ship; they execute only during `task lint-css` with repo-controlled glob arguments, so no untrusted input reaches `braces` and the DoS precondition does not exist here. `package-lock.json` marks `node_modules/braces` and `node_modules/micromatch` with `"dev": true`.
+
+**Re-check trigger:** when a `braces` release greater than `3.0.3` ships, drop `--omit=dev` from `scripts/npm-audit.sh` and re-enable the full gate. Track upstream: https://github.com/micromatch/braces/issues/70
+
+Do not reintroduce `npm audit fix --force` or a `braces` `overrides` entry — no fixed version exists, so neither clears the advisory.
+
 ## Code Style Guidelines
 
 ### Imports
