@@ -56,4 +56,16 @@ const (
 	PeriodValue3Months  = "3months"
 	PeriodValue6Months  = "6months"
 	PeriodValue12Months = "12months"
+
+	// Recipe API providers
+	RecipeProviderThemealDB = "themealdb"
+	RecipeProviderMealie    = "mealie"
+	RecipeProviderTandoor   = "tandoor"
+
+	// DefaultTheMealDBRecipeAPIURL is the public TheMealDB endpoint. It MUST
+	// stay in sync with viper.SetDefault("recipe_api.url", …) in
+	// src/proviant.go: the recipe URL validator compares a self-hosted
+	// provider's configured URL against this host to keep the operator's API
+	// key off the public API, and a drifted copy would silently reopen the leak.
+	DefaultTheMealDBRecipeAPIURL = "https://www.themealdb.com/api/json/v1/1"
 )

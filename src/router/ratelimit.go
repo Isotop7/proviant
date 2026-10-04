@@ -10,6 +10,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
+	"codeberg.org/isotop7/proviant/util"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
@@ -31,12 +32,38 @@ var (
 	exportLimiters   = &sync.Map{}
 	passwordLimiters = &sync.Map{}
 	scanLimiters     = &sync.Map{}
+	recipesLimiters  = &sync.Map{}
 
 	loginRate    = rate.Limit(5.0 / 60.0)
 	signupRate   = rate.Limit(3.0 / 60.0)
 	exportRate   = rate.Limit(1.0 / 60.0)
 	passwordRate = rate.Limit(3.0 / 60.0)
 	scanRate     = rate.Limit(10.0 / 60.0)
+	recipesRate  = rate.Limit(6.0 / 60.0)
+
+	// recipesBurstCap stays far below the minute's worth of tokens the default
+	// burst would hand out: one suggestions request fans out into up to 10
+	// provider searches plus 20 detail lookups, so the limiter exists to bound
+	// that fan-out rather than to police one request at a time.
+	//
+	// It also has to cover the request pattern the recipes page generates on
+	// its own. The page fires one request on load, and cookMatchedProducts
+	// reloads suggestions after every successful cook — and that reload passes
+	// refresh=1, so it is a guaranteed cache miss and a full fan-out rather
+	// than a cheap read. With a burst of 2 the tokens were gone after the
+	// first cook and the second one 429'd. The cap of 4 covers load plus three
+	// cooks.
+	recipesBurstCap = 4
+
+	// recipesBurst is min(recipesBurstCap, RecipesPerMinute), resolved in
+	// InitRateLimits. It is not the cap alone, because a fixed cap leaves
+	// recipes_per_minute unable to govern the endpoint in either direction:
+	// `recipes_per_minute: 1` would still admit 4 back-to-back fan-outs, i.e.
+	// 4x its configured quota in the first instant, while a large value would
+	// stay pinned at 4 and 429 on the fifth rapid request. ValidateServerConfiguration
+	// already rejects a non-positive RecipesPerMinute, so the floor of 1 here is
+	// only a guard against the default value preceding that validation.
+	recipesBurst = recipesBurstCap
 )
 
 func InitRateLimits(cfg configuration.RateLimitConfiguration) {
@@ -45,16 +72,27 @@ func InitRateLimits(cfg configuration.RateLimitConfiguration) {
 	exportRate = rate.Limit(float64(cfg.ExportPerMinute) / 60.0)
 	passwordRate = rate.Limit(float64(cfg.PasswordPerMinute) / 60.0)
 	scanRate = rate.Limit(float64(cfg.ScanPerMinute) / 60.0)
+	recipesRate = rate.Limit(float64(cfg.RecipesPerMinute) / 60.0)
+	recipesBurst = min(max(cfg.RecipesPerMinute, 1), recipesBurstCap)
 }
 
 func getLimiter(store *sync.Map, key string, limit rate.Limit) *rate.Limiter {
+	return getLimiterBurst(store, key, limit, int(limit*60)+1)
+}
+
+// getLimiterBurst returns the limiter for key, creating it with the given burst
+// on first use. Endpoints whose single request fans out into many outbound
+// calls must pass an explicit small burst: the default int(limit*60)+1 hands
+// out a full minute of tokens at once, which for a fan-out endpoint means that
+// many simultaneous upstream bursts.
+func getLimiterBurst(store *sync.Map, key string, limit rate.Limit, burst int) *rate.Limiter {
 	now := time.Now()
 	if storedValue, ok := store.Load(key); ok {
 		storedLimiter := storedValue.(*clientLimiter)
 		storedLimiter.lastSeen = now
 		return storedLimiter.limiter
 	}
-	limiter := rate.NewLimiter(limit, int(limit*60)+1)
+	limiter := rate.NewLimiter(limit, burst)
 	store.Store(key, &clientLimiter{limiter: limiter, lastSeen: now})
 	return limiter
 }
@@ -67,6 +105,7 @@ func loginRateLimitMiddleware(ctx *gin.Context) {
 		reservation.Cancel()
 		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many login attempts, please try again later"))
+		ctx.Abort()
 		return
 	}
 	ctx.Next()
@@ -80,6 +119,7 @@ func signupRateLimitMiddleware(ctx *gin.Context) {
 		reservation.Cancel()
 		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many signup attempts, please try again later"))
+		ctx.Abort()
 		return
 	}
 	ctx.Next()
@@ -90,6 +130,7 @@ func exportRateLimitMiddleware(ctx *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		api.RespondError(ctx, http.StatusUnauthorized, errors.New("Unauthorized"))
+		ctx.Abort()
 		return
 	}
 
@@ -100,6 +141,7 @@ func exportRateLimitMiddleware(ctx *gin.Context) {
 		reservation.Cancel()
 		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many export requests, please try again later"))
+		ctx.Abort()
 		return
 	}
 	ctx.Next()
@@ -123,6 +165,7 @@ func passwordRateLimitMiddleware(ctx *gin.Context) {
 		reservation.Cancel()
 		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many password change attempts, please try again later"))
+		ctx.Abort()
 		return
 	}
 	ctx.Next()
@@ -141,6 +184,7 @@ func publicPasswordRateLimitMiddleware(ctx *gin.Context) {
 		reservation.Cancel()
 		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many password reset attempts, please try again later"))
+		ctx.Abort()
 		return
 	}
 	ctx.Next()
@@ -151,6 +195,7 @@ func scanRateLimitMiddleware(ctx *gin.Context) {
 	userID := uint(claims[static.TokenIdentityKey].(float64))
 	if userID <= 0 {
 		api.RespondError(ctx, http.StatusUnauthorized, errors.New("Unauthorized"))
+		ctx.Abort()
 		return
 	}
 
@@ -161,6 +206,33 @@ func scanRateLimitMiddleware(ctx *gin.Context) {
 		reservation.Cancel()
 		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
 		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many scan requests, please try again later"))
+		ctx.Abort()
+		return
+	}
+	ctx.Next()
+}
+
+// recipesRateLimitMiddleware rate-limits recipe suggestion traffic per user.
+// A single suggestions request can fan out to many outbound provider calls
+// (especially with refresh=1), so this protects the configured recipe backend.
+// Both the JWT and the PAT auth path set util.ContextKeyUserID for
+// authenticated requests, so one key source covers both; requests without a
+// resolvable user fall back to the client IP.
+func recipesRateLimitMiddleware(ctx *gin.Context) {
+	key := ctx.ClientIP()
+	if raw, ok := ctx.Get(util.ContextKeyUserID); ok {
+		if userID, ok := raw.(uint); ok && userID > 0 {
+			key = strconv.FormatUint(uint64(userID), 10)
+		}
+	}
+
+	limiter := getLimiterBurst(recipesLimiters, key, recipesRate, recipesBurst)
+	reservation := limiter.Reserve()
+	if delay := reservation.Delay(); delay > 0 {
+		reservation.Cancel()
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
+		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many recipe requests, please try again later"))
+		ctx.Abort()
 		return
 	}
 	ctx.Next()
@@ -202,6 +274,13 @@ func cleanupLimiters() {
 			storedLimiter := value.(*clientLimiter)
 			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
 				scanLimiters.Delete(key)
+			}
+			return true
+		})
+		recipesLimiters.Range(func(key, value any) bool {
+			storedLimiter := value.(*clientLimiter)
+			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
+				recipesLimiters.Delete(key)
 			}
 			return true
 		})

@@ -526,14 +526,26 @@ var _ database.SavingsRepositoryInterface = (*MockSavingsRepository)(nil)
 type MockRecipeRepository struct {
 	Cache dbModel.RecipeCache
 	Err   error
+	// PopulatedCache is what HasPopulatedCache reports; its zero value means
+	// "no populated entry", which is the safe default for a store-on-miss test.
+	PopulatedCache bool
+	// CacheWrites records every cache the controller stored, so tests can
+	// assert that a degraded run did NOT replace an existing good entry.
+	CacheWrites []dbModel.RecipeCache
 }
 
 func (m *MockRecipeRepository) GetCacheByQueryHash(hash string) (dbModel.RecipeCache, error) {
 	return m.Cache, m.Err
 }
-func (m *MockRecipeRepository) CreateCache(cache *dbModel.RecipeCache) error { return m.Err }
-func (m *MockRecipeRepository) UpdateCacheHit(hash string) error             { return m.Err }
-func (m *MockRecipeRepository) CleanupExpiredCaches() error                  { return m.Err }
+func (m *MockRecipeRepository) CreateCache(cache *dbModel.RecipeCache) error {
+	m.CacheWrites = append(m.CacheWrites, *cache)
+	return m.Err
+}
+func (m *MockRecipeRepository) HasPopulatedCache(hash string) (bool, error) {
+	return m.PopulatedCache, m.Err
+}
+func (m *MockRecipeRepository) UpdateCacheHit(hash string) error { return m.Err }
+func (m *MockRecipeRepository) CleanupExpiredCaches() error      { return m.Err }
 
 var _ database.RecipeRepositoryInterface = (*MockRecipeRepository)(nil)
 

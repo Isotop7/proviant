@@ -3040,7 +3040,7 @@ const docTemplate = `{
         },
         "/api/v1/recipes/suggestions": {
             "get": {
-                "description": "Returns up to 6 recipe suggestions matching products expiring within 7 days",
+                "description": "Returns up to 6 recipe suggestions matching products expiring within 7 days. Results are ranked by expiry proximity first, then match percentage. Set refresh=1 to bypass the suggestion cache.",
                 "produces": [
                     "application/json"
                 ],
@@ -3053,6 +3053,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Number of suggestions (default 6, max 10)",
                         "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Set to 1 to bypass the cache and fetch fresh suggestions",
+                        "name": "refresh",
                         "in": "query"
                     }
                 ],
@@ -4544,6 +4550,13 @@ const docTemplate = `{
                 "matchPercent": {
                     "description": "0-100",
                     "type": "number"
+                },
+                "matchedProductIds": {
+                    "description": "product IDs whose names/categories matched ingredients",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 },
                 "matchedProducts": {
                     "description": "deprecated, kept for compatibility",

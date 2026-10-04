@@ -35,6 +35,7 @@ server:
     export_per_minute: 1
     password_per_minute: 3
     scan_per_minute: 10
+    recipes_per_minute: 6
 
 calendar:
   tokenExpiryDays: 365
@@ -95,3 +96,22 @@ recipe_api:
   timeout: 10
   cache_enabled: true
   cache_ttl: 24
+  # Self-hosted providers (Mealie / Tandoor) — set provider, url and api_key
+  # together. When enabling one you MUST also replace the url above: pointing a
+  # self-hosted provider at the public TheMealDB URL would send your api_key and
+  # your household's product names to a third party on every request.
+  # provider: "mealie"
+  # url: "https://mealie.example.com"
+  # api_key: ""
+  # or:
+  # provider: "tandoor"
+  # url: "https://tandoor.example.com"
+  # api_key: ""
+  #
+  # A wrong self-hosted setup never stops the server from starting. It disables
+  # recipe suggestions instead (the page returns no suggestions and no outbound
+  # request is made) and logs a warning naming the problem, for both of:
+  #   - a missing api_key, and
+  #   - a url still pointing at the public TheMealDB host.
+  # An http:// url is accepted but warns: the api_key and search keywords would
+  # travel unencrypted, so prefer https:// unless the instance is LAN-only.

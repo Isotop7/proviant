@@ -344,6 +344,21 @@ var (
 	// ErrRecipeInvalidProvider is thrown when the configured recipe API provider is not supported
 	ErrRecipeInvalidProvider = errors.New("invalid recipe API provider")
 
+	// ErrRecipeAPIMissingAPIKey is thrown when a self-hosted recipe provider is
+	// configured without the API key it requires. It is kept separate from
+	// ErrRecipeInvalidProvider so startup can degrade this recoverable
+	// misconfiguration instead of refusing to boot.
+	ErrRecipeAPIMissingAPIKey = errors.New("missing recipe API key for configured provider")
+
+	// ErrRecipeAPIProviderURLMismatch is thrown when a self-hosted recipe
+	// provider is configured with the public TheMealDB URL. Every outbound
+	// request would then carry the operator's API key and the household's
+	// inventory-derived search keywords to a third party, so startup refuses
+	// instead of falling back to the public API.
+	ErrRecipeAPIProviderURLMismatch = errors.New(
+		"recipe API URL points at the public TheMealDB host; " +
+			"a self-hosted provider (mealie/tandoor) must use its own instance URL")
+
 	// ErrRecipeAPIEmptyURL is thrown when the recipe API URL is empty
 	ErrRecipeAPIEmptyURL = errors.New("empty recipe API URL")
 
