@@ -37,6 +37,48 @@ definitions:
       total:
         type: integer
     type: object
+  api.BulkCreateItemError:
+    properties:
+      barcode:
+        type: string
+      index:
+        type: integer
+      reason:
+        type: string
+    type: object
+  api.BulkCreateProductItem:
+    properties:
+      amount:
+        type: integer
+      barcode:
+        type: string
+      expireAt:
+        type: string
+      productName:
+        type: string
+      storageLocationId:
+        type: integer
+    type: object
+  api.BulkCreateProductsAPIModel:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/api.BulkCreateProductItem'
+        type: array
+    type: object
+  api.BulkCreateResponse:
+    properties:
+      created:
+        type: integer
+      errors:
+        items:
+          $ref: '#/definitions/api.BulkCreateItemError'
+        type: array
+      failed:
+        type: integer
+      message:
+        type: string
+    type: object
   api.ConsumptionRateResponse:
     properties:
       daysCovered:
@@ -2454,6 +2496,42 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Return a list of archived products
+      tags:
+      - product
+  /api/v1/products/bulk:
+    post:
+      consumes:
+      - application/json
+      description: Creates multiple products from a batch scan queue. Every item is
+        validated on its own; valid items are inserted in one transaction while rejected
+        ones are reported with an index and reason. A missing product name is re-resolved
+        from the Open Food Facts cache and, within a bounded lookup budget, live;
+        an Open Food Facts miss creates the product with an empty name, matching single-create
+        behaviour. Duplicates of an existing household barcode are allowed.
+      parameters:
+      - description: Batch items
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.BulkCreateProductsAPIModel'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.BulkCreateResponse'
+        "400":
+          description: Returned when no item was created (invalid body, empty items,
+            over cap, or every item failed)
+          schema:
+            $ref: '#/definitions/api.BulkCreateResponse'
+        "500":
+          description: Returned when no item was created and a server-side error occurred
+          schema:
+            $ref: '#/definitions/api.BulkCreateResponse'
+      summary: Create multiple products in one batch
       tags:
       - product
   /api/v1/products/bulkConsume:

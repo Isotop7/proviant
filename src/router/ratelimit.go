@@ -27,21 +27,23 @@ type clientLimiter struct {
 }
 
 var (
-	loginLimiters    = &sync.Map{}
-	signupLimiters   = &sync.Map{}
-	exportLimiters   = &sync.Map{}
-	passwordLimiters = &sync.Map{}
-	scanLimiters     = &sync.Map{}
-	recipesLimiters  = &sync.Map{}
-	importLimiters   = &sync.Map{}
+	loginLimiters      = &sync.Map{}
+	signupLimiters     = &sync.Map{}
+	exportLimiters     = &sync.Map{}
+	passwordLimiters   = &sync.Map{}
+	scanLimiters       = &sync.Map{}
+	recipesLimiters    = &sync.Map{}
+	importLimiters     = &sync.Map{}
+	bulkCreateLimiters = &sync.Map{}
 
-	loginRate    = rate.Limit(5.0 / 60.0)
-	signupRate   = rate.Limit(3.0 / 60.0)
-	exportRate   = rate.Limit(1.0 / 60.0)
-	passwordRate = rate.Limit(3.0 / 60.0)
-	scanRate     = rate.Limit(10.0 / 60.0)
-	recipesRate  = rate.Limit(6.0 / 60.0)
-	importRate   = rate.Limit(5.0 / 60.0)
+	loginRate      = rate.Limit(5.0 / 60.0)
+	signupRate     = rate.Limit(3.0 / 60.0)
+	exportRate     = rate.Limit(1.0 / 60.0)
+	passwordRate   = rate.Limit(3.0 / 60.0)
+	scanRate       = rate.Limit(10.0 / 60.0)
+	recipesRate    = rate.Limit(6.0 / 60.0)
+	importRate     = rate.Limit(5.0 / 60.0)
+	bulkCreateRate = rate.Limit(5.0 / 60.0)
 
 	// importBurstCap bounds how many CSV imports one user can start at once.
 	// importRate is deliberately not config-driven: a config key that defaults
@@ -51,6 +53,14 @@ var (
 	// cost — up to util.CsvImportMaxRows inserts plus the bounded Open Food
 	// Facts lookups — from being repeatable back to back.
 	importBurstCap = 1
+
+	// bulkCreateBurstCap bounds how many batch-scan submissions one user can
+	// start at once. Unlike the CSV import, a batch save is a routine
+	// end-of-session action and its failure path keeps failed items queued and
+	// resubmits them on the next Done click, so consecutive POSTs within
+	// seconds are the normal pattern. A burst of 3 covers a save plus two
+	// retries without letting lookup-heavy batches run back to back.
+	bulkCreateBurstCap = 3
 
 	// recipesBurstCap stays far below the minute's worth of tokens the default
 	// burst would hand out: one suggestions request fans out into up to 10
@@ -274,6 +284,31 @@ func importRateLimitMiddleware(ctx *gin.Context) {
 	ctx.Next()
 }
 
+// bulkCreateRateLimitMiddleware rate-limits batch-scan product creation per
+// user. It deliberately uses its own limiter store instead of sharing the
+// import budget: one batch save is a routine action, its failure path keeps
+// failed items queued and resubmits them, and a save right after a CSV import
+// must not 429 because the two features drained one token pool.
+func bulkCreateRateLimitMiddleware(ctx *gin.Context) {
+	key := ctx.ClientIP()
+	if raw, ok := ctx.Get(util.ContextKeyUserID); ok {
+		if userID, ok := raw.(uint); ok && userID > 0 {
+			key = strconv.FormatUint(uint64(userID), 10)
+		}
+	}
+
+	limiter := getLimiterBurst(bulkCreateLimiters, key, bulkCreateRate, bulkCreateBurstCap)
+	reservation := limiter.Reserve()
+	if delay := reservation.Delay(); delay > 0 {
+		reservation.Cancel()
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
+		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many batch save requests, please try again later"))
+		ctx.Abort()
+		return
+	}
+	ctx.Next()
+}
+
 func cleanupLimiters() {
 	for {
 		time.Sleep(time.Minute)
@@ -324,6 +359,13 @@ func cleanupLimiters() {
 			storedLimiter := value.(*clientLimiter)
 			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
 				importLimiters.Delete(key)
+			}
+			return true
+		})
+		bulkCreateLimiters.Range(func(key, value any) bool {
+			storedLimiter := value.(*clientLimiter)
+			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
+				bulkCreateLimiters.Delete(key)
 			}
 			return true
 		})

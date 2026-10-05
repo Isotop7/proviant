@@ -355,6 +355,20 @@ proviant.cookProducts = async function (items) {
   return { code: res.status, consumed: body.consumed, partial: body.partial, errors: body.errors || [] };
 };
 
+proviant.bulkCreateProducts = async function (items) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulk`;
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message, created: body.created, failed: body.failed, errors: body.errors || [] };
+};
+
+proviant.getStorageLocations = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/storage-locations`;
+  const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
 // Clears the bulk selection before a reload. Browsers restore form control
 // state (checkbox checked states) across location.reload(); without this the
 // selection would land on the products that shifted into those table rows.

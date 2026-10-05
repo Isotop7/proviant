@@ -237,6 +237,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductMemberAPI.POST("/bulkConsume", v1.WrapHandler(v1.BulkConsumeProducts))
 	publicProductMemberAPI.POST("/bulkWaste", v1.WrapHandler(v1.BulkWasteProducts))
 	publicProductMemberAPI.POST("/cook", v1.WrapHandler(v1.CookProducts))
+	// Batch create re-resolves missing product names through the same bounded
+	// Open Food Facts lookups as the CSV import, so it is throttled to keep one
+	// client from queuing lookups back to back — but with its own limiter and
+	// a larger burst, because consecutive saves are the normal batch flow and
+	// must not drain the CSV import budget.
+	publicProductMemberAPI.POST("/bulk", bulkCreateRateLimitMiddleware, v1.WrapHandler(v1.BulkCreateProducts))
 	// Import is a write, so it inherits the household-role gate above. It must
 	// not move to protectedProductAPI, which shares the path prefix. The rate
 	// limiter keeps one upload from repeating its bounded Open Food Facts

@@ -97,6 +97,11 @@ const (
 	// cannot steer that request at another endpoint.
 	CsvImportBarcodePattern = "^[A-Za-z0-9_-]+$"
 
+	// BulkCreateMaxItems bounds how many products one batch-scan submission may
+	// carry. Exceeding it rejects the whole request instead of truncating it
+	// silently, mirroring CsvImportMaxRows for the CSV import.
+	BulkCreateMaxItems = 100
+
 	// CsvImportMultipartSlackBytes is added to the configured upload cap before
 	// the request body is capped with http.MaxBytesReader, so the file part can
 	// be exactly MaxUploadSizeMB without the multipart envelope tripping the

@@ -16,7 +16,7 @@ proviant.importProductsCSV = async function (file) {
   let result;
   try {
     result = await res.json();
-  } catch (parseErr) {
+  } catch (_parseErr) {
     result = { message: res.statusText || "The CSV could not be imported." };
   }
   return { code: res.status, message: result };

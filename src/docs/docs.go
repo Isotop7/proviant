@@ -2076,6 +2076,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/bulk": {
+            "post": {
+                "description": "Creates multiple products from a batch scan queue. Every item is validated on its own; valid items are inserted in one transaction while rejected ones are reported with an index and reason. A missing product name is re-resolved from the Open Food Facts cache and, within a bounded lookup budget, live; an Open Food Facts miss creates the product with an empty name, matching single-create behaviour. Duplicates of an existing household barcode are allowed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Create multiple products in one batch",
+                "parameters": [
+                    {
+                        "description": "Batch items",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.BulkCreateProductsAPIModel"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.BulkCreateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Returned when no item was created (invalid body, empty items, over cap, or every item failed)",
+                        "schema": {
+                            "$ref": "#/definitions/api.BulkCreateResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Returned when no item was created and a server-side error occurred",
+                        "schema": {
+                            "$ref": "#/definitions/api.BulkCreateResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/bulkConsume": {
             "post": {
                 "description": "Soft-deletes (archives) multiple products without firing product.wasted webhook events",
@@ -4319,6 +4365,71 @@ const docTemplate = `{
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.BulkCreateItemError": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "index": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.BulkCreateProductItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "barcode": {
+                    "type": "string"
+                },
+                "expireAt": {
+                    "type": "string"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.BulkCreateProductsAPIModel": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.BulkCreateProductItem"
+                    }
+                }
+            }
+        },
+        "api.BulkCreateResponse": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "integer"
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.BulkCreateItemError"
+                    }
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
                 }
             }
         },

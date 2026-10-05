@@ -2720,6 +2720,11 @@ const (
     // cannot steer that request at another endpoint.
     CsvImportBarcodePattern = "^[A-Za-z0-9_-]+$"
 
+    // BulkCreateMaxItems bounds how many products one batch-scan submission may
+    // carry. Exceeding it rejects the whole request instead of truncating it
+    // silently, mirroring CsvImportMaxRows for the CSV import.
+    BulkCreateMaxItems = 100
+
     // CsvImportMultipartSlackBytes is added to the configured upload cap before
     // the request body is capped with http.MaxBytesReader, so the file part can
     // be exactly MaxUploadSizeMB without the multipart envelope tripping the
@@ -3221,6 +3226,8 @@ v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
+v1 implements version 1 of the proviant API
+
 ## Index
 
 - [Constants](<#constants>)
@@ -3229,6 +3236,7 @@ v1 implements version 1 of the proviant API
 - [func ApplyForHousehold\(ctx \*gin.Context, appCtx \*AppContext\)](<#ApplyForHousehold>)
 - [func ApproveHouseholdApplication\(ctx \*gin.Context, appCtx \*AppContext\)](<#ApproveHouseholdApplication>)
 - [func BulkConsumeProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#BulkConsumeProducts>)
+- [func BulkCreateProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#BulkCreateProducts>)
 - [func BulkRestoreProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#BulkRestoreProducts>)
 - [func BulkWasteProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#BulkWasteProducts>)
 - [func CancelHouseholdApplication\(ctx \*gin.Context, appCtx \*AppContext\)](<#CancelHouseholdApplication>)
@@ -3448,6 +3456,15 @@ func BulkConsumeProducts(ctx *gin.Context, appCtx *AppContext)
 ```
 
 BulkConsumeProducts marks multiple products as consumed \(soft\-delete, no product.wasted event\) @Summary Mark products as consumed @Description Soft\-deletes \(archives\) multiple products without firing product.wasted webhook events @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/bulkConsume \[post\]
+
+<a name="BulkCreateProducts"></a>
+## func [BulkCreateProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_bulk_create.go#L42>)
+
+```go
+func BulkCreateProducts(ctx *gin.Context, appCtx *AppContext)
+```
+
+BulkCreateProducts creates multiple products queued by the batch scan mode @Summary Create multiple products in one batch @Description Creates multiple products from a batch scan queue. Every item is validated on its own; valid items are inserted in one transaction while rejected ones are reported with an index and reason. A missing product name is re\-resolved from the Open Food Facts cache and, within a bounded lookup budget, live; an Open Food Facts miss creates the product with an empty name, matching single\-create behaviour. Duplicates of an existing household barcode are allowed. @Tags product @Accept json @Produce json @Param request body apiModel.BulkCreateProductsAPIModel true "Batch items" @Success 200 \{object\} apiModel.BulkCreateResponse @Failure 400 \{object\} apiModel.BulkCreateResponse "Returned when no item was created \(invalid body, empty items, over cap, or every item failed\)" @Failure 500 \{object\} apiModel.BulkCreateResponse "Returned when no item was created and a server\-side error occurred" @Router /api/v1/products/bulk \[post\]
 
 <a name="BulkRestoreProducts"></a>
 ## func [BulkRestoreProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_archive.go#L94>)
@@ -6353,7 +6370,9 @@ func (r *ProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode in
 func (r *ProductRepository) GetUserProductsBulkByBarcodes(userID uint, barcodes []string) ([]database.Product, error)
 ```
 
+GetUserProductsBulkByBarcodes returns the household's active products whose barcode is in the given set. Unlike GetUserProductsBulkByBarcode it takes the codes as strings: that variant parses them as an int, which drops leading zeros and cannot hold non\-numeric codes.
 
+privacyScope is required, not optional. The import turns every returned barcode into a per\-row "already exists" rejection, so without it a member gets an existence oracle over other members' private products and their own rows are rejected because of a product they cannot see.
 
 <a name="ProductRepository.GetUserProductsByIDs"></a>
 ### func \(\*ProductRepository\) [GetUserProductsByIDs](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L242>)
@@ -7669,6 +7688,10 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [Variables](<#variables>)
 - [type ActivityEntry](<#ActivityEntry>)
 - [type ActivityLogResponse](<#ActivityLogResponse>)
+- [type BulkCreateItemError](<#BulkCreateItemError>)
+- [type BulkCreateProductItem](<#BulkCreateProductItem>)
+- [type BulkCreateProductsAPIModel](<#BulkCreateProductsAPIModel>)
+- [type BulkCreateResponse](<#BulkCreateResponse>)
 - [type BulkProductsAPIModel](<#BulkProductsAPIModel>)
 - [type ConsumptionRateResponse](<#ConsumptionRateResponse>)
 - [type CookItemAPIModel](<#CookItemAPIModel>)
@@ -7750,6 +7773,59 @@ type ActivityLogResponse struct {
     Total      int             `json:"total"`
     Limit      int             `json:"limit"`
     Offset     int             `json:"offset"`
+}
+```
+
+<a name="BulkCreateItemError"></a>
+## type [BulkCreateItemError](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product_bulk_create.go#L25-L29>)
+
+BulkCreateItemError describes why a single queued item was rejected. Index is the 0\-based position of the item in the request, so the client can map the reason back to its queue entry.
+
+```go
+type BulkCreateItemError struct {
+    Index   int    `json:"index"`
+    Barcode string `json:"barcode,omitempty"`
+    Reason  string `json:"reason"`
+}
+```
+
+<a name="BulkCreateProductItem"></a>
+## type [BulkCreateProductItem](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product_bulk_create.go#L9-L15>)
+
+BulkCreateProductItem is one scanned product queued by the batch scan mode on the client. ProductName is what the client already fetched from the Open Food Facts proxy; the server re\-resolves missing names with the import name resolver.
+
+```go
+type BulkCreateProductItem struct {
+    Barcode           string    `json:"barcode"`
+    ProductName       string    `json:"productName,omitempty"`
+    ExpireAt          time.Time `json:"expireAt"`
+    Amount            int       `json:"amount"`
+    StorageLocationID *uint     `json:"storageLocationId"`
+}
+```
+
+<a name="BulkCreateProductsAPIModel"></a>
+## type [BulkCreateProductsAPIModel](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product_bulk_create.go#L18-L20>)
+
+BulkCreateProductsAPIModel is the request body for POST /api/v1/products/bulk.
+
+```go
+type BulkCreateProductsAPIModel struct {
+    Items []BulkCreateProductItem `json:"items"`
+}
+```
+
+<a name="BulkCreateResponse"></a>
+## type [BulkCreateResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product_bulk_create.go#L35-L40>)
+
+BulkCreateResponse is the response body for POST /api/v1/products/bulk. Created and Failed always sum to the number of submitted items. Errors is never nil so it serialises as \[\] rather than null; the frontend iterates it unconditionally.
+
+```go
+type BulkCreateResponse struct {
+    Message string                `json:"message,omitempty"`
+    Created int                   `json:"created"`
+    Failed  int                   `json:"failed"`
+    Errors  []BulkCreateItemError `json:"errors"`
 }
 ```
 
