@@ -53,6 +53,9 @@ func (m *MockProductRepository) GetUserArchivedProductsBulk(userID uint, limit i
 func (m *MockProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
+func (m *MockProductRepository) GetUserProductsBulkByBarcodes(userID uint, barcodes []string) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
 func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.Product, error) {
 	return m.Product, m.Err
 }
@@ -70,6 +73,12 @@ func (m *MockProductRepository) GetUserProductsByLocation(userID, locationID uin
 }
 func (m *MockProductRepository) CreateProduct(userID uint, product *dbModel.Product) error {
 	return m.Err
+}
+func (m *MockProductRepository) CreateProductsBulk(userID uint, rows []database.ImportedProduct) ([]string, error) {
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	return nil, nil
 }
 func (m *MockProductRepository) UpdateProduct(productID uint, userID uint, product *dbModel.ProductDTOPatch) error {
 	return m.Err
@@ -130,6 +139,9 @@ func (m *MockProductRepository) UserHasProductAccess(userID uint, productID int)
 }
 func (m *MockProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (dbModel.OpenFoodFactsCache, error) {
 	return m.OFFCache, m.Err
+}
+func (m *MockProductRepository) GetOpenFoodFactsCachesByBarcodes(barcodes []string) ([]dbModel.OpenFoodFactsCache, error) {
+	return []dbModel.OpenFoodFactsCache{m.OFFCache}, m.Err
 }
 func (m *MockProductRepository) CreateOpenFoodFactsCache(entry *dbModel.OpenFoodFactsCache) error {
 	return m.Err

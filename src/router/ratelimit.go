@@ -33,6 +33,7 @@ var (
 	passwordLimiters = &sync.Map{}
 	scanLimiters     = &sync.Map{}
 	recipesLimiters  = &sync.Map{}
+	importLimiters   = &sync.Map{}
 
 	loginRate    = rate.Limit(5.0 / 60.0)
 	signupRate   = rate.Limit(3.0 / 60.0)
@@ -40,6 +41,16 @@ var (
 	passwordRate = rate.Limit(3.0 / 60.0)
 	scanRate     = rate.Limit(10.0 / 60.0)
 	recipesRate  = rate.Limit(6.0 / 60.0)
+	importRate   = rate.Limit(5.0 / 60.0)
+
+	// importBurstCap bounds how many CSV imports one user can start at once.
+	// importRate is deliberately not config-driven: a config key that defaults
+	// to zero would make ValidateServerConfiguration reject every existing
+	// config.yaml that predates the key. Five imports a minute with a burst of
+	// one matches how often the feature is actually used and keeps the per-call
+	// cost — up to util.CsvImportMaxRows inserts plus the bounded Open Food
+	// Facts lookups — from being repeatable back to back.
+	importBurstCap = 1
 
 	// recipesBurstCap stays far below the minute's worth of tokens the default
 	// burst would hand out: one suggestions request fans out into up to 10
@@ -238,6 +249,31 @@ func recipesRateLimitMiddleware(ctx *gin.Context) {
 	ctx.Next()
 }
 
+// importRateLimitMiddleware rate-limits CSV product imports per user. One import
+// can insert up to util.CsvImportMaxRows products and — for rows that carry only
+// a barcode — make live Open Food Facts requests, so it gets its own limiter
+// rather than sharing the scan budget. importRate stays a package constant so a
+// missing config key cannot fail startup validation for existing deployments.
+func importRateLimitMiddleware(ctx *gin.Context) {
+	key := ctx.ClientIP()
+	if raw, ok := ctx.Get(util.ContextKeyUserID); ok {
+		if userID, ok := raw.(uint); ok && userID > 0 {
+			key = strconv.FormatUint(uint64(userID), 10)
+		}
+	}
+
+	limiter := getLimiterBurst(importLimiters, key, importRate, importBurstCap)
+	reservation := limiter.Reserve()
+	if delay := reservation.Delay(); delay > 0 {
+		reservation.Cancel()
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
+		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many import requests, please try again later"))
+		ctx.Abort()
+		return
+	}
+	ctx.Next()
+}
+
 func cleanupLimiters() {
 	for {
 		time.Sleep(time.Minute)
@@ -281,6 +317,13 @@ func cleanupLimiters() {
 			storedLimiter := value.(*clientLimiter)
 			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
 				recipesLimiters.Delete(key)
+			}
+			return true
+		})
+		importLimiters.Range(func(key, value any) bool {
+			storedLimiter := value.(*clientLimiter)
+			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
+				importLimiters.Delete(key)
 			}
 			return true
 		})

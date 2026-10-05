@@ -237,6 +237,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductMemberAPI.POST("/bulkConsume", v1.WrapHandler(v1.BulkConsumeProducts))
 	publicProductMemberAPI.POST("/bulkWaste", v1.WrapHandler(v1.BulkWasteProducts))
 	publicProductMemberAPI.POST("/cook", v1.WrapHandler(v1.CookProducts))
+	// Import is a write, so it inherits the household-role gate above. It must
+	// not move to protectedProductAPI, which shares the path prefix. The rate
+	// limiter keeps one upload from repeating its bounded Open Food Facts
+	// lookups and full row insert back to back.
+	publicProductMemberAPI.POST("/import", importRateLimitMiddleware, v1.WrapHandler(v1.ImportProducts))
 	publicProductAPI.POST("/scan", scanRateLimitMiddleware, v1.WrapHandler(v1.ScanProduct))
 	publicProductAPI.POST("/scan-date", v1.WrapHandler(v1.ScanExpiryDate))
 	publicProductAPI.GET("/byBarcode/:barcode", v1.WrapHandler(v1.GetProductsByBarcode))
@@ -248,6 +253,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.GET("/export/products.json", exportRateLimitMiddleware, v1.WrapHandler(v1.ExportProductsJSON))
 	publicProductAPI.GET("/export/archive.csv", exportRateLimitMiddleware, v1.WrapHandler(v1.ExportArchiveCSV))
 	publicProductAPI.GET("/export/full.json", exportRateLimitMiddleware, v1.WrapHandler(v1.ExportFullJSON))
+	publicProductAPI.GET("/import/template.csv", v1.WrapHandler(v1.ImportTemplateCSV))
 
 	// Protected user routes
 	protectedUserAPI := engine.Group("/api/v1/user")

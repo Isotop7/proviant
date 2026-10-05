@@ -2422,6 +2422,70 @@
                 }
             }
         },
+        "/api/v1/products/import": {
+            "post": {
+                "description": "Creates products from an uploaded CSV file. Insert-only: a barcode that already exists among the household's active products is reported as a row error and never modified. Unknown storage locations are created. Rows without a name are completed from the Open Food Facts cache, and at most a bounded number of them may additionally trigger a live Open Food Facts lookup.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "import"
+                ],
+                "summary": "Import products from CSV",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "CSV file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ImportProductsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.ImportProductsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ImportProductsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/import/template.csv": {
+            "get": {
+                "description": "Returns a CSV file with the import column header and one example row",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "import"
+                ],
+                "summary": "Download the CSV import template",
+                "responses": {
+                    "200": {
+                        "description": "CSV file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/openfoodfacts/{barcode}": {
             "get": {
                 "description": "Proxies OpenFoodFacts API with optional database caching",
@@ -4391,6 +4455,52 @@
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "api.ImportProductsResponse": {
+            "type": "object",
+            "properties": {
+                "createdLocations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ImportRowError"
+                    }
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "imported": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "totalRows": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.ImportRowError": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "row": {
+                    "type": "integer"
                 }
             }
         },

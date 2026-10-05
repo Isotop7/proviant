@@ -133,6 +133,36 @@ definitions:
       name:
         type: string
     type: object
+  api.ImportProductsResponse:
+    properties:
+      createdLocations:
+        items:
+          type: string
+        type: array
+      errors:
+        items:
+          $ref: '#/definitions/api.ImportRowError'
+        type: array
+      failed:
+        type: integer
+      imported:
+        type: integer
+      message:
+        type: string
+      totalRows:
+        type: integer
+    type: object
+  api.ImportRowError:
+    properties:
+      barcode:
+        type: string
+      name:
+        type: string
+      reason:
+        type: string
+      row:
+        type: integer
+    type: object
   api.IngredientMatch:
     properties:
       matched:
@@ -2663,6 +2693,53 @@ paths:
       summary: Export products as JSON
       tags:
       - export
+  /api/v1/products/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 'Creates products from an uploaded CSV file. Insert-only: a barcode
+        that already exists among the household''s active products is reported as
+        a row error and never modified. Unknown storage locations are created. Rows
+        without a name are completed from the Open Food Facts cache, and at most a
+        bounded number of them may additionally trigger a live Open Food Facts lookup.'
+      parameters:
+      - description: CSV file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ImportProductsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ImportProductsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ImportProductsResponse'
+      summary: Import products from CSV
+      tags:
+      - import
+  /api/v1/products/import/template.csv:
+    get:
+      description: Returns a CSV file with the import column header and one example
+        row
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: CSV file
+          schema:
+            type: file
+      summary: Download the CSV import template
+      tags:
+      - import
   /api/v1/products/openfoodfacts/{barcode}:
     get:
       description: Proxies OpenFoodFacts API with optional database caching

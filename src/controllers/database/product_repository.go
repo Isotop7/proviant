@@ -74,17 +74,31 @@ func filterByEffectiveExpiryWindow(products []database.Product, start, end time.
 	return filtered
 }
 
+// ImportedProduct is one row of a bulk import, paired with the storage location
+// it still needs. Product.StorageLocationID is already set when the row points
+// at a location the household has; NewLocationName carries the name to create
+// otherwise. Keeping the location name outside the Product model lets
+// CreateProductsBulk resolve it inside the same transaction as the insert, so a
+// failed import leaves no orphaned locations behind.
+type ImportedProduct struct {
+	Product         database.Product
+	NewLocationName string
+	NewLocationIcon string
+}
+
 type ProductRepositoryInterface interface {
 	GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
 	GetUserProductsByIDs(userID uint, ids []uint) ([]database.Product, error)
 	GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
 	GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
+	GetUserProductsBulkByBarcodes(userID uint, barcodes []string) ([]database.Product, error)
 	GetProductByID(productID, userID uint) (database.Product, error)
 	GetProductIdentity(productID, userID uint) (database.Product, error)
 	GetArchivedProductByID(productID, userID uint) (database.Product, error)
 	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
 	GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
 	CreateProduct(userID uint, product *database.Product) error
+	CreateProductsBulk(userID uint, rows []ImportedProduct) ([]string, error)
 	UpdateProduct(productID uint, userID uint, product *database.ProductDTOPatch) error
 	UpdateProductAmount(productID uint, userID uint, delta int) (bool, error)
 	DeleteProduct(productID uint, userID uint, archiveOnly bool) error
@@ -105,6 +119,7 @@ type ProductRepositoryInterface interface {
 	GetLastInsertedProduct(householdID uint) (database.Product, error)
 	UserHasProductAccess(userID uint, productID int) bool
 	GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error)
+	GetOpenFoodFactsCachesByBarcodes(barcodes []string) ([]database.OpenFoodFactsCache, error)
 	CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error
 	UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error
 	GetOpenFoodFactsCacheWithoutStorageHint() ([]database.OpenFoodFactsCache, error)
@@ -272,6 +287,59 @@ func (r *ProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode in
 	return products, nil
 }
 
+// bulkQueryChunkSize bounds the number of placeholders per IN clause. SQLite
+// builds have historically capped bound variables at 999, so a full import's
+// 5000 barcodes cannot go into one query.
+const bulkQueryChunkSize = 500
+
+// chunkStrings splits values into consecutive slices of at most size elements.
+func chunkStrings(values []string, size int) [][]string {
+	chunks := make([][]string, 0, (len(values)+size-1)/size)
+	for start := 0; start < len(values); start += size {
+		end := start + size
+		if end > len(values) {
+			end = len(values)
+		}
+		chunks = append(chunks, values[start:end])
+	}
+	return chunks
+}
+
+// GetUserProductsBulkByBarcodes returns the household's active products whose
+// barcode is in the given set. Unlike GetUserProductsBulkByBarcode it takes
+// the codes as strings: that variant parses them as an int, which drops
+// leading zeros and cannot hold non-numeric codes.
+//
+// privacyScope is required, not optional. The import turns every returned
+// barcode into a per-row "already exists" rejection, so without it a member
+// gets an existence oracle over other members' private products and their own
+// rows are rejected because of a product they cannot see.
+func (r *ProductRepository) GetUserProductsBulkByBarcodes(userID uint, barcodes []string) ([]database.Product, error) {
+	if len(barcodes) == 0 {
+		return []database.Product{}, nil
+	}
+
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return []database.Product{}, err
+	}
+
+	var products []database.Product
+	for _, chunk := range chunkStrings(barcodes, bulkQueryChunkSize) {
+		var batch []database.Product
+		queryErr := r.DB.Scopes(r.privacyScope(userID)).
+			Where(util.QueryHouseholdId, householdID).
+			Where(util.WhereDeletedIsNull).
+			Where("barcode IN ?", chunk).
+			Find(&batch).Error
+		if queryErr != nil {
+			return []database.Product{}, queryErr
+		}
+		products = append(products, batch...)
+	}
+	return products, nil
+}
+
 func (r *ProductRepository) GetProductByID(productID, userID uint) (database.Product, error) {
 	if productID == 0 {
 		return database.Product{}, gorm.ErrNotImplemented
@@ -433,6 +501,107 @@ func (r *ProductRepository) CreateProduct(userID uint, product *database.Product
 	product.UserID = userID
 	createErr := r.DB.Create(&product)
 	return createErr.Error
+}
+
+// CreateProductsBulk writes a batch of imported products for one user in a
+// single transaction. The household is resolved once and stamped on every row.
+// Any storage location named by NewLocationName that the household does not have
+// yet is created inside that same transaction, so a failed insert cannot leave
+// orphaned locations behind. The returned slice holds the names of the locations
+// this call created, in creation order; an empty slice means none were needed.
+//
+// A CSV naming more than util.CsvImportMaxNewLocations distinct new locations is
+// rejected whole with errors.ErrImportTooManyLocations. Storage locations are
+// permanent rows the products list, home and product-detail renders all load
+// without a limit, so letting one upload add thousands of them degrades every
+// later page load.
+func (r *ProductRepository) CreateProductsBulk(userID uint, rows []ImportedProduct) ([]string, error) {
+	if len(rows) == 0 {
+		return nil, nil
+	}
+
+	var user authentication.User
+	if err := r.DB.First(&user, userID).Error; err != nil {
+		return nil, err
+	}
+
+	// Counted outside the transaction: it only seeds the SortOrder of the new
+	// locations, so holding the write transaction open for it buys nothing.
+	var existingCount int64
+	if countErr := r.DB.Model(&database.StorageLocation{}).Where(util.QueryHouseholdId, user.HouseholdID).Count(&existingCount).Error; countErr != nil {
+		return nil, countErr
+	}
+
+	var created []string
+	transactionErr := r.DB.Transaction(func(tx *gorm.DB) error {
+		createdIDs, locationNames, createErr := createImportedStorageLocations(tx, user.HouseholdID, int(existingCount), rows)
+		if createErr != nil {
+			return createErr
+		}
+		created = locationNames
+
+		products := make([]database.Product, len(rows))
+		for i := range rows {
+			rows[i].Product.HouseholdID = user.HouseholdID
+			rows[i].Product.UserID = userID
+			products[i] = rows[i].Product
+			if locationID, ok := createdIDs[strings.ToLower(rows[i].NewLocationName)]; ok {
+				products[i].StorageLocationID = &locationID
+			}
+		}
+		return tx.CreateInBatches(&products, 100).Error
+	})
+	if transactionErr != nil {
+		return nil, transactionErr
+	}
+	return created, nil
+}
+
+// createImportedStorageLocations creates one storage location per distinct
+// NewLocationName. It returns the id of each, keyed by the lowercased name so
+// rows spelled differently still share one location, plus the created names in
+// creation order. New locations sort after the existingCount locations the
+// household already has. Exceeding util.CsvImportMaxNewLocations distinct names
+// fails with errors.ErrImportTooManyLocations rather than truncating the file.
+func createImportedStorageLocations(tx *gorm.DB, householdID uint, existingCount int, rows []ImportedProduct) (map[string]uint, []string, error) {
+	ids := make(map[string]uint)
+	locations := make([]database.StorageLocation, 0)
+	for i := range rows {
+		name := strings.TrimSpace(rows[i].NewLocationName)
+		if name == "" {
+			continue
+		}
+		key := strings.ToLower(name)
+		if _, exists := ids[key]; exists {
+			continue
+		}
+		if len(locations) >= util.CsvImportMaxNewLocations {
+			return nil, nil, errors.ErrImportTooManyLocations
+		}
+		ids[key] = 0
+		locations = append(locations, database.StorageLocation{
+			HouseholdID: householdID,
+			Name:        name,
+			Icon:        rows[i].NewLocationIcon,
+			SortOrder:   existingCount + len(locations),
+		})
+	}
+	if len(locations) == 0 {
+		return ids, nil, nil
+	}
+
+	// One batched insert instead of one round trip per name: GORM fills the
+	// primary keys in place, which is what turns the placeholder ids above into
+	// the ids the products are stamped with.
+	if err := tx.CreateInBatches(&locations, 100).Error; err != nil {
+		return nil, nil, err
+	}
+	names := make([]string, 0, len(locations))
+	for i := range locations {
+		ids[strings.ToLower(locations[i].Name)] = locations[i].ID
+		names = append(names, locations[i].Name)
+	}
+	return ids, names, nil
 }
 
 func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *database.ProductDTOPatch) error {
@@ -992,6 +1161,26 @@ func (r *ProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (data
 	return entry, result.Error
 }
 
+// GetOpenFoodFactsCachesByBarcodes returns every cached Open Food Facts entry
+// whose barcode is in the given set. It is the batch form of
+// GetOpenFoodFactsCacheByBarcode, so a bulk import can resolve all of its
+// fallback names with one query instead of one lookup per row.
+func (r *ProductRepository) GetOpenFoodFactsCachesByBarcodes(barcodes []string) ([]database.OpenFoodFactsCache, error) {
+	if len(barcodes) == 0 {
+		return []database.OpenFoodFactsCache{}, nil
+	}
+	var entries []database.OpenFoodFactsCache
+	for _, chunk := range chunkStrings(barcodes, bulkQueryChunkSize) {
+		var batch []database.OpenFoodFactsCache
+		queryErr := r.DB.Where("barcode IN ?", chunk).Find(&batch).Error
+		if queryErr != nil {
+			return []database.OpenFoodFactsCache{}, queryErr
+		}
+		entries = append(entries, batch...)
+	}
+	return entries, nil
+}
+
 func (r *ProductRepository) CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error {
 	return r.DB.Create(entry).Error
 }
@@ -1041,7 +1230,7 @@ func (r *ProductRepository) GetUserActiveProductsFiltered(userID uint, from, to 
 	}
 
 	var products []database.Product
-	query := r.DB.Scopes(r.privacyScope(userID)).Where(util.QueryHouseholdId, householdID).Where(util.WhereDeletedIsNull)
+	query := r.DB.Preload("StorageLocation").Scopes(r.privacyScope(userID)).Where(util.QueryHouseholdId, householdID).Where(util.WhereDeletedIsNull)
 
 	if from != nil {
 		query = query.Where("created_at >= ?", *from)
@@ -1064,7 +1253,7 @@ func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, t
 	}
 
 	var products []database.Product
-	query := r.DB.Unscoped().Scopes(r.privacyScope(userID)).Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, householdID)
+	query := r.DB.Preload("StorageLocation").Unscoped().Scopes(r.privacyScope(userID)).Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, householdID)
 
 	if from != nil {
 		query = query.Where("deleted_at >= ?", *from)

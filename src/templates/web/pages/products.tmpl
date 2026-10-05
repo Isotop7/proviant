@@ -95,6 +95,9 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" id="mobileExportMenu">
                         <li><a class="dropdown-item" href="#" data-bs-toggle="offcanvas" data-bs-target="#mobileFiltersOffcanvas"><i class="bi bi-funnel me-2"></i>Filters</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-import-csv"><i class="bi bi-upload me-2"></i>Import products (CSV)</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-import-template"><i class="bi bi-file-earmark-arrow-down me-2"></i>Download CSV template</a></li>
                         {{ if .Products }}
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#" id="mobile-export-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Products CSV</a></li>
@@ -698,9 +701,13 @@
     </div>
 </div>
 
+<!-- Hidden file input backing the CSV import menu entries -->
+<input type="file" id="csvImportFile" accept=".csv,text/csv" class="d-none" aria-hidden="true" tabindex="-1">
+
 <script src="/assets/js/html5-qrcode.min.js"></script>
 <script src="/assets/js/productsCreate.js"></script>
 <script src="/assets/js/products.js"></script>
 <script src="/assets/js/productsExpiryOCR.js"></script>
+<script src="/assets/js/productsImport.js"></script>
 
 {{ end }}

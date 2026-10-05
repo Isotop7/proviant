@@ -229,6 +229,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           restore: 'bi-arrow-counterclockwise',
           cook: 'bi-fire',
           amount_change: 'bi-pencil',
+          import: 'bi-upload',
         };
         const actionLabelMap = {
           add: 'added',
@@ -237,6 +238,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           restore: 'restored',
           cook: 'cooked',
           amount_change: 'adjusted',
+          import: 'imported',
         };
 
         function relativeTime(timestamp) {

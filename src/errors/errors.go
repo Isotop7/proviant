@@ -387,6 +387,29 @@ var (
 	ErrExportCSVWriteWrapper = "CSV write error: %s"
 
 	/*
+	 * CSV import related errors
+	 */
+	// ErrImportMissingFile is thrown when the import request carries no file part
+	ErrImportMissingFile = errors.New("no CSV file uploaded")
+
+	// ErrImportNoBarcodeColumn is thrown when the CSV header has no barcode column
+	ErrImportNoBarcodeColumn = errors.New("CSV header must contain a barcode column")
+
+	// ErrImportTooManyRows is thrown when the CSV exceeds util.CsvImportMaxRows
+	ErrImportTooManyRows = errors.New("CSV contains too many rows")
+
+	// ErrImportEmptyFile is thrown when the CSV has a header but no data rows
+	ErrImportEmptyFile = errors.New("CSV contains no product rows")
+
+	// ErrImportTooManyLocations is thrown when the CSV names more distinct new
+	// storage locations than util.CsvImportMaxNewLocations
+	ErrImportTooManyLocations = errors.New("CSV names too many new storage locations")
+
+	// ErrImportRowWrapper formats a rejected CSV line for the log. The response
+	// itself keeps row and reason in separate fields, so it does not need it.
+	ErrImportRowWrapper = "ImportProducts: row %d rejected: %s"
+
+	/*
 	 * Stats/export shared log format strings
 	 */
 	FmtErrGetActiveProductsCount              = "GetActiveProductsCount: %s"

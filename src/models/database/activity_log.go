@@ -26,4 +26,5 @@ const (
 	ActivityActionCook         = "cook"
 	ActivityActionAmountChange = "amount_change"
 	ActivityActionStreakReset  = "streak_reset"
+	ActivityActionImport       = "import"
 )

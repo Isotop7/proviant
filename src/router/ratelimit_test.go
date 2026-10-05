@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"codeberg.org/isotop7/proviant/util"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
@@ -110,6 +112,47 @@ func TestRecipesRateLimitMiddleware_AbortsOnRejection(t *testing.T) {
 	}
 	if handlerHits != recipesBurst {
 		t.Errorf("handler ran %d times, want %d (a rejected request must abort the chain)", handlerHits, recipesBurst)
+	}
+}
+
+// The import limiter must stop a second upload from starting while the first is
+// still in flight: importBurstCap is 1, so the repeat has to abort before the
+// handler runs.
+func TestImportRateLimitMiddleware_AbortsOnRejection(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	importLimiters = &sync.Map{}
+	// Pin a rate that never refills during the test so the assertion is about
+	// importBurstCap alone, not about how fast the limiter would refill.
+	originalRate := importRate
+	importRate = rate.Every(time.Hour)
+	t.Cleanup(func() { importRate = originalRate })
+
+	handlerHits := 0
+	engine := gin.New()
+	engine.Use(func(c *gin.Context) {
+		c.Set(util.ContextKeyUserID, uint(4242))
+		c.Next()
+	})
+	engine.POST("/api/v1/products/import", importRateLimitMiddleware, func(c *gin.Context) {
+		handlerHits++
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	limited := 0
+	for range importBurstCap + 2 {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodPost, "/api/v1/products/import", nil)
+		engine.ServeHTTP(recorder, request)
+		if recorder.Code == http.StatusTooManyRequests {
+			limited++
+		}
+	}
+
+	if limited != 2 {
+		t.Errorf("got %d rate-limited responses, want 2", limited)
+	}
+	if handlerHits != importBurstCap {
+		t.Errorf("handler ran %d times, want %d (a rejected request must abort the chain)", handlerHits, importBurstCap)
 	}
 }
 
