@@ -70,7 +70,11 @@ type RateLimitConfiguration struct {
 
 // ServerConfiguration contains all properties regarding the proviant server
 type ServerConfiguration struct {
-	Port            int
+	Port int
+	// Host is the bind address. Empty means every interface (wildcard), which
+	// is the default and keeps container deployments reachable. Set it to
+	// 127.0.0.1 for a loopback-only listener.
+	Host            string
 	Authentication  AuthenticationConfiguration
 	CORS            CorsConfiguration
 	BaseURL         string

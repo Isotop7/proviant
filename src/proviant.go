@@ -4,7 +4,9 @@ package main
 import (
 	"fmt"
 	stdlog "log"
+	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -240,8 +242,10 @@ func startProviantServer(logger *zerolog.Logger, proviantConfiguration *configur
 		serverPort = 5114
 	}
 
-	// Start server
-	runErr := proviantEngine.Run(fmt.Sprintf(":%d", serverPort))
+	// An empty host binds every interface, which is what a container deployment
+	// needs. Anything else (e.g. 127.0.0.1) narrows the listener to that address.
+	bindHost := proviantConfiguration.Server.Host
+	runErr := proviantEngine.Run(net.JoinHostPort(bindHost, strconv.Itoa(serverPort)))
 	if runErr != nil {
 		panic(runErr)
 	}
