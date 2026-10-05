@@ -46,7 +46,8 @@ src/data
 .claude/
 
 # Kilo
-.kilo/
+.kilo/*
+!.kilo/skills
 
 # Issue sync
 issues/
