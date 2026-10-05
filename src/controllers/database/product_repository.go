@@ -117,6 +117,7 @@ type ProductRepositoryInterface interface {
 	GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
 	GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
 	GetExpiringSoonCount(userID uint, days int) (int, error)
+	GetActiveExpiryCounts(userID uint, now time.Time, criticalDays int) (expired, critical int, err error)
 	GetWasteThisMonth(userID uint) (int, error)
 	GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
 	GetProductsByHousehold(householdID uint) ([]database.Product, error)
@@ -1110,6 +1111,66 @@ func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, er
 	}
 
 	return len(filterByEffectiveExpiryWindow(rows, startOfToday, endOfWindow)), nil
+}
+
+// GetActiveExpiryCounts returns how many of the user's active products are
+// already past their effective expiry and how many expire within criticalDays.
+// It exists for the products-page sidebar badge, which needs two integers and
+// used to load every active product — full row set plus a StorageLocation
+// preload — only to derive them.
+//
+// Only the three expiry columns are projected, and the effective-date
+// classification runs in Go through database.EffectiveExpireAt. Doing it in SQL
+// would need engine-specific date arithmetic on opened_at + days_after_opening,
+// which the other expiry queries deliberately avoid too.
+func (r *ProductRepository) GetActiveExpiryCounts(userID uint, now time.Time, criticalDays int) (expired, critical int, err error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	criticalBefore := now.AddDate(0, 0, criticalDays)
+
+	// One-sided prune: rows whose latest possible effective expiry is beyond the
+	// critical window cannot be counted. There is no lower bound — a product can
+	// have been expired for years and still counts.
+	var rows []expiryCandidate
+	err = r.DB.Model(&database.Product{}).
+		Select("expire_at, opened_at, days_after_opening").
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
+		Where(
+			"(expire_at <= ?) OR "+
+				"(opened_at IS NOT NULL AND days_after_opening > 0 AND opened_at <= ?)",
+			criticalBefore, criticalBefore,
+		).
+		Find(&rows).Error
+	if err != nil {
+		return 0, 0, err
+	}
+
+	for i := range rows {
+		effective := database.EffectiveExpireAt(rows[i].ExpireAt, rows[i].OpenedAt, rows[i].DaysAfterOpening)
+		if effective.IsZero() {
+			continue
+		}
+		if effective.Before(now) {
+			expired++
+		} else if effective.Before(criticalBefore) {
+			critical++
+		}
+	}
+	return expired, critical, nil
+}
+
+// expiryCandidate is the narrow projection GetActiveExpiryCounts needs. The
+// three fields are the whole input to database.EffectiveExpireAt, so the count
+// cannot drift from the ranking that decides what a page renders.
+type expiryCandidate struct {
+	ExpireAt         time.Time
+	OpenedAt         *time.Time
+	DaysAfterOpening *int
 }
 
 func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {

@@ -278,40 +278,43 @@ func fetchProducts(
 	}
 }
 
-func productExpiryStatus(p *dbModel.Product, now time.Time, criticalDur, soonDur time.Duration) string {
+// The expiry window boundaries use calendar-day arithmetic (AddDate) to stay
+// consistent with GetActiveExpiryCounts, which classifies the same products
+// for the sidebar badge on the archived view.
+func productExpiryStatus(p *dbModel.Product, now time.Time, criticalDays, soonDays int) string {
 	effective := p.EffectiveExpireAt()
 	switch {
 	case effective.IsZero():
 		return "nodate"
 	case effective.Before(now):
 		return "expired"
-	case effective.Before(now.Add(criticalDur)):
+	case effective.Before(now.AddDate(0, 0, criticalDays)):
 		return "critical"
-	case effective.Before(now.Add(soonDur)):
+	case effective.Before(now.AddDate(0, 0, soonDays)):
 		return "soon"
 	default:
 		return "fresh"
 	}
 }
 
-func computeExpiryStats(products []dbModel.Product, now time.Time, criticalDur time.Duration) (expired, critical int) {
+func computeExpiryStats(products []dbModel.Product, now time.Time, criticalDays int) (expired, critical int) {
 	for i := range products {
 		p := &products[i]
 		effective := p.EffectiveExpireAt()
 		if !effective.IsZero() && effective.Before(now) {
 			expired++
-		} else if !effective.IsZero() && effective.Before(now.Add(criticalDur)) {
+		} else if !effective.IsZero() && effective.Before(now.AddDate(0, 0, criticalDays)) {
 			critical++
 		}
 	}
 	return
 }
 
-func filterProductsByStatus(products []dbModel.Product, status string, now time.Time, criticalDur, soonDur time.Duration) []dbModel.Product {
+func filterProductsByStatus(products []dbModel.Product, status string, now time.Time, criticalDays, soonDays int) []dbModel.Product {
 	filtered := make([]dbModel.Product, 0, len(products))
 	for i := range products {
 		p := &products[i]
-		if productExpiryStatus(p, now, criticalDur, soonDur) == status {
+		if productExpiryStatus(p, now, criticalDays, soonDays) == status {
 			filtered = append(filtered, *p)
 		}
 	}
@@ -377,13 +380,25 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	if soonDays <= 0 {
 		soonDays = 7
 	}
-	criticalDuration := time.Duration(criticalDays) * 24 * time.Hour
-	soonDuration := time.Duration(soonDays) * 24 * time.Hour
 
-	expiredCount, criticalCount := computeExpiryStats(allProducts, now, criticalDuration)
+	// The sidebar badge counts expiring stock, so it must always be derived from
+	// the active list. On the archived view the rendered rows are all consumed
+	// and therefore all past their expiry date, which would badge every one of
+	// them as urgent, so that view asks the repository for the counts directly
+	// instead of loading the active rows it would immediately throw away.
+	var expiredCount, criticalCount int
+	if statusFilter == "archived" {
+		if archivedExpired, archivedCritical, statsErr := repos.Products.GetActiveExpiryCounts(userID, now, criticalDays); statsErr != nil {
+			logger.Warn().Msgf("Error getting active product expiry stats: %s", statsErr)
+		} else {
+			expiredCount, criticalCount = archivedExpired, archivedCritical
+		}
+	} else {
+		expiredCount, criticalCount = computeExpiryStats(products, now, criticalDays)
+	}
 
 	if statusFilter != "all" && statusFilter != "archived" {
-		products = filterProductsByStatus(allProducts, statusFilter, now, criticalDuration, soonDuration)
+		products = filterProductsByStatus(allProducts, statusFilter, now, criticalDays, soonDays)
 	}
 
 	params := url.Values{}

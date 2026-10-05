@@ -27,6 +27,11 @@ type MockProductRepository struct {
 	MapResult     map[string]int
 	Err           error
 
+	// ExpiryCounts overrides the pair GetActiveExpiryCounts returns; nil
+	// derives them from Products via the same rule the real repository uses,
+	// so a mock seeded with Products needs no explicit count.
+	ExpiryCounts *[2]int
+
 	// ConsumePartialFullyConsumed overrides the fullyConsumed result of
 	// ConsumeProductPartial; nil keeps the default of true on success.
 	ConsumePartialFullyConsumed *bool
@@ -161,6 +166,33 @@ func (m *MockProductRepository) GetUsersByHouseholdID(householdID uint) ([]authe
 }
 func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error) {
 	return m.IntResult, m.Err
+}
+func (m *MockProductRepository) GetActiveExpiryCounts(userID uint, now time.Time, criticalDays int) (int, int, error) {
+	if m.Err != nil {
+		return 0, 0, m.Err
+	}
+	if m.ExpiryCounts != nil {
+		return m.ExpiryCounts[0], m.ExpiryCounts[1], nil
+	}
+	if m.IntResult != 0 {
+		return m.IntResult, m.IntResult, nil
+	}
+	// Mirror the real classification so a test that only seeds Products still
+	// gets a badge consistent with the rows it rendered.
+	criticalBefore := now.AddDate(0, 0, criticalDays)
+	expired, critical := 0, 0
+	for i := range m.Products {
+		effective := m.Products[i].EffectiveExpireAt()
+		if effective.IsZero() {
+			continue
+		}
+		if effective.Before(now) {
+			expired++
+		} else if effective.Before(criticalBefore) {
+			critical++
+		}
+	}
+	return expired, critical, nil
 }
 func (m *MockProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 	return m.IntResult, m.Err

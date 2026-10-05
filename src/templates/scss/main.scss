@@ -800,8 +800,11 @@ $bootstrap-icons-font-dir: "../fonts";
   align-items: center;
   justify-content: space-between;
   padding: 14px 24px;
-  // Negative margins cancel content-wrapper padding on top + sides
-  margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-6)) var(--space-5);
+  // Negative margins cancel content-wrapper padding. The vertical padding is
+  // --space-6 but the horizontal padding is --space-3, so the sides must cancel
+  // --space-3 — bleeding by --space-6 overshoots by 12px and gives every page
+  // using this bar a horizontal scrollbar.
+  margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-3)) var(--space-5);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
