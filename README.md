@@ -288,13 +288,7 @@ Documentation is generated with `gomarkdoc` and `swagger`:
 
 ## Screenshots
 
-**Login**
-
-![Login](./screenshots/login.png)
-
----
-
-**Dashboard** — metric tiles, waste rate, category breakdown and expiry trend charts
+<!-- ui-capture:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->
 
 <table>
   <tr>
@@ -302,14 +296,10 @@ Documentation is generated with `gomarkdoc` and `swagger`:
     <th>Mobile</th>
   </tr>
   <tr>
-    <td><img src="./screenshots/portal.png" alt="Dashboard desktop"></td>
-    <td><img src="./screenshots/portal_mobile.png" alt="Dashboard mobile"></td>
+    <td width="50%"><img src="./screenshots/portal.png" alt="Dashboard — metric tiles, waste rate, category breakdown and expiry trend charts — desktop"></td>
+    <td width="25%"><img src="./screenshots/portal_mobile.png" alt="Dashboard — metric tiles, waste rate, category breakdown and expiry trend charts — mobile"></td>
   </tr>
 </table>
-
----
-
-**Add product** — barcode scan with auto-fill from OpenFoodFacts
 
 <table>
   <tr>
@@ -317,14 +307,10 @@ Documentation is generated with `gomarkdoc` and `swagger`:
     <th>Mobile</th>
   </tr>
   <tr>
-    <td><img src="./screenshots/create.png" alt="Add product desktop"></td>
-    <td><img src="./screenshots/create_mobile.png" alt="Add product mobile"></td>
+    <td width="50%"><img src="./screenshots/search.png" alt="Products — search, filter, adjust and manage what is in your household — desktop"></td>
+    <td width="25%"><img src="./screenshots/search_mobile.png" alt="Products — search, filter, adjust and manage what is in your household — mobile"></td>
   </tr>
 </table>
-
----
-
-**Search** — filter products by name, barcode or category
 
 <table>
   <tr>
@@ -332,14 +318,10 @@ Documentation is generated with `gomarkdoc` and `swagger`:
     <th>Mobile</th>
   </tr>
   <tr>
-    <td><img src="./screenshots/search.png" alt="Search desktop"></td>
-    <td><img src="./screenshots/search_mobile.png" alt="Search mobile"></td>
+    <td width="50%"><img src="./screenshots/create.png" alt="Add product — barcode scan with auto-fill from OpenFoodFacts — desktop"></td>
+    <td width="25%"><img src="./screenshots/create_mobile.png" alt="Add product — barcode scan with auto-fill from OpenFoodFacts — mobile"></td>
   </tr>
 </table>
-
----
-
-**Recipe** — Get recipes for expiring products
 
 <table>
   <tr>
@@ -347,10 +329,38 @@ Documentation is generated with `gomarkdoc` and `swagger`:
     <th>Mobile</th>
   </tr>
   <tr>
-    <td><img src="./screenshots/recipe.png" alt="Search desktop"></td>
-    <td><img src="./screenshots/recipe_mobile.png" alt="Search mobile"></td>
+    <td width="50%"><img src="./screenshots/recipe.png" alt="Recipes — suggestions built from the products you already have — desktop"></td>
+    <td width="25%"><img src="./screenshots/recipe_mobile.png" alt="Recipes — suggestions built from the products you already have — mobile"></td>
   </tr>
 </table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/waste.png" alt="Waste analytics — consumed vs wasted, monthly breakdown and cost of waste — desktop"></td>
+    <td width="25%"><img src="./screenshots/waste_mobile.png" alt="Waste analytics — consumed vs wasted, monthly breakdown and cost of waste — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/shopping.png" alt="Shopping list — shared household list with low-stock import — desktop"></td>
+    <td width="25%"><img src="./screenshots/shopping_mobile.png" alt="Shopping list — shared household list with low-stock import — mobile"></td>
+  </tr>
+</table>
+
+**Sign in**
+
+![Sign in](./screenshots/login.png)
+
+<!-- ui-capture:end -->
 
 ## Contributing
 
