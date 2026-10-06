@@ -124,11 +124,27 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      PRIVATE_REGISTRY_ENABLED: ${{ secrets.PRIVATE_REGISTRY_USERNAME != '' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - name: Resolve image reference
+        id: imgref
+        run: |
+          repository=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
+          emit_tags() {
+            echo "$1<<PROVIANT_TAGS_EOF" >> "$GITHUB_OUTPUT"
+            echo "ghcr.io/$repository:$2" >> "$GITHUB_OUTPUT"
+            if [ "$PRIVATE_REGISTRY_ENABLED" = 'true' ]; then
+              echo "$PRIVATE_REGISTRY/$repository:$2" >> "$GITHUB_OUTPUT"
+            fi
+            echo "PROVIANT_TAGS_EOF" >> "$GITHUB_OUTPUT"
+          }
+          emit_tags prod_tags '${{ github.ref_name }}'
+          emit_tags demo_tags demo
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to GitHub Container Registry
@@ -138,6 +154,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Login to private registry
+        if: env.PRIVATE_REGISTRY_ENABLED == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.PRIVATE_REGISTRY }}
@@ -148,23 +165,19 @@ jobs:
         with:
           file: ./Dockerfile
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
-            ghcr.io/${{ github.repository }}:latest
-            ${{ env.PRIVATE_REGISTRY }}/${{ github.repository }}:${{ github.ref_name }}
-            ${{ env.PRIVATE_REGISTRY }}/${{ github.repository }}:latest
+          platforms: linux/amd64
+          cache-from: type=gha,scope=proviant-prod-amd64
+          cache-to: type=gha,mode=max,scope=proviant-prod-amd64
+          tags: ${{ steps.imgref.outputs.prod_tags }}
       - name: Build and push Demo Docker image
         uses: docker/build-push-action@v6
         with:
           file: ./Dockerfile.demo
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: |
-            ghcr.io/${{ github.repository }}:demo
-            ${{ env.PRIVATE_REGISTRY }}/${{ github.repository }}:demo
+          platforms: linux/amd64
+          cache-from: type=gha,scope=proviant-demo-amd64
+          cache-to: type=gha,mode=max,scope=proviant-demo-amd64
+          tags: ${{ steps.imgref.outputs.demo_tags }}
 
   sonarcloud-scan:
     needs: check

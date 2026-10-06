@@ -1,16 +1,16 @@
 {{ define "content" }}
-<div class="container my-4">
 
-    {{/* ── Page header ─────────────────────────────────────────── */}}
-    <div class="mb-4">
-        <h1 class="h2 fw-bold mb-1">User Settings</h1>
-        <span class="badge bg-primary">ID: #{{ .User.ID }}</span>
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">User Settings</h1>
+        <p class="page-header-subtitle"><span class="id-chip">#{{ .User.ID }}</span></p>
     </div>
+</div>
 
-    {{ template "_settings_profile" . }}
-    {{ template "_settings_notifications" . }}
-    {{ template "_settings_security" . }}
-    {{ template "_settings_household" . }}
+{{ template "_settings_profile" . }}
+{{ template "_settings_notifications" . }}
+{{ template "_settings_security" . }}
+{{ template "_settings_household" . }}
 
 <script src="/assets/js/userSettings.js"></script>
 {{ end }}

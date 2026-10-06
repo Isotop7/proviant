@@ -1216,3 +1216,139 @@ func TestValidateRecipeAPIConfigurationSelfHostedFailuresAreDistinct(t *testing.
 		}
 	})
 }
+
+func TestValidateOCRReceiptConfiguration(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *ProviantConfiguration
+		wantErr  error
+		afterChk func(t *testing.T, config *ProviantConfiguration)
+	}{
+		{
+			name:    "disabled feature is always valid",
+			config:  &ProviantConfiguration{},
+			wantErr: nil,
+		},
+		{
+			name: "valid enabled configuration",
+			config: &ProviantConfiguration{
+				OCR: OCRConfiguration{Receipt: ReceiptOCRConfiguration{
+					Enabled: true,
+					Model:   "gpt-4o-mini",
+				}},
+			},
+			wantErr: nil,
+			afterChk: func(t *testing.T, config *ProviantConfiguration) {
+				if config.OCR.Receipt.Provider != util.ReceiptOCRProviderOpenAI {
+					t.Errorf("Provider = %q, want default %q", config.OCR.Receipt.Provider, util.ReceiptOCRProviderOpenAI)
+				}
+				if config.OCR.Receipt.Timeout != util.ReceiptScanDefaultTimeout {
+					t.Errorf("Timeout = %d, want default %d", config.OCR.Receipt.Timeout, util.ReceiptScanDefaultTimeout)
+				}
+			},
+		},
+		{
+			name: "non-vision provider tesseract is rejected",
+			config: &ProviantConfiguration{
+				OCR: OCRConfiguration{Receipt: ReceiptOCRConfiguration{
+					Enabled:  true,
+					Provider: "tesseract",
+					Model:    "gpt-4o-mini",
+				}},
+			},
+			wantErr: proviantErrors.ErrReceiptOCRInvalidProvider,
+		},
+		{
+			name: "empty model is rejected",
+			config: &ProviantConfiguration{
+				OCR: OCRConfiguration{Receipt: ReceiptOCRConfiguration{
+					Enabled: true,
+				}},
+			},
+			wantErr: proviantErrors.ErrReceiptOCREmptyModel,
+		},
+		{
+			name: "whitespace-only model is rejected",
+			config: &ProviantConfiguration{
+				OCR: OCRConfiguration{Receipt: ReceiptOCRConfiguration{
+					Enabled: true,
+					Model:   "   ",
+				}},
+			},
+			wantErr: proviantErrors.ErrReceiptOCREmptyModel,
+		},
+		{
+			name: "provider is normalized case-insensitively",
+			config: &ProviantConfiguration{
+				OCR: OCRConfiguration{Receipt: ReceiptOCRConfiguration{
+					Enabled:  true,
+					Provider: "OpenAI",
+					Model:    "gpt-4o-mini",
+				}},
+			},
+			wantErr: nil,
+			afterChk: func(t *testing.T, config *ProviantConfiguration) {
+				if config.OCR.Receipt.Provider != util.ReceiptOCRProviderOpenAI {
+					t.Errorf("Provider = %q, want %q", config.OCR.Receipt.Provider, util.ReceiptOCRProviderOpenAI)
+				}
+			},
+		},
+		{
+			name: "endpoint and API key whitespace is trimmed",
+			config: &ProviantConfiguration{
+				OCR: OCRConfiguration{Receipt: ReceiptOCRConfiguration{
+					Enabled:  true,
+					Model:    "gpt-4o-mini",
+					Endpoint: "  https://llm.example.com/v1\n",
+					APIKey:   "  token123  ",
+				}},
+			},
+			wantErr: nil,
+			afterChk: func(t *testing.T, config *ProviantConfiguration) {
+				if config.OCR.Receipt.Endpoint != "https://llm.example.com/v1" {
+					t.Errorf("Endpoint = %q, want %q", config.OCR.Receipt.Endpoint, "https://llm.example.com/v1")
+				}
+				if config.OCR.Receipt.APIKey != "token123" {
+					t.Errorf("APIKey = %q, want %q", config.OCR.Receipt.APIKey, "token123")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.ValidateOCRReceiptConfiguration()
+			assertValidationError(t, err, tt.wantErr)
+			if err == nil && tt.afterChk != nil {
+				tt.afterChk(t, tt.config)
+			}
+		})
+	}
+}
+
+// TestReceiptOCRConfigurationUsesInsecureTransport covers the plaintext-HTTP
+// warning for the receipt scan endpoint. A custom endpoint authenticates with
+// a bearer API key and receives the uploaded receipt photo, so an http:// URL
+// transmits both in cleartext. Like the recipe API guard, it is reported
+// rather than rejected because a LAN-only endpoint is legitimate.
+func TestReceiptOCRConfigurationUsesInsecureTransport(t *testing.T) {
+	tests := []struct {
+		name     string
+		endpoint string
+		insecure bool
+	}{
+		{name: "http endpoint is insecure", endpoint: "http://llm.example.com/v1", insecure: true},
+		{name: "https endpoint is secure", endpoint: "https://llm.example.com/v1", insecure: false},
+		{name: "empty endpoint resolves to the https OpenAI default", endpoint: "", insecure: false},
+		{name: "unparseable endpoint fails closed", endpoint: "://not-a-url", insecure: false},
+		{name: "whitespace is trimmed before parsing", endpoint: "  http://127.0.0.1:1234  ", insecure: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := ReceiptOCRConfiguration{Endpoint: tt.endpoint}
+			if got := config.UsesInsecureTransport(); got != tt.insecure {
+				t.Errorf("UsesInsecureTransport() = %v, want %v", got, tt.insecure)
+			}
+		})
+	}
+}

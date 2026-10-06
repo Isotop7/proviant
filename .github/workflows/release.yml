@@ -1,5 +1,8 @@
 name: Release
 
+env:
+  PRIVATE_REGISTRY: registry.hr94.de
+
 on:
   push:
     tags:
@@ -9,8 +12,139 @@ permissions:
   contents: write
   issues: read
 
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
+  docker-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      PRIVATE_REGISTRY_ENABLED: ${{ secrets.PRIVATE_REGISTRY_USERNAME != '' }}
+    outputs:
+      image: ${{ steps.imgref.outputs.image }}
+      prod_digest: ${{ steps.build.outputs.digest }}
+      demo_digest: ${{ steps.build-demo.outputs.digest }}
+    steps:
+      - name: Checkout tagged commit
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag points at a commit on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD; then
+            echo "::error::Tagged commit $GITHUB_SHA is not on main, refusing to publish an official image"
+            exit 1
+          fi
+          released=$(git tag -l --sort=-v:refname 'v[0-9]*' | grep -v -- '-' | grep -vxF "$GITHUB_REF_NAME" || true)
+          previous=$(printf '%s\n' "$released" | head -n 1)
+          if [ -z "$previous" ]; then
+            echo "No earlier final release tag found, treating $GITHUB_REF_NAME as the first release"
+          elif ! git merge-base --is-ancestor "refs/tags/$previous" "$GITHUB_SHA"; then
+            echo "::error::Tagged commit $GITHUB_SHA does not descend from previous release $previous, refusing to publish a rollback as the newest release"
+            exit 1
+          fi
+
+      - name: Resolve image reference
+        id: imgref
+        run: |
+          case "${GITHUB_REF_NAME#v}" in
+            [0-9]*.[0-9]*.[0-9]*) ver="${GITHUB_REF_NAME#v}" ;;
+            *) echo "::error::unsupported tag $GITHUB_REF_NAME, expected vMAJOR.MINOR.PATCH"; exit 1 ;;
+          esac
+          repository=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
+          echo "path=$repository" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/$repository" >> "$GITHUB_OUTPUT"
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
+          case "$ver" in
+            *-*) echo "final=false" >> "$GITHUB_OUTPUT" ;;
+            *) echo "final=true" >> "$GITHUB_OUTPUT" ;;
+          esac
+          emit_tags() {
+            echo "$1<<PROVIANT_TAGS_EOF" >> "$GITHUB_OUTPUT"
+            echo "ghcr.io/$repository:$2" >> "$GITHUB_OUTPUT"
+            echo "ghcr.io/$repository:$3" >> "$GITHUB_OUTPUT"
+            if [ "$PRIVATE_REGISTRY_ENABLED" = 'true' ]; then
+              echo "$PRIVATE_REGISTRY/$repository:$2" >> "$GITHUB_OUTPUT"
+              echo "$PRIVATE_REGISTRY/$repository:$3" >> "$GITHUB_OUTPUT"
+            fi
+            echo "PROVIANT_TAGS_EOF" >> "$GITHUB_OUTPUT"
+          }
+          emit_tags prod_tags "$GITHUB_REF_NAME" "$ver"
+          emit_tags demo_tags "$GITHUB_REF_NAME-demo" "$ver-demo"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to private registry
+        if: env.PRIVATE_REGISTRY_ENABLED == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.PRIVATE_REGISTRY }}
+          username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
+          password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
+
+      - name: Build and push production image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64
+          cache-from: type=gha,scope=proviant-prod-amd64
+          tags: ${{ steps.imgref.outputs.prod_tags }}
+          labels: |
+            org.opencontainers.image.title=proviant
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.imgref.outputs.ver }}
+
+      - name: Build and push demo image
+        id: build-demo
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.demo
+          push: true
+          platforms: linux/amd64
+          cache-from: type=gha,scope=proviant-demo-amd64
+          tags: ${{ steps.imgref.outputs.demo_tags }}
+          labels: |
+            org.opencontainers.image.title=proviant-demo
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.imgref.outputs.ver }}-demo
+
+      - name: Move latest tag to the new release
+        if: steps.imgref.outputs.final == 'true'
+        env:
+          IMAGE: ${{ steps.imgref.outputs.image }}
+          IMAGE_PATH: ${{ steps.imgref.outputs.path }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          if [ "$PRIVATE_REGISTRY_ENABLED" = 'true' ]; then
+            docker buildx imagetools create \
+              --tag "$PRIVATE_REGISTRY/$IMAGE_PATH:latest" \
+              "$PRIVATE_REGISTRY/$IMAGE_PATH@$DIGEST"
+          fi
+          docker buildx imagetools create --tag "$IMAGE:latest" "$IMAGE@$DIGEST"
+
   release:
+    needs: docker-publish
+    if: ${{ needs.docker-publish.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -36,17 +170,23 @@ jobs:
           git config user.email "release-bot@users.noreply.github.com"
 
       - name: Commit CHANGELOG.md
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          PUSH_URL: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
           git add CHANGELOG.md
-          git commit -m "chore: update CHANGELOG.md for ${{ github.ref_name }}"
-          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main
+          git diff --quiet --cached -- CHANGELOG.md || git commit -m "chore: update CHANGELOG.md for $REF_NAME"
+          git pull --rebase origin main
+          git push "$PUSH_URL" HEAD:main
           git fetch origin main:tmp-main
           git checkout tmp-main -- CHANGELOG.md
 
       - name: Generate release notes
         id: notes
+        env:
+          CURRENT_TAG: ${{ github.ref_name }}
         run: |
-          current_tag="${{ github.ref_name }}"
+          current_tag="$CURRENT_TAG"
           all_tags_sorted=$(git tag --sort=-v:refname)
           previous_tag=$(echo "$all_tags_sorted" | grep -A100 "^${current_tag}$" | sed -n '2p')
           if [ -z "$previous_tag" ]; then
@@ -57,6 +197,17 @@ jobs:
           else
             git-cliff --config cliff.toml --verbose "$previous_tag..$current_tag" --output /tmp/notes.md
           fi
+      - name: Prepend Docker section
+        env:
+          IMAGE: ${{ needs.docker-publish.outputs.image }}
+          TAG: ${{ github.ref_name }}
+          PROD_DIGEST: ${{ needs.docker-publish.outputs.prod_digest }}
+          DEMO_DIGEST: ${{ needs.docker-publish.outputs.demo_digest }}
+        run: |
+          printf '## Docker\n\n```bash\ndocker pull %s:%s\ndocker pull %s:%s-demo\n```\n\nProduction `%s` · Demo `%s`\n\n' \
+            "$IMAGE" "$TAG" "$IMAGE" "$TAG" "$PROD_DIGEST" "$DEMO_DIGEST" > /tmp/docker.md
+          cat /tmp/docker.md /tmp/notes.md > /tmp/notes.final.md
+          mv /tmp/notes.final.md /tmp/notes.md
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

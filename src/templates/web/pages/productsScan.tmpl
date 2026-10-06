@@ -33,6 +33,102 @@
         <i class="bi bi-keyboard" aria-hidden="true"></i>
         Enter barcode manually
     </button>
+
+    <div class="scan-divider">or</div>
+
+    <button class="btn btn-proviant-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2" type="button" id="btnBatchToggle">
+        <i class="bi bi-stack" aria-hidden="true"></i>
+        Batch scan
+    </button>
+</div>
+
+<!-- Batch start panel — storage location chosen once, then scanning begins -->
+<div id="batchStartPanel" class="product-data-panel d-none px-3 py-3" aria-label="Batch scan setup">
+    <div class="card">
+        <div class="card-body">
+            <div class="fw-semibold mb-1">Batch scan</div>
+            <div class="text-secondary-custom small mb-3">
+                Scan many products in a row and save them all at once.
+            </div>
+
+            <label for="batchStorageLocation" class="form-label fw-medium small">Storage location</label>
+            <select class="form-select mb-3" id="batchStorageLocation" aria-label="Storage location for all queued products">
+                <option value="">No location</option>
+            </select>
+
+            <div class="d-grid gap-2">
+                <button type="button" class="btn btn-proviant-primary" id="btnBatchStart">
+                    <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>Start scanning
+                </button>
+                <button type="button" class="btn btn-proviant-secondary" id="btnBatchCancelStart">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Batch confirm panel — one entry per scan while the camera stays live -->
+<div id="batchConfirmPanel" class="product-data-panel d-none px-3 py-3" aria-label="Confirm scanned product">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="flex-shrink-0 batch-thumb-wrap">
+                    <i id="batchProductPlaceholder" class="bi bi-upc batch-thumb-icon" aria-hidden="true"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div id="batchProductName" class="fw-semibold">Scanning…</div>
+                    <div id="batchProductBarcode" class="text-secondary-custom small font-monospace"></div>
+                </div>
+            </div>
+
+            <label class="form-label fw-medium small">Amount</label>
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <button type="button" class="btn btn-proviant-secondary" id="btnBatchAmountDec" aria-label="Decrease amount">-</button>
+                <span id="batchAmountDisplay" class="fs-5 px-2" aria-live="polite">1</span>
+                <button type="button" class="btn btn-proviant-secondary" id="btnBatchAmountInc" aria-label="Increase amount">+</button>
+            </div>
+            <input type="hidden" id="batchAmount" value="1">
+
+            <label for="batchExpireAt" class="form-label fw-medium small">
+                Expiry date <span class="text-danger" aria-hidden="true">*</span>
+            </label>
+            <input type="date" class="form-control mb-2" id="batchExpireAt" required aria-required="true">
+            <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please select an expiry date</div>
+
+            <div class="btn-group w-100 mb-3" role="group" aria-label="Quick expiry shortcuts">
+                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnBatchExpireAdd3">+3 days</button>
+                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnBatchExpireAdd7">+7 days</button>
+                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnBatchExpireAdd1m">+1 month</button>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="button" class="btn btn-proviant-primary" id="btnBatchAdd">
+                    <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>Add to batch
+                </button>
+                <button type="button" class="btn btn-proviant-secondary" id="btnBatchSkip">
+                    Skip
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Batch tally bar — fixed at the bottom while items are queued -->
+<div id="batchTally" class="batch-tally d-none" aria-live="polite">
+    <div class="batch-tally-info">
+        <div id="batchTallyCount" class="fw-semibold">0 items queued</div>
+        <div id="batchTallyLast" class="text-secondary-custom small text-truncate"></div>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-proviant-secondary" id="btnBatchUndo" aria-label="Remove last queued item">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+            Undo
+        </button>
+        <button type="button" class="btn btn-proviant-primary" id="btnBatchDone">
+            <i class="bi bi-check-circle me-1" aria-hidden="true"></i>Done
+        </button>
+    </div>
 </div>
 
 <!-- Product data — revealed by JS after barcode lookup -->

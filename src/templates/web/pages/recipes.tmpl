@@ -10,7 +10,7 @@
 </div>
 
 <div id="recipe-suggestions-container">
-    <div class="text-center p-5">
+    <div class="loading-state">
         <div class="spinner-border text-secondary-custom" role="status">
             <span class="visually-hidden">Loading...</span>
         </div>
@@ -19,13 +19,12 @@
 </div>
 
 <div id="recipe-error-container" class="d-none">
-    <div class="text-center py-5">
-        <div class="mb-3">
-            <i class="bi bi-exclamation-triangle fs-1 text-danger"></i>
+    <div class="empty">
+        <div class="empty-icon empty-icon-danger">
+            <i class="bi bi-exclamation-triangle"></i>
         </div>
-        <h2 class="h4 mb-2">Unable to load recipes</h2>
-        <p class="text-secondary-custom mb-1">We couldn't fetch recipe suggestions at this time. Please try again later.</p>
-        <p class="text-secondary-custom small mb-4">Error: <span id="error-message"></span></p>
+        <div class="empty-title">Unable to load recipes</div>
+        <div class="empty-desc">We couldn't fetch recipe suggestions at this time. Please try again later.<br>Error: <span id="error-message"></span></div>
         <button class="btn btn-proviant-secondary" id="recipesRetryBtn" type="button">
             <i class="bi bi-arrow-clockwise me-1"></i> Try again
         </button>

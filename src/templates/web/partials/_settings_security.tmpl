@@ -1,6 +1,6 @@
 {{ define "_settings_security" }}
 <div class="card card-section mb-4">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
         <div class="d-flex align-items-center gap-2">
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-key"></i>
@@ -59,7 +59,7 @@
 
 {{ if .IsAdmin }}
 <div class="card card-section mb-4" id="auditLogSection">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
         <div class="d-flex align-items-center gap-2">
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-shield-lock"></i>
@@ -73,7 +73,7 @@
     </div>
     <div class="card-body p-0">
         <p class="text-secondary-custom small px-4 pt-3 mb-0">Security-relevant actions from the last 7 days. Auto-refreshes every 30 seconds.</p>
-        <div class="audit-log-container" style="max-height: 280px; overflow-y: auto;" aria-live="polite" id="auditLogContainer">
+        <div class="audit-log-container" aria-live="polite" id="auditLogContainer">
             <ul class="list-group list-group-flush" id="auditLogList">
                 <li class="list-group-item text-center text-secondary-custom py-4" id="auditLogLoading">
                     <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -81,8 +81,8 @@
                 </li>
             </ul>
         </div>
-        <div class="px-4 py-2 border-top" style="background: var(--bg-subtle);">
-            <small class="text-secondary-custom" id="auditLogMeta" style="font-size: var(--text-xs);"></small>
+        <div class="px-4 py-2 border-top bg-subtle">
+            <small class="text-secondary-custom text-xs" id="auditLogMeta"></small>
         </div>
     </div>
 </div>

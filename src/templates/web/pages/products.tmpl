@@ -5,24 +5,31 @@
         <h1 class="page-header-title">Products</h1>
         <p class="page-header-subtitle">{{ .ProductCount }} items in your household</p>
     </div>
-    <button class="btn btn-proviant-primary d-none d-md-flex align-items-center gap-2" id="btnOpenAddProductModal">
-        <i class="bi bi-plus-lg"></i> Add product
-    </button>
+    <div class="d-flex gap-2">
+        {{ if .ReceiptScanEnabled }}
+        <a href="/web/products/scan-receipt" class="btn btn-proviant-secondary d-none d-md-flex align-items-center gap-2">
+            <i class="bi bi-receipt"></i> Scan receipt
+        </a>
+        {{ end }}
+        <button class="btn btn-proviant-primary d-none d-md-flex align-items-center gap-2" id="btnOpenAddProductModal">
+            <i class="bi bi-plus-lg"></i> Add product
+        </button>
+    </div>
 </div>
 
 <div class="toolbar-sticky">
     <!-- Row 1: search (full width on mobile, with view toggle on desktop) -->
     <div class="d-flex gap-2 align-items-center mb-2">
-        <div class="flex-grow-1" style="min-width: 0;">
+        <div class="flex-grow-1 min-w-0">
             {{ template "searchBar" . }}
         </div>
         <!-- View toggle buttons on desktop -->
         <div class="d-none d-md-flex gap-1 align-items-center flex-shrink-0">
-            <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}">
-                <i class="bi bi-list-ul"></i>
+            <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}" aria-label="List view">
+                <i class="bi bi-list-ul" aria-hidden="true"></i>
             </a>
-            <a href="?{{ queryWith .Params "view" "grid" }}" class="btn-view {{ if eq .View "grid" }}active{{ end }}">
-                <i class="bi bi-grid-3x3-gap"></i>
+            <a href="?{{ queryWith .Params "view" "grid" }}" class="btn-view {{ if eq .View "grid" }}active{{ end }}" aria-label="Grid view">
+                <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
             </a>
         </div>
     </div>
@@ -33,11 +40,11 @@
         <div class="d-flex gap-1 align-items-center flex-shrink-0">
             <!-- View toggle: visible on mobile, hidden on desktop (already in Row 1 on desktop) -->
             <div class="d-flex d-md-none gap-1">
-                <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}" title="List view">
-                    <i class="bi bi-list-ul"></i>
+                <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}" title="List view" aria-label="List view">
+                    <i class="bi bi-list-ul" aria-hidden="true"></i>
                 </a>
-                <a href="?{{ queryWith .Params "view" "grid" }}" class="btn-view {{ if eq .View "grid" }}active{{ end }}" title="Grid view">
-                    <i class="bi bi-grid-3x3-gap"></i>
+                <a href="?{{ queryWith .Params "view" "grid" }}" class="btn-view {{ if eq .View "grid" }}active{{ end }}" title="Grid view" aria-label="Grid view">
+                    <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
                 </a>
             </div>
             <!-- Desktop filters (hidden on mobile) -->
@@ -90,11 +97,17 @@
             <!-- Mobile filter/export button -->
             <div class="d-block d-md-none">
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn-bulk dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-three-dots-vertical"></i>
+                    <button type="button" class="btn-bulk dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More options">
+                        <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" id="mobileExportMenu">
                         <li><a class="dropdown-item" href="#" data-bs-toggle="offcanvas" data-bs-target="#mobileFiltersOffcanvas"><i class="bi bi-funnel me-2"></i>Filters</a></li>
+                        {{ if .ReceiptScanEnabled }}
+                        <li><a class="dropdown-item" href="/web/products/scan-receipt"><i class="bi bi-receipt me-2"></i>Scan receipt</a></li>
+                        {{ end }}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-import-csv"><i class="bi bi-upload me-2"></i>Import products (CSV)</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-import-template"><i class="bi bi-file-earmark-arrow-down me-2"></i>Download CSV template</a></li>
                         {{ if .Products }}
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#" id="mobile-export-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Products CSV</a></li>
@@ -121,7 +134,7 @@
 <div id="productList">
     <div class="list-header">
         <div class="list-checkbox-col">
-            <input type="checkbox" id="selectAll" class="list-checkbox">
+            <input type="checkbox" id="selectAll" class="list-checkbox" aria-label="Select all products">
         </div>
         <div class="col-product">Product</div>
         <div class="col-status">Status</div>
@@ -133,132 +146,132 @@
     <div id="skeletonRows" class="d-none">
         <div class="list-row skeleton-row">
           <div class="list-checkbox-col">
-            <div class="skeleton-block" style="width:15px;height:15px;"></div>
+            <div class="skeleton-block skeleton-icon"></div>
           </div>
           <div class="col-product">
             <div class="d-flex align-items-center gap-2">
-              <div class="skeleton-block" style="width:32px;height:32px;border-radius:6px;flex-shrink:0;"></div>
+              <div class="skeleton-block skeleton-thumb"></div>
               <div class="flex-grow-1">
-                <div class="skeleton-block mb-1" style="height:14px;width:70%"></div>
-                <div class="skeleton-block" style="height:10px;width:40%"></div>
+                <div class="skeleton-block mb-1 skeleton-line"></div>
+                <div class="skeleton-block skeleton-line-sm"></div>
               </div>
             </div>
           </div>
           <div class="col-status">
-            <div class="skeleton-block" style="height:20px;width:70px;border-radius:10px;"></div>
+            <div class="skeleton-block skeleton-badge"></div>
           </div>
           <div class="col-expiry">
-            <div class="skeleton-block" style="height:13px;width:50px;"></div>
+            <div class="skeleton-block skeleton-date"></div>
           </div>
           <div class="col-location">
-            <div class="skeleton-block" style="height:13px;width:70px;"></div>
+            <div class="skeleton-block skeleton-location"></div>
           </div>
           <div class="col-qty">
-            <div class="skeleton-block" style="height:26px;width:40px;border-radius:4px;"></div>
+            <div class="skeleton-block skeleton-qty"></div>
           </div>
         </div>
         <div class="list-row skeleton-row">
           <div class="list-checkbox-col">
-            <div class="skeleton-block" style="width:15px;height:15px;"></div>
+            <div class="skeleton-block skeleton-icon"></div>
           </div>
           <div class="col-product">
             <div class="d-flex align-items-center gap-2">
-              <div class="skeleton-block" style="width:32px;height:32px;border-radius:6px;flex-shrink:0;"></div>
+              <div class="skeleton-block skeleton-thumb"></div>
               <div class="flex-grow-1">
-                <div class="skeleton-block mb-1" style="height:14px;width:70%"></div>
-                <div class="skeleton-block" style="height:10px;width:40%"></div>
+                <div class="skeleton-block mb-1 skeleton-line"></div>
+                <div class="skeleton-block skeleton-line-sm"></div>
               </div>
             </div>
           </div>
           <div class="col-status">
-            <div class="skeleton-block" style="height:20px;width:70px;border-radius:10px;"></div>
+            <div class="skeleton-block skeleton-badge"></div>
           </div>
           <div class="col-expiry">
-            <div class="skeleton-block" style="height:13px;width:50px;"></div>
+            <div class="skeleton-block skeleton-date"></div>
           </div>
           <div class="col-location">
-            <div class="skeleton-block" style="height:13px;width:70px;"></div>
+            <div class="skeleton-block skeleton-location"></div>
           </div>
           <div class="col-qty">
-            <div class="skeleton-block" style="height:26px;width:40px;border-radius:4px;"></div>
+            <div class="skeleton-block skeleton-qty"></div>
           </div>
         </div>
         <div class="list-row skeleton-row">
           <div class="list-checkbox-col">
-            <div class="skeleton-block" style="width:15px;height:15px;"></div>
+            <div class="skeleton-block skeleton-icon"></div>
           </div>
           <div class="col-product">
             <div class="d-flex align-items-center gap-2">
-              <div class="skeleton-block" style="width:32px;height:32px;border-radius:6px;flex-shrink:0;"></div>
+              <div class="skeleton-block skeleton-thumb"></div>
               <div class="flex-grow-1">
-                <div class="skeleton-block mb-1" style="height:14px;width:70%"></div>
-                <div class="skeleton-block" style="height:10px;width:40%"></div>
+                <div class="skeleton-block mb-1 skeleton-line"></div>
+                <div class="skeleton-block skeleton-line-sm"></div>
               </div>
             </div>
           </div>
           <div class="col-status">
-            <div class="skeleton-block" style="height:20px;width:70px;border-radius:10px;"></div>
+            <div class="skeleton-block skeleton-badge"></div>
           </div>
           <div class="col-expiry">
-            <div class="skeleton-block" style="height:13px;width:50px;"></div>
+            <div class="skeleton-block skeleton-date"></div>
           </div>
           <div class="col-location">
-            <div class="skeleton-block" style="height:13px;width:70px;"></div>
+            <div class="skeleton-block skeleton-location"></div>
           </div>
           <div class="col-qty">
-            <div class="skeleton-block" style="height:26px;width:40px;border-radius:4px;"></div>
+            <div class="skeleton-block skeleton-qty"></div>
           </div>
         </div>
         <div class="list-row skeleton-row">
           <div class="list-checkbox-col">
-            <div class="skeleton-block" style="width:15px;height:15px;"></div>
+            <div class="skeleton-block skeleton-icon"></div>
           </div>
           <div class="col-product">
             <div class="d-flex align-items-center gap-2">
-              <div class="skeleton-block" style="width:32px;height:32px;border-radius:6px;flex-shrink:0;"></div>
+              <div class="skeleton-block skeleton-thumb"></div>
               <div class="flex-grow-1">
-                <div class="skeleton-block mb-1" style="height:14px;width:70%"></div>
-                <div class="skeleton-block" style="height:10px;width:40%"></div>
+                <div class="skeleton-block mb-1 skeleton-line"></div>
+                <div class="skeleton-block skeleton-line-sm"></div>
               </div>
             </div>
           </div>
           <div class="col-status">
-            <div class="skeleton-block" style="height:20px;width:70px;border-radius:10px;"></div>
+            <div class="skeleton-block skeleton-badge"></div>
           </div>
           <div class="col-expiry">
-            <div class="skeleton-block" style="height:13px;width:50px;"></div>
+            <div class="skeleton-block skeleton-date"></div>
           </div>
           <div class="col-location">
-            <div class="skeleton-block" style="height:13px;width:70px;"></div>
+            <div class="skeleton-block skeleton-location"></div>
           </div>
           <div class="col-qty">
-            <div class="skeleton-block" style="height:26px;width:40px;border-radius:4px;"></div>
+            <div class="skeleton-block skeleton-qty"></div>
           </div>
         </div>
         <div class="list-row skeleton-row">
           <div class="list-checkbox-col">
-            <div class="skeleton-block" style="width:15px;height:15px;"></div>
+            <div class="skeleton-block skeleton-icon"></div>
           </div>
           <div class="col-product">
             <div class="d-flex align-items-center gap-2">
-              <div class="skeleton-block" style="width:32px;height:32px;border-radius:6px;flex-shrink:0;"></div>
+              <div class="skeleton-block skeleton-thumb"></div>
               <div class="flex-grow-1">
-                <div class="skeleton-block mb-1" style="height:14px;width:70%"></div>
-                <div class="skeleton-block" style="height:10px;width:40%"></div>
+                <div class="skeleton-block mb-1 skeleton-line"></div>
+                <div class="skeleton-block skeleton-line-sm"></div>
               </div>
             </div>
           </div>
           <div class="col-status">
-            <div class="skeleton-block" style="height:20px;width:70px;border-radius:10px;"></div>
+            <div class="skeleton-block skeleton-badge"></div>
           </div>
           <div class="col-expiry">
-            <div class="skeleton-block" style="height:13px;width:50px;"></div>
+            <div class="skeleton-block skeleton-date"></div>
           </div>
           <div class="col-location">
-            <div class="skeleton-block" style="height:13px;width:70px;"></div>
+            <div class="skeleton-block skeleton-location"></div>
           </div>
           <div class="col-qty">
-            <div class="skeleton-block" style="height:26px;width:40px;border-radius:4px;"></div>
+            <div class="skeleton-block skeleton-qty"></div>
           </div>
         </div>
     </div>
@@ -266,7 +279,7 @@
     {{ range .Products }}
     <div class="list-row" data-id="{{ .Model.ID }}">
         <div class="list-checkbox-col">
-            <input type="checkbox" class="row-checkbox list-checkbox" value="{{ .Model.ID }}">
+            <input type="checkbox" class="row-checkbox list-checkbox" value="{{ .Model.ID }}" aria-label="Select {{ .ProductName }}">
         </div>
         <div class="col-product">
             <a href="/web/products/{{ .Model.ID }}/edit" class="list-thumb">
@@ -319,9 +332,9 @@
             <span class="qty-static">{{ .Amount }}</span>
             {{ else }}
             <div class="qty-stepper">
-                <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}">−</button>
+                <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}" aria-label="Decrease quantity of {{ .ProductName }}">−</button>
                 <span id="qty-{{ .Model.ID }}">{{ .Amount }}</span>
-                <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}">+</button>
+                <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}" aria-label="Increase quantity of {{ .ProductName }}">+</button>
             </div>
             {{ end }}
         </div>
@@ -442,7 +455,7 @@
                         <i class="bi bi-upc-scan barcode-scan-icon"></i>
 <input id="barcode" type="text" inputmode="numeric" pattern="[0-9]{13}"
 			placeholder="Scan or type EAN barcode…"
-			autocomplete="off" spellcheck="false">
+			autocomplete="off" spellcheck="false" aria-label="Barcode">
                         <span class="kbd-hint">↵</span>
                     </div>
     <div class="input-hint">
@@ -538,8 +551,8 @@
                         <div class="d-flex align-items-center gap-2">
                             <input type="date" class="form-control flex-grow-1" id="expireAt"
                                    value="{{ today }}" required aria-required="true">
-                            <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="Scan expiry date from photo">
-                                <i class="bi bi-camera"></i>
+                            <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="Scan expiry date from photo" aria-label="Scan expiry date from photo">
+                                <i class="bi bi-camera" aria-hidden="true"></i>
                             </button>
                         </div>
                         <div class="invalid-feedback">
@@ -547,13 +560,13 @@
                         </div>
                         {{ if .Locations }}
                         <label for="modalStorageLocation" class="form-label mt-2">Storage Location</label>
-                        <select class="form-select" id="modalStorageLocation">
+                        <select class="form-select" id="modalStorageLocation" aria-label="Storage location">
                             <option value="">— None —</option>
                             {{ range .Locations }}
                             <option value="{{ .ID }}">{{ .Icon }} {{ .Name }}</option>
                             {{ end }}
                         </select>
-                        <small id="storageHint" class="text-muted d-none mb-2"></small>
+                        <small id="storageHint" class="text-secondary-custom d-none mb-2"></small>
                         {{ end }}
                     </form>
 
@@ -698,9 +711,13 @@
     </div>
 </div>
 
+<!-- Hidden file input backing the CSV import menu entries -->
+<input type="file" id="csvImportFile" accept=".csv,text/csv" class="d-none" aria-hidden="true" tabindex="-1">
+
 <script src="/assets/js/html5-qrcode.min.js"></script>
 <script src="/assets/js/productsCreate.js"></script>
 <script src="/assets/js/products.js"></script>
 <script src="/assets/js/productsExpiryOCR.js"></script>
+<script src="/assets/js/productsImport.js"></script>
 
 {{ end }}

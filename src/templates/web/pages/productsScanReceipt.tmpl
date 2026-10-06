@@ -1,0 +1,106 @@
+{{ define "content" }}
+
+<div class="scan-page-header">
+    <div class="scan-page-title">Scan a receipt</div>
+    <div class="scan-page-sub">Photograph a receipt to add several products at once</div>
+</div>
+
+<!-- Persistent screen reader status region (visually hidden) -->
+<div id="receiptLiveStatus" class="visually-hidden" aria-live="polite"></div>
+
+<!-- Step 1: capture / upload -->
+<div id="receiptUploadStep">
+    <div class="card mb-3">
+        <div class="card-body">
+            <form id="receiptUploadForm">
+                <label for="receiptImage" class="form-label fw-medium small">Receipt photo</label>
+                <input type="file" accept="image/*" capture="environment" class="form-control" id="receiptImage"
+                       aria-describedby="receiptImageHelp" required aria-required="true">
+                <div id="receiptImageHelp" class="form-text">
+                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Full receipt in focus, all items visible
+                </div>
+            </form>
+            <div class="d-grid mt-3">
+                <button type="button" class="btn btn-proviant-primary" id="btnScanReceipt">
+                    <i class="bi bi-receipt me-2" aria-hidden="true"></i>Scan receipt
+                </button>
+            </div>
+            <div id="receiptScanProgress" class="d-none mt-3" aria-live="polite">
+                <div class="progress" role="progressbar" aria-label="Scanning receipt">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
+                </div>
+                <p class="text-secondary-custom small mt-2 mb-0">Analyzing receipt… this can take up to a minute.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 2: nothing recognized -->
+<div id="receiptEmptyStep" class="d-none">
+    <div class="card mb-3">
+        <div class="card-body text-center py-4">
+            <i class="bi bi-receipt fs-1 d-block mb-2 text-secondary-custom" aria-hidden="true"></i>
+            <p class="mb-3">No products were recognized on this photo. Try a sharper picture, or add the products manually.</p>
+            <div class="d-grid gap-2">
+                <button type="button" class="btn btn-proviant-secondary" id="btnRetryEmpty">
+                    <i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i>Try again
+                </button>
+                <a href="/web/products" class="btn btn-proviant-primary">
+                    <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>Add product manually
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 3: review & confirm -->
+<div id="receiptReviewStep" class="d-none">
+    <!-- Batch defaults -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="fw-semibold mb-2"><i class="bi bi-sliders me-2" aria-hidden="true"></i>Defaults for all items</div>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label for="batchExpireAt" class="form-label small mb-1">Expiry date</label>
+                    <input type="date" class="form-control" id="batchExpireAt">
+                </div>
+                <div class="col-6">
+                    <label for="batchStorageLocation" class="form-label small mb-1">Storage location</label>
+                    <select class="form-select" id="batchStorageLocation" aria-label="Storage location">
+                        <option value="">— none —</option>
+                        {{ range .StorageLocations }}
+                        <option value="{{ .ID }}">{{ .Name }}</option>
+                        {{ end }}
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label for="batchCategories" class="form-label small mb-1">Category</label>
+                    <input type="text" class="form-control" id="batchCategories" placeholder="e.g. dairy" autocomplete="off">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Items -->
+    <div id="receiptItems" class="vstack gap-2 mb-3"></div>
+
+    <div class="d-flex gap-2 mb-2">
+        <button type="button" class="btn btn-proviant-secondary flex-fill" id="btnRescanReceipt">
+            <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Rescan
+        </button>
+        <button type="button" class="btn btn-proviant-primary flex-fill" id="btnImportReceipt">
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i>Add <span id="receiptImportCount" aria-live="polite">0</span> products
+        </button>
+    </div>
+    <div id="receiptImportProgress" class="d-none" aria-live="polite">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span class="ms-1">Adding products…</span>
+    </div>
+</div>
+
+<script nonce="{{ .CSPNonce }}">
+window.RECEIPT_SCAN_MAX_ITEMS = {{ .MaxItems }};
+window.RECEIPT_SCAN_TIMEOUT_SECONDS = {{ .ScanTimeoutSeconds }};
+</script>
+<script src="/assets/js/productsReceiptScan.js"></script>
+{{ end }}

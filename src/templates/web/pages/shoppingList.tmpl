@@ -39,11 +39,11 @@
 
 <div class="shopping-list-add-form mb-3" id="addItemForm">
     <div class="add-item-form-inner">
-        <input type="text" class="form-control" id="inputItemName" placeholder="Item name">
-        <input type="number" class="form-control" id="inputItemQuantity" value="1" min="1" placeholder="Qty">
-        <input type="text" class="form-control" id="inputItemUnit" placeholder="Unit">
-        <button type="button" class="btn btn-proviant-primary" id="btnAddItem">
-            <i class="bi bi-plus-lg"></i>
+        <input type="text" class="form-control" id="inputItemName" placeholder="Item name" aria-label="Item name">
+        <input type="number" class="form-control" id="inputItemQuantity" value="1" min="1" placeholder="Qty" aria-label="Quantity">
+        <input type="text" class="form-control" id="inputItemUnit" placeholder="Unit" aria-label="Unit">
+        <button type="button" class="btn btn-proviant-primary" id="btnAddItem" aria-label="Add item">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
         </button>
     </div>
 </div>
@@ -52,7 +52,7 @@
 <div id="shoppingListContainer">
     <div class="sl-list-header">
         <div class="sl-checkbox-col">
-            <input type="checkbox" id="selectAll" class="list-checkbox">
+            <input type="checkbox" id="selectAll" class="list-checkbox" aria-label="Select all items">
         </div>
         <div class="sl-product-col">Item</div>
         <div class="sl-qty-col">Qty</div>
@@ -62,7 +62,7 @@
     {{ range $item := .ItemsSorted }}
     <div class="sl-list-row{{ if $item.Checked }} checked{{ end }}" data-id="{{ $item.ID }}" id="item-{{ $item.ID }}">
         <div class="sl-checkbox-col">
-            <input type="checkbox" class="item-checkbox list-checkbox"{{ if $item.Checked }} checked{{ end }} data-item-id="{{ $item.ID }}">
+            <input type="checkbox" class="item-checkbox list-checkbox"{{ if $item.Checked }} checked{{ end }} data-item-id="{{ $item.ID }}" aria-label="Mark {{ $item.Name }} as done">
         </div>
         <div class="sl-product-col">
             <div class="sl-item-content">
@@ -71,17 +71,17 @@
         </div>
         <div class="sl-qty-col">
             <div class="qty-stepper">
-                <button type="button" data-qty-action="dec" data-item-id="{{ $item.ID }}">−</button>
+                <button type="button" data-qty-action="dec" data-item-id="{{ $item.ID }}" aria-label="Decrease quantity of {{ $item.Name }}">−</button>
                 <span id="qty-{{ $item.ID }}">{{ $item.Quantity }}</span>
-                <button type="button" data-qty-action="inc" data-item-id="{{ $item.ID }}">+</button>
+                <button type="button" data-qty-action="inc" data-item-id="{{ $item.ID }}" aria-label="Increase quantity of {{ $item.Name }}">+</button>
             </div>
         </div>
         <div class="sl-actions-col">
-            <button type="button" class="btn-icon text-secondary-custom" data-notes-toggle="{{ $item.ID }}" title="Notes">
-                <i class="bi bi-chat-left-text"></i>
+            <button type="button" class="btn-icon text-secondary-custom" data-notes-toggle="{{ $item.ID }}" title="Notes" aria-label="Toggle notes for {{ $item.Name }}">
+                <i class="bi bi-chat-left-text" aria-hidden="true"></i>
             </button>
-            <button type="button" class="btn-icon text-danger" data-delete-item="{{ $item.ID }}" title="Delete">
-                <i class="bi bi-trash3"></i>
+            <button type="button" class="btn-icon text-danger" data-delete-item="{{ $item.ID }}" title="Delete" aria-label="Delete {{ $item.Name }}">
+                <i class="bi bi-trash3" aria-hidden="true"></i>
             </button>
         </div>
     </div>
@@ -91,12 +91,12 @@
     {{ end }}
 </div>
 {{ else }}
-<div class="text-center py-5">
-    <div class="mb-4">
-        <i class="bi bi-cart3 fs-1 text-secondary-custom"></i>
+<div class="empty">
+    <div class="empty-icon">
+        <i class="bi bi-cart3"></i>
     </div>
-    <h2 class="h4 mb-2">Your shopping list is empty</h2>
-    <p class="text-secondary-custom mb-4">Add items manually or import from low-stock products.</p>
+    <div class="empty-title">Your shopping list is empty</div>
+    <div class="empty-desc">Add items manually or import from low-stock products.</div>
 </div>
 {{ end }}
 

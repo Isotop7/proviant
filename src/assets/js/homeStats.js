@@ -1,4 +1,9 @@
+(function() {
 'use strict';
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
 
 function renderSkeletons(count) {
   const dashboard = document.getElementById('dashboard');
@@ -23,8 +28,20 @@ function showEmptyChart(canvasId, message) {
   canvas.style.display = 'none';
   canvas.insertAdjacentHTML(
     'afterend',
-    `<p class="text-secondary-custom small text-center my-auto py-4">${message}</p>`,
+    `<p class="text-secondary-custom small text-center my-auto py-4 chart-empty-msg">${message}</p>`,
   );
+}
+
+function clearEmptyChart(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  canvas.style.display = '';
+  let next = canvas.nextElementSibling;
+  while (next && next.classList && next.classList.contains('chart-empty-msg')) {
+    const toRemove = next;
+    next = next.nextElementSibling;
+    toRemove.remove();
+  }
 }
 
 function renderTile(title, hero, variant, heroClass) {
@@ -93,6 +110,84 @@ function renderListTile(title, items, days) {
 
   return col;
 }
+
+let dashboardCharts = [];
+let lastStats = null;
+
+function renderCharts(s) {
+  dashboardCharts.forEach((chart) => chart.destroy());
+  dashboardCharts = [];
+  Chart.defaults.color = cssVar('--fg-2');
+
+  // Chart 1 — Waste donut (expired vs fresh)
+  clearEmptyChart('chartWaste');
+  if (!s.totalActive) {
+    showEmptyChart('chartWaste', 'No active products yet');
+  } else {
+    dashboardCharts.push(new Chart(document.getElementById('chartWaste'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Expired', 'Fresh'],
+        datasets: [{
+          data: [s.wasteCount, s.totalActive - s.wasteCount],
+          backgroundColor: [cssVar('--status-expired'), cssVar('--status-fresh')],
+        }],
+      },
+      options: { plugins: { legend: { position: 'bottom' } } },
+    }));
+  }
+
+  // Chart 2 — Category breakdown (pie)
+  clearEmptyChart('chartCategories');
+  if (!Object.keys(s.categories).length) {
+    showEmptyChart('chartCategories', 'No category data yet');
+  } else {
+    dashboardCharts.push(new Chart(document.getElementById('chartCategories'), {
+      type: 'pie',
+      data: {
+        labels: Object.keys(s.categories),
+        datasets: [{
+          data: Object.values(s.categories),
+          backgroundColor: [
+            cssVar('--status-fresh'),
+            cssVar('--brand-slate'),
+            cssVar('--color-info'),
+            cssVar('--status-soon'),
+            cssVar('--status-nodate'),
+            cssVar('--status-expired'),
+          ],
+        }],
+      },
+      options: { plugins: { legend: { position: 'bottom' } } },
+    }));
+  }
+
+  // Chart 3 — Expiry trend (line)
+  clearEmptyChart('chartExpiryTrend');
+  if (!s.expiryTrend.length) {
+    showEmptyChart('chartExpiryTrend', 'No expiry trend data yet');
+  } else {
+    dashboardCharts.push(new Chart(document.getElementById('chartExpiryTrend'), {
+      type: 'line',
+      data: {
+        labels: s.expiryTrend.map((m) => m.month),
+        datasets: [{
+          label: 'Products expiring',
+          data: s.expiryTrend.map((m) => m.count),
+          borderColor: cssVar('--accent'),
+          pointBackgroundColor: cssVar('--accent'),
+          tension: 0.3,
+          fill: false,
+        }],
+      },
+      options: { plugins: { legend: { display: false } } },
+    }));
+  }
+}
+
+document.addEventListener('proviant:themechange', () => {
+  if (lastStats) renderCharts(lastStats);
+});
 
 document.addEventListener('DOMContentLoaded', async function () {
   renderSkeletons(7);
@@ -229,6 +324,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           restore: 'bi-arrow-counterclockwise',
           cook: 'bi-fire',
           amount_change: 'bi-pencil',
+          import: 'bi-upload',
         };
         const actionLabelMap = {
           add: 'added',
@@ -237,6 +333,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           restore: 'restored',
           cook: 'cooked',
           amount_change: 'adjusted',
+          import: 'imported',
         };
 
         function relativeTime(timestamp) {
@@ -324,63 +421,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     const status = document.getElementById('dashboard-status');
     if (status) status.textContent = 'Dashboard loaded';
 
-    // Chart 1 — Waste donut (expired vs fresh)
-    if (!s.totalActive) {
-      showEmptyChart('chartWaste', 'No active products yet');
-    } else {
-      new Chart(document.getElementById('chartWaste'), {
-        type: 'doughnut',
-        data: {
-          labels: ['Expired', 'Fresh'],
-          datasets: [{
-            data: [s.wasteCount, s.totalActive - s.wasteCount],
-            backgroundColor: ['#DC2626', '#3D7A5C'],
-          }],
-        },
-        options: { plugins: { legend: { position: 'bottom' } } },
-      });
-    }
-
-    // Chart 2 — Category breakdown (pie)
-    if (!Object.keys(s.categories).length) {
-      showEmptyChart('chartCategories', 'No category data yet');
-    } else {
-      new Chart(document.getElementById('chartCategories'), {
-        type: 'pie',
-        data: {
-          labels: Object.keys(s.categories),
-          datasets: [{
-            data: Object.values(s.categories),
-            backgroundColor: ['#3D7A5C', '#5B7FA6', '#7BC67E', '#E8914E', '#9DB5A8', '#DC2626'],
-          }],
-        },
-        options: { plugins: { legend: { position: 'bottom' } } },
-      });
-    }
-
-    // Chart 3 — Expiry trend (line)
-    if (!s.expiryTrend.length) {
-      showEmptyChart('chartExpiryTrend', 'No expiry trend data yet');
-    } else {
-      new Chart(document.getElementById('chartExpiryTrend'), {
-        type: 'line',
-        data: {
-          labels: s.expiryTrend.map((m) => m.month),
-          datasets: [{
-            label: 'Products expiring',
-            data: s.expiryTrend.map((m) => m.count),
-            borderColor: '#3D7A5C',
-            pointBackgroundColor: '#3D7A5C',
-            tension: 0.3,
-            fill: false,
-          }],
-        },
-        options: { plugins: { legend: { display: false } } },
-      });
-    }
+    lastStats = s;
+    renderCharts(s);
   } catch {
     clearSkeletons();
     const status = document.getElementById('dashboard-status');
     if (status) status.textContent = 'Dashboard failed to load. Please refresh.';
   }
 });
+})();

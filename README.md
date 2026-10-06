@@ -28,13 +28,17 @@
 
 ## Preview
 
-**Dashboard** — metric tiles, waste rate donut, category breakdown and expiry trend charts
+<!-- ui-capture-preview:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->
 
-![Dashboard](./screenshots/portal.png)
+**Dashboard — metric tiles, waste rate donut, category breakdown and expiry trend charts**
 
-**Products** — search, filter and manage your products
+![Dashboard — metric tiles, waste rate donut, category breakdown and expiry trend charts](./screenshots/portal.png)
 
-![Products](./screenshots/search.png)
+**Products — search, filter and manage your products**
+
+![Products — search, filter and manage your products](./screenshots/search.png)
+
+<!-- ui-capture-preview:end -->
 
 ## Features
 
@@ -106,6 +110,35 @@ Then open http://localhost:5114
 ```bash
 chown -R 100:101 <path>
 ```
+
+##### Prebuilt images
+
+Official images are published to GitHub Container Registry on every release. Running one needs no
+repository checkout — unlike the compose files shipped in this repo, which always build from source
+(`build: ./`) and never reference the published image:
+
+```bash
+docker pull ghcr.io/isotop7/proviant:latest
+docker run --rm -p 5114:5114 ghcr.io/isotop7/proviant:latest
+```
+
+| Tag | Description |
+|---|---|
+| `vX.Y.Z` | Exact release version |
+| `X.Y.Z` | Same image as `vX.Y.Z`, without the `v` prefix |
+| `latest` | Newest final release (never a pre-release) |
+| `vX.Y.Z-demo` / `X.Y.Z-demo` | Matching release with demo data |
+| `main` / `develop` | Unreleased builds from the respective branch, may be broken |
+| `demo` | Demo image, rebuilt on every `main`/`develop` merge |
+
+**IMPORTANT:**
+
+- Images are built for `linux/amd64` only. On native ARM hosts (e.g. Raspberry Pi) the pull fails
+  with `no matching manifest for linux/arm64/v8` — build from source there. Runtimes with emulation
+  (Docker Desktop on Apple Silicon) can pull it with `docker run --platform linux/amd64 …`.
+- A version tag is never reused for a different release, but re-running a release workflow
+  re-pushes it. For a bit-for-bit reproducible deployment, pin the digest printed in that release's
+  notes (`ghcr.io/isotop7/proviant@sha256:…`) rather than the tag.
 
 ### Configuration
 
@@ -216,12 +249,25 @@ Additionally, `GIN_MODE` can be set to `debug` to enable Gin's debug mode.
 
 ### Docker
 
-Pull the latest image and restart:
+When running the prebuilt image, replace the container with the version you want to upgrade to:
 
 ```bash
-docker compose pull
-docker compose up -d
+docker pull ghcr.io/isotop7/proviant:vX.Y.Z
+docker rm -f proviant
+docker run -d --name proviant --restart always -p 5114:5114 \
+  -e PROVIANT_DATABASE_ENGINE=sqlite \
+  -e PROVIANT_LOGGING_FILE=logs/proviant.log \
+  -v proviantdb:/app/data \
+  -v proviantlogs:/app/logs \
+  ghcr.io/isotop7/proviant:vX.Y.Z
 ```
+
+The container runs as the unprivileged proviant user, so the mounted volumes must be writable by
+`100:101` (`docker run --rm -v proviantdb:/data alpine chown -R 100:101 /data`).
+
+`:latest` always points at the newest final release. The compose files in this repository build from
+source (`build: ./`), so `docker compose pull` is a no-op for them — upgrade those with
+`docker compose build --pull && docker compose up -d`, or switch to the prebuilt image as above.
 
 Database migrations run automatically on startup. See the [CHANGELOG](./CHANGELOG.md) for breaking changes that may require manual intervention.
 
@@ -246,13 +292,7 @@ Documentation is generated with `gomarkdoc` and `swagger`:
 
 ## Screenshots
 
-**Login**
-
-![Login](./screenshots/login.png)
-
----
-
-**Dashboard** — metric tiles, waste rate, category breakdown and expiry trend charts
+<!-- ui-capture:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->
 
 <table>
   <tr>
@@ -260,14 +300,10 @@ Documentation is generated with `gomarkdoc` and `swagger`:
     <th>Mobile</th>
   </tr>
   <tr>
-    <td><img src="./screenshots/portal.png" alt="Dashboard desktop"></td>
-    <td><img src="./screenshots/portal_mobile.png" alt="Dashboard mobile"></td>
+    <td width="50%"><img src="./screenshots/portal.png" alt="Dashboard — metric tiles, waste rate, category breakdown and expiry trend charts — desktop"></td>
+    <td width="25%"><img src="./screenshots/portal_mobile.png" alt="Dashboard — metric tiles, waste rate, category breakdown and expiry trend charts — mobile"></td>
   </tr>
 </table>
-
----
-
-**Add product** — barcode scan with auto-fill from OpenFoodFacts
 
 <table>
   <tr>
@@ -275,14 +311,10 @@ Documentation is generated with `gomarkdoc` and `swagger`:
     <th>Mobile</th>
   </tr>
   <tr>
-    <td><img src="./screenshots/create.png" alt="Add product desktop"></td>
-    <td><img src="./screenshots/create_mobile.png" alt="Add product mobile"></td>
+    <td width="50%"><img src="./screenshots/search.png" alt="Products — search, filter, adjust and manage what is in your household — desktop"></td>
+    <td width="25%"><img src="./screenshots/search_mobile.png" alt="Products — search, filter, adjust and manage what is in your household — mobile"></td>
   </tr>
 </table>
-
----
-
-**Search** — filter products by name, barcode or category
 
 <table>
   <tr>
@@ -290,14 +322,10 @@ Documentation is generated with `gomarkdoc` and `swagger`:
     <th>Mobile</th>
   </tr>
   <tr>
-    <td><img src="./screenshots/search.png" alt="Search desktop"></td>
-    <td><img src="./screenshots/search_mobile.png" alt="Search mobile"></td>
+    <td width="50%"><img src="./screenshots/product-detail.png" alt="Product detail — expiry status, actions and history — desktop"></td>
+    <td width="25%"><img src="./screenshots/product-detail_mobile.png" alt="Product detail — expiry status, actions and history — mobile"></td>
   </tr>
 </table>
-
----
-
-**Recipe** — Get recipes for expiring products
 
 <table>
   <tr>
@@ -305,10 +333,82 @@ Documentation is generated with `gomarkdoc` and `swagger`:
     <th>Mobile</th>
   </tr>
   <tr>
-    <td><img src="./screenshots/recipe.png" alt="Search desktop"></td>
-    <td><img src="./screenshots/recipe_mobile.png" alt="Search mobile"></td>
+    <td width="50%"><img src="./screenshots/create.png" alt="Add product — barcode scan with auto-fill from OpenFoodFacts — desktop"></td>
+    <td width="25%"><img src="./screenshots/create_mobile.png" alt="Add product — barcode scan with auto-fill from OpenFoodFacts — mobile"></td>
   </tr>
 </table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/receipt.png" alt="Receipt scan — OCR bulk entry from a grocery receipt photo — desktop"></td>
+    <td width="25%"><img src="./screenshots/receipt_mobile.png" alt="Receipt scan — OCR bulk entry from a grocery receipt photo — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/recipe.png" alt="Recipes — suggestions built from the products you already have — desktop"></td>
+    <td width="25%"><img src="./screenshots/recipe_mobile.png" alt="Recipes — suggestions built from the products you already have — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/waste.png" alt="Waste analytics — consumed vs wasted, monthly breakdown and cost of waste — desktop"></td>
+    <td width="25%"><img src="./screenshots/waste_mobile.png" alt="Waste analytics — consumed vs wasted, monthly breakdown and cost of waste — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/shopping.png" alt="Shopping list — shared household list with low-stock import — desktop"></td>
+    <td width="25%"><img src="./screenshots/shopping_mobile.png" alt="Shopping list — shared household list with low-stock import — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/onboarding.png" alt="Onboarding — profile, notifications and household setup — desktop"></td>
+    <td width="25%"><img src="./screenshots/onboarding_mobile.png" alt="Onboarding — profile, notifications and household setup — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/settings.png" alt="Settings — notifications, household, tokens and security — desktop"></td>
+    <td width="25%"><img src="./screenshots/settings_mobile.png" alt="Settings — notifications, household, tokens and security — mobile"></td>
+  </tr>
+</table>
+
+**Sign in**
+
+![Sign in](./screenshots/login.png)
+
+<!-- ui-capture:end -->
 
 ## Contributing
 

@@ -4,19 +4,20 @@
 
 <div aria-live="polite" aria-atomic="true" class="visually-hidden" id="waste-status"></div>
 
-<div class="px-3 pt-3">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-        <div>
-            <h1 class="h3 mb-1">Waste Analytics</h1>
-            <div class="text-secondary-custom small">Track what you consume versus what you throw away, and the cost of waste.</div>
-        </div>
-        <div class="btn-group gap-1" role="group" aria-label="Period selector" id="periodSelector">
-            <button type="button" class="btn-bulk" data-period="month">This Month</button>
-            <button type="button" class="btn-bulk" data-period="3months">3 Months</button>
-            <button type="button" class="btn-bulk active" data-period="6months" aria-pressed="true">6 Months</button>
-            <button type="button" class="btn-bulk" data-period="12months">12 Months</button>
-        </div>
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Waste Analytics</h1>
+        <p class="page-header-subtitle">Track what you consume versus what you throw away, and the cost of waste.</p>
     </div>
+    <div class="btn-group gap-1" role="group" aria-label="Period selector" id="periodSelector">
+        <button type="button" class="btn-bulk" data-period="month">This Month</button>
+        <button type="button" class="btn-bulk" data-period="3months">3 Months</button>
+        <button type="button" class="btn-bulk active" data-period="6months" aria-pressed="true">6 Months</button>
+        <button type="button" class="btn-bulk" data-period="12months">12 Months</button>
+    </div>
+</div>
+
+<div>
 
     <div class="row row-cols-2 row-cols-md-5 g-3 mb-2" id="wasteTiles"></div>
 
@@ -97,23 +98,15 @@
 
 {{ else }}
 
-<div class="container">
-    <div class="row text-center">
-        <p class="fs-1">
-            <i class="bi bi-emoji-dizzy-fill my-5 text-primary"></i>
-        </p>
-        <p class="fs-2 my-2">
-            No household yet
-        </p>
-        <p class="my-3">
-            Connect to or create a household to see your waste analytics.
-        </p>
-        <div class="my-4">
-            <a class="btn btn-proviant-primary" href="/web/user/settings#household">
-                <i class="bi bi-people me-2"></i> Set up Household
-            </a>
-        </div>
+<div class="empty">
+    <div class="empty-icon">
+        <i class="bi bi-emoji-dizzy-fill"></i>
     </div>
+    <div class="empty-title">No household yet</div>
+    <div class="empty-desc">Connect to or create a household to see your waste analytics.</div>
+    <a class="btn btn-proviant-primary" href="/web/user/settings#household">
+        <i class="bi bi-people me-2"></i> Set up Household
+    </a>
 </div>
 
 {{ end }}

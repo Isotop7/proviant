@@ -2070,6 +2070,52 @@
                 }
             }
         },
+        "/api/v1/products/bulk": {
+            "post": {
+                "description": "Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Create multiple products",
+                "parameters": [
+                    {
+                        "description": "Product drafts",
+                        "name": "items",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.BulkCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.BulkCreateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/bulkConsume": {
             "post": {
                 "description": "Soft-deletes (archives) multiple products without firing product.wasted webhook events",
@@ -2422,6 +2468,70 @@
                 }
             }
         },
+        "/api/v1/products/import": {
+            "post": {
+                "description": "Creates products from an uploaded CSV file. Insert-only: a barcode that already exists among the household's active products is reported as a row error and never modified. Unknown storage locations are created. Rows without a name are completed from the Open Food Facts cache, and at most a bounded number of them may additionally trigger a live Open Food Facts lookup.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "import"
+                ],
+                "summary": "Import products from CSV",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "CSV file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ImportProductsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.ImportProductsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ImportProductsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/import/template.csv": {
+            "get": {
+                "description": "Returns a CSV file with the import column header and one example row",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "import"
+                ],
+                "summary": "Download the CSV import template",
+                "responses": {
+                    "200": {
+                        "description": "CSV file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/openfoodfacts/{barcode}": {
             "get": {
                 "description": "Proxies OpenFoodFacts API with optional database caching",
@@ -2541,6 +2651,68 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/scan-receipt": {
+            "post": {
+                "description": "Upload a receipt photo; returns extracted product drafts (name, amount, unit, price). An empty items list means the scan succeeded but nothing was recognized.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Scan receipt photo for line items",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Receipt photo",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ReceiptScanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -3848,6 +4020,32 @@
                 }
             }
         },
+        "/web/products/scan-receipt": {
+            "get": {
+                "description": "Renders the receipt photo scanning page",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Receipt scan page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/web/products/{id}/edit": {
             "get": {
                 "description": "Renders the page for editing a product",
@@ -4252,6 +4450,77 @@
                 }
             }
         },
+        "api.BulkCreateRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.BulkProductDraft"
+                    }
+                }
+            }
+        },
+        "api.BulkCreateResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.BulkItemResult"
+                    }
+                }
+            }
+        },
+        "api.BulkItemResult": {
+            "type": "object",
+            "properties": {
+                "index": {
+                    "type": "integer"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.BulkProductDraft": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "barcode": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "expireAt": {
+                    "type": "string"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "priceOverride": {
+                    "type": "number"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
         "api.ConsumptionRateResponse": {
             "type": "object",
             "properties": {
@@ -4394,6 +4663,52 @@
                 }
             }
         },
+        "api.ImportProductsResponse": {
+            "type": "object",
+            "properties": {
+                "createdLocations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ImportRowError"
+                    }
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "imported": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "totalRows": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.ImportRowError": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "row": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.IngredientMatch": {
             "type": "object",
             "properties": {
@@ -4523,6 +4838,34 @@
                 },
                 "wasteThisMonth": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.ReceiptItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.ReceiptScanResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ReceiptItem"
+                    }
                 }
             }
         },

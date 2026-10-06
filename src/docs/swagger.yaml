@@ -37,6 +37,52 @@ definitions:
       total:
         type: integer
     type: object
+  api.BulkCreateRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/api.BulkProductDraft'
+        type: array
+    type: object
+  api.BulkCreateResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/api.BulkItemResult'
+        type: array
+    type: object
+  api.BulkItemResult:
+    properties:
+      index:
+        type: integer
+      productId:
+        type: integer
+      reason:
+        type: string
+      status:
+        type: string
+    type: object
+  api.BulkProductDraft:
+    properties:
+      amount:
+        type: integer
+      barcode:
+        type: string
+      categories:
+        type: string
+      expireAt:
+        type: string
+      isPrivate:
+        type: boolean
+      priceOverride:
+        type: number
+      productName:
+        type: string
+      storageLocationId:
+        type: integer
+      unit:
+        type: string
+    type: object
   api.ConsumptionRateResponse:
     properties:
       daysCovered:
@@ -133,6 +179,36 @@ definitions:
       name:
         type: string
     type: object
+  api.ImportProductsResponse:
+    properties:
+      createdLocations:
+        items:
+          type: string
+        type: array
+      errors:
+        items:
+          $ref: '#/definitions/api.ImportRowError'
+        type: array
+      failed:
+        type: integer
+      imported:
+        type: integer
+      message:
+        type: string
+      totalRows:
+        type: integer
+    type: object
+  api.ImportRowError:
+    properties:
+      barcode:
+        type: string
+      name:
+        type: string
+      reason:
+        type: string
+      row:
+        type: integer
+    type: object
   api.IngredientMatch:
     properties:
       matched:
@@ -218,6 +294,24 @@ definitions:
         type: integer
       wasteThisMonth:
         type: integer
+    type: object
+  api.ReceiptItem:
+    properties:
+      amount:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      unit:
+        type: string
+    type: object
+  api.ReceiptScanResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/api.ReceiptItem'
+        type: array
     type: object
   api.RecipeSuggestionResponse:
     properties:
@@ -2426,6 +2520,37 @@ paths:
       summary: Return a list of archived products
       tags:
       - product
+  /api/v1/products/bulk:
+    post:
+      consumes:
+      - application/json
+      description: Creates products from a list of drafts with per-item results. Partial
+        success is allowed; each item reports created or failed with a reason.
+      parameters:
+      - description: Product drafts
+        in: body
+        name: items
+        required: true
+        schema:
+          $ref: '#/definitions/api.BulkCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.BulkCreateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Create multiple products
+      tags:
+      - product
   /api/v1/products/bulkConsume:
     post:
       consumes:
@@ -2663,6 +2788,53 @@ paths:
       summary: Export products as JSON
       tags:
       - export
+  /api/v1/products/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 'Creates products from an uploaded CSV file. Insert-only: a barcode
+        that already exists among the household''s active products is reported as
+        a row error and never modified. Unknown storage locations are created. Rows
+        without a name are completed from the Open Food Facts cache, and at most a
+        bounded number of them may additionally trigger a live Open Food Facts lookup.'
+      parameters:
+      - description: CSV file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ImportProductsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ImportProductsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ImportProductsResponse'
+      summary: Import products from CSV
+      tags:
+      - import
+  /api/v1/products/import/template.csv:
+    get:
+      description: Returns a CSV file with the import column header and one example
+        row
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: CSV file
+          schema:
+            type: file
+      summary: Download the CSV import template
+      tags:
+      - import
   /api/v1/products/openfoodfacts/{barcode}:
     get:
       description: Proxies OpenFoodFacts API with optional database caching
@@ -2745,6 +2917,49 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Scan expiry date from product photo
+      tags:
+      - product
+  /api/v1/products/scan-receipt:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a receipt photo; returns extracted product drafts (name,
+        amount, unit, price). An empty items list means the scan succeeded but nothing
+        was recognized.
+      parameters:
+      - description: Receipt photo
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ReceiptScanResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Scan receipt photo for line items
       tags:
       - product
   /api/v1/products/search:
@@ -3465,6 +3680,23 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Product view page
+      tags:
+      - web
+  /web/products/scan-receipt:
+    get:
+      description: Renders the receipt photo scanning page
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Receipt scan page
       tags:
       - web
   /web/recipes:

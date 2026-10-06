@@ -299,6 +299,24 @@ tasks:
         print(f"\nDone. {inserted} inserted. Household totals: {active} active, {archived_count} archived.")
         PYEOF
 
+  uicapture:
+    desc: "Capture UI screenshots/video. Usage: task uicapture -- --preset dashboard [--no-video] [--gif] [--mp4]"
+    cmds:
+      - bash scripts/uicapture.sh {{.CLI_ARGS}}
+
+  uicapture-publish:
+    desc: Regenerate screenshots/ and the README gallery (requires podman or docker)
+    preconditions:
+      - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
+        msg: "No container runtime found. Please install podman or docker."
+    cmds:
+      - bash scripts/uicapture.sh --publish
+
+  uicapture-all:
+    desc: "Capture every page as stills + video. Usage: task uicapture-all -- [--viewport mobile] [--gif]"
+    cmds:
+      - bash scripts/uicapture.sh --preset all {{.CLI_ARGS}}
+
   seed-reset:
     desc: "Remove all products for a user's household. Usage: task seed-reset -- <username>"
     dir: src

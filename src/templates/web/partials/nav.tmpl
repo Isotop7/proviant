@@ -1,7 +1,8 @@
 {{ define "nav" }}
 <nav class="pv-sidebar">
 	<a href="/web" class="brand" aria-label="Go to home">
-		<img src="/assets/icons/header_transparent.png" alt="">
+		<img src="/assets/icons/proviant_logo_192.png" alt="" class="brand-logo">
+		<span class="brand-name">proviant</span>
 	</a>
 	<div class="nav-items">
 		<a href="/web" class="pv-nav-item {{ if eq .Title "Home" }}active{{ end }}"
@@ -47,11 +48,15 @@
 		</a>
 	</div>
 	<div class="nav-footer-section">
+		<button class="pv-nav-item w-100" id="btnThemeToggle"
+			aria-label="Toggle color theme" title="Toggle color theme">
+			<i class="bi bi-circle-half" id="themeToggleIcon" aria-hidden="true"></i> Theme
+		</button>
 		<div class="position-relative">
 			<button class="pv-nav-item w-100"
 				data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
 				<i class="bi bi-bell" aria-hidden="true"></i> Notifications
-				<span class="badge bg-danger rounded-pill position-absolute d-none"
+				<span class="nav-badge position-absolute d-none"
 					id="notification-badge">0</span>
 			</button>
 			<div class="dropdown-menu p-0" id="notification-dropdown">

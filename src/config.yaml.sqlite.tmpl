@@ -2,6 +2,9 @@
 server:
   baseURL: "https://proviant.local.de"
   port: 5114
+  # Bind address. Empty means every interface (needed in a container). Set to
+  # 127.0.0.1 to serve loopback only.
+  host: ""
   maxUploadSizeMB: 5
   debug: false
   authentication:
@@ -85,6 +88,13 @@ ocr:
   provider: "tesseract"
   languages: "deu+eng"
   timeout: 10
+  receipt:
+    enabled: false
+    provider: "openai"
+    apiKey: ""
+    endpoint: ""
+    model: ""
+    timeout: 120
 
 expiry:
   critical_threshold_days: 3

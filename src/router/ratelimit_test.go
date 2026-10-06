@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"codeberg.org/isotop7/proviant/util"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
@@ -113,6 +115,47 @@ func TestRecipesRateLimitMiddleware_AbortsOnRejection(t *testing.T) {
 	}
 }
 
+// The import limiter must stop a second upload from starting while the first is
+// still in flight: importBurstCap is 1, so the repeat has to abort before the
+// handler runs.
+func TestImportRateLimitMiddleware_AbortsOnRejection(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	importLimiters = &sync.Map{}
+	// Pin a rate that never refills during the test so the assertion is about
+	// importBurstCap alone, not about how fast the limiter would refill.
+	originalRate := importRate
+	importRate = rate.Every(time.Hour)
+	t.Cleanup(func() { importRate = originalRate })
+
+	handlerHits := 0
+	engine := gin.New()
+	engine.Use(func(c *gin.Context) {
+		c.Set(util.ContextKeyUserID, uint(4242))
+		c.Next()
+	})
+	engine.POST("/api/v1/products/import", importRateLimitMiddleware, func(c *gin.Context) {
+		handlerHits++
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	limited := 0
+	for range importBurstCap + 2 {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodPost, "/api/v1/products/import", nil)
+		engine.ServeHTTP(recorder, request)
+		if recorder.Code == http.StatusTooManyRequests {
+			limited++
+		}
+	}
+
+	if limited != 2 {
+		t.Errorf("got %d rate-limited responses, want 2", limited)
+	}
+	if handlerHits != importBurstCap {
+		t.Errorf("handler ran %d times, want %d (a rejected request must abort the chain)", handlerHits, importBurstCap)
+	}
+}
+
 func TestGetLimiterBurst_ReusesStoredLimiter(t *testing.T) {
 	store := &sync.Map{}
 
@@ -125,5 +168,56 @@ func TestGetLimiterBurst_ReusesStoredLimiter(t *testing.T) {
 	other := getLimiterBurst(store, "other", rate.Every(time.Second), 1)
 	if other == first {
 		t.Error("getLimiterBurst() shared a limiter across keys")
+	}
+}
+
+// Concurrent first requests for the same key must not create duplicate
+// limiters: LoadOrStore guarantees exactly one winner, and the losers must
+// reuse it. Run with -race: every goroutine also touches lastSeen, which
+// cleanupLimiters reads concurrently in production.
+func TestGetLimiterBurst_ConcurrentCreationYieldsSingleLimiter(t *testing.T) {
+	store := &sync.Map{}
+
+	const goroutines = 32
+	returned := make(chan *rate.Limiter, goroutines)
+	var wg sync.WaitGroup
+	for range goroutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			returned <- getLimiterBurst(store, "client", rate.Every(time.Second), 1)
+		}()
+	}
+	wg.Wait()
+	close(returned)
+
+	first := <-returned
+	for got := range returned {
+		if got != first {
+			t.Error("getLimiterBurst() created duplicate limiters for the same new key")
+		}
+	}
+	entries := 0
+	store.Range(func(_, _ any) bool {
+		entries++
+		return true
+	})
+	if entries != 1 {
+		t.Errorf("store holds %d limiters, want 1", entries)
+	}
+}
+
+func TestCleanupLimiterStore_DropsOnlyIdleLimiters(t *testing.T) {
+	store := &sync.Map{}
+	store.Store("active", &clientLimiter{limiter: rate.NewLimiter(1, 1), lastSeen: time.Now()})
+	store.Store("idle", &clientLimiter{limiter: rate.NewLimiter(1, 1), lastSeen: time.Now().Add(-11 * time.Minute)})
+
+	cleanupLimiterStore(store, time.Now())
+
+	if _, ok := store.Load("active"); !ok {
+		t.Error("cleanupLimiterStore() dropped a limiter that was seen recently")
+	}
+	if _, ok := store.Load("idle"); ok {
+		t.Error("cleanupLimiterStore() kept a limiter idle for over 10 minutes")
 	}
 }

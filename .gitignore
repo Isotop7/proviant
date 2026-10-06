@@ -46,7 +46,9 @@ src/data
 .claude/
 
 # Kilo
-.kilo/
+.kilo/*
+!.kilo/skills
+skills-lock.json
 
 # Issue sync
 issues/

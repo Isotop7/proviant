@@ -79,7 +79,7 @@ function renderRecipes(recipes) {
                         ${recipe.imageUrl ? `
                             <img src="${escapeHtml(recipe.imageUrl)}" class="card-img-top" alt="${escapeHtml(recipe.title)}" loading="lazy" style="height: 200px; object-fit: cover;">
                         ` : `
-                            <div class="bg-light text-center py-4">
+                            <div class="bg-body-tertiary text-center py-4">
                                 <i class="bi bi-journal-richtext fs-1 text-secondary-custom"></i>
                             </div>
                         `}
