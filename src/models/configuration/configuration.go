@@ -483,7 +483,7 @@ func (ec *ProviantConfiguration) ValidateRecipeAPIConfiguration() error {
 // rejection because a LAN-only vision endpoint is a legitimate deployment.
 // An empty Endpoint resolves to the https:// OpenAI default, so it is never
 // insecure.
-func (rc ReceiptOCRConfiguration) UsesInsecureTransport() bool {
+func (rc *ReceiptOCRConfiguration) UsesInsecureTransport() bool {
 	parsed, parseErr := url.Parse(strings.TrimSpace(rc.Endpoint))
 	if parseErr != nil {
 		return false

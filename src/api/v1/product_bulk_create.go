@@ -183,6 +183,8 @@ func BulkCreateProducts(ctx *gin.Context, appCtx *AppContext) {
 // waitBulkSideEffectsIdle blocks until every spawned side-effect worker has
 // finished, returning false when the timeout elapses first. Tests call it so
 // DB cleanup cannot close the database under a still-running worker.
+//
+//nolint:unused // called from product_bulk_create_test.go; linter runs with tests:false
 func waitBulkSideEffectsIdle(timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for bulkSideEffectBatches.Load() > 0 {
