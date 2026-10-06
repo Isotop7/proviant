@@ -68,7 +68,7 @@ export default async function flow({ page, shot, goto, settle }) {
   // the suggestion endpoint answers with a real quantity rather than falling
   // back to a direct add.
   await goto('/web/products/1/view');
-  await settle('.text-bg-tertiary h2');
+  await settle('h1.page-header-title');
   await page.click('.btn-add-to-shopping-list');
   await settle('#restockSuggestionModal.show', 'visible');
   await shot('product-restock-suggestion');

@@ -6,11 +6,11 @@
 
 <div class="col">
     <div class="card product-card h-100" id="card-{{ .Model.ID }}">
-        <div class="status-bar" style="background: var(--status-{{ $cls }}-bar);"></div>
+        <div class="status-bar status-bar-{{ $cls }}"></div>
         <div class="d-flex align-items-center gap-2 px-3 pt-2 pb-1">
             <input class="form-check-input flex-shrink-0 row-checkbox" type="checkbox" id="checkbox-{{ .Model.ID }}" value="{{ .Model.ID }}"
                 aria-label="Select {{ .ProductName }}">
-            <span class="badge bg-secondary ms-auto">#{{- .Model.ID -}}</span>
+            <span class="id-chip ms-auto">#{{- .Model.ID -}}</span>
         </div>
         <div class="product-img">
             {{ if .ImageURL }}
@@ -53,7 +53,7 @@
             </div>
             {{ $urgency := expiryUrgencyText $eff }}
             {{ if $urgency }}
-            <div class="product-meta mt-1 fw-semibold" style="color: var(--status-{{ $cls }});">
+            <div class="product-meta mt-1 fw-semibold text-status-{{ $cls }}">
                 <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
                 <span class="urgency-text d-none d-sm-inline">{{ $urgency }}</span>
                 <span class="urgency-days d-inline d-sm-none">{{ expiryDays $eff }}</span>
@@ -74,7 +74,7 @@
                 <span class="text-secondary-custom small">
                     <i class="bi bi-geo-alt me-2" aria-hidden="true"></i>Location
                 </span>
-                <span class="badge bg-light text-dark border">{{ .StorageLocation.Icon }} {{ .StorageLocation.Name }}</span>
+                <span class="badge-status badge-nodate">{{ .StorageLocation.Icon }} {{ .StorageLocation.Name }}</span>
             </li>
             {{ end }}
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">

@@ -3,14 +3,14 @@
 
   <!-- ── Mobile: topbar (hidden on desktop) ── -->
   <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-white d-md-none">
-    <a href="/web/products" style="color:var(--fg-2);font-size:20px;">
+    <a href="/web/products" class="text-fg-2 fs-4">
       <i class="bi bi-arrow-left"></i>
     </a>
     <div class="flex-grow-1">
-      <div style="font-size:15px;font-weight:700;color:var(--fg);letter-spacing:-0.01em;">Edit product</div>
-      <div style="font-size:10px;color:var(--fg-3);">#{{ .Product.ID }} · {{ .Product.ProductName }}</div>
+      <div class="mobile-topbar-title">Edit product</div>
+      <div class="mobile-topbar-sub">#{{ .Product.ID }} · {{ .Product.ProductName }}</div>
     </div>
-    <span class="badge-status badge-{{ expiryStatusClass .Product.ExpireAt }}" style="font-size:10px;padding:2px 9px;">
+    <span class="badge-status badge-status-sm badge-{{ expiryStatusClass .Product.ExpireAt }}">
       <i class="bi bi-{{ expiryStatusIcon .Product.ExpireAt }}"></i> {{ expiryStatusLabel .Product.ExpireAt }}
     </span>
   </div>
@@ -23,11 +23,11 @@
       {{ end }}
       <i class="bi bi-image pv-mobile-thumb-icon"></i>
     </div>
-    <div class="flex-grow-1" style="min-width:0;">
-      <div style="font-size:13px;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ .Product.ProductName }}</div>
-      <div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-3);margin-top:2px;">{{ .Product.Barcode }}</div>
+    <div class="flex-grow-1 min-w-0">
+      <div class="mobile-product-name">{{ .Product.ProductName }}</div>
+      <div class="font-mono mobile-product-barcode">{{ .Product.Barcode }}</div>
     </div>
-    <button type="button" id="btnMobilePhotoFocus" class="btn" style="background:var(--accent-subtle);border:1px solid oklch(0.78 0.08 162);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--accent);font-weight:600;">
+    <button type="button" id="btnMobilePhotoFocus" class="btn btn-sm btn-proviant-secondary">
       <i class="bi bi-image"></i> Photo
     </button>
   </div>
@@ -42,7 +42,7 @@
     <div>
       <div class="pv-page-title-row">
         <h1 class="pv-page-title">Edit product</h1>
-        <span class="pv-id-chip">#<span id="labelProductID">{{ .Product.ID }}</span></span>
+        <span class="id-chip">#<span id="labelProductID">{{ .Product.ID }}</span></span>
       </div>
       <div class="pv-page-sub">Changes are saved after clicking Update product</div>
     </div>
@@ -63,25 +63,25 @@
       <div class="pv-form-left">
 
         <!-- Identity card -->
-        <div class="pv-card">
-          <div class="pv-card-header">
-            <div class="pv-card-header-icon"><i class="bi bi-tag"></i></div>
-            <div class="pv-card-header-title">Identity</div>
+        <div class="card mb-3">
+          <div class="card-header d-flex align-items-center gap-2">
+            <div class="icon-chip"><i class="bi bi-tag"></i></div>
+            <span class="fw-semibold">Identity</span>
           </div>
-          <div class="pv-card-body">
-            <div class="pv-field">
-              <label class="pv-field-label">Product name <span class="req">*</span></label>
-              <input type="text" class="pv-field-input" id="inputProductName" value="{{ .Product.ProductName }}" required>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Product name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="inputProductName" value="{{ .Product.ProductName }}" required>
             </div>
-            <div class="pv-field">
-              <label class="pv-field-label">Barcode</label>
-              <div style="position:relative;">
-                <i class="bi bi-upc-scan" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--fg-3);font-size:15px;pointer-events:none;"></i>
-                <input type="text" class="pv-field-input mono" value="{{ .Product.Barcode }}" style="padding-left:34px;" readonly>
+            <div class="mb-3">
+              <label class="form-label">Barcode</label>
+              <div class="position-relative">
+                <i class="bi bi-upc-scan position-absolute text-fg-3 input-icon-left"></i>
+                <input type="text" class="form-control font-mono input-with-icon" value="{{ .Product.Barcode }}" readonly>
               </div>
             </div>
-            <div class="pv-field">
-              <label class="pv-field-label">
+            <div class="mb-3">
+              <label class="form-label">
                 <i class="bi bi-lock"></i> Private product
               </label>
               <div class="form-check form-switch">
@@ -91,25 +91,25 @@
                   Only visible to you
                 </label>
               </div>
-              <div class="pv-field-hint">Private products are hidden from other household members.</div>
+              <div class="form-text">Private products are hidden from other household members.</div>
             </div>
           </div>
         </div>
 
         <!-- Categories card -->
-        <div class="pv-card">
-          <div class="pv-card-header">
-            <div class="pv-card-header-icon"><i class="bi bi-grid"></i></div>
-            <div class="pv-card-header-title">Categories</div>
+        <div class="card mb-3">
+          <div class="card-header d-flex align-items-center gap-2">
+            <div class="icon-chip"><i class="bi bi-grid"></i></div>
+            <span class="fw-semibold">Categories</span>
           </div>
-          <div class="pv-card-body">
-            <div class="pv-field">
-              <label class="pv-field-label">Product categories</label>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Product categories</label>
               <input type="hidden" id="categoriesHidden" value="{{ .Product.Categories }}">
               <div class="pv-tag-wrap" data-target="categoriesHidden" data-color="accent" data-readonly="true"></div>
             </div>
-            <div class="pv-field">
-              <label class="pv-field-label">Countries sold in</label>
+            <div class="mb-3">
+              <label class="form-label">Countries sold in</label>
               <input type="hidden" id="countriesHidden" value="{{ .Product.Countries }}">
               <div class="pv-tag-wrap" data-target="countriesHidden" data-color="neutral" data-readonly="true"></div>
             </div>
@@ -117,18 +117,18 @@
         </div>
 
         <!-- Expiry & inventory card -->
-        <div class="pv-card">
-          <div class="pv-card-header">
-            <div class="pv-card-header-icon"><i class="bi bi-calendar-event"></i></div>
-            <div class="pv-card-header-title">Expiry &amp; inventory</div>
+        <div class="card mb-3">
+          <div class="card-header d-flex align-items-center gap-2">
+            <div class="icon-chip"><i class="bi bi-calendar-event"></i></div>
+            <span class="fw-semibold">Expiry &amp; inventory</span>
           </div>
-          <div class="pv-card-body">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-              <div class="pv-field">
-                <label class="pv-field-label">Expiry date <span class="req">*</span></label>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Expiry date <span class="text-danger">*</span></label>
                 <div class="d-flex align-items-center gap-2">
-                  <input type="date" class="pv-field-input mono" id="inputExpireAt"
-                    value="{{ .Product.ExpireAt | inputDate }}" required style="flex:1;">
+                  <input type="date" class="form-control font-mono flex-grow-1" id="inputExpireAt"
+                    value="{{ .Product.ExpireAt | inputDate }}" required>
                   {{ if .Product.ExpireAt.IsZero }}
                   <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTodayExpiry" title="Set to today">
                     <i class="bi bi-calendar-check"></i>
@@ -139,18 +139,18 @@
                   </button>
                 </div>
               </div>
-              <div class="pv-field">
-                <label class="pv-field-label">Amount</label>
-                <div class="pv-stepper">
+              <div class="col-md-6">
+                <label class="form-label">Amount</label>
+                <div class="qty-stepper">
                   <button type="button" data-amount-step="-1">-</button>
                   <input type="number" id="inputAmount" value="{{ .Product.Amount }}" min="0">
                   <button type="button" data-amount-step="1">+</button>
                 </div>
               </div>
             </div>
-            <div class="pv-field">
-              <label class="pv-field-label">Storage location</label>
-              <select class="pv-field-input" id="selectStorageLocation">
+            <div class="mb-3 mt-3">
+              <label class="form-label">Storage location</label>
+              <select class="form-select" id="selectStorageLocation">
                 <option value="">— None —</option>
                 {{ range .Locations }}
                 <option value="{{ .ID }}" {{ if and $.Product.StorageLocationID (eq (derefUint $.Product.StorageLocationID) .ID) }}selected{{ end }}>
@@ -159,39 +159,39 @@
                 {{ end }}
               </select>
             </div>
-            <div class="pv-field">
-              <label class="pv-field-label">Notification lead time</label>
-              <input type="number" class="pv-field-input" id="inputNotificationLeadDays"
+            <div class="mb-3">
+              <label class="form-label">Notification lead time</label>
+              <input type="number" class="form-control" id="inputNotificationLeadDays"
                 value="{{ if .Product.NotificationLeadDays }}{{ .Product.NotificationLeadDays }}{{ end }}"
                 min="0" placeholder="Default: {{ .GlobalNotificationThresholdDays }}">
-              <div class="pv-field-hint">Days before expiry to notify. Leave blank to use household default ({{ .GlobalNotificationThresholdDays }} days).</div>
+              <div class="form-text">Days before expiry to notify. Leave blank to use household default ({{ .GlobalNotificationThresholdDays }} days).</div>
             </div>
-            <div class="pv-field">
-              <label class="pv-field-label">Min. stock amount</label>
-              <input type="number" class="pv-field-input" id="inputMinStockAmount"
+            <div class="mb-3">
+              <label class="form-label">Min. stock amount</label>
+              <input type="number" class="form-control" id="inputMinStockAmount"
                 value="{{ .Product.MinStockAmount }}" min="0">
-              <div class="pv-field-hint">Auto-add to shopping list when amount drops below this threshold.</div>
+              <div class="form-text">Auto-add to shopping list when amount drops below this threshold.</div>
             </div>
-            <div class="pv-field">
-              <label class="pv-field-label">Purchase price (EUR, optional)</label>
-              <input type="number" class="pv-field-input" id="inputPriceOverride"
+            <div class="mb-3">
+              <label class="form-label">Purchase price (EUR, optional)</label>
+              <input type="number" class="form-control" id="inputPriceOverride"
                 value="{{ if .Product.PriceOverride }}{{ .Product.PriceOverride }}{{ end }}"
                 min="0" step="0.01" placeholder="e.g. 1.99">
-              <div class="pv-field-hint">Used to compute waste savings. Leave blank to use category average.</div>
+              <div class="form-text">Used to compute waste savings. Leave blank to use category average.</div>
             </div>
-            <div class="pv-field">
-              <label class="pv-field-label">Shelf life after opening</label>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                <div>
-                  <input type="date" class="pv-field-input mono" id="inputOpenedAt"
+            <div class="mb-3">
+              <label class="form-label">Shelf life after opening</label>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <input type="date" class="form-control font-mono" id="inputOpenedAt"
                     value="{{ if .Product.OpenedAt }}{{ .Product.OpenedAt | inputDate }}{{ end }}">
-                  <div class="pv-field-hint">When the product was opened. Used to compute a secondary expiry.</div>
+                  <div class="form-text">When the product was opened. Used to compute a secondary expiry.</div>
                 </div>
-                <div>
-                  <input type="number" class="pv-field-input" id="inputDaysAfterOpening"
+                <div class="col-md-6">
+                  <input type="number" class="form-control" id="inputDaysAfterOpening"
                     value="{{ if .Product.DaysAfterOpening }}{{ .Product.DaysAfterOpening }}{{ end }}"
                     min="0" max="365" placeholder="e.g. 14">
-                  <div class="pv-field-hint">Days the product is good after opening (e.g. 5 for cream cheese, 42 for jam).</div>
+                  <div class="form-text">Days the product is good after opening (e.g. 5 for cream cheese, 42 for jam).</div>
                 </div>
               </div>
               {{ if .Product.OpenedAt }}
@@ -206,23 +206,23 @@
         </div>
 
         <!-- Desktop form actions (hidden on mobile) -->
-        <div class="pv-form-actions d-none d-md-flex">
-          <button class="pv-btn-primary" type="submit">
+        <div class="d-none d-md-flex gap-2 mb-3">
+          <button class="btn btn-proviant-primary" type="submit">
             <i class="bi bi-check2"></i> Update product
           </button>
-          <a href="/web/products" class="pv-btn-secondary">Cancel</a>
-          <div class="spacer"></div>
+          <a href="/web/products" class="btn btn-proviant-secondary">Cancel</a>
+          <div class="flex-grow-1"></div>
           {{ if $.IsArchived }}
-          <button class="pv-btn-restore" type="button" id="btnRestoreProduct">
+          <button class="btn btn-proviant-secondary" type="button" id="btnRestoreProduct">
             <i class="bi bi-arrow-counterclockwise"></i> Restore
           </button>
           {{ end }}
           {{ if not $.IsArchived }}
-          <button class="pv-btn-secondary" type="button" id="btnConsumeProduct">
+          <button class="btn btn-proviant-secondary" type="button" id="btnConsumeProduct">
             <i class="bi bi-check-circle"></i> Consumed
           </button>
           {{ end }}
-          <button class="pv-btn-danger-ghost" type="button"
+          <button class="btn btn-proviant-danger" type="button"
             data-bs-toggle="modal" data-bs-target="#deleteModal">
             <i class="bi bi-trash3"></i> Wasted
           </button>
@@ -260,41 +260,40 @@
         </div>
 
         <!-- Image URL card -->
-        <div class="pv-card">
-          <div class="pv-card-header">
-            <div class="pv-card-header-icon"><i class="bi bi-image"></i></div>
-            <div class="pv-card-header-title">Image URL</div>
+        <div class="card mb-3">
+          <div class="card-header d-flex align-items-center gap-2">
+            <div class="icon-chip"><i class="bi bi-image"></i></div>
+            <span class="fw-semibold">Image URL</span>
           </div>
-          <div class="pv-card-body" style="padding:14px 16px;">
-            <div class="pv-field" style="margin-bottom:0;">
-              <input type="url" id="inputImageURL" class="pv-field-input"
-                value="{{ .Product.ImageURL }}" placeholder="https://…"
-                style="font-size:12px;font-family:var(--font-mono);">
-              <div class="pv-field-hint">Paste a URL or leave blank to remove the image</div>
+          <div class="card-body py-3">
+            <div class="mb-0">
+              <input type="url" id="inputImageURL" class="form-control font-mono text-sm"
+                value="{{ .Product.ImageURL }}" placeholder="https://…">
+              <div class="form-text">Paste a URL or leave blank to remove the image</div>
             </div>
           </div>
         </div>
 
         <!-- Quick info card -->
-        <div class="pv-card">
-          <div class="pv-card-header">
-            <div class="pv-card-header-icon"><i class="bi bi-info-circle"></i></div>
-            <div class="pv-card-header-title">Product info</div>
+        <div class="card mb-3">
+          <div class="card-header d-flex align-items-center gap-2">
+            <div class="icon-chip"><i class="bi bi-info-circle"></i></div>
+            <span class="fw-semibold">Product info</span>
           </div>
-          <div class="pv-card-body" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
-              <span style="color:var(--fg-3);">Status</span>
-              <span class="badge-status badge-{{ expiryStatusClass .Product.ExpireAt }}" style="font-size:11px;padding:2px 9px;">
+          <div class="card-body product-info-body">
+            <div class="product-info-row">
+              <span class="text-fg-3">Status</span>
+              <span class="badge-status badge-{{ expiryStatusClass .Product.ExpireAt }}">
                 {{ expiryStatusLabel .Product.ExpireAt }}
               </span>
             </div>
-            <div style="border-top:1px solid var(--border-subtle);padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
-              <span style="color:var(--fg-3);">Amount</span>
-              <span style="font-weight:600;color:var(--fg);font-family:var(--font-mono);">{{ .Product.Amount }}</span>
+            <div class="product-info-row product-info-row-sep">
+              <span class="text-fg-3">Amount</span>
+              <span class="font-mono fw-semibold">{{ .Product.Amount }}</span>
             </div>
-            <div style="border-top:1px solid var(--border-subtle);padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
-              <span style="color:var(--fg-3);">Expiry Date</span>
-              <span style="font-weight:600;font-family:var(--font-mono);">{{ .Product.ExpireAt | humanDate }}</span>
+            <div class="product-info-row product-info-row-sep">
+              <span class="text-fg-3">Expiry Date</span>
+              <span class="font-mono fw-semibold">{{ .Product.ExpireAt | humanDate }}</span>
             </div>
           </div>
         </div>
@@ -305,24 +304,23 @@
   </form>
 
   <!-- ── Mobile: sticky footer (hidden on desktop) ── -->
-  <div class="d-flex gap-2 d-md-none" style="position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);padding:10px 14px calc(10px + env(safe-area-inset-bottom, 0px));box-shadow:0 -4px 16px oklch(0.18 0.022 70 / 0.08);z-index:100;">
-    <button type="submit" form="editProductForm" class="pv-btn-primary flex-grow-1">
+  <div class="d-flex gap-2 d-md-none mobile-sticky-footer">
+    <button type="submit" form="editProductForm" class="btn btn-proviant-primary flex-grow-1">
       <i class="bi bi-check2"></i> Update product
     </button>
-    <a href="/web/products" class="pv-btn-secondary">Cancel</a>
+    <a href="/web/products" class="btn btn-proviant-secondary">Cancel</a>
     {{ if $.IsArchived }}
-    <button type="button" class="pv-btn-restore" id="btnRestoreProductMobile">
+    <button type="button" class="btn btn-proviant-secondary" id="btnRestoreProductMobile">
       <i class="bi bi-arrow-counterclockwise"></i> Restore
     </button>
     {{ end }}
     {{ if not $.IsArchived }}
-    <button type="button" class="pv-btn-secondary" id="btnConsumeProductMobile">
+    <button type="button" class="btn btn-proviant-secondary" id="btnConsumeProductMobile">
       <i class="bi bi-check-circle"></i> Consumed
     </button>
     {{ end }}
-    <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#deleteModal"
-      style="background:white;border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--status-expired);">
-      <i class="bi bi-trash3" style="font-size:16px;"></i>
+    <button type="button" class="btn btn-proviant-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+      <i class="bi bi-trash3"></i>
     </button>
   </div>
 
@@ -330,24 +328,25 @@
 
 <!-- ── Delete confirmation modal ── -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
-    <div class="modal-content" style="border-radius:14px;">
-      <div class="modal-header d-flex gap-3 align-items-start" style="border-bottom:1px solid var(--border-subtle);padding:18px 20px 14px;">
-        <div style="width:38px;height:38px;border-radius:9px;background:oklch(0.95 0.05 25);display:flex;align-items:center;justify-content:center;font-size:18px;color:oklch(0.45 0.20 25);flex-shrink:0;">
+  <div class="modal-dialog modal-dialog-centered modal-narrow">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-icon modal-icon-danger">
           <i class="bi bi-trash3-fill"></i>
         </div>
-        <div class="flex-grow-1">
-          <h5 class="modal-title" style="font-size:15px;font-weight:700;">Mark {{ .Product.ProductName }} as wasted?</h5>
+        <div class="modal-header-body">
+          <h5 class="modal-title mb-0">Mark {{ .Product.ProductName }} as wasted?</h5>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x"></i>
+        </button>
       </div>
-      <div class="modal-body" style="font-size:13px;color:var(--fg-2);line-height:1.6;padding:16px 20px;">
-          This product will be permanently marked as wasted. Consider marking as consumed instead if you want to keep the record.
+      <div class="modal-body">
+        <p class="text-secondary-custom small mb-0">This product will be permanently marked as wasted. Consider marking as consumed instead if you want to keep the record.</p>
       </div>
-      <div class="modal-footer" style="border-top:1px solid var(--border-subtle);padding:12px 20px;">
-        <button class="pv-btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button id="btnConfirmDelete" class="pv-btn-danger-ghost" type="button"
-          style="background:oklch(0.55 0.20 25);color:white;border:none;border-radius:8px;padding:10px 18px;">
+      <div class="modal-footer">
+        <button class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="btnConfirmDelete" class="btn btn-proviant-danger" type="button">
           <i class="bi bi-trash3"></i> Wasted
         </button>
       </div>
@@ -406,7 +405,7 @@
       <div class="modal-body">
         <div id="ocrPreviewImage" class="mb-3 text-center"></div>
         <div class="mb-3" id="ocrDetectedDate"></div>
-        <div class="progress mb-2" style="height:8px;">
+        <div class="progress progress-sm mb-2">
           <div id="ocrConfidenceBar" class="progress-bar" role="progressbar" style="width:0%"></div>
         </div>
         <small class="text-secondary-custom" id="ocrConfidenceLabel">Confidence: 0%</small>

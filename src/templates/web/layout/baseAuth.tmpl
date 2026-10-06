@@ -28,16 +28,22 @@
          aria-labelledby="proviantFeedbackModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content">
-                <div class="modal-header border-0 pb-0">
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header">
+                    <div class="modal-icon" id="proviantFeedbackIconBox" aria-hidden="true">
+                        <i id="proviantFeedbackIcon" class="bi"></i>
+                    </div>
+                    <div class="modal-header-body">
+                        <h5 id="proviantFeedbackTitle" class="modal-title mb-0"></h5>
+                    </div>
+                    <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="bi bi-x"></i>
+                    </button>
                 </div>
-                <div class="modal-body text-center px-4 pb-2">
-                    <i id="proviantFeedbackIcon" class="bi fs-1 mb-3 d-block" aria-hidden="true"></i>
-                    <h5 id="proviantFeedbackTitle" class="mb-2"></h5>
-                    <p id="proviantFeedbackMessage" class="text-secondary-custom mb-0 small"></p>
+                <div class="modal-body">
+                    <p id="proviantFeedbackMessage" class="text-secondary-custom small mb-0"></p>
                 </div>
-                <div class="modal-footer border-0 justify-content-center pt-2 pb-4">
-                    <button type="button" class="btn btn-proviant-primary px-4"
+                <div class="modal-footer justify-content-end">
+                    <button type="button" class="btn btn-proviant-primary"
                             id="proviantFeedbackBtn" data-bs-dismiss="modal">OK</button>
                 </div>
             </div>

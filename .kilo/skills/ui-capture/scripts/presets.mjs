@@ -27,7 +27,7 @@ export const PRESETS = {
   'settings': { path: '/web/user/settings', login: true, ready: 'h1:has-text("User Settings")' },
   'user': { path: '/web/user', login: true, ready: 'h3:has-text("User")' },
   'onboarding': { path: '/web/onboarding', login: true, ready: '#step1' },
-  'product-detail': { path: '/web/products/1/view', login: true, ready: '.text-bg-tertiary h2' },
+  'product-detail': { path: '/web/products/1/view', login: true, ready: 'h1.page-header-title' },
   'product-edit': { path: '/web/products/1/edit', login: true, ready: '#editProductForm' },
 
   // Product filter tabs. The seed leaves product 7 past its expiry and writes
@@ -50,7 +50,7 @@ export const PRESETS = {
   'unsubscribe': { path: '/web/unsubscribe?token=demo-unsubscribe-token', login: false, ready: 'h1:has-text("Unsubscribed")' },
 
   // Catch-all handler (router.go:474) renders error.tmpl for any unknown /web path.
-  'not-found': { path: '/web/this-page-does-not-exist', login: true, ready: '.display-5:has-text("Something went wrong")' },
+  'not-found': { path: '/web/this-page-does-not-exist', login: true, ready: '.empty-title:has-text("Something went wrong")' },
 };
 
 // Order the `all` walk visits. Deliberately not Object.keys(PRESETS): this is a

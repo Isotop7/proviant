@@ -1,6 +1,6 @@
 {{ define "_settings_household" }}
 <div class="card card-section mb-4">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
         <div class="d-flex align-items-center gap-2">
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-geo-alt"></i>
@@ -73,7 +73,7 @@
 </div>
 
 <div class="card card-section mb-4" id="household">
-    <div class="card-header bg-white d-flex align-items-center gap-2 py-3 px-4">
+    <div class="card-header d-flex align-items-center gap-2 py-3 px-4">
         <div class="icon-chip" aria-hidden="true">
             <i class="bi bi-house"></i>
         </div>
@@ -82,10 +82,10 @@
     <div class="card-body px-4 py-4">
 
         {{/* Current household info */}}
-        <div class="d-flex align-items-center gap-2 p-3 rounded bg-body-tertiary mb-4">
-            <span class="badge bg-secondary">ID: {{ .Household.ID }}</span>
+        <div class="d-flex align-items-center gap-2 p-3 rounded bg-subtle mb-4">
+            <span class="badge-status badge-nodate">ID: {{ .Household.ID }}</span>
             <strong>{{ .Household.Name }}</strong>
-            {{ if .IsAdmin }}<span class="badge bg-primary"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
+            {{ if .IsAdmin }}<span class="badge-status badge-fresh"><i class="bi bi-shield-check me-1"></i>Admin</span>{{ end }}
         </div>
 
         {{/* Rename household — admin only */}}
@@ -110,11 +110,11 @@
                 <label class="form-label fw-medium small">Goal type</label>
                 <div class="btn-group btn-group-sm" role="group" id="monthlyGoalTypeGroup" aria-label="Monthly goal type">
                     <input type="radio" class="btn-check" name="monthlyGoalType" id="monthlyGoalTypeDisabled" value="" {{ if not .Household.MonthlyWasteGoalType }}checked{{ end }}>
-                    <label class="btn btn-outline-secondary" for="monthlyGoalTypeDisabled">Disabled</label>
+                    <label class="btn btn-proviant-secondary btn-sm" for="monthlyGoalTypeDisabled">Disabled</label>
                     <input type="radio" class="btn-check" name="monthlyGoalType" id="monthlyGoalTypeCount" value="count" {{ if eq .Household.MonthlyWasteGoalType "count" }}checked{{ end }}>
-                    <label class="btn btn-outline-secondary" for="monthlyGoalTypeCount">Max count</label>
+                    <label class="btn btn-proviant-secondary btn-sm" for="monthlyGoalTypeCount">Max count</label>
                     <input type="radio" class="btn-check" name="monthlyGoalType" id="monthlyGoalTypePercent" value="percent" {{ if eq .Household.MonthlyWasteGoalType "percent" }}checked{{ end }}>
-                    <label class="btn btn-outline-secondary" for="monthlyGoalTypePercent">Max percent</label>
+                    <label class="btn btn-proviant-secondary btn-sm" for="monthlyGoalTypePercent">Max percent</label>
                 </div>
             </div>
             <div class="mb-3" id="monthlyGoalCountRow" {{ if ne .Household.MonthlyWasteGoalType "count" }}style="display:none"{{ end }}>
@@ -196,7 +196,7 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center" id="invitation-{{ .ID }}">
                         <span>
                             <i class="bi bi-envelope me-2"></i>{{ .Email }}
-                            <span class="badge bg-secondary ms-2">{{ .Status }}</span>
+                            <span class="badge-status badge-nodate ms-2">{{ .Status }}</span>
                             <small class="text-secondary-custom ms-2">Expires: {{ .ExpiresAt.Format "2006-01-02" }}</small>
                         </span>
                         {{ if eq .Status "pending" }}
@@ -231,7 +231,7 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center text-secondary-custom" id="invitation-{{ .ID }}">
                         <span>
                             <i class="bi bi-envelope me-2"></i>{{ .Email }}
-                            <span class="badge bg-secondary ms-2">{{ .Status }}</span>
+                            <span class="badge-status badge-nodate ms-2">{{ .Status }}</span>
                         </span>
                     </li>
                     {{ end }}
@@ -346,7 +346,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="webhookCreateSettings" class="list-group-item px-3 py-3 bg-body-tertiary d-none">
+                <div id="webhookCreateSettings" class="list-group-item px-3 py-3 bg-subtle d-none">
                     <form id="webhookCreateForm" novalidate>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">

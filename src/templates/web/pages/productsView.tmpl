@@ -1,100 +1,96 @@
 {{ define "content" }}
-<div class="my-3 text-bg-tertiary w-100">
-    <div class="row g-0">
-        <div class="col-md-2 m-auto p-3">
-            <img src="{{- .Product.ImageURL -}}" class="img-fluid" alt="{{- .Product.ProductName -}}">
-        </div>
-        <div class="ms-auto col-md-10 pb-4 border-bottom border-primary border-2">
-            <div>
-                <h2>
-                    {{- .Product.ProductName -}}
-                </h2>
-            </div>
-            <div class="row my-2">
-                <div class="col-4 fw-bold">
-                    ID
-                </div>
-                <div class="col col-auto">
-                    <span class="badge bg-primary">#{{- .Product.ID -}}</span>
-                </div>
-            </div>
-            <div class="row my-2">
-                <div class="col-4 fw-bold">
-                    Barcode
-                </div>
-                <div class="col col-auto font-monospace">
-                    {{- .Product.Barcode -}}
-                </div>
-            </div>
-            <div class="row my-2">
-                <div class="col-4 fw-bold">
-                    Categories
-                </div>
-                <div class="col col-auto">
-                    {{- badgifyCategories .Product.Categories 5 -}}
-                </div>
-            </div>
-            <div class="row my-2">
-                <div class="col-4 fw-bold">
-                    Countries
-                </div>
-                <div class="col col-auto">
-                    {{- flagReplace .Product.Countries -}}
-                </div>
-            </div>
-            {{ if .Product.OpenedAt }}
-            <div class="row my-2">
-                <div class="col-4 fw-bold">
-                    Opened on
-                </div>
-                <div class="col col-auto">
-                    <span class="badge bg-info-subtle text-info-emphasis border">{{ .Product.OpenedAt | humanDate }}</span>
-                    {{ if .Product.DaysAfterOpening }}
-                    <span class="text-secondary-custom small ms-2">shelf life after opening: {{ .Product.DaysAfterOpening }} day(s)</span>
-                    {{ end }}
-                </div>
-            </div>
-            <div class="row my-2">
-                <div class="col-4 fw-bold">
-                    Effective expiry
-                </div>
-                <div class="col col-auto">
-                    {{ effectiveExpireAt .Product | humanDate }}
-                    <span class="text-secondary-custom small ms-1">(use-by)</span>
-                </div>
-            </div>
-            {{ end }}
-            <details class="mt-3">
-                <summary class="text-secondary-custom" style="cursor:pointer;list-style:none;">
-                    <i class="bi bi-clock-history me-1"></i>Metadata
-                </summary>
-                <div class="row mt-2">
-                    <div class="col-12 col-md-4 mb-1 text-secondary-custom small">
-                        <i class="bi bi-upc-scan me-1"></i>Scanned: {{- .Product.ScannedAt | humanDateTime -}}
-                    </div>
-                    <div class="col-12 col-md-4 mb-1 text-secondary-custom small">
-                        <i class="bi bi-pencil me-1"></i>Updated: {{- .Product.UpdatedAt | humanDateTime -}}
-                    </div>
-                    <div class="col-12 col-md-4 mb-1 text-secondary-custom small">
-                        <i class="bi bi-bell me-1"></i>Notified: {{- .Product.NotifiedAt | humanDateTime -}}
-                    </div>
-                </div>
-            </details>
-        </div>
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">{{ .Product.ProductName }}</h1>
+        <p class="page-header-subtitle"><span class="id-chip">#{{ .Product.ID }}</span> <span class="font-mono ms-2">{{ .Product.Barcode }}</span></p>
     </div>
-    {{ if and .Consumption .Consumption.TemplateMessage }}
-    <div class="alert alert-info d-flex align-items-center mt-3" role="status" data-consumption-source="{{ .Consumption.Source }}">
-        <i class="bi bi-graph-up-arrow me-2"></i>
-        <span>{{ .Consumption.TemplateMessage }}</span>
-    </div>
-    {{ end }}
-    <div class="d-flex justify-content-end mt-3 gap-2">
+    <div class="d-flex gap-2">
         <button type="button" class="btn btn-proviant-secondary btn-add-to-shopping-list" data-product-id="{{ .Product.ID }}">
-            <i class="bi bi-cart-plus me-2"></i>Add to list
+            <i class="bi bi-cart-plus"></i> Add to list
         </button>
         <a class="btn btn-proviant-secondary" href="/web/products/{{ .Product.ID }}/edit">
-            <i class="bi bi-wrench me-2"></i>Edit
+            <i class="bi bi-wrench"></i> Edit
         </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card">
+            {{ if .Product.ImageURL }}
+            <img src="{{ .Product.ImageURL }}" class="card-img-top card-img-cover" alt="{{ .Product.ProductName }}">
+            {{ else }}
+            <div class="card-img-top d-flex align-items-center justify-content-center bg-subtle card-img-cover">
+                <i class="bi bi-box-seam fs-1 text-fg-3"></i>
+            </div>
+            {{ end }}
+            <div class="card-body">
+                {{ if .Product.OpenedAt }}
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge-status badge-opened">
+                        <i class="bi bi-box-open"></i> Opened {{ .Product.OpenedAt | humanDate }}
+                    </span>
+                    {{ if .Product.DaysAfterOpening }}
+                    <span class="text-secondary-custom small">shelf life: {{ .Product.DaysAfterOpening }} day(s)</span>
+                    {{ end }}
+                </div>
+                <div class="text-secondary-custom small">
+                    Effective expiry: <strong>{{ effectiveExpireAt .Product | humanDate }}</strong> (use-by)
+                </div>
+                {{ end }}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                <div class="icon-chip" aria-hidden="true">
+                    <i class="bi bi-info-circle"></i>
+                </div>
+                Product Details
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="text-secondary-custom small mb-1">Categories</div>
+                        <div>{{ badgifyCategories .Product.Categories 5 }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-secondary-custom small mb-1">Countries</div>
+                        <div>{{ flagReplace .Product.Countries }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{ if and .Consumption .Consumption.TemplateMessage }}
+        <div class="alert alert-info d-flex align-items-center mt-3" role="status" data-consumption-source="{{ .Consumption.Source }}">
+            <i class="bi bi-graph-up-arrow me-2"></i>
+            <span>{{ .Consumption.TemplateMessage }}</span>
+        </div>
+        {{ end }}
+
+        <div class="card mt-3">
+            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                <div class="icon-chip" aria-hidden="true">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                Metadata
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-12 col-md-4 text-secondary-custom small">
+                        <i class="bi bi-upc-scan me-1"></i>Scanned: {{ .Product.ScannedAt | humanDateTime }}
+                    </div>
+                    <div class="col-12 col-md-4 text-secondary-custom small">
+                        <i class="bi bi-pencil me-1"></i>Updated: {{ .Product.UpdatedAt | humanDateTime }}
+                    </div>
+                    <div class="col-12 col-md-4 text-secondary-custom small">
+                        <i class="bi bi-bell me-1"></i>Notified: {{ .Product.NotifiedAt | humanDateTime }}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
