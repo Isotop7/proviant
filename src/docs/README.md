@@ -188,6 +188,7 @@ import "codeberg.org/isotop7/proviant/controllers"
 - [func InitWebhookService\(db \*gorm.DB, logger \*zerolog.Logger\)](<#InitWebhookService>)
 - [func ParseReceiptItems\(content string\) \(\[\]apiModel.ReceiptItem, error\)](<#ParseReceiptItems>)
 - [func ParseWebhookEvents\(eventsJSON string\) \[\]string](<#ParseWebhookEvents>)
+- [func ReceiptImageMIME\(data \[\]byte\) string](<#ReceiptImageMIME>)
 - [func ValidateAndLookupPAT\(token string, dbHandle \*gorm.DB\) \(\*authentication.PersonalAccessToken, error\)](<#ValidateAndLookupPAT>)
 - [type DatasetGetter](<#DatasetGetter>)
 - [type EmailNotificationProvider](<#EmailNotificationProvider>)
@@ -376,13 +377,13 @@ func InitWebhookService(db *gorm.DB, logger *zerolog.Logger)
 
 
 <a name="ParseReceiptItems"></a>
-## func [ParseReceiptItems](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/receiptcontroller.go#L396>)
+## func [ParseReceiptItems](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/receiptcontroller.go#L493>)
 
 ```go
 func ParseReceiptItems(content string) ([]apiModel.ReceiptItem, error)
 ```
 
-ParseReceiptItems extracts the JSON payload from the model output and validates/clamps every item. Invalid items are dropped, not fatal: a half\-recognized receipt is still worth showing in the review UI. Vision models often emit near\-JSON \(missing commas between items, non\-integer amounts, output truncated at the token cap\), so a strict parse is retried over a repaired payload, and as a last resort complete items are salvaged from an unparseable one before giving up.
+ParseReceiptItems extracts the JSON payload from the model output and validates/clamps every item. Invalid items are dropped, not fatal: a half\-recognized receipt is still worth showing in the review UI. Vision models often emit near\-JSON \(missing commas between items, non\-integer amounts, output truncated at the token cap\), so a strict parse is retried over a repaired payload, and as a last resort complete items are salvaged from an unparseable one before giving up. Commentary around the payload may contain stray brace pairs, so every top\-level object is tried in order and the first one yielding items wins — an earlier brace pair must not mask the real payload behind a silent empty success.
 
 <a name="ParseWebhookEvents"></a>
 ## func [ParseWebhookEvents](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/webhook_service.go#L165>)
@@ -392,6 +393,15 @@ func ParseWebhookEvents(eventsJSON string) []string
 ```
 
 
+
+<a name="ReceiptImageMIME"></a>
+## func [ReceiptImageMIME](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/receiptcontroller.go#L203>)
+
+```go
+func ReceiptImageMIME(data []byte) string
+```
+
+ReceiptImageMIME sniffs the actual image format of the uploaded bytes. It returns the detected MIME type when the payload is one of the accepted receipt image formats, and "" otherwise — the declared Content\-Type header of a multipart upload is client\-controlled and never trusted.
 
 <a name="ValidateAndLookupPAT"></a>
 ## func [ValidateAndLookupPAT](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/pat.go#L32>)
@@ -882,7 +892,7 @@ type ProductSource struct {
 ```
 
 <a name="ReceiptScanController"></a>
-## type [ReceiptScanController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/receiptcontroller.go#L42-L44>)
+## type [ReceiptScanController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/receiptcontroller.go#L50-L52>)
 
 ReceiptScanController extracts line items from receipt photos via an OpenAI\-compatible vision endpoint
 
@@ -893,7 +903,7 @@ type ReceiptScanController interface {
 ```
 
 <a name="ReceiptScanControllerImpl"></a>
-## type [ReceiptScanControllerImpl](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/receiptcontroller.go#L46-L50>)
+## type [ReceiptScanControllerImpl](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/receiptcontroller.go#L54-L58>)
 
 
 
@@ -906,7 +916,7 @@ type ReceiptScanControllerImpl struct {
 ```
 
 <a name="NewReceiptScanController"></a>
-### func [NewReceiptScanController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/receiptcontroller.go#L53>)
+### func [NewReceiptScanController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/receiptcontroller.go#L61>)
 
 ```go
 func NewReceiptScanController(logger *zerolog.Logger, config *configuration.ReceiptOCRConfiguration) *ReceiptScanControllerImpl
@@ -915,7 +925,7 @@ func NewReceiptScanController(logger *zerolog.Logger, config *configuration.Rece
 NewReceiptScanController creates a new receipt scan controller instance
 
 <a name="ReceiptScanControllerImpl.ScanReceipt"></a>
-### func \(\*ReceiptScanControllerImpl\) [ScanReceipt](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/receiptcontroller.go#L163>)
+### func \(\*ReceiptScanControllerImpl\) [ScanReceipt](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/receiptcontroller.go#L217>)
 
 ```go
 func (c *ReceiptScanControllerImpl) ScanReceipt(parent context.Context, image []byte) (*apiModel.ReceiptScanResponse, error)
@@ -1296,6 +1306,9 @@ errors contains custom error definitions
 ## Index
 
 - [Variables](<#variables>)
+- [type ReceiptEndpointError](<#ReceiptEndpointError>)
+  - [func \(e \*ReceiptEndpointError\) Error\(\) string](<#ReceiptEndpointError.Error>)
+  - [func \(e \*ReceiptEndpointError\) Unwrap\(\) error](<#ReceiptEndpointError.Unwrap>)
 
 
 ## Variables
@@ -1620,6 +1633,13 @@ var (
     // ErrOCRProcessing is thrown when OCR processing fails (generic)
     ErrOCRProcessing = errors.New("OCR processing failed")
 
+    // ErrReceiptEndpoint is returned to clients when the configured vision
+    // endpoint itself fails (unreachable, non-2xx status or an endpoint-reported
+    // error such as 401/403 auth or config problems). Distinct from
+    // ErrOCRProcessing so an upstream problem is not reported as an internal
+    // server error.
+    ErrReceiptEndpoint = errors.New("receipt scan endpoint failed")
+
     // ErrReceiptOCRDisabled is returned when receipt scanning is used while the ocr.receipt feature is disabled
     ErrReceiptOCRDisabled = errors.New("receipt scanning is not enabled on this server")
 
@@ -1632,6 +1652,10 @@ var (
 
     // ErrFileTooLarge is thrown when the uploaded image exceeds the size limit
     ErrFileTooLarge = errors.New("uploaded file too large")
+
+    // ErrInvalidImageType is thrown when an uploaded receipt photo is not a
+    // supported image format (JPEG, PNG or WebP)
+    ErrInvalidImageType = errors.New("uploaded file is not a supported image")
 
     // ErrInvalidRequest is thrown when the request is malformed or missing required parameters
     ErrInvalidRequest = errors.New("invalid request")
@@ -1741,6 +1765,35 @@ var (
     MsgErrGettingProducts              = "Error getting products"
 )
 ```
+
+<a name="ReceiptEndpointError"></a>
+## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L458-L460>)
+
+ReceiptEndpointError marks an OCR scan failure as originating from the upstream vision endpoint rather than from Proviant itself. The API layer maps it to 502 Bad Gateway instead of 500 via errors.As.
+
+```go
+type ReceiptEndpointError struct {
+    Err error
+}
+```
+
+<a name="ReceiptEndpointError.Error"></a>
+### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L462>)
+
+```go
+func (e *ReceiptEndpointError) Error() string
+```
+
+
+
+<a name="ReceiptEndpointError.Unwrap"></a>
+### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L464>)
+
+```go
+func (e *ReceiptEndpointError) Unwrap() error
+```
+
+
 
 # logging
 
@@ -2144,7 +2197,7 @@ func CSRFMiddleware(cfg *configuration.ProviantConfiguration) gin.HandlerFunc
 CSRFMiddleware implements the double\-submit cookie CSRF protection pattern. It sets a csrf\_token cookie on all responses and validates the X\-CSRF\-Token request header against that cookie on state\-mutating requests. Requests that include an Authorization header are exempt because non\-browser programmatic clients \(PAT, Bearer token in header\) are not subject to CSRF.
 
 <a name="InitRateLimits"></a>
-## func [InitRateLimits](<https://github.com/Isotop7/proviant/blob/develop/src/router/ratelimit.go#L90>)
+## func [InitRateLimits](<https://github.com/Isotop7/proviant/blob/develop/src/router/ratelimit.go#L117>)
 
 ```go
 func InitRateLimits(cfg configuration.RateLimitConfiguration)
@@ -2786,6 +2839,11 @@ const (
     // cannot steer that request at another endpoint.
     CsvImportBarcodePattern = "^[A-Za-z0-9_-]+$"
 
+    // BulkCreateMaxItems bounds how many products one batch-scan submission may
+    // carry. Exceeding it rejects the whole request instead of truncating it
+    // silently, mirroring CsvImportMaxRows for the CSV import.
+    BulkCreateMaxItems = 100
+
     // CsvImportMultipartSlackBytes is added to the configured upload cap before
     // the request body is capped with http.MaxBytesReader, so the file part can
     // be exactly MaxUploadSizeMB without the multipart envelope tripping the
@@ -2820,16 +2878,48 @@ const (
     ContextKeyReceiptCtrl     = "receiptController"
     ReceiptScanDefaultTimeout = 120
 
+    // DefaultMaxUploadSizeMB mirrors the viper default for
+    // server.maxUploadSizeMB (proviant.go). Used as a fallback where a zero or
+    // negative configured value would otherwise disable the upload size check.
+    DefaultMaxUploadSizeMB = 5
+
+    // ReceiptScanMultipartSlackBytes is added to the configured upload cap
+    // before the receipt scan request body is capped with http.MaxBytesReader,
+    // so the image part can be exactly MaxUploadSizeMB without the multipart
+    // envelope tripping the transport-level limit.
+    ReceiptScanMultipartSlackBytes = 1 << 20
+
     // ReceiptBulkMaxItems bounds one bulk-create request. The review UI sends
     // what one receipt photo plausibly contains; a client is never expected to
     // send hundreds of items in a single call.
     ReceiptBulkMaxItems = 100
 
+    // ReceiptBulkMaxBodyBytes caps the JSON body of one bulk-create request
+    // with http.MaxBytesReader before binding. Worst-case math per item: the
+    // draft field caps sum to 334 bytes (name 200, categories 100, unit 20,
+    // barcode 14), but encoding/json escapes `<`, `>`, `&`, `"` and control
+    // characters as \uXXXX, turning each such byte into 6 — so a fully-maxed
+    // item whose payload is all-escapable expands to ~2.2KB. Budget 4KB per
+    // item to cover that expansion plus per-item JSON syntax, and one extra
+    // 4KB for the top-level JSON envelope. Without the transport-level cap,
+    // 100 items × unbounded string fields are fully buffered in memory
+    // before any per-item clamp runs.
+    ReceiptBulkMaxBodyBytes = ReceiptBulkMaxItems*4096 + 4096
+
+    // ReceiptScanMaxTokens bounds the VLM completion. 100 items at ~50 tokens
+    // each exceed the previous flat 2000, which truncated large receipts
+    // mid-array before parsing ever saw the full output.
+    ReceiptScanMaxTokens = 5000
+
     // ReceiptItem limits for VLM output validation
     ReceiptItemMaxNameLength = 200
-    ReceiptItemMaxUnitLength = 20
-    ReceiptItemMaxAmount     = 999
-    ReceiptItemMaxPrice      = 100000.0
+    // ReceiptItemMaxCategoriesLength bounds the free-text categories field of
+    // a bulk-created product. Receipt scans emit short comma lists; the cap
+    // exists so a direct API client cannot push an unbounded string to the DB.
+    ReceiptItemMaxCategoriesLength = 100
+    ReceiptItemMaxUnitLength       = 20
+    ReceiptItemMaxAmount           = 999
+    ReceiptItemMaxPrice            = 100000.0
 )
 ```
 
@@ -2900,7 +2990,7 @@ const (
 ```
 
 <a name="BrandFeature"></a>
-## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1032-L1035>)
+## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1041-L1044>)
 
 BrandFeature is a single icon\+text row in the brand panel of the split\-panel auth pages. Consumed by the partials/loginBrand.tmpl template.
 
@@ -2923,7 +3013,7 @@ type Frontend struct {
 ```
 
 <a name="Frontend.AcceptInvite"></a>
-### func \(\*Frontend\) [AcceptInvite](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L627>)
+### func \(\*Frontend\) [AcceptInvite](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L636>)
 
 ```go
 func (frontend *Frontend) AcceptInvite(ctx *gin.Context)
@@ -2941,7 +3031,7 @@ func (frontend *Frontend) Auth(ctx *gin.Context)
 Auth renders the authentication page @Summary Auth page @Description Renders the authentication page for login/signup @Tags web @Produce html @Success 200 \{string\} html @Router /web/auth \[get\]
 
 <a name="Frontend.ForgotPassword"></a>
-### func \(\*Frontend\) [ForgotPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L990>)
+### func \(\*Frontend\) [ForgotPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L999>)
 
 ```go
 func (frontend *Frontend) ForgotPassword(ctx *gin.Context)
@@ -2950,7 +3040,7 @@ func (frontend *Frontend) ForgotPassword(ctx *gin.Context)
 ForgotPassword renders the forgot\-password page \(form to request a reset link\). @Summary Forgot password page @Description Renders the page that lets users request a password reset link via email. @Tags web @Produce html @Success 200 \{string\} html @Router /web/forgot\-password \[get\]
 
 <a name="Frontend.Onboarding"></a>
-### func \(\*Frontend\) [Onboarding](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L761>)
+### func \(\*Frontend\) [Onboarding](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L770>)
 
 ```go
 func (frontend *Frontend) Onboarding(ctx *gin.Context)
@@ -2968,7 +3058,7 @@ func (frontend *Frontend) Products(ctx *gin.Context)
 
 
 <a name="Frontend.ProductsEdit"></a>
-### func \(\*Frontend\) [ProductsEdit](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L557>)
+### func \(\*Frontend\) [ProductsEdit](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L566>)
 
 ```go
 func (frontend *Frontend) ProductsEdit(ctx *gin.Context)
@@ -2977,7 +3067,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context)
 ProductsEdit renders the product edit page @Summary Product edit page @Description Renders the page for editing a product @Tags web @Produce html @Param id path int true "Product ID" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products/\{id\}/edit \[get\]
 
 <a name="Frontend.ProductsScan"></a>
-### func \(\*Frontend\) [ProductsScan](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L434>)
+### func \(\*Frontend\) [ProductsScan](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L439>)
 
 ```go
 func (frontend *Frontend) ProductsScan(ctx *gin.Context)
@@ -2986,7 +3076,7 @@ func (frontend *Frontend) ProductsScan(ctx *gin.Context)
 
 
 <a name="Frontend.ProductsScanReceipt"></a>
-### func \(\*Frontend\) [ProductsScanReceipt](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L452>)
+### func \(\*Frontend\) [ProductsScanReceipt](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L457>)
 
 ```go
 func (frontend *Frontend) ProductsScanReceipt(ctx *gin.Context)
@@ -2995,7 +3085,7 @@ func (frontend *Frontend) ProductsScanReceipt(ctx *gin.Context)
 ProductsScanReceipt renders the receipt photo scan page \(issue \#61\). Storage locations are prefetched server\-side so the review form can offer the household's locations without an extra API round\-trip. @Summary Receipt scan page @Description Renders the receipt photo scanning page @Tags web @Produce html @Success 200 \{string\} html @Failure 500 \{object\} api.APIResponse @Router /web/products/scan\-receipt \[get\]
 
 <a name="Frontend.ProductsView"></a>
-### func \(\*Frontend\) [ProductsView](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L500>)
+### func \(\*Frontend\) [ProductsView](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L509>)
 
 ```go
 func (frontend *Frontend) ProductsView(ctx *gin.Context)
@@ -3004,7 +3094,7 @@ func (frontend *Frontend) ProductsView(ctx *gin.Context)
 ProductsView renders the product view page @Summary Product view page @Description Renders the product details page @Tags web @Produce html @Param id path int true "Product ID" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products/\{id\}/view \[get\]
 
 <a name="Frontend.Recipes"></a>
-### func \(\*Frontend\) [Recipes](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L790>)
+### func \(\*Frontend\) [Recipes](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L799>)
 
 ```go
 func (frontend *Frontend) Recipes(ctx *gin.Context)
@@ -3013,7 +3103,7 @@ func (frontend *Frontend) Recipes(ctx *gin.Context)
 Recipes renders the recipe suggestions page @Summary Recipes page @Description Shows recipe suggestions for expiring products @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/recipes \[get\]
 
 <a name="Frontend.ResetPassword"></a>
-### func \(\*Frontend\) [ResetPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1009>)
+### func \(\*Frontend\) [ResetPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1018>)
 
 ```go
 func (frontend *Frontend) ResetPassword(ctx *gin.Context)
@@ -3031,7 +3121,7 @@ func (frontend *Frontend) Root(ctx *gin.Context)
 Root renders the home page for authenticated users @Summary Home page @Description Renders the home page showing product dashboard @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web \[get\]
 
 <a name="Frontend.ShoppingList"></a>
-### func \(\*Frontend\) [ShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L848>)
+### func \(\*Frontend\) [ShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L857>)
 
 ```go
 func (frontend *Frontend) ShoppingList(ctx *gin.Context)
@@ -3040,7 +3130,7 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context)
 ShoppingList renders the shopping list page @Summary Shopping List page @Description Renders the shared household shopping list with custom items and import banner @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/shopping\-list \[get\]
 
 <a name="Frontend.Unsubscribe"></a>
-### func \(\*Frontend\) [Unsubscribe](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L930>)
+### func \(\*Frontend\) [Unsubscribe](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L939>)
 
 ```go
 func (frontend *Frontend) Unsubscribe(ctx *gin.Context)
@@ -3067,7 +3157,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context)
 UserSettings renders the user settings page @Summary User settings page @Description Renders the user settings page with household management @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/user/settings \[get\]
 
 <a name="Frontend.VerifyEmail"></a>
-### func \(\*Frontend\) [VerifyEmail](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L734>)
+### func \(\*Frontend\) [VerifyEmail](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L743>)
 
 ```go
 func (frontend *Frontend) VerifyEmail(ctx *gin.Context)
@@ -3076,7 +3166,7 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context)
 VerifyEmail renders the email verification page @Summary Verify email page @Description Renders the email verification status page @Tags web @Produce html @Param token query string false "Verification token" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Router /web/verify\-email \[get\]
 
 <a name="Frontend.WasteAnalytics"></a>
-### func \(\*Frontend\) [WasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L819>)
+### func \(\*Frontend\) [WasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L828>)
 
 ```go
 func (frontend *Frontend) WasteAnalytics(ctx *gin.Context)
@@ -3544,7 +3634,7 @@ func BulkConsumeProducts(ctx *gin.Context, appCtx *AppContext)
 BulkConsumeProducts marks multiple products as consumed \(soft\-delete, no product.wasted event\) @Summary Mark products as consumed @Description Soft\-deletes \(archives\) multiple products without firing product.wasted webhook events @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/bulkConsume \[post\]
 
 <a name="BulkCreateProducts"></a>
-## func [BulkCreateProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_bulk_create.go#L33>)
+## func [BulkCreateProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_bulk_create.go#L58>)
 
 ```go
 func BulkCreateProducts(ctx *gin.Context, appCtx *AppContext)
@@ -4192,13 +4282,13 @@ func ScanProduct(ctx *gin.Context, appCtx *AppContext)
 ScanProduct returns a barcode based on an image @Summary Scan product @Description Returns the barcode of a product in an uploaded image @Tags product @Accept json @Produce json @Success 200 \{object\} database.ProductDTOBarcode @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/scan \[post\]
 
 <a name="ScanReceipt"></a>
-## func [ScanReceipt](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_receipt.go#L33>)
+## func [ScanReceipt](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_receipt.go#L37>)
 
 ```go
 func ScanReceipt(ctx *gin.Context, appCtx *AppContext)
 ```
 
-ScanReceipt extracts product line items from an uploaded receipt photo via a vision LLM. Stateless: nothing is persisted server\-side. @Summary Scan receipt photo for line items @Description Upload a receipt photo; returns extracted product drafts \(name, amount, unit, price\). An empty items list means the scan succeeded but nothing was recognized. @Tags product @Accept multipart/form\-data @Produce json @Param image formData file true "Receipt photo" @Success 200 \{object\} apiModel.ReceiptScanResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Failure 504 \{object\} api.APIResponse @Router /api/v1/products/scan\-receipt \[post\]
+ScanReceipt extracts product line items from an uploaded receipt photo via a vision LLM. Stateless: nothing is persisted server\-side. @Summary Scan receipt photo for line items @Description Upload a receipt photo; returns extracted product drafts \(name, amount, unit, price\). An empty items list means the scan succeeded but nothing was recognized. @Tags product @Accept multipart/form\-data @Produce json @Param image formData file true "Receipt photo" @Success 200 \{object\} apiModel.ReceiptScanResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Failure 502 \{object\} api.APIResponse @Failure 504 \{object\} api.APIResponse @Router /api/v1/products/scan\-receipt \[post\]
 
 <a name="SearchProducts"></a>
 ## func [SearchProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_search.go#L78>)
@@ -8840,6 +8930,7 @@ configuration defines structs and methods for proviants configuration and specif
   - [func \(ec \*ProviantConfiguration\) ValidateServerConfiguration\(\) error](<#ProviantConfiguration.ValidateServerConfiguration>)
 - [type RateLimitConfiguration](<#RateLimitConfiguration>)
 - [type ReceiptOCRConfiguration](<#ReceiptOCRConfiguration>)
+  - [func \(rc \*ReceiptOCRConfiguration\) UsesInsecureTransport\(\) bool](<#ReceiptOCRConfiguration.UsesInsecureTransport>)
 - [type RecipeAPIConfiguration](<#RecipeAPIConfiguration>)
   - [func \(rc RecipeAPIConfiguration\) IsSelfHosted\(\) bool](<#RecipeAPIConfiguration.IsSelfHosted>)
   - [func \(rc RecipeAPIConfiguration\) UsesInsecureTransport\(\) bool](<#RecipeAPIConfiguration.UsesInsecureTransport>)
@@ -9075,7 +9166,7 @@ type ProviantConfiguration struct {
 ```
 
 <a name="ProviantConfiguration.ValidateDatabaseConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateDatabaseConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L311>)
+### func \(\*ProviantConfiguration\) [ValidateDatabaseConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L316>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error
@@ -9111,7 +9202,7 @@ func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error
 ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
 
 <a name="ProviantConfiguration.ValidateRecipeAPIConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateRecipeAPIConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L439>)
+### func \(\*ProviantConfiguration\) [ValidateRecipeAPIConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L444>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateRecipeAPIConfiguration() error
@@ -9126,7 +9217,7 @@ Validation runs in two stages on purpose: the provider\-independent checks \(URL
 - A self\-hosted provider whose URL is the public TheMealDB endpoint is rejected after the key check: without a key there is nothing to leak, so the missing key is the actionable problem first. With a key present, that URL is unambiguously wrong and no substitute URL can be guessed. Both self\-hosted failures are recoverable configuration errors, not programming errors, so the caller degrades the feature instead of refusing to boot.
 
 <a name="ProviantConfiguration.ValidateServerConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateServerConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L343>)
+### func \(\*ProviantConfiguration\) [ValidateServerConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L348>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateServerConfiguration() error
@@ -9166,6 +9257,15 @@ type ReceiptOCRConfiguration struct {
 }
 ```
 
+<a name="ReceiptOCRConfiguration.UsesInsecureTransport"></a>
+### func \(\*ReceiptOCRConfiguration\) [UsesInsecureTransport](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L486>)
+
+```go
+func (rc *ReceiptOCRConfiguration) UsesInsecureTransport() bool
+```
+
+UsesInsecureTransport reports whether the configured receipt endpoint is served over plaintext HTTP. A custom endpoint authenticates every request with a bearer API key and receives the uploaded receipt photo, so an http:// URL transmits both in cleartext. Mirrors RecipeAPIConfiguration. UsesInsecureTransport: surfaced as a startup warning rather than a rejection because a LAN\-only vision endpoint is a legitimate deployment. An empty Endpoint resolves to the https:// OpenAI default, so it is never insecure.
+
 <a name="RecipeAPIConfiguration"></a>
 ## type [RecipeAPIConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L181-L188>)
 
@@ -9183,7 +9283,7 @@ type RecipeAPIConfiguration struct {
 ```
 
 <a name="RecipeAPIConfiguration.IsSelfHosted"></a>
-### func \(RecipeAPIConfiguration\) [IsSelfHosted](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L368>)
+### func \(RecipeAPIConfiguration\) [IsSelfHosted](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L373>)
 
 ```go
 func (rc RecipeAPIConfiguration) IsSelfHosted() bool
@@ -9194,7 +9294,7 @@ IsSelfHosted reports whether the configured provider is a self\-hosted instance 
 It delegates to isSelfHostedRecipeProvider so the provider list that gates the api\_key check and the public\-TheMealDB\-host leak guard stays a single list. Two hand\-maintained copies could drift, and the failure mode is silent: a provider present in one but not the other skips the guard whose whole purpose is keeping the operator's key and the household's product names off a third party.
 
 <a name="RecipeAPIConfiguration.UsesInsecureTransport"></a>
-### func \(RecipeAPIConfiguration\) [UsesInsecureTransport](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L408>)
+### func \(RecipeAPIConfiguration\) [UsesInsecureTransport](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L413>)
 
 ```go
 func (rc RecipeAPIConfiguration) UsesInsecureTransport() bool

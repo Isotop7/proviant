@@ -2711,6 +2711,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/api.APIResponse"
                         }
                     },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
                     "504": {
                         "description": "Gateway Timeout",
                         "schema": {
