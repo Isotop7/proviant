@@ -453,6 +453,14 @@ document.addEventListener('DOMContentLoaded', function () {
         openBtn.addEventListener('click', function () { bsModal.show(); });
     }
 
+    // Open from empty-state button (noproducts partial)
+    document.addEventListener('click', function (event) {
+        if (event.target.closest('#btnOpenAddProductModalEmpty')) {
+            event.preventDefault();
+            bsModal.show();
+        }
+    });
+
     modalEl.addEventListener('shown.bs.modal', function () {
         modalIsOpen = true;
         resetToScan();

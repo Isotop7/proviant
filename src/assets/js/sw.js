@@ -1,11 +1,12 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v112';
+const CACHE_NAME = 'proviant-v117';
 
 const PRECACHE_URLS = [
   '/manifest.json',
   '/assets/css/main.css',
   '/assets/js/proviant.js',
+  '/assets/js/theme.js',
   '/assets/js/bootstrap.bundle.min.js',
   '/assets/js/chart.umd.min.js',
   '/assets/js/main.js',
@@ -18,7 +19,7 @@ const PRECACHE_URLS = [
 
 // Minimal offline fallback page (no asset dependencies)
 const OFFLINE_PAGE = `<!doctype html>
-<html lang="en" data-bs-theme="light">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

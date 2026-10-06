@@ -1,7 +1,13 @@
+(function() {
 'use strict';
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
 
 let monthlyChart = null;
 let trendChart = null;
+let lastStats = null;
 
 function renderTile(title, hero, variant, heroClass) {
   const col = document.createElement('div');
@@ -103,8 +109,8 @@ function renderMonthlyChart(s) {
     data: {
       labels,
       datasets: [
-        { label: 'Consumed', data: consumed, backgroundColor: '#3D7A5C' },
-        { label: 'Wasted',   data: wasted,   backgroundColor: '#DC2626' },
+        { label: 'Consumed', data: consumed, backgroundColor: cssVar('--status-fresh') },
+        { label: 'Wasted',   data: wasted,   backgroundColor: cssVar('--status-expired') },
       ],
     },
     options: {
@@ -137,9 +143,9 @@ function renderTrendChart(s) {
       datasets: [{
         label: 'Wasted',
         data,
-        borderColor: '#DC2626',
-        pointBackgroundColor: '#DC2626',
-        backgroundColor: 'rgba(220, 38, 38, 0.12)',
+        borderColor: cssVar('--status-expired'),
+        pointBackgroundColor: cssVar('--status-expired'),
+        backgroundColor: cssVar('--status-expired-subtle'),
         tension: 0.3,
         fill: true,
       }],
@@ -281,6 +287,8 @@ async function load(period) {
     return;
   }
   const s = resp.message;
+  lastStats = s;
+  Chart.defaults.color = cssVar('--fg-2');
   if (s.sort) currentSort = s.sort;
   setActivePeriod(s.period || currentPeriod);
   setActiveSort(currentSort);
@@ -292,6 +300,13 @@ async function load(period) {
   const status = document.getElementById('waste-status');
   if (status) status.textContent = 'Waste analytics loaded';
 }
+
+document.addEventListener('proviant:themechange', () => {
+  if (!lastStats) return;
+  Chart.defaults.color = cssVar('--fg-2');
+  renderMonthlyChart(lastStats);
+  renderTrendChart(lastStats);
+});
 
 document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', (event) => {
@@ -312,3 +327,4 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   load('6months');
 });
+})();

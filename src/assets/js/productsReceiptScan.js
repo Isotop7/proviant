@@ -403,7 +403,14 @@
       // Review items (scanned + user edits) are lost on rescan; confirm
       // before discarding, but only when there is something to lose.
       const itemCount = document.querySelectorAll("#receiptItems .card").length;
-      if (itemCount > 0 && !window.confirm("Discard the " + itemCount + " scanned product(s)?")) {
+      if (itemCount > 0) {
+        proviant.showConfirm(
+          "Discard scanned products",
+          "Discard the " + itemCount + " scanned product(s)?",
+          function() { resetToUpload(); },
+          "Discard",
+          "danger"
+        );
         return;
       }
       resetToUpload();

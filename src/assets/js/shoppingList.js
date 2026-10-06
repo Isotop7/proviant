@@ -119,7 +119,12 @@
   }
 
   function deleteItem(itemId) {
-    if (!confirm('Delete this item?')) return;
+    proviant.showConfirm('Delete item', 'Delete this item from your shopping list?', function() {
+      doDeleteItem(itemId);
+    }, 'Delete', 'danger');
+  }
+
+  function doDeleteItem(itemId) {
     fetch('/api/v1/shopping-list/' + itemId, {
       method: 'DELETE'
     }).then(function(res) {

@@ -1,6 +1,6 @@
 {{define "baseAuth"}}
 <!doctype html>
-<html lang="en" data-bs-theme="light" class="h-100">
+<html lang="en" class="h-100">
 
 <head>
     <meta charset="utf-8">
@@ -16,13 +16,44 @@
     <meta name="apple-mobile-web-app-title" content="Proviant">
     <link rel="apple-touch-icon" href="/assets/icons/proviant_logo_192.png">
 
+    <script src="/assets/js/theme.js"></script>
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="stylesheet" href="/assets/css/auth.css">
     <script src="/assets/js/proviant.js"></script>
 </head>
 
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <main id="main-content">
     {{template "content" .}}
+    </main>
+    <!-- Shared confirm modal — destructive actions requiring user decision -->
+    <div id="proviantConfirmModal" class="modal fade" tabindex="-1"
+         aria-labelledby="proviantConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-icon modal-icon-danger" id="proviantConfirmIconBox" aria-hidden="true">
+                        <i id="proviantConfirmIcon" class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div class="modal-header-body">
+                        <h5 id="proviantConfirmTitle" class="modal-title mb-0"></h5>
+                    </div>
+                    <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="proviantConfirmMessage" class="text-secondary-custom small mb-0"></p>
+                </div>
+                <div class="modal-footer justify-content-end gap-2">
+                    <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-proviant-danger" id="proviantConfirmBtn">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Shared feedback modal -->
     <div id="proviantFeedbackModal" class="modal fade" tabindex="-1"
          aria-labelledby="proviantFeedbackModalLabel" aria-hidden="true">

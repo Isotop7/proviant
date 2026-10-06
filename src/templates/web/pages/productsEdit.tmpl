@@ -2,7 +2,7 @@
 <div class="pv-edit-page-wrap">
 
   <!-- ── Mobile: topbar (hidden on desktop) ── -->
-  <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-white d-md-none">
+  <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-body d-md-none">
     <a href="/web/products" class="text-fg-2 fs-4">
       <i class="bi bi-arrow-left"></i>
     </a>
@@ -16,7 +16,7 @@
   </div>
 
   <!-- ── Mobile: image strip (hidden on desktop) ── -->
-  <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-white d-md-none">
+  <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-body d-md-none">
     <div class="pv-mobile-thumb">
       {{ if .Product.ImageURL }}
        <img src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}">
@@ -34,7 +34,7 @@
 
   <!-- ── Desktop: breadcrumb + page header (hidden on mobile) ── -->
   <div class="pv-breadcrumb-row d-none d-md-flex">
-    <a href="/products"><i class="bi bi-box-seam"></i> Products</a>
+    <a href="/web/products"><i class="bi bi-box-seam"></i> Products</a>
     <i class="bi bi-chevron-right"></i>
     <span>Edit product</span>
   </div>
@@ -130,12 +130,12 @@
                   <input type="date" class="form-control font-mono flex-grow-1" id="inputExpireAt"
                     value="{{ .Product.ExpireAt | inputDate }}" required>
                   {{ if .Product.ExpireAt.IsZero }}
-                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTodayExpiry" title="Set to today">
-                    <i class="bi bi-calendar-check"></i>
+                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTodayExpiry" title="Set to today" aria-label="Set expiry date to today">
+                    <i class="bi bi-calendar-check" aria-hidden="true"></i>
                   </button>
                   {{ end }}
-                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="Scan expiry date">
-                    <i class="bi bi-camera"></i>
+                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="Scan expiry date" aria-label="Scan expiry date from photo">
+                    <i class="bi bi-camera" aria-hidden="true"></i>
                   </button>
                 </div>
               </div>
@@ -184,7 +184,7 @@
               <div class="row g-3">
                 <div class="col-md-6">
                   <input type="date" class="form-control font-mono" id="inputOpenedAt"
-                    value="{{ if .Product.OpenedAt }}{{ .Product.OpenedAt | inputDate }}{{ end }}">
+                    value="{{ if .Product.OpenedAt }}{{ .Product.OpenedAt | inputDate }}{{ end }}" max="{{ today }}">
                   <div class="form-text">When the product was opened. Used to compute a secondary expiry.</div>
                 </div>
                 <div class="col-md-6">

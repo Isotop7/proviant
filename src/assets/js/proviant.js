@@ -124,7 +124,7 @@ proviant.badgifyCategories = function (categories, limit) {
     const cat = arr[i].trim();
     const parts = cat.split(":");
     if (parts.length === 2) {
-      output += `<span class="badge bg-dark me-3">${parts[0].trim()}</span>${parts[1].trim()}</br>`;
+      output += `<span class="badge text-bg-secondary me-3">${parts[0].trim()}</span>${parts[1].trim()}</br>`;
     } else {
       output += `${cat}</br>`;
     }
