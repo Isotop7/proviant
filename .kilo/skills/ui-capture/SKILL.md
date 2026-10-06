@@ -238,14 +238,28 @@ without libx264 — `references/fedora-setup.md` has the dnf escape hatch.
 The server is torn down in a `finally` on every exit path, so a leaked
 `proviant` holding the port never happens.
 
+## Taskfile integration
+
+Three tasks wrap the runner so it is discoverable without reading this file:
+
+```bash
+task uicapture -- --preset dashboard          # one page, stills + webm
+task uicapture -- --preset dashboard --no-video
+task uicapture-all                            # every page, stills + webm
+task uicapture-all -- --viewport mobile --gif
+task uicapture-publish                        # regenerate screenshots/ + README gallery
+```
+
+All three delegate to `scripts/uicapture.sh`, which forwards every argument to
+`uicapture.mjs`. The skill still lives under `.kilo/`; the wrapper resolves the
+repo root and exits with a clear message if the skill directory is missing.
+
 ## Do not
 
 - **Do not hand-edit `screenshots/` or the generated README blocks.** `--publish`
   owns both the `## Preview` and `## Screenshots` regions. Editing them by hand
   means the next publish silently reverts your change, or worse, keeps it and
   drifts.
-- **Do not add a `Taskfile.yml` task for this.** The skill lives under `.kilo/`,
-  so a task would be broken for anyone without it.
 - **Do not point `--out` at `screenshots/`.** A normal run writes numbered stills
   and a video there; that directory is owned by `--publish`, which writes stable
   filenames.
