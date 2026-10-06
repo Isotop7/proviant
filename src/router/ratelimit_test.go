@@ -170,3 +170,54 @@ func TestGetLimiterBurst_ReusesStoredLimiter(t *testing.T) {
 		t.Error("getLimiterBurst() shared a limiter across keys")
 	}
 }
+
+// Concurrent first requests for the same key must not create duplicate
+// limiters: LoadOrStore guarantees exactly one winner, and the losers must
+// reuse it. Run with -race: every goroutine also touches lastSeen, which
+// cleanupLimiters reads concurrently in production.
+func TestGetLimiterBurst_ConcurrentCreationYieldsSingleLimiter(t *testing.T) {
+	store := &sync.Map{}
+
+	const goroutines = 32
+	returned := make(chan *rate.Limiter, goroutines)
+	var wg sync.WaitGroup
+	for range goroutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			returned <- getLimiterBurst(store, "client", rate.Every(time.Second), 1)
+		}()
+	}
+	wg.Wait()
+	close(returned)
+
+	first := <-returned
+	for got := range returned {
+		if got != first {
+			t.Error("getLimiterBurst() created duplicate limiters for the same new key")
+		}
+	}
+	entries := 0
+	store.Range(func(_, _ any) bool {
+		entries++
+		return true
+	})
+	if entries != 1 {
+		t.Errorf("store holds %d limiters, want 1", entries)
+	}
+}
+
+func TestCleanupLimiterStore_DropsOnlyIdleLimiters(t *testing.T) {
+	store := &sync.Map{}
+	store.Store("active", &clientLimiter{limiter: rate.NewLimiter(1, 1), lastSeen: time.Now()})
+	store.Store("idle", &clientLimiter{limiter: rate.NewLimiter(1, 1), lastSeen: time.Now().Add(-11 * time.Minute)})
+
+	cleanupLimiterStore(store, time.Now())
+
+	if _, ok := store.Load("active"); !ok {
+		t.Error("cleanupLimiterStore() dropped a limiter that was seen recently")
+	}
+	if _, ok := store.Load("idle"); ok {
+		t.Error("cleanupLimiterStore() kept a limiter idle for over 10 minutes")
+	}
+}

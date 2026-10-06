@@ -23,27 +23,45 @@ const (
 
 type clientLimiter struct {
 	limiter  *rate.Limiter
+	mu       sync.Mutex
 	lastSeen time.Time
 }
 
-var (
-	loginLimiters      = &sync.Map{}
-	signupLimiters     = &sync.Map{}
-	exportLimiters     = &sync.Map{}
-	passwordLimiters   = &sync.Map{}
-	scanLimiters       = &sync.Map{}
-	recipesLimiters    = &sync.Map{}
-	importLimiters     = &sync.Map{}
-	bulkCreateLimiters = &sync.Map{}
+// touch records that the limiter was just used. lastSeen is written by every
+// request goroutine and read by cleanupLimiters, so all access is guarded.
+func (cl *clientLimiter) touch(now time.Time) {
+	cl.mu.Lock()
+	cl.lastSeen = now
+	cl.mu.Unlock()
+}
 
-	loginRate      = rate.Limit(5.0 / 60.0)
-	signupRate     = rate.Limit(3.0 / 60.0)
-	exportRate     = rate.Limit(1.0 / 60.0)
-	passwordRate   = rate.Limit(3.0 / 60.0)
-	scanRate       = rate.Limit(10.0 / 60.0)
-	recipesRate    = rate.Limit(6.0 / 60.0)
-	importRate     = rate.Limit(5.0 / 60.0)
-	bulkCreateRate = rate.Limit(5.0 / 60.0)
+// idleFor reports how long the limiter has gone unused.
+func (cl *clientLimiter) idleFor(now time.Time) time.Duration {
+	cl.mu.Lock()
+	defer cl.mu.Unlock()
+	return now.Sub(cl.lastSeen)
+}
+
+var (
+	loginLimiters    = &sync.Map{}
+	signupLimiters   = &sync.Map{}
+	exportLimiters   = &sync.Map{}
+	passwordLimiters = &sync.Map{}
+	scanLimiters     = &sync.Map{}
+	recipesLimiters  = &sync.Map{}
+	importLimiters   = &sync.Map{}
+	bulkLimiters     = &sync.Map{}
+	receiptLimiters  = &sync.Map{}
+
+	loginRate    = rate.Limit(5.0 / 60.0)
+	signupRate   = rate.Limit(3.0 / 60.0)
+	exportRate   = rate.Limit(1.0 / 60.0)
+	passwordRate = rate.Limit(3.0 / 60.0)
+	scanRate     = rate.Limit(10.0 / 60.0)
+	recipesRate  = rate.Limit(6.0 / 60.0)
+	importRate   = rate.Limit(5.0 / 60.0)
+	bulkRate     = rate.Limit(5.0 / 60.0)
+	receiptRate  = rate.Limit(5.0 / 60.0)
 
 	// importBurstCap bounds how many CSV imports one user can start at once.
 	// importRate is deliberately not config-driven: a config key that defaults
@@ -54,13 +72,22 @@ var (
 	// Facts lookups — from being repeatable back to back.
 	importBurstCap = 1
 
-	// bulkCreateBurstCap bounds how many batch-scan submissions one user can
-	// start at once. Unlike the CSV import, a batch save is a routine
-	// end-of-session action and its failure path keeps failed items queued and
-	// resubmits them on the next Done click, so consecutive POSTs within
-	// seconds are the normal pattern. A burst of 3 covers a save plus two
-	// retries without letting lookup-heavy batches run back to back.
-	bulkCreateBurstCap = 3
+	// bulkBurstCap mirrors importBurstCap for POST /api/v1/products/bulk: one
+	// call inserts up to util.ReceiptBulkMaxItems products, so back-to-back
+	// bulk creates are not a pattern the review UI produces and the limiter
+	// exists to stop them. bulkRate stays a package constant, same reasoning
+	// as importRate — a config key defaulting to zero would break startup
+	// validation for existing deployments.
+	bulkBurstCap = 1
+
+	// receiptBurstCap mirrors bulkBurstCap for POST /api/v1/products/scan-receipt.
+	// Each call sends the photo to an external vision endpoint (multi-second,
+	// potentially paid), so it gets its own limiter instead of sharing the
+	// scanRate budget with the cheap local expiry-date scans. receiptRate
+	// stays a package constant, same reasoning as importRate — a config key
+	// defaulting to zero would break startup validation for existing
+	// deployments.
+	receiptBurstCap = 1
 
 	// recipesBurstCap stays far below the minute's worth of tokens the default
 	// burst would hand out: one suggestions request fans out into up to 10
@@ -110,12 +137,20 @@ func getLimiterBurst(store *sync.Map, key string, limit rate.Limit, burst int) *
 	now := time.Now()
 	if storedValue, ok := store.Load(key); ok {
 		storedLimiter := storedValue.(*clientLimiter)
-		storedLimiter.lastSeen = now
+		storedLimiter.touch(now)
 		return storedLimiter.limiter
 	}
-	limiter := rate.NewLimiter(limit, burst)
-	store.Store(key, &clientLimiter{limiter: limiter, lastSeen: now})
-	return limiter
+	// LoadOrStore so concurrent first requests for the same key cannot
+	// create duplicate limiters: only one goroutine's limiter is stored,
+	// and the losers discard theirs and reuse the winner's.
+	newLimiter := &clientLimiter{limiter: rate.NewLimiter(limit, burst), lastSeen: now}
+	storedValue, loaded := store.LoadOrStore(key, newLimiter)
+	if !loaded {
+		return newLimiter.limiter
+	}
+	storedLimiter := storedValue.(*clientLimiter)
+	storedLimiter.touch(now)
+	return storedLimiter.limiter
 }
 
 func loginRateLimitMiddleware(ctx *gin.Context) {
@@ -284,12 +319,11 @@ func importRateLimitMiddleware(ctx *gin.Context) {
 	ctx.Next()
 }
 
-// bulkCreateRateLimitMiddleware rate-limits batch-scan product creation per
-// user. It deliberately uses its own limiter store instead of sharing the
-// import budget: one batch save is a routine action, its failure path keeps
-// failed items queued and resubmits them, and a save right after a CSV import
-// must not 429 because the two features drained one token pool.
-func bulkCreateRateLimitMiddleware(ctx *gin.Context) {
+// bulkRateLimitMiddleware rate-limits bulk product creates per user. One call
+// inserts up to util.ReceiptBulkMaxItems products; unlike the CSV import path
+// there are no outbound lookups, but 100 inserts per request still warrant a
+// dedicated limiter rather than sharing the scan budget.
+func bulkRateLimitMiddleware(ctx *gin.Context) {
 	key := ctx.ClientIP()
 	if raw, ok := ctx.Get(util.ContextKeyUserID); ok {
 		if userID, ok := raw.(uint); ok && userID > 0 {
@@ -297,12 +331,36 @@ func bulkCreateRateLimitMiddleware(ctx *gin.Context) {
 		}
 	}
 
-	limiter := getLimiterBurst(bulkCreateLimiters, key, bulkCreateRate, bulkCreateBurstCap)
+	limiter := getLimiterBurst(bulkLimiters, key, bulkRate, bulkBurstCap)
 	reservation := limiter.Reserve()
 	if delay := reservation.Delay(); delay > 0 {
 		reservation.Cancel()
 		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
-		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many batch save requests, please try again later"))
+		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many bulk create requests, please try again later"))
+		ctx.Abort()
+		return
+	}
+	ctx.Next()
+}
+
+// receiptRateLimitMiddleware rate-limits receipt photo scans per user. Every
+// call forwards the upload to an external OpenAI-compatible vision endpoint,
+// so rapid repeats burn the configured provider's quota — hence a dedicated
+// budget instead of sharing scanRate with local expiry-date scans.
+func receiptRateLimitMiddleware(ctx *gin.Context) {
+	key := ctx.ClientIP()
+	if raw, ok := ctx.Get(util.ContextKeyUserID); ok {
+		if userID, ok := raw.(uint); ok && userID > 0 {
+			key = strconv.FormatUint(uint64(userID), 10)
+		}
+	}
+
+	limiter := getLimiterBurst(receiptLimiters, key, receiptRate, receiptBurstCap)
+	reservation := limiter.Reserve()
+	if delay := reservation.Delay(); delay > 0 {
+		reservation.Cancel()
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
+		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many receipt scan requests, please try again later"))
 		ctx.Abort()
 		return
 	}
@@ -313,63 +371,25 @@ func cleanupLimiters() {
 	for {
 		time.Sleep(time.Minute)
 		now := time.Now()
-		loginLimiters.Range(func(key, value interface{}) bool {
-			storedLimiter := value.(*clientLimiter)
-			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
-				loginLimiters.Delete(key)
-			}
-			return true
-		})
-		signupLimiters.Range(func(key, value interface{}) bool {
-			storedLimiter := value.(*clientLimiter)
-			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
-				signupLimiters.Delete(key)
-			}
-			return true
-		})
-		exportLimiters.Range(func(key, value interface{}) bool {
-			storedLimiter := value.(*clientLimiter)
-			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
-				exportLimiters.Delete(key)
-			}
-			return true
-		})
-		passwordLimiters.Range(func(key, value any) bool {
-			storedLimiter := value.(*clientLimiter)
-			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
-				passwordLimiters.Delete(key)
-			}
-			return true
-		})
-		scanLimiters.Range(func(key, value any) bool {
-			storedLimiter := value.(*clientLimiter)
-			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
-				scanLimiters.Delete(key)
-			}
-			return true
-		})
-		recipesLimiters.Range(func(key, value any) bool {
-			storedLimiter := value.(*clientLimiter)
-			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
-				recipesLimiters.Delete(key)
-			}
-			return true
-		})
-		importLimiters.Range(func(key, value any) bool {
-			storedLimiter := value.(*clientLimiter)
-			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
-				importLimiters.Delete(key)
-			}
-			return true
-		})
-		bulkCreateLimiters.Range(func(key, value any) bool {
-			storedLimiter := value.(*clientLimiter)
-			if now.Sub(storedLimiter.lastSeen) > 10*time.Minute {
-				bulkCreateLimiters.Delete(key)
-			}
-			return true
-		})
+		for _, store := range []*sync.Map{
+			loginLimiters, signupLimiters, exportLimiters, passwordLimiters,
+			scanLimiters, recipesLimiters, importLimiters, bulkLimiters, receiptLimiters,
+		} {
+			cleanupLimiterStore(store, now)
+		}
 	}
+}
+
+// cleanupLimiterStore drops the limiters in one store that have gone unused
+// for 10 minutes.
+func cleanupLimiterStore(store *sync.Map, now time.Time) {
+	store.Range(func(key, value any) bool {
+		storedLimiter := value.(*clientLimiter)
+		if storedLimiter.idleFor(now) > 10*time.Minute {
+			store.Delete(key)
+		}
+		return true
+	})
 }
 
 func init() {

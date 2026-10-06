@@ -1,394 +1,269 @@
 package v1
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
-	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/authentication"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-type bulkCreateFixture struct {
-	db      *gorm.DB
-	userID  uint
-	houseID uint
-}
-
-// newBulkCreateFixture creates a real database with one household so the
-// storage-location membership and insert paths run against the same queries
-// production uses.
-func newBulkCreateFixture(t *testing.T) *bulkCreateFixture {
-	t.Helper()
+// newBulkTestSetup creates a user + household + storage location and wires a
+// gin context for the bulk create handler. Returns the location ID too.
+func newBulkTestSetup(t *testing.T) (*gin.Context, *httptest.ResponseRecorder, *AppContext, uint) {
 	db := testutil.SetupTestDB(t)
-	user := authentication.User{Username: "batchscanner", Password: "x", MailAddress: "b@x"}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("create user: %v", err)
-	}
-	household := dbModel.Household{Name: "Batch Household", AdminID: user.ID}
-	if err := db.Create(&household).Error; err != nil {
-		t.Fatalf("create household: %v", err)
-	}
-	user.HouseholdID = household.ID
-	if err := db.Save(&user).Error; err != nil {
-		t.Fatalf("save user: %v", err)
-	}
-	return &bulkCreateFixture{db: db, userID: user.ID, houseID: household.ID}
-}
-
-// bulkCreateRequest posts a JSON body to BulkCreateProducts. items may be nil
-// to exercise the invalid-body path.
-func (f *bulkCreateFixture) bulkCreateRequest(
-	t *testing.T,
-	items []api.BulkCreateProductItem,
-	rawBody string,
-	getter controllers.DatasetGetter,
-) (*httptest.ResponseRecorder, api.BulkCreateResponse) {
-	t.Helper()
-	gin.SetMode(gin.TestMode)
-
-	var body []byte
-	if rawBody != "" {
-		body = []byte(rawBody)
-	} else {
-		encoded, encErr := json.Marshal(api.BulkCreateProductsAPIModel{Items: items})
-		if encErr != nil {
-			t.Fatalf("marshal request: %v", encErr)
+	// The handler spawns a side-effect worker goroutine per batch; wait for it
+	// to finish before the temp DB dir is removed underneath it. Registered
+	// after SetupTestDB, so it runs before t.TempDir cleanup.
+	t.Cleanup(func() {
+		if !waitBulkSideEffectsIdle(5 * time.Second) {
+			t.Errorf("bulk side-effect worker did not finish within timeout")
 		}
-		body = encoded
-	}
-
-	ctx, w := repomocks.SetupGinContextWithDB(f.db)
-	ctx.Request = httptest.NewRequest(http.MethodPost, "/api/v1/products/bulk", bytes.NewReader(body))
-	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
-	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{
-		OpenFoodFacts: configuration.OpenFoodFactsConfiguration{CacheEnabled: true},
 	})
-	if getter != nil {
-		ctx.Set("offacntrl", getter)
-	}
-	testutil.MockJWTClaimsWithKey(ctx, f.userID, testutil.TokenIdentityKey)
-	appCtx := SetupTestAppContext(ctx, f.userID)
+	user := testutil.CreateTestUser(db, 0)
+	household := testutil.CreateTestHousehold(db, user.ID)
+	user.HouseholdID = household.ID
+	db.Save(user)
+	location := testutil.CreateTestStorageLocation(db, household.ID)
 
-	BulkCreateProducts(ctx, appCtx)
-
-	var resp api.BulkCreateResponse
-	if w.Body.Len() > 0 {
-		if decodeErr := json.Unmarshal(w.Body.Bytes(), &resp); decodeErr != nil {
-			t.Fatalf("decode response: %v (body=%s)", decodeErr, w.Body.String())
-		}
-	}
-	return w, resp
+	ctx, w := testutil.SetupGinContext(db)
+	testutil.MockJWTClaims(ctx, user.ID)
+	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+	appCtx := SetupTestAppContext(ctx, user.ID)
+	return ctx, w, appCtx, location.ID
 }
-
-func (f *bulkCreateFixture) activeProducts(t *testing.T) []dbModel.Product {
-	t.Helper()
-	rows, err := database.NewProductRepository(f.db).GetUserActiveProductsFiltered(f.userID, nil, nil)
-	if err != nil {
-		t.Fatalf("read back products: %v", err)
-	}
-	return rows
-}
-
-func bulkItem(barcode string, amount int, expireAt string, locationID *uint) api.BulkCreateProductItem {
-	expiry := time.Time{}
-	if expireAt != "" {
-		parsed, parseErr := time.Parse(time.RFC3339, expireAt)
-		if parseErr != nil {
-			panic(parseErr)
-		}
-		expiry = parsed
-	}
-	return api.BulkCreateProductItem{
-		Barcode:           barcode,
-		ProductName:       "",
-		ExpireAt:          expiry,
-		Amount:            amount,
-		StorageLocationID: locationID,
-	}
-}
-
-const bulkValidExpiry = "2026-12-31T00:00:00Z"
 
 func TestBulkCreateProducts(t *testing.T) {
-	t.Run("all items are created and stored with their values", func(t *testing.T) {
-		f := newBulkCreateFixture(t)
-		location := dbModel.StorageLocation{Name: "Fridge", Icon: "🧊", HouseholdID: f.houseID}
-		if err := f.db.Create(&location).Error; err != nil {
-			t.Fatalf("seed location: %v", err)
-		}
+	gin.SetMode(gin.TestMode)
 
-		items := []api.BulkCreateProductItem{
-			bulkItem("4006381333931", 2, bulkValidExpiry, &location.ID),
-			bulkItem("4006381333948", 1, bulkValidExpiry, nil),
-		}
-		items[0].ProductName = "Milk"
-		items[1].ProductName = "Bread"
+	t.Run("creates all valid items", func(t *testing.T) {
+		ctx, w, appCtx, locationID := newBulkTestSetup(t)
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
+			Items: []apiModel.BulkProductDraft{
+				{ProductName: "Milk", Amount: 2, Unit: "l", ExpireAt: "2030-01-02", PriceOverride: pricePtr(2.49)},
+				{ProductName: "Bread", Amount: 1, StorageLocationID: &locationID},
+			},
+		})
 
-		w, resp := f.bulkCreateRequest(t, items, "", nil)
+		BulkCreateProducts(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
-			t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
+			t.Fatalf("status = %d, want 200; body = %s", w.Code, w.Body.String())
 		}
-		if resp.Created != 2 || resp.Failed != 0 {
-			t.Errorf("counts = created %d / failed %d, want 2/0", resp.Created, resp.Failed)
+		var resp apiModel.BulkCreateResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("decode: %v", err)
 		}
-		if resp.Errors == nil {
-			t.Error("errors must serialise as [] rather than null")
+		if len(resp.Results) != 2 {
+			t.Fatalf("results = %d, want 2", len(resp.Results))
 		}
-		products := f.activeProducts(t)
-		if len(products) != 2 {
-			t.Fatalf("stored products = %d, want 2", len(products))
-		}
-		byBarcode := map[string]dbModel.Product{}
-		for _, product := range products {
-			byBarcode[product.Barcode] = product
-		}
-		milk, milkOk := byBarcode["4006381333931"]
-		bread, breadOk := byBarcode["4006381333948"]
-		if !milkOk || !breadOk {
-			t.Fatalf("stored barcodes = %v, want both scanned barcodes", byBarcode)
-		}
-		if milk.ProductName != "Milk" || milk.Amount != 2 {
-			t.Errorf("milk = %+v, want Milk with amount 2", milk)
-		}
-		if milk.StorageLocationID == nil || *milk.StorageLocationID != location.ID {
-			t.Errorf("milk storage location = %v, want %d", milk.StorageLocationID, location.ID)
-		}
-		if milk.HouseholdID != f.houseID {
-			t.Errorf("milk household = %d, want %d", milk.HouseholdID, f.houseID)
-		}
-		if milk.ExpireAt.IsZero() {
-			t.Error("expiry was not stored")
-		}
-		if bread.ProductName != "Bread" || bread.Amount != 1 {
-			t.Errorf("bread = %+v, want Bread with amount 1", bread)
-		}
-		if bread.StorageLocationID != nil {
-			t.Errorf("bread storage location = %v, want none", bread.StorageLocationID)
-		}
-	})
-
-	t.Run("partial failure rejects only its own items", func(t *testing.T) {
-		f := newBulkCreateFixture(t)
-		items := []api.BulkCreateProductItem{
-			bulkItem("../../api/v2", 1, bulkValidExpiry, nil),  // bad charset
-			bulkItem("4006381333948", 0, bulkValidExpiry, nil), // amount 0
-			bulkItem("4006381333955", 1, "", nil),              // no expiry
-			bulkItem("4006381333962", 3, bulkValidExpiry, nil),
-		}
-		items[3].ProductName = "Good"
-
-		w, resp := f.bulkCreateRequest(t, items, "", nil)
-
-		if w.Code != http.StatusOK {
-			t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
-		}
-		if resp.Created != 1 || resp.Failed != 3 {
-			t.Errorf("counts = created %d / failed %d, want 1/3", resp.Created, resp.Failed)
-		}
-		if resp.Created+resp.Failed != len(items) {
-			t.Errorf("created + failed = %d, want %d", resp.Created+resp.Failed, len(items))
-		}
-		if len(resp.Errors) != 3 {
-			t.Fatalf("errors = %+v, want 3 rejections", resp.Errors)
-		}
-		for _, itemErr := range resp.Errors {
-			if itemErr.Reason == "" {
-				t.Errorf("item %d was rejected without a reason", itemErr.Index)
+		for _, r := range resp.Results {
+			if r.Status != apiModel.BulkItemStatusCreated {
+				t.Errorf("item %d status = %q (%s), want created", r.Index, r.Status, r.Reason)
 			}
 		}
-		products := f.activeProducts(t)
-		if len(products) != 1 || products[0].ProductName != "Good" || products[0].Amount != 3 {
-			t.Errorf("stored products = %+v, want only Good(3)", products)
+		var count int64
+		appCtx.DB.Model(&dbModel.Product{}).Count(&count)
+		if count != 2 {
+			t.Errorf("product count = %d, want 2", count)
 		}
 	})
 
-	t.Run("invalid JSON body is rejected", func(t *testing.T) {
-		f := newBulkCreateFixture(t)
+	t.Run("partial success: invalid item does not block valid ones", func(t *testing.T) {
+		ctx, w, appCtx, _ := newBulkTestSetup(t)
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
+			Items: []apiModel.BulkProductDraft{
+				{ProductName: "", Amount: 1},
+				{ProductName: "Milk", Amount: 1, ExpireAt: "not-a-date"},
+				{ProductName: "Bread", Amount: 1},
+			},
+		})
 
-		w, _ := f.bulkCreateRequest(t, nil, "not json", nil)
+		BulkCreateProducts(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", w.Code, w.Body.String())
+		}
+		var resp apiModel.BulkCreateResponse
+		_ = json.Unmarshal(w.Body.Bytes(), &resp)
+		if len(resp.Results) != 3 {
+			t.Fatalf("results = %d, want 3", len(resp.Results))
+		}
+		if resp.Results[0].Status != apiModel.BulkItemStatusFailed || resp.Results[0].Reason == "" {
+			t.Errorf("item 0 = %+v, want failed with reason", resp.Results[0])
+		}
+		if resp.Results[1].Status != apiModel.BulkItemStatusFailed {
+			t.Errorf("item 1 = %+v, want failed (invalid expiry)", resp.Results[1])
+		}
+		if resp.Results[2].Status != apiModel.BulkItemStatusCreated || resp.Results[2].ProductID == nil {
+			t.Errorf("item 2 = %+v, want created", resp.Results[2])
+		}
+	})
+
+	t.Run("unknown storage location fails that item only", func(t *testing.T) {
+		ctx, w, appCtx, _ := newBulkTestSetup(t)
+		unknown := uint(9999)
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
+			Items: []apiModel.BulkProductDraft{{ProductName: "Milk", StorageLocationID: &unknown}},
+		})
+
+		BulkCreateProducts(ctx, appCtx)
+
+		var resp apiModel.BulkCreateResponse
+		_ = json.Unmarshal(w.Body.Bytes(), &resp)
+		if w.Code != http.StatusOK || resp.Results[0].Status != apiModel.BulkItemStatusFailed {
+			t.Fatalf("status = %d, results = %+v; want 200 with failed item", w.Code, resp.Results)
+		}
+	})
+
+	t.Run("out of range prices fail that item only", func(t *testing.T) {
+		ctx, w, appCtx, _ := newBulkTestSetup(t)
+		negative := -1.5
+		tooHigh := util.ReceiptItemMaxPrice + 1
+		valid := 4.99
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
+			Items: []apiModel.BulkProductDraft{
+				{ProductName: "Milk", PriceOverride: &negative},
+				{ProductName: "Caviar", PriceOverride: &tooHigh},
+				{ProductName: "Bread", PriceOverride: &valid},
+			},
+		})
+
+		BulkCreateProducts(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", w.Code, w.Body.String())
+		}
+		var resp apiModel.BulkCreateResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if resp.Results[0].Status != apiModel.BulkItemStatusFailed || resp.Results[0].Reason == "" {
+			t.Errorf("item 0 = %+v, want failed (negative price)", resp.Results[0])
+		}
+		if resp.Results[1].Status != apiModel.BulkItemStatusFailed || resp.Results[1].Reason == "" {
+			t.Errorf("item 1 = %+v, want failed (price above cap)", resp.Results[1])
+		}
+		if resp.Results[2].Status != apiModel.BulkItemStatusCreated {
+			t.Errorf("item 2 = %+v, want created", resp.Results[2])
+		}
+		var stored dbModel.Product
+		if err := appCtx.DB.First(&stored, "product_name = ?", "Bread").Error; err != nil {
+			t.Fatalf("stored product: %v", err)
+		}
+		if stored.PriceOverride == nil || *stored.PriceOverride != valid {
+			t.Errorf("priceOverride = %v, want %v", stored.PriceOverride, valid)
+		}
+		var failedCount int64
+		appCtx.DB.Model(&dbModel.Product{}).Where("product_name IN ?", []string{"Milk", "Caviar"}).Count(&failedCount)
+		if failedCount != 0 {
+			t.Errorf("rejected items were stored: %d rows", failedCount)
+		}
+	})
+
+	t.Run("empty items list is rejected", func(t *testing.T) {
+		ctx, w, appCtx, _ := newBulkTestSetup(t)
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{Items: []apiModel.BulkProductDraft{}})
+
+		BulkCreateProducts(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("status = %d, want 400", w.Code)
 		}
-		if products := f.activeProducts(t); len(products) != 0 {
-			t.Errorf("stored products = %d, want 0", len(products))
-		}
 	})
 
-	t.Run("empty items are rejected", func(t *testing.T) {
-		f := newBulkCreateFixture(t)
-
-		w, _ := f.bulkCreateRequest(t, []api.BulkCreateProductItem{}, "", nil)
-
-		if w.Code != http.StatusBadRequest {
-			t.Fatalf("status = %d, want 400", w.Code)
-		}
-	})
-
-	t.Run("more than the item cap is rejected", func(t *testing.T) {
-		f := newBulkCreateFixture(t)
-		items := make([]api.BulkCreateProductItem, util.BulkCreateMaxItems+1)
+	t.Run("too many items are rejected", func(t *testing.T) {
+		ctx, w, appCtx, _ := newBulkTestSetup(t)
+		items := make([]apiModel.BulkProductDraft, util.ReceiptBulkMaxItems+1)
 		for i := range items {
-			items[i] = bulkItem(fmt.Sprintf("4006381333%03d", i%1000), 1, bulkValidExpiry, nil)
-			items[i].ProductName = "Filler"
+			items[i] = apiModel.BulkProductDraft{ProductName: "X"}
 		}
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{Items: items})
 
-		w, _ := f.bulkCreateRequest(t, items, "", nil)
+		BulkCreateProducts(ctx, appCtx)
 
 		if w.Code != http.StatusBadRequest {
-			t.Fatalf("status = %d, want 400 for %d items", w.Code, len(items))
-		}
-		if products := f.activeProducts(t); len(products) != 0 {
-			t.Errorf("stored products = %d, want 0", len(products))
+			t.Fatalf("status = %d, want 400", w.Code)
 		}
 	})
 
-	t.Run("a storage location from another household is rejected", func(t *testing.T) {
-		f := newBulkCreateFixture(t)
-		foreignUser := authentication.User{Username: "outsider", Password: "x", MailAddress: "o@x"}
-		if err := f.db.Create(&foreignUser).Error; err != nil {
-			t.Fatalf("create foreign user: %v", err)
-		}
-		foreignHousehold := dbModel.Household{Name: "Foreign Household", AdminID: foreignUser.ID}
-		if err := f.db.Create(&foreignHousehold).Error; err != nil {
-			t.Fatalf("create foreign household: %v", err)
-		}
-		foreignLocation := dbModel.StorageLocation{Name: "Their Fridge", Icon: "🧊", HouseholdID: foreignHousehold.ID}
-		if err := f.db.Create(&foreignLocation).Error; err != nil {
-			t.Fatalf("seed foreign location: %v", err)
-		}
+	t.Run("malformed body is rejected", func(t *testing.T) {
+		ctx, w, appCtx, _ := newBulkTestSetup(t)
+		testutil.CreateTestRequest(ctx, "not-an-object")
 
-		items := []api.BulkCreateProductItem{
-			bulkItem("4006381333931", 1, bulkValidExpiry, &foreignLocation.ID),
-			bulkItem("4006381333948", 1, bulkValidExpiry, nil),
-		}
-		items[0].ProductName = "Milk"
-		items[1].ProductName = "Bread"
+		BulkCreateProducts(ctx, appCtx)
 
-		w, resp := f.bulkCreateRequest(t, items, "", nil)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400", w.Code)
+		}
+	})
+
+	t.Run("oversized barcode, unit and categories are clamped", func(t *testing.T) {
+		ctx, w, appCtx, _ := newBulkTestSetup(t)
+		longUnit := strings.Repeat("u", util.ReceiptItemMaxUnitLength+10)
+		longCategories := strings.Repeat("c", util.ReceiptItemMaxCategoriesLength+10)
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
+			Items: []apiModel.BulkProductDraft{{
+				ProductName: "Milk",
+				Barcode:     strings.Repeat("9", 40),
+				Unit:        longUnit,
+				Categories:  longCategories,
+			}},
+		})
+
+		BulkCreateProducts(ctx, appCtx)
 
 		if w.Code != http.StatusOK {
-			t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
+			t.Fatalf("status = %d, want 200; body = %s", w.Code, w.Body.String())
 		}
-		if resp.Created != 1 || resp.Failed != 1 {
-			t.Errorf("counts = created %d / failed %d, want 1/1", resp.Created, resp.Failed)
+		var stored dbModel.Product
+		if err := appCtx.DB.First(&stored, "product_name = ?", "Milk").Error; err != nil {
+			t.Fatalf("stored product: %v", err)
 		}
-		if len(resp.Errors) != 1 || resp.Errors[0].Index != 0 {
-			t.Fatalf("errors = %+v, want one rejection on index 0", resp.Errors)
+		if len(stored.Barcode) != util.CsvImportMaxBarcodeLength {
+			t.Errorf("barcode length = %d, want %d", len(stored.Barcode), util.CsvImportMaxBarcodeLength)
 		}
-	})
-
-	t.Run("Open Food Facts miss creates the item with an empty name", func(t *testing.T) {
-		f := newBulkCreateFixture(t)
-
-		items := []api.BulkCreateProductItem{bulkItem("4006381333931", 1, bulkValidExpiry, nil)}
-
-		w, resp := f.bulkCreateRequest(t, items, "", stubDatasetGetter{err: fmt.Errorf("no entry")})
-
-		if w.Code != http.StatusOK {
-			t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
+		if stored.Unit != longUnit[:util.ReceiptItemMaxUnitLength] {
+			t.Errorf("unit = %q, want clamped to %d bytes", stored.Unit, util.ReceiptItemMaxUnitLength)
 		}
-		if resp.Created != 1 || resp.Failed != 0 {
-			t.Errorf("counts = created %d / failed %d, want 1/0", resp.Created, resp.Failed)
-		}
-		products := f.activeProducts(t)
-		if len(products) != 1 {
-			t.Fatalf("stored products = %d, want 1", len(products))
-		}
-		if products[0].ProductName != "" || products[0].Barcode != "4006381333931" {
-			t.Errorf("stored product = %+v, want an unnamed product with the scanned barcode", products[0])
+		if stored.Categories != longCategories[:util.ReceiptItemMaxCategoriesLength] {
+			t.Errorf("categories = %q, want clamped to %d bytes", stored.Categories, util.ReceiptItemMaxCategoriesLength)
 		}
 	})
 
-	t.Run("a missing name is resolved live from Open Food Facts", func(t *testing.T) {
-		f := newBulkCreateFixture(t)
-		entry := dbModel.OpenFoodFactsCache{Barcode: "4006381333931", ProductName: "Cached Milk"}
-		if err := f.db.Create(&entry).Error; err != nil {
-			t.Fatalf("seed cache: %v", err)
-		}
+	t.Run("multibyte strings are clamped without splitting a rune", func(t *testing.T) {
+		ctx, _, appCtx, _ := newBulkTestSetup(t)
+		// "ä" is 2 UTF-8 bytes; a byte-boundary cut must not split it.
+		multibyte := strings.Repeat("ä", 15)
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
+			Items: []apiModel.BulkProductDraft{{ProductName: "Milk", Unit: multibyte}},
+		})
 
-		items := []api.BulkCreateProductItem{
-			bulkItem("4006381333931", 1, bulkValidExpiry, nil),
-			bulkItem("4006381333948", 1, bulkValidExpiry, nil),
-		}
+		BulkCreateProducts(ctx, appCtx)
 
-		calls := 0
-		w, resp := f.bulkCreateRequest(t, items, "", stubDatasetGetter{name: "Live Bread", calls: &calls})
-
-		if w.Code != http.StatusOK {
-			t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
+		var stored dbModel.Product
+		if err := appCtx.DB.First(&stored, "product_name = ?", "Milk").Error; err != nil {
+			t.Fatalf("stored product: %v", err)
 		}
-		if resp.Created != 2 {
-			t.Errorf("created = %d, want 2", resp.Created)
+		if !utf8.ValidString(stored.Unit) {
+			t.Errorf("unit = %q is not valid UTF-8", stored.Unit)
 		}
-		if calls != 1 {
-			t.Errorf("live lookups = %d, want 1 (the other barcode came from the cache)", calls)
-		}
-		names := map[string]bool{}
-		for _, product := range f.activeProducts(t) {
-			names[product.ProductName] = true
-		}
-		if !names["Cached Milk"] || !names["Live Bread"] {
-			t.Errorf("stored names = %v, want Cached Milk and Live Bread", names)
-		}
-	})
-
-	t.Run("a client-provided name wins and skips the resolver", func(t *testing.T) {
-		f := newBulkCreateFixture(t)
-
-		items := []api.BulkCreateProductItem{bulkItem("4006381333931", 1, bulkValidExpiry, nil)}
-		items[0].ProductName = "Hand-labelled Jar"
-
-		calls := 0
-		w, _ := f.bulkCreateRequest(t, items, "", stubDatasetGetter{name: "OFF Name", calls: &calls})
-
-		if w.Code != http.StatusOK {
-			t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
-		}
-		if calls != 0 {
-			t.Errorf("live lookups = %d, want 0 when the client names the product", calls)
-		}
-		if products := f.activeProducts(t); len(products) != 1 || products[0].ProductName != "Hand-labelled Jar" {
-			t.Errorf("stored products = %+v, want the client-provided name", products)
-		}
-	})
-
-	t.Run("duplicates of an existing household barcode are allowed", func(t *testing.T) {
-		f := newBulkCreateFixture(t)
-		existing := dbModel.Product{
-			ProductName: "Milk", Barcode: "4006381333931",
-			HouseholdID: f.houseID, UserID: f.userID, Amount: 1,
-		}
-		if err := f.db.Create(&existing).Error; err != nil {
-			t.Fatalf("seed product: %v", err)
-		}
-
-		items := []api.BulkCreateProductItem{bulkItem("4006381333931", 2, bulkValidExpiry, nil)}
-		items[0].ProductName = "Milk"
-
-		w, resp := f.bulkCreateRequest(t, items, "", nil)
-
-		if w.Code != http.StatusOK || resp.Created != 1 {
-			t.Fatalf("status %d created %d, want 200/1; body=%s", w.Code, resp.Created, w.Body.String())
-		}
-		if products := f.activeProducts(t); len(products) != 2 {
-			t.Errorf("stored products = %d, want 2 (the original plus the scanned one)", len(products))
+		if len(stored.Unit) > util.ReceiptItemMaxUnitLength {
+			t.Errorf("unit length = %d, want <= %d", len(stored.Unit), util.ReceiptItemMaxUnitLength)
 		}
 	})
 }
+
+func pricePtr(v float64) *float64 { return &v }

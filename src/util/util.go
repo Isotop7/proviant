@@ -130,6 +130,54 @@ const (
 	// provider's configured URL against this host to keep the operator's API
 	// key off the public API, and a drifted copy would silently reopen the leak.
 	DefaultTheMealDBRecipeAPIURL = "https://www.themealdb.com/api/json/v1/1"
+
+	// Receipt scan (issue #61)
+	ReceiptOCRProviderOpenAI  = "openai"
+	ContextKeyReceiptCtrl     = "receiptController"
+	ReceiptScanDefaultTimeout = 120
+
+	// DefaultMaxUploadSizeMB mirrors the viper default for
+	// server.maxUploadSizeMB (proviant.go). Used as a fallback where a zero or
+	// negative configured value would otherwise disable the upload size check.
+	DefaultMaxUploadSizeMB = 5
+
+	// ReceiptScanMultipartSlackBytes is added to the configured upload cap
+	// before the receipt scan request body is capped with http.MaxBytesReader,
+	// so the image part can be exactly MaxUploadSizeMB without the multipart
+	// envelope tripping the transport-level limit.
+	ReceiptScanMultipartSlackBytes = 1 << 20
+
+	// ReceiptBulkMaxItems bounds one bulk-create request. The review UI sends
+	// what one receipt photo plausibly contains; a client is never expected to
+	// send hundreds of items in a single call.
+	ReceiptBulkMaxItems = 100
+
+	// ReceiptBulkMaxBodyBytes caps the JSON body of one bulk-create request
+	// with http.MaxBytesReader before binding. Worst-case math per item: the
+	// draft field caps sum to 334 bytes (name 200, categories 100, unit 20,
+	// barcode 14), but encoding/json escapes `<`, `>`, `&`, `"` and control
+	// characters as \uXXXX, turning each such byte into 6 — so a fully-maxed
+	// item whose payload is all-escapable expands to ~2.2KB. Budget 4KB per
+	// item to cover that expansion plus per-item JSON syntax, and one extra
+	// 4KB for the top-level JSON envelope. Without the transport-level cap,
+	// 100 items × unbounded string fields are fully buffered in memory
+	// before any per-item clamp runs.
+	ReceiptBulkMaxBodyBytes = ReceiptBulkMaxItems*4096 + 4096
+
+	// ReceiptScanMaxTokens bounds the VLM completion. 100 items at ~50 tokens
+	// each exceed the previous flat 2000, which truncated large receipts
+	// mid-array before parsing ever saw the full output.
+	ReceiptScanMaxTokens = 5000
+
+	// ReceiptItem limits for VLM output validation
+	ReceiptItemMaxNameLength = 200
+	// ReceiptItemMaxCategoriesLength bounds the free-text categories field of
+	// a bulk-created product. Receipt scans emit short comma lists; the cap
+	// exists so a direct API client cannot push an unbounded string to the DB.
+	ReceiptItemMaxCategoriesLength = 100
+	ReceiptItemMaxUnitLength       = 20
+	ReceiptItemMaxAmount           = 999
+	ReceiptItemMaxPrice            = 100000.0
 )
 
 // CsvImportColumnAliases maps an accepted alternative column header to its

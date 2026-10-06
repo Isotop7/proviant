@@ -357,9 +357,23 @@ proviant.cookProducts = async function (items) {
 
 proviant.bulkCreateProducts = async function (items) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulk`;
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }) });
+  // The bulk endpoint expects expireAt as a YYYY-MM-DD date string and reports
+  // per-item outcomes as results[{index, status, reason}]; the batch UI works
+  // with created/failed/errors, so normalize both here.
+  const payload = (items || []).map((item) => ({ ...item, expireAt: String(item.expireAt || "").slice(0, 10) }));
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: payload }) });
   const body = await res.json();
-  return { code: res.status, message: body.message, created: body.created, failed: body.failed, errors: body.errors || [] };
+  const results = Array.isArray(body.results) ? body.results : [];
+  let created = 0;
+  const errors = [];
+  results.forEach((result) => {
+    if (result.status === "created") {
+      created += 1;
+    } else {
+      errors.push({ index: result.index, reason: result.reason });
+    }
+  });
+  return { code: res.status, message: body.message, created, failed: errors.length, errors };
 };
 
 proviant.getStorageLocations = async function () {

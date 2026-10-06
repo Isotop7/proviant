@@ -2072,7 +2072,7 @@
         },
         "/api/v1/products/bulk": {
             "post": {
-                "description": "Creates multiple products from a batch scan queue. Every item is validated on its own; valid items are inserted in one transaction while rejected ones are reported with an index and reason. A missing product name is re-resolved from the Open Food Facts cache and, within a bounded lookup budget, live; an Open Food Facts miss creates the product with an empty name, matching single-create behaviour. Duplicates of an existing household barcode are allowed.",
+                "description": "Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2082,15 +2082,15 @@
                 "tags": [
                     "product"
                 ],
-                "summary": "Create multiple products in one batch",
+                "summary": "Create multiple products",
                 "parameters": [
                     {
-                        "description": "Batch items",
-                        "name": "request",
+                        "description": "Product drafts",
+                        "name": "items",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api.BulkCreateProductsAPIModel"
+                            "$ref": "#/definitions/api.BulkCreateRequest"
                         }
                     }
                 ],
@@ -2102,15 +2102,15 @@
                         }
                     },
                     "400": {
-                        "description": "Returned when no item was created (invalid body, empty items, over cap, or every item failed)",
+                        "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.BulkCreateResponse"
+                            "$ref": "#/definitions/api.APIResponse"
                         }
                     },
                     "500": {
-                        "description": "Returned when no item was created and a server-side error occurred",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.BulkCreateResponse"
+                            "$ref": "#/definitions/api.APIResponse"
                         }
                     }
                 }
@@ -2651,6 +2651,62 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/scan-receipt": {
+            "post": {
+                "description": "Upload a receipt photo; returns extracted product drafts (name, amount, unit, price). An empty items list means the scan succeeded but nothing was recognized.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Scan receipt photo for line items",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Receipt photo",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ReceiptScanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -3958,6 +4014,32 @@
                 }
             }
         },
+        "/web/products/scan-receipt": {
+            "get": {
+                "description": "Renders the receipt photo scanning page",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Receipt scan page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/web/products/{id}/edit": {
             "get": {
                 "description": "Renders the page for editing a product",
@@ -4362,21 +4444,46 @@
                 }
             }
         },
-        "api.BulkCreateItemError": {
+        "api.BulkCreateRequest": {
             "type": "object",
             "properties": {
-                "barcode": {
-                    "type": "string"
-                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.BulkProductDraft"
+                    }
+                }
+            }
+        },
+        "api.BulkCreateResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.BulkItemResult"
+                    }
+                }
+            }
+        },
+        "api.BulkItemResult": {
+            "type": "object",
+            "properties": {
                 "index": {
+                    "type": "integer"
+                },
+                "productId": {
                     "type": "integer"
                 },
                 "reason": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
-        "api.BulkCreateProductItem": {
+        "api.BulkProductDraft": {
             "type": "object",
             "properties": {
                 "amount": {
@@ -4385,44 +4492,25 @@
                 "barcode": {
                     "type": "string"
                 },
+                "categories": {
+                    "type": "string"
+                },
                 "expireAt": {
                     "type": "string"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "priceOverride": {
+                    "type": "number"
                 },
                 "productName": {
                     "type": "string"
                 },
                 "storageLocationId": {
                     "type": "integer"
-                }
-            }
-        },
-        "api.BulkCreateProductsAPIModel": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/api.BulkCreateProductItem"
-                    }
-                }
-            }
-        },
-        "api.BulkCreateResponse": {
-            "type": "object",
-            "properties": {
-                "created": {
-                    "type": "integer"
                 },
-                "errors": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/api.BulkCreateItemError"
-                    }
-                },
-                "failed": {
-                    "type": "integer"
-                },
-                "message": {
+                "unit": {
                     "type": "string"
                 }
             }
@@ -4744,6 +4832,34 @@
                 },
                 "wasteThisMonth": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.ReceiptItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.ReceiptScanResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ReceiptItem"
+                    }
                 }
             }
         },

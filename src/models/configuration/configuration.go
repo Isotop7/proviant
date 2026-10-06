@@ -155,13 +155,26 @@ type OpenFoodFactsConfiguration struct {
 
 // OCRConfiguration contains settings for OCR expiry date detection
 type OCRConfiguration struct {
-	Enabled       bool   `mapstructure:"enabled"`       // master switch
-	Provider      string `mapstructure:"provider"`      // "tesseract" (local), "google", "openai"
-	APIKey        string `mapstructure:"apiKey"`        // for cloud providers
-	Endpoint      string `mapstructure:"endpoint"`      // custom endpoint (e.g., Tesseract HTTP server)
-	Timeout       int    `mapstructure:"timeout"`       // seconds per request
-	Languages     string `mapstructure:"languages"`     // Tesseract language codes, e.g. "deu+eng"
-	TesseractPath string `mapstructure:"tesseractPath"` // absolute path to tesseract binary
+	Enabled       bool                    `mapstructure:"enabled"`       // master switch
+	Provider      string                  `mapstructure:"provider"`      // "tesseract" (local), "google", "openai"
+	APIKey        string                  `mapstructure:"apiKey"`        // for cloud providers
+	Endpoint      string                  `mapstructure:"endpoint"`      // custom endpoint (e.g., Tesseract HTTP server)
+	Timeout       int                     `mapstructure:"timeout"`       // seconds per request
+	Languages     string                  `mapstructure:"languages"`     // Tesseract language codes, e.g. "deu+eng"
+	TesseractPath string                  `mapstructure:"tesseractPath"` // absolute path to tesseract binary
+	Receipt       ReceiptOCRConfiguration `mapstructure:"receipt"`       // receipt photo scanning via vision LLM
+}
+
+// ReceiptOCRConfiguration contains settings for receipt photo scanning
+// (issue #61). Provider is restricted to vision-capable OpenAI-compatible
+// endpoints; the whole feature is off unless Enabled is true.
+type ReceiptOCRConfiguration struct {
+	Enabled  bool   `mapstructure:"enabled"`  // master switch
+	Provider string `mapstructure:"provider"` // "openai" — any OpenAI-compatible vision endpoint
+	APIKey   string `mapstructure:"apiKey"`   // bearer token for the endpoint
+	Endpoint string `mapstructure:"endpoint"` // chat completions URL; empty = OpenAI default
+	Model    string `mapstructure:"model"`    // vision model name, required
+	Timeout  int    `mapstructure:"timeout"`  // seconds per request, default 120
 }
 
 // RecipeAPIConfiguration contains settings for the recipe suggestions feature
@@ -263,6 +276,40 @@ func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error {
 		return errors.ErrNotificationInvalidWasteReportHour
 	}
 	return validateNtfyConfig(ec.Notification.Ntfy)
+}
+
+// ValidateOCRReceiptConfiguration validates the receipt scan configuration.
+// A disabled feature is always valid: nothing is parsed, no endpoint is
+// contacted, so there is nothing to reject. An enabled configuration must
+// name a vision-capable provider ("openai" — any OpenAI-compatible endpoint)
+// and a model; a non-vision provider such as "tesseract" cannot return
+// structured line items at all, so it is a hard validation error rather than
+// a runtime fallback.
+func (ec *ProviantConfiguration) ValidateOCRReceiptConfiguration() error {
+	if !ec.OCR.Receipt.Enabled {
+		return nil
+	}
+	provider := strings.ToLower(strings.TrimSpace(ec.OCR.Receipt.Provider))
+	if provider == "" {
+		provider = util.ReceiptOCRProviderOpenAI
+	}
+	ec.OCR.Receipt.Provider = provider
+	if provider != util.ReceiptOCRProviderOpenAI {
+		return errors.ErrReceiptOCRInvalidProvider
+	}
+	ec.OCR.Receipt.Model = strings.TrimSpace(ec.OCR.Receipt.Model)
+	if ec.OCR.Receipt.Model == "" {
+		return errors.ErrReceiptOCREmptyModel
+	}
+	if ec.OCR.Receipt.Timeout <= 0 {
+		ec.OCR.Receipt.Timeout = util.ReceiptScanDefaultTimeout
+	}
+	// Trimmed like the recipe API key above: mapstructure hands over quoted
+	// whitespace verbatim, so trailing whitespace would end up inside the
+	// Authorization header or the request URL.
+	ec.OCR.Receipt.Endpoint = strings.TrimSpace(ec.OCR.Receipt.Endpoint)
+	ec.OCR.Receipt.APIKey = strings.TrimSpace(ec.OCR.Receipt.APIKey)
+	return nil
 }
 
 // ValidateDatabaseConfiguration checks the current database configuration for common errors
@@ -426,6 +473,22 @@ func (ec *ProviantConfiguration) ValidateRecipeAPIConfiguration() error {
 		return errors.ErrRecipeAPIProviderURLMismatch
 	}
 	return nil
+}
+
+// UsesInsecureTransport reports whether the configured receipt endpoint is
+// served over plaintext HTTP. A custom endpoint authenticates every request
+// with a bearer API key and receives the uploaded receipt photo, so an
+// http:// URL transmits both in cleartext. Mirrors RecipeAPIConfiguration.
+// UsesInsecureTransport: surfaced as a startup warning rather than a
+// rejection because a LAN-only vision endpoint is a legitimate deployment.
+// An empty Endpoint resolves to the https:// OpenAI default, so it is never
+// insecure.
+func (rc ReceiptOCRConfiguration) UsesInsecureTransport() bool {
+	parsed, parseErr := url.Parse(strings.TrimSpace(rc.Endpoint))
+	if parseErr != nil {
+		return false
+	}
+	return strings.EqualFold(parsed.Scheme, "http")
 }
 
 // isSelfHostedRecipeProvider reports whether name identifies a self-hosted

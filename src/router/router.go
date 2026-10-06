@@ -169,6 +169,13 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		ctx.Next()
 	})
 
+	// Receipt scan controller for receipt photo line item extraction
+	receiptCtrl := controllers.NewReceiptScanController(logger, &proviantConfiguration.OCR.Receipt)
+	engine.Use(func(ctx *gin.Context) {
+		ctx.Set(util.ContextKeyReceiptCtrl, receiptCtrl)
+		ctx.Next()
+	})
+
 	// Proviant configuration for access in handlers
 	engine.Use(func(ctx *gin.Context) {
 		ctx.Set(util.ContextKeyProviantConfig, proviantConfiguration)
@@ -237,17 +244,19 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductMemberAPI.POST("/bulkConsume", v1.WrapHandler(v1.BulkConsumeProducts))
 	publicProductMemberAPI.POST("/bulkWaste", v1.WrapHandler(v1.BulkWasteProducts))
 	publicProductMemberAPI.POST("/cook", v1.WrapHandler(v1.CookProducts))
-	// Batch create re-resolves missing product names through the same bounded
-	// Open Food Facts lookups as the CSV import, so it is throttled to keep one
-	// client from queuing lookups back to back — but with its own limiter and
-	// a larger burst, because consecutive saves are the normal batch flow and
-	// must not drain the CSV import budget.
-	publicProductMemberAPI.POST("/bulk", bulkCreateRateLimitMiddleware, v1.WrapHandler(v1.BulkCreateProducts))
 	// Import is a write, so it inherits the household-role gate above. It must
 	// not move to protectedProductAPI, which shares the path prefix. The rate
 	// limiter keeps one upload from repeating its bounded Open Food Facts
 	// lookups and full row insert back to back.
 	publicProductMemberAPI.POST("/import", importRateLimitMiddleware, v1.WrapHandler(v1.ImportProducts))
+	// Receipt scan sends the photo to an external vision endpoint and gets its
+	// own limiter — cheap local expiry scans must not consume its budget.
+	// Member-gated like the create path it feeds.
+	publicProductMemberAPI.POST("/scan-receipt", receiptRateLimitMiddleware, v1.WrapHandler(v1.ScanReceipt))
+	// Bulk create backs the receipt review UI: per-item processing, partial
+	// success allowed. Do not confuse with the CSV import path above. Rate
+	// limited: one call inserts up to util.ReceiptBulkMaxItems products.
+	publicProductMemberAPI.POST("/bulk", bulkRateLimitMiddleware, v1.WrapHandler(v1.BulkCreateProducts))
 	publicProductAPI.POST("/scan", scanRateLimitMiddleware, v1.WrapHandler(v1.ScanProduct))
 	publicProductAPI.POST("/scan-date", v1.WrapHandler(v1.ScanExpiryDate))
 	publicProductAPI.GET("/byBarcode/:barcode", v1.WrapHandler(v1.GetProductsByBarcode))
@@ -451,6 +460,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/user/settings", webFrontendHandler.UserSettings)
 	publicWebFrontend.GET("/products", webFrontendHandler.Products)
 	publicWebFrontend.GET("/products/scan", webFrontendHandler.ProductsScan)
+	publicWebFrontend.GET("/products/scan-receipt", webFrontendHandler.ProductsScanReceipt)
 	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
 	publicWebFrontend.GET("/recipes", webFrontendHandler.Recipes)
 	publicWebFrontend.GET("/waste-analytics", webFrontendHandler.WasteAnalytics)

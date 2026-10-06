@@ -320,8 +320,29 @@ var (
 	// ErrOCRProcessing is thrown when OCR processing fails (generic)
 	ErrOCRProcessing = errors.New("OCR processing failed")
 
+	// ErrReceiptEndpoint is returned to clients when the configured vision
+	// endpoint itself fails (unreachable, non-2xx status or an endpoint-reported
+	// error such as 401/403 auth or config problems). Distinct from
+	// ErrOCRProcessing so an upstream problem is not reported as an internal
+	// server error.
+	ErrReceiptEndpoint = errors.New("receipt scan endpoint failed")
+
+	// ErrReceiptOCRDisabled is returned when receipt scanning is used while the ocr.receipt feature is disabled
+	ErrReceiptOCRDisabled = errors.New("receipt scanning is not enabled on this server")
+
+	// ErrReceiptOCRInvalidProvider is thrown when ocr.receipt is enabled with a provider
+	// that is not an OpenAI-compatible vision endpoint
+	ErrReceiptOCRInvalidProvider = errors.New("receipt scanning requires an OpenAI-compatible vision provider")
+
+	// ErrReceiptOCREmptyModel is thrown when ocr.receipt is enabled without a model name
+	ErrReceiptOCREmptyModel = errors.New("receipt scanning requires a model name")
+
 	// ErrFileTooLarge is thrown when the uploaded image exceeds the size limit
 	ErrFileTooLarge = errors.New("uploaded file too large")
+
+	// ErrInvalidImageType is thrown when an uploaded receipt photo is not a
+	// supported image format (JPEG, PNG or WebP)
+	ErrInvalidImageType = errors.New("uploaded file is not a supported image")
 
 	// ErrInvalidRequest is thrown when the request is malformed or missing required parameters
 	ErrInvalidRequest = errors.New("invalid request")
@@ -430,3 +451,14 @@ var (
 	MsgErrComputingExpiryTrend         = "Error computing expiry trend"
 	MsgErrGettingProducts              = "Error getting products"
 )
+
+// ReceiptEndpointError marks an OCR scan failure as originating from the
+// upstream vision endpoint rather than from Proviant itself. The API layer
+// maps it to 502 Bad Gateway instead of 500 via errors.As.
+type ReceiptEndpointError struct {
+	Err error
+}
+
+func (e *ReceiptEndpointError) Error() string { return e.Err.Error() }
+
+func (e *ReceiptEndpointError) Unwrap() error { return e.Err }

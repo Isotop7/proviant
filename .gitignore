@@ -48,6 +48,7 @@ src/data
 # Kilo
 .kilo/*
 !.kilo/skills
+skills-lock.json
 
 # Issue sync
 issues/

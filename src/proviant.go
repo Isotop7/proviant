@@ -141,6 +141,12 @@ func setupConfig() *configuration.ProviantConfiguration {
 	viper.SetDefault("server.rateLimit.recipes_per_minute", 6)
 	viper.SetDefault("server.demoMode", false)
 
+	// Receipt scan defaults (issue #61): the OpenAI-compatible endpoint is
+	// assumed unless another is configured; timeout follows the vision-LLM
+	// reality of multi-second responses.
+	viper.SetDefault("ocr.receipt.provider", util.ReceiptOCRProviderOpenAI)
+	viper.SetDefault("ocr.receipt.timeout", util.ReceiptScanDefaultTimeout)
+
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
 		panic(err.Error())
@@ -274,6 +280,22 @@ func main() {
 	if err := proviantConfiguration.ValidateServerConfiguration(); err != nil {
 		logger.Error().Msg(err.Error())
 		panic(err)
+	}
+
+	// Validate receipt scan configuration
+	if err := proviantConfiguration.ValidateOCRReceiptConfiguration(); err != nil {
+		logger.Error().Msg(err.Error())
+		panic(err)
+	}
+	// A custom receipt endpoint authenticates with a bearer API key and
+	// receives the uploaded receipt photo, so an http:// URL puts both on the
+	// wire in cleartext. Allowed, because a LAN-only vision endpoint is a
+	// legitimate deployment, but never silently.
+	if proviantConfiguration.OCR.Receipt.Enabled && proviantConfiguration.OCR.Receipt.UsesInsecureTransport() {
+		logger.Warn().Msgf(
+			"receipt OCR endpoint %q uses http://; its api_key and the receipt photos are sent unencrypted. "+
+				"Use https:// unless the endpoint is reachable only over a trusted network",
+			proviantConfiguration.OCR.Receipt.Endpoint)
 	}
 
 	// Setup database connection handle

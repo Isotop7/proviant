@@ -372,10 +372,16 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	now := time.Now()
 
 	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	if proviantConfig == nil {
+		logger.Error().Msg("failed to get proviant configuration from context")
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, "Internal error")
+		return
+	}
 	criticalDays := proviantConfig.Expiry.CriticalThresholdDays
 	if criticalDays <= 0 {
 		criticalDays = 3
 	}
+	receiptScanEnabled := proviantConfig.OCR.Receipt.Enabled && strings.TrimSpace(proviantConfig.OCR.Receipt.Model) != ""
 	soonDays := proviantConfig.Expiry.SoonThresholdDays
 	if soonDays <= 0 {
 		soonDays = 7
@@ -407,24 +413,25 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	}
 
 	pageData := map[string]any{
-		"InviteToken":      ctx.Query("invite_token"),
-		"Title":            "Products",
-		"Products":         products,
-		"QueryParam":       queryParam,
-		"QueryValue":       queryValue,
-		"Sort":             sort,
-		"Order":            order,
-		"Locations":        locations,
-		"StorageLocations": locations,
-		"LocationFilter":   locationFilter,
-		"View":             view,
-		"StatusFilter":     statusFilter,
-		"ProductCount":     len(allProducts),
-		"ExpiredCount":     expiredCount,
-		"CriticalCount":    criticalCount,
-		"UrgentCount":      expiredCount + criticalCount,
-		"Params":           params,
-		"CurrentUserID":    userID,
+		"InviteToken":        ctx.Query("invite_token"),
+		"Title":              "Products",
+		"Products":           products,
+		"QueryParam":         queryParam,
+		"QueryValue":         queryValue,
+		"Sort":               sort,
+		"Order":              order,
+		"Locations":          locations,
+		"StorageLocations":   locations,
+		"LocationFilter":     locationFilter,
+		"View":               view,
+		"StatusFilter":       statusFilter,
+		"ProductCount":       len(allProducts),
+		"ExpiredCount":       expiredCount,
+		"CriticalCount":      criticalCount,
+		"UrgentCount":        expiredCount + criticalCount,
+		"Params":             params,
+		"CurrentUserID":      userID,
+		"ReceiptScanEnabled": receiptScanEnabled,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }
@@ -435,6 +442,58 @@ func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
 		"Title":       "Scan Product",
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsScan.tmpl", pageData)
+}
+
+// ProductsScanReceipt renders the receipt photo scan page (issue #61).
+// Storage locations are prefetched server-side so the review form can offer
+// the household's locations without an extra API round-trip.
+// @Summary      Receipt scan page
+// @Description  Renders the receipt photo scanning page
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/products/scan-receipt [get]
+func (frontend *Frontend) ProductsScanReceipt(ctx *gin.Context) {
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+
+	// Gate on the feature flag server-side: without this a user with the URL
+	// uploads a photo and only then hits a 403 from the scan API. Mirrors the
+	// products-page entry-point condition, including the model check — with
+	// enabled:true but an empty model the page would render and every scan
+	// would then fail at request time.
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	if proviantConfig == nil || !proviantConfig.OCR.Receipt.Enabled || strings.TrimSpace(proviantConfig.OCR.Receipt.Model) == "" {
+		ctx.Redirect(http.StatusFound, "/web/products")
+		return
+	}
+
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
+		logger.Error().Msg(errors.ErrDatabaseContextNotFound.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, "Internal error")
+		return
+	}
+	claims := jwt.ExtractClaims(ctx)
+	userID := uint(claims[static.TokenIdentityKey].(float64))
+	if userID <= 0 {
+		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusUnauthorized, errors.ErrUserIDFromToken.Error())
+		return
+	}
+
+	locations, locErr := repos.StorageLocations.GetByHousehold(userID)
+	if locErr != nil {
+		logger.Warn().Msgf("Receipt scan page: storage locations: %s", locErr)
+	}
+
+	pageData := map[string]any{
+		"Title":              "Scan Receipt",
+		"StorageLocations":   locations,
+		"MaxItems":           util.ReceiptBulkMaxItems,
+		"ScanTimeoutSeconds": proviantConfig.OCR.Receipt.Timeout,
+	}
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsScanReceipt.tmpl", pageData)
 }
 
 // ProductsView renders the product view page

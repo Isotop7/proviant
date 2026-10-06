@@ -5,9 +5,16 @@
         <h1 class="page-header-title">Products</h1>
         <p class="page-header-subtitle">{{ .ProductCount }} items in your household</p>
     </div>
-    <button class="btn btn-proviant-primary d-none d-md-flex align-items-center gap-2" id="btnOpenAddProductModal">
-        <i class="bi bi-plus-lg"></i> Add product
-    </button>
+    <div class="d-flex gap-2">
+        {{ if .ReceiptScanEnabled }}
+        <a href="/web/products/scan-receipt" class="btn btn-proviant-secondary d-none d-md-flex align-items-center gap-2">
+            <i class="bi bi-receipt"></i> Scan receipt
+        </a>
+        {{ end }}
+        <button class="btn btn-proviant-primary d-none d-md-flex align-items-center gap-2" id="btnOpenAddProductModal">
+            <i class="bi bi-plus-lg"></i> Add product
+        </button>
+    </div>
 </div>
 
 <div class="toolbar-sticky">
@@ -95,6 +102,9 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" id="mobileExportMenu">
                         <li><a class="dropdown-item" href="#" data-bs-toggle="offcanvas" data-bs-target="#mobileFiltersOffcanvas"><i class="bi bi-funnel me-2"></i>Filters</a></li>
+                        {{ if .ReceiptScanEnabled }}
+                        <li><a class="dropdown-item" href="/web/products/scan-receipt"><i class="bi bi-receipt me-2"></i>Scan receipt</a></li>
+                        {{ end }}
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#" id="mobile-import-csv"><i class="bi bi-upload me-2"></i>Import products (CSV)</a></li>
                         <li><a class="dropdown-item" href="#" id="mobile-import-template"><i class="bi bi-file-earmark-arrow-down me-2"></i>Download CSV template</a></li>

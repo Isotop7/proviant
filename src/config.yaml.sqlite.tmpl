@@ -88,6 +88,13 @@ ocr:
   provider: "tesseract"
   languages: "deu+eng"
   timeout: 10
+  receipt:
+    enabled: false
+    provider: "openai"
+    apiKey: ""
+    endpoint: ""
+    model: ""
+    timeout: 120
 
 expiry:
   critical_threshold_days: 3

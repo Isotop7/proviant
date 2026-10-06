@@ -1,226 +1,330 @@
-// v1 implements version 1 of the proviant API
 package v1
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
-const (
-	fmtErrBulkCreateLocations = "BulkCreateProducts: GetByHousehold: %s"
-	fmtErrBulkCreateWrite     = "BulkCreateProducts: CreateProductsBulk: %s"
-	fmtErrBulkCreateActivity  = "BulkCreateProducts: activity log: %s"
+// bulkSideEffectSlots bounds the number of concurrent bulk-create side-effect
+// workers (activity log + webhook) across all requests.
+var bulkSideEffectSlots = make(chan struct{}, 4)
 
-	// fmtBulkCreateProductSummary names the aggregate activity feed entry.
-	fmtBulkCreateProductSummary = "%d products added via batch scan"
-)
+// bulkSideEffectSlotWait bounds how long a side-effect worker waits for a free
+// slot before giving up. Long enough to ride out a brief saturation spike,
+// short enough that a stuck worker cannot pin a batch indefinitely.
+const bulkSideEffectSlotWait = 2 * time.Second
 
-// BulkCreateProducts creates multiple products queued by the batch scan mode
-// @Summary      Create multiple products in one batch
-// @Description  Creates multiple products from a batch scan queue. Every item is validated on its own; valid items are inserted in one transaction while rejected ones are reported with an index and reason. A missing product name is re-resolved from the Open Food Facts cache and, within a bounded lookup budget, live; an Open Food Facts miss creates the product with an empty name, matching single-create behaviour. Duplicates of an existing household barcode are allowed.
-// @Tags         product
-// @Accept       json
-// @Produce      json
-// @Param        request  body  apiModel.BulkCreateProductsAPIModel  true  "Batch items"
-// @Success      200  {object}  apiModel.BulkCreateResponse
-// @Failure      400  {object}  apiModel.BulkCreateResponse  "Returned when no item was created (invalid body, empty items, over cap, or every item failed)"
-// @Failure      500  {object}  apiModel.BulkCreateResponse  "Returned when no item was created and a server-side error occurred"
-// @Router       /api/v1/products/bulk [post]
+// bulkSideEffectsDropped counts product batches whose activity log entries and
+// webhooks were discarded because no side-effect slot became free in time.
+// Dropped side effects are otherwise invisible to consumers; the saturation
+// Error log below carries the running total, which is the observable metric
+// for monitoring.
+var bulkSideEffectsDropped atomic.Int64
+
+// bulkSideEffectBatches counts in-flight side-effect worker goroutines.
+// Tests use waitBulkSideEffectsIdle so DB cleanup cannot close the database
+// under a still-running worker.
+var bulkSideEffectBatches atomic.Int64
+
+// BulkCreateProducts creates multiple products in one request. Processing is
+// per-item and partial success is allowed: every submitted item reports its
+// own outcome, a failing item never blocks the others.
+// @Summary       Create multiple products
+// @Description   Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason.
+// @Tags          product
+// @Accept        json
+// @Produce       json
+// @Param         items  body  apiModel.BulkCreateRequest  true  "Product drafts"
+// @Success       200  {object}  apiModel.BulkCreateResponse
+// @Failure       400  {object}  api.APIResponse
+// @Failure       500  {object}  api.APIResponse
+// @Router        /api/v1/products/bulk [post]
 func BulkCreateProducts(ctx *gin.Context, appCtx *AppContext) {
 	logger := appCtx.Logger
-	repos := appCtx.Repos
-	userID := appCtx.UserID
 
-	configValue, configOk := ctx.Get(util.ContextKeyProviantConfig)
-	proviantConfig, isConfig := configValue.(*configuration.ProviantConfiguration)
-	if !configOk || !isConfig || proviantConfig == nil {
-		logger.Error().Msg("proviant config not found in context")
-		api.RespondError(ctx, http.StatusInternalServerError, errors.ErrInternalServer)
-		return
-	}
-
-	var request apiModel.BulkCreateProductsAPIModel
-	if !bindJSON(ctx, logger, &request) {
-		return
-	}
-
-	response := apiModel.BulkCreateResponse{
-		Errors: make([]apiModel.BulkCreateItemError, 0),
-	}
-
-	if len(request.Items) == 0 {
-		response.Message = "no items were submitted"
-		ctx.JSON(http.StatusBadRequest, response)
-		return
-	}
-	if len(request.Items) > util.BulkCreateMaxItems {
-		response.Message = fmt.Sprintf("a batch may contain at most %d items", util.BulkCreateMaxItems)
-		ctx.JSON(http.StatusBadRequest, response)
-		return
-	}
-
-	locations, locationErr := repos.StorageLocations.GetByHousehold(userID)
-	if locationErr != nil {
-		logger.Error().Msgf(fmtErrBulkCreateLocations, locationErr)
-		api.RespondError(ctx, http.StatusInternalServerError, errors.ErrInternalServer)
-		return
-	}
-	knownLocations := make(map[uint]bool, len(locations))
-	for i := range locations {
-		knownLocations[locations[i].ID] = true
-	}
-
-	// Only items without a client-provided name may consume an Open Food Facts
-	// lookup, so the resolver is seeded with just those barcodes.
-	var resolver *importNameResolver
-	for i := range request.Items {
-		if request.Items[i].ProductName == "" {
-			barcodes := make([]string, 0, len(request.Items))
-			for j := range request.Items {
-				if request.Items[j].ProductName == "" {
-					barcodes = append(barcodes, request.Items[j].Barcode)
-				}
-			}
-			resolver = newImportNameResolver(repos, barcodes, importOffDatasetGetter(ctx), proviantConfig.OpenFoodFacts.CacheEnabled, logger)
-			break
-		}
-	}
-
-	products := make([]database.ImportedProduct, 0, len(request.Items))
-	for i := range request.Items {
-		item := &request.Items[i]
-		product, reason := parseBulkCreateItem(item, knownLocations, resolver)
-		if reason != "" {
-			logger.Debug().Msgf("BulkCreateProducts: item %d rejected: %s", i, reason)
-			response.Errors = append(response.Errors, apiModel.BulkCreateItemError{
-				Index: i, Barcode: item.Barcode, Reason: reason,
-			})
-			continue
-		}
-		product.StorageLocationID = item.StorageLocationID
-		products = append(products, database.ImportedProduct{Product: product})
-	}
-
-	response.Created = len(products)
-	response.Failed = len(response.Errors)
-
-	if len(products) == 0 {
-		// Nothing was written. The client asked for a write that did not
-		// happen, so this is a bad request rather than a partial success.
-		response.Message = "no products were created"
-		ctx.JSON(http.StatusBadRequest, response)
-		return
-	}
-
-	if _, createErr := repos.Products.CreateProductsBulk(userID, products); createErr != nil {
-		logger.Error().Msgf(fmtErrBulkCreateWrite, createErr)
-		response.Created = 0
-		response.Failed = len(request.Items)
-		response.Message = "failed to write products"
-		ctx.JSON(http.StatusInternalServerError, response)
-		return
-	}
-
-	logBulkCreateActivity(repos, logger, userID, len(products))
-
-	if response.Failed > 0 {
-		response.Message = fmt.Sprintf("%d created, %d failed", response.Created, response.Failed)
-	} else {
-		response.Message = fmt.Sprintf("%d products created", response.Created)
-	}
-	ctx.JSON(http.StatusOK, response)
-}
-
-// parseBulkCreateItem converts one queued item into a product, or returns the
-// reason it was rejected. An empty reason means the item is insertable. Unlike
-// the CSV import there is no household-duplicate check: batch scan deliberately
-// allows re-adding a barcode that is already on the shelf.
-func parseBulkCreateItem(
-	item *apiModel.BulkCreateProductItem,
-	knownLocations map[uint]bool,
-	resolver *importNameResolver,
-) (dbModel.Product, string) {
-	var product dbModel.Product
-
-	reason := validateImportBarcode(&importRow{barcode: item.Barcode})
-	if reason != "" {
-		return product, reason
-	}
-	if item.Amount < 1 {
-		return product, "amount must be at least 1"
-	}
-	if item.ExpireAt.IsZero() {
-		return product, "expiry date is required"
-	}
-	if item.StorageLocationID != nil && !knownLocations[*item.StorageLocationID] {
-		return product, "storage location does not belong to this household"
-	}
-
-	product = dbModel.Product{
-		Barcode:     item.Barcode,
-		ProductName: item.ProductName,
-		ExpireAt:    item.ExpireAt,
-		Amount:      item.Amount,
-	}
-
-	if product.ProductName == "" && resolver != nil {
-		// An Open Food Facts miss is not an error here: single create also
-		// stores the product with an empty name, so a blank reason string is
-		// discarded and the barcode-only row is kept as-is.
-		name, _ := resolver.resolve(item.Barcode)
-		product.ProductName = name
-	}
-
-	return product, ""
-}
-
-// logBulkCreateActivity records the whole batch as a single feed entry, in the
-// same fashion as the CSV import. The webhook is deliberately skipped for the
-// same reason: per-product events would flood subscribers for a large batch.
-func logBulkCreateActivity(repos *database.RepositoryContainer, logger *zerolog.Logger, userID uint, count int) {
-	if repos.ActivityLogs == nil {
-		return
-	}
-	go func() {
-		householdID, householdErr := repos.Users.GetUserHouseholdByID(userID)
-		if householdErr != nil {
-			// An entry with HouseholdID 0 would be orphaned; dropping it beats
-			// writing a feed row no feed ever renders.
-			logger.Warn().Msgf(fmtErrBulkCreateActivity, householdErr)
+	var req apiModel.BulkCreateRequest
+	// Transport-level body cap before binding: 100 items × unbounded string
+	// fields would otherwise be fully buffered in memory before the per-item
+	// clamps ever run (same pattern as ScanReceipt).
+	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, util.ReceiptBulkMaxBodyBytes)
+	if bindErr := ctx.ShouldBindJSON(&req); bindErr != nil {
+		if importBodyTooLarge(bindErr) {
+			logger.Warn().Msgf("Bulk create: request body too large: %s", bindErr)
+			api.RespondError(ctx, http.StatusBadRequest, errors.ErrFileTooLarge)
 			return
 		}
-		userName := ""
-		if user, err := repos.Users.GetUserByID(userID); err == nil {
-			userName = user.DisplayName
+		logger.Error().Msgf(errors.FormatGenericError, errors.ErrParseBody.Error(), bindErr.Error())
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputError())
+		return
+	}
+
+	if len(req.Items) == 0 {
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "items missing"})
+		return
+	}
+	if len(req.Items) > util.ReceiptBulkMaxItems {
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("too many items (max %d)", util.ReceiptBulkMaxItems)})
+		return
+	}
+
+	// One household lookup per request, not per item
+	validLocationIDs := make(map[uint]bool)
+	locations, locErr := appCtx.Repos.StorageLocations.GetByHousehold(appCtx.UserID)
+	if locErr != nil {
+		// With the lookup failed the map stays empty and every item carrying
+		// a location is rejected as "unknown storage location" — that reason
+		// is misleading without this log line pointing at the real cause.
+		logger.Error().Msgf("Bulk create: storage location lookup failed: %s", locErr)
+	} else {
+		for i := range locations {
+			validLocationIDs[locations[i].ID] = true
 		}
-		// ProductID stays 0: the feed links a row only when a product is
-		// attached, and an aggregate entry has no single product.
-		logEntry := &dbModel.ActivityLog{
-			HouseholdID: householdID,
-			UserID:      &userID,
-			UserName:    userName,
-			Action:      dbModel.ActivityActionAdd,
-			ProductName: fmt.Sprintf(fmtBulkCreateProductSummary, count),
-			Quantity:    count,
-			Timestamp:   time.Now(),
+	}
+
+	// Household and display name feed the activity log; look them up once per
+	// request, not per item. A failing household lookup only disables activity
+	// logging — it never blocks product creation.
+	bulkActorInfo := bulkActor{userID: appCtx.UserID}
+	householdID, householdErr := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
+	if householdErr != nil {
+		logger.Warn().Msgf("Bulk create: activity log disabled, household lookup failed: %s", householdErr)
+	} else {
+		bulkActorInfo.householdID = householdID
+		bulkActorInfo.householdKnown = true
+	}
+	if user, userErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID); userErr == nil {
+		bulkActorInfo.userName = user.DisplayName
+	} else {
+		logger.Warn().Msgf("Bulk create: activity log will use empty user name, user lookup failed: %s", userErr)
+	}
+
+	results := make([]apiModel.BulkItemResult, 0, len(req.Items))
+	createdProducts := make([]*dbModel.Product, 0, len(req.Items))
+	for i := range req.Items {
+		product, result := bulkCreateItem(appCtx, i, &req.Items[i], validLocationIDs)
+		if result.Status == apiModel.BulkItemStatusCreated {
+			logger.Info().Msgf("Bulk create: item %d created product %d", i, *result.ProductID)
+			createdProducts = append(createdProducts, product)
+		} else {
+			logger.Warn().Msgf("Bulk create: item %d failed: %s", i, result.Reason)
 		}
-		ctxBg, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := repos.ActivityLogs.Create(ctxBg, logEntry); err != nil {
-			logger.Warn().Msgf(fmtErrBulkCreateActivity, err)
+		results = append(results, result)
+	}
+
+	// Side effects run off the request path. A package-level semaphore bounds
+	// total in-flight workers: without it, a bulk-create flood would pile up
+	// unbounded goroutines contending on the DB (SQLite especially) that the
+	// sequential CreateProduct calls above just avoided.
+	if len(createdProducts) > 0 {
+		bulkSideEffectBatches.Add(1)
+		go func() {
+			defer bulkSideEffectBatches.Add(-1)
+			// Gin's recovery middleware does not cover goroutines: a panic in
+			// webhook or activity-log code here would take down the whole
+			// server. Contain it — the products are already created and the
+			// response is on its way either way.
+			defer func() {
+				if r := recover(); r != nil {
+					appCtx.Logger.Error().Msgf("Bulk create: side-effect worker panicked: %v", r)
+				}
+			}()
+			// The slot is acquired and released per item, never for the whole
+			// batch: a 100-item batch with a 5s activity-log timeout each would
+			// otherwise monopolize a slot for minutes and starve every other
+			// batch's side effects. Releasing between items lets concurrent
+			// batches interleave.
+			for _, product := range createdProducts {
+				select {
+				case bulkSideEffectSlots <- struct{}{}:
+				case <-time.After(bulkSideEffectSlotWait):
+					// No slot freed within the wait: drop this batch's
+					// remaining side effects rather than queue unboundedly.
+					// Products exist either way; the loss must be visible, so
+					// this logs at Error level, not Warn/Debug.
+					dropped := bulkSideEffectsDropped.Add(1)
+					appCtx.Logger.Error().
+						Int("items", len(createdProducts)).
+						Int64("batchesDroppedTotal", dropped).
+						Msg("Bulk create: no side-effect worker slot free, dropping activity log and webhooks for this batch")
+					return
+				}
+				// Per-item closure: if activity-log or webhook code panics
+				// while the slot is held, the deferred release still runs —
+				// otherwise the token would leak and permanently shrink the
+				// semaphore — before the panic reaches the outer recover.
+				func() {
+					defer func() { <-bulkSideEffectSlots }()
+					logBulkActivity(appCtx, product, bulkActorInfo)
+					fireBulkProductCreated(appCtx, product)
+				}()
+			}
+		}()
+	}
+
+	ctx.JSON(http.StatusOK, apiModel.BulkCreateResponse{Results: results})
+}
+
+// waitBulkSideEffectsIdle blocks until every spawned side-effect worker has
+// finished, returning false when the timeout elapses first. Tests call it so
+// DB cleanup cannot close the database under a still-running worker.
+func waitBulkSideEffectsIdle(timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for bulkSideEffectBatches.Load() > 0 {
+		if time.Now().After(deadline) {
+			return false
 		}
-	}()
+		time.Sleep(2 * time.Millisecond)
+	}
+	return true
+}
+
+// bulkActor carries the once-per-request user info the activity log needs.
+type bulkActor struct {
+	userID         uint
+	householdID    uint
+	householdKnown bool
+	userName       string
+}
+
+// bulkCreateItem validates one draft and creates it. Validation failures and
+// DB errors are item-level outcomes, never request-level ones. The created
+// product is returned for the caller's side-effect worker; nil on failure.
+func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDraft, validLocationIDs map[uint]bool) (*dbModel.Product, apiModel.BulkItemResult) {
+	// Overlong names are clamped, not rejected: the receipt scan path clamps
+	// names the same way and the other string fields are truncated, so a
+	// direct API client gets the same permissive-but-bounded treatment.
+	productName := truncateDraftField(strings.TrimSpace(draft.ProductName), util.ReceiptItemMaxNameLength)
+	if productName == "" {
+		return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: "product name is missing"}
+	}
+	amount := draft.Amount
+	if amount < 1 {
+		amount = 1
+	}
+	if amount > util.ReceiptItemMaxAmount {
+		amount = util.ReceiptItemMaxAmount
+	}
+
+	expireAt := time.Time{}
+	if strings.TrimSpace(draft.ExpireAt) != "" {
+		parsed, parseErr := time.Parse(util.DefaultDateFormatParseStr, draft.ExpireAt)
+		if parseErr != nil {
+			// Truncate before echoing: draft.ExpireAt is unvalidated client
+			// input and %q-escaping a ~100KB string would blow it up to
+			// ~600KB in the response body and Warn log.
+			return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: fmt.Sprintf("invalid expiry date %q", truncateDraftField(draft.ExpireAt, 64))}
+		}
+		expireAt = parsed
+	}
+
+	// Mirrors the receipt scan clamp: a direct API client must not push an
+	// unbounded or negative price into the DB, where it would poison the
+	// savings calculations that sum PriceOverride * Amount.
+	if draft.PriceOverride != nil && (*draft.PriceOverride < 0 || *draft.PriceOverride > util.ReceiptItemMaxPrice) {
+		return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: fmt.Sprintf("invalid price %.2f (0 to %.0f allowed)", *draft.PriceOverride, util.ReceiptItemMaxPrice)}
+	}
+
+	product := dbModel.Product{
+		ProductName:   productName,
+		Barcode:       truncateDraftField(strings.TrimSpace(draft.Barcode), util.CsvImportMaxBarcodeLength),
+		Amount:        amount,
+		Unit:          truncateDraftField(strings.TrimSpace(draft.Unit), util.ReceiptItemMaxUnitLength),
+		Categories:    truncateDraftField(strings.TrimSpace(draft.Categories), util.ReceiptItemMaxCategoriesLength),
+		ExpireAt:      expireAt,
+		PriceOverride: draft.PriceOverride,
+		IsPrivate:     draft.IsPrivate,
+	}
+	if draft.StorageLocationID != nil {
+		if !validLocationIDs[*draft.StorageLocationID] {
+			return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: "unknown storage location"}
+		}
+		product.StorageLocationID = draft.StorageLocationID
+	}
+
+	if err := appCtx.Repos.Products.CreateProduct(appCtx.UserID, &product); err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: "user not found"}
+		}
+		appCtx.Logger.Error().Msgf("Bulk create: item %d create failed: %s", index, err)
+		return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: "database error"}
+	}
+
+	productID := product.ID
+	return &product, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusCreated, ProductID: &productID}
+}
+
+// fireBulkProductCreated emits the product.created webhook, mirroring the
+// single-create path. Failures are the webhook service's concern; the
+// product exists either way.
+func fireBulkProductCreated(appCtx *AppContext, product *dbModel.Product) {
+	if ws := controllers.GetWebhookService(); ws != nil {
+		ws.FireEvent("product.created", map[string]any{
+			"id":          product.ID,
+			"productName": product.ProductName,
+			"barcode":     product.Barcode,
+			"expireAt":    product.ExpireAt,
+			"amount":      product.Amount,
+			"unit":        product.Unit,
+			"householdId": product.HouseholdID,
+		})
+	}
+}
+
+// logBulkActivity records the created item in the household activity feed,
+// mirroring the single-create path. Failures are logged and ignored: the
+// product exists either way.
+func logBulkActivity(appCtx *AppContext, product *dbModel.Product, actor bulkActor) {
+	if !actor.householdKnown {
+		// Without a household the activity row would be orphaned (household 0)
+		// and never show up in any feed — skip it entirely. The lookup failure
+		// itself was already logged once per request.
+		return
+	}
+	userID := actor.userID
+	logEntry := &dbModel.ActivityLog{
+		HouseholdID: actor.householdID,
+		UserID:      &userID,
+		UserName:    actor.userName,
+		Action:      dbModel.ActivityActionAdd,
+		ProductID:   product.ID,
+		ProductName: product.ProductName,
+		Quantity:    product.Amount,
+		Timestamp:   time.Now(),
+	}
+	ctxBg, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := appCtx.Repos.ActivityLogs.Create(ctxBg, logEntry); err != nil {
+		appCtx.Logger.Warn().Msgf("Bulk create: activity log failed: %s", err)
+	}
+}
+
+// truncateDraftField bounds a client-supplied draft string to max UTF-8
+// bytes without splitting a multi-byte rune. A drafts endpoint accepts
+// permissive input by design; without this an oversized barcode, unit or
+// category string lands unbounded in the database.
+func truncateDraftField(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	cut := max
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut]
 }
