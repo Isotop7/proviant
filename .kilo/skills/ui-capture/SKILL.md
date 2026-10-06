@@ -90,8 +90,10 @@ count. Default output: `.cache/ui-captures/<preset>-<YYYYMMDD-HHMMSS>/`.
 node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish
 ```
 
-One command, no arguments. It shoots seven screens at both viewports, copies
-them over `screenshots/`, and rewrites the generated gallery in `README.md`.
+One command, no arguments. It shoots eleven screens at both viewports, copies
+them over `screenshots/`, and rewrites two generated regions in `README.md`:
+the `## Preview` section near the top and the `## Screenshots` gallery at the
+bottom.
 
 **Stills, not video.** GitHub strips a `<video>` tag with a repo-relative
 `src`, so an mp4 in the repo only renders from an absolute URL; a GIF of the
@@ -99,27 +101,36 @@ full walk would add megabytes to git for something a reader cannot pause. The
 README already documents itself with viewport-sized desktop/mobile PNG pairs, so
 that is what it keeps producing.
 
-**Where it writes.** `screenshots/portal.png`, `search.png`, `create.png`,
-`recipe.png`, `waste.png`, `shopping.png` and `login.png`, plus `_mobile`
-variants for the first six. The four original filenames are reused from the
-versions already committed, so existing links keep resolving.
+**Where it writes.** `screenshots/portal.png`, `search.png`, `product-detail.png`,
+`create.png`, `receipt.png`, `recipe.png`, `waste.png`, `shopping.png`,
+`onboarding.png`, `settings.png` and `login.png`, plus `_mobile` variants for
+all but `login`. The four original filenames are reused from the versions
+already committed, so existing links keep resolving.
 
-**Where in the README.** One delimited region inside `## Screenshots`:
+**Where in the README.** Two delimited regions, each with its own markers:
 
 ```markdown
+## Preview
+
+<!-- ui-capture-preview:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->
+…desktop-only embeds…
+<!-- ui-capture-preview:end -->
+
+## Screenshots
+
 <!-- ui-capture:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->
 …desktop/mobile tables…
 <!-- ui-capture:end -->
 ```
 
-Only what sits between the markers is rewritten; everything else in the file is
-left alone. On a first run the block is inserted directly under the
-`## Screenshots` heading. Republishing is idempotent — the second run produces a
-byte-identical README.
+The `## Preview` block is the above-the-fold pitch: a curated desktop-only
+subset of the gallery screens. It reuses the same PNG files the gallery shoots,
+so no extra capture is needed — `PREVIEW_SCREENS` in `uicapture.mjs` only
+controls which screens appear and how they are captioned.
 
-`## Preview` near the top of the README is **not** generated. Those two embeds
-are the above-the-fold pitch and stay hand-curated; they point at the same
-files, so a publish keeps them current without touching that section.
+Only what sits between the markers is rewritten; everything else in the file is
+left alone. On a first run each block is inserted directly under its heading.
+Republishing is idempotent — the second run produces a byte-identical README.
 
 Review the diff. A publish legitimately rewrites tracked binaries, so it belongs
 in its own commit rather than being mixed into a feature change.
@@ -229,9 +240,10 @@ The server is torn down in a `finally` on every exit path, so a leaked
 
 ## Do not
 
-- **Do not hand-edit `screenshots/` or the generated README block.** `--publish`
-  owns both. Editing them by hand means the next publish silently reverts your
-  change, or worse, keeps it and drifts.
+- **Do not hand-edit `screenshots/` or the generated README blocks.** `--publish`
+  owns both the `## Preview` and `## Screenshots` regions. Editing them by hand
+  means the next publish silently reverts your change, or worse, keeps it and
+  drifts.
 - **Do not add a `Taskfile.yml` task for this.** The skill lives under `.kilo/`,
   so a task would be broken for anyone without it.
 - **Do not point `--out` at `screenshots/`.** A normal run writes numbered stills

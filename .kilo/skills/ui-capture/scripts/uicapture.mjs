@@ -563,6 +563,8 @@ async function runBrowser(info, opts, outDir) {
 
 const README_BEGIN = '<!-- ui-capture:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->';
 const README_END = '<!-- ui-capture:end -->';
+const README_PREVIEW_BEGIN = '<!-- ui-capture-preview:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->';
+const README_PREVIEW_END = '<!-- ui-capture-preview:end -->';
 const SCREENSHOT_DIR = path.join(REPO_ROOT, 'screenshots');
 
 // One entry per screen, and the single source of truth for the README gallery:
@@ -577,11 +579,24 @@ const SCREENSHOT_DIR = path.join(REPO_ROOT, 'screenshots');
 const PUBLISHED_SCREENS = [
   { file: 'portal', caption: 'Dashboard — metric tiles, waste rate, category breakdown and expiry trend charts', preset: 'dashboard', anonymous: false, mobile: true },
   { file: 'search', caption: 'Products — search, filter, adjust and manage what is in your household', preset: 'products', anonymous: false, mobile: true },
+  { file: 'product-detail', caption: 'Product detail — expiry status, actions and history', preset: 'product-detail', anonymous: false, mobile: true },
   { file: 'create', caption: 'Add product — barcode scan with auto-fill from OpenFoodFacts', preset: 'add-product', anonymous: false, mobile: true },
+  { file: 'receipt', caption: 'Receipt scan — OCR bulk entry from a grocery receipt photo', preset: 'receipt-scan', anonymous: false, mobile: true },
   { file: 'recipe', caption: 'Recipes — suggestions built from the products you already have', preset: 'recipes', anonymous: false, mobile: true },
   { file: 'waste', caption: 'Waste analytics — consumed vs wasted, monthly breakdown and cost of waste', preset: 'waste', anonymous: false, mobile: true },
   { file: 'shopping', caption: 'Shopping list — shared household list with low-stock import', preset: 'shopping-list', anonymous: false, mobile: true },
+  { file: 'onboarding', caption: 'Onboarding — profile, notifications and household setup', preset: 'onboarding', anonymous: false, mobile: true },
+  { file: 'settings', caption: 'Settings — notifications, household, tokens and security', preset: 'settings', anonymous: false, mobile: true },
   { file: 'login', caption: 'Sign in', preset: 'login', anonymous: true, mobile: false },
+];
+
+// The ## Preview section near the top of the README. Desktop-only, curated
+// subset of the gallery — the above-the-fold pitch. Each entry references a
+// file that PUBLISHED_SCREENS already shoots, so no extra capture is needed;
+// this list only controls which screens appear and how they are captioned.
+const PREVIEW_SCREENS = [
+  { file: 'portal', caption: 'Dashboard — metric tiles, waste rate donut, category breakdown and expiry trend charts' },
+  { file: 'search', caption: 'Products — search, filter and manage your products' },
 ];
 
 function renderReadmeBlock(screens) {
@@ -614,7 +629,21 @@ function renderReadmeBlock(screens) {
   return lines.join('\n');
 }
 
-// Rewrites only the region between the markers. Everything outside stays
+function renderPreviewBlock(screens) {
+  const lines = [README_PREVIEW_BEGIN, ''];
+  for (const screen of screens) {
+    lines.push(
+      `**${screen.caption}**`,
+      '',
+      `![${screen.caption}](./screenshots/${screen.file}.png)`,
+      '',
+    );
+  }
+  lines.push(README_PREVIEW_END);
+  return lines.join('\n');
+}
+
+// Rewrites only the regions between the markers. Everything outside stays
 // hand-curated, so a bad publish can never mangle the rest of the README.
 async function publishScreens(outDir) {
   const copied = [];
@@ -648,8 +677,9 @@ async function publishScreens(outDir) {
 
   const readmePath = path.join(REPO_ROOT, 'README.md');
   let readme = await fs.readFile(readmePath, 'utf8');
-  const block = renderReadmeBlock(PUBLISHED_SCREENS);
 
+  // Gallery block under ## Screenshots
+  const block = renderReadmeBlock(PUBLISHED_SCREENS);
   if (readme.includes(README_BEGIN) || readme.includes(README_END)) {
     if (!readme.includes(README_BEGIN) || !readme.includes(README_END)) {
       throw new UiCaptureError(5, `README.md has only one ui-capture marker; fix the block by hand before publishing`);
@@ -664,6 +694,23 @@ async function publishScreens(outDir) {
     readme = readme.replace('## Screenshots', `## Screenshots\n\n${block}`);
   } else {
     throw new UiCaptureError(5, 'README.md has no `## Screenshots` heading and no ui-capture markers; add them by hand first');
+  }
+
+  // Preview block under ## Preview
+  const previewBlock = renderPreviewBlock(PREVIEW_SCREENS);
+  if (readme.includes(README_PREVIEW_BEGIN) || readme.includes(README_PREVIEW_END)) {
+    if (!readme.includes(README_PREVIEW_BEGIN) || !readme.includes(README_PREVIEW_END)) {
+      throw new UiCaptureError(5, `README.md has only one ui-capture-preview marker; fix the block by hand before publishing`);
+    }
+    readme = readme.replace(
+      new RegExp(`${escapeRegExp(README_PREVIEW_BEGIN)}[\\s\\S]*${escapeRegExp(README_PREVIEW_END)}`),
+      previewBlock,
+    );
+  } else if (readme.includes('## Preview')) {
+    // First publish: insert immediately under the heading.
+    readme = readme.replace('## Preview', `## Preview\n\n${previewBlock}`);
+  } else {
+    throw new UiCaptureError(5, 'README.md has no `## Preview` heading and no ui-capture-preview markers; add them by hand first');
   }
 
   await fs.writeFile(readmePath, readme);

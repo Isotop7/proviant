@@ -15,6 +15,7 @@ seeded demo user unless noted. Output lands in
 | `product-detail` | `/web/products/1/view` | yes | `.text-bg-tertiary h2` |
 | `product-edit` | `/web/products/1/edit` | yes | `#editProductForm` |
 | `add-product` | `/web/products/scan` | yes | `#viewfinder` |
+| `receipt-scan` | `/web/products/scan-receipt` | yes | `#receiptUploadForm` |
 | `recipes` | `/web/recipes` | yes | `.recipe-card`, or the error container becoming visible |
 | `waste` | `/web/waste-analytics` | yes | `#waste-status` reading `Waste analytics loaded` |
 | `shopping-list` | `/web/shopping-list` | yes | `#shoppingListContainer .sl-list-row` |
@@ -105,6 +106,10 @@ headless capture, not a bug in the tool.
 The camera *tab* inside the add-product modal behaves the same way, and reports
 the failure through the shared `#proviantFeedbackModal` — `flows/overlays.mjs`
 captures that stack rather than pretending it works.
+
+`receipt-scan` (`/web/products/scan-receipt`) needs no camera: it is a file
+upload form, so the headless capture shows the full upload UI without
+degradation.
 
 ## The seed is a capture dependency
 

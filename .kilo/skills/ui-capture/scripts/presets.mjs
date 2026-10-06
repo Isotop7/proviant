@@ -14,6 +14,7 @@ export const PRESETS = {
   'dashboard': { path: '/web', login: true, ready: '#dashboard-status:has-text("Dashboard loaded")' },
   'products': { path: '/web/products', login: true, ready: '#productRows .list-row' },
   'add-product': { path: '/web/products/scan', login: true, ready: '#viewfinder' },
+  'receipt-scan': { path: '/web/products/scan-receipt', login: true, ready: '#receiptUploadForm' },
   'recipes': {
     path: '/web/recipes',
     login: true,

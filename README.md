@@ -28,13 +28,17 @@
 
 ## Preview
 
-**Dashboard** — metric tiles, waste rate donut, category breakdown and expiry trend charts
+<!-- ui-capture-preview:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->
 
-![Dashboard](./screenshots/portal.png)
+**Dashboard — metric tiles, waste rate donut, category breakdown and expiry trend charts**
 
-**Products** — search, filter and manage your products
+![Dashboard — metric tiles, waste rate donut, category breakdown and expiry trend charts](./screenshots/portal.png)
 
-![Products](./screenshots/search.png)
+**Products — search, filter and manage your products**
+
+![Products — search, filter and manage your products](./screenshots/search.png)
+
+<!-- ui-capture-preview:end -->
 
 ## Features
 
@@ -318,8 +322,30 @@ Documentation is generated with `gomarkdoc` and `swagger`:
     <th>Mobile</th>
   </tr>
   <tr>
+    <td width="50%"><img src="./screenshots/product-detail.png" alt="Product detail — expiry status, actions and history — desktop"></td>
+    <td width="25%"><img src="./screenshots/product-detail_mobile.png" alt="Product detail — expiry status, actions and history — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
     <td width="50%"><img src="./screenshots/create.png" alt="Add product — barcode scan with auto-fill from OpenFoodFacts — desktop"></td>
     <td width="25%"><img src="./screenshots/create_mobile.png" alt="Add product — barcode scan with auto-fill from OpenFoodFacts — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/receipt.png" alt="Receipt scan — OCR bulk entry from a grocery receipt photo — desktop"></td>
+    <td width="25%"><img src="./screenshots/receipt_mobile.png" alt="Receipt scan — OCR bulk entry from a grocery receipt photo — mobile"></td>
   </tr>
 </table>
 
@@ -353,6 +379,28 @@ Documentation is generated with `gomarkdoc` and `swagger`:
   <tr>
     <td width="50%"><img src="./screenshots/shopping.png" alt="Shopping list — shared household list with low-stock import — desktop"></td>
     <td width="25%"><img src="./screenshots/shopping_mobile.png" alt="Shopping list — shared household list with low-stock import — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/onboarding.png" alt="Onboarding — profile, notifications and household setup — desktop"></td>
+    <td width="25%"><img src="./screenshots/onboarding_mobile.png" alt="Onboarding — profile, notifications and household setup — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/settings.png" alt="Settings — notifications, household, tokens and security — desktop"></td>
+    <td width="25%"><img src="./screenshots/settings_mobile.png" alt="Settings — notifications, household, tokens and security — mobile"></td>
   </tr>
 </table>
 
