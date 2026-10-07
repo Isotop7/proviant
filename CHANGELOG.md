@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.20.0] - 2026-10-06
+
+### Added
+- (f1a5f776): Configurable server bind host
+- (e0a277b5): Add CSV product import
+- (afa6f2f8): Feat(products): add batch scan mode
+Closes: #59
+- (03ee096e): Feat(products): add batch scan mode
+Closes: #59
+- (ba9e2a4a): Feat: add receipt scan and bulk product import
+Closes: #61
+- (f270710b): Add taskfile tasks for ui-capture
+- (37610e98): **web:** Add dark mode
+
+
+### CI/CD
+- (4efd3a6f): **release:** Publish docker images to ghcr
+
+
+### Documentation
+- (dfcbed56): Regenerate swagger and godoc
+
+
+### Fixed
+- (7e05f39b): Expiry badge and header overflow
+- (7009a387): **lint:** Resolve golangci-lint findings
+
+
+### Miscellaneous
+- (8401ff14): Update CHANGELOG.md for v0.19.0
+- (7410a50b): Expand demo seed and screenshots
+- (0d14f3da): Add ui-capture skill
+- (83f7c950): **ui-capture:** Update capture skill
+- (a3135eac): **templates:** Replace inline styles with utility classes
+
+
 ## [0.19.0] - 2026-10-04
 
 ### Added
