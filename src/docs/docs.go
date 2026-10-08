@@ -3602,6 +3602,79 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/user/receipt-scan-settings": {
+            "get": {
+                "description": "Retrieves the current user's receipt scan vision model override settings and the app-level defaults. API keys are never returned.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Gets a user's receipt scan settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.receiptScanSettingsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Updates the current user's receipt scan vision model override settings. An empty apiKey keeps the stored key; clearApiKey wipes it.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Updates a user's receipt scan settings",
+                "parameters": [
+                    {
+                        "description": "Receipt scan settings",
+                        "name": "settings",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.receiptScanSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/user/telegram-link-token": {
             "post": {
                 "description": "Generates a short-lived token the user sends to the Proviant Telegram bot to link their account",
@@ -5239,6 +5312,23 @@ const docTemplate = `{
                 }
             }
         },
+        "authentication.ReceiptScanPreferences": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "overrideEnabled": {
+                    "type": "boolean"
+                },
+                "timeout": {
+                    "type": "integer"
+                }
+            }
+        },
         "authentication.Signup": {
             "type": "object",
             "required": [
@@ -5290,6 +5380,9 @@ const docTemplate = `{
                 },
                 "notificationPreferences": {
                     "$ref": "#/definitions/authentication.NotificationPreferences"
+                },
+                "receiptScanPreferences": {
+                    "$ref": "#/definitions/authentication.ReceiptScanPreferences"
                 },
                 "role": {
                     "type": "string"
@@ -5745,6 +5838,69 @@ const docTemplate = `{
             "properties": {
                 "email": {
                     "type": "string"
+                }
+            }
+        },
+        "v1.receiptScanDefaultsResponse": {
+            "type": "object",
+            "properties": {
+                "apiKeyConfigured": {
+                    "type": "boolean"
+                },
+                "endpoint": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "timeout": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.receiptScanSettingsRequest": {
+            "type": "object",
+            "properties": {
+                "apiKey": {
+                    "type": "string"
+                },
+                "clearApiKey": {
+                    "type": "boolean"
+                },
+                "endpoint": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "overrideEnabled": {
+                    "type": "boolean"
+                },
+                "timeout": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.receiptScanSettingsResponse": {
+            "type": "object",
+            "properties": {
+                "apiKeyConfigured": {
+                    "type": "boolean"
+                },
+                "defaults": {
+                    "$ref": "#/definitions/v1.receiptScanDefaultsResponse"
+                },
+                "endpoint": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "overrideEnabled": {
+                    "type": "boolean"
+                },
+                "timeout": {
+                    "type": "integer"
                 }
             }
         },

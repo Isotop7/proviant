@@ -453,6 +453,12 @@ proviant.updateNotificationSettings = async function (preferences) {
   return { code: res.status, message: body.message };
 };
 
+proviant.updateReceiptScanSettings = async function (settings) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/receipt-scan-settings`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
 proviant.generateTelegramLinkToken = async function () {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/telegram-link-token`, { method: "POST" });
   const body = await res.json();

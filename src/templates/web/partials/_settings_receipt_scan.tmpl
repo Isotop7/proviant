@@ -1,0 +1,100 @@
+{{ define "_settings_receipt_scan" }}
+{{ if .ReceiptScanFeatureEnabled }}
+<div class="card card-section mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
+        <div class="d-flex align-items-center gap-2">
+            <div class="icon-chip" aria-hidden="true">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <h2 class="h5 mb-0 fw-semibold">Receipt Scan &mdash; Vision Model</h2>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnResetReceiptScanSettings">
+                Reset to Defaults
+            </button>
+            <button type="button" class="btn btn-proviant-primary btn-sm" id="btnUpdateReceiptScanSettings">
+                Save
+            </button>
+        </div>
+    </div>
+    <div class="card-body px-4 py-4">
+        <form id="receiptScanSettings" novalidate>
+
+            <div class="list-group list-group-flush border rounded-3">
+                <div class="list-group-item px-3 py-3">
+                    <div class="d-flex align-items-center justify-content-between gap-3">
+                        <div>
+                            <div class="fw-medium small">Override Server Settings</div>
+                            <div class="text-secondary-custom small">Use your own vision model endpoint for receipt scanning instead of the server default.</div>
+                        </div>
+                        <div class="form-check form-switch mb-0 flex-shrink-0">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="toggleReceiptScanOverride"
+                                   {{if .User.ReceiptScanPreferences.OverrideEnabled}}checked{{end}}>
+                            <label class="visually-hidden" for="toggleReceiptScanOverride">Override receipt scan settings</label>
+                        </div>
+                    </div>
+                </div>
+                <div id="receiptScanOverrideFields" class="list-group-item px-3 py-3 bg-subtle{{if not .User.ReceiptScanPreferences.OverrideEnabled}} d-none{{end}}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="inputReceiptScanEndpoint" class="form-label fw-medium small">Endpoint URL</label>
+                            <input type="url" class="form-control" id="inputReceiptScanEndpoint"
+                                   placeholder="{{ .ReceiptScanDefaults.Endpoint }}"
+                                   value="{{ .User.ReceiptScanPreferences.Endpoint }}"
+                                   autocomplete="off">
+                            <div class="form-text text-secondary-custom">Leave empty to use the server endpoint and its configured API key.</div>
+                            <div class="invalid-feedback">Enter a valid http:// or https:// URL.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputReceiptScanModel" class="form-label fw-medium small">Model</label>
+                            <input type="text" class="form-control" id="inputReceiptScanModel"
+                                   placeholder="{{ .ReceiptScanDefaults.Model }}"
+                                   value="{{ .User.ReceiptScanPreferences.Model }}"
+                                   autocomplete="off">
+                            <div class="form-text text-secondary-custom">Leave empty to use the server default.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputReceiptScanApiKey" class="form-label fw-medium small">API Key</label>
+                            <input type="password" class="form-control" id="inputReceiptScanApiKey"
+                                   placeholder="Leave empty to keep current"
+                                   autocomplete="new-password">
+                            <div class="form-text text-secondary-custom">
+                                {{ if .User.ReceiptScanPreferences.APIKey }}
+                                <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Custom API key configured.</span>
+                                Enter a new key to replace it.
+                                {{ else if and .ReceiptScanDefaults.APIKeyConfigured (not .User.ReceiptScanPreferences.Endpoint) }}
+                                No custom key set &mdash; the server default key is used with the server default endpoint.
+                                {{ else if .ReceiptScanDefaults.APIKeyConfigured }}
+                                No custom key set &mdash; the server key is never sent to a custom endpoint.
+                                {{ else }}
+                                No API key configured.
+                                {{ end }}
+                            </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="clearReceiptScanApiKey">
+                                <label class="form-check-label small" for="clearReceiptScanApiKey">Clear my custom API key</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputReceiptScanTimeout" class="form-label fw-medium small">Timeout (seconds)</label>
+                            <div class="input-group input-width-260">
+                                <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                                <input type="number" class="form-control" id="inputReceiptScanTimeout"
+                                       min="1" max="900" step="1"
+                                       placeholder="{{ .ReceiptScanDefaults.Timeout }}"
+                                       value="{{ if gt .User.ReceiptScanPreferences.Timeout 0 }}{{ .User.ReceiptScanPreferences.Timeout }}{{ end }}">
+                                <span class="input-group-text">s</span>
+                            </div>
+                            <div class="form-text text-secondary-custom">Leave empty to use the server default. Range: 1&ndash;900.</div>
+                            <div class="invalid-feedback">Timeout must be between 1 and 900 seconds.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+{{ end }}
+{{ end }}

@@ -337,6 +337,16 @@ var (
 	// ErrReceiptOCREmptyModel is thrown when ocr.receipt is enabled without a model name
 	ErrReceiptOCREmptyModel = errors.New("receipt scanning requires a model name")
 
+	// ErrReceiptScanInvalidEndpoint is thrown when a per-user receipt scan endpoint is not an absolute http/https URL with a host
+	ErrReceiptScanInvalidEndpoint = errors.New("receipt scan endpoint must be an absolute http:// or https:// URL")
+
+	// ErrReceiptScanPrivateIP is thrown when a per-user receipt scan endpoint points to a private or internal IP address
+	// (literal IPs at save time, resolved addresses at request time)
+	ErrReceiptScanPrivateIP = errors.New("receipt scan endpoint must not point to a private or internal IP address")
+
+	// ErrReceiptScanInvalidTimeout is thrown when a per-user receipt scan timeout is out of range
+	ErrReceiptScanInvalidTimeout = errors.New("receipt scan timeout must be between 1 and 900 seconds")
+
 	// ErrFileTooLarge is thrown when the uploaded image exceeds the size limit
 	ErrFileTooLarge = errors.New("uploaded file too large")
 

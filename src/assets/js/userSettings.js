@@ -385,6 +385,118 @@ function UpdateNotificationSettings() {
     });
 }
 
+/* ── Receipt scan settings ────────────────────────────────────────── */
+function UpdateReceiptScanSettings() {
+  const toggleOverride = document.getElementById("toggleReceiptScanOverride");
+  const inputEndpoint = document.getElementById("inputReceiptScanEndpoint");
+  const inputModel = document.getElementById("inputReceiptScanModel");
+  const inputApiKey = document.getElementById("inputReceiptScanApiKey");
+  const clearApiKeyInput = document.getElementById("clearReceiptScanApiKey");
+  const inputTimeout = document.getElementById("inputReceiptScanTimeout");
+  if (!toggleOverride) return;
+
+  const endpointVal = inputEndpoint ? inputEndpoint.value.trim() : "";
+  const timeoutVal = inputTimeout ? inputTimeout.value.trim() : "";
+
+  if (endpointVal) {
+    let valid = false;
+    try {
+      const parsed = new URL(endpointVal);
+      valid = (parsed.protocol === "http:" || parsed.protocol === "https:") && parsed.host !== "";
+    } catch (_e) { valid = false; }
+    if (!valid) {
+      if (inputEndpoint) inputEndpoint.classList.add("is-invalid");
+      return;
+    }
+  }
+
+  let timeoutNum = 0;
+  if (timeoutVal) {
+    timeoutNum = Number(timeoutVal);
+    if (!Number.isInteger(timeoutNum) || timeoutNum < 1 || timeoutNum > 900) {
+      if (inputTimeout) inputTimeout.classList.add("is-invalid");
+      return;
+    }
+  }
+
+  const btn = document.getElementById("btnUpdateReceiptScanSettings");
+  setButtonLoading(btn, true);
+
+  const settingsData = {
+    overrideEnabled: toggleOverride.checked,
+    endpoint: endpointVal,
+    model: inputModel ? inputModel.value.trim() : "",
+    apiKey: inputApiKey ? inputApiKey.value : "",
+    clearApiKey: Boolean(clearApiKeyInput?.checked && !inputApiKey?.value),
+    timeout: timeoutNum,
+  };
+
+  proviant
+    .updateReceiptScanSettings(settingsData)
+    .then((response) => {
+      setButtonLoading(btn, false);
+      if (response.code === 200) {
+        ShowSuccessModal("Receipt scan settings updated successfully.", function (event) {
+          event.preventDefault();
+          location.reload();
+        });
+      } else {
+        proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
+      }
+    })
+    .catch((error) => {
+      setButtonLoading(btn, false);
+      proviant.showFeedback('error', 'Error', `Network error: ${error.message}`);
+    });
+}
+
+function ResetReceiptScanSettings() {
+  proviant.showConfirm(
+    'Reset Receipt Scan Settings',
+    'This will disable the override, clear your custom endpoint, model, timeout, and API key. The server defaults will be used. Continue?',
+    function () {
+      const btn = document.getElementById("btnResetReceiptScanSettings");
+      setButtonLoading(btn, true);
+
+      const settingsData = {
+        overrideEnabled: false,
+        endpoint: "",
+        model: "",
+        apiKey: "",
+        clearApiKey: true,
+        timeout: 0,
+      };
+
+      proviant
+        .updateReceiptScanSettings(settingsData)
+        .then((response) => {
+          setButtonLoading(btn, false);
+          if (response.code === 200) {
+            ShowSuccessModal("Receipt scan settings reset to server defaults.", function (event) {
+              event.preventDefault();
+              location.reload();
+            });
+          } else {
+            proviant.showFeedback('error', 'Error', `Reset failed: ${response.message}`);
+          }
+        })
+        .catch((error) => {
+          setButtonLoading(btn, false);
+          proviant.showFeedback('error', 'Error', `Network error: ${error.message}`);
+        });
+    },
+    'Reset',
+    'danger'
+  );
+}
+
+function toggleReceiptScanOverrideFields() {
+  const toggle = document.getElementById("toggleReceiptScanOverride");
+  const fields = document.getElementById("receiptScanOverrideFields");
+  if (!toggle || !fields) return;
+  fields.classList.toggle("d-none", !toggle.checked);
+}
+
 /* ── Household management helpers ────────────────────────────────── */
 
 /* Leave household */
@@ -1227,6 +1339,18 @@ document.addEventListener("click", function (event) {
     return;
   }
 
+  if (target.closest("#btnUpdateReceiptScanSettings")) {
+    event.preventDefault();
+    UpdateReceiptScanSettings();
+    return;
+  }
+
+  if (target.closest("#btnResetReceiptScanSettings")) {
+    event.preventDefault();
+    ResetReceiptScanSettings();
+    return;
+  }
+
   if (target.closest("#btnCreatePAT")) {
     event.preventDefault();
     handleCreatePAT();
@@ -1547,6 +1671,10 @@ document.addEventListener("input", function (event) {
     case "editMailAddress":
       clearInvalid(target);
       break;
+    case "inputReceiptScanEndpoint":
+    case "inputReceiptScanTimeout":
+      clearInvalid(target);
+      break;
   }
 });
 
@@ -1578,6 +1706,10 @@ document.addEventListener("change", function (event) {
   if (event.target.id === "togglePushNotifications") {
     toggleWebPushSettings();
     handleWebPushToggle();
+  }
+
+  if (event.target.id === "toggleReceiptScanOverride") {
+    toggleReceiptScanOverrideFields();
   }
 
 });

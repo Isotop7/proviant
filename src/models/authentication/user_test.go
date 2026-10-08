@@ -1,6 +1,25 @@
 package authentication
 
-import "testing"
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+)
+
+func TestUserJSONOmitsReceiptScanPreferences(t *testing.T) {
+	user := User{ReceiptScanPreferences: ReceiptScanPreferences{
+		Endpoint: "https://user:secret@example.com?key=secret",
+		APIKey:   "secret",
+	}}
+
+	raw, err := json.Marshal(user)
+	if err != nil {
+		t.Fatalf("marshal user: %v", err)
+	}
+	if strings.Contains(string(raw), "receiptScanPreferences") || strings.Contains(string(raw), "secret") {
+		t.Errorf("user JSON exposes receipt scan settings: %s", raw)
+	}
+}
 
 func TestUserIsValid(t *testing.T) {
 	tests := []struct {

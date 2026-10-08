@@ -297,6 +297,9 @@ func (m *MockUserRepository) CreateUser(user *authentication.User) error { retur
 func (m *MockUserRepository) UpdateUser(userID uint, user *authentication.User) error {
 	return m.Err
 }
+func (m *MockUserRepository) UpdateUserReceiptScanSettings(userID uint, prefs authentication.ReceiptScanPreferences, apiKey *string) error {
+	return m.Err
+}
 func (m *MockUserRepository) UpdateAdminUserFields(userID uint, username, mailAddress string) error {
 	return m.Err
 }

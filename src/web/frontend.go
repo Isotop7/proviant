@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
+	v1 "codeberg.org/isotop7/proviant/api/v1"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
@@ -199,31 +200,50 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	requireDigit := false
 	requireSpecial := false
 
+	receiptScanFeatureEnabled := false
+	receiptScanDefaultTimeout := util.ReceiptScanDefaultTimeout
+	receiptScanDefaults := map[string]any{
+		"Endpoint":         "",
+		"Model":            "",
+		"Timeout":          receiptScanDefaultTimeout,
+		"APIKeyConfigured": false,
+	}
+
 	if cfgVal, ok := ctx.Get(util.ContextKeyProviantConfig); ok {
 		if cfg, ok := cfgVal.(*configuration.ProviantConfiguration); ok {
 			minLength = cfg.Server.Authentication.PasswordMinLength
 			requireUppercase = cfg.Server.Authentication.PasswordRequireUppercase
 			requireDigit = cfg.Server.Authentication.PasswordRequireDigit
 			requireSpecial = cfg.Server.Authentication.PasswordRequireSpecial
+			receiptScanFeatureEnabled = cfg.OCR.Receipt.Enabled && strings.TrimSpace(cfg.OCR.Receipt.Model) != ""
+			receiptScanDefaultTimeout = v1.ReceiptScanEffectiveTimeout(cfg.OCR.Receipt.Timeout)
+			receiptScanDefaults = map[string]any{
+				"Endpoint":         cfg.OCR.Receipt.Endpoint,
+				"Model":            cfg.OCR.Receipt.Model,
+				"Timeout":          receiptScanDefaultTimeout,
+				"APIKeyConfigured": cfg.OCR.Receipt.APIKey != "",
+			}
 		}
 	}
 
 	pageData := map[string]any{
-		"InviteToken":              ctx.Query("invite_token"),
-		"Title":                    "User Settings",
-		"User":                     user,
-		"Household":                household,
-		"IsAdmin":                  isAdmin,
-		"ShowAuditLog":             isAdmin,
-		"Members":                  members,
-		"PendingApplications":      pendingApplications,
-		"MyApplications":           myApplications,
-		"TelegramConfigured":       telegramConfigured,
-		"Locations":                locations,
-		"PasswordMinLength":        minLength,
-		"PasswordRequireUppercase": requireUppercase,
-		"PasswordRequireDigit":     requireDigit,
-		"PasswordRequireSpecial":   requireSpecial,
+		"InviteToken":               ctx.Query("invite_token"),
+		"Title":                     "User Settings",
+		"User":                      user,
+		"Household":                 household,
+		"IsAdmin":                   isAdmin,
+		"ShowAuditLog":              isAdmin,
+		"Members":                   members,
+		"PendingApplications":       pendingApplications,
+		"MyApplications":            myApplications,
+		"TelegramConfigured":        telegramConfigured,
+		"Locations":                 locations,
+		"PasswordMinLength":         minLength,
+		"PasswordRequireUppercase":  requireUppercase,
+		"PasswordRequireDigit":      requireDigit,
+		"PasswordRequireSpecial":    requireSpecial,
+		"ReceiptScanFeatureEnabled": receiptScanFeatureEnabled,
+		"ReceiptScanDefaults":       receiptScanDefaults,
 	}
 
 	if isAdmin {
@@ -487,11 +507,21 @@ func (frontend *Frontend) ProductsScanReceipt(ctx *gin.Context) {
 		logger.Warn().Msgf("Receipt scan page: storage locations: %s", locErr)
 	}
 
+	scanTimeoutSeconds := v1.ReceiptScanEffectiveTimeout(proviantConfig.OCR.Receipt.Timeout)
+	if user, userErr := repos.Users.GetUserByID(userID); userErr == nil {
+		effective := v1.ResolveReceiptScanConfiguration(&proviantConfig.OCR.Receipt, user.ReceiptScanPreferences)
+		scanTimeoutSeconds = v1.ReceiptScanEffectiveTimeout(effective.Timeout)
+	} else {
+		logger.Error().Msgf("Receipt scan page: failed to load user settings: %s", userErr)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrInternalServer.Error())
+		return
+	}
+
 	pageData := map[string]any{
 		"Title":              "Scan Receipt",
 		"StorageLocations":   locations,
 		"MaxItems":           util.ReceiptBulkMaxItems,
-		"ScanTimeoutSeconds": proviantConfig.OCR.Receipt.Timeout,
+		"ScanTimeoutSeconds": scanTimeoutSeconds,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsScanReceipt.tmpl", pageData)
 }

@@ -100,9 +100,15 @@ func ScanReceipt(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	receiptCtrl, ok := ctx.MustGet(util.ContextKeyReceiptCtrl).(controllers.ReceiptScanController)
+	baseCtrl, ok := ctx.MustGet(util.ContextKeyReceiptCtrl).(controllers.ReceiptScanController)
 	if !ok {
 		logger.Error().Msg("Receipt scan controller not found in context")
+		api.RespondError(ctx, http.StatusInternalServerError, errors.ErrInternalServer)
+		return
+	}
+	receiptCtrl, ctrlErr := receiptScanControllerForUser(ctx, appCtx, baseCtrl)
+	if ctrlErr != nil {
+		logger.Error().Msgf("Receipt scan: per-user settings unavailable: %s", ctrlErr)
 		api.RespondError(ctx, http.StatusInternalServerError, errors.ErrInternalServer)
 		return
 	}

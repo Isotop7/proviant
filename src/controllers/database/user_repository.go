@@ -23,6 +23,7 @@ type UserRepositoryInterface interface {
 	UserExistsByMailAddress(user *authentication.User) bool
 	CreateUser(user *authentication.User) error
 	UpdateUser(userID uint, user *authentication.User) error
+	UpdateUserReceiptScanSettings(userID uint, prefs authentication.ReceiptScanPreferences, apiKey *string) error
 	UpdateAdminUserFields(userID uint, username, mailAddress string) error
 	UpdateDisplayName(userID uint, displayName string) error
 	UpdateUserPassword(userID uint, login *authentication.Login) error
@@ -176,8 +177,8 @@ func (r *UserRepository) CreateUser(user *authentication.User) error {
 }
 
 func (r *UserRepository) UpdateUser(userID uint, user *authentication.User) error {
-	if userID <= 0 {
-		return gorm.ErrNotImplemented
+	if userID == 0 {
+		return errors.ErrInvalidUserID
 	}
 
 	var dbUser authentication.User
@@ -194,11 +195,56 @@ func (r *UserRepository) UpdateUser(userID uint, user *authentication.User) erro
 	dbUser.MailAddress = user.MailAddress
 	dbUser.NotificationPreferences = user.NotificationPreferences
 
-	saveResult := r.DB.Save(&dbUser)
+	// Receipt-scan columns (including the API key) are owned exclusively by
+	// UpdateUserReceiptScanSettings. Omitting them from this full-record save
+	// keeps a generic update from replaying a stale snapshot and reverting a
+	// concurrently saved preference or resurrecting a cleared API key.
+	saveResult := r.DB.Omit(
+		"receipt_scan_override_enabled",
+		"receipt_scan_endpoint",
+		"receipt_scan_model",
+		"receipt_scan_timeout",
+		"receipt_scan_api_key",
+	).Save(&dbUser)
 	if saveResult.Error != nil {
 		return saveResult.Error
 	}
 	return nil
+}
+
+// UpdateUserReceiptScanSettings persists the receipt scan preference columns
+// and, when apiKey is non-nil, the API key column in a single transaction.
+// The key stays out of the preference write set — a keep-the-key save
+// (apiKey == nil) must not replay a stale value and resurrect a key that was
+// cleared concurrently — and the transaction guarantees the new endpoint can
+// never go live while the old key is still stored (or vice versa).
+func (r *UserRepository) UpdateUserReceiptScanSettings(userID uint, prefs authentication.ReceiptScanPreferences, apiKey *string) error {
+	if userID <= 0 {
+		return gorm.ErrNotImplemented
+	}
+
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		updateResult := tx.Model(&authentication.User{}).
+			Where("id = ?", userID).
+			Updates(map[string]any{
+				"receipt_scan_override_enabled": prefs.OverrideEnabled,
+				"receipt_scan_endpoint":         prefs.Endpoint,
+				"receipt_scan_model":            prefs.Model,
+				"receipt_scan_timeout":          prefs.Timeout,
+			})
+		if updateResult.Error != nil {
+			return updateResult.Error
+		}
+
+		if apiKey == nil {
+			return nil
+		}
+
+		keyResult := tx.Model(&authentication.User{}).
+			Where("id = ?", userID).
+			Update("receipt_scan_api_key", *apiKey)
+		return keyResult.Error
+	})
 }
 
 // UpdateAdminUserFields allows admins to change login-credential fields (username, email).

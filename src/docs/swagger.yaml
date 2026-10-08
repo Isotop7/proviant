@@ -554,6 +554,17 @@ definitions:
       webPushEnabled:
         type: boolean
     type: object
+  authentication.ReceiptScanPreferences:
+    properties:
+      endpoint:
+        type: string
+      model:
+        type: string
+      overrideEnabled:
+        type: boolean
+      timeout:
+        type: integer
+    type: object
   authentication.Signup:
     properties:
       inviteToken:
@@ -589,6 +600,8 @@ definitions:
         type: string
       notificationPreferences:
         $ref: '#/definitions/authentication.NotificationPreferences'
+      receiptScanPreferences:
+        $ref: '#/definitions/authentication.ReceiptScanPreferences'
       role:
         type: string
       updatedAt:
@@ -888,6 +901,47 @@ definitions:
         type: string
     required:
     - email
+    type: object
+  v1.receiptScanDefaultsResponse:
+    properties:
+      apiKeyConfigured:
+        type: boolean
+      endpoint:
+        type: string
+      model:
+        type: string
+      timeout:
+        type: integer
+    type: object
+  v1.receiptScanSettingsRequest:
+    properties:
+      apiKey:
+        type: string
+      clearApiKey:
+        type: boolean
+      endpoint:
+        type: string
+      model:
+        type: string
+      overrideEnabled:
+        type: boolean
+      timeout:
+        type: integer
+    type: object
+  v1.receiptScanSettingsResponse:
+    properties:
+      apiKeyConfigured:
+        type: boolean
+      defaults:
+        $ref: '#/definitions/v1.receiptScanDefaultsResponse'
+      endpoint:
+        type: string
+      model:
+        type: string
+      overrideEnabled:
+        type: boolean
+      timeout:
+        type: integer
     type: object
   v1.storageLocationRequest:
     properties:
@@ -3348,6 +3402,56 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Updates a user password
+      tags:
+      - user
+  /api/v1/user/receipt-scan-settings:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the current user's receipt scan vision model override
+        settings and the app-level defaults. API keys are never returned.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.receiptScanSettingsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Gets a user's receipt scan settings
+      tags:
+      - user
+    post:
+      consumes:
+      - application/json
+      description: Updates the current user's receipt scan vision model override settings.
+        An empty apiKey keeps the stored key; clearApiKey wipes it.
+      parameters:
+      - description: Receipt scan settings
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/v1.receiptScanSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Updates a user's receipt scan settings
       tags:
       - user
   /api/v1/user/telegram-link-token:
