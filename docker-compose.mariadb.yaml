@@ -35,6 +35,7 @@ services:
       - PROVIANT_DATABASE_MARIADB_PASSWORD=supersecretpassword
       - PROVIANT_NOTIFICATION_SMTP_HOST=smtp
       - PROVIANT_NOTIFICATION_SMTP_FROMADDRESS=proviant@yourdomain.com
+      - "PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD=${PROVIANT_JWT_SECRET:?PROVIANT_JWT_SECRET is not set - add it to .env, generate with openssl rand -hex 32}"
     volumes:
       - proviantlogs:/app/logs
     links:

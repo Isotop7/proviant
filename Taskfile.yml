@@ -136,7 +136,9 @@ tasks:
       - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
         msg: "No container runtime found. Please install podman or docker."
     cmds:
-      - '{{.CONTAINER_RUNTIME}} run -t --rm -p 5114:5114 -v ./src/config.yaml.sqlite.tmpl:/app/config.yaml:Z proviant:latest'
+      # Dev-only secret, same value as src/config.yaml. The shipped config
+      # template carries none, so the container cannot start without one.
+      - '{{.CONTAINER_RUNTIME}} run -t --rm -p 5114:5114 -v ./src/config.yaml.sqlite.tmpl:/app/config.yaml:Z -e PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD=dev-only-local-secret proviant:latest'
 
   runcontainerdebug:
     desc: Build and run container with shell entrypoint (requires podman or docker)
@@ -145,7 +147,7 @@ tasks:
       - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
         msg: "No container runtime found. Please install podman or docker."
     cmds:
-      - '{{.CONTAINER_RUNTIME}} run -it --rm -v ./src/config.yaml.sqlite.tmpl:/app/config.yaml:Z --entrypoint /bin/sh proviant:latest'
+      - '{{.CONTAINER_RUNTIME}} run -it --rm -v ./src/config.yaml.sqlite.tmpl:/app/config.yaml:Z -e PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD=dev-only-local-secret --entrypoint /bin/sh proviant:latest'
 
   fonts:
     desc: Copy font files to assets
