@@ -188,6 +188,7 @@ func (nc *NotificationController) Dispatch() {
 			notificationProducts, getError := nc.NotificationRepo.GetProductsExpiredAndNotificationPending(sleepInterval, maxThreshold)
 			if getError != nil {
 				nc.Logger.Error().Msg(getError.Error())
+				time.Sleep(sleepInterval)
 				continue
 			}
 

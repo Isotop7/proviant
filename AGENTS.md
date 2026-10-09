@@ -421,6 +421,7 @@ Project uses [Conventional Commits](https://www.conventionalcommits.org/) for au
 - **Tag format**: `vX.Y.Z` tags (e.g., `v0.4.0`). `cliff.toml` tag pattern `v?[0-9].*` supports both `v`-prefixed and legacy unprefixed tags.
 
 ## Important Notes
+- **NEVER commit any change without explicit user confirmation.** Propose the commit message, then wait for the user to approve. This applies to every `git commit` (and `git push`), regardless of task size or prior instructions.
 - **Always use Context7 MCP** for code generation, setup/configuration, library/API docs — auto-call `resolve-library-id` and `query-docs` without waiting to be asked.
 - Run `task check` before committing — golangci-lint must pass
 - **Database migrations**: When creating or modifying DB model, always add to `AutoMigrate` call in `src/proviant.go` (~line 188). Omitting causes "no such table" at runtime. Example:
