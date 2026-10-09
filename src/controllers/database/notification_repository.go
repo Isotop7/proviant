@@ -128,7 +128,7 @@ func (r *NotificationRepository) GetHouseholdMembersMailAddressesByID(householdI
 
 	var users []*authentication.User
 	findErr := r.DB.Where(util.QueryHouseholdId, householdID).Find(&users)
-	if findErr != nil {
+	if findErr.Error != nil {
 		return mailAddresses, findErr.Error
 	}
 

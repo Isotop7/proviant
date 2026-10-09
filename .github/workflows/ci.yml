@@ -86,11 +86,11 @@ jobs:
         run: |
           cd ./src
           COVERAGE=$(go tool cover -func=coverage.out | grep total: | awk '{print $3}' | tr -d '%')
-          if (( $(echo "$COVERAGE < 15" | bc -l) )); then
-            echo "Coverage is $COVERAGE%, below minimum threshold of 15%"
+          if (( $(echo "$COVERAGE < 40" | bc -l) )); then
+            echo "Coverage is $COVERAGE%, below minimum threshold of 40%"
             exit 1
           fi
-          echo "Coverage is $COVERAGE%, above minimum threshold of 15%"
+          echo "Coverage is $COVERAGE%, above minimum threshold of 40%"
       - name: Compile code
         run: |
           cd ./src

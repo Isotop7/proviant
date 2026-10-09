@@ -31,6 +31,12 @@ var testModels = []any{
 	&dbModel.ProductCategoryPrice{},
 	&dbModel.ActivityLog{},
 	&dbModel.AuditLog{},
+	&authentication.RevokedToken{},
+	&authentication.PersonalAccessToken{},
+	&authentication.CalendarToken{},
+	&dbModel.WebPushConfig{},
+	&dbModel.MailDigestUnsubscribeToken{},
+	&dbModel.ShoppingListItem{},
 }
 
 func SetupTestDB(t *testing.T) *gorm.DB {
