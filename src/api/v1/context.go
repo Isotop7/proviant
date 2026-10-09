@@ -202,7 +202,9 @@ func bindJSON(ctx *gin.Context, logger *zerolog.Logger, v any) bool {
 func parseUintPathParam(ctx *gin.Context, logger *zerolog.Logger, paramName string) (uint, bool) {
 	raw := ctx.Param(paramName)
 	id, err := strconv.ParseUint(raw, 10, 64)
-	if err != nil {
+	// id 0 never names a row; the repositories answer it with
+	// gorm.ErrNotImplemented, which the handlers would report as 500.
+	if err != nil || id == 0 {
 		logger.Warn().Msgf(apperrors.FormatInvalidRequestId, raw)
 		api.RespondError(ctx, http.StatusBadRequest, fmt.Errorf(apperrors.FormatInvalidRequestId, raw))
 		return 0, false

@@ -668,6 +668,18 @@ func TestValidateServerConfiguration(t *testing.T) {
 			wantErr: proviantErrors.ErrServerEmptyTokenPassword,
 		},
 		{
+			name: "retired public default token password",
+			config: &ProviantConfiguration{
+				Server: ServerConfiguration{
+					Authentication: AuthenticationConfiguration{
+						TokenPassword: util.RetiredTokenPassword,
+						TokenLifetime: 24,
+					},
+				},
+			},
+			wantErr: proviantErrors.ErrServerRetiredTokenPassword,
+		},
+		{
 			name: "zero token lifetime",
 			config: &ProviantConfiguration{
 				Server: ServerConfiguration{

@@ -9,6 +9,15 @@ import (
 const (
 	RemovalReasonConsumed = "consumed"
 	RemovalReasonWasted   = "wasted"
+
+	// MaxDaysAfterOpening is the upper bound on Product.DaysAfterOpening,
+	// enforced on every write (create and PATCH). The opened-shelf-life SQL
+	// prunes (effectiveExpiryCandidateScope and the notification candidate
+	// start) bound their OpenedAt floor with this same value, so the write
+	// bound and the query bound must stay in sync: a stored value above it
+	// can put a row inside a query window while sitting below the prune floor,
+	// silently dropping it from expiring-soon lists and notifications.
+	MaxDaysAfterOpening = 365
 )
 
 // Product is the database model of a product

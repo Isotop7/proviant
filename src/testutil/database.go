@@ -30,6 +30,7 @@ var testModels = []any{
 	&dbModel.PasswordReset{},
 	&dbModel.ProductCategoryPrice{},
 	&dbModel.ActivityLog{},
+	&dbModel.AuditLog{},
 }
 
 func SetupTestDB(t *testing.T) *gorm.DB {
@@ -46,6 +47,19 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
+
+	// Services fire activity log / savings event writes from background
+	// goroutines that can outlive the test. Close the pool before
+	// t.TempDir() cleanup removes the directory (cleanups run LIFO, and
+	// TempDir registered first): Close waits for in-flight queries, and
+	// later goroutine writes fail with ErrPoolClosed instead of recreating
+	// WAL files inside a directory that is being deleted — the source of
+	// flaky "TempDir RemoveAll cleanup: directory not empty" failures.
+	t.Cleanup(func() {
+		if sqlDB, closeErr := db.DB(); closeErr == nil {
+			_ = sqlDB.Close()
+		}
+	})
 
 	if err = db.AutoMigrate(testModels...); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)

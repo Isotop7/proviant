@@ -1,14 +1,12 @@
 package v1
 
 import (
-	"context"
 	"net/http"
-	"strconv"
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/audit"
 	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -147,7 +145,7 @@ func DeleteHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	go recordAccountDeleted(ctx, appCtx.UserID, targetUserID, householdID)
+	go recordAccountDeleted(audit.FromGin(ctx), appCtx.UserID, targetUserID, householdID)
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "User deleted"})
 }
 
@@ -215,33 +213,6 @@ type updateAdminUserRequest struct {
 	MailAddress string `json:"mailAddress"`
 }
 
-func recordAccountDeleted(ctx *gin.Context, adminID uint, deletedUserID uint, householdID uint) {
-	reposVal, exists := ctx.Get(util.ContextKeyRepos)
-	if !exists {
-		return
-	}
-	repos, ok := reposVal.(*database.RepositoryContainer)
-	if !ok {
-		return
-	}
-	ipAddress := ""
-	if ctx.Request != nil {
-		ipAddress = ctx.Request.RemoteAddr
-	}
-	var requestIDStr string
-	if requestID, ok := ctx.Get(util.ContextKeyRequestID); ok {
-		requestIDStr, _ = requestID.(string)
-	}
-	auditLog := &dbModel.AuditLog{
-		Timestamp: time.Now(),
-		UserID:    &adminID,
-		Action:    dbModel.AuditActionAccountDeleted,
-		IPAddress: ipAddress,
-		RequestID: requestIDStr,
-		Details:   `{"deleted_user_id": ` + strconv.FormatUint(uint64(deletedUserID), 10) + `, "household_id": ` + strconv.FormatUint(uint64(householdID), 10) + `}`,
-	}
-	if repos.AuditLogs == nil {
-		return
-	}
-	_ = repos.AuditLogs.Create(context.Background(), auditLog)
+func recordAccountDeleted(values audit.Values, adminID uint, deletedUserID uint, householdID uint) {
+	values.Log(adminID, dbModel.AuditActionAccountDeleted, map[string]uint{"deleted_user_id": deletedUserID, "household_id": householdID})
 }

@@ -20,7 +20,6 @@ import (
 
 const (
 	MsgCheckProductIdTryAgain           = "Check the product ID and try again"
-	FmtProductNotFoundOrNoAccess        = "Product with ID '%d' was not found or you do not have access"
 	MsgFailedToGetControllerFromContext = "Failed to get controller from context"
 )
 
@@ -90,19 +89,21 @@ func GetProduct(ctx *gin.Context, appCtx *AppContext) {
 	case nil:
 		ctx.JSON(http.StatusOK, product)
 		return
-	case errors.ErrMismatcherUserID:
-		appCtx.Logger.Warn().Msgf("Product with ID '%d' for user was not found in database (mismatched userID in JWT <> DB)", productID)
-		ctx.JSON(http.StatusNotFound, api.APIResponse{
-			Message: fmt.Sprintf(FmtProductNotFoundOrNoAccess, productID),
-			Action:  MsgCheckProductIdTryAgain,
-		})
-		return
-	default:
-		appCtx.Logger.Warn().Msgf(errors.FormatProductNotFound, productID)
+	case gorm.ErrRecordNotFound, errors.ErrMismatcherUserID:
+		// Unknown and foreign ids fall through to the same body on purpose:
+		// distinct messages would let a caller probe which sequential ids
+		// exist in other households.
+		appCtx.Logger.Warn().Msgf("Product with ID '%d' not accessible: %s", productID, getError)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
+		return
+	default:
+		// Anything else is a server-side failure (DB down, user row gone);
+		// reporting it as 404 would hide it from monitoring.
+		appCtx.Logger.Error().Msgf("Error fetching product: %s", getError)
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 }
@@ -151,6 +152,13 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 
 	createResult := repos.Products.CreateProduct(userID, &product)
 	if createResult != nil {
+		// Client-supplied OpenedAt/DaysAfterOpening failing validation is a
+		// bad request, not a server fault.
+		if createResult == errors.ErrInvalidOpenedLifecycle {
+			logger.Warn().Msgf("Rejected product create: %s", createResult)
+			ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(createResult.Error()))
+			return
+		}
 		logger.Error().Msgf("Error creating product: %s", createResult)
 		ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
 		return
@@ -227,12 +235,21 @@ func UpdateProduct(ctx *gin.Context, appCtx *AppContext) {
 	case nil:
 		ctx.JSON(http.StatusOK, product)
 		return
-	case gorm.ErrRecordNotFound:
-		appCtx.Logger.Warn().Msgf(errors.FormatProductNotFound, productID)
+	case gorm.ErrRecordNotFound, errors.ErrMismatcherUserID:
+		// One body for unknown and foreign ids alike: distinct messages
+		// would let a caller probe which sequential ids exist in other
+		// households.
+		appCtx.Logger.Warn().Msgf("Product with ID '%d' not accessible: %s", productID, updateErr)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
+		return
+	case errors.ErrInvalidOpenedLifecycle:
+		// validateOpenedLifecycle rejected client-supplied OpenedAt /
+		// DaysAfterOpening — user input, not a server fault.
+		appCtx.Logger.Warn().Msgf("Rejected product update for %d: %s", productID, updateErr)
+		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(updateErr.Error()))
 		return
 	default:
 		appCtx.Logger.Error().Msgf("Error saving product: %s", updateErr)
@@ -268,7 +285,7 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 
 	product, err := appCtx.Repos.Products.GetProductByID(productID, appCtx.UserID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == gorm.ErrRecordNotFound || err == errors.ErrMismatcherUserID {
 			appCtx.Logger.Warn().Msgf(errors.FormatProductNotFound, productID)
 			ctx.JSON(http.StatusNotFound, api.APIResponse{
 				Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
@@ -325,8 +342,11 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 			ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d amount updated", productID)})
 		}
 		return
-	case gorm.ErrRecordNotFound:
-		appCtx.Logger.Warn().Msgf(errors.FormatProductNotFound, productID)
+	case gorm.ErrRecordNotFound, errors.ErrMismatcherUserID:
+		// One body for unknown and foreign ids alike: distinct messages
+		// would let a caller probe which sequential ids exist in other
+		// households.
+		appCtx.Logger.Warn().Msgf("Product with ID '%d' not accessible: %s", productID, updateErr)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
 			Action:  MsgCheckProductIdTryAgain,
@@ -371,9 +391,24 @@ func DeleteProduct(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	if err := appCtx.Products.DeleteProduct(productID, appCtx.UserID, archiveOnly); err != nil {
-		appCtx.Logger.Error().Msgf("Error deleting product: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.DeleteFailedError())
-		return
+		// A missing or foreign product is the caller's problem (404), not a
+		// server fault — the default branch used to report both as 500.
+		switch err {
+		case gorm.ErrRecordNotFound, errors.ErrMismatcherUserID:
+			// One body for unknown and foreign ids alike: distinct messages
+			// would let a caller probe which sequential ids exist in other
+			// households.
+			appCtx.Logger.Warn().Msgf("Product with ID '%d' not accessible: %s", productID, err)
+			ctx.JSON(http.StatusNotFound, api.APIResponse{
+				Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+				Action:  MsgCheckProductIdTryAgain,
+			})
+			return
+		default:
+			appCtx.Logger.Error().Msgf("Error deleting product: %s", err)
+			ctx.JSON(http.StatusInternalServerError, api.DeleteFailedError())
+			return
+		}
 	}
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product with ID '%d' was deleted", productID)})
 }
@@ -407,11 +442,16 @@ func SetExpireAt(ctx *gin.Context, appCtx *AppContext) {
 
 	product, getErr := appCtx.Repos.Products.GetProductByID(productID, appCtx.UserID)
 	if getErr != nil {
-		appCtx.Logger.Warn().Msgf(errors.FormatProductNotFound, productID)
-		ctx.JSON(http.StatusNotFound, api.APIResponse{
-			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
-			Action:  MsgCheckProductIdTryAgain,
-		})
+		if getErr == gorm.ErrRecordNotFound || getErr == errors.ErrMismatcherUserID {
+			appCtx.Logger.Warn().Msgf(errors.FormatProductNotFound, productID)
+			ctx.JSON(http.StatusNotFound, api.APIResponse{
+				Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
+				Action:  MsgCheckProductIdTryAgain,
+			})
+			return
+		}
+		appCtx.Logger.Error().Msgf("Error fetching product before expiry update: %s", getErr)
+		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
 		return
 	}
 
@@ -426,17 +466,13 @@ func SetExpireAt(ctx *gin.Context, appCtx *AppContext) {
 		}
 		ctx.JSON(http.StatusOK, expireDTO)
 		return
-	case gorm.ErrRecordNotFound:
-		appCtx.Logger.Warn().Msgf(errors.FormatProductNotFound, productID)
+	case gorm.ErrRecordNotFound, errors.ErrMismatcherUserID:
+		// One body for unknown and foreign ids alike: distinct messages
+		// would let a caller probe which sequential ids exist in other
+		// households.
+		appCtx.Logger.Warn().Msgf("Product with ID '%d' not accessible: %s", productID, updateErr)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(errors.FormatProductWithIDNotFound, productID),
-			Action:  MsgCheckProductIdTryAgain,
-		})
-		return
-	case errors.ErrMismatcherUserID:
-		appCtx.Logger.Warn().Msgf("Product with ID '%d' for user was not found in database: %s", productID, updateErr)
-		ctx.JSON(http.StatusNotFound, api.APIResponse{
-			Message: fmt.Sprintf(FmtProductNotFoundOrNoAccess, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
 		return

@@ -1,6 +1,9 @@
 package database
 
-import "gorm.io/gorm"
+import (
+	"github.com/rs/zerolog"
+	"gorm.io/gorm"
+)
 
 // RepositoryContainer holds all repository interfaces.
 // Injected into the Gin context under the key "repos" so handlers
@@ -26,7 +29,10 @@ type RepositoryContainer struct {
 }
 
 // NewRepositoryContainer creates a RepositoryContainer backed by GORM implementations.
-func NewRepositoryContainer(db *gorm.DB) *RepositoryContainer {
+// logger may be nil (tests); the audit repository needs it to warn about
+// entries that fail household attribution, because such an entry stays
+// invisible to every household.
+func NewRepositoryContainer(db *gorm.DB, logger *zerolog.Logger) *RepositoryContainer {
 	return &RepositoryContainer{
 		Products:          NewProductRepository(db),
 		Users:             NewUserRepository(db),
@@ -42,7 +48,7 @@ func NewRepositoryContainer(db *gorm.DB) *RepositoryContainer {
 		Streaks:           NewStreakRepository(db),
 		ExpiryScan:        NewExpiryScanRepository(db),
 		CalendarTokens:    NewCalendarTokenRepository(db),
-		AuditLogs:         NewAuditLogRepository(db),
+		AuditLogs:         NewAuditLogRepository(db, logger),
 		ActivityLogs:      NewActivityLogRepository(db),
 		ShoppingListItems: NewShoppingListItemRepository(db),
 	}

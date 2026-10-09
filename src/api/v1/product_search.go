@@ -11,6 +11,7 @@ import (
 	"codeberg.org/isotop7/proviant/errors"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // GetProductsByBarcode returns a list of products of a user matching a barcode
@@ -51,13 +52,16 @@ func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext) {
 	case nil:
 		ctx.JSON(http.StatusOK, products)
 		return
-	case errors.ErrMismatcherUserID:
-		appCtx.Logger.Warn().Msgf("Products with barcode '%d' for user were not found in database (mismatched userID in JWT <> DB)", barcode)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Products with barcode '%d' for user were not found", barcode)})
+	case errors.ErrInvalidUserData, gorm.ErrRecordNotFound:
+		// The caller's own account state is unusable (no household / user row
+		// gone): a bad request, not a server fault. Unknown barcodes never
+		// reach this branch — they come back as an empty 200.
+		appCtx.Logger.Warn().Msgf("Products with barcode '%d' lookup rejected: %s", barcode, getError)
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Products with barcode '%d' were not found", barcode)})
 		return
 	default:
-		appCtx.Logger.Warn().Msgf("Products with barcode '%d' were not found in database", barcode)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Products with barcode '%d' were not found", barcode)})
+		appCtx.Logger.Error().Msgf("Products with barcode '%d' lookup failed: %s", barcode, getError)
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 }
@@ -67,9 +71,9 @@ func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext) {
 // @Description  	Returns a list of products based on a query
 // @Tags         	product
 // @Produce      	json
-// @Param        	queryParam  query  string  true  	"Search field (product_name, barcode, category, storage_location)"
+// @Param        	queryParam  query  string  true  	"Search field (product_name, barcode)"
 // @Param        	queryValue  query  string  true  	"Search value"
-// @Param        	sort        query  string  false  "Sort field"  default(product_name)
+// @Param        	sort        query  string  false  "Sort field (product_name, expire_at, created_at, scanned_at, notified_at, barcode)"  default(product_name)
 // @Param        	order       query  string  false  "Sort order (asc, desc)"  default(asc)
 // @Success      	200  {object}  []database.Product
 // @Failure      	400  {object}  api.APIResponse
@@ -90,9 +94,28 @@ func SearchProducts(ctx *gin.Context, appCtx *AppContext) {
 
 	products, productErr := appCtx.Repos.Products.SearchProducts(enumParam, q.QueryValue, q.Sort, q.Order, appCtx.UserID)
 	if productErr != nil {
-		appCtx.Logger.Error().Msgf("%s: %s", errors.MsgErrGettingProducts, productErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})
-		return
+		// The caller picked the sort column/direction and owns their account
+		// row: those misses are client input, not server faults. The query
+		// binding rejects most bad sort values first, but the repo allowlist
+		// can lag it — that drift must not read as a 500 either.
+		switch productErr {
+		case errors.ErrDatabaseInvalidSortParameter:
+			// The binding rejects most bad sort values first, but the repo
+			// allowlist can lag it — a public error message, safe to echo.
+			appCtx.Logger.Warn().Msgf("%s: %s", errors.MsgErrGettingProducts, productErr)
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: productErr.Error()})
+			return
+		case gorm.ErrRecordNotFound:
+			// The caller's own account row is gone: report the account state,
+			// never gorm's internal "record not found".
+			appCtx.Logger.Warn().Msgf("%s: %s", errors.MsgErrGettingProducts, productErr)
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserData.Error()})
+			return
+		default:
+			appCtx.Logger.Error().Msgf("%s: %s", errors.MsgErrGettingProducts, productErr)
+			ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})
+			return
+		}
 	}
 
 	ctx.JSON(http.StatusOK, products)

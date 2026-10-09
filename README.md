@@ -57,6 +57,7 @@
 
 ```bash
 curl -o docker-compose.yml https://codeberg.org/isotop7/proviant/raw/branch/main/docker-compose.sqlite.yaml
+echo "PROVIANT_JWT_SECRET=$(openssl rand -hex 32)" > .env
 docker compose up -d
 ```
 
@@ -95,7 +96,7 @@ Then open http://localhost:5114
 2. Setup node_modules and assets (needs [Taskfile](https://taskfile.dev/)): `task init`
 3. Navigate to the project directory: `cd proviant/src`
 4. Build the application: `go build -o proviant`
-5. Copy the desired config file `config.yaml.[mariadb|sqlite].tmpl`, rename it to `config.yaml` and adjust it
+5. Copy the desired config file `config.yaml.[mariadb|sqlite].tmpl`, rename it to `config.yaml` and adjust it — `tokenPassword` ships empty and must be set (`openssl rand -hex 32`), the server refuses to start without it or with the old public placeholder `secret key`
 6. Run the server: `./proviant`
 
 #### Docker
@@ -104,6 +105,13 @@ Then open http://localhost:5114
 
 - [External MariaDB database](./docker-compose.mariadb.yaml)
 - [Internal SQLite database](./docker-compose.sqlite.yaml)
+
+Both compose files require `PROVIANT_JWT_SECRET` in a `.env` next to them — compose
+refuses to start without it:
+
+```bash
+echo "PROVIANT_JWT_SECRET=$(openssl rand -hex 32)" > .env
+```
 
 **IMPORTANT:** The mounted directories need to be chowned by the proviant app user.
 
@@ -119,7 +127,9 @@ repository checkout — unlike the compose files shipped in this repo, which alw
 
 ```bash
 docker pull ghcr.io/isotop7/proviant:latest
-docker run --rm -p 5114:5114 ghcr.io/isotop7/proviant:latest
+docker run --rm -p 5114:5114 \
+  -e PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD="$(openssl rand -hex 32)" \
+  ghcr.io/isotop7/proviant:latest
 ```
 
 | Tag | Description |
@@ -150,7 +160,7 @@ Configuration is set via environment variables. The complete list of available o
 |---|---|---|
 | `PROVIANT_SERVER_PORT` | `5114` | Listening port |
 | `PROVIANT_SERVER_BASEURL` | `https://proviant.local.de` | URL of Proviant with protocol (used in emails, notifications) |
-| `PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD` | `secret key` | Secret used for JSON Web Tokens |
+| `PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD` | *(required — no default)* | Secret used for JSON Web Tokens. Generate one with `openssl rand -hex 32`. Startup fails if empty or if it is the old public placeholder `secret key` — upgrading installs still carrying that value must rotate. |
 | `PROVIANT_SERVER_AUTHENTICATION_TOKENLIFETIME` | `8` | Lifetime of JSON Web Tokens in hours |
 | `PROVIANT_SERVER_AUTHENTICATION_MAXLOGINATTEMPTS` | `3` | Maximum failed login attempts before lockout |
 | `PROVIANT_SERVER_AUTHENTICATION_LOCKOUTDURATIONMINS` | `10` | Lockout duration in minutes after max failed attempts |
@@ -270,6 +280,12 @@ source (`build: ./`), so `docker compose pull` is a no-op for them — upgrade t
 `docker compose build --pull && docker compose up -d`, or switch to the prebuilt image as above.
 
 Database migrations run automatically on startup. See the [CHANGELOG](./CHANGELOG.md) for breaking changes that may require manual intervention.
+
+Upgrades also rotate two things on first start: existing `audit_logs` rows are attributed
+to the household their actor belongs to *now* (a member who changed households before the
+upgrade will see their older entries under their current household), and a `tokenPassword`
+still set to the old public placeholder `secret key` aborts startup until you generate a
+new one (`openssl rand -hex 32`).
 
 ### Manual / binary
 

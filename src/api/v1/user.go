@@ -1,16 +1,14 @@
 package v1
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/audit"
 	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
@@ -105,7 +103,7 @@ func UpdateUserPassword(ctx *gin.Context, appCtx *AppContext) {
 	validationErr := login.IsValidWithValidator(passwordValidator)
 	if validationErr != nil {
 		appCtx.Logger.Error().Msg(validationErr.Error())
-		go recordPasswordChangeFailed(ctx, appCtx.UserID, validationErr.Error())
+		go recordPasswordChangeFailed(audit.FromGin(ctx), appCtx.UserID, validationErr.Error())
 		api.RespondError(ctx, http.StatusBadRequest, validationErr)
 		return
 	}
@@ -114,17 +112,17 @@ func UpdateUserPassword(ctx *gin.Context, appCtx *AppContext) {
 
 	switch updateErr {
 	case nil:
-		go recordPasswordChangeSuccess(ctx, appCtx.UserID)
+		go recordPasswordChangeSuccess(audit.FromGin(ctx), appCtx.UserID)
 		ctx.JSON(http.StatusOK, api.APIResponse{Message: "Password updated"})
 		return
 	case gorm.ErrRecordNotFound:
 		appCtx.Logger.Error().Msgf("User with ID '%d' was not found in database", appCtx.UserID)
-		go recordPasswordChangeFailed(ctx, appCtx.UserID, "user_not_found")
+		go recordPasswordChangeFailed(audit.FromGin(ctx), appCtx.UserID, "user_not_found")
 		api.RespondError(ctx, http.StatusNotFound, fmt.Errorf(apperrors.ErrInvalidUserIDWrapper, appCtx.UserID))
 		return
 	default:
 		appCtx.Logger.Error().Msgf("Error updating password: %s", updateErr)
-		go recordPasswordChangeFailed(ctx, appCtx.UserID, updateErr.Error())
+		go recordPasswordChangeFailed(audit.FromGin(ctx), appCtx.UserID, updateErr.Error())
 		api.RespondError(ctx, http.StatusInternalServerError, updateErr)
 		return
 	}
@@ -323,63 +321,10 @@ func manageUserTelegramPoller(ctx *gin.Context, userID uint, tokenChanged bool, 
 	}
 }
 
-func recordPasswordChangeSuccess(ctx *gin.Context, userID uint) {
-	reposVal, exists := ctx.Get(util.ContextKeyRepos)
-	if !exists {
-		return
-	}
-	repos, ok := reposVal.(*database.RepositoryContainer)
-	if !ok {
-		return
-	}
-	ipAddress := ""
-	if ctx.Request != nil {
-		ipAddress = ctx.Request.RemoteAddr
-	}
-	var requestIDStr string
-	if requestID, ok := ctx.Get(util.ContextKeyRequestID); ok {
-		requestIDStr, _ = requestID.(string)
-	}
-	auditLog := &dbModel.AuditLog{
-		Timestamp: time.Now(),
-		UserID:    &userID,
-		Action:    dbModel.AuditActionPasswordChange,
-		IPAddress: ipAddress,
-		RequestID: requestIDStr,
-	}
-	if repos.AuditLogs == nil {
-		return
-	}
-	_ = repos.AuditLogs.Create(context.Background(), auditLog)
+func recordPasswordChangeSuccess(values audit.Values, userID uint) {
+	values.Log(userID, dbModel.AuditActionPasswordChange, struct{}{})
 }
 
-func recordPasswordChangeFailed(ctx *gin.Context, userID uint, reason string) {
-	reposVal, exists := ctx.Get(util.ContextKeyRepos)
-	if !exists {
-		return
-	}
-	repos, ok := reposVal.(*database.RepositoryContainer)
-	if !ok {
-		return
-	}
-	ipAddress := ""
-	if ctx.Request != nil {
-		ipAddress = ctx.Request.RemoteAddr
-	}
-	var requestIDStr string
-	if requestID, ok := ctx.Get(util.ContextKeyRequestID); ok {
-		requestIDStr, _ = requestID.(string)
-	}
-	auditLog := &dbModel.AuditLog{
-		Timestamp: time.Now(),
-		UserID:    &userID,
-		Action:    dbModel.AuditActionPasswordChangeFailed,
-		IPAddress: ipAddress,
-		RequestID: requestIDStr,
-		Details:   `{"reason": "` + reason + `"}`,
-	}
-	if repos.AuditLogs == nil {
-		return
-	}
-	_ = repos.AuditLogs.Create(context.Background(), auditLog)
+func recordPasswordChangeFailed(values audit.Values, userID uint, reason string) {
+	values.Log(userID, dbModel.AuditActionPasswordChangeFailed, map[string]string{"reason": reason})
 }

@@ -15,7 +15,7 @@ import (
 
 func newTestProductService(db *gorm.DB) *ProductService {
 	logger := zerolog.Nop()
-	repos := database.NewRepositoryContainer(db)
+	repos := database.NewRepositoryContainer(db, nil)
 	return NewProductService(repos, &logger)
 }
 
@@ -305,9 +305,12 @@ func TestProductService_BulkConsumeProducts(t *testing.T) {
 		product := testutil.CreateTestProduct(db, household.ID)
 
 		ids := []uint{product.ID, 9999}
-		err := svc.BulkConsumeProducts(ids, user.ID)
+		failed, err := svc.BulkConsumeProducts(ids, user.ID)
 		if err != nil {
-			t.Errorf("BulkConsumeProducts() error = %v, want nil", err)
+			t.Errorf("BulkConsumeProducts() error = %v, want nil (an unknown id is the caller's problem, not a server fault)", err)
+		}
+		if len(failed) != 1 || failed[0] != 9999 {
+			t.Errorf("BulkConsumeProducts() failed = %v, want [9999]", failed)
 		}
 	})
 }
@@ -322,9 +325,12 @@ func TestProductService_BulkWasteProducts(t *testing.T) {
 		product := testutil.CreateTestProduct(db, household.ID)
 
 		ids := []uint{product.ID, 9999}
-		err := svc.BulkWasteProducts(ids, user.ID)
+		failed, err := svc.BulkWasteProducts(ids, user.ID)
 		if err != nil {
-			t.Errorf("BulkWasteProducts() error = %v, want nil", err)
+			t.Errorf("BulkWasteProducts() error = %v, want nil (an unknown id is the caller's problem, not a server fault)", err)
+		}
+		if len(failed) != 1 || failed[0] != 9999 {
+			t.Errorf("BulkWasteProducts() failed = %v, want [9999]", failed)
 		}
 	})
 }
@@ -366,9 +372,26 @@ func TestProductService_BulkRestoreProducts(t *testing.T) {
 		_ = svc.ConsumeProduct(product.ID, user.ID)
 
 		ids := []uint{product.ID}
-		err := svc.BulkRestoreProducts(ids, user.ID)
+		failed, err := svc.BulkRestoreProducts(ids, user.ID)
 		if err != nil {
 			t.Errorf("BulkRestoreProducts() error = %v, want nil", err)
+		}
+		if len(failed) != 0 {
+			t.Errorf("BulkRestoreProducts() failed = %v, want none", failed)
+		}
+	})
+
+	t.Run("unknown id is reported as failed", func(t *testing.T) {
+		household := testutil.CreateTestHousehold(db, 1)
+		user := testutil.CreateTestUser(db, household.ID)
+
+		unknownID := uint(999999)
+		failed, err := svc.BulkRestoreProducts([]uint{unknownID}, user.ID)
+		if err != nil {
+			t.Errorf("BulkRestoreProducts() error = %v, want nil (client-side miss is not a server fault)", err)
+		}
+		if len(failed) != 1 || failed[0] != unknownID {
+			t.Errorf("BulkRestoreProducts() failed = %v, want [%d]", failed, unknownID)
 		}
 	})
 }

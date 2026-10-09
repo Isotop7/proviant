@@ -3340,6 +3340,52 @@ select.pv-field-input {
   }
 }
 
+// Product list pagination — the list is served one page at a time, so these
+// links are the only way through it. Sized to the 44px touch-target minimum.
+.products-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.pagination-link {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 16px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--fg-2);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 120ms;
+
+  &:hover {
+    color: var(--fg);
+    background: var(--bg-subtle);
+  }
+
+  &.is-disabled {
+    color: var(--fg-3);
+    cursor: not-allowed;
+    opacity: .6;
+  }
+}
+
+.pagination-status {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-3);
+}
+
 .filter-dot {
   display: inline-block;
   width: 6px;

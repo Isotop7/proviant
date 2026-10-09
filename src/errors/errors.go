@@ -101,6 +101,11 @@ var (
 	// ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
 	ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
 
+	// ErrDatabaseInvalidSortParameter is thrown if a sort column or direction is not on the
+	// allowlist. Sort values are interpolated into the SQL ORDER BY clause, so anything that
+	// reaches the query must come from that allowlist — never from request input.
+	ErrDatabaseInvalidSortParameter = errors.New("invalid sort parameter on database call")
+
 	// ErrDatabaseMariaDBEmptyHost is thrown if an empty MariaDB host was specified
 	ErrDatabaseMariaDBEmptyHost = errors.New("empty MariaDB host specified")
 
@@ -288,7 +293,17 @@ var (
 	 * Server configuration related errors
 	 */
 	// ErrServerEmptyTokenPassword is thrown if no JWT token password was specified
-	ErrServerEmptyTokenPassword = errors.New("JWT token password cannot be empty")
+	ErrServerEmptyTokenPassword = errors.New(
+		"JWT token password cannot be empty: set server.authentication.tokenPassword " +
+			"(generate one with 'openssl rand -hex 32') or the " +
+			"PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD environment variable")
+
+	// ErrServerRetiredTokenPassword is thrown if the JWT token password is a
+	// default that earlier releases shipped publicly in their config templates
+	ErrServerRetiredTokenPassword = errors.New(
+		"JWT token password is a publicly known default shipped by an earlier release: " +
+			"set server.authentication.tokenPassword (generate one with 'openssl rand -hex 32') or the " +
+			"PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD environment variable")
 
 	// ErrServerInvalidTokenLifetime is thrown if an invalid JWT token lifetime was specified
 	ErrServerInvalidTokenLifetime = errors.New("JWT token lifetime must be greater than 0")
@@ -337,6 +352,16 @@ var (
 	// ErrReceiptOCREmptyModel is thrown when ocr.receipt is enabled without a model name
 	ErrReceiptOCREmptyModel = errors.New("receipt scanning requires a model name")
 
+	// ErrReceiptScanInvalidEndpoint is thrown when a per-user receipt scan endpoint is not an absolute http/https URL with a host
+	ErrReceiptScanInvalidEndpoint = errors.New("receipt scan endpoint must be an absolute http:// or https:// URL")
+
+	// ErrReceiptScanPrivateIP is thrown when a per-user receipt scan endpoint points to a private or internal IP address
+	// (literal IPs at save time, resolved addresses at request time)
+	ErrReceiptScanPrivateIP = errors.New("receipt scan endpoint must not point to a private or internal IP address")
+
+	// ErrReceiptScanInvalidTimeout is thrown when a per-user receipt scan timeout is out of range
+	ErrReceiptScanInvalidTimeout = errors.New("receipt scan timeout must be between 1 and 900 seconds")
+
 	// ErrFileTooLarge is thrown when the uploaded image exceeds the size limit
 	ErrFileTooLarge = errors.New("uploaded file too large")
 
@@ -346,6 +371,11 @@ var (
 
 	// ErrInvalidRequest is thrown when the request is malformed or missing required parameters
 	ErrInvalidRequest = errors.New("invalid request")
+
+	// ErrInvalidOpenedLifecycle is thrown if a product's OpenedAt / DaysAfterOpening
+	// fields violate the opened-shelf-life bounds
+	ErrInvalidOpenedLifecycle = errors.New(
+		"daysAfterOpening must be between 0 and 365 and openedAt must not be more than one day in the future")
 
 	// ErrTokenExpired is thrown when a calendar token has passed its expiration date
 	ErrTokenExpired = errors.New("calendar token expired")
@@ -433,12 +463,12 @@ var (
 	/*
 	 * Stats/export shared log format strings
 	 */
-	FmtErrGetActiveProductsCount              = "GetActiveProductsCount: %s"
-	FmtErrGetExpiredProductsCount             = "GetExpiredProductsCount: %s"
-	FmtErrGetExpiringSoonProducts             = "GetExpiringSoonProducts: %s"
-	FmtErrGetProductCategoryBreakdown         = "GetProductCategoryBreakdown: %s"
-	FmtErrGetExpiryTrend                      = "GetExpiryTrend: %s"
-	FmtErrGetArchivedProductsGroupedByBarcode = "GetArchivedProductsGroupedByBarcode: %s"
+	FmtErrGetActiveProductsCount      = "GetActiveProductsCount: %s"
+	FmtErrGetExpiredProductsCount     = "GetExpiredProductsCount: %s"
+	FmtErrGetExpiringSoonProducts     = "GetExpiringSoonProducts: %s"
+	FmtErrGetProductCategoryBreakdown = "GetProductCategoryBreakdown: %s"
+	FmtErrGetExpiryTrend              = "GetExpiryTrend: %s"
+	FmtErrGetUniqueArchivedCount      = "GetUniqueArchivedProductsCount: %s"
 
 	/*
 	 * Stats/export shared HTTP response messages

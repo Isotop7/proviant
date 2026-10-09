@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 
@@ -198,6 +199,64 @@ func TestProductRepository_CreateProduct(t *testing.T) {
 	if product.HouseholdID != household.ID {
 		t.Errorf("CreateProduct() HouseholdID = %d, want %d", product.HouseholdID, household.ID)
 	}
+}
+
+// TestProductRepository_CreateProductValidatesOpenedLifecycle pins the create-
+// path half of the opened-shelf-life invariant: POST binds the raw model, so
+// the repository is the only gate. A row with DaysAfterOpening > 365 would be
+// pruned out of effectiveExpiryCandidateScope's window and silently vanish
+// from expiring-soon lists and notifications.
+func TestProductRepository_CreateProductValidatesOpenedLifecycle(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewProductRepository(db)
+
+	household := dbModel.Household{Name: "Test Household"}
+	db.Create(&household)
+	user := authentication.User{
+		Username:    "lifecycleuser",
+		Password:    "password",
+		MailAddress: "lifecycle@example.com",
+		HouseholdID: household.ID,
+	}
+	db.Create(&user)
+
+	t.Run("daysAfterOpening above the bound is rejected", func(t *testing.T) {
+		tooManyDays := 366
+		product := dbModel.Product{
+			ProductName:      "Bad Shelf Life",
+			Barcode:          "1111111111111",
+			DaysAfterOpening: &tooManyDays,
+		}
+		if err := repo.CreateProduct(user.ID, &product); err != errors.ErrInvalidOpenedLifecycle {
+			t.Errorf("CreateProduct() error = %v, want %v", err, errors.ErrInvalidOpenedLifecycle)
+		}
+	})
+
+	t.Run("future openedAt is rejected", func(t *testing.T) {
+		future := time.Now().Add(72 * time.Hour)
+		product := dbModel.Product{
+			ProductName: "Future Open",
+			Barcode:     "2222222222222",
+			OpenedAt:    &future,
+		}
+		if err := repo.CreateProduct(user.ID, &product); err != errors.ErrInvalidOpenedLifecycle {
+			t.Errorf("CreateProduct() error = %v, want %v", err, errors.ErrInvalidOpenedLifecycle)
+		}
+	})
+
+	t.Run("valid opened lifecycle is accepted", func(t *testing.T) {
+		opened := time.Now().Add(-24 * time.Hour)
+		validDays := 14
+		product := dbModel.Product{
+			ProductName:      "Good Shelf Life",
+			Barcode:          "3333333333333",
+			OpenedAt:         &opened,
+			DaysAfterOpening: &validDays,
+		}
+		if err := repo.CreateProduct(user.ID, &product); err != nil {
+			t.Fatalf("CreateProduct() error = %v, want nil", err)
+		}
+	})
 }
 
 func TestProductRepository_UpdateProduct(t *testing.T) {
@@ -712,6 +771,53 @@ func TestProductRepository_WasteProduct(t *testing.T) {
 	}
 	if wasted.RemovalReason != dbModel.RemovalReasonWasted {
 		t.Errorf("WasteProduct() RemovalReason = %q, want %q", wasted.RemovalReason, dbModel.RemovalReasonWasted)
+	}
+}
+
+func TestProductRepository_WasteProduct_ConcurrentModification(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewProductRepository(db)
+
+	household := dbModel.Household{Name: "Test Household"}
+	db.Create(&household)
+
+	user := authentication.User{
+		Username:    "testuser",
+		Password:    "password",
+		MailAddress: "test@example.com",
+		HouseholdID: household.ID,
+	}
+	db.Create(&user)
+
+	product := dbModel.Product{
+		ProductName: "To Waste",
+		Barcode:     "1234567890123",
+		HouseholdID: household.ID,
+	}
+	db.Create(&product)
+
+	// Simulate a concurrent write landing between the repository's read and
+	// its guarded write: bump updated_at before any UPDATE on products runs,
+	// so the optimistic-lock precondition (updated_at = read value) fails.
+	db.Callback().Update().Before("gorm:before_update").Register("test:concurrent_write", func(tx *gorm.DB) {
+		_, _ = tx.Statement.ConnPool.ExecContext(tx.Statement.Context,
+			"UPDATE products SET updated_at = ? WHERE id = ?", time.Now(), product.ID)
+	})
+
+	err := repo.WasteProduct(product.ID, user.ID)
+	if err != errors.ErrProductConcurrentModification {
+		t.Fatalf("WasteProduct() error = %v, want %v", err, errors.ErrProductConcurrentModification)
+	}
+
+	var untouched dbModel.Product
+	if getErr := db.Unscoped().First(&untouched, product.ID).Error; getErr != nil {
+		t.Fatalf("product record vanished: %v", getErr)
+	}
+	if untouched.DeletedAt.Valid {
+		t.Error("concurrent-modification failure must roll back the soft-delete")
+	}
+	if untouched.RemovalReason == dbModel.RemovalReasonWasted {
+		t.Error("concurrent-modification failure must roll back the removal-reason update")
 	}
 }
 
@@ -1481,5 +1587,69 @@ func TestExpiryScanRepository_CreateExpiryScan(t *testing.T) {
 
 	if len(scans) != 1 {
 		t.Errorf("GetByUser() returned %d scans, want 1", len(scans))
+	}
+}
+
+// TestProductRepository_BulkRestoreProductsSkipsUnattributableIDs pins the
+// fix for a data-corruption bug: an unknown or foreign id used to fall
+// through to Save(&zeroValueProduct), which gorm writes as an INSERT of a
+// blank product row (empty name, household 0). Failed ids must be reported
+// and nothing else written.
+func TestProductRepository_BulkRestoreProductsSkipsUnattributableIDs(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewProductRepository(db)
+
+	householdA := dbModel.Household{Name: "Household A"}
+	householdB := dbModel.Household{Name: "Household B"}
+	db.Create(&householdA)
+	db.Create(&householdB)
+	userA := authentication.User{
+		Username:    "bulkrestorea",
+		Password:    "password",
+		MailAddress: "a@example.com",
+		HouseholdID: householdA.ID,
+	}
+	db.Create(&userA)
+
+	// An archived product of ANOTHER household: must be rejected, not restored.
+	foreign := dbModel.Product{
+		ProductName: "Foreign Archived",
+		Barcode:     "4444444444444",
+		HouseholdID: householdB.ID,
+	}
+	db.Create(&foreign)
+	db.Delete(&foreign)
+
+	countRows := func() int64 {
+		t.Helper()
+		var n int64
+		if err := db.Unscoped().Model(&dbModel.Product{}).Count(&n).Error; err != nil {
+			t.Fatalf("count failed: %v", err)
+		}
+		return n
+	}
+
+	before := countRows()
+
+	unknownID := uint(999999)
+	errs := repo.BulkRestoreProducts([]uint{unknownID, foreign.ID}, userA.ID)
+
+	if len(errs) != 2 {
+		t.Errorf("got %d errors, want 2 (both ids must fail)", len(errs))
+	}
+	if len(errs) == 2 && errs[0].ProductID() != unknownID {
+		t.Errorf("errs[0].ProductID() = %d, want %d", errs[0].ProductID(), unknownID)
+	}
+	if got := countRows(); got != before {
+		t.Errorf("product rows = %d, want %d (failed restores must not insert rows)", got, before)
+	}
+
+	// The foreign product must still be archived.
+	var reloaded dbModel.Product
+	if err := db.Unscoped().First(&reloaded, foreign.ID).Error; err != nil {
+		t.Fatalf("failed to reload foreign product: %v", err)
+	}
+	if !reloaded.DeletedAt.Valid {
+		t.Errorf("foreign product was restored across household boundary")
 	}
 }

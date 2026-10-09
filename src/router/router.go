@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/api/auth"
@@ -39,25 +38,6 @@ func (w zerologWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func cleanupRevokedTokens(db *gorm.DB, logger *zerolog.Logger) {
-	const batchSize = 500
-	ticker := time.NewTicker(1 * time.Hour)
-	defer ticker.Stop()
-	for range ticker.C {
-		now := time.Now()
-		var totalDeleted int64
-		for {
-			result := db.Where("expires_at < ?", now).Limit(batchSize).Delete(&authentication.RevokedToken{})
-			totalDeleted += result.RowsAffected
-			if result.RowsAffected < int64(batchSize) {
-				break
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
-		logger.Info().Int64("deleted", totalDeleted).Msg("Cleaned up expired revoked tokens")
-	}
-}
-
 // mustInitJWT creates and fully initializes a GinJWTMiddleware; panics on any error.
 func mustInitJWT(
 	logger *zerolog.Logger,
@@ -81,9 +61,8 @@ func mustInitJWT(
 // SetupRouter creates the gin engine and associated middleware
 func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) *gin.Engine {
 	InitRateLimits(proviantConfiguration.Server.RateLimit)
-	go cleanupRevokedTokens(dbHandle, logger)
 
-	repos := dbcontroller.NewRepositoryContainer(dbHandle)
+	repos := dbcontroller.NewRepositoryContainer(dbHandle, logger)
 
 	if proviantConfiguration.Server.Debug {
 		gin.SetMode(gin.DebugMode)
@@ -278,6 +257,8 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedUserAPI.POST("/password", passwordRateLimitMiddleware, v1.WrapHandler(v1.UpdateUserPassword))
 	protectedUserAPI.GET("/notification-preferences", v1.WrapHandler(v1.GetUserNotificationPreferences))
 	protectedUserAPI.POST("/notification-preferences", v1.WrapHandler(v1.UpdateUserNotificationPreferences))
+	protectedUserAPI.GET("/receipt-scan-settings", v1.WrapHandler(v1.GetUserReceiptScanSettings))
+	protectedUserAPI.POST("/receipt-scan-settings", v1.WrapHandler(v1.UpdateUserReceiptScanSettings))
 	protectedUserAPI.POST("/telegram-link-token", v1.WrapHandler(v1.GenerateTelegramLinkToken))
 	protectedUserAPI.POST("/household/leave", v1.WrapHandler(v1.LeaveHousehold))
 	protectedUserAPI.POST("/household/create", v1.WrapHandler(v1.CreateHousehold))
@@ -361,8 +342,10 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	adminAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteHouseholdUser))
 	adminAPI.POST("/:id/reset-password", v1.WrapHandler(v1.AdminResetUserPassword))
 
-	// Admin audit log route
-	engine.GET("/api/v1/admin/audit-log", jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware(), v1.WrapHandler(v1.GetAuditLogs))
+	// Admin audit log route. RequireHouseholdAdmin gates the route and stamps
+	// ContextKeyHouseholdID, which the handler passes to the repository so the
+	// query is scoped to the caller's household.
+	engine.GET("/api/v1/admin/audit-log", jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware(), RequireHouseholdAdmin(), v1.WrapHandler(v1.GetAuditLogs))
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")

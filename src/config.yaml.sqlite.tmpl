@@ -8,7 +8,10 @@ server:
   maxUploadSizeMB: 5
   debug: false
   authentication:
-    tokenPassword: "secret key"
+    # REQUIRED. No default is shipped: a publicly known secret lets anyone forge
+    # a session token for any household. Generation: openssl rand -hex 32
+    # Can also be supplied via PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD.
+    tokenPassword: ""
     tokenLifetime: 8
     max_login_attempts: 3
     lockout_duration_mins: 10

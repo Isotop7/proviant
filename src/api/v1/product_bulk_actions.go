@@ -2,7 +2,6 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -13,15 +12,16 @@ import (
 )
 
 // BulkConsumeProducts marks multiple products as consumed (soft-delete, no product.wasted event)
-// @Summary      Mark products as consumed
-// @Description  Soft-deletes (archives) multiple products without firing product.wasted webhook events
+// @Summary      Mark multiple products as consumed
+// @Description  Soft-deletes (archives) multiple products without firing product.wasted webhook events. Reports the ids that were not touched: 404 when none could be consumed (unknown or foreign ids), 200 with the failed ids in failedIds when only some fail, 500 (also carrying failedIds) when a failure was server-side.
 // @Tags         product
 // @Accept       json
 // @Produce      json
 // @Param        productIDs  body  []int  true  "Product IDs"
-// @Success      200  {object}  api.APIResponse
+// @Success      200  {object}  api.BulkActionResponse
 // @Failure      400  {object}  api.APIResponse
-// @Failure      500  {object}  api.APIResponse
+// @Failure      404  {object}  api.BulkActionResponse
+// @Failure      500  {object}  api.BulkActionResponse
 // @Router       /api/v1/products/bulkConsume [post]
 func BulkConsumeProducts(ctx *gin.Context, appCtx *AppContext) {
 	var products apiModel.BulkProductsAPIModel
@@ -29,23 +29,22 @@ func BulkConsumeProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	if err := appCtx.Products.BulkConsumeProducts(products.ProductIDs, appCtx.UserID); err != nil {
-		appCtx.Logger.Error().Msgf("BulkConsumeProducts: %s", err)
-	}
-
-	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("%d products marked as consumed", len(products.ProductIDs))})
+	ids := dedupProductIDs(products.ProductIDs)
+	failed, err := appCtx.Products.BulkConsumeProducts(ids, appCtx.UserID)
+	writeBulkActionResult(ctx, appCtx, ids, failed, err, "marked as consumed")
 }
 
 // BulkWasteProducts marks multiple products as wasted (hard-delete, fires product.wasted webhook per product)
-// @Summary      Mark products as wasted
-// @Description  Hard-deletes multiple products and fires the product.wasted webhook event per product
+// @Summary      Mark multiple products as wasted
+// @Description  Hard-deletes multiple products and fires the product.wasted webhook per product. Reports the ids that were not touched: 404 when none could be wasted (unknown or foreign ids), 200 with the failed ids in failedIds when only some fail, 500 (also carrying failedIds) when a failure was server-side.
 // @Tags         product
 // @Accept       json
 // @Produce      json
 // @Param        productIDs  body  []int  true  "Product IDs"
-// @Success      200  {object}  api.APIResponse
+// @Success      200  {object}  api.BulkActionResponse
 // @Failure      400  {object}  api.APIResponse
-// @Failure      500  {object}  api.APIResponse
+// @Failure      404  {object}  api.BulkActionResponse
+// @Failure      500  {object}  api.BulkActionResponse
 // @Router       /api/v1/products/bulkWaste [post]
 func BulkWasteProducts(ctx *gin.Context, appCtx *AppContext) {
 	var products apiModel.BulkProductsAPIModel
@@ -53,11 +52,9 @@ func BulkWasteProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	if err := appCtx.Products.BulkWasteProducts(products.ProductIDs, appCtx.UserID); err != nil {
-		appCtx.Logger.Error().Msgf("BulkWasteProducts: %s", err)
-	}
-
-	ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("%d products marked as wasted", len(products.ProductIDs))})
+	ids := dedupProductIDs(products.ProductIDs)
+	failed, err := appCtx.Products.BulkWasteProducts(ids, appCtx.UserID)
+	writeBulkActionResult(ctx, appCtx, ids, failed, err, "marked as wasted")
 }
 
 // CookProducts consumes multiple products, partially or fully (cook workflow)

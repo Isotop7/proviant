@@ -101,10 +101,17 @@ func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *
 
 // setupConfig initializes the configuration and returns a ProviantConfiguration instance.
 func setupConfig() *configuration.ProviantConfiguration {
+	return loadConfig(".")
+}
+
+// loadConfig reads config.yaml from configDir and unmarshals it. The directory is
+// a parameter so tests can point it at a fixture rather than at a developer's
+// local config file, which is gitignored and therefore absent in CI.
+func loadConfig(configDir string) *configuration.ProviantConfiguration {
 	// Set configuration file path
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
+	viper.AddConfigPath(configDir)
 	// Set env prefix
 	viper.SetEnvPrefix("PROVIANT")
 	viper.AutomaticEnv()

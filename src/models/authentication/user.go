@@ -23,6 +23,14 @@ const (
 	RoleViewer = "viewer"
 )
 
+type ReceiptScanPreferences struct {
+	OverrideEnabled bool   `json:"overrideEnabled" gorm:"default:false"`
+	Endpoint        string `json:"endpoint,omitempty"`
+	APIKey          string `json:"-"`
+	Model           string `json:"model,omitempty"`
+	Timeout         int    `json:"timeout,omitempty"`
+}
+
 type NotificationPreferences struct {
 	EmailEnabled              bool   `json:"emailEnabled" gorm:"default:true"`
 	NtfyEnabled               bool   `json:"ntfyEnabled" gorm:"default:false"`
@@ -57,6 +65,7 @@ type User struct {
 	Household               database.Household
 	Role                    string                  `gorm:"default:'member'" json:"role"`
 	NotificationPreferences NotificationPreferences `gorm:"embedded"`
+	ReceiptScanPreferences  ReceiptScanPreferences  `gorm:"embedded;embeddedPrefix:receipt_scan_" json:"-"`
 	FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`
 	LockedUntil             gorm.DeletedAt          `json:"-"`
 }

@@ -17,6 +17,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/testutil"
 	"codeberg.org/isotop7/proviant/util"
@@ -26,15 +27,19 @@ import (
 )
 
 // newReceiptTestSetup wires a gin context, app context and receipt controller
-// with the VLM endpoint pointing at the given test server URL.
+// with the VLM endpoint pointing at the given test server URL. A real user is
+// created because the scan path loads the user's receipt scan preferences
+// (and fails closed when the user cannot be resolved).
 func newReceiptTestSetup(t *testing.T, receiptEnabled bool, endpointURL string, userID uint) (*gin.Context, *httptest.ResponseRecorder, *AppContext) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
 	_ = userID
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
 	ctx, w := testutil.SetupGinContext(db)
 
-	testutil.MockJWTClaims(ctx, 1)
-	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+	testutil.MockJWTClaims(ctx, user.ID)
+	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 	cfg := &configuration.ProviantConfiguration{}
 	cfg.Server.MaxUploadSizeMB = 5
@@ -50,7 +55,7 @@ func newReceiptTestSetup(t *testing.T, receiptEnabled bool, endpointURL string, 
 	receiptCtrl := controllers.NewReceiptScanController(&logger, &cfg.OCR.Receipt)
 	ctx.Set(util.ContextKeyReceiptCtrl, receiptCtrl)
 
-	appCtx := SetupTestAppContext(ctx, 1)
+	appCtx := SetupTestAppContext(ctx, user.ID)
 	return ctx, w, appCtx
 }
 
@@ -149,8 +154,12 @@ func TestScanReceipt(t *testing.T) {
 		}))
 		defer slow.Close()
 
-		ctx, w := testutil.SetupGinContext(testutil.SetupTestDB(t))
-		testutil.MockJWTClaims(ctx, 1)
+		db := testutil.SetupTestDB(t)
+		household := testutil.CreateTestHousehold(db, 0)
+		user := testutil.CreateTestUser(db, household.ID)
+		ctx, w := testutil.SetupGinContext(db)
+		testutil.MockJWTClaims(ctx, user.ID)
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 		cfg := &configuration.ProviantConfiguration{}
 		cfg.Server.MaxUploadSizeMB = 5
 		cfg.OCR.Receipt.Enabled = true
@@ -165,7 +174,7 @@ func TestScanReceipt(t *testing.T) {
 		ctx.Set(util.ContextKeyProviantConfig, cfg)
 		logger := zerolog.Nop()
 		ctx.Set(util.ContextKeyReceiptCtrl, controllers.NewReceiptScanController(&logger, &cfg.OCR.Receipt))
-		appCtx := SetupTestAppContext(ctx, 1)
+		appCtx := SetupTestAppContext(ctx, user.ID)
 
 		ctx.Request = newMultipartImageRequest(t, "image", "receipt.png")
 
@@ -437,6 +446,158 @@ func TestParseReceiptItems(t *testing.T) {
 		}
 		if items[1].Name != "Bread" {
 			t.Errorf("item 1 name = %q, want Bread", items[1].Name)
+		}
+	})
+}
+
+func TestScanReceiptPerUserOverride(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("user with override hits user endpoint with user key and model", func(t *testing.T) {
+		setSSRFGuardTransport(t, http.DefaultTransport)
+
+		var appHits, userHits int
+		var userAuthHeader, userModel string
+
+		appServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			appHits++
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{"choices": []map[string]any{}})
+		}))
+		defer appServer.Close()
+
+		userServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userHits++
+			userAuthHeader = r.Header.Get("Authorization")
+			var req struct {
+				Model string `json:"model"`
+			}
+			raw, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(raw, &req)
+			userModel = req.Model
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"choices": []map[string]any{
+					{"message": map[string]any{"content": `{"items":[{"name":"Milk","amount":1}]}`}},
+				},
+			})
+		}))
+		defer userServer.Close()
+
+		db := testutil.SetupTestDB(t)
+		household := testutil.CreateTestHousehold(db, 0)
+		user := testutil.CreateTestUser(db, household.ID)
+		user.ReceiptScanPreferences = authentication.ReceiptScanPreferences{
+			OverrideEnabled: true,
+			Endpoint:        userServer.URL,
+			APIKey:          "user-key",
+			Model:           "user-model",
+			Timeout:         5,
+		}
+		if err := db.Save(user).Error; err != nil {
+			t.Fatalf("save user: %v", err)
+		}
+
+		ctx, w := testutil.SetupGinContext(db)
+		testutil.MockJWTClaims(ctx, user.ID)
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
+
+		cfg := &configuration.ProviantConfiguration{}
+		cfg.Server.MaxUploadSizeMB = 5
+		cfg.OCR.Receipt.Enabled = true
+		cfg.OCR.Receipt.Provider = util.ReceiptOCRProviderOpenAI
+		cfg.OCR.Receipt.APIKey = "app-key"
+		cfg.OCR.Receipt.Endpoint = appServer.URL
+		cfg.OCR.Receipt.Model = "app-model"
+		cfg.OCR.Receipt.Timeout = 5
+		ctx.Set(util.ContextKeyProviantConfig, cfg)
+
+		logger := zerolog.Nop()
+		receiptCtrl := controllers.NewReceiptScanController(&logger, &cfg.OCR.Receipt)
+		ctx.Set(util.ContextKeyReceiptCtrl, receiptCtrl)
+
+		appCtx := SetupTestAppContext(ctx, user.ID)
+		ctx.Request = newMultipartImageRequest(t, "image", "receipt.png")
+
+		ScanReceipt(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", w.Code, w.Body.String())
+		}
+		if appHits != 0 {
+			t.Errorf("app endpoint hit %d times, want 0", appHits)
+		}
+		if userHits != 1 {
+			t.Errorf("user endpoint hit %d times, want 1", userHits)
+		}
+		if userAuthHeader != "Bearer user-key" {
+			t.Errorf("Authorization = %q, want %q", userAuthHeader, "Bearer user-key")
+		}
+		if userModel != "user-model" {
+			t.Errorf("model = %q, want %q", userModel, "user-model")
+		}
+	})
+
+	t.Run("user without override hits app endpoint", func(t *testing.T) {
+		var appHits int
+		var appAuthHeader, appModel string
+
+		appServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			appHits++
+			appAuthHeader = r.Header.Get("Authorization")
+			var req struct {
+				Model string `json:"model"`
+			}
+			raw, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(raw, &req)
+			appModel = req.Model
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"choices": []map[string]any{
+					{"message": map[string]any{"content": `{"items":[]}`}},
+				},
+			})
+		}))
+		defer appServer.Close()
+
+		db := testutil.SetupTestDB(t)
+		household := testutil.CreateTestHousehold(db, 0)
+		user := testutil.CreateTestUser(db, household.ID)
+
+		ctx, w := testutil.SetupGinContext(db)
+		testutil.MockJWTClaims(ctx, user.ID)
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
+
+		cfg := &configuration.ProviantConfiguration{}
+		cfg.Server.MaxUploadSizeMB = 5
+		cfg.OCR.Receipt.Enabled = true
+		cfg.OCR.Receipt.Provider = util.ReceiptOCRProviderOpenAI
+		cfg.OCR.Receipt.APIKey = "app-key"
+		cfg.OCR.Receipt.Endpoint = appServer.URL
+		cfg.OCR.Receipt.Model = "app-model"
+		cfg.OCR.Receipt.Timeout = 5
+		ctx.Set(util.ContextKeyProviantConfig, cfg)
+
+		logger := zerolog.Nop()
+		receiptCtrl := controllers.NewReceiptScanController(&logger, &cfg.OCR.Receipt)
+		ctx.Set(util.ContextKeyReceiptCtrl, receiptCtrl)
+
+		appCtx := SetupTestAppContext(ctx, user.ID)
+		ctx.Request = newMultipartImageRequest(t, "image", "receipt.png")
+
+		ScanReceipt(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", w.Code, w.Body.String())
+		}
+		if appHits != 1 {
+			t.Errorf("app endpoint hit %d times, want 1", appHits)
+		}
+		if appAuthHeader != "Bearer app-key" {
+			t.Errorf("Authorization = %q, want %q", appAuthHeader, "Bearer app-key")
+		}
+		if appModel != "app-model" {
+			t.Errorf("model = %q, want %q", appModel, "app-model")
 		}
 	})
 }

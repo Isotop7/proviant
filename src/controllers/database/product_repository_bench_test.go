@@ -157,3 +157,76 @@ func BenchmarkGetExpiringSoonCount(b *testing.B) {
 		}
 	}
 }
+
+// archiveFirstHouseholdStock soft-deletes the first 200 seeded products. The
+// shared seed leaves the archive empty, which would let any comparison of the
+// archived-table loads measure nothing; household 0's rows are created first,
+// so an id bound selects exactly them.
+func archiveFirstHouseholdStock(b *testing.B, db *gorm.DB) {
+	b.Helper()
+	if err := db.Exec("UPDATE products SET deleted_at = ? WHERE id <= 200", time.Now()).Error; err != nil {
+		b.Fatalf("failed to archive seeded products: %v", err)
+	}
+}
+
+// BenchmarkGetProductStats times the seven queries the stats endpoint runs:
+// three COUNTs and four narrow expiry/category projections. No full-row load is
+// left on this path.
+func BenchmarkGetProductStats(b *testing.B) {
+	db := testutil.SetupTestDB(&testing.T{})
+	userIDs := seedTestData(&testing.T{}, db)
+	repo := NewProductRepository(db)
+	userID := userIDs[0]
+	archiveFirstHouseholdStock(b, db)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := repo.GetActiveProductsCount(userID); err != nil {
+			b.Fatalf("GetActiveProductsCount failed: %v", err)
+		}
+		if _, err := repo.GetExpiredProductsCount(userID); err != nil {
+			b.Fatalf("GetExpiredProductsCount failed: %v", err)
+		}
+		if _, err := repo.GetExpiringSoonProducts(userID, 7); err != nil {
+			b.Fatalf("GetExpiringSoonProducts failed: %v", err)
+		}
+		if _, err := repo.GetProductCategoryBreakdown(userID); err != nil {
+			b.Fatalf("GetProductCategoryBreakdown failed: %v", err)
+		}
+		if _, err := repo.GetExpiryTrend(userID); err != nil {
+			b.Fatalf("GetExpiryTrend failed: %v", err)
+		}
+		if _, err := repo.GetArchivedProductsCount(userID); err != nil {
+			b.Fatalf("GetArchivedProductsCount failed: %v", err)
+		}
+		if _, err := repo.GetUniqueArchivedProductsCount(userID); err != nil {
+			b.Fatalf("GetUniqueArchivedProductsCount failed: %v", err)
+		}
+	}
+}
+
+// BenchmarkGetProductStatsFullTableLoads is the same seven numbers computed the
+// way the endpoint did before: five loads of every active row and two of every
+// archived row, each with a StorageLocation preload. It is the baseline the
+// rewrite has to stay ahead of, kept here so that claim stays measurable.
+func BenchmarkGetProductStatsFullTableLoads(b *testing.B) {
+	db := testutil.SetupTestDB(&testing.T{})
+	userIDs := seedTestData(&testing.T{}, db)
+	repo := NewProductRepository(db)
+	userID := userIDs[0]
+	archiveFirstHouseholdStock(b, db)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for load := 0; load < 5; load++ {
+			if _, err := repo.GetUserProductsBulk(userID, 0); err != nil {
+				b.Fatalf("GetUserProductsBulk failed: %v", err)
+			}
+		}
+		for load := 0; load < 2; load++ {
+			if _, err := repo.GetUserArchivedProductsBulk(userID, -1); err != nil {
+				b.Fatalf("GetUserArchivedProductsBulk failed: %v", err)
+			}
+		}
+	}
+}

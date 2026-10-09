@@ -37,6 +37,17 @@ definitions:
       total:
         type: integer
     type: object
+  api.BulkActionResponse:
+    properties:
+      action:
+        type: string
+      failedIds:
+        items:
+          type: integer
+        type: array
+      message:
+        type: string
+    type: object
   api.BulkCreateRequest:
     properties:
       items:
@@ -606,6 +617,14 @@ definitions:
         $ref: '#/definitions/gorm.DeletedAt'
       details:
         type: string
+      householdId:
+        description: |-
+          HouseholdID is written at record time, never derived at read time. Deriving
+          it from the user's *current* household would move a member's historical
+          entries into whichever household they have since joined — a cross-tenant
+          read. NULL means the entry could not be attributed (failed login for an
+          unknown username) and is invisible to every household.
+        type: integer
       id:
         type: integer
       ipAddress:
@@ -889,6 +908,47 @@ definitions:
     required:
     - email
     type: object
+  v1.receiptScanDefaultsResponse:
+    properties:
+      apiKeyConfigured:
+        type: boolean
+      endpoint:
+        type: string
+      model:
+        type: string
+      timeout:
+        type: integer
+    type: object
+  v1.receiptScanSettingsRequest:
+    properties:
+      apiKey:
+        type: string
+      clearApiKey:
+        type: boolean
+      endpoint:
+        type: string
+      model:
+        type: string
+      overrideEnabled:
+        type: boolean
+      timeout:
+        type: integer
+    type: object
+  v1.receiptScanSettingsResponse:
+    properties:
+      apiKeyConfigured:
+        type: boolean
+      defaults:
+        $ref: '#/definitions/v1.receiptScanDefaultsResponse'
+      endpoint:
+        type: string
+      model:
+        type: string
+      overrideEnabled:
+        type: boolean
+      timeout:
+        type: integer
+    type: object
   v1.storageLocationRequest:
     properties:
       icon:
@@ -957,7 +1017,8 @@ paths:
       - common
   /api/v1/admin/audit-log:
     get:
-      description: Returns paginated audit log entries (admin only)
+      description: Returns paginated audit log entries for the caller's household.
+        Household admins only; entries are scoped to the caller's household.
       parameters:
       - description: Maximum number of logs to return (default 100, max 1000)
         in: query
@@ -2166,67 +2227,6 @@ paths:
       summary: Updates the expire date
       tags:
       - product
-  /api/v1/product/{id}/restore:
-    post:
-      consumes:
-      - application/json
-      description: Restores an archived product of a user
-      parameters:
-      - description: Product ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Restores a product
-      tags:
-      - product
-  /api/v1/product/bulkRestore:
-    post:
-      consumes:
-      - application/json
-      description: Restores a list of product of a user
-      parameters:
-      - description: Product IDs
-        in: body
-        name: productIDs
-        required: true
-        schema:
-          items:
-            type: integer
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Restores a list of product
-      tags:
-      - product
   /api/v1/products:
     get:
       description: Return a list of products of user
@@ -2466,6 +2466,39 @@ paths:
       summary: Get restock quantity suggestion
       tags:
       - product
+  /api/v1/products/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restores an archived product of a user
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Restores a product
+      tags:
+      - product
   /api/v1/products/{id}/waste:
     post:
       description: Hard-deletes a product and fires the product.wasted webhook event
@@ -2555,8 +2588,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Soft-deletes (archives) multiple products without firing product.wasted
-        webhook events
+      description: 'Soft-deletes (archives) multiple products without firing product.wasted
+        webhook events. Reports the ids that were not touched: 404 when none could
+        be consumed (unknown or foreign ids), 200 with the failed ids in failedIds
+        when only some fail, 500 (also carrying failedIds) when a failure was server-side.'
       parameters:
       - description: Product IDs
         in: body
@@ -2572,24 +2607,69 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.BulkActionResponse'
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.BulkActionResponse'
         "500":
           description: Internal Server Error
           schema:
+            $ref: '#/definitions/api.BulkActionResponse'
+      summary: Mark multiple products as consumed
+      tags:
+      - product
+  /api/v1/products/bulkRestore:
+    post:
+      consumes:
+      - application/json
+      description: 'Restores a list of product of a user. Reports the ids that were
+        not restored: 404 when none could be restored (unknown or foreign ids), 200
+        with the failed ids in failedIds when only some fail, 500 (also carrying failedIds)
+        when a failure was server-side.'
+      parameters:
+      - description: Product IDs
+        in: body
+        name: productIDs
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.BulkActionResponse'
+        "400":
+          description: Bad Request
+          schema:
             $ref: '#/definitions/api.APIResponse'
-      summary: Mark products as consumed
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.BulkActionResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.BulkActionResponse'
+      summary: Restores a list of product
       tags:
       - product
   /api/v1/products/bulkWaste:
     post:
       consumes:
       - application/json
-      description: Hard-deletes multiple products and fires the product.wasted webhook
-        event per product
+      description: 'Hard-deletes multiple products and fires the product.wasted webhook
+        per product. Reports the ids that were not touched: 404 when none could be
+        wasted (unknown or foreign ids), 200 with the failed ids in failedIds when
+        only some fail, 500 (also carrying failedIds) when a failure was server-side.'
       parameters:
       - description: Product IDs
         in: body
@@ -2605,16 +2685,20 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.BulkActionResponse'
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.BulkActionResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Mark products as wasted
+            $ref: '#/definitions/api.BulkActionResponse'
+      summary: Mark multiple products as wasted
       tags:
       - product
   /api/v1/products/cook:
@@ -2966,7 +3050,7 @@ paths:
     get:
       description: Returns a list of products based on a query
       parameters:
-      - description: Search field (product_name, barcode, category, storage_location)
+      - description: Search field (product_name, barcode)
         in: query
         name: queryParam
         required: true
@@ -2977,7 +3061,8 @@ paths:
         required: true
         type: string
       - default: product_name
-        description: Sort field
+        description: Sort field (product_name, expire_at, created_at, scanned_at,
+          notified_at, barcode)
         in: query
         name: sort
         type: string
@@ -3348,6 +3433,56 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Updates a user password
+      tags:
+      - user
+  /api/v1/user/receipt-scan-settings:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the current user's receipt scan vision model override
+        settings and the app-level defaults. API keys are never returned.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.receiptScanSettingsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Gets a user's receipt scan settings
+      tags:
+      - user
+    post:
+      consumes:
+      - application/json
+      description: Updates the current user's receipt scan vision model override settings.
+        An empty apiKey keeps the stored key; clearApiKey wipes it.
+      parameters:
+      - description: Receipt scan settings
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/v1.receiptScanSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Updates a user's receipt scan settings
       tags:
       - user
   /api/v1/user/telegram-link-token:

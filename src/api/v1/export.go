@@ -328,9 +328,9 @@ func buildExportStats(ctx *gin.Context, repos *database.RepositoryContainer, use
 		return apiModel.ProductStatsResponse{}, false
 	}
 
-	uniqueArchivedMap, err := repos.Products.GetArchivedProductsGroupedByBarcode(userID)
+	uniqueArchived, err := repos.Products.GetUniqueArchivedProductsCount(userID)
 	if err != nil {
-		logger.Error().Msgf(errors.FmtErrGetArchivedProductsGroupedByBarcode, err)
+		logger.Error().Msgf(errors.FmtErrGetUniqueArchivedCount, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingUniqueArchivedCount})
 		return apiModel.ProductStatsResponse{}, false
 	}
@@ -346,7 +346,7 @@ func buildExportStats(ctx *gin.Context, repos *database.RepositoryContainer, use
 		WastePercent:        wastePercent,
 		TotalActive:         totalActive,
 		TotalArchived:       archivedProductsLen,
-		UniqueArchived:      len(uniqueArchivedMap),
+		UniqueArchived:      uniqueArchived,
 		LastInsertedProduct: lastInsertedProduct,
 		ExpiringSoon:        expiringSoon,
 		ExpiringSoonDays:    expiringSoonDays,

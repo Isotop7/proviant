@@ -20,8 +20,9 @@ import (
 // maxDaysAfterOpening is the upper bound enforced on the DaysAfterOpening
 // field on PATCH. It is also used to bound the "opened-shelf-life" OR branch
 // in effectiveExpiryCandidateScope so the planner can prune candidate rows
-// whose opened date is far outside the requested window.
-const maxDaysAfterOpening = 365
+// whose opened date is far outside the requested window. Kept as an alias of
+// the model constant so the write bound and the query bound cannot drift.
+const maxDaysAfterOpening = database.MaxDaysAfterOpening
 
 // effectiveExpiryCandidateScope returns a GORM scope that selects product
 // rows whose effective expiry (printed ExpireAt, OR OpenedAt + DaysAfterOpening)
@@ -90,13 +91,16 @@ type ProductRepositoryInterface interface {
 	GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
 	GetUserProductsByIDs(userID uint, ids []uint) ([]database.Product, error)
 	GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
+	GetActiveProductProjections(userID, locationID uint) ([]database.Product, error)
+	GetArchivedProductProjections(userID uint) ([]database.Product, error)
+	GetUserArchivedProductsByIDs(userID uint, ids []uint) ([]database.Product, error)
 	GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
 	GetUserProductsBulkByBarcodes(userID uint, barcodes []string) ([]database.Product, error)
 	GetProductByID(productID, userID uint) (database.Product, error)
 	GetProductIdentity(productID, userID uint) (database.Product, error)
 	GetArchivedProductByID(productID, userID uint) (database.Product, error)
 	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
-	GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error)
+	SearchProductProjections(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID, locationID uint) ([]database.Product, error)
 	CreateProduct(userID uint, product *database.Product) error
 	CreateProductsBulk(userID uint, rows []ImportedProduct) ([]string, error)
 	UpdateProduct(productID uint, userID uint, product *database.ProductDTOPatch) error
@@ -108,7 +112,8 @@ type ProductRepositoryInterface interface {
 	SetProductNotifiedAt(productID uint) error
 	GetProductsExpired(userID uint) ([]*database.Product, error)
 	GetExpiredProductsCount(userID uint) (int, error)
-	GetArchivedProductsGroupedByBarcode(userID uint) (map[string]int, error)
+	GetArchivedProductsCount(userID uint) (int, error)
+	GetUniqueArchivedProductsCount(userID uint) (int, error)
 	GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error)
 	GetActiveProductsCount(userID uint) (int, error)
 	GetProductCategoryBreakdown(userID uint) (map[string]int, error)
@@ -181,8 +186,28 @@ type BulkOperationError struct {
 	error     error
 }
 
+// NewBulkOperationError builds a failure entry for one bulk-operation id, so
+// callers outside this package (test mocks) can report failures too.
+func NewBulkOperationError(productID uint, err error) BulkOperationError {
+	return BulkOperationError{productID: productID, error: err}
+}
+
 func (b *BulkOperationError) Error() string {
 	return fmt.Sprintf("Error bulk deleting product '%d', error: %v", b.productID, b.error)
+}
+
+// ProductID exposes which product a bulk operation error refers to, so
+// callers can distinguish failed items from succeeded ones (the error list
+// is sparse — it only contains failures, not one entry per requested id).
+func (b *BulkOperationError) ProductID() uint {
+	return b.productID
+}
+
+// Err exposes the underlying failure so callers can classify it: a
+// not-found/cross-tenant miss is the client's problem, anything else is a
+// server-side fault that must surface as a 500.
+func (b *BulkOperationError) Err() error {
+	return b.error
 }
 
 func (r *ProductRepository) getUserHouseholdID(userID uint) (uint, error) {
@@ -200,6 +225,31 @@ func (r *ProductRepository) privacyScope(userID uint) func(db *gorm.DB) *gorm.DB
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("(is_private = 0 OR user_id = ?)", userID)
 	}
+}
+
+// SortByEffectiveExpiry orders products by the earlier of the printed expiry
+// and the opened-shelf-life date, with undated rows last. It is the products
+// list's ordering: the repository sorts full rows with it, and the products page
+// sorts the narrow projection it pages from, so both must agree exactly or page
+// boundaries drift from what a full list would have shown.
+//
+// It must be a stable sort: two products expiring the same day are a tie, and
+// an arbitrary tie order that differs between the projection pass and any later
+// pass over the same data lets a product land on two pages or on none.
+func SortByEffectiveExpiry(products []database.Product) {
+	sort.SliceStable(products, func(i, j int) bool {
+		ti, tj := products[i].EffectiveExpireAt(), products[j].EffectiveExpireAt()
+		if ti.IsZero() && tj.IsZero() {
+			return false
+		}
+		if ti.IsZero() {
+			return false
+		}
+		if tj.IsZero() {
+			return true
+		}
+		return ti.Before(tj)
+	})
 }
 
 func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error) {
@@ -220,19 +270,7 @@ func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]datab
 		return []database.Product{}, queryErr
 	}
 
-	sort.Slice(products, func(i, j int) bool {
-		ti, tj := products[i].EffectiveExpireAt(), products[j].EffectiveExpireAt()
-		if ti.IsZero() && tj.IsZero() {
-			return false
-		}
-		if ti.IsZero() {
-			return false
-		}
-		if tj.IsZero() {
-			return true
-		}
-		return ti.Before(tj)
-	})
+	SortByEffectiveExpiry(products)
 
 	return products, nil
 }
@@ -269,6 +307,86 @@ func (r *ProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) 
 	queryErr := query.Find(&products).Error
 	if queryErr != nil {
 		return []database.Product{}, queryErr
+	}
+	return products, nil
+}
+
+// productProjectionColumns is every column the products page reads before it has
+// chosen a page: the row id it hydrates with, and the three inputs to
+// EffectiveExpireAt that decide ordering and status. The page hydrates only the
+// rows it renders, so the expensive part (full rows plus a StorageLocation
+// preload) scales with the page size instead of with the size of the pantry.
+const productProjectionColumns = "id, expire_at, opened_at, days_after_opening"
+
+// GetActiveProductProjections returns the household's active rows narrowed to
+// productProjectionColumns, ordered by id. locationID narrows the result to one
+// storage location; pass 0 for every location. Callers sort, filter by status
+// and slice a single page out of the result before hydrating it.
+func (r *ProductRepository) GetActiveProductProjections(userID, locationID uint) ([]database.Product, error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	query := r.DB.Model(&database.Product{}).
+		Select(productProjectionColumns).
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull)
+	if locationID != 0 {
+		query = query.Where("storage_location_id = ?", locationID)
+	}
+
+	var products []database.Product
+	if err := query.Order("id").Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
+}
+
+// GetArchivedProductProjections is the archived-view counterpart of
+// GetActiveProductProjections. The archived view has no expiry ordering of its
+// own, so id order is what keeps a row on exactly one page.
+func (r *ProductRepository) GetArchivedProductProjections(userID uint) ([]database.Product, error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var products []database.Product
+	err = r.DB.Unscoped().Model(&database.Product{}).
+		Select(productProjectionColumns).
+		Scopes(r.privacyScope(userID)).
+		Where(util.WhereDeletedIsNotNull).
+		Where(util.QueryHouseholdId, householdID).
+		Order("id").
+		Find(&products).Error
+	if err != nil {
+		return nil, err
+	}
+	return products, nil
+}
+
+// GetUserArchivedProductsByIDs hydrates one page of the archived view: full rows
+// with their StorageLocation, for the given IDs only.
+func (r *ProductRepository) GetUserArchivedProductsByIDs(userID uint, ids []uint) ([]database.Product, error) {
+	if len(ids) == 0 {
+		return []database.Product{}, nil
+	}
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return []database.Product{}, err
+	}
+
+	var products []database.Product
+	err = r.DB.Preload("StorageLocation").Unscoped().
+		Scopes(r.privacyScope(userID)).
+		Where(util.WhereDeletedIsNotNull).
+		Where(util.QueryHouseholdId, householdID).
+		Where("id IN ?", ids).
+		Find(&products).Error
+	if err != nil {
+		return []database.Product{}, err
 	}
 	return products, nil
 }
@@ -398,6 +516,12 @@ func (r *ProductRepository) GetProductIdentity(productID, userID uint) (database
 	return product, nil
 }
 
+// GetArchivedProductByID returns the product behind productID together with
+// the caller's access checks (same household, private rows only their owner).
+// Despite the name it does NOT restrict the row to archived products: the
+// lookup is Unscoped so it sees soft-deleted rows at all, and DeleteProduct
+// shares it and must accept active rows too. A restore of an already-active
+// product therefore succeeds as a no-op instead of failing.
 func (r *ProductRepository) GetArchivedProductByID(productID, userID uint) (database.Product, error) {
 	if productID == 0 {
 		return database.Product{}, gorm.ErrNotImplemented
@@ -424,74 +548,132 @@ func (r *ProductRepository) GetArchivedProductByID(productID, userID uint) (data
 	return product, nil
 }
 
-func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error) {
-	var user authentication.User
-	if err := r.DB.First(&user, userID).Error; err != nil {
-		return []database.Product{}, err
-	}
+// productSortColumns is the allowlist of columns permitted in a request-driven
+// ORDER BY clause. Sort values are interpolated verbatim into SQL, so the only
+// string that may reach Order() is a value resolved through this map: the key
+// is what a caller sends, the value is the real column name.
+var productSortColumns = map[string]string{
+	"product_name": "product_name",
+	"created_at":   "created_at",
+	"expire_at":    "expire_at",
+	"scanned_at":   "scanned_at",
+	"notified_at":  "notified_at",
+	"barcode":      "barcode",
+}
 
-	var foundProducts []database.Product
-	preloadedDataset := r.DB.Preload("StorageLocation").
-		Scopes(r.privacyScope(userID)).
-		Where(util.QueryHouseholdId, user.HouseholdID).
-		Where(util.WhereDeletedIsNull)
-
-	queryValue = fmt.Sprintf("%%%s%%", queryValue)
-
-	switch queryParam {
-	case ProductName:
-		preloadedDataset = preloadedDataset.Where("product_name LIKE ?", queryValue)
-	case Barcode:
-		preloadedDataset = preloadedDataset.Where("barcode LIKE ?", queryValue)
-	default:
-		return []database.Product{}, errors.ErrDatabaseInvalidSearchParameter
-	}
-
+// resolveSortClause maps a caller-supplied sort key and direction onto a safe
+// ORDER BY clause. Empty values fall back to the defaults; any value outside
+// the allowlist returns ErrDatabaseInvalidSortParameter rather than silently
+// falling back, so misuse stays visible instead of masquerading as a working
+// sort. It lives here, at the single Order() call site, so both the web and the
+// API entry points are covered by one guard.
+func resolveSortClause(sortValue, orderValue string) (string, error) {
 	if sortValue == "" {
 		sortValue = "product_name"
 	}
 	if orderValue == "" {
-		orderValue = "ASC"
+		orderValue = "asc"
 	}
-	preloadedDataset = preloadedDataset.Order(fmt.Sprintf("%s %s", sortValue, orderValue))
+	column, ok := productSortColumns[sortValue]
+	if !ok {
+		return "", errors.ErrDatabaseInvalidSortParameter
+	}
+	direction := strings.ToUpper(orderValue)
+	if direction != "ASC" && direction != "DESC" {
+		return "", errors.ErrDatabaseInvalidSortParameter
+	}
+	return column + " " + direction, nil
+}
 
-	findErr := preloadedDataset.Find(&foundProducts)
+// searchProductsQuery builds the shared predicate for both search entry points:
+// the API's full-row search and the products page's projection search. Keeping
+// it in one place means a new search field cannot be added to one and forgotten
+// in the other.
+func (r *ProductRepository) searchProductsQuery(queryParam SearchParameterEnum, queryValue string, userID uint) (*gorm.DB, error) {
+	var user authentication.User
+	if err := r.DB.First(&user, userID).Error; err != nil {
+		return nil, err
+	}
+
+	query := r.DB.
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, user.HouseholdID).
+		Where(util.WhereDeletedIsNull)
+
+	likeValue := fmt.Sprintf("%%%s%%", queryValue)
+	switch queryParam {
+	case ProductName:
+		query = query.Where("product_name LIKE ?", likeValue)
+	case Barcode:
+		query = query.Where("barcode LIKE ?", likeValue)
+	default:
+		return nil, errors.ErrDatabaseInvalidSearchParameter
+	}
+	return query, nil
+}
+
+func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error) {
+	query, queryErr := r.searchProductsQuery(queryParam, queryValue, userID)
+	if queryErr != nil {
+		return []database.Product{}, queryErr
+	}
+
+	sortClause, sortErr := resolveSortClause(sortValue, orderValue)
+	if sortErr != nil {
+		return []database.Product{}, sortErr
+	}
+
+	var foundProducts []database.Product
+	findErr := query.Preload("StorageLocation").Order(sortClause).Find(&foundProducts)
 	if findErr.Error != nil {
 		return []database.Product{}, findErr.Error
 	}
 	return foundProducts, nil
 }
 
-func (r *ProductRepository) GetUserProductsByLocation(userID, locationID uint) ([]database.Product, error) {
-	householdID, err := r.getUserHouseholdID(userID)
-	if err != nil {
-		return []database.Product{}, err
+// SearchProductProjections is the products page's search: same predicate and the
+// same whitelisted ORDER BY as SearchProducts, narrowed to
+// productProjectionColumns and optionally to one storage location (0 = every
+// location), so a search inside a location filter narrows instead of
+// shadowing. It deliberately returns every match (no SQL LIMIT) because the
+// caller still has to apply the status filter before it knows which rows make
+// up the page.
+func (r *ProductRepository) SearchProductProjections(
+	queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID, locationID uint,
+) ([]database.Product, error) {
+	query, queryErr := r.searchProductsQuery(queryParam, queryValue, userID)
+	if queryErr != nil {
+		return nil, queryErr
 	}
-	var products []database.Product
-	err = r.DB.Preload("StorageLocation").
-		Scopes(r.privacyScope(userID)).
-		Where("household_id = ? AND storage_location_id = ?", householdID, locationID).
-		Find(&products).Error
-	if err != nil {
-		return []database.Product{}, err
+	if locationID != 0 {
+		query = query.Where("storage_location_id = ?", locationID)
 	}
-	sort.Slice(products, func(i, j int) bool {
-		ti, tj := products[i].EffectiveExpireAt(), products[j].EffectiveExpireAt()
-		if ti.IsZero() && tj.IsZero() {
-			return false
-		}
-		if ti.IsZero() {
-			return false
-		}
-		if tj.IsZero() {
-			return true
-		}
-		return ti.Before(tj)
-	})
-	return products, nil
+
+	sortClause, sortErr := resolveSortClause(sortValue, orderValue)
+	if sortErr != nil {
+		return nil, sortErr
+	}
+
+	var foundProducts []database.Product
+	if err := query.Select(productProjectionColumns).Order(sortClause).Find(&foundProducts).Error; err != nil {
+		return nil, err
+	}
+	return foundProducts, nil
 }
 
 func (r *ProductRepository) CreateProduct(userID uint, product *database.Product) error {
+	// POST /api/v1/products binds the raw model, so OpenedAt and
+	// DaysAfterOpening arrive unvalidated here — unlike PATCH, which validates
+	// before it reaches the repository. The bound is not cosmetic:
+	// effectiveExpiryCandidateScope prunes with maxDaysAfterOpening, so a row
+	// with days_after_opening > 365 can fall inside the expiring-soon window
+	// yet be pruned out of it — silently missing from the list and from
+	// expiry notifications. Validate at the repository so every create path
+	// is covered.
+	if err := validateOpenedLifecycle(product.OpenedAt, product.DaysAfterOpening); err != nil {
+		return err
+	}
+
 	var user authentication.User
 	if err := r.DB.First(&user, userID).Error; err != nil {
 		return err
@@ -662,10 +844,10 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 // ignored silently (when <= 0) or produce a nonsense shelf life.
 func validateOpenedLifecycle(openedAt *time.Time, daysAfterOpening *int) error {
 	if openedAt != nil && openedAt.After(time.Now().Add(24*time.Hour)) {
-		return errors.ErrInvalidRequest
+		return errors.ErrInvalidOpenedLifecycle
 	}
 	if daysAfterOpening != nil && (*daysAfterOpening < 0 || *daysAfterOpening > maxDaysAfterOpening) {
-		return errors.ErrInvalidRequest
+		return errors.ErrInvalidOpenedLifecycle
 	}
 	return nil
 }
@@ -742,13 +924,18 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) 
 	for _, productID := range productIDs {
 		product, getError := r.GetArchivedProductByID(productID, userID)
 		if getError != nil {
+			// Without this continue the zero-value product below would be
+			// Saved: gorm writes a primary key of 0 as a fresh INSERT, so a
+			// single unknown or foreign id would create a blank product row
+			// (empty name, household 0) on every attempt.
 			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+			continue
 		}
 		product.DeletedAt = gorm.DeletedAt{}
 		product.RemovalReason = ""
 		saveResult := r.DB.Save(&product)
 		if saveResult.Error != nil {
-			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, saveResult.Error})
 		}
 	}
 	return bulkErrors
@@ -860,33 +1047,45 @@ func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product
 	return expiredProducts, nil
 }
 
+// GetExpiredProductsCount returns how many of the user's active products are
+// already past their effective expiry. It follows the same shape as
+// GetActiveExpiryCounts: a one-sided SQL prune of the rows that cannot possibly
+// be expired, then the effective-date verdict in Go, because the date arithmetic
+// (opened_at + days_after_opening) has no portable SQL form.
+//
+// The prune deliberately also matches rows with a zero expire_at, which the Go
+// loop below counts as expired exactly as the full-table version did.
 func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error) {
-	userProducts, getBulkErr := r.GetUserProductsBulk(userID, 0)
-	if getBulkErr != nil {
-		return 0, getBulkErr
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return 0, err
+	}
+
+	now := time.Now()
+
+	var rows []expiryCandidate
+	err = r.DB.Model(&database.Product{}).
+		Select("expire_at, opened_at, days_after_opening").
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
+		Where(
+			"(expire_at <= ?) OR "+
+				"(opened_at IS NOT NULL AND days_after_opening > 0 AND opened_at <= ?)",
+			now, now,
+		).
+		Find(&rows).Error
+	if err != nil {
+		return 0, err
 	}
 
 	count := 0
-	timestamp := time.Now()
-	for i := range userProducts {
-		if userProducts[i].EffectiveExpireAt().Before(timestamp) {
+	for i := range rows {
+		if database.EffectiveExpireAt(rows[i].ExpireAt, rows[i].OpenedAt, rows[i].DaysAfterOpening).Before(now) {
 			count++
 		}
 	}
 	return count, nil
-}
-
-func (r *ProductRepository) GetArchivedProductsGroupedByBarcode(userID uint) (map[string]int, error) {
-	archivedProducts, err := r.GetUserArchivedProductsBulk(userID, -1)
-	if err != nil {
-		return nil, err
-	}
-
-	grouped := make(map[string]int)
-	for i := range archivedProducts {
-		grouped[archivedProducts[i].Barcode]++
-	}
-	return grouped, nil
 }
 
 func (r *ProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error) {
@@ -937,16 +1136,88 @@ func (r *ProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]da
 	return result, nil
 }
 
+// GetActiveProductsCount counts the user's active products in SQL. It used to
+// load every active row plus a StorageLocation preload just to take len(), which
+// made the stats endpoint scale with the household's full stock rather than with
+// the handful of numbers it returns.
 func (r *ProductRepository) GetActiveProductsCount(userID uint) (int, error) {
-	products, err := r.GetUserProductsBulk(userID, 0)
+	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return 0, err
 	}
-	return len(products), nil
+
+	var count int64
+	err = r.DB.Model(&database.Product{}).
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+// GetArchivedProductsCount returns how many products the household has archived.
+// It is the count-only sibling of GetUserArchivedProductsBulk, which materialises
+// every archived row (and preloads StorageLocation) for callers that only need a
+// number.
+func (r *ProductRepository) GetArchivedProductsCount(userID uint) (int, error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return 0, err
+	}
+
+	var count int64
+	err = r.DB.Unscoped().Model(&database.Product{}).
+		Scopes(r.privacyScope(userID)).
+		Where(util.WhereDeletedIsNotNull).
+		Where(util.QueryHouseholdId, householdID).
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+// GetUniqueArchivedProductsCount counts distinct barcodes among archived
+// products. COUNT(DISTINCT barcode) returns the same number as grouping the
+// rows in Go by barcode and counting the groups — an empty barcode is one group
+// on both sides.
+func (r *ProductRepository) GetUniqueArchivedProductsCount(userID uint) (int, error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return 0, err
+	}
+
+	var count int64
+	err = r.DB.Unscoped().Model(&database.Product{}).
+		Scopes(r.privacyScope(userID)).
+		Where(util.WhereDeletedIsNotNull).
+		Where(util.QueryHouseholdId, householdID).
+		Distinct("barcode").
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
 }
 
 func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string]int, error) {
-	products, err := r.GetUserProductsBulk(userID, 0)
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Only the categories column is read; the rows are still one per product,
+	// but they no longer carry the full record or a StorageLocation preload.
+	var products []database.Product
+	err = r.DB.Model(&database.Product{}).
+		Select("categories").
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
+		Find(&products).Error
 	if err != nil {
 		return nil, err
 	}
@@ -1001,8 +1272,22 @@ func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string
 	return result, nil
 }
 
+// GetExpiryTrend buckets the next 12 months of expiries. Only the three columns
+// EffectiveExpireAt reads are projected, so the query cost tracks the row count
+// rather than the row width.
 func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error) {
-	products, err := r.GetUserProductsBulk(userID, 0)
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var products []database.Product
+	err = r.DB.Model(&database.Product{}).
+		Select("expire_at, opened_at, days_after_opening").
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
+		Find(&products).Error
 	if err != nil {
 		return nil, err
 	}
@@ -1032,7 +1317,7 @@ func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthly
 }
 
 func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error) {
-	products, err := r.GetUserProductsBulk(userID, 0)
+	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -1040,6 +1325,21 @@ func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]ap
 	now := time.Now()
 	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
+
+	// Candidate scope is a one-sided prune: it only drops rows whose effective
+	// expiry provably cannot reach the window, so the verdict below still runs
+	// in Go through EffectiveExpireAt. Same pattern as GetExpiringSoonCount.
+	var products []database.Product
+	err = r.DB.Model(&database.Product{}).
+		Select("product_name, expire_at, opened_at, days_after_opening").
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
+		Scopes(effectiveExpiryCandidateScope(startOfToday, endOfWindow)).
+		Find(&products).Error
+	if err != nil {
+		return nil, err
+	}
 
 	var result []apiModel.StatsExpiringProduct
 	for i := range products {
@@ -1734,11 +2034,25 @@ func (r *ProductRepository) WasteProduct(productID, userID uint) error {
 	if err != nil {
 		return err
 	}
-	product.RemovalReason = database.RemovalReasonWasted
-	if err := r.DB.Save(&product).Error; err != nil {
-		return err
-	}
-	return r.DB.Delete(&database.Product{}, productID).Error
+	// Single transaction: the removal-reason update and the soft-delete must
+	// succeed together, or neither lands. The update is guarded by updated_at,
+	// so a concurrent row change between the caller's read and the write fails
+	// instead of silently overwriting it.
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&database.Product{}).
+			Where("id = ?", product.ID).
+			Where("household_id = ?", product.HouseholdID).
+			Where(util.WhereDeletedIsNull).
+			Where("updated_at = ?", product.UpdatedAt).
+			Update("removal_reason", database.RemovalReasonWasted)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return errors.ErrProductConcurrentModification
+		}
+		return tx.Delete(&database.Product{}, productID).Error
+	})
 }
 
 func (r *ProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError {
