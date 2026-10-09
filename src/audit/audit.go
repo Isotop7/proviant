@@ -41,8 +41,8 @@ func FromGin(ctx *gin.Context) Values {
 	if requestID, ok := ctx.Get(util.ContextKeyRequestID); ok {
 		values.RequestID, _ = requestID.(string)
 	}
-	if logger, ok := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger); ok {
-		values.Logger = logger
+	if logger, ok := ctx.Get(util.ContextKeyLogger); ok {
+		values.Logger, _ = logger.(*zerolog.Logger)
 	}
 	return values
 }
