@@ -30,6 +30,7 @@ var testModels = []any{
 	&dbModel.PasswordReset{},
 	&dbModel.ProductCategoryPrice{},
 	&dbModel.ActivityLog{},
+	&dbModel.AuditLog{},
 }
 
 func SetupTestDB(t *testing.T) *gorm.DB {

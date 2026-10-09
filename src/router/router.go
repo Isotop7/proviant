@@ -363,8 +363,10 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	adminAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteHouseholdUser))
 	adminAPI.POST("/:id/reset-password", v1.WrapHandler(v1.AdminResetUserPassword))
 
-	// Admin audit log route
-	engine.GET("/api/v1/admin/audit-log", jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware(), v1.WrapHandler(v1.GetAuditLogs))
+	// Admin audit log route. RequireHouseholdAdmin gates the route and stamps
+	// ContextKeyHouseholdID, which the handler passes to the repository so the
+	// query is scoped to the caller's household.
+	engine.GET("/api/v1/admin/audit-log", jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware(), RequireHouseholdAdmin(), v1.WrapHandler(v1.GetAuditLogs))
 
 	// Protected product routes
 	protectedProductAPI := engine.Group("/api/v1/products")

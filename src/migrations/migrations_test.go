@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"testing"
+	"time"
 
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/database"
@@ -131,5 +132,77 @@ func TestRunBreakingDatabaseMigrations_UsersWithHouseholds(t *testing.T) {
 	db.First(&dbUser, user.ID)
 	if dbUser.HouseholdID != originalHouseholdID {
 		t.Errorf("dbUser.HouseholdID = %v, want %v", dbUser.HouseholdID, originalHouseholdID)
+	}
+}
+
+// TestBackfillAuditLogHouseholdID covers the one-time attribution of audit
+// entries written before household_id existed. Entries that cannot be
+// attributed (unknown username, no user at all) must stay NULL.
+func TestBackfillAuditLogHouseholdID(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+
+	if err := testutil.MigrateAllModels(db); err != nil {
+		t.Fatalf("Failed to migrate database: %v", err)
+	}
+
+	household := database.Household{Name: "Household"}
+	db.Create(&household)
+	user := authentication.User{
+		Username:    "user1",
+		Password:    "password1",
+		HouseholdID: household.ID,
+	}
+	db.Create(&user)
+
+	seed := func(userID *uint) database.AuditLog {
+		row := database.AuditLog{
+			Timestamp: time.Now(),
+			UserID:    userID,
+			Action:    database.AuditActionLoginSuccess,
+			IPAddress: "10.0.0.1",
+		}
+		if err := db.Create(&row).Error; err != nil {
+			t.Fatalf("failed to seed audit log: %v", err)
+		}
+		return row
+	}
+
+	knownUser := seed(&user.ID)
+	unknownUsername := uint(0)
+	noUsernameMatch := seed(&unknownUsername)
+	noUser := seed(nil)
+
+	logger := zerolog.Nop()
+	if err := BackfillAuditLogHouseholdID(&logger, db); err != nil {
+		t.Fatalf("BackfillAuditLogHouseholdID() error = %v", err)
+	}
+
+	reload := func(row database.AuditLog) database.AuditLog {
+		var reloaded database.AuditLog
+		if err := db.First(&reloaded, row.ID).Error; err != nil {
+			t.Fatalf("failed to reload audit log: %v", err)
+		}
+		return reloaded
+	}
+
+	if got := reload(knownUser); got.HouseholdID == nil || *got.HouseholdID != household.ID {
+		t.Errorf("known user entry HouseholdID = %v, want %d", got.HouseholdID, household.ID)
+	}
+	if got := reload(noUsernameMatch); got.HouseholdID != nil {
+		t.Errorf("unknown username entry HouseholdID = %v, want nil", *got.HouseholdID)
+	}
+	if got := reload(noUser); got.HouseholdID != nil {
+		t.Errorf("userless entry HouseholdID = %v, want nil", *got.HouseholdID)
+	}
+
+	// Re-running must be a no-op, not a re-attribution.
+	if err := BackfillAuditLogHouseholdID(&logger, db); err != nil {
+		t.Fatalf("second BackfillAuditLogHouseholdID() error = %v", err)
+	}
+	if got := reload(knownUser); *got.HouseholdID != household.ID {
+		t.Errorf("after re-run HouseholdID = %v, want %d", *got.HouseholdID, household.ID)
 	}
 }

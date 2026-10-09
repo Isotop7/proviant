@@ -261,6 +261,39 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 		return err
 	}
 
+	// Attribute pre-existing audit log entries to a household
+	logger.Debug().Msg("Backfill audit log household attribution")
+	if err := BackfillAuditLogHouseholdID(logger, db); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// BackfillAuditLogHouseholdID attributes existing audit log entries to the
+// household their actor belonged to when the backfill runs. It is a best effort
+// and runs once: entries whose user is gone (or was never known, as with a
+// failed login for an unknown username) keep household_id NULL and stay
+// invisible to every household, which is the safe direction to err in.
+//
+// The subquery deliberately ignores users.deleted_at: account_deleted is
+// written after the target user is soft-deleted, and that entry still belongs
+// to the household.
+func BackfillAuditLogHouseholdID(logger *zerolog.Logger, db *gorm.DB) error {
+	result := db.Exec(`
+		UPDATE audit_logs
+		SET household_id = (
+			SELECT users.household_id FROM users
+			WHERE users.id = audit_logs.user_id
+		)
+		WHERE household_id IS NULL
+		AND user_id IS NOT NULL
+		AND user_id != 0
+	`)
+	if result.Error != nil {
+		return result.Error
+	}
+	logger.Info().Int64("count", result.RowsAffected).Msg("Backfilled audit log household attribution")
 	return nil
 }
 
