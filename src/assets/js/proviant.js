@@ -331,21 +331,21 @@ proviant.bulkConsumeProducts = async function (productIDs) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkConsume`;
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIDs }) });
   const body = await res.json();
-  return { code: res.status, message: body.message };
+  return { code: res.status, message: body.message, failedIds: body.failedIds || [] };
 };
 
 proviant.bulkWasteProducts = async function (productIDs) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkWaste`;
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIDs }) });
   const body = await res.json();
-  return { code: res.status, message: body.message };
+  return { code: res.status, message: body.message, failedIds: body.failedIds || [] };
 };
 
 proviant.bulkRestoreProducts = async function (productIDs) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkRestore`;
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIDs }) });
   const body = await res.json();
-  return { code: res.status, message: body.message };
+  return { code: res.status, message: body.message, failedIds: body.failedIds || [] };
 };
 
 proviant.cookProducts = async function (items) {
@@ -402,22 +402,42 @@ proviant.bulkAction = async function (type, ids, options = {}) {
   const { confirm: needsConfirm = false, confirmTitle = '', confirmMsg = '', onDone = () => clearBulkSelectionAndReload() } = options;
   const fn = { delete: proviant.bulkWasteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkConsumeProducts }[type];
   if (!fn) return;
+  // Failures must reach the user, and the reload must wait for that message:
+  // reloading right away would wipe the modal. Every bulk endpoint answers a
+  // partial run with 200 + failedIds, so status alone is not enough to detect
+  // it. Status first: a 404 carries failedIds for every id, which must read as
+  // a failure, not as a partial success.
+  const verb = { restore: "restored", archive: "marked as consumed", delete: "marked as wasted" }[type];
+  const finish = (res) => {
+    if (res.code !== 200) {
+      proviant.showFeedback("error", "Bulk action failed", res.message || `Request failed with status ${res.code}`, onDone);
+    } else if (res.failedIds && res.failedIds.length) {
+      proviant.showFeedback("warning", `Not all products were ${verb}`, `${res.failedIds.length} of ${ids.length} products were not ${verb} (not found or no access).`, onDone);
+    } else {
+      onDone();
+    }
+  };
+  // A rejected fetch (network drop, a rate-limit page that is not JSON) has
+  // no status to report, but the user must still learn that the action was
+  // not confirmed — and onDone must still run, or the modal stays open over
+  // a stale selection.
+  const run = async () => {
+    try {
+      finish(await fn(ids));
+    } catch (err) {
+      proviant.showFeedback("error", "Bulk action failed", (err && err.message) || "Request failed", onDone);
+    }
+  };
   if (needsConfirm) {
     proviant.showConfirm(
       confirmTitle || (type === 'delete' ? 'Mark as wasted' : type === 'archive' ? 'Mark as consumed' : 'Confirm'),
       confirmMsg || `${ids.length} product${ids.length !== 1 ? 's' : ''}?${type === 'delete' ? ' This cannot be undone.' : ''}`,
-      async () => {
-        const res = await fn(ids);
-        if (res.code !== 200) console.error(res.message);
-        onDone();
-      },
+      run,
       type === 'delete' ? 'Wasted' : type === 'archive' ? 'Consumed' : 'Restore',
       type === 'delete' ? 'danger' : type === 'archive' ? 'warning' : 'primary'
     );
   } else {
-    const res = await fn(ids);
-    if (res.code !== 200) console.error(res.message);
-    onDone();
+    await run();
   }
 };
 

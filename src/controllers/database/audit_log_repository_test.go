@@ -1,19 +1,23 @@
 package database
 
 import (
+	"bytes"
 	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
+
+	"github.com/rs/zerolog"
 )
 
 // TestAuditLogRepositoryHouseholdScoping proves audit entries are attributed
 // at write time and read back only for their own household.
 func TestAuditLogRepositoryHouseholdScoping(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewAuditLogRepository(db)
+	repo := NewAuditLogRepository(db, nil)
 	ctx := context.Background()
 
 	householdA := testutil.CreateTestHousehold(db, 0)
@@ -125,6 +129,84 @@ func TestAuditLogRepositoryHouseholdScoping(t *testing.T) {
 		}
 		if *log.HouseholdID != explicitHousehold {
 			t.Errorf("HouseholdID = %d, want %d", *log.HouseholdID, explicitHousehold)
+		}
+	})
+}
+
+// TestAuditLogRepositoryWarnsOnFailedAttribution covers the observability gap:
+// an entry with a non-zero user id that cannot be attributed stays NULL (and
+// therefore invisible to every household), so the repository must say so in
+// the log instead of failing silently.
+func TestAuditLogRepositoryWarnsOnFailedAttribution(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+
+	var buf bytes.Buffer
+	logger := zerolog.New(&buf)
+	repo := NewAuditLogRepository(db, &logger)
+	ctx := context.Background()
+
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	t.Run("a user id with no row is reported", func(t *testing.T) {
+		goneUserID := user.ID + 1000 // non-zero id that has no row
+		entry := &database.AuditLog{
+			Timestamp: time.Now(),
+			UserID:    &goneUserID,
+			Action:    database.AuditActionLoginFailure,
+			IPAddress: "10.0.0.5",
+		}
+		if err := repo.Create(ctx, entry); err != nil {
+			t.Fatalf("Create() must still write the entry, got error: %v", err)
+		}
+		if entry.HouseholdID != nil {
+			t.Errorf("HouseholdID = %v, want nil", *entry.HouseholdID)
+		}
+		if !strings.Contains(buf.String(), "not attributed to a household") {
+			t.Errorf("no attribution warning logged, got %q", buf.String())
+		}
+	})
+
+	t.Run("a user without a household is reported", func(t *testing.T) {
+		buf.Reset()
+		user.HouseholdID = 0
+		if err := db.Save(&user).Error; err != nil {
+			t.Fatalf("failed to update user: %v", err)
+		}
+		entry := &database.AuditLog{
+			Timestamp: time.Now(),
+			UserID:    &user.ID,
+			Action:    database.AuditActionLoginFailure,
+			IPAddress: "10.0.0.5",
+		}
+		if err := repo.Create(ctx, entry); err != nil {
+			t.Fatalf("Create() must still write the entry, got error: %v", err)
+		}
+		if entry.HouseholdID != nil {
+			t.Errorf("HouseholdID = %v, want nil", *entry.HouseholdID)
+		}
+		if !strings.Contains(buf.String(), "user has no household") {
+			t.Errorf("no attribution warning logged, got %q", buf.String())
+		}
+	})
+
+	t.Run("attributed entries do not warn", func(t *testing.T) {
+		buf.Reset()
+		user.HouseholdID = household.ID
+		if err := db.Save(&user).Error; err != nil {
+			t.Fatalf("failed to update user: %v", err)
+		}
+		entry := &database.AuditLog{
+			Timestamp: time.Now(),
+			UserID:    &user.ID,
+			Action:    database.AuditActionLoginSuccess,
+			IPAddress: "10.0.0.6",
+		}
+		if err := repo.Create(ctx, entry); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if buf.Len() != 0 {
+			t.Errorf("unexpected warning for a successful attribution: %q", buf.String())
 		}
 	})
 }

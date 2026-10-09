@@ -77,7 +77,7 @@ func (m *MockProductRepository) GetArchivedProductByID(productID, userID uint) (
 func (m *MockProductRepository) SearchProducts(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
-func (m *MockProductRepository) SearchProductProjections(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]dbModel.Product, error) {
+func (m *MockProductRepository) SearchProductProjections(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID, locationID uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
 func (m *MockProductRepository) CreateProduct(userID uint, product *dbModel.Product) error {
@@ -100,7 +100,14 @@ func (m *MockProductRepository) DeleteProduct(productID uint, userID uint, archi
 }
 func (m *MockProductRepository) RestoreProduct(productID, userID uint) error { return m.Err }
 func (m *MockProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) []database.BulkOperationError {
-	return nil
+	if m.Err == nil {
+		return nil
+	}
+	errs := make([]database.BulkOperationError, 0, len(productIDs))
+	for _, productID := range productIDs {
+		errs = append(errs, database.NewBulkOperationError(productID, m.Err))
+	}
+	return errs
 }
 func (m *MockProductRepository) SetProductExpireAt(productID uint, userID uint, expireAt dbModel.Timestamp) error {
 	return m.Err

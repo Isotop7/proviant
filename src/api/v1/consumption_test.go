@@ -20,7 +20,7 @@ import (
 
 func newConsumptionAppCtx(db *gorm.DB, userID uint) *AppContext {
 	logger := zerolog.Nop()
-	repos := database.NewRepositoryContainer(db)
+	repos := database.NewRepositoryContainer(db, nil)
 	return &AppContext{
 		Logger:      &logger,
 		DB:          db,

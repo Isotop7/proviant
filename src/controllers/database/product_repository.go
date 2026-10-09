@@ -20,8 +20,9 @@ import (
 // maxDaysAfterOpening is the upper bound enforced on the DaysAfterOpening
 // field on PATCH. It is also used to bound the "opened-shelf-life" OR branch
 // in effectiveExpiryCandidateScope so the planner can prune candidate rows
-// whose opened date is far outside the requested window.
-const maxDaysAfterOpening = 365
+// whose opened date is far outside the requested window. Kept as an alias of
+// the model constant so the write bound and the query bound cannot drift.
+const maxDaysAfterOpening = database.MaxDaysAfterOpening
 
 // effectiveExpiryCandidateScope returns a GORM scope that selects product
 // rows whose effective expiry (printed ExpireAt, OR OpenedAt + DaysAfterOpening)
@@ -99,7 +100,7 @@ type ProductRepositoryInterface interface {
 	GetProductIdentity(productID, userID uint) (database.Product, error)
 	GetArchivedProductByID(productID, userID uint) (database.Product, error)
 	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
-	SearchProductProjections(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
+	SearchProductProjections(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID, locationID uint) ([]database.Product, error)
 	CreateProduct(userID uint, product *database.Product) error
 	CreateProductsBulk(userID uint, rows []ImportedProduct) ([]string, error)
 	UpdateProduct(productID uint, userID uint, product *database.ProductDTOPatch) error
@@ -185,8 +186,28 @@ type BulkOperationError struct {
 	error     error
 }
 
+// NewBulkOperationError builds a failure entry for one bulk-operation id, so
+// callers outside this package (test mocks) can report failures too.
+func NewBulkOperationError(productID uint, err error) BulkOperationError {
+	return BulkOperationError{productID: productID, error: err}
+}
+
 func (b *BulkOperationError) Error() string {
 	return fmt.Sprintf("Error bulk deleting product '%d', error: %v", b.productID, b.error)
+}
+
+// ProductID exposes which product a bulk operation error refers to, so
+// callers can distinguish failed items from succeeded ones (the error list
+// is sparse — it only contains failures, not one entry per requested id).
+func (b *BulkOperationError) ProductID() uint {
+	return b.productID
+}
+
+// Err exposes the underlying failure so callers can classify it: a
+// not-found/cross-tenant miss is the client's problem, anything else is a
+// server-side fault that must surface as a 500.
+func (b *BulkOperationError) Err() error {
+	return b.error
 }
 
 func (r *ProductRepository) getUserHouseholdID(userID uint) (uint, error) {
@@ -495,6 +516,12 @@ func (r *ProductRepository) GetProductIdentity(productID, userID uint) (database
 	return product, nil
 }
 
+// GetArchivedProductByID returns the product behind productID together with
+// the caller's access checks (same household, private rows only their owner).
+// Despite the name it does NOT restrict the row to archived products: the
+// lookup is Unscoped so it sees soft-deleted rows at all, and DeleteProduct
+// shares it and must accept active rows too. A restore of an already-active
+// product therefore succeeds as a no-op instead of failing.
 func (r *ProductRepository) GetArchivedProductByID(productID, userID uint) (database.Product, error) {
 	if productID == 0 {
 		return database.Product{}, gorm.ErrNotImplemented
@@ -606,13 +633,20 @@ func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, query
 
 // SearchProductProjections is the products page's search: same predicate and the
 // same whitelisted ORDER BY as SearchProducts, narrowed to
-// productProjectionColumns. It deliberately returns every match (no SQL LIMIT)
-// because the caller still has to apply the status filter before it knows which
-// rows make up the page.
-func (r *ProductRepository) SearchProductProjections(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error) {
+// productProjectionColumns and optionally to one storage location (0 = every
+// location), so a search inside a location filter narrows instead of
+// shadowing. It deliberately returns every match (no SQL LIMIT) because the
+// caller still has to apply the status filter before it knows which rows make
+// up the page.
+func (r *ProductRepository) SearchProductProjections(
+	queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID, locationID uint,
+) ([]database.Product, error) {
 	query, queryErr := r.searchProductsQuery(queryParam, queryValue, userID)
 	if queryErr != nil {
 		return nil, queryErr
+	}
+	if locationID != 0 {
+		query = query.Where("storage_location_id = ?", locationID)
 	}
 
 	sortClause, sortErr := resolveSortClause(sortValue, orderValue)
@@ -628,6 +662,18 @@ func (r *ProductRepository) SearchProductProjections(queryParam SearchParameterE
 }
 
 func (r *ProductRepository) CreateProduct(userID uint, product *database.Product) error {
+	// POST /api/v1/products binds the raw model, so OpenedAt and
+	// DaysAfterOpening arrive unvalidated here — unlike PATCH, which validates
+	// before it reaches the repository. The bound is not cosmetic:
+	// effectiveExpiryCandidateScope prunes with maxDaysAfterOpening, so a row
+	// with days_after_opening > 365 can fall inside the expiring-soon window
+	// yet be pruned out of it — silently missing from the list and from
+	// expiry notifications. Validate at the repository so every create path
+	// is covered.
+	if err := validateOpenedLifecycle(product.OpenedAt, product.DaysAfterOpening); err != nil {
+		return err
+	}
+
 	var user authentication.User
 	if err := r.DB.First(&user, userID).Error; err != nil {
 		return err
@@ -798,10 +844,10 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 // ignored silently (when <= 0) or produce a nonsense shelf life.
 func validateOpenedLifecycle(openedAt *time.Time, daysAfterOpening *int) error {
 	if openedAt != nil && openedAt.After(time.Now().Add(24*time.Hour)) {
-		return errors.ErrInvalidRequest
+		return errors.ErrInvalidOpenedLifecycle
 	}
 	if daysAfterOpening != nil && (*daysAfterOpening < 0 || *daysAfterOpening > maxDaysAfterOpening) {
-		return errors.ErrInvalidRequest
+		return errors.ErrInvalidOpenedLifecycle
 	}
 	return nil
 }
@@ -878,13 +924,18 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) 
 	for _, productID := range productIDs {
 		product, getError := r.GetArchivedProductByID(productID, userID)
 		if getError != nil {
+			// Without this continue the zero-value product below would be
+			// Saved: gorm writes a primary key of 0 as a fresh INSERT, so a
+			// single unknown or foreign id would create a blank product row
+			// (empty name, household 0) on every attempt.
 			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+			continue
 		}
 		product.DeletedAt = gorm.DeletedAt{}
 		product.RemovalReason = ""
 		saveResult := r.DB.Save(&product)
 		if saveResult.Error != nil {
-			bulkErrors = append(bulkErrors, BulkOperationError{productID, getError})
+			bulkErrors = append(bulkErrors, BulkOperationError{productID, saveResult.Error})
 		}
 	}
 	return bulkErrors

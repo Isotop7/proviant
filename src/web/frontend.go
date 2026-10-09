@@ -25,6 +25,7 @@ import (
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
 type Frontend struct {
@@ -279,57 +280,85 @@ type productQueryParams struct {
 const productsPageSize = 50
 
 // fetchProductProjections returns the candidate rows for the products page,
-// narrowed to productProjectionColumns. Nothing here is a page yet: the caller
-// classifies, filters, orders, slices one page out of the result and hydrates
-// just those rows.
+// narrowed to productProjectionColumns, and reports whether they arrive
+// already ordered by a caller-chosen column. Nothing here is a page yet: the
+// caller classifies, filters, orders, slices one page out of the result and
+// hydrates just those rows.
 //
-// The search path keeps its SQL ORDER BY (the caller picked that column); every
-// other path comes back in id order for the caller to sort.
+// Only the search path orders rows in SQL (the caller picked that column).
+// Every other path comes back in id order and must be sorted by the caller,
+// so the flag tracks the branch that actually ran rather than the raw query
+// parameters. A location filter narrows both branches instead of shadowing
+// the search: performSearch keeps locationId and the location links keep the
+// query params, so the two routinely arrive together.
 func fetchProductProjections(
 	repos *database.RepositoryContainer,
 	userID uint,
 	params *productQueryParams,
-) ([]dbModel.Product, error) {
+) ([]dbModel.Product, bool, error) {
 	if params.statusFilter == "archived" {
-		return repos.Products.GetArchivedProductProjections(userID)
+		products, err := repos.Products.GetArchivedProductProjections(userID)
+		return products, false, err
 	}
-	switch {
-	case params.locationFilter != "":
-		locationID, err := strconv.ParseUint(params.locationFilter, 10, 64)
+
+	// Parsed before either branch so a malformed filter is a 400 with or
+	// without an accompanying search, not a silently ignored parameter.
+	var locationID uint
+	if params.locationFilter != "" {
+		parsed, err := strconv.ParseUint(params.locationFilter, 10, 64)
 		if err != nil {
-			return nil, nil
+			return nil, false, errors.ErrInvalidQueryParameter
 		}
-		return repos.Products.GetActiveProductProjections(userID, uint(locationID)) //nolint:gosec
-	case params.queryParam != "" && params.queryValue != "":
+		locationID = uint(parsed) //nolint:gosec
+	}
+
+	if params.queryParam != "" && params.queryValue != "" {
 		enumParam := database.SearchParameterEnumFromString(params.queryParam)
 		if enumParam == database.InvalidParameter {
-			return nil, errors.ErrProductSearchInvalidQuery
+			return nil, false, errors.ErrProductSearchInvalidQuery
 		}
-		return repos.Products.SearchProductProjections(enumParam, params.queryValue, params.sort, params.order, userID)
-	default:
-		return repos.Products.GetActiveProductProjections(userID, 0)
+		products, err := repos.Products.SearchProductProjections(
+			enumParam, params.queryValue, params.sort, params.order, userID, locationID)
+		if err != nil {
+			return nil, false, err
+		}
+		return products, true, nil
 	}
+	products, err := repos.Products.GetActiveProductProjections(userID, locationID)
+	return products, false, err
 }
 
 // renderProductsFetchError writes the response for a failed products fetch and
 // reports whether it did, so the caller can return immediately. It is shared by
 // the projection pass and the hydration pass because they fail the same way for
-// the user.
+// the user. Client-side causes (bad query, bad sort, unusable account state)
+// stay 400; anything else is a server-side failure and must surface as 500 so
+// monitoring sees it instead of a wall of "no products found".
 func renderProductsFetchError(ctx *gin.Context, frontend *Frontend, logger *zerolog.Logger, err error) bool {
 	switch err {
 	case nil:
 		return false
 	case errors.ErrProductSearchInvalidQuery:
-		logger.Error().Msg(err.Error())
+		logger.Warn().Msg(err.Error())
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, err.Error())
 		return true
 	case errors.ErrDatabaseInvalidSortParameter:
 		logger.Warn().Msg(err.Error())
 		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, err.Error())
 		return true
+	case errors.ErrInvalidQueryParameter:
+		logger.Warn().Msg(err.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, err.Error())
+		return true
+	case errors.ErrInvalidUserData, gorm.ErrRecordNotFound:
+		logger.Warn().Msg(err.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
+		return true
 	default:
 		logger.Error().Msgf("Error getting products of user: %s", err)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
+		// The body must not claim "no products found" — that invites the user
+		// to add products for what is actually a server-side failure.
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrInternalServer.Error())
 		return true
 	}
 }
@@ -493,7 +522,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		sort:           sort,
 		order:          order,
 	}
-	projections, productErr := fetchProductProjections(repos, userID, productQuery)
+	projections, searchOrdered, productErr := fetchProductProjections(repos, userID, productQuery)
 	if renderProductsFetchError(ctx, frontend, logger, productErr) {
 		return
 	}
@@ -540,11 +569,13 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		projections = filterProductsByStatus(projections, statusFilter, now, criticalDays, soonDays)
 	}
 
-	// A search arrives already ordered by the column the caller picked. Every
-	// other active view is ordered by effective expiry; the archived view keeps
-	// the id order its projection came back in.
-	isSearch := productQuery.queryParam != "" && productQuery.queryValue != ""
-	if statusFilter != "archived" && !isSearch {
+	// A search orders its rows in SQL (searchOrdered); every other active
+	// view is ordered by effective expiry here. The archived view keeps the
+	// id order its projection came back in. The flag reports the branch that
+	// actually ran — search params can accompany the archived view, and a
+	// location filter narrows (not shadows) the search branch, which stays
+	// SQL-ordered.
+	if statusFilter != "archived" && !searchOrdered {
 		database.SortByEffectiveExpiry(projections)
 	}
 

@@ -83,7 +83,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	InitRateLimits(proviantConfiguration.Server.RateLimit)
 	go cleanupRevokedTokens(dbHandle, logger)
 
-	repos := dbcontroller.NewRepositoryContainer(dbHandle)
+	repos := dbcontroller.NewRepositoryContainer(dbHandle, logger)
 
 	if proviantConfiguration.Server.Debug {
 		gin.SetMode(gin.DebugMode)

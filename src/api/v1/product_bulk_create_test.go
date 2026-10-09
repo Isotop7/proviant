@@ -39,7 +39,7 @@ func newBulkTestSetup(t *testing.T) (*gin.Context, *httptest.ResponseRecorder, *
 
 	ctx, w := testutil.SetupGinContext(db)
 	testutil.MockJWTClaims(ctx, user.ID)
-	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
 	appCtx := SetupTestAppContext(ctx, user.ID)
 	return ctx, w, appCtx, location.ID

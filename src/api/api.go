@@ -43,6 +43,15 @@ type APIResponse struct {
 	Action  string `json:"action,omitempty"`
 }
 
+// BulkActionResponse is the response of a bulk action (restore, consume,
+// waste). FailedIDs carries the requested ids that did not land, so a partial
+// failure — which is an HTTP 200 — stays machine-readable for the client
+// instead of hiding in the message string.
+type BulkActionResponse struct {
+	APIResponse
+	FailedIDs []uint `json:"failedIds,omitempty"`
+}
+
 // Error returns an API response object from a error object
 func Error(err error) APIResponse {
 	return APIResponse{Message: err.Error()}

@@ -349,6 +349,12 @@ func (ec *ProviantConfiguration) ValidateServerConfiguration() error {
 	if ec.Server.Authentication.TokenPassword == "" {
 		return errors.ErrServerEmptyTokenPassword
 	}
+	// The empty check alone let every install that copied an old template keep
+	// running on a publicly known signing key — refuse that value explicitly so
+	// existing deployments are forced to rotate on upgrade.
+	if ec.Server.Authentication.TokenPassword == util.RetiredTokenPassword {
+		return errors.ErrServerRetiredTokenPassword
+	}
 	if ec.Server.Authentication.TokenLifetime <= 0 {
 		return errors.ErrServerInvalidTokenLifetime
 	}

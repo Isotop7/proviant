@@ -298,6 +298,13 @@ var (
 			"(generate one with 'openssl rand -hex 32') or the " +
 			"PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD environment variable")
 
+	// ErrServerRetiredTokenPassword is thrown if the JWT token password is a
+	// default that earlier releases shipped publicly in their config templates
+	ErrServerRetiredTokenPassword = errors.New(
+		"JWT token password is a publicly known default shipped by an earlier release: " +
+			"set server.authentication.tokenPassword (generate one with 'openssl rand -hex 32') or the " +
+			"PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD environment variable")
+
 	// ErrServerInvalidTokenLifetime is thrown if an invalid JWT token lifetime was specified
 	ErrServerInvalidTokenLifetime = errors.New("JWT token lifetime must be greater than 0")
 
@@ -364,6 +371,11 @@ var (
 
 	// ErrInvalidRequest is thrown when the request is malformed or missing required parameters
 	ErrInvalidRequest = errors.New("invalid request")
+
+	// ErrInvalidOpenedLifecycle is thrown if a product's OpenedAt / DaysAfterOpening
+	// fields violate the opened-shelf-life bounds
+	ErrInvalidOpenedLifecycle = errors.New(
+		"daysAfterOpening must be between 0 and 365 and openedAt must not be more than one day in the future")
 
 	// ErrTokenExpired is thrown when a calendar token has passed its expiration date
 	ErrTokenExpired = errors.New("calendar token expired")
@@ -456,6 +468,7 @@ var (
 	FmtErrGetExpiringSoonProducts     = "GetExpiringSoonProducts: %s"
 	FmtErrGetProductCategoryBreakdown = "GetProductCategoryBreakdown: %s"
 	FmtErrGetExpiryTrend              = "GetExpiryTrend: %s"
+	FmtErrGetUniqueArchivedCount      = "GetUniqueArchivedProductsCount: %s"
 
 	/*
 	 * Stats/export shared HTTP response messages

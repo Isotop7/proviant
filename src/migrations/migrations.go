@@ -267,18 +267,36 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 		return err
 	}
 
+	// Restore the opened-shelf-life bound that the SQL prunes assume
+	logger.Debug().Msg("Backfill clamp days_after_opening to the validated maximum")
+	if err := BackfillClampDaysAfterOpening(logger, db); err != nil {
+		return err
+	}
 	return nil
 }
 
 // BackfillAuditLogHouseholdID attributes existing audit log entries to the
-// household their actor belonged to when the backfill runs. It is a best effort
-// and runs once: entries whose user is gone (or was never known, as with a
-// failed login for an unknown username) keep household_id NULL and stay
-// invisible to every household, which is the safe direction to err in.
+// household their actor belonged to at the time of the run. It is idempotent
+// rather than one-shot: RunBreakingDatabaseMigrations runs it on every
+// startup, and the household_id IS NULL predicate means already-attributed
+// rows are never touched again. The EXISTS guard excludes rows whose actor is
+// gone (or was never known, as with a failed login for an unknown username):
+// they can never be attributed, keep household_id NULL, and stay invisible to
+// every household — which is the safe direction to err in — without being
+// re-scanned and re-counted on every boot.
 //
-// The subquery deliberately ignores users.deleted_at: account_deleted is
+// Attribution uses the household the user is in *now*: a member who changed
+// households before this release has their older entries stamped into the
+// household they currently belong to. That is a one-time, best-effort
+// compromise — there is no membership history table to attribute those rows
+// any more precisely.
+//
+// The subqueries deliberately ignore users.deleted_at: account_deleted is
 // written after the target user is soft-deleted, and that entry still belongs
-// to the household.
+// to the household. The EXISTS guard also requires a non-zero household:
+// stamping 0 would take the row out of the NULL set for good, so an actor
+// without a household keeps household_id NULL and is attributed once they
+// join one, instead of being frozen at 0 forever.
 func BackfillAuditLogHouseholdID(logger *zerolog.Logger, db *gorm.DB) error {
 	result := db.Exec(`
 		UPDATE audit_logs
@@ -289,11 +307,38 @@ func BackfillAuditLogHouseholdID(logger *zerolog.Logger, db *gorm.DB) error {
 		WHERE household_id IS NULL
 		AND user_id IS NOT NULL
 		AND user_id != 0
+		AND EXISTS (
+			SELECT 1 FROM users
+			WHERE users.id = audit_logs.user_id
+			AND users.household_id != 0
+		)
 	`)
 	if result.Error != nil {
 		return result.Error
 	}
 	logger.Info().Int64("count", result.RowsAffected).Msg("Backfilled audit log household attribution")
+	return nil
+}
+
+// BackfillClampDaysAfterOpening clamps stored days_after_opening values to
+// database.MaxDaysAfterOpening (365). The create path (POST /api/v1/products
+// binds the raw model) accepted unvalidated values until the repository-level
+// check was added, and effectiveExpiryCandidateScope prunes opened_at rows
+// using that same bound: a row with days_after_opening = 1000 and opened_at
+// 995 days ago has an effective expiry inside a 7-day window but sits below
+// the prune floor, so it would silently miss the expiring-soon list and its
+// notification. The clamp is idempotent, runs on every startup, and only
+// touches rows above the bound. Clamping (rather than deleting) moves such
+// rows to "expired", which is the safe direction: visible, not hidden.
+func BackfillClampDaysAfterOpening(logger *zerolog.Logger, db *gorm.DB) error {
+	result := db.Exec(
+		"UPDATE products SET days_after_opening = ? WHERE days_after_opening > ?",
+		database.MaxDaysAfterOpening, database.MaxDaysAfterOpening,
+	)
+	if result.Error != nil {
+		return result.Error
+	}
+	logger.Info().Int64("count", result.RowsAffected).Msg("Clamped days_after_opening to the validated maximum")
 	return nil
 }
 

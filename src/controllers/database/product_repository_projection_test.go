@@ -141,7 +141,7 @@ func TestProductProjections(t *testing.T) {
 	})
 
 	t.Run("search projections honour visibility and the sort allowlist", func(t *testing.T) {
-		ascending, err := repo.SearchProductProjections(ProductName, "a", "product_name", "asc", user.ID)
+		ascending, err := repo.SearchProductProjections(ProductName, "a", "product_name", "asc", user.ID, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -155,7 +155,7 @@ func TestProductProjections(t *testing.T) {
 			}
 		}
 
-		descending, err := repo.SearchProductProjections(ProductName, "a", "product_name", "desc", user.ID)
+		descending, err := repo.SearchProductProjections(ProductName, "a", "product_name", "desc", user.ID, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -165,8 +165,41 @@ func TestProductProjections(t *testing.T) {
 			}
 		}
 
-		if _, err := repo.SearchProductProjections(ProductName, "a", "product_name; DROP TABLE products;--", "asc", user.ID); err != errors.ErrDatabaseInvalidSortParameter {
+		if _, err := repo.SearchProductProjections(ProductName, "a", "product_name; DROP TABLE products;--", "asc", user.ID, 0); err != errors.ErrDatabaseInvalidSortParameter {
 			t.Errorf("err = %v, want ErrDatabaseInvalidSortParameter", err)
+		}
+	})
+
+	// A location filter must narrow the search, not shadow it: the products
+	// page sends locationId and the query params together.
+	t.Run("search projections narrow to a location", func(t *testing.T) {
+		for _, tc := range []struct {
+			name       string
+			locationID uint
+			wantID     uint
+		}{
+			{"locA holds zebra", locA.ID, zebra.ID},
+			{"locB holds apple", locB.ID, apple.ID},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				rows, err := repo.SearchProductProjections(ProductName, "a", "product_name", "asc", user.ID, tc.locationID)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if len(rows) != 1 || rows[0].ID != tc.wantID {
+					t.Errorf("got %d rows (%+v), want only product %d", len(rows), rows, tc.wantID)
+				}
+			})
+		}
+
+		// A location nothing matches returns nothing — rows without a
+		// storage location (mango) are excluded by any location filter.
+		rows, err := repo.SearchProductProjections(ProductName, "a", "product_name", "asc", user.ID, locB.ID+1000)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(rows) != 0 {
+			t.Errorf("got %d rows (%+v), want none for an empty location", len(rows), rows)
 		}
 	})
 }

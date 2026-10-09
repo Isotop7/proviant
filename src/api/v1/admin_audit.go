@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/models/database"
@@ -38,7 +39,7 @@ func GetAuditLogs(ctx *gin.Context, appCtx *AppContext) {
 	}
 	householdID, ok := householdIDValue.(uint)
 	if !ok || householdID == 0 {
-		appCtx.Logger.Error().Msg("household id missing from context")
+		appCtx.Logger.Error().Msg("household id in context is not a valid uint")
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to fetch audit logs"})
 		return
 	}
@@ -48,6 +49,13 @@ func GetAuditLogs(ctx *gin.Context, appCtx *AppContext) {
 	var err error
 
 	if dateParam != "" {
+		// The repository parses this too, but a malformed date is client
+		// input and must surface as 400, not as a parse-failure 500.
+		if _, parseErr := time.Parse(util.DefaultDateFormatParseStr, dateParam); parseErr != nil {
+			appCtx.Logger.Warn().Msgf("Invalid audit log date '%s'", dateParam)
+			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "date must be in YYYY-MM-DD format"})
+			return
+		}
 		logs, err = appCtx.Repos.AuditLogs.GetAuditLogsByDate(ctx.Request.Context(), householdID, limit, dateParam)
 	} else {
 		logs, err = appCtx.Repos.AuditLogs.GetAuditLogs(ctx.Request.Context(), householdID, limit)

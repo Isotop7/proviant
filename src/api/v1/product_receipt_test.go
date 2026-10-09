@@ -39,7 +39,7 @@ func newReceiptTestSetup(t *testing.T, receiptEnabled bool, endpointURL string, 
 	ctx, w := testutil.SetupGinContext(db)
 
 	testutil.MockJWTClaims(ctx, user.ID)
-	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 	cfg := &configuration.ProviantConfiguration{}
 	cfg.Server.MaxUploadSizeMB = 5
@@ -159,7 +159,7 @@ func TestScanReceipt(t *testing.T) {
 		user := testutil.CreateTestUser(db, household.ID)
 		ctx, w := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 		cfg := &configuration.ProviantConfiguration{}
 		cfg.Server.MaxUploadSizeMB = 5
 		cfg.OCR.Receipt.Enabled = true
@@ -500,7 +500,7 @@ func TestScanReceiptPerUserOverride(t *testing.T) {
 
 		ctx, w := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 		cfg := &configuration.ProviantConfiguration{}
 		cfg.Server.MaxUploadSizeMB = 5
@@ -566,7 +566,7 @@ func TestScanReceiptPerUserOverride(t *testing.T) {
 
 		ctx, w := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 		cfg := &configuration.ProviantConfiguration{}
 		cfg.Server.MaxUploadSizeMB = 5

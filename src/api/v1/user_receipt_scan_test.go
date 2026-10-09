@@ -217,7 +217,7 @@ func setupReceiptScanTestContext(t *testing.T, userID uint) (*gin.Context, *http
 	db := testutil.SetupTestDB(t)
 	ctx, w := testutil.SetupGinContext(db)
 	testutil.MockJWTClaims(ctx, userID)
-	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 	cfg := &configuration.ProviantConfiguration{}
 	cfg.OCR.Receipt.Enabled = true
@@ -252,7 +252,7 @@ func TestGetUserReceiptScanSettings(t *testing.T) {
 
 		ctx, w := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 		cfg := &configuration.ProviantConfiguration{}
 		cfg.OCR.Receipt.Enabled = true
@@ -320,7 +320,7 @@ func TestGetUserReceiptScanSettings(t *testing.T) {
 
 		ctx, w := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 		cfg := &configuration.ProviantConfiguration{}
 		cfg.OCR.Receipt.Enabled = true
@@ -366,7 +366,7 @@ func TestUpdateUserReceiptScanSettings(t *testing.T) {
 
 		ctx, w := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 		cfg := &configuration.ProviantConfiguration{}
 		cfg.OCR.Receipt.Enabled = true
@@ -423,7 +423,7 @@ func TestUpdateUserReceiptScanSettings(t *testing.T) {
 
 		ctx, w := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 		cfg := &configuration.ProviantConfiguration{}
 		ctx.Set(util.ContextKeyProviantConfig, cfg)
 		appCtx := SetupTestAppContext(ctx, user.ID)
@@ -462,7 +462,7 @@ func TestUpdateUserReceiptScanSettings(t *testing.T) {
 
 		ctx, w := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 		cfg := &configuration.ProviantConfiguration{}
 		ctx.Set(util.ContextKeyProviantConfig, cfg)
 		appCtx := SetupTestAppContext(ctx, user.ID)
@@ -640,7 +640,7 @@ func TestReceiptScanControllerForUser(t *testing.T) {
 
 		ctx, _ := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 		logger := zerolog.Nop()
 		cfg := &configuration.ProviantConfiguration{}
@@ -673,7 +673,7 @@ func TestReceiptScanControllerForUser(t *testing.T) {
 
 		ctx, _ := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 		logger := zerolog.Nop()
 		cfg := &configuration.ProviantConfiguration{}
@@ -716,7 +716,7 @@ func TestReceiptScanControllerForUser(t *testing.T) {
 
 		ctx, _ := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 		logger := zerolog.Nop()
 		cfg := &configuration.ProviantConfiguration{}
@@ -775,7 +775,7 @@ func TestReceiptScanControllerForUser(t *testing.T) {
 
 		ctx, _ := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, user.ID)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 		cfg := &configuration.ProviantConfiguration{}
 		cfg.OCR.Receipt.Enabled = true
@@ -807,7 +807,7 @@ func TestReceiptScanControllerForUser(t *testing.T) {
 
 		ctx, _ := testutil.SetupGinContext(db)
 		testutil.MockJWTClaims(ctx, 9999)
-		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+		ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 		cfg := &configuration.ProviantConfiguration{}
 		cfg.OCR.Receipt.Enabled = true

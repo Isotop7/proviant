@@ -131,6 +131,11 @@ const (
 	// key off the public API, and a drifted copy would silently reopen the leak.
 	DefaultTheMealDBRecipeAPIURL = "https://www.themealdb.com/api/json/v1/1"
 
+	// RetiredTokenPassword is the tokenPassword value that released config
+	// templates used to ship. It is public, so validation refuses to start
+	// with it: anyone who knows it can forge a session token for any user.
+	RetiredTokenPassword = "secret key" //nolint:gosec // G101: published placeholder being rejected, not a credential
+
 	// Receipt scan (issue #61)
 	ReceiptOCRProviderOpenAI  = "openai"
 	ContextKeyReceiptCtrl     = "receiptController"

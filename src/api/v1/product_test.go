@@ -143,6 +143,39 @@ func TestGetProduct(t *testing.T) {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
 		}
 	})
+
+	t.Run("cross-household product is 404", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = errors.ErrMismatcherUserID
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "id", Value: "2"}}
+
+		appCtx := newTestAppContext(m, 1)
+		GetProduct(ctx, appCtx)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
+		}
+	})
+
+	// A DB failure must not hide behind 404: monitoring only sees the status.
+	t.Run("server-side failure is 500", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = errors.ErrInternalServer
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+		appCtx := newTestAppContext(m, 1)
+		GetProduct(ctx, appCtx)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Errorf("Status = %v, want %v; body: %s", w.Code, http.StatusInternalServerError, w.Body.String())
+		}
+	})
 }
 
 // TestCreateProduct tests the CreateProduct endpoint
@@ -200,7 +233,50 @@ func TestCreateProduct(t *testing.T) {
 			t.Errorf("Barcode = %v, want %v", responseProduct.Barcode, "1234567890123")
 		}
 	})
+
+	// Validation failures on client-supplied OpenedAt/DaysAfterOpening are 400s;
+	// the handler used to report every create failure as 500.
+	t.Run("opened lifecycle validation failure is 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = errors.ErrInvalidOpenedLifecycle
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		mockOpenFoodFactsAPIController := &MockOpenFoodFactsAPIController{
+			MockGetDataset: func(barcode string) (dbModel.Product, error) {
+				return dbModel.Product{}, errors.ErrProductSearchInvalidQuery
+			},
+		}
+		ctx.Set("offacntrl", mockOpenFoodFactsAPIController)
+
+		// Unknown barcode keeps the client-bound product (with its opened
+		// fields) instead of replacing it with the OFF dataset row.
+		productData := dbModel.Product{
+			ProductName:      "Bad Shelf Life",
+			Barcode:          "0000000000000",
+			DaysAfterOpening: intPtr(9999),
+		}
+		body, _ := json.Marshal(productData)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		CreateProduct(ctx, appCtx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v; body: %s", w.Code, http.StatusBadRequest, w.Body.String())
+		}
+	})
 }
+
+func intPtr(v int) *int { return &v }
 
 // TestUpdateProduct tests the UpdateProduct endpoint
 func TestUpdateProduct(t *testing.T) {
@@ -258,6 +334,65 @@ func TestUpdateProduct(t *testing.T) {
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusNotFound)
+		}
+	})
+
+	// A rejected OpenedAt/DaysAfterOpening is client input (400), and a
+	// product outside the caller's household is not found (404) — neither is
+	// a server fault, which is what the default branch used to report.
+	t.Run("opened lifecycle validation failure is 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = errors.ErrInvalidOpenedLifecycle
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+
+		updateData := dbModel.ProductDTOPatch{ProductName: "Updated Product"}
+		body, _ := json.Marshal(updateData)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		UpdateProduct(ctx, appCtx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v; body: %s", w.Code, http.StatusBadRequest, w.Body.String())
+		}
+	})
+
+	t.Run("cross-household update is 404", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = errors.ErrMismatcherUserID
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+
+		updateData := dbModel.ProductDTOPatch{ProductName: "Updated Product"}
+		body, _ := json.Marshal(updateData)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		UpdateProduct(ctx, appCtx)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Status = %v, want %v; body: %s", w.Code, http.StatusNotFound, w.Body.String())
 		}
 	})
 }
@@ -411,6 +546,38 @@ func TestSearchProducts(t *testing.T) {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
 		}
 	})
+
+	// Client-side causes reaching the repo (sort allowlist drift, own account
+	// row gone) are 400s; only real server faults may hide behind 500.
+	for _, tc := range []struct {
+		name string
+		err  error
+		want int
+	}{
+		{"repo sort allowlist miss is 400", errors.ErrDatabaseInvalidSortParameter, http.StatusBadRequest},
+		{"missing user row is 400", gorm.ErrRecordNotFound, http.StatusBadRequest},
+		{"repository failure is 500", errors.ErrInternalServer, http.StatusInternalServerError},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := repomocks.NewMockRepositoryContainer()
+			m.Products.Err = tc.err
+			ctx, w := repomocks.SetupGinContextWithMocks(m)
+			testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+			ctx.Request = &http.Request{Header: make(http.Header)}
+			ctx.Request.URL = &url.URL{RawQuery: "queryParam=product_name&queryValue=Apple&sort=expire_at"}
+
+			appCtx := &AppContext{
+				Logger: &zerolog.Logger{},
+				Repos:  m.ToRepositoryContainer(),
+				UserID: 1,
+			}
+			SearchProducts(ctx, appCtx)
+
+			if w.Code != tc.want {
+				t.Errorf("Status = %v, want %v; body: %s", w.Code, tc.want, w.Body.String())
+			}
+		})
+	}
 }
 
 // TestGetProductsByBarcode tests the GetProductsByBarcode endpoint
@@ -531,6 +698,48 @@ func TestGetProductsByBarcode(t *testing.T) {
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+	})
+
+	// An unusable account (no household, user row gone) is the caller's state
+	// and stays 400; an unknown barcode never errors at all — it is an empty 200.
+	t.Run("user without a household returns 400", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = errors.ErrInvalidUserData
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "barcode", Value: "4001724814405"}}
+
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProductsByBarcode(ctx, appCtx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("repository failure returns 500", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Err = errors.ErrInternalServer
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Params = []gin.Param{{Key: "barcode", Value: "4001724814405"}}
+
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		GetProductsByBarcode(ctx, appCtx)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Errorf("Status = %v, want %v; body: %s", w.Code, http.StatusInternalServerError, w.Body.String())
 		}
 	})
 }
@@ -763,4 +972,65 @@ func TestProductListQueryIDsBinding(t *testing.T) {
 			t.Errorf("IDs = %v, want empty", q.IDs)
 		}
 	})
+}
+
+// TestProductActionAccessErrorsAre404 covers the shared not-found/cross-
+// tenant mapping across the destructive product endpoints. Both conditions
+// used to fall through to 500, reporting a caller's bad id as a server fault
+// (and, for foreign ids, probing the existence of other households' rows
+// through the status code difference).
+func TestProductActionAccessErrorsAre404(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cases := []struct {
+		name    string
+		handler func(*gin.Context, *AppContext)
+		err     error
+	}{
+		{"delete not found", DeleteProduct, gorm.ErrRecordNotFound},
+		{"delete cross-tenant", DeleteProduct, errors.ErrMismatcherUserID},
+		{"restore not found", RestoreProduct, gorm.ErrRecordNotFound},
+		{"restore cross-tenant", RestoreProduct, errors.ErrMismatcherUserID},
+		{"consume not found", ConsumeProduct, gorm.ErrRecordNotFound},
+		{"consume cross-tenant", ConsumeProduct, errors.ErrMismatcherUserID},
+		{"waste not found", WasteProduct, gorm.ErrRecordNotFound},
+		{"waste cross-tenant", WasteProduct, errors.ErrMismatcherUserID},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := repomocks.NewMockRepositoryContainer()
+			m.Products.Err = tc.err
+			ctx, w := repomocks.SetupGinContextWithMocks(m)
+			testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+
+			ctx.Request = &http.Request{Header: make(http.Header), URL: &url.URL{}}
+			ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+			tc.handler(ctx, newTestAppContext(m, 1))
+
+			if w.Code != http.StatusNotFound {
+				t.Errorf("Status = %v, want %v; body: %s", w.Code, http.StatusNotFound, w.Body.String())
+			}
+		})
+	}
+}
+
+// TestUpdateProductAmountAccessErrorIs404 covers the amount endpoint's
+// pre-fetch: a cross-tenant id must read as not-found, not as 500.
+func TestUpdateProductAmountAccessErrorIs404(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	m := repomocks.NewMockRepositoryContainer()
+	m.Products.Err = errors.ErrMismatcherUserID
+	ctx, w := repomocks.SetupGinContextWithMocks(m)
+	testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+	ctx.Request = testutil.CreateJSONRequest(http.MethodPost, "/api/v1/products/1/amount", apiModel.ProductAmountDTO{Delta: -1})
+	ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+	UpdateProductAmount(ctx, newTestAppContext(m, 1))
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Status = %v, want %v; body: %s", w.Code, http.StatusNotFound, w.Body.String())
+	}
 }

@@ -25,7 +25,7 @@ func SetupGinContextWithDB(db *gorm.DB) (*gin.Context, *httptest.ResponseRecorde
 	mockLogger := zerolog.Nop()
 	ctx.Set(util.ContextKeyLogger, &mockLogger)
 	ctx.Set(util.ContextKeyDBHandle, db)
-	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db))
+	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
 
 	return ctx, w
 }

@@ -37,6 +37,17 @@ definitions:
       total:
         type: integer
     type: object
+  api.BulkActionResponse:
+    properties:
+      action:
+        type: string
+      failedIds:
+        items:
+          type: integer
+        type: array
+      message:
+        type: string
+    type: object
   api.BulkCreateRequest:
     properties:
       items:
@@ -2216,67 +2227,6 @@ paths:
       summary: Updates the expire date
       tags:
       - product
-  /api/v1/product/{id}/restore:
-    post:
-      consumes:
-      - application/json
-      description: Restores an archived product of a user
-      parameters:
-      - description: Product ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Restores a product
-      tags:
-      - product
-  /api/v1/product/bulkRestore:
-    post:
-      consumes:
-      - application/json
-      description: Restores a list of product of a user
-      parameters:
-      - description: Product IDs
-        in: body
-        name: productIDs
-        required: true
-        schema:
-          items:
-            type: integer
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Restores a list of product
-      tags:
-      - product
   /api/v1/products:
     get:
       description: Return a list of products of user
@@ -2516,6 +2466,39 @@ paths:
       summary: Get restock quantity suggestion
       tags:
       - product
+  /api/v1/products/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restores an archived product of a user
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Restores a product
+      tags:
+      - product
   /api/v1/products/{id}/waste:
     post:
       description: Hard-deletes a product and fires the product.wasted webhook event
@@ -2605,8 +2588,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Soft-deletes (archives) multiple products without firing product.wasted
-        webhook events
+      description: 'Soft-deletes (archives) multiple products without firing product.wasted
+        webhook events. Reports the ids that were not touched: 404 when none could
+        be consumed (unknown or foreign ids), 200 with the failed ids in failedIds
+        when only some fail, 500 (also carrying failedIds) when a failure was server-side.'
       parameters:
       - description: Product IDs
         in: body
@@ -2622,24 +2607,69 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.BulkActionResponse'
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.BulkActionResponse'
         "500":
           description: Internal Server Error
           schema:
+            $ref: '#/definitions/api.BulkActionResponse'
+      summary: Mark multiple products as consumed
+      tags:
+      - product
+  /api/v1/products/bulkRestore:
+    post:
+      consumes:
+      - application/json
+      description: 'Restores a list of product of a user. Reports the ids that were
+        not restored: 404 when none could be restored (unknown or foreign ids), 200
+        with the failed ids in failedIds when only some fail, 500 (also carrying failedIds)
+        when a failure was server-side.'
+      parameters:
+      - description: Product IDs
+        in: body
+        name: productIDs
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.BulkActionResponse'
+        "400":
+          description: Bad Request
+          schema:
             $ref: '#/definitions/api.APIResponse'
-      summary: Mark products as consumed
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.BulkActionResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.BulkActionResponse'
+      summary: Restores a list of product
       tags:
       - product
   /api/v1/products/bulkWaste:
     post:
       consumes:
       - application/json
-      description: Hard-deletes multiple products and fires the product.wasted webhook
-        event per product
+      description: 'Hard-deletes multiple products and fires the product.wasted webhook
+        per product. Reports the ids that were not touched: 404 when none could be
+        wasted (unknown or foreign ids), 200 with the failed ids in failedIds when
+        only some fail, 500 (also carrying failedIds) when a failure was server-side.'
       parameters:
       - description: Product IDs
         in: body
@@ -2655,16 +2685,20 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.BulkActionResponse'
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.BulkActionResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Mark products as wasted
+            $ref: '#/definitions/api.BulkActionResponse'
+      summary: Mark multiple products as wasted
       tags:
       - product
   /api/v1/products/cook:
@@ -3016,7 +3050,7 @@ paths:
     get:
       description: Returns a list of products based on a query
       parameters:
-      - description: Search field (product_name, barcode, category, storage_location)
+      - description: Search field (product_name, barcode)
         in: query
         name: queryParam
         required: true
@@ -3027,7 +3061,8 @@ paths:
         required: true
         type: string
       - default: product_name
-        description: Sort field
+        description: Sort field (product_name, expire_at, created_at, scanned_at,
+          notified_at, barcode)
         in: query
         name: sort
         type: string

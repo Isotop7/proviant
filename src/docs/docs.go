@@ -1658,55 +1658,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/product/bulkRestore": {
-            "post": {
-                "description": "Restores a list of product of a user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "product"
-                ],
-                "summary": "Restores a list of product",
-                "parameters": [
-                    {
-                        "description": "Product IDs",
-                        "name": "productIDs",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "integer"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/product/{id}": {
             "get": {
                 "description": "Returns a single product of user",
@@ -1918,50 +1869,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/product/{id}/restore": {
-            "post": {
-                "description": "Restores an archived product of a user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "product"
-                ],
-                "summary": "Restores a product",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Product ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/products": {
             "get": {
                 "description": "Return a list of products of user",
@@ -2124,7 +2031,7 @@ const docTemplate = `{
         },
         "/api/v1/products/bulkConsume": {
             "post": {
-                "description": "Soft-deletes (archives) multiple products without firing product.wasted webhook events",
+                "description": "Soft-deletes (archives) multiple products without firing product.wasted webhook events. Reports the ids that were not touched: 404 when none could be consumed (unknown or foreign ids), 200 with the failed ids in failedIds when only some fail, 500 (also carrying failedIds) when a failure was server-side.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2134,7 +2041,7 @@ const docTemplate = `{
                 "tags": [
                     "product"
                 ],
-                "summary": "Mark products as consumed",
+                "summary": "Mark multiple products as consumed",
                 "parameters": [
                     {
                         "description": "Product IDs",
@@ -2153,7 +2060,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.BulkActionResponse"
                         }
                     },
                     "400": {
@@ -2162,10 +2069,71 @@ const docTemplate = `{
                             "$ref": "#/definitions/api.APIResponse"
                         }
                     },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.BulkActionResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
+                            "$ref": "#/definitions/api.BulkActionResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/bulkRestore": {
+            "post": {
+                "description": "Restores a list of product of a user. Reports the ids that were not restored: 404 when none could be restored (unknown or foreign ids), 200 with the failed ids in failedIds when only some fail, 500 (also carrying failedIds) when a failure was server-side.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Restores a list of product",
+                "parameters": [
+                    {
+                        "description": "Product IDs",
+                        "name": "productIDs",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.BulkActionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
                             "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.BulkActionResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.BulkActionResponse"
                         }
                     }
                 }
@@ -2173,7 +2141,7 @@ const docTemplate = `{
         },
         "/api/v1/products/bulkWaste": {
             "post": {
-                "description": "Hard-deletes multiple products and fires the product.wasted webhook event per product",
+                "description": "Hard-deletes multiple products and fires the product.wasted webhook per product. Reports the ids that were not touched: 404 when none could be wasted (unknown or foreign ids), 200 with the failed ids in failedIds when only some fail, 500 (also carrying failedIds) when a failure was server-side.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2183,7 +2151,7 @@ const docTemplate = `{
                 "tags": [
                     "product"
                 ],
-                "summary": "Mark products as wasted",
+                "summary": "Mark multiple products as wasted",
                 "parameters": [
                     {
                         "description": "Product IDs",
@@ -2202,7 +2170,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.BulkActionResponse"
                         }
                     },
                     "400": {
@@ -2211,10 +2179,16 @@ const docTemplate = `{
                             "$ref": "#/definitions/api.APIResponse"
                         }
                     },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.BulkActionResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.BulkActionResponse"
                         }
                     }
                 }
@@ -2739,7 +2713,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Search field (product_name, barcode, category, storage_location)",
+                        "description": "Search field (product_name, barcode)",
                         "name": "queryParam",
                         "in": "query",
                         "required": true
@@ -2754,7 +2728,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "default": "product_name",
-                        "description": "Sort field",
+                        "description": "Sort field (product_name, expire_at, created_at, scanned_at, notified_at, barcode)",
                         "name": "sort",
                         "in": "query"
                     },
@@ -3096,6 +3070,56 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.RestockSuggestionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/{id}/restore": {
+            "post": {
+                "description": "Restores an archived product of a user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Restores a product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
                         }
                     },
                     "400": {
@@ -4526,6 +4550,23 @@ const docTemplate = `{
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.BulkActionResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "failedIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "message": {
+                    "type": "string"
                 }
             }
         },

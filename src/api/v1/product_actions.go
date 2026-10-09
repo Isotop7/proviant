@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/errors"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -33,7 +34,9 @@ func ConsumeProduct(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	if err := appCtx.Products.ConsumeProduct(productID, appCtx.UserID); err != nil {
-		if err == gorm.ErrRecordNotFound {
+		// A foreign id is as not-found as a missing one; only real server
+		// faults belong in the 500 branch.
+		if err == gorm.ErrRecordNotFound || err == errors.ErrMismatcherUserID {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: MsgProductNotFound})
 			return
 		}
@@ -63,7 +66,7 @@ func WasteProduct(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	if err := appCtx.Products.WasteProduct(productID, appCtx.UserID); err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == gorm.ErrRecordNotFound || err == errors.ErrMismatcherUserID {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: MsgProductNotFound})
 			return
 		}

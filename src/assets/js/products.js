@@ -490,7 +490,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // Intercept success feedback to show inline success step
     if (typeof proviant !== 'undefined' && typeof proviant.showFeedback === 'function') {
         const _origFeedback = proviant.showFeedback.bind(proviant);
-        proviant.showFeedback = function (type, title, msg) {
+        // Forward onClose: callers (bulkAction's failure paths, import's
+        // reload) rely on it running when the toast is dismissed — dropping
+        // the 4th arg here would leave a stale selection behind on every
+        // failed bulk action.
+        proviant.showFeedback = function (type, title, msg, onClose) {
             if (type === 'success' && modalIsOpen) {
                 const nameEl = document.getElementById('productInfoName');
                 const successNameEl = document.getElementById('modalSuccessName');
@@ -500,7 +504,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 showModalStep('success');
                 return;
             }
-            _origFeedback(type, title, msg);
+            _origFeedback(type, title, msg, onClose);
         };
     }
 });

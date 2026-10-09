@@ -14,7 +14,7 @@ import (
 
 func newTestConsumptionService(db *gorm.DB) *ConsumptionService {
 	logger := zerolog.Nop()
-	repos := database.NewRepositoryContainer(db)
+	repos := database.NewRepositoryContainer(db, nil)
 	return NewConsumptionService(repos, &logger)
 }
 

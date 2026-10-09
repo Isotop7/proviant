@@ -330,7 +330,7 @@ func buildExportStats(ctx *gin.Context, repos *database.RepositoryContainer, use
 
 	uniqueArchived, err := repos.Products.GetUniqueArchivedProductsCount(userID)
 	if err != nil {
-		logger.Error().Msgf("GetUniqueArchivedProductsCount: %s", err)
+		logger.Error().Msgf(errors.FmtErrGetUniqueArchivedCount, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingUniqueArchivedCount})
 		return apiModel.ProductStatsResponse{}, false
 	}

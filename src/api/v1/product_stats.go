@@ -157,7 +157,7 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 
 	uniqueArchived, err := appCtx.Repos.Products.GetUniqueArchivedProductsCount(appCtx.UserID)
 	if err != nil {
-		appCtx.Logger.Error().Msgf("GetUniqueArchivedProductsCount: %s", err)
+		appCtx.Logger.Error().Msgf(errors.FmtErrGetUniqueArchivedCount, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingUniqueArchivedCount})
 		return
 	}

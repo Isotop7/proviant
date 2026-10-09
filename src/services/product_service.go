@@ -45,11 +45,44 @@ func (s *ProductService) recordActivityLog(userID uint, householdID uint, action
 	if householdID == 0 {
 		return
 	}
-	userName := ""
-	if user, err := s.repos.Users.GetUserByID(userID); err == nil {
-		userName = user.DisplayName
+	go func() {
+		entry := s.activityLogEntry(userID, householdID, action, s.activityLogUserName(userID), productID, productName, quantity)
+		s.createActivityLog(entry)
+	}()
+}
+
+// recordActivityLogs writes the activity entries of a bulk action behind a
+// single worker goroutine that inserts sequentially: one entry per restored
+// row must not fan out one goroutine (and one user lookup) per row the way the
+// single-product path does. Everything, including the user lookup, runs off
+// the request path.
+func (s *ProductService) recordActivityLogs(userID uint, householdID uint, action string, products []dbModel.Product) {
+	if householdID == 0 || len(products) == 0 {
+		return
 	}
-	logEntry := &dbModel.ActivityLog{
+	go func() {
+		userName := s.activityLogUserName(userID)
+		for i := range products {
+			s.createActivityLog(s.activityLogEntry(userID, householdID, action, userName, products[i].ID, products[i].ProductName, 1))
+		}
+	}()
+}
+
+// activityLogUserName resolves the actor's display name for an activity entry.
+func (s *ProductService) activityLogUserName(userID uint) string {
+	if user, err := s.repos.Users.GetUserByID(userID); err == nil {
+		return user.DisplayName
+	}
+	return ""
+}
+
+// activityLogEntry builds one entry; userName is resolved once per batch by
+// the caller via activityLogUserName.
+func (s *ProductService) activityLogEntry(
+	userID uint, householdID uint, action string, userName string,
+	productID uint, productName string, quantity int,
+) *dbModel.ActivityLog {
+	return &dbModel.ActivityLog{
 		HouseholdID: householdID,
 		UserID:      &userID,
 		UserName:    userName,
@@ -59,16 +92,20 @@ func (s *ProductService) recordActivityLog(userID uint, householdID uint, action
 		Quantity:    quantity,
 		Timestamp:   time.Now(),
 	}
-	go func() {
-		if s.repos.ActivityLogs == nil {
-			return
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := s.repos.ActivityLogs.Create(ctx, logEntry); err != nil {
-			s.logger.Error().Msgf("recordActivityLog: %s", err)
-		}
-	}()
+}
+
+// createActivityLog inserts the entry with a bounded timeout. Callers run it
+// either in its own goroutine (single product) or sequentially in a bulk
+// worker.
+func (s *ProductService) createActivityLog(entry *dbModel.ActivityLog) {
+	if s.repos.ActivityLogs == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := s.repos.ActivityLogs.Create(ctx, entry); err != nil {
+		s.logger.Error().Msgf("recordActivityLog: %s", err)
+	}
 }
 
 func (s *ProductService) ConsumeProduct(productID, userID uint) error {
@@ -120,22 +157,39 @@ func (s *ProductService) WasteProduct(productID, userID uint) error {
 	return nil
 }
 
-func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) error {
+// bulkClientMiss reports whether a bulk-operation failure is the caller's
+// problem (unknown, foreign or malformed id) rather than a server fault, so
+// the handler can answer 4xx-with-failedIds instead of a blanket 500. Body
+// ids never pass through parseUintPathParam, so id 0 reaches the
+// repositories and surfaces as gorm.ErrNotImplemented — a bad request, not
+// an outage.
+func bulkClientMiss(err error) bool {
+	return err == gorm.ErrRecordNotFound ||
+		err == errors.ErrMismatcherUserID ||
+		err == errors.ErrInvalidUserData ||
+		err == gorm.ErrNotImplemented
+}
+
+// BulkConsumeProducts archives productIDs and reports which ones were not
+// touched. Mirrors BulkRestoreProducts: the failed list carries the ids the
+// caller can fix, the error is non-nil only for a server-side failure, so the
+// handler never reports success for a request that did not land.
+func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) ([]uint, error) {
 	householdID, _ := s.repos.Users.GetUserHouseholdByID(userID)
 
+	failed := make([]uint, 0)
+	var serverErr error
 	for _, productID := range productIDs {
 		product, err := s.repos.Products.GetProductByID(productID, userID)
 		if err != nil {
-			s.logger.Warn().Msgf("BulkConsumeProducts: product %d not found", productID)
+			failed = append(failed, productID)
+			s.logBulkFailure("BulkConsumeProducts", productID, err, &serverErr)
 			continue
 		}
 
 		if consumeErr := s.repos.Products.ConsumeProduct(productID, userID); consumeErr != nil {
-			if consumeErr == gorm.ErrRecordNotFound {
-				s.logger.Warn().Msgf("BulkConsumeProducts: product %d not found", productID)
-			} else {
-				s.logger.Error().Msgf("BulkConsumeProducts: %s", consumeErr)
-			}
+			failed = append(failed, productID)
+			s.logBulkFailure("BulkConsumeProducts", productID, consumeErr, &serverErr)
 			continue
 		}
 
@@ -144,25 +198,27 @@ func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) err
 			go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, 1)
 		}
 	}
-	return nil
+	return failed, serverErr
 }
 
-func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) error {
+// BulkWasteProducts hard-deletes productIDs and reports which ones were not
+// touched. Same contract as BulkConsumeProducts.
+func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) ([]uint, error) {
 	householdID, householdErr := s.repos.Users.GetUserHouseholdByID(userID)
 
+	failed := make([]uint, 0)
+	var serverErr error
 	for _, productID := range productIDs {
 		product, err := s.repos.Products.GetProductByID(productID, userID)
 		if err != nil {
-			s.logger.Warn().Msgf("BulkWasteProducts: product %d not found", productID)
+			failed = append(failed, productID)
+			s.logBulkFailure("BulkWasteProducts", productID, err, &serverErr)
 			continue
 		}
 
 		if wasteErr := s.repos.Products.WasteProduct(productID, userID); wasteErr != nil {
-			if wasteErr == gorm.ErrRecordNotFound {
-				s.logger.Warn().Msgf("BulkWasteProducts: product %d not found", productID)
-			} else {
-				s.logger.Error().Msgf("BulkWasteProducts: %s", wasteErr)
-			}
+			failed = append(failed, productID)
+			s.logBulkFailure("BulkWasteProducts", productID, wasteErr, &serverErr)
 			continue
 		}
 
@@ -183,7 +239,21 @@ func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) error
 
 		go s.recordSavingsEvent(userID, &product, "wasted")
 	}
-	return nil
+	return failed, serverErr
+}
+
+// logBulkFailure records one per-id bulk failure at the right level (client
+// misses are Warn so the Error stream keeps its meaning) and remembers the
+// first server-side cause for the caller's 5xx decision.
+func (s *ProductService) logBulkFailure(op string, productID uint, err error, serverErr *error) {
+	if bulkClientMiss(err) {
+		s.logger.Warn().Msgf("%s: product %d rejected (bad or foreign id): %s", op, productID, err)
+		return
+	}
+	s.logger.Error().Msgf("%s: product %d: %s", op, productID, err)
+	if *serverErr == nil {
+		*serverErr = err
+	}
 }
 
 // CookProducts consumes the given products, partially or fully. errs carries
@@ -310,20 +380,74 @@ func (s *ProductService) RestoreProduct(productID, userID uint) error {
 	return nil
 }
 
-func (s *ProductService) BulkRestoreProducts(productIDs []uint, userID uint) error {
+// BulkRestoreProducts restores productIDs and reports which ones were not
+// restored. The returned error is non-nil only when a failure was server-side
+// (so the caller can surface a 500); unknown or foreign ids come back in the
+// failed list instead, which keeps the client from being told "restored" for
+// ids that were not.
+func (s *ProductService) BulkRestoreProducts(productIDs []uint, userID uint) ([]uint, error) {
 	householdID, _ := s.repos.Users.GetUserHouseholdByID(userID)
 	errs := s.repos.Products.BulkRestoreProducts(productIDs, userID)
-	for idx, err := range errs {
-		s.logger.Error().Msg(err.Error())
-		if idx < len(productIDs) {
-			productID := productIDs[idx]
-			product, err := s.repos.Products.GetArchivedProductByID(productID, userID)
-			if err == nil && householdID > 0 {
-				go s.recordActivityLog(userID, householdID, dbModel.ActivityActionRestore, productID, product.ProductName, 1)
-			}
+	// The error list is sparse: one entry per *failed* id, not per requested
+	// id. Indexing productIDs by the error position logged restore activity
+	// against the wrong products (and against failures), so track the failed
+	// ids explicitly and derive the restored ones below.
+	failed := make([]uint, 0, len(errs))
+	failedSet := make(map[uint]bool, len(errs))
+	var serverErr error
+	for i := range errs {
+		cause := errs[i].Err()
+		// An id the caller can fix (unknown, foreign, malformed) is not a
+		// server fault: warn, so the Error stream keeps its meaning.
+		clientMiss := bulkClientMiss(cause)
+		if clientMiss {
+			s.logger.Warn().Msg(errs[i].Error())
+		} else {
+			s.logger.Error().Msg(errs[i].Error())
+		}
+		failed = append(failed, errs[i].ProductID())
+		failedSet[errs[i].ProductID()] = true
+		if cause != nil && !clientMiss && serverErr == nil {
+			serverErr = cause
 		}
 	}
-	return nil
+	// The ids that landed, deduplicated so a repeat is counted (and
+	// messaged) once. Note the shared lookup is Unscoped — it also serves
+	// DeleteProduct on active rows — so a repeated id succeeds again
+	// instead of failing here.
+	restored := make([]uint, 0, len(productIDs))
+	seen := make(map[uint]bool, len(productIDs))
+	for _, productID := range productIDs {
+		if seen[productID] || failedSet[productID] {
+			continue
+		}
+		seen[productID] = true
+		restored = append(restored, productID)
+	}
+	if len(restored) == 0 {
+		return failed, serverErr
+	}
+	// One batch read instead of a per-id re-read: the old loop cost two
+	// queries per restored row on the request path plus one goroutine each.
+	// It also confirms the rows really are active again before they are
+	// logged as restored.
+	products, err := s.repos.Products.GetUserProductsByIDs(userID, restored)
+	if err != nil {
+		// The restores may well have landed, but nothing was verified and no
+		// activity was logged: a server-side read fault must surface as a
+		// 500 instead of reporting an unconfirmed success.
+		s.logger.Error().Msgf("BulkRestoreProducts: failed to verify %d restored products: %s", len(restored), err)
+		if serverErr == nil {
+			serverErr = err
+		}
+		return failed, serverErr
+	}
+	if len(products) != len(restored) {
+		s.logger.Warn().Msgf("BulkRestoreProducts: verified %d of %d restored products for the activity log",
+			len(products), len(restored))
+	}
+	s.recordActivityLogs(userID, householdID, dbModel.ActivityActionRestore, products)
+	return failed, serverErr
 }
 
 func (s *ProductService) DeleteProduct(productID, userID uint, archiveOnly bool) error {

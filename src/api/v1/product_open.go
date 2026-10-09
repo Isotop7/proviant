@@ -82,17 +82,13 @@ func OpenProduct(ctx *gin.Context, appCtx *AppContext) {
 	switch err {
 	case nil:
 		// fall through
-	case gorm.ErrRecordNotFound:
-		appCtx.Logger.Warn().Msgf(apperrors.FormatProductNotFound, productID)
+	case gorm.ErrRecordNotFound, apperrors.ErrMismatcherUserID:
+		// One body for unknown and foreign ids alike: distinct messages
+		// would let a caller probe which sequential ids exist in other
+		// households.
+		appCtx.Logger.Warn().Msgf("Product with ID '%d' not accessible: %s", productID, err)
 		ctx.JSON(http.StatusNotFound, api.APIResponse{
 			Message: fmt.Sprintf(apperrors.FormatProductWithIDNotFound, productID),
-			Action:  MsgCheckProductIdTryAgain,
-		})
-		return
-	case apperrors.ErrMismatcherUserID:
-		appCtx.Logger.Warn().Msgf("Product with ID '%d' for user was not found in database: %s", productID, err)
-		ctx.JSON(http.StatusNotFound, api.APIResponse{
-			Message: fmt.Sprintf(FmtProductNotFoundOrNoAccess, productID),
 			Action:  MsgCheckProductIdTryAgain,
 		})
 		return

@@ -30,7 +30,7 @@ func TestGetAuditLogsScoping(t *testing.T) {
 	userA := testutil.CreateTestUser(db, householdA.ID)
 	userB := testutil.CreateTestUser(db, householdB.ID)
 
-	repos := database.NewRepositoryContainer(db)
+	repos := database.NewRepositoryContainer(db, nil)
 	entryTime := time.Date(2026, time.June, 1, 10, 0, 0, 0, time.UTC)
 	for _, userID := range []uint{userA.ID, userB.ID} {
 		id := userID
@@ -82,4 +82,26 @@ func TestGetAuditLogsScoping(t *testing.T) {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusInternalServerError)
 		}
 	})
+}
+
+// TestGetAuditLogsRejectsMalformedDate keeps a bad ?date= at 400: the
+// repository's time.Parse failure is client input, not a server fault.
+func TestGetAuditLogsRejectsMalformedDate(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := testutil.SetupTestDB(t)
+
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+	repos := database.NewRepositoryContainer(db, nil)
+	logger := zerolog.Nop()
+
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/admin/audit-log?date=not-a-date", nil)
+	ctx.Set(util.ContextKeyHouseholdID, household.ID)
+
+	GetAuditLogs(ctx, &AppContext{Logger: &logger, DB: db, Repos: repos, UserID: user.ID})
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Status = %v, want %v; body: %s", w.Code, http.StatusBadRequest, w.Body.String())
+	}
 }

@@ -6,8 +6,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -17,6 +19,7 @@ import (
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 )
 
 func candidateRows(n int) []dbModel.Product {
@@ -190,6 +193,13 @@ func TestProductsHandlerPagesTheList(t *testing.T) {
 			t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
 		}
 	})
+
+	t.Run("a malformed locationId is rejected", func(t *testing.T) {
+		w := render("/web/products?locationId=not-a-number")
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+		}
+	})
 }
 
 // TestProductsHandlerOmitsPagerOnASinglePage keeps the pager out of the way
@@ -234,9 +244,170 @@ func productNameFor(i int) string {
 	return fmt.Sprintf("Product %03d", i)
 }
 
+// TestProductsHandlerSortsLocationFilterByExpiry pins the ordering of a
+// location-filtered list: that branch returns id order, so the handler must
+// sort it by effective expiry. Raw search params alongside the filter no
+// longer reach this branch at all — they run the search (see
+// TestProductsHandlerNarrowsSearchByLocation) — so this test drives the
+// filter alone.
+func TestProductsHandlerSortsLocationFilterByExpiry(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+	location := testutil.CreateTestStorageLocation(db, household.ID)
+
+	// Create in id order that is the *reverse* of expiry order: the first
+	// product created must expire last.
+	late := testutil.CreateTestProduct(db, household.ID, user.ID)
+	late.ProductName = "Loc Expiry Late"
+	late.ExpireAt = time.Now().Add(72 * time.Hour)
+	late.StorageLocationID = &location.ID
+	if err := db.Save(late).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	early := testutil.CreateTestProduct(db, household.ID, user.ID)
+	early.ProductName = "Loc Expiry Early"
+	early.ExpireAt = time.Now().Add(1 * time.Hour)
+	early.StorageLocationID = &location.ID
+	if err := db.Save(early).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+	frontend := &Frontend{TemplateCache: cache}
+
+	target := fmt.Sprintf("/web/products?locationId=%d", location.ID)
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, target, nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+	frontend.Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	earlyIdx := strings.Index(body, early.ProductName)
+	lateIdx := strings.Index(body, late.ProductName)
+	if earlyIdx < 0 || lateIdx < 0 {
+		t.Fatalf("rendered body missing one of the location products: early=%d late=%d", earlyIdx, lateIdx)
+	}
+	if earlyIdx > lateIdx {
+		t.Errorf("list is in id order, not expiry order: %q (id %d) rendered before %q (id %d)",
+			late.ProductName, late.ID, early.ProductName, early.ID)
+	}
+}
+
+// TestProductsHandlerNarrowsSearchByLocation pins that a search is narrowed
+// by the location filter instead of shadowed by it: performSearch keeps
+// locationId and the location links keep the query params, so both arrive
+// together and the result must satisfy both predicates — the name match and
+// the location — with nothing leaking in from other locations.
+func TestProductsHandlerNarrowsSearchByLocation(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+	pantry := testutil.CreateTestStorageLocation(db, household.ID)
+	freezer := testutil.CreateTestStorageLocation(db, household.ID)
+
+	pantryApple := testutil.CreateTestProduct(db, household.ID, user.ID)
+	pantryApple.ProductName = "Apple Pantry"
+	pantryApple.ExpireAt = time.Now().Add(48 * time.Hour)
+	pantryApple.StorageLocationID = &pantry.ID
+	if err := db.Save(pantryApple).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	freezerApple := testutil.CreateTestProduct(db, household.ID, user.ID)
+	freezerApple.ProductName = "Apple Freezer"
+	freezerApple.ExpireAt = time.Now().Add(48 * time.Hour)
+	freezerApple.StorageLocationID = &freezer.ID
+	if err := db.Save(freezerApple).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	bread := testutil.CreateTestProduct(db, household.ID, user.ID)
+	bread.ProductName = "Bread Pantry"
+	bread.ExpireAt = time.Now().Add(48 * time.Hour)
+	bread.StorageLocationID = &pantry.ID
+	if err := db.Save(bread).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+	frontend := &Frontend{TemplateCache: cache}
+
+	target := fmt.Sprintf("/web/products?locationId=%d&queryParam=product_name&queryValue=Apple", pantry.ID)
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, target, nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+	frontend.Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, pantryApple.ProductName) {
+		t.Errorf("search inside the location filter dropped the matching product %q", pantryApple.ProductName)
+	}
+	if strings.Contains(body, freezerApple.ProductName) {
+		t.Errorf("product %q from another location leaked into the location-filtered search", freezerApple.ProductName)
+	}
+	if strings.Contains(body, bread.ProductName) {
+		t.Errorf("non-matching product %q survived the search", bread.ProductName)
+	}
+}
+
+// TestRenderProductsFetchErrorStatusCodes keeps server faults at 500 so
+// monitoring sees them; only known client-side causes are 400.
+func TestRenderProductsFetchErrorStatusCodes(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+	frontend := &Frontend{TemplateCache: cache}
+	logger := zerolog.Nop()
+
+	for _, tc := range []struct {
+		name string
+		err  error
+		want int
+	}{
+		{"invalid search query is 400", errors.ErrProductSearchInvalidQuery, http.StatusBadRequest},
+		{"invalid sort is 400", errors.ErrDatabaseInvalidSortParameter, http.StatusBadRequest},
+		{"invalid query parameter is 400", errors.ErrInvalidQueryParameter, http.StatusBadRequest},
+		{"invalid user data is 400", errors.ErrInvalidUserData, http.StatusBadRequest},
+		{"unknown DB failure is 500", fmt.Errorf("database is locked"), http.StatusInternalServerError},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, w := repomocks.SetupGinContextWithDB(nil)
+			if handled := renderProductsFetchError(ctx, frontend, &logger, tc.err); !handled {
+				t.Fatalf("renderProductsFetchError(%v) handled = false, want true", tc.err)
+			}
+			if w.Code != tc.want {
+				t.Errorf("status = %d, want %d", w.Code, tc.want)
+			}
+		})
+	}
+}
+
 func TestHydrateProductsPage(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repos := database.NewRepositoryContainer(db)
+	repos := database.NewRepositoryContainer(db, nil)
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 
