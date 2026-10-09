@@ -57,7 +57,7 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 	// flaky "TempDir RemoveAll cleanup: directory not empty" failures.
 	t.Cleanup(func() {
 		if sqlDB, closeErr := db.DB(); closeErr == nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 	})
 
