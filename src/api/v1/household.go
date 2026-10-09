@@ -15,6 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
 const (
@@ -364,8 +365,15 @@ func GetHouseholdActivity(ctx *gin.Context, appCtx *AppContext) {
 
 	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Unknown caller is a client error; siblings answer the same way.
+			appCtx.Logger.Warn().Msgf("GetHouseholdActivity: unknown user: %s", err)
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserID)
+			return
+		}
+		// A lookup failure is a server-side problem, not a bad caller.
 		appCtx.Logger.Error().Msgf("GetHouseholdActivity: failed to get user: %s", err)
-		api.RespondError(ctx, http.StatusInternalServerError, err)
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		return
 	}
 

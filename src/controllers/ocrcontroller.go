@@ -162,24 +162,36 @@ func (c *OCRControllerImpl) extractDateCandidates(text string) []dateCandidate {
 	keywordRe := regexp.MustCompile(`(?i)(Mindesthaltbarkeit|Verbrauch[_\s]?bis|Haltbar[_\s]?bis|Mindestens[_\s]?haltbar[_\s]?bis|Zu[_\s]?verbrauchen[_\s]?bis|Gültig[_\s]?bis|Best[_\s]?before|Expiry|Use[_\s]?by|Mindestens|Haltbar|Verbrauchen|Mindesthaltbar)`)
 	hasKeyword := keywordRe.MatchString(text)
 
+	// assembleDateString always normalises to YYYY-MM-DD, so every pattern is
+	// parsed with the ISO layout. Parsing with the source layout ("02.01.2006"
+	// etc.) can never match the normalised string, which silently yielded zero
+	// candidates for every date.
 	patterns := []struct {
-		regex    *regexp.Regexp
-		layout   string
-		dayFirst bool
+		regex *regexp.Regexp
+		// reorder turns the regex capture groups into day, month, year. Nil
+		// means the groups already arrive in that order.
+		reorder func([]string) []string
 	}{
-		{regexp.MustCompile(`(\d{1,2})\.(\d{1,2})\.(\d{2,4})`), "02.01.2006", true},
-		{regexp.MustCompile(`(\d{1,2})/(\d{1,2})/(\d{2,4})`), "02/01/2006", true},
-		{regexp.MustCompile(`(\d{4})-(\d{2})-(\d{2})`), util.DefaultDateFormatParseStr, false},
+		{regexp.MustCompile(`(\d{1,2})\.(\d{1,2})\.(\d{2,4})`), nil},
+		{regexp.MustCompile(`(\d{1,2})/(\d{1,2})/(\d{2,4})`), nil},
+		{regexp.MustCompile(`(\d{4})-(\d{2})-(\d{2})`), func(groups []string) []string {
+			return []string{groups[2], groups[1], groups[0]}
+		}},
 	}
 
 	for _, p := range patterns {
 		for _, m := range p.regex.FindAllStringSubmatch(text, -1) {
 			raw := m[0]
-			t, err := time.Parse(p.layout, c.assembleDateString(m[1:], p.dayFirst))
+			groups := m[1:]
+			if p.reorder != nil {
+				groups = p.reorder(groups)
+			}
+			// Day-first normalisation covers all three patterns after reorder.
+			t, err := time.Parse(util.DefaultDateFormatParseStr, c.assembleDateString(groups, true))
 			if err != nil || !isDateInRange(t, now) {
 				continue
 			}
-			conf := c.scoreDateCandidate(hasKeyword, keywordRe, text, raw, p.dayFirst, len(m[len(m)-1]))
+			conf := c.scoreDateCandidate(hasKeyword, keywordRe, text, raw, true, len(groups[2]))
 			candidates = append(candidates, dateCandidate{date: t, raw: raw, confidence: conf})
 		}
 	}

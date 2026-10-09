@@ -3,6 +3,7 @@ package testutil
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	"codeberg.org/isotop7/proviant/models/authentication"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -57,13 +58,39 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 	// Services fire activity log / savings event writes from background
 	// goroutines that can outlive the test. Close the pool before
 	// t.TempDir() cleanup removes the directory (cleanups run LIFO, and
-	// TempDir registered first): Close waits for in-flight queries, and
-	// later goroutine writes fail with ErrPoolClosed instead of recreating
-	// WAL files inside a directory that is being deleted — the source of
-	// flaky "TempDir RemoveAll cleanup: directory not empty" failures.
+	// TempDir registered first): later goroutine writes fail with
+	// ErrPoolClosed instead of recreating WAL files inside a directory
+	// that is being deleted.
+	//
+	// Close does not wait for a query already executing on a busy
+	// connection: that connection can recreate test.db-wal/-shm by path
+	// after Close returns and while TempDir's RemoveAll runs, which is the
+	// source of flaky "TempDir RemoveAll cleanup: directory not empty"
+	// failures. Drain in-use connections (the busy timeout is 5000ms) and
+	// leave a small grace for the driver to finish closing the file.
+	//
+	// honey: worst-case 5.1s per test when a goroutine pins a connection;
+	// revisit (e.g. track background writes with a WaitGroup) if the suite
+	// ever grows noticeably slower.
 	t.Cleanup(func() {
-		if sqlDB, closeErr := db.DB(); closeErr == nil {
-			_ = sqlDB.Close()
+		sqlDB, closeErr := db.DB()
+		if closeErr != nil {
+			return
+		}
+		_ = sqlDB.Close()
+		deadline := time.Now().Add(5100 * time.Millisecond)
+		drained := false
+		for sqlDB.Stats().InUse > 0 {
+			drained = true
+			if time.Now().After(deadline) {
+				t.Logf("SetupTestDB cleanup: %d connection(s) still in use after 5.1s; TempDir RemoveAll may race with a late WAL write", sqlDB.Stats().InUse)
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		if drained {
+			// Small grace for the driver to finish closing the file.
+			time.Sleep(5 * time.Millisecond)
 		}
 	})
 

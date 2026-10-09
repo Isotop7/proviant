@@ -3,6 +3,8 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"time"
 
 	"codeberg.org/isotop7/proviant/models/database"
 	"github.com/SherClockHolmes/webpush-go"
@@ -64,12 +66,13 @@ func (p *WebPushNotificationProvider) SendNotification(product *database.Product
 		return fmt.Errorf("invalid subscription JSON: %w", unmarshalErr)
 	}
 
-	days := formatWebPushExpiryDays(product.ExpireAt)
 	msg := webPushMessage{
 		Title: fmt.Sprintf("⚠️ %s", product.ProductName),
-		Body:  fmt.Sprintf("expires in %s", days),
-		Tag:   "proviant-notification",
-		URL:   "/web/products",
+		// EffectiveExpireAt, not ExpireAt: an opened product may carry no
+		// printed expiry and expire relative to opened_at instead.
+		Body: formatWebPushExpiryDays(product.EffectiveExpireAt()),
+		Tag:  "proviant-notification",
+		URL:  "/web/products",
 	}
 
 	payload, payloadErr := json.Marshal(msg)
@@ -94,11 +97,33 @@ func (p *WebPushNotificationProvider) SendNotification(product *database.Product
 	return nil
 }
 
+// formatWebPushExpiryDays renders the expiry phrase used as the push body.
+// A time.Time is formatted relative to now ("expires in N days", "expires
+// tomorrow", "expires today", "expired"); strings pass through unchanged and
+// unsupported inputs fall back to a vague phrase.
 func formatWebPushExpiryDays(expireAt any) string {
 	switch v := expireAt.(type) {
 	case string:
 		return v
+	case time.Time:
+		if v.IsZero() {
+			return "expires soon"
+		}
+		remaining := time.Until(v)
+		if remaining < 0 {
+			return "expired"
+		}
+		// Round, not floor: a product 71.99h out should still read "3 days".
+		days := int(math.Round(remaining.Hours() / 24))
+		switch days {
+		case 0:
+			return "expires today"
+		case 1:
+			return "expires tomorrow"
+		default:
+			return fmt.Sprintf("expires in %d days", days)
+		}
 	default:
-		return "soon"
+		return "expires soon"
 	}
 }
