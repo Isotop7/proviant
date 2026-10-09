@@ -185,6 +185,52 @@ import "codeberg.org/isotop7/proviant/assets"
 var AssetFiles embed.FS
 ```
 
+# audit
+
+```go
+import "codeberg.org/isotop7/proviant/audit"
+```
+
+Package audit extracts plain audit\-log values from a gin.Context while the request handler is still running. goroutines spawned after the handler returned must not touch gin.Context \(unsafe for post\-handler use\) — pass Values instead.
+
+## Index
+
+- [type Values](<#Values>)
+  - [func FromGin\(ctx \*gin.Context\) Values](<#FromGin>)
+  - [func \(v Values\) Log\(userID uint, action string, details any\)](<#Values.Log>)
+
+
+<a name="Values"></a>
+## type [Values](<https://github.com/Isotop7/proviant/blob/develop/src/audit/audit.go#L20-L24>)
+
+Values holds plain copies of everything an audit log entry needs.
+
+```go
+type Values struct {
+    Repos     *database.RepositoryContainer
+    IPAddress string
+    RequestID string
+}
+```
+
+<a name="FromGin"></a>
+### func [FromGin](<https://github.com/Isotop7/proviant/blob/develop/src/audit/audit.go#L30>)
+
+```go
+func FromGin(ctx *gin.Context) Values
+```
+
+FromGin extracts Values synchronously from the request context. Call it only while the handler runs — before spawning goroutines. In a \`go\` statement the arguments \(including the FromGin call\) are evaluated in the calling goroutine, so \`go recordX\(audit.FromGin\(ctx\), ...\)\` is safe.
+
+<a name="Values.Log"></a>
+### func \(Values\) [Log](<https://github.com/Isotop7/proviant/blob/develop/src/audit/audit.go#L47>)
+
+```go
+func (v Values) Log(userID uint, action string, details any)
+```
+
+Log writes one audit log entry. Details is JSON\-marshalled \(must be a JSON\-serialisable value\). No\-op when repos are unavailable.
+
 # controllers
 
 ```go
@@ -610,7 +656,7 @@ func (nc *NotificationController) Dispatch()
 Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them. The timeout can be configured with the Configuration struct of NotificationController
 
 <a name="NotificationController.DispatchInvitations"></a>
-### func \(\*NotificationController\) [DispatchInvitations](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L375>)
+### func \(\*NotificationController\) [DispatchInvitations](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L376>)
 
 ```go
 func (nc *NotificationController) DispatchInvitations(baseURL string)
@@ -619,7 +665,7 @@ func (nc *NotificationController) DispatchInvitations(baseURL string)
 DispatchInvitations starts a background goroutine that periodically retries sending pending invitation emails. It runs once immediately on startup, then every Interval hours \(reusing the same config as product notifications\).
 
 <a name="NotificationController.DispatchMonthlyWasteReports"></a>
-### func \(\*NotificationController\) [DispatchMonthlyWasteReports](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L491>)
+### func \(\*NotificationController\) [DispatchMonthlyWasteReports](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L492>)
 
 ```go
 func (nc *NotificationController) DispatchMonthlyWasteReports()
@@ -628,7 +674,7 @@ func (nc *NotificationController) DispatchMonthlyWasteReports()
 DispatchMonthlyWasteReports starts a goroutine that sends household waste reports on the configured day/hour \(UTC\) of each month to opted\-in members via all enabled providers.
 
 <a name="NotificationController.DispatchStreakUpdates"></a>
-### func \(\*NotificationController\) [DispatchStreakUpdates](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L564>)
+### func \(\*NotificationController\) [DispatchStreakUpdates](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L565>)
 
 ```go
 func (nc *NotificationController) DispatchStreakUpdates()
@@ -646,7 +692,7 @@ func (nc *NotificationController) GetUserTelegramBotUsername(userID uint) string
 GetUserTelegramBotUsername returns the bot username resolved at poller start for a user.
 
 <a name="NotificationController.SendEmailVerification"></a>
-### func \(\*NotificationController\) [SendEmailVerification](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L456>)
+### func \(\*NotificationController\) [SendEmailVerification](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L457>)
 
 ```go
 func (nc *NotificationController) SendEmailVerification(email, username, token, baseURL string, expiresAt time.Time) error
@@ -655,7 +701,7 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 SendEmailVerification sends a verification email directly to the user with a verification token.
 
 <a name="NotificationController.SendInvitationEmail"></a>
-### func \(\*NotificationController\) [SendInvitationEmail](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L399>)
+### func \(\*NotificationController\) [SendInvitationEmail](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L400>)
 
 ```go
 func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, tx *gorm.DB) error
@@ -664,7 +710,7 @@ func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.Househ
 SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database. If tx is provided \(non\-nil\), the "mark as sent" update will run within that transaction to avoid SQLite "database is locked" conflicts when the transaction holds a write lock.
 
 <a name="NotificationController.SendPasswordReset"></a>
-### func \(\*NotificationController\) [SendPasswordReset](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L473>)
+### func \(\*NotificationController\) [SendPasswordReset](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L474>)
 
 ```go
 func (nc *NotificationController) SendPasswordReset(email, username, token, baseURL string, expiresAt time.Time) error
@@ -673,7 +719,7 @@ func (nc *NotificationController) SendPasswordReset(email, username, token, base
 SendPasswordReset sends a password reset email directly to the user.
 
 <a name="NotificationController.SendVerificationEmail"></a>
-### func \(\*NotificationController\) [SendVerificationEmail](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L431>)
+### func \(\*NotificationController\) [SendVerificationEmail](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L432>)
 
 ```go
 func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.HouseholdInvitation, username, baseURL string) error
@@ -691,7 +737,7 @@ func (nc *NotificationController) SetActivityLogRepo(repo dbController.ActivityL
 SetActivityLogRepo attaches the activity log repository used for streak\-reset entries.
 
 <a name="NotificationController.StartAllUserTelegramPollers"></a>
-### func \(\*NotificationController\) [StartAllUserTelegramPollers](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L866>)
+### func \(\*NotificationController\) [StartAllUserTelegramPollers](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L867>)
 
 ```go
 func (nc *NotificationController) StartAllUserTelegramPollers()
@@ -700,7 +746,7 @@ func (nc *NotificationController) StartAllUserTelegramPollers()
 StartAllUserTelegramPollers queries all users with a configured bot token and starts the worker pool for Telegram polling. Called once at startup.
 
 <a name="NotificationController.StartMailDigestScheduler"></a>
-### func \(\*NotificationController\) [StartMailDigestScheduler](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L758>)
+### func \(\*NotificationController\) [StartMailDigestScheduler](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L759>)
 
 ```go
 func (nc *NotificationController) StartMailDigestScheduler(baseURL string)
@@ -709,7 +755,7 @@ func (nc *NotificationController) StartMailDigestScheduler(baseURL string)
 StartDigestScheduler starts a goroutine that checks every minute whether any household's digest is due, and sends expiry digest emails.
 
 <a name="NotificationController.StartTelegramPollerPool"></a>
-### func \(\*NotificationController\) [StartTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L871>)
+### func \(\*NotificationController\) [StartTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L872>)
 
 ```go
 func (nc *NotificationController) StartTelegramPollerPool()
@@ -718,7 +764,7 @@ func (nc *NotificationController) StartTelegramPollerPool()
 StartTelegramPollerPool initializes the worker pool and registers all users with bot tokens.
 
 <a name="NotificationController.StartUserTelegramPoller"></a>
-### func \(\*NotificationController\) [StartUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L906>)
+### func \(\*NotificationController\) [StartUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L907>)
 
 ```go
 func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken string)
@@ -727,7 +773,7 @@ func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken 
 StartUserTelegramPoller registers or updates a user in the pool and resolves the bot username.
 
 <a name="NotificationController.StopTelegramPollerPool"></a>
-### func \(\*NotificationController\) [StopTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L935>)
+### func \(\*NotificationController\) [StopTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L936>)
 
 ```go
 func (nc *NotificationController) StopTelegramPollerPool()
@@ -736,7 +782,7 @@ func (nc *NotificationController) StopTelegramPollerPool()
 StopTelegramPollerPool stops all workers and cleans up.
 
 <a name="NotificationController.StopUserTelegramPoller"></a>
-### func \(\*NotificationController\) [StopUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L924>)
+### func \(\*NotificationController\) [StopUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L925>)
 
 ```go
 func (nc *NotificationController) StopUserTelegramPoller(userID uint)
@@ -3664,7 +3710,7 @@ const (
 ```
 
 <a name="AdminResetUserPassword"></a>
-## func [AdminResetUserPassword](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L166>)
+## func [AdminResetUserPassword](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L164>)
 
 ```go
 func AdminResetUserPassword(ctx *gin.Context, appCtx *AppContext)
@@ -3682,7 +3728,7 @@ func AppContextMiddleware() gin.HandlerFunc
 
 
 <a name="ApplyForHousehold"></a>
-## func [ApplyForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L95>)
+## func [ApplyForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L93>)
 
 ```go
 func ApplyForHousehold(ctx *gin.Context, appCtx *AppContext)
@@ -3691,7 +3737,7 @@ func ApplyForHousehold(ctx *gin.Context, appCtx *AppContext)
 ApplyForHousehold submits a join application for an existing household. @Summary Apply to join a household @Description Creates a pending application for the calling user to join the specified household. @Tags household @Produce json @Param id path int true "Household ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/\{id\}/apply \[post\]
 
 <a name="ApproveHouseholdApplication"></a>
-## func [ApproveHouseholdApplication](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L150>)
+## func [ApproveHouseholdApplication](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L148>)
 
 ```go
 func ApproveHouseholdApplication(ctx *gin.Context, appCtx *AppContext)
@@ -3736,7 +3782,7 @@ func BulkWasteProducts(ctx *gin.Context, appCtx *AppContext)
 BulkWasteProducts marks multiple products as wasted \(hard\-delete, fires product.wasted webhook per product\) @Summary Mark multiple products as wasted @Description Hard\-deletes multiple products and fires the product.wasted webhook per product. Reports the ids that were not touched: 404 when none could be wasted \(unknown or foreign ids\), 200 with the failed ids in failedIds when only some fail, 500 \(also carrying failedIds\) when a failure was server\-side. @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.BulkActionResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.BulkActionResponse @Failure 500 \{object\} api.BulkActionResponse @Router /api/v1/products/bulkWaste \[post\]
 
 <a name="CancelHouseholdApplication"></a>
-## func [CancelHouseholdApplication](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L320>)
+## func [CancelHouseholdApplication](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L318>)
 
 ```go
 func CancelHouseholdApplication(ctx *gin.Context, appCtx *AppContext)
@@ -3781,7 +3827,7 @@ func CreateCalendarToken(ctx *gin.Context, appCtx *AppContext)
 CreateCalendarToken creates a new calendar token for CalDAV/iCal subscription @Summary Create calendar token @Description Creates or regenerates a personal calendar token for iCal/CalDAV subscription. Old token is invalidated. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 201 \{object\} CalendarTokenResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token \[post\]
 
 <a name="CreateHousehold"></a>
-## func [CreateHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L66>)
+## func [CreateHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L64>)
 
 ```go
 func CreateHousehold(ctx *gin.Context, appCtx *AppContext)
@@ -3853,7 +3899,7 @@ func DeleteCalendarToken(ctx *gin.Context, appCtx *AppContext)
 DeleteCalendarToken removes the user's calendar token @Summary Delete calendar token @Description Removes the personal calendar token, invalidating any active iCal/CalDAV subscriptions. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token \[delete\]
 
 <a name="DeleteHouseholdUser"></a>
-## func [DeleteHouseholdUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L122>)
+## func [DeleteHouseholdUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L120>)
 
 ```go
 func DeleteHouseholdUser(ctx *gin.Context, appCtx *AppContext)
@@ -3952,7 +3998,7 @@ func ExportProductsJSON(ctx *gin.Context, appCtx *AppContext)
 ExportProductsJSON exports the user's active products as JSON. @Summary Export products as JSON @Description Returns a JSON file with all active products for the user @Tags export @Produce application/json @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{file\} binary "JSON file" @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/products.json \[get\]
 
 <a name="GenerateTelegramLinkToken"></a>
-## func [GenerateTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L234>)
+## func [GenerateTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L232>)
 
 ```go
 func GenerateTelegramLinkToken(ctx *gin.Context, appCtx *AppContext)
@@ -4015,7 +4061,7 @@ func GetExpired(ctx *gin.Context, appCtx *AppContext)
 GetExpired returns the list of all expired products of a user @Summary Gets expired products @Description Gets a list of expired products of a user @Tags product @Accept json @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/expired \[get\]
 
 <a name="GetHouseholdActivity"></a>
-## func [GetHouseholdActivity](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L351>)
+## func [GetHouseholdActivity](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L349>)
 
 ```go
 func GetHouseholdActivity(ctx *gin.Context, appCtx *AppContext)
@@ -4024,7 +4070,7 @@ func GetHouseholdActivity(ctx *gin.Context, appCtx *AppContext)
 GetHouseholdActivity returns the activity feed for the caller's household. @Summary Get household activity feed @Description Returns paginated activity log entries for the household the caller belongs to. @Tags household @Produce json @Param limit query int false "Max entries to return \(default 50, max 100\)" @Param offset query int false "Number of entries to skip \(default 0\)" @Success 200 \{object\} api.ActivityLogResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/activity \[get\]
 
 <a name="GetHouseholdApplications"></a>
-## func [GetHouseholdApplications](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L125>)
+## func [GetHouseholdApplications](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L123>)
 
 ```go
 func GetHouseholdApplications(ctx *gin.Context, appCtx *AppContext)
@@ -4033,7 +4079,7 @@ func GetHouseholdApplications(ctx *gin.Context, appCtx *AppContext)
 GetHouseholdApplications returns all pending applications for the household the caller administrates. @Summary List pending household applications @Description Returns pending join applications for the household the calling user is admin of. @Tags household @Produce json @Success 200 \{array\} database.HouseholdApplication @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications \[get\]
 
 <a name="GetHouseholdSettings"></a>
-## func [GetHouseholdSettings](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L244>)
+## func [GetHouseholdSettings](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L242>)
 
 ```go
 func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext)
@@ -4042,7 +4088,7 @@ func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext)
 GetHouseholdSettings returns the caller's household settings.
 
 <a name="GetHouseholdUsers"></a>
-## func [GetHouseholdUsers](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L36>)
+## func [GetHouseholdUsers](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L34>)
 
 ```go
 func GetHouseholdUsers(ctx *gin.Context, appCtx *AppContext)
@@ -4161,7 +4207,7 @@ func GetStreak(ctx *gin.Context, appCtx *AppContext)
 GetStreak returns the current waste\-free streak for the user's household @Summary Get waste\-free streak @Description Returns the current and longest waste\-free streak for the caller's household @Tags streak @Produce json @Success 200 \{object\} apiModel.StreakResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/streak \[get\]
 
 <a name="GetUserNotificationPreferences"></a>
-## func [GetUserNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L143>)
+## func [GetUserNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L141>)
 
 ```go
 func GetUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext)
@@ -4242,7 +4288,7 @@ func ImportTemplateCSV(ctx *gin.Context, _ *AppContext)
 ImportTemplateCSV streams the import column header plus one example row @Summary Download the CSV import template @Description Returns a CSV file with the import column header and one example row @Tags import @Produce text/csv @Success 200 \{file\} binary "CSV file" @Router /api/v1/products/import/template.csv \[get\]
 
 <a name="LeaveHousehold"></a>
-## func [LeaveHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L36>)
+## func [LeaveHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L34>)
 
 ```go
 func LeaveHousehold(ctx *gin.Context, appCtx *AppContext)
@@ -4321,7 +4367,7 @@ func ReceiptScanEffectiveTimeout(timeout int) int
 ReceiptScanEffectiveTimeout returns the timeout that scans actually use: unset \(zero or negative\) values fall back to the default, mirroring the fallback in controllers.NewReceiptScanController.
 
 <a name="RejectHouseholdApplication"></a>
-## func [RejectHouseholdApplication](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L183>)
+## func [RejectHouseholdApplication](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L181>)
 
 ```go
 func RejectHouseholdApplication(ctx *gin.Context, appCtx *AppContext)
@@ -4330,7 +4376,7 @@ func RejectHouseholdApplication(ctx *gin.Context, appCtx *AppContext)
 RejectHouseholdApplication rejects a pending join application. @Summary Reject a household application @Description Marks the application as rejected. Caller must be the household admin. @Tags household @Produce json @Param id path int true "Application ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications/\{id\}/reject \[post\]
 
 <a name="RemoveHouseholdMember"></a>
-## func [RemoveHouseholdMember](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L421>)
+## func [RemoveHouseholdMember](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L419>)
 
 ```go
 func RemoveHouseholdMember(ctx *gin.Context, appCtx *AppContext)
@@ -4438,7 +4484,7 @@ func UnsubscribeWebPushNotifications(ctx *gin.Context, appCtx *AppContext)
 
 
 <a name="UpdateHouseholdMemberRole"></a>
-## func [UpdateHouseholdMemberRole](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L457>)
+## func [UpdateHouseholdMemberRole](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L455>)
 
 ```go
 func UpdateHouseholdMemberRole(ctx *gin.Context, appCtx *AppContext)
@@ -4447,7 +4493,7 @@ func UpdateHouseholdMemberRole(ctx *gin.Context, appCtx *AppContext)
 UpdateHouseholdMemberRole changes a member's role in the household. Caller must be the admin. @Summary Update household member role @Tags household @Accept json @Produce json @Param userId path int true "User ID" @Param role body updateHouseholdMemberRoleRequest true "New role" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/members/\{userId\}/role \[patch\]
 
 <a name="UpdateHouseholdName"></a>
-## func [UpdateHouseholdName](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L215>)
+## func [UpdateHouseholdName](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L213>)
 
 ```go
 func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext)
@@ -4456,7 +4502,7 @@ func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext)
 UpdateHouseholdName renames the caller's household. Caller must be the household admin. @Summary Rename household @Tags household @Accept json @Produce json @Param household body updateHouseholdNameRequest true "Name" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/name \[patch\]
 
 <a name="UpdateHouseholdSettings"></a>
-## func [UpdateHouseholdSettings](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L264>)
+## func [UpdateHouseholdSettings](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L262>)
 
 ```go
 func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext)
@@ -4465,7 +4511,7 @@ func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext)
 UpdateHouseholdSettings updates monthly waste goal for the caller's household \(admin only\).
 
 <a name="UpdateHouseholdUser"></a>
-## func [UpdateHouseholdUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L68>)
+## func [UpdateHouseholdUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L66>)
 
 ```go
 func UpdateHouseholdUser(ctx *gin.Context, appCtx *AppContext)
@@ -4510,7 +4556,7 @@ func UpdateStorageLocation(ctx *gin.Context, appCtx *AppContext)
 UpdateStorageLocation renames or re\-icons a storage location. @Summary Update a storage location @Description Updates the name, icon, and sort order of an existing storage location. @Tags household @Accept json @Produce json @Param id path int true "Location ID" @Param body body storageLocationRequest true "Location data" @Success 200 \{object\} database.StorageLocation @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations/:id \[patch\]
 
 <a name="UpdateUser"></a>
-## func [UpdateUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L36>)
+## func [UpdateUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L34>)
 
 ```go
 func UpdateUser(ctx *gin.Context, appCtx *AppContext)
@@ -4519,7 +4565,7 @@ func UpdateUser(ctx *gin.Context, appCtx *AppContext)
 UpdateUser updates a user's display name and email address. The login username is never modified by this endpoint. @Summary Updates a user object @Description Updates display name and email of the authenticated user @Tags user @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user \[patch\]
 
 <a name="UpdateUserNotificationPreferences"></a>
-## func [UpdateUserNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L168>)
+## func [UpdateUserNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L166>)
 
 ```go
 func UpdateUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext)
@@ -4528,7 +4574,7 @@ func UpdateUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext)
 UpdateUserNotificationPreferences updates a user's notification preferences @Summary Updates a user's notification preferences @Description Updates notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[post\]
 
 <a name="UpdateUserPassword"></a>
-## func [UpdateUserPassword](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L79>)
+## func [UpdateUserPassword](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L77>)
 
 ```go
 func UpdateUserPassword(ctx *gin.Context, appCtx *AppContext)
