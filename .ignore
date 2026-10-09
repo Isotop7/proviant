@@ -2,3 +2,4 @@
 !kilo/plans
 !src/config.yaml
 !sonar-export.json
+!handoff*.md
