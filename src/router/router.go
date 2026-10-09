@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/api/auth"
@@ -39,25 +38,6 @@ func (w zerologWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func cleanupRevokedTokens(db *gorm.DB, logger *zerolog.Logger) {
-	const batchSize = 500
-	ticker := time.NewTicker(1 * time.Hour)
-	defer ticker.Stop()
-	for range ticker.C {
-		now := time.Now()
-		var totalDeleted int64
-		for {
-			result := db.Where("expires_at < ?", now).Limit(batchSize).Delete(&authentication.RevokedToken{})
-			totalDeleted += result.RowsAffected
-			if result.RowsAffected < int64(batchSize) {
-				break
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
-		logger.Info().Int64("deleted", totalDeleted).Msg("Cleaned up expired revoked tokens")
-	}
-}
-
 // mustInitJWT creates and fully initializes a GinJWTMiddleware; panics on any error.
 func mustInitJWT(
 	logger *zerolog.Logger,
@@ -81,7 +61,6 @@ func mustInitJWT(
 // SetupRouter creates the gin engine and associated middleware
 func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) *gin.Engine {
 	InitRateLimits(proviantConfiguration.Server.RateLimit)
-	go cleanupRevokedTokens(dbHandle, logger)
 
 	repos := dbcontroller.NewRepositoryContainer(dbHandle, logger)
 
