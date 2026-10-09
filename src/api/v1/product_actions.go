@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	MsgProductNotFound = "Product not found"
+	MsgProductNotFound               = "Product not found"
+	MsgProductConcurrentModification = "Product was changed by another request, please retry"
 )
 
 // ConsumeProduct marks a product as consumed (soft-delete/archive, no product.wasted event)
@@ -68,6 +69,11 @@ func WasteProduct(ctx *gin.Context, appCtx *AppContext) {
 	if err := appCtx.Products.WasteProduct(productID, appCtx.UserID); err != nil {
 		if err == gorm.ErrRecordNotFound || err == errors.ErrMismatcherUserID {
 			ctx.JSON(http.StatusNotFound, api.APIResponse{Message: MsgProductNotFound})
+			return
+		}
+		if err == errors.ErrProductConcurrentModification {
+			appCtx.Logger.Warn().Msgf("WasteProduct: product %d changed concurrently", productID)
+			ctx.JSON(http.StatusConflict, api.APIResponse{Message: MsgProductConcurrentModification})
 			return
 		}
 		appCtx.Logger.Error().Msgf("WasteProduct: %s", err)

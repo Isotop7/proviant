@@ -1,8 +1,8 @@
 package v1
 
 import (
-	apperrors "codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/audit"
+	apperrors "codeberg.org/isotop7/proviant/errors"
 	"errors"
 	"net/http"
 	"strconv"

@@ -774,6 +774,53 @@ func TestProductRepository_WasteProduct(t *testing.T) {
 	}
 }
 
+func TestProductRepository_WasteProduct_ConcurrentModification(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewProductRepository(db)
+
+	household := dbModel.Household{Name: "Test Household"}
+	db.Create(&household)
+
+	user := authentication.User{
+		Username:    "testuser",
+		Password:    "password",
+		MailAddress: "test@example.com",
+		HouseholdID: household.ID,
+	}
+	db.Create(&user)
+
+	product := dbModel.Product{
+		ProductName: "To Waste",
+		Barcode:     "1234567890123",
+		HouseholdID: household.ID,
+	}
+	db.Create(&product)
+
+	// Simulate a concurrent write landing between the repository's read and
+	// its guarded write: bump updated_at before any UPDATE on products runs,
+	// so the optimistic-lock precondition (updated_at = read value) fails.
+	db.Callback().Update().Before("gorm:before_update").Register("test:concurrent_write", func(tx *gorm.DB) {
+		_, _ = tx.Statement.ConnPool.ExecContext(tx.Statement.Context,
+			"UPDATE products SET updated_at = ? WHERE id = ?", time.Now(), product.ID)
+	})
+
+	err := repo.WasteProduct(product.ID, user.ID)
+	if err != errors.ErrProductConcurrentModification {
+		t.Fatalf("WasteProduct() error = %v, want %v", err, errors.ErrProductConcurrentModification)
+	}
+
+	var untouched dbModel.Product
+	if getErr := db.Unscoped().First(&untouched, product.ID).Error; getErr != nil {
+		t.Fatalf("product record vanished: %v", getErr)
+	}
+	if untouched.DeletedAt.Valid {
+		t.Error("concurrent-modification failure must roll back the soft-delete")
+	}
+	if untouched.RemovalReason == dbModel.RemovalReasonWasted {
+		t.Error("concurrent-modification failure must roll back the removal-reason update")
+	}
+}
+
 func TestProductRepository_GetActiveProductsCount(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewProductRepository(db)

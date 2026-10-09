@@ -163,11 +163,17 @@ func (s *ProductService) WasteProduct(productID, userID uint) error {
 // ids never pass through parseUintPathParam, so id 0 reaches the
 // repositories and surfaces as gorm.ErrNotImplemented — a bad request, not
 // an outage.
+// bulkClientMiss identifies per-id bulk failures that are the caller's or a
+// concurrent writer's problem — bad/foreign ids, invalid data, or a retryable
+// optimistic-lock race (ErrProductConcurrentModification) — rather than a
+// server-side fault. These do not turn the bulk response into a 5xx; the id
+// simply lands in failedIds for a retry.
 func bulkClientMiss(err error) bool {
 	return err == gorm.ErrRecordNotFound ||
 		err == errors.ErrMismatcherUserID ||
 		err == errors.ErrInvalidUserData ||
-		err == gorm.ErrNotImplemented
+		err == gorm.ErrNotImplemented ||
+		err == errors.ErrProductConcurrentModification
 }
 
 // BulkConsumeProducts archives productIDs and reports which ones were not
@@ -243,11 +249,12 @@ func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) ([]ui
 }
 
 // logBulkFailure records one per-id bulk failure at the right level (client
-// misses are Warn so the Error stream keeps its meaning) and remembers the
-// first server-side cause for the caller's 5xx decision.
+// misses, including retryable optimistic-lock races, are Warn so the Error
+// stream keeps its meaning) and remembers the first server-side cause for the
+// caller's 5xx decision.
 func (s *ProductService) logBulkFailure(op string, productID uint, err error, serverErr *error) {
 	if bulkClientMiss(err) {
-		s.logger.Warn().Msgf("%s: product %d rejected (bad or foreign id): %s", op, productID, err)
+		s.logger.Warn().Msgf("%s: product %d rejected (bad id or concurrent change): %s", op, productID, err)
 		return
 	}
 	s.logger.Error().Msgf("%s: product %d: %s", op, productID, err)

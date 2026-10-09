@@ -2034,11 +2034,25 @@ func (r *ProductRepository) WasteProduct(productID, userID uint) error {
 	if err != nil {
 		return err
 	}
-	product.RemovalReason = database.RemovalReasonWasted
-	if err := r.DB.Save(&product).Error; err != nil {
-		return err
-	}
-	return r.DB.Delete(&database.Product{}, productID).Error
+	// Single transaction: the removal-reason update and the soft-delete must
+	// succeed together, or neither lands. The update is guarded by updated_at,
+	// so a concurrent row change between the caller's read and the write fails
+	// instead of silently overwriting it.
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&database.Product{}).
+			Where("id = ?", product.ID).
+			Where("household_id = ?", product.HouseholdID).
+			Where(util.WhereDeletedIsNull).
+			Where("updated_at = ?", product.UpdatedAt).
+			Update("removal_reason", database.RemovalReasonWasted)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return errors.ErrProductConcurrentModification
+		}
+		return tx.Delete(&database.Product{}, productID).Error
+	})
 }
 
 func (r *ProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError {
