@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.21.0] - 2026-10-09
+
+### Added
+- (e2ab09c3): **api:** Add per-user receipt scan override settings with SSRF guard
+
+
+### Changed
+- (3559b545): Update ignore
+
+
+### Fixed
+- (69d62427): **api:** Scope audit log reads to the caller's household
+- (2239178a): **config:** Stop shipping a default JWT secret
+- (3e8582bd): **products:** Allowlist sort input and stop loading whole tables
+- (826b3f45): **api:** Correct status codes and report bulk failures
+- (fa2c1362): Fix(controllers): add backoff on DB error
+Closes: #388
+- (d868a198): Fix(router,api): pass audit values instead of gin.Context to goroutines
+Closes: #389
+- (2e770b72): Fix: make WasteProduct write transactional
+Closes: #390
+- (56038d66): Fix(router): drop duplicate token cleanup
+Closes: #391
+- (0f343a42): **audit:** Avoid panic on missing logger
+
+
+### Miscellaneous
+- (f174de03): Update CHANGELOG.md for v0.20.0
+
+
+### Testing
+- (234fc7d6): Close test DB pool before TempDir cleanup
+- (b90bf2a4): Close test DB pool before TempDir cleanup
+
+
 ## [0.20.0] - 2026-10-06
 
 ### Added
