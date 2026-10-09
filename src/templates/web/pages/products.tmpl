@@ -353,6 +353,25 @@
     {{ end }}
 </div>
 {{ end }}
+{{ if gt .TotalPages 1 }}
+<nav class="products-pagination" aria-label="Product list pages">
+    {{ if .PrevPageURL }}
+    <a href="{{ .PrevPageURL }}" class="pagination-link" rel="prev">
+        <i class="bi bi-chevron-left" aria-hidden="true"></i><span>Previous</span>
+    </a>
+    {{ else }}
+    <span class="pagination-link is-disabled"><i class="bi bi-chevron-left" aria-hidden="true"></i><span>Previous</span></span>
+    {{ end }}
+    <span class="pagination-status" aria-live="polite">Page {{ .Page }} of {{ .TotalPages }}</span>
+    {{ if .NextPageURL }}
+    <a href="{{ .NextPageURL }}" class="pagination-link" rel="next">
+        <span>Next</span><i class="bi bi-chevron-right" aria-hidden="true"></i>
+    </a>
+    {{ else }}
+    <span class="pagination-link is-disabled"><span>Next</span><i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+    {{ end }}
+</nav>
+{{ end }}
 {{ else }}
 {{ template "noproducts" . }}
 {{ end }}

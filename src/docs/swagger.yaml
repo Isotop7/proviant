@@ -554,17 +554,6 @@ definitions:
       webPushEnabled:
         type: boolean
     type: object
-  authentication.ReceiptScanPreferences:
-    properties:
-      endpoint:
-        type: string
-      model:
-        type: string
-      overrideEnabled:
-        type: boolean
-      timeout:
-        type: integer
-    type: object
   authentication.Signup:
     properties:
       inviteToken:
@@ -600,8 +589,6 @@ definitions:
         type: string
       notificationPreferences:
         $ref: '#/definitions/authentication.NotificationPreferences'
-      receiptScanPreferences:
-        $ref: '#/definitions/authentication.ReceiptScanPreferences'
       role:
         type: string
       updatedAt:
@@ -619,6 +606,14 @@ definitions:
         $ref: '#/definitions/gorm.DeletedAt'
       details:
         type: string
+      householdId:
+        description: |-
+          HouseholdID is written at record time, never derived at read time. Deriving
+          it from the user's *current* household would move a member's historical
+          entries into whichever household they have since joined — a cross-tenant
+          read. NULL means the entry could not be attributed (failed login for an
+          unknown username) and is invisible to every household.
+        type: integer
       id:
         type: integer
       ipAddress:
@@ -1011,7 +1006,8 @@ paths:
       - common
   /api/v1/admin/audit-log:
     get:
-      description: Returns paginated audit log entries (admin only)
+      description: Returns paginated audit log entries for the caller's household.
+        Household admins only; entries are scoped to the caller's household.
       parameters:
       - description: Maximum number of logs to return (default 100, max 1000)
         in: query

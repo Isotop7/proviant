@@ -50,6 +50,15 @@ func (m *MockProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([
 func (m *MockProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
+func (m *MockProductRepository) GetActiveProductProjections(userID, locationID uint) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
+func (m *MockProductRepository) GetArchivedProductProjections(userID uint) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
+func (m *MockProductRepository) GetUserArchivedProductsByIDs(userID uint, ids []uint) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
 func (m *MockProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
@@ -68,7 +77,7 @@ func (m *MockProductRepository) GetArchivedProductByID(productID, userID uint) (
 func (m *MockProductRepository) SearchProducts(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
-func (m *MockProductRepository) GetUserProductsByLocation(userID, locationID uint) ([]dbModel.Product, error) {
+func (m *MockProductRepository) SearchProductProjections(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
 func (m *MockProductRepository) CreateProduct(userID uint, product *dbModel.Product) error {
@@ -107,8 +116,11 @@ func (m *MockProductRepository) GetProductsExpired(userID uint) ([]*dbModel.Prod
 func (m *MockProductRepository) GetExpiredProductsCount(userID uint) (int, error) {
 	return m.IntResult, m.Err
 }
-func (m *MockProductRepository) GetArchivedProductsGroupedByBarcode(userID uint) (map[string]int, error) {
-	return m.MapResult, m.Err
+func (m *MockProductRepository) GetArchivedProductsCount(userID uint) (int, error) {
+	return m.IntResult, m.Err
+}
+func (m *MockProductRepository) GetUniqueArchivedProductsCount(userID uint) (int, error) {
+	return m.IntResult, m.Err
 }
 func (m *MockProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]dbModel.Product, error) {
 	return m.Products, m.Err

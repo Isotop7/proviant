@@ -146,21 +146,21 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	archivedProducts, err := appCtx.Repos.Products.GetUserArchivedProductsBulk(appCtx.UserID, -1)
+	// Counts, not row loads: the archived rows are large and the endpoint only
+	// ever reported their totals.
+	totalArchived, err := appCtx.Repos.Products.GetArchivedProductsCount(appCtx.UserID)
 	if err != nil {
-		appCtx.Logger.Error().Msgf("GetUserArchivedProductsBulk: %s", err)
+		appCtx.Logger.Error().Msgf("GetArchivedProductsCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing archived count"})
 		return
 	}
-	totalArchived := len(archivedProducts)
 
-	uniqueArchivedMap, err := appCtx.Repos.Products.GetArchivedProductsGroupedByBarcode(appCtx.UserID)
+	uniqueArchived, err := appCtx.Repos.Products.GetUniqueArchivedProductsCount(appCtx.UserID)
 	if err != nil {
-		appCtx.Logger.Error().Msgf(errors.FmtErrGetArchivedProductsGroupedByBarcode, err)
+		appCtx.Logger.Error().Msgf("GetUniqueArchivedProductsCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingUniqueArchivedCount})
 		return
 	}
-	uniqueArchived := len(uniqueArchivedMap)
 
 	lastInsertedProduct := getLastInsertedProductName(appCtx.Repos, appCtx.UserID)
 

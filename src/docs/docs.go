@@ -48,7 +48,7 @@ const docTemplate = `{
         },
         "/api/v1/admin/audit-log": {
             "get": {
-                "description": "Returns paginated audit log entries (admin only)",
+                "description": "Returns paginated audit log entries for the caller's household. Household admins only; entries are scoped to the caller's household.",
                 "produces": [
                     "application/json"
                 ],
@@ -5312,23 +5312,6 @@ const docTemplate = `{
                 }
             }
         },
-        "authentication.ReceiptScanPreferences": {
-            "type": "object",
-            "properties": {
-                "endpoint": {
-                    "type": "string"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "overrideEnabled": {
-                    "type": "boolean"
-                },
-                "timeout": {
-                    "type": "integer"
-                }
-            }
-        },
         "authentication.Signup": {
             "type": "object",
             "required": [
@@ -5381,9 +5364,6 @@ const docTemplate = `{
                 "notificationPreferences": {
                     "$ref": "#/definitions/authentication.NotificationPreferences"
                 },
-                "receiptScanPreferences": {
-                    "$ref": "#/definitions/authentication.ReceiptScanPreferences"
-                },
                 "role": {
                     "type": "string"
                 },
@@ -5409,6 +5389,10 @@ const docTemplate = `{
                 },
                 "details": {
                     "type": "string"
+                },
+                "householdId": {
+                    "description": "HouseholdID is written at record time, never derived at read time. Deriving\nit from the user's *current* household would move a member's historical\nentries into whichever household they have since joined — a cross-tenant\nread. NULL means the entry could not be attributed (failed login for an\nunknown username) and is invisible to every household.",
+                    "type": "integer"
                 },
                 "id": {
                     "type": "integer"

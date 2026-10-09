@@ -368,6 +368,49 @@ func TestSearchProducts(t *testing.T) {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusBadRequest)
 		}
 	})
+
+	t.Run("sort outside the allowlist is rejected", func(t *testing.T) {
+		// Payloads are chosen without '&' or ';', which Go's URL parser discards
+		// before the query ever reaches the binder.
+		for _, sortValue := range []string{"evil", "category", "storage_location", "created_at,sqlite_version()"} {
+			m := repomocks.NewMockRepositoryContainer()
+			ctx, w := repomocks.SetupGinContextWithMocks(m)
+			testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+			ctx.Request = &http.Request{Header: make(http.Header)}
+			ctx.Request.URL = &url.URL{RawQuery: "queryParam=product_name&queryValue=Apple&sort=" + sortValue}
+
+			appCtx := &AppContext{
+				Logger: &zerolog.Logger{},
+				Repos:  m.ToRepositoryContainer(),
+				UserID: 1,
+			}
+			SearchProducts(ctx, appCtx)
+
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("sort=%q: Status = %v, want %v", sortValue, w.Code, http.StatusBadRequest)
+			}
+		}
+	})
+
+	t.Run("allowlisted sort is accepted", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.Products = []dbModel.Product{{ProductName: "Apple Juice"}}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Request = &http.Request{Header: make(http.Header)}
+		ctx.Request.URL = &url.URL{RawQuery: "queryParam=product_name&queryValue=Apple&sort=expire_at&order=desc"}
+
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		SearchProducts(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
+		}
+	})
 }
 
 // TestGetProductsByBarcode tests the GetProductsByBarcode endpoint

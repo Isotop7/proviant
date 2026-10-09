@@ -101,6 +101,11 @@ var (
 	// ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
 	ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
 
+	// ErrDatabaseInvalidSortParameter is thrown if a sort column or direction is not on the
+	// allowlist. Sort values are interpolated into the SQL ORDER BY clause, so anything that
+	// reaches the query must come from that allowlist — never from request input.
+	ErrDatabaseInvalidSortParameter = errors.New("invalid sort parameter on database call")
+
 	// ErrDatabaseMariaDBEmptyHost is thrown if an empty MariaDB host was specified
 	ErrDatabaseMariaDBEmptyHost = errors.New("empty MariaDB host specified")
 
@@ -288,7 +293,10 @@ var (
 	 * Server configuration related errors
 	 */
 	// ErrServerEmptyTokenPassword is thrown if no JWT token password was specified
-	ErrServerEmptyTokenPassword = errors.New("JWT token password cannot be empty")
+	ErrServerEmptyTokenPassword = errors.New(
+		"JWT token password cannot be empty: set server.authentication.tokenPassword " +
+			"(generate one with 'openssl rand -hex 32') or the " +
+			"PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD environment variable")
 
 	// ErrServerInvalidTokenLifetime is thrown if an invalid JWT token lifetime was specified
 	ErrServerInvalidTokenLifetime = errors.New("JWT token lifetime must be greater than 0")
@@ -443,12 +451,11 @@ var (
 	/*
 	 * Stats/export shared log format strings
 	 */
-	FmtErrGetActiveProductsCount              = "GetActiveProductsCount: %s"
-	FmtErrGetExpiredProductsCount             = "GetExpiredProductsCount: %s"
-	FmtErrGetExpiringSoonProducts             = "GetExpiringSoonProducts: %s"
-	FmtErrGetProductCategoryBreakdown         = "GetProductCategoryBreakdown: %s"
-	FmtErrGetExpiryTrend                      = "GetExpiryTrend: %s"
-	FmtErrGetArchivedProductsGroupedByBarcode = "GetArchivedProductsGroupedByBarcode: %s"
+	FmtErrGetActiveProductsCount      = "GetActiveProductsCount: %s"
+	FmtErrGetExpiredProductsCount     = "GetExpiredProductsCount: %s"
+	FmtErrGetExpiringSoonProducts     = "GetExpiringSoonProducts: %s"
+	FmtErrGetProductCategoryBreakdown = "GetProductCategoryBreakdown: %s"
+	FmtErrGetExpiryTrend              = "GetExpiryTrend: %s"
 
 	/*
 	 * Stats/export shared HTTP response messages

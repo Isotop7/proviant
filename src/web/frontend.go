@@ -272,13 +272,26 @@ type productQueryParams struct {
 	order          string
 }
 
-func fetchProducts(
+// productsPageSize bounds how many full rows one products-page request
+// materialises. The candidate list is still every matching row — the
+// effective-expiry order cannot be expressed in portable SQL — but only this
+// many rows are fetched whole and rendered.
+const productsPageSize = 50
+
+// fetchProductProjections returns the candidate rows for the products page,
+// narrowed to productProjectionColumns. Nothing here is a page yet: the caller
+// classifies, filters, orders, slices one page out of the result and hydrates
+// just those rows.
+//
+// The search path keeps its SQL ORDER BY (the caller picked that column); every
+// other path comes back in id order for the caller to sort.
+func fetchProductProjections(
 	repos *database.RepositoryContainer,
 	userID uint,
 	params *productQueryParams,
 ) ([]dbModel.Product, error) {
 	if params.statusFilter == "archived" {
-		return repos.Products.GetUserArchivedProductsBulk(userID, -1)
+		return repos.Products.GetArchivedProductProjections(userID)
 	}
 	switch {
 	case params.locationFilter != "":
@@ -286,16 +299,119 @@ func fetchProducts(
 		if err != nil {
 			return nil, nil
 		}
-		return repos.Products.GetUserProductsByLocation(userID, uint(locationID)) //nolint:gosec
+		return repos.Products.GetActiveProductProjections(userID, uint(locationID)) //nolint:gosec
 	case params.queryParam != "" && params.queryValue != "":
 		enumParam := database.SearchParameterEnumFromString(params.queryParam)
 		if enumParam == database.InvalidParameter {
 			return nil, errors.ErrProductSearchInvalidQuery
 		}
-		return repos.Products.SearchProducts(enumParam, params.queryValue, params.sort, params.order, userID)
+		return repos.Products.SearchProductProjections(enumParam, params.queryValue, params.sort, params.order, userID)
 	default:
-		return repos.Products.GetUserProductsBulk(userID, -1)
+		return repos.Products.GetActiveProductProjections(userID, 0)
 	}
+}
+
+// renderProductsFetchError writes the response for a failed products fetch and
+// reports whether it did, so the caller can return immediately. It is shared by
+// the projection pass and the hydration pass because they fail the same way for
+// the user.
+func renderProductsFetchError(ctx *gin.Context, frontend *Frontend, logger *zerolog.Logger, err error) bool {
+	switch err {
+	case nil:
+		return false
+	case errors.ErrProductSearchInvalidQuery:
+		logger.Error().Msg(err.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, err.Error())
+		return true
+	case errors.ErrDatabaseInvalidSortParameter:
+		logger.Warn().Msg(err.Error())
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, err.Error())
+		return true
+	default:
+		logger.Error().Msgf("Error getting products of user: %s", err)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
+		return true
+	}
+}
+
+// pageURL renders the current filters with the page number swapped in. The
+// value slices are shared with params on purpose: only the page key is added,
+// and Set replaces that entry rather than touching any other key's slice.
+func pageURL(params url.Values, page int) string {
+	paged := make(url.Values, len(params)+1)
+	for key, value := range params {
+		paged[key] = value
+	}
+	paged.Set("page", strconv.Itoa(page))
+	return "?" + paged.Encode()
+}
+
+// hydrateProductsPage fetches the full rows for the chosen page IDs and returns
+// them in exactly that order. The projection pass has already decided the
+// ordering (SQL for a search, effective expiry otherwise) while the hydration
+// query orders by id, so the caller's order has to be restored rather than
+// assumed. A row that disappeared between the two queries is dropped instead of
+// shifting the rest of the page.
+func hydrateProductsPage(repos *database.RepositoryContainer, userID uint, ids []uint, archived bool) ([]dbModel.Product, error) {
+	if len(ids) == 0 {
+		return []dbModel.Product{}, nil
+	}
+
+	var rows []dbModel.Product
+	var err error
+	if archived {
+		rows, err = repos.Products.GetUserArchivedProductsByIDs(userID, ids)
+	} else {
+		rows, err = repos.Products.GetUserProductsByIDs(userID, ids)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	byID := make(map[uint]dbModel.Product, len(rows))
+	for i := range rows {
+		byID[rows[i].ID] = rows[i]
+	}
+	ordered := make([]dbModel.Product, 0, len(ids))
+	for _, id := range ids {
+		if row, ok := byID[id]; ok {
+			ordered = append(ordered, row)
+		}
+	}
+	return ordered, nil
+}
+
+// sliceProductPage picks the page of candidate rows one request renders: the
+// ordered IDs to hydrate, the 1-based page actually shown, and how many pages
+// the candidate list has in total.
+//
+// The requested page is clamped into range: a stale link or a list that shrank
+// since it was written lands on a valid page instead of rendering an empty one
+// that reads like data loss.
+func sliceProductPage(candidates []dbModel.Product, rawPage string) (ids []uint, page, totalPages int) {
+	totalPages = (len(candidates) + productsPageSize - 1) / productsPageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
+	page = 1
+	if requested, err := strconv.Atoi(rawPage); err == nil && requested > 1 {
+		page = requested
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+
+	start := (page - 1) * productsPageSize
+	end := start + productsPageSize
+	if end > len(candidates) {
+		end = len(candidates)
+	}
+	ids = make([]uint, 0, end-start)
+	for i := start; i < end; i++ {
+		ids = append(ids, candidates[i].ID)
+	}
+	return ids, page, totalPages
 }
 
 // The expiry window boundaries use calendar-day arithmetic (AddDate) to stay
@@ -369,26 +485,19 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
-	products, productErr := fetchProducts(repos, userID, &productQueryParams{
+	productQuery := &productQueryParams{
 		statusFilter:   statusFilter,
 		locationFilter: locationFilter,
 		queryParam:     queryParam,
 		queryValue:     queryValue,
 		sort:           sort,
 		order:          order,
-	})
-	if productErr == errors.ErrProductSearchInvalidQuery {
-		logger.Error().Msg(productErr.Error())
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, productErr.Error())
-		return
 	}
-	if productErr != nil {
-		logger.Error().Msgf("Error getting products of user: %s", productErr)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, errors.ErrUserNoProductsFound.Error())
+	projections, productErr := fetchProductProjections(repos, userID, productQuery)
+	if renderProductsFetchError(ctx, frontend, logger, productErr) {
 		return
 	}
 
-	allProducts := products
 	now := time.Now()
 
 	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
@@ -420,16 +529,47 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 			expiredCount, criticalCount = archivedExpired, archivedCritical
 		}
 	} else {
-		expiredCount, criticalCount = computeExpiryStats(products, now, criticalDays)
+		expiredCount, criticalCount = computeExpiryStats(projections, now, criticalDays)
 	}
 
+	// ProductCount keeps its old meaning: every row the view selected, before the
+	// status filter narrows it to what is on screen.
+	totalMatched := len(projections)
+
 	if statusFilter != "all" && statusFilter != "archived" {
-		products = filterProductsByStatus(allProducts, statusFilter, now, criticalDays, soonDays)
+		projections = filterProductsByStatus(projections, statusFilter, now, criticalDays, soonDays)
+	}
+
+	// A search arrives already ordered by the column the caller picked. Every
+	// other active view is ordered by effective expiry; the archived view keeps
+	// the id order its projection came back in.
+	isSearch := productQuery.queryParam != "" && productQuery.queryValue != ""
+	if statusFilter != "archived" && !isSearch {
+		database.SortByEffectiveExpiry(projections)
+	}
+
+	pageIDs, page, totalPages := sliceProductPage(projections, ctx.Query("page"))
+
+	products, hydrateErr := hydrateProductsPage(repos, userID, pageIDs, statusFilter == "archived")
+	if renderProductsFetchError(ctx, frontend, logger, hydrateErr) {
+		return
 	}
 
 	params := url.Values{}
 	for k, v := range ctx.Request.URL.Query() {
 		params[k] = v
+	}
+	// Filter and view links start over at page 1: carrying ?page= along would
+	// mean a page number that no longer refers to anything under the new filter.
+	delete(params, "page")
+
+	// Pagination links keep every current filter and swap only the page number.
+	var prevPageURL, nextPageURL string
+	if page > 1 {
+		prevPageURL = pageURL(params, page-1)
+	}
+	if page < totalPages {
+		nextPageURL = pageURL(params, page+1)
 	}
 
 	pageData := map[string]any{
@@ -445,11 +585,15 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		"LocationFilter":     locationFilter,
 		"View":               view,
 		"StatusFilter":       statusFilter,
-		"ProductCount":       len(allProducts),
+		"ProductCount":       totalMatched,
 		"ExpiredCount":       expiredCount,
 		"CriticalCount":      criticalCount,
 		"UrgentCount":        expiredCount + criticalCount,
 		"Params":             params,
+		"Page":               page,
+		"TotalPages":         totalPages,
+		"PrevPageURL":        prevPageURL,
+		"NextPageURL":        nextPageURL,
 		"CurrentUserID":      userID,
 		"ReceiptScanEnabled": receiptScanEnabled,
 	}
@@ -507,7 +651,9 @@ func (frontend *Frontend) ProductsScanReceipt(ctx *gin.Context) {
 		logger.Warn().Msgf("Receipt scan page: storage locations: %s", locErr)
 	}
 
-	scanTimeoutSeconds := v1.ReceiptScanEffectiveTimeout(proviantConfig.OCR.Receipt.Timeout)
+	// ResolveReceiptScanConfiguration already folds in the configured default,
+	// and the else branch returns, so there is nothing to assign up front.
+	var scanTimeoutSeconds int
 	if user, userErr := repos.Users.GetUserByID(userID); userErr == nil {
 		effective := v1.ResolveReceiptScanConfiguration(&proviantConfig.OCR.Receipt, user.ReceiptScanPreferences)
 		scanTimeoutSeconds = v1.ReceiptScanEffectiveTimeout(effective.Timeout)

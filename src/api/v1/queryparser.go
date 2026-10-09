@@ -26,7 +26,7 @@ type ArchiveOnlyQuery struct {
 type ProductSearchQuery struct {
 	QueryParam string `form:"queryParam" binding:"required"`
 	QueryValue string `form:"queryValue" binding:"required"`
-	Sort       string `form:"sort" binding:"omitempty,oneof=product_name expire_at created_at category storage_location barcode"`
+	Sort       string `form:"sort" binding:"omitempty,oneof=product_name expire_at created_at scanned_at notified_at barcode"`
 	Order      string `form:"order" binding:"omitempty,oneof=asc desc"`
 }
 
