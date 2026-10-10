@@ -5,9 +5,11 @@
     "css-prefix": "postcss --replace src/assets/css/main.css --use autoprefixer --map",
     "css": "npm-run-all css-compile css-prefix",
     "lint-css": "stylelint src/templates/scss/",
-    "lint-js": "eslint src/assets/js/",
+    "lint-js": "eslint src/assets/js/ tests/js/",
     "lint-html": "htmlhint \"src/templates/web/**/*.tmpl\"",
-    "test": "npm-run-all lint-css css"
+    "test": "npm-run-all lint-css css",
+    "test-js": "vitest run",
+    "test-js-watch": "vitest"
   },
   "dependencies": {
     "@fontsource-variable/vend-sans": "^5.3.0",
@@ -25,11 +27,13 @@
     "eslint": "^10.12.0",
     "globals": "^17.13.0",
     "htmlhint": "^1.9.2",
+    "jsdom": "^30.1.2",
     "npm-run-all": "^4.1.5",
     "postcss": "^8.5.28",
     "postcss-cli": "^12.0.0",
     "sass": "^1.105.1",
     "stylelint": "^16.26.1",
-    "stylelint-config-twbs-bootstrap": "^16.1.0"
+    "stylelint-config-twbs-bootstrap": "^16.1.0",
+    "vitest": "^5.0.3"
   }
 }

@@ -124,6 +124,8 @@ jobs:
         run: npm run lint-js
       - name: Lint HTML
         run: npm run lint-html
+      - name: Test JS
+        run: npm run test-js
 
   image-scan:
     needs:

@@ -248,7 +248,7 @@ proviant.markProductOpened = async function (productID, force = false) {
     body: JSON.stringify({ force }),
   });
   let body = {};
-  try { body = await res.json(); } catch (_) {}
+  try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
   return { code: res.status, product: body, conflict: res.status === 409, openedAt: body.openedAt };
 };
 
@@ -444,7 +444,7 @@ proviant.bulkAction = async function (type, ids, options = {}) {
 /* ── Auth / user API ─────────────────────────────────────────────────────────── */
 proviant.loginUser = async function (username, password) {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
-  let body = {}; try { body = await res.json(); } catch (_) {}
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
   return { code: res.status, body: body.message || body.code || "", retryAfter: res.headers.get("Retry-After") };
 };
 

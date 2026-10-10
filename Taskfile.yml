@@ -44,6 +44,11 @@ tasks:
       - go test -race -vet=off ./...
       - go mod verify
 
+  test-js:
+    desc: Run frontend (vitest) tests
+    cmds:
+      - npm run test-js
+
   cover:
     desc: Get code coverage report
     dir: src

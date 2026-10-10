@@ -49,7 +49,8 @@ Use Context7 MCP tools automatically (without being asked) for library/API docs,
 | `task lint` / `task lint-css` / `task lint-js` / `task lint-html` | Before committing frontend changes. Runs stylelint/eslint/htmlhint. |
 | `task vet` | Quick `go vet` pass without running the full linter container. |
 | `task tidy` | Before committing Go changes. Runs `go fmt` and `go mod tidy`. |
-| `task test` | Before committing. Runs the full Go test suite with `-race`. |
+| `task test` | Before committing. Runs the full Go test suite with `-race`. Go only — see "Frontend Tests" for JS. |
+| `task test-js` | Before committing frontend changes. Runs the vitest suite in `tests/js/`. |
 | `task test-single` | Running a single test — use the pattern in "Quality Control" below, or invoke `go test` directly inside `src/`. |
 | `task check` | Pre-commit / pre-push Go lint via golangci-lint in a container. Replaces raw `golangci-lint run`. |
 | `task check-changed` | Lint only files changed vs. previous commit. Faster local feedback loop. |
@@ -61,7 +62,7 @@ Use Context7 MCP tools automatically (without being asked) for library/API docs,
 | `task seed` / `task seed-reset` | Populate / wipe demo products for a user. |
 
 ### Do not
-- Do not run `npm install`, `npm run css`, `npm run lint-*`, or `npm test` directly — use `task init` / `task css` / `task lint` / `task test` (or a direct `go test` for the single-test case below) so deps, caches, and asset copies stay in sync.
+- Do not run `npm install`, `npm run css`, `npm run lint-*`, or `npm test` directly — use `task init` / `task css` / `task lint` / `task test` (or a direct `go test` for the single-test case below) so deps, caches, and asset copies stay in sync. The same applies to `npm run test-js` — use `task test-js`.
 - Do not run `podman`/`docker build` directly — use `task containerimage`.
 - Do not run `golangci-lint run` directly — use `task check` (handles container, config mount, cache dirs).
 - Do not run `go run` for the dev server — use `task run`.
@@ -326,6 +327,59 @@ Is this a startup failure that prevents the app from running?
 - Use `t.Run()` for subtests
 - Test both success and error paths
 - Keep test DB setup in helper functions, not duplicated per test file
+
+### Frontend Tests
+
+Vitest + jsdom. Specs live in `tests/js/`, run via `task test-js`, and are wired into
+the `frontend-check` job in `ci.yml`. The JS is served as classic `<script src>`
+bundles — **not one file in `src/assets/js` contains an `export` statement** — so the
+suite cannot import the shipped code directly. `tests/js/helpers/loadScript.js`
+bridges that: it reads the file, appends a capture expression, injects it as a
+`<script>`, and hands the requested identifiers back.
+
+```js
+const { exports: { proviant }, realm } = loadClassicScript("proviant.js", ["proviant"], {
+  globals: { fetch: fetchStub, navigator: { onLine: true } },
+  prelude: "localStorage.clear(); document.body.innerHTML = '';",
+});
+```
+
+**Four constraints that are easy to get wrong — all verified empirically, not assumed:**
+
+1. **Return `realm`, not `window`.** vitest's jsdom environment exposes the DOM on the
+   test's global object, but an injected script runs inside jsdom's *own* realm, whose
+   `window` is a different object. Writes to `window` from inside the script are invisible
+   to the test. `document` is the only reference both sides share, so that is the carrier.
+   `realm` is that realm's real `window` and the only handle on its `localStorage`,
+   `fetch` and `document.cookie`.
+2. **Stub globals *before* loading, via `globals`.** `proviant.js` captures `window.fetch`
+   at load time to build the CSRF interceptor. A stub installed afterwards wraps a
+   different function than the one under test. `globals` uses `Object.defineProperty`
+   because jsdom exposes `navigator` as a getter-only accessor.
+3. **Reset realm state per test.** jsdom's realm lives for the whole test file, so
+   `localStorage` and `document.body` carry over. Without the `prelude` reset, one test's
+   queue is replayed into the next and a stale badge stays the element
+   `getElementById` resolves. `localStorage.clear()` must run *before* the source, since
+   the source reads it at load.
+4. **Delegation tests need their own file.** Every load of `theme.js` adds another
+   document click listener, and each calls `window.proviantTheme.cycle()` — N loads means
+   N cycles per click, so the assertion would depend on how many other tests ran first.
+   Hence `theme.click.test.js` stands alone.
+
+`vitest.config.mjs` pins `TZ=UTC`: `formatDate` and `colorExpiry` build dates from local
+time, so assertions would otherwise drift between a laptop and CI.
+
+**There is deliberately no coverage task.** Injected scripts execute in jsdom's own V8
+context, which the coverage inspector never sees, so every file reports 0%. The provider
+itself works — a normally imported module measures correctly; the loader is what defeats
+it. Do not add one back until the harness can attribute its script to a filename: a
+permanently-zero metric is worse than none.
+
+**Not yet covered** (IIFEs, whose internals are unreachable without a production-code seam):
+`homeStats.js`, `wasteAnalytics.js`, `shoppingList.js`. Also `sw.js` — its fetch routing is
+inline in the `self.addEventListener('fetch')` handler and needs `caches`/`Response` stubs.
+That is the highest-risk untested code, since AGENTS.md documents the routing policy as
+deliberate. See issue #394 for the follow-ups.
 
 ### Frontend/Assets
 - SCSS files in `src/templates/scss/`
