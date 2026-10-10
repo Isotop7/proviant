@@ -164,6 +164,29 @@ func TestZerologMiddleware_AccessLogContainsBothFields(t *testing.T) {
 	assert.Contains(t, logOutput, "Request handled")
 }
 
+// TestZerologMiddleware_SkipsProbeTraffic covers the exclusion. An orchestrator
+// probes on a fixed interval and Prometheus scrapes every 15s, so logging them
+// buries real traffic under thousands of identical lines a day.
+func TestZerologMiddleware_SkipsProbeTraffic(t *testing.T) {
+	for _, route := range []string{util.RouteHealth, util.RouteHealthReady, util.RouteMetrics} {
+		t.Run(route, func(t *testing.T) {
+			var buf bytes.Buffer
+			logger := zerolog.New(&buf)
+
+			gin.SetMode(gin.TestMode)
+			r := gin.New()
+			r.Use(ZerologMiddleware(&logger))
+			r.GET(route, func(c *gin.Context) { c.Status(http.StatusOK) })
+
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, route, nil))
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.NotContains(t, buf.String(), "Request handled")
+		})
+	}
+}
+
 func TestParseRequestID(t *testing.T) {
 	tests := []struct {
 		name     string

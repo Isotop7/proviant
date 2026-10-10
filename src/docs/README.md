@@ -1471,6 +1471,11 @@ var (
     // ErrDatabaseContextNotFound is thrown if database handle can't be found in context
     ErrDatabaseContextNotFound = errors.New("failed to get database from context")
 
+    // ErrServiceNotReady is what the readiness probe reports to an unauthenticated
+    // caller. The reason (which handle was missing, which ping failed) goes to the
+    // log: api.RespondError echoes err.Error() back to the client.
+    ErrServiceNotReady = errors.New("service not ready")
+
     // ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
     ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
 
@@ -1857,7 +1862,7 @@ var (
 ```
 
 <a name="ReceiptEndpointError"></a>
-## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L488-L490>)
+## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L493-L495>)
 
 ReceiptEndpointError marks an OCR scan failure as originating from the upstream vision endpoint rather than from Proviant itself. The API layer maps it to 502 Bad Gateway instead of 500 via errors.As.
 
@@ -1868,7 +1873,7 @@ type ReceiptEndpointError struct {
 ```
 
 <a name="ReceiptEndpointError.Error"></a>
-### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L492>)
+### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L497>)
 
 ```go
 func (e *ReceiptEndpointError) Error() string
@@ -1877,7 +1882,7 @@ func (e *ReceiptEndpointError) Error() string
 
 
 <a name="ReceiptEndpointError.Unwrap"></a>
-### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L494>)
+### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L499>)
 
 ```go
 func (e *ReceiptEndpointError) Unwrap() error
@@ -2254,6 +2259,8 @@ router contains the gin router definitions and maps requests to handlers
 - [func CSRFMiddleware\(cfg \*configuration.ProviantConfiguration\) gin.HandlerFunc](<#CSRFMiddleware>)
 - [func InitRateLimits\(cfg configuration.RateLimitConfiguration\)](<#InitRateLimits>)
 - [func JWTMiddleware\(proviantConfiguration \*configuration.ProviantConfiguration, dbHandle \*gorm.DB, authorizatorFunc func\(data any, ctx \*gin.Context\) bool, unauthorizedFunc func\(ctx \*gin.Context, code int, message string\)\) \(\*jwt.GinJWTMiddleware, error\)](<#JWTMiddleware>)
+- [func MetricsHandler\(logger \*zerolog.Logger\) gin.HandlerFunc](<#MetricsHandler>)
+- [func MetricsMiddleware\(\) gin.HandlerFunc](<#MetricsMiddleware>)
 - [func PATMiddleware\(jwtMiddleware \*jwt.GinJWTMiddleware\) gin.HandlerFunc](<#PATMiddleware>)
 - [func RequestIDMiddleware\(baseLogger \*zerolog.Logger\) gin.HandlerFunc](<#RequestIDMiddleware>)
 - [func RequireHouseholdAdmin\(\) gin.HandlerFunc](<#RequireHouseholdAdmin>)
@@ -2275,7 +2282,7 @@ const MsgInvalidCredentials = "Invalid credentials"
 ```
 
 <a name="AuthorizatorNotUserAware"></a>
-## func [AuthorizatorNotUserAware](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L303>)
+## func [AuthorizatorNotUserAware](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L308>)
 
 ```go
 func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool
@@ -2284,7 +2291,7 @@ func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool
 
 
 <a name="AuthorizatorShoppingListItem"></a>
-## func [AuthorizatorShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L229>)
+## func [AuthorizatorShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L234>)
 
 ```go
 func AuthorizatorShoppingListItem(data any, ctx *gin.Context) bool
@@ -2293,7 +2300,7 @@ func AuthorizatorShoppingListItem(data any, ctx *gin.Context) bool
 
 
 <a name="AuthorizatorUserAware"></a>
-## func [AuthorizatorUserAware](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L200>)
+## func [AuthorizatorUserAware](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L205>)
 
 ```go
 func AuthorizatorUserAware(data any, ctx *gin.Context) bool
@@ -2320,13 +2327,31 @@ func InitRateLimits(cfg configuration.RateLimitConfiguration)
 
 
 <a name="JWTMiddleware"></a>
-## func [JWTMiddleware](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L329-L333>)
+## func [JWTMiddleware](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L334-L338>)
 
 ```go
 func JWTMiddleware(proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, authorizatorFunc func(data any, ctx *gin.Context) bool, unauthorizedFunc func(ctx *gin.Context, code int, message string)) (*jwt.GinJWTMiddleware, error)
 ```
 
 JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization \(optional\)
+
+<a name="MetricsHandler"></a>
+## func [MetricsHandler](<https://github.com/Isotop7/proviant/blob/develop/src/router/metrics.go#L50>)
+
+```go
+func MetricsHandler(logger *zerolog.Logger) gin.HandlerFunc
+```
+
+MetricsHandler returns a Gin handler that exposes the Prometheus metrics scrape endpoint from the application registry. @Summary Prometheus metrics @Description Exposes the Prometheus scrape endpoint in the text exposition format. Served without authentication, so network access must be restricted to trusted scrapers @Tags common @Produce text/plain @Success 200 \{string\} string @Router /metrics \[get\]
+
+<a name="MetricsMiddleware"></a>
+## func [MetricsMiddleware](<https://github.com/Isotop7/proviant/blob/develop/src/router/metrics.go#L97>)
+
+```go
+func MetricsMiddleware() gin.HandlerFunc
+```
+
+
 
 <a name="PATMiddleware"></a>
 ## func [PATMiddleware](<https://github.com/Isotop7/proviant/blob/develop/src/router/pat_middleware.go#L15>)
@@ -2383,7 +2408,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 SetupRouter creates the gin engine and associated middleware
 
 <a name="UnauthorizedAPIFunc"></a>
-## func [UnauthorizedAPIFunc](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L150>)
+## func [UnauthorizedAPIFunc](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L155>)
 
 ```go
 func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string)
@@ -2392,7 +2417,7 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string)
 
 
 <a name="UnauthorizedFrontendFunc"></a>
-## func [UnauthorizedFrontendFunc](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L184>)
+## func [UnauthorizedFrontendFunc](<https://github.com/Isotop7/proviant/blob/develop/src/router/middleware.go#L189>)
 
 ```go
 func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string)
@@ -2787,7 +2812,7 @@ func CreateTestWebhook(db *gorm.DB, userID uint) *dbModel.Webhook
 
 
 <a name="MigrateAllModels"></a>
-## func [MigrateAllModels](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/database.go#L95>)
+## func [MigrateAllModels](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/database.go#L104>)
 
 ```go
 func MigrateAllModels(db *gorm.DB) error
@@ -2895,6 +2920,11 @@ const (
     RouteAuth           = "/web/auth"
     RouteForgotPassword = "/web/forgot-password"
     RouteResetPassword  = "/web/reset-password" //nolint:gosec // G101: route path constant, not a credential
+
+    // Health probes and metrics
+    RouteHealth      = "/health"
+    RouteHealthReady = "/health/ready"
+    RouteMetrics     = "/metrics"
 
     // Consumption rate estimation
     ConsumptionHistoryWindowDays = 90
@@ -3385,16 +3415,26 @@ common implements non\-specifc handlers
 ## Index
 
 - [func GetHealth\(ctx \*gin.Context\)](<#GetHealth>)
+- [func GetReadiness\(ctx \*gin.Context\)](<#GetReadiness>)
 
 
 <a name="GetHealth"></a>
-## func [GetHealth](<https://github.com/Isotop7/proviant/blob/develop/src/api/common/health.go#L19>)
+## func [GetHealth](<https://github.com/Isotop7/proviant/blob/develop/src/api/common/health.go#L43>)
 
 ```go
 func GetHealth(ctx *gin.Context)
 ```
 
-GetHealth returns the health status of the API @Summary Gets health @Description Gets health status of the API @Tags common @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Router /api/health \[get\]
+GetHealth returns the health status of the API @Summary Gets health @Description Gets health status of the API @Tags common @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Router /health \[get\]
+
+<a name="GetReadiness"></a>
+## func [GetReadiness](<https://github.com/Isotop7/proviant/blob/develop/src/api/common/health.go#L58>)
+
+```go
+func GetReadiness(ctx *gin.Context)
+```
+
+GetReadiness returns 200 when the database answers a ping, 503 otherwise. Kept separate from GetHealth because a failing liveness probe means "restart me" while a failing readiness probe means "stop routing traffic here". @Summary Readiness probe @Description Pings the database and returns 200 when it is reachable, 503 otherwise @Tags common @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Failure 503 \{object\} api.APIResponse @Router /health/ready \[get\]
 
 # onboarding
 
@@ -9239,7 +9279,7 @@ type AuthenticationConfiguration struct {
 ```
 
 <a name="CalendarConfiguration"></a>
-## type [CalendarConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L90-L93>)
+## type [CalendarConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L91-L94>)
 
 CalendarConfiguration contains settings for calendar token expiry and warnings.
 
@@ -9304,7 +9344,7 @@ type DatabaseSQLiteConfiguration struct {
 ```
 
 <a name="ExpiryConfiguration"></a>
-## type [ExpiryConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L191-L194>)
+## type [ExpiryConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L192-L195>)
 
 ExpiryConfiguration controls the visual expiry\-status thresholds.
 
@@ -9316,7 +9356,7 @@ type ExpiryConfiguration struct {
 ```
 
 <a name="LoggingConfiguration"></a>
-## type [LoggingConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L96-L99>)
+## type [LoggingConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L97-L100>)
 
 LoggingConfiguration contains all properties regarding the log configuration for zerolog
 
@@ -9328,7 +9368,7 @@ type LoggingConfiguration struct {
 ```
 
 <a name="MailDigestConfiguration"></a>
-## type [MailDigestConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L131-L134>)
+## type [MailDigestConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L132-L135>)
 
 MailDigestConfiguration controls when the expiry digest email is sent.
 
@@ -9340,7 +9380,7 @@ type MailDigestConfiguration struct {
 ```
 
 <a name="MonthlyWasteReportConfiguration"></a>
-## type [MonthlyWasteReportConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L119-L122>)
+## type [MonthlyWasteReportConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L120-L123>)
 
 MonthlyWasteReportConfiguration controls when the monthly waste report email is sent.
 
@@ -9352,7 +9392,7 @@ type MonthlyWasteReportConfiguration struct {
 ```
 
 <a name="NotificationConfiguration"></a>
-## type [NotificationConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L137-L145>)
+## type [NotificationConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L138-L146>)
 
 NotificationConfiguration contains all properties regarding the notification handler
 
@@ -9369,7 +9409,7 @@ type NotificationConfiguration struct {
 ```
 
 <a name="NtfyConfiguration"></a>
-## type [NtfyConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L112-L116>)
+## type [NtfyConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L113-L117>)
 
 NtfyConfiguration contains all properties regarding the ntfy.sh notification provider
 
@@ -9382,7 +9422,7 @@ type NtfyConfiguration struct {
 ```
 
 <a name="OCRConfiguration"></a>
-## type [OCRConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L157-L166>)
+## type [OCRConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L158-L167>)
 
 OCRConfiguration contains settings for OCR expiry date detection
 
@@ -9400,7 +9440,7 @@ type OCRConfiguration struct {
 ```
 
 <a name="OpenFoodFactsConfiguration"></a>
-## type [OpenFoodFactsConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L148-L154>)
+## type [OpenFoodFactsConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L149-L155>)
 
 OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
 
@@ -9415,7 +9455,7 @@ type OpenFoodFactsConfiguration struct {
 ```
 
 <a name="ProviantConfiguration"></a>
-## type [ProviantConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L197-L217>)
+## type [ProviantConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L198-L218>)
 
 ProviantConfiguration is the configuration wrapper struct
 
@@ -9444,7 +9484,7 @@ type ProviantConfiguration struct {
 ```
 
 <a name="ProviantConfiguration.ValidateDatabaseConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateDatabaseConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L316>)
+### func \(\*ProviantConfiguration\) [ValidateDatabaseConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L317>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error
@@ -9453,7 +9493,7 @@ func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error
 ValidateDatabaseConfiguration checks the current database configuration for common errors
 
 <a name="ProviantConfiguration.ValidateNotificationConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateNotificationConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L260>)
+### func \(\*ProviantConfiguration\) [ValidateNotificationConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L261>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error
@@ -9462,7 +9502,7 @@ func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error
 ValidateNotificationConfiguration validates the notification configuration
 
 <a name="ProviantConfiguration.ValidateOCRReceiptConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateOCRReceiptConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L288>)
+### func \(\*ProviantConfiguration\) [ValidateOCRReceiptConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L289>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateOCRReceiptConfiguration() error
@@ -9471,7 +9511,7 @@ func (ec *ProviantConfiguration) ValidateOCRReceiptConfiguration() error
 ValidateOCRReceiptConfiguration validates the receipt scan configuration. A disabled feature is always valid: nothing is parsed, no endpoint is contacted, so there is nothing to reject. An enabled configuration must name a vision\-capable provider \("openai" — any OpenAI\-compatible endpoint\) and a model; a non\-vision provider such as "tesseract" cannot return structured line items at all, so it is a hard validation error rather than a runtime fallback.
 
 <a name="ProviantConfiguration.ValidateOpenFoodFactsConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L220>)
+### func \(\*ProviantConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L221>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error
@@ -9480,7 +9520,7 @@ func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error
 ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
 
 <a name="ProviantConfiguration.ValidateRecipeAPIConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateRecipeAPIConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L450>)
+### func \(\*ProviantConfiguration\) [ValidateRecipeAPIConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L451>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateRecipeAPIConfiguration() error
@@ -9495,7 +9535,7 @@ Validation runs in two stages on purpose: the provider\-independent checks \(URL
 - A self\-hosted provider whose URL is the public TheMealDB endpoint is rejected after the key check: without a key there is nothing to leak, so the missing key is the actionable problem first. With a key present, that URL is unambiguously wrong and no substitute URL can be guessed. Both self\-hosted failures are recoverable configuration errors, not programming errors, so the caller degrades the feature instead of refusing to boot.
 
 <a name="ProviantConfiguration.ValidateServerConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateServerConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L348>)
+### func \(\*ProviantConfiguration\) [ValidateServerConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L349>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateServerConfiguration() error
@@ -9520,7 +9560,7 @@ type RateLimitConfiguration struct {
 ```
 
 <a name="ReceiptOCRConfiguration"></a>
-## type [ReceiptOCRConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L171-L178>)
+## type [ReceiptOCRConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L172-L179>)
 
 ReceiptOCRConfiguration contains settings for receipt photo scanning \(issue \#61\). Provider is restricted to vision\-capable OpenAI\-compatible endpoints; the whole feature is off unless Enabled is true.
 
@@ -9536,7 +9576,7 @@ type ReceiptOCRConfiguration struct {
 ```
 
 <a name="ReceiptOCRConfiguration.UsesInsecureTransport"></a>
-### func \(\*ReceiptOCRConfiguration\) [UsesInsecureTransport](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L492>)
+### func \(\*ReceiptOCRConfiguration\) [UsesInsecureTransport](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L493>)
 
 ```go
 func (rc *ReceiptOCRConfiguration) UsesInsecureTransport() bool
@@ -9545,7 +9585,7 @@ func (rc *ReceiptOCRConfiguration) UsesInsecureTransport() bool
 UsesInsecureTransport reports whether the configured receipt endpoint is served over plaintext HTTP. A custom endpoint authenticates every request with a bearer API key and receives the uploaded receipt photo, so an http:// URL transmits both in cleartext. Mirrors RecipeAPIConfiguration. UsesInsecureTransport: surfaced as a startup warning rather than a rejection because a LAN\-only vision endpoint is a legitimate deployment. An empty Endpoint resolves to the https:// OpenAI default, so it is never insecure.
 
 <a name="RecipeAPIConfiguration"></a>
-## type [RecipeAPIConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L181-L188>)
+## type [RecipeAPIConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L182-L189>)
 
 RecipeAPIConfiguration contains settings for the recipe suggestions feature
 
@@ -9561,7 +9601,7 @@ type RecipeAPIConfiguration struct {
 ```
 
 <a name="RecipeAPIConfiguration.IsSelfHosted"></a>
-### func \(RecipeAPIConfiguration\) [IsSelfHosted](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L379>)
+### func \(RecipeAPIConfiguration\) [IsSelfHosted](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L380>)
 
 ```go
 func (rc RecipeAPIConfiguration) IsSelfHosted() bool
@@ -9572,7 +9612,7 @@ IsSelfHosted reports whether the configured provider is a self\-hosted instance 
 It delegates to isSelfHostedRecipeProvider so the provider list that gates the api\_key check and the public\-TheMealDB\-host leak guard stays a single list. Two hand\-maintained copies could drift, and the failure mode is silent: a provider present in one but not the other skips the guard whose whole purpose is keeping the operator's key and the household's product names off a third party.
 
 <a name="RecipeAPIConfiguration.UsesInsecureTransport"></a>
-### func \(RecipeAPIConfiguration\) [UsesInsecureTransport](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L419>)
+### func \(RecipeAPIConfiguration\) [UsesInsecureTransport](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L420>)
 
 ```go
 func (rc RecipeAPIConfiguration) UsesInsecureTransport() bool
@@ -9581,7 +9621,7 @@ func (rc RecipeAPIConfiguration) UsesInsecureTransport() bool
 UsesInsecureTransport reports whether the configured provider URL is served over plaintext HTTP. A self\-hosted provider authenticates every request with an API key and puts the household's inventory\-derived search keywords in the query string, so an http:// instance URL transmits both in cleartext. This is surfaced as a startup warning rather than a rejection because a Mealie or Tandoor instance reachable only over a trusted LAN is a legitimate deployment, and refusing to start would be a worse outcome than the warning.
 
 <a name="SMTPConfiguration"></a>
-## type [SMTPConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L102-L109>)
+## type [SMTPConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L103-L110>)
 
 SMTPConfiguration contains all properties regarding the notification handler target
 
@@ -9609,7 +9649,7 @@ type SecurityHeadersConfiguration struct {
 ```
 
 <a name="ServerConfiguration"></a>
-## type [ServerConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L72-L87>)
+## type [ServerConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L72-L88>)
 
 ServerConfiguration contains all properties regarding the proviant server
 
@@ -9629,11 +9669,12 @@ type ServerConfiguration struct {
     MaxUploadSizeMB int                    `mapstructure:"maxUploadSizeMB"`
     Debug           bool                   `mapstructure:"debug"`
     DemoMode        bool                   `mapstructure:"demoMode"`
+    MetricsEnabled  bool                   `mapstructure:"metricsEnabled"`
 }
 ```
 
 <a name="TelegramConfiguration"></a>
-## type [TelegramConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L125-L128>)
+## type [TelegramConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L126-L129>)
 
 TelegramConfiguration holds per\-instance Telegram settings \(no global bot token\).
 

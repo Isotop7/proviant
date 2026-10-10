@@ -98,6 +98,11 @@ var (
 	// ErrDatabaseContextNotFound is thrown if database handle can't be found in context
 	ErrDatabaseContextNotFound = errors.New("failed to get database from context")
 
+	// ErrServiceNotReady is what the readiness probe reports to an unauthenticated
+	// caller. The reason (which handle was missing, which ping failed) goes to the
+	// log: api.RespondError echoes err.Error() back to the client.
+	ErrServiceNotReady = errors.New("service not ready")
+
 	// ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
 	ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
 

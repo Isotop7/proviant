@@ -142,8 +142,6 @@ tasks:
       - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
         msg: "No container runtime found. Please install podman or docker."
     cmds:
-      # Dev-only secret, same value as src/config.yaml. The shipped config
-      # template carries none, so the container cannot start without one.
       - '{{.CONTAINER_RUNTIME}} run -t --rm -p 5114:5114 -v ./src/config.yaml.sqlite.tmpl:/app/config.yaml:Z -e PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD=dev-only-local-secret proviant:latest'
 
   runcontainerdebug:
@@ -235,9 +233,6 @@ tasks:
 
   vuln:
     desc: Scan Go and npm dependencies for vulnerabilities
-    # vuln-image is deliberately NOT a dep: it builds a full container image
-    # (containerimage, --no-cache) and needs podman/docker, which dep-only audits
-    # should not require. Run `task vuln-image` explicitly when you want the image scan.
     deps: [vuln-go, vuln-npm]
 
   sonar-issues:

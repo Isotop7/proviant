@@ -174,12 +174,25 @@ import (
 - Max ~120 chars (recommended, unenforced)
 
 ### Comments
-- **Minimize.** Default none — code should read without.
-- Only when technically required or documenting sidehack:
-  - Tooling/convention: godoc on exported symbols, Swagger annotations, side-effect import (`_`) rationale.
-  - Sidehack / non-obvious workaround: temporary hack, upstream-bug workaround, counter-intuitive line whose *why* can't be expressed in code — include revisit trigger or upstream link.
-- Never comment what code says (no restating logic, no narrating obvious steps).
-- Prefer well-named function/variable over explanation.
+- **Allowed / required:**
+  - godoc on exported symbols (see `### Documentation`)
+  - Swagger annotations on handlers (see `### Documentation`)
+  - One doc comment above a test function stating its intent
+  - One line on a side-effect (`_`) import saying why (tooling convention)
+- **Discouraged:** everything else — comments restating what the code does, narrating steps, or explaining a workaround/hack. Rename the function/variable instead, or move the intent into the test name. No exception with a revisit trigger: if the code needs a paragraph, the code is wrong.
+- Applies to `_test.go` too: doc comment *above* the test, none inside restating assertions.
+
+```go
+// WRONG: 4-line rationale paragraph explaining obvious code
+// A client-side probe timeout cancels the request context: the caller
+// gave up, which is not the database failing. Logging it at Error would
+// turn an ordinary 1s kubelet timeout into a self-inflicted outage
+// signal from a process whose database is merely slow.
+logProbeOutcome(ctx, err)
+
+// CORRECT: the name carries it, no comment
+logClientAbandonedProbe(ctx, err)
+```
 
 ### Naming Conventions
 - **Exported functions/types**: PascalCase (`GetProduct`, `DatabaseController`)
@@ -332,6 +345,7 @@ Is this a startup failure that prevents the app from running?
 - `t.Run()` subtests
 - Test success + error paths
 - Test DB setup in helpers, not per test file
+- Doc comment above each test function stating intent; no comments inside test bodies
 
 ### Frontend Tests
 
@@ -409,7 +423,7 @@ document.addEventListener("click", function(event) {
 ```
 
 ### Documentation
-- godoc comments exported functions
+- godoc per `### Comments` policy
 - Swagger annotations API endpoints
 - `task doc` regenerate docs before commits
 - Swagger format: `@Summary`, `@Description`, `@Tags`, `@Router`

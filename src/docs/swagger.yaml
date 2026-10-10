@@ -1000,21 +1000,6 @@ info:
   title: proviant
   version: 0.2.0
 paths:
-  /api/health:
-    get:
-      consumes:
-      - application/json
-      description: Gets health status of the API
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Gets health
-      tags:
-      - common
   /api/v1/admin/audit-log:
     get:
       description: Returns paginated audit log entries for the caller's household.
@@ -3660,6 +3645,55 @@ paths:
       summary: Verify email
       tags:
       - auth
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Gets health status of the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Gets health
+      tags:
+      - common
+  /health/ready:
+    get:
+      consumes:
+      - application/json
+      description: Pings the database and returns 200 when it is reachable, 503 otherwise
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Readiness probe
+      tags:
+      - common
+  /metrics:
+    get:
+      description: Exposes the Prometheus scrape endpoint in the text exposition format.
+        Served without authentication, so network access must be restricted to trusted
+        scrapers
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Prometheus metrics
+      tags:
+      - common
   /web:
     get:
       description: Renders the home page showing product dashboard

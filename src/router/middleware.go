@@ -126,6 +126,11 @@ func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
 		// Process the request
 		ctx.Next()
 
+		switch ctx.FullPath() {
+		case util.RouteHealth, util.RouteHealthReady, util.RouteMetrics:
+			return
+		}
+
 		// Read request_id and user_id from context
 		reqID, _ := ctx.Get(util.ContextKeyRequestID)
 		userID, _ := ctx.Get(util.ContextKeyUserID)
