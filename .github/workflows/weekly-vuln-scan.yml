@@ -1,7 +1,7 @@
 name: Weekly Vulnerability Scan
 
 env:
-  GO_VERSION: 1.26.8
+  GO_VERSION: 1.26.9
 
 on:
   schedule:
@@ -38,3 +38,56 @@ jobs:
         run: npm install
       - name: Audit dependencies
         uses: ./.github/actions/npm-audit
+
+  image-scan:
+    runs-on: ubuntu-latest
+    # Cold-cache budget: full CGO+npm image build plus the trivy DB download
+    # and scan. Keep above the worst realistic build+scan.
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build image without pushing
+        uses: docker/build-push-action@v6
+        with:
+          file: ./Dockerfile
+          push: false
+          load: true
+          # Nothing ships from this workflow, so attestations are pointless —
+          # and the docker exporter cannot carry them. Set explicitly so the
+          # build does not depend on buildx's exporter/attestation defaults.
+          provenance: false
+          sbom: false
+          platforms: linux/amd64
+          # Own scope: sharing ci.yml's proviant-scan-prod-amd64 makes the two
+          # workflows collide on the same actions/cache reservation, and GHA
+          # cache writes are not transactional.
+          cache-from: type=gha,scope=proviant-weekly-scan-prod-amd64
+          cache-to: type=gha,mode=max,scope=proviant-weekly-scan-prod-amd64
+          tags: proviant:scan
+      - name: Cache trivy vulnerability database
+        uses: actions/cache@v4
+        with:
+          path: .cache/trivy
+          # run_id (not a constant) so the cache is re-saved with the DB trivy
+          # actually used this run. A fixed key makes actions/cache skip every
+          # save after the first, pinning the DB to whatever day one shipped and
+          # re-downloading ~50 MB on every run.
+          key: trivy-db-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            trivy-db-${{ runner.os }}-
+      - name: Scan image
+        env:
+          TRIVY_CACHE_DIR: ${{ github.workspace }}/.cache/trivy
+        run: bash scripts/image-scan.sh proviant:scan
+      - name: Upload scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-weekly-report
+          path: trivy-report.json
+          retention-days: 14

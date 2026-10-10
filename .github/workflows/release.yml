@@ -60,6 +60,11 @@ jobs:
           repository=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
           echo "path=$repository" >> "$GITHUB_OUTPUT"
           echo "image=ghcr.io/$repository" >> "$GITHUB_OUTPUT"
+          # Per-SHA scan tag, mirroring ci.yml: an immutable promotion source that
+          # a later release cannot overwrite. A shared `:scan` tag would still
+          # resolve to the last *attempted* image after a failed release, so
+          # anyone pulling it would get a scan that never passed.
+          echo "scan_tag=ghcr.io/$repository:scan-$GITHUB_SHA" >> "$GITHUB_OUTPUT"
           echo "ver=$ver" >> "$GITHUB_OUTPUT"
           case "$ver" in
             *-*) echo "final=false" >> "$GITHUB_OUTPUT" ;;
@@ -96,8 +101,15 @@ jobs:
           username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
           password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
 
-      - name: Build and push production image
-        id: build
+      # Build and push to a per-SHA scan tag with attestations, then promote to
+      # release tags after the scan passes. A second build between scan and push
+      # would produce a different digest, so trivy-report.json must vouch for the
+      # exact image that ships. Promotion via imagetools create copies the scanned
+      # manifest (and its attestations) by digest — no rebuild.
+      # The scan tag is left behind on purpose: buildx has no delete API, and the
+      # next release prunes nothing (only ci.yml prunes). It is not a supported
+      # pull target.
+      - name: Build and push production image to scan tag
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -105,12 +117,60 @@ jobs:
           push: true
           platforms: linux/amd64
           cache-from: type=gha,scope=proviant-prod-amd64
-          tags: ${{ steps.imgref.outputs.prod_tags }}
+          cache-to: type=gha,mode=max,scope=proviant-prod-amd64
+          tags: ${{ steps.imgref.outputs.scan_tag }}
           labels: |
             org.opencontainers.image.title=proviant
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ steps.imgref.outputs.ver }}
+
+      - name: Cache trivy vulnerability database
+        uses: actions/cache@v4
+        with:
+          path: .cache/trivy
+          # run_id (not a constant) so the cache is re-saved with the DB trivy
+          # actually used this run. A fixed key makes actions/cache skip every
+          # save after the first, pinning the DB to whatever day one shipped and
+          # re-downloading ~120 MB on every run.
+          key: trivy-db-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            trivy-db-${{ runner.os }}-
+
+      - name: Scan image for vulnerabilities
+        env:
+          TRIVY_CACHE_DIR: ${{ github.workspace }}/.cache/trivy
+          SCAN_IMAGE: ${{ steps.imgref.outputs.scan_tag }}
+        run: bash scripts/image-scan.sh "$SCAN_IMAGE"
+
+      - name: Upload scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report.json
+          retention-days: 14
+
+      # Promote the scanned image to all release tags by digest. The digest is
+      # read from the registry (not the local store) for the "latest" retag and
+      # release notes.
+      - name: Promote scanned image to release tags
+        id: build
+        env:
+          TAGS: ${{ steps.imgref.outputs.prod_tags }}
+          IMAGE: ${{ steps.imgref.outputs.image }}
+          SCAN_IMAGE: ${{ steps.imgref.outputs.scan_tag }}
+        run: |
+          DIGEST="$(docker buildx imagetools inspect "$SCAN_IMAGE" --format '{{.Manifest.Digest}}')"
+          if [ -z "$DIGEST" ] || [ "$DIGEST" = "null" ]; then
+            echo "::error::could not resolve digest for $SCAN_IMAGE"
+            exit 1
+          fi
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            docker buildx imagetools create --tag "$tag" "$IMAGE@$DIGEST"
+          done <<< "$TAGS"
 
       - name: Build and push demo image
         id: build-demo

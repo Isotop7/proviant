@@ -1,6 +1,6 @@
 ![Proviant](./res/icons/proviant_hero.png)
 
-![Golang version](https://img.shields.io/badge/Go-1.26.8-green)
+![Golang version](https://img.shields.io/badge/Go-1.26.9-green)
 ![CI status](https://github.com/Isotop7/proviant/actions/workflows/ci.yml/badge.svg?branch=main)
 ![Release state](https://img.shields.io/github/v/release/Isotop7/proviant)
 ![Open issues](https://img.shields.io/github/issues/Isotop7/proviant)
@@ -425,6 +425,20 @@ Documentation is generated with `gomarkdoc` and `swagger`:
 ![Sign in](./screenshots/login.png)
 
 <!-- ui-capture:end -->
+
+## Security Scanning
+
+The CI pipeline runs on every push, and on pull requests targeting `main` or `develop`. Dependency scanning gates every run; container-image scanning gates pushes to `main`/`develop` and same-repo pull requests:
+
+| Scan | Tool | Scope |
+| --- | --- | --- |
+| Go dependencies | `govulncheck` | `task vuln-go` / CI `check` job |
+| npm dependencies | `npm audit` (production gate) | `task vuln-npm` / CI `frontend-check` job |
+| Container image | `trivy` (prod image) | `task vuln-image` / CI `image-scan` job + release gate |
+
+Image scanning blocks on fixable `HIGH`/`CRITICAL` findings. Scan flags and the digest-pinned trivy image live in `scripts/image-scan.sh` — the single source of truth shared by CI and `task vuln-image`. The task uses the pinned container image when no local `trivy` binary is found.
+
+The image scan publishes the scanned image to a `ci-scan-<sha>` tag and the release step promotes that exact digest to the published tags, so the report always covers the image that ships. A scan that fails to complete (unreachable vulnerability database, registry error) is reported as an error rather than as a clean result — the gate never passes because the scanner broke. Pull requests from forks do not run the image scan (their CI token is read-only); the gate is enforced through branch protection on `main` and `develop`.
 
 ## Contributing
 

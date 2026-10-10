@@ -1,4 +1,4 @@
-FROM docker.io/golang:1.26.8-alpine AS buildenv
+FROM docker.io/golang:1.26.9-alpine AS buildenv
 WORKDIR /app
 
 RUN apk add --no-cache --update g++ gcc go npm
@@ -23,7 +23,7 @@ RUN npm ci && \
     cd src && \
     CGO_ENABLED=1 GOOS=linux CGO_CFLAGS="-D_LARGEFILE64_SOURCE" go build -v -o ../proviant
 
-FROM golang:1.26.8-alpine AS seeder
+FROM golang:1.26.9-alpine AS seeder
 WORKDIR /app
 RUN apk add --no-cache gcc g++ musl-dev
 COPY --from=buildenv /app/src /app/src

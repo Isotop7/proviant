@@ -1,7 +1,7 @@
 name: CI
 
 env:
-  GO_VERSION: 1.26.8
+  GO_VERSION: 1.26.9
   GOLANGCI_LINT_VERSION: v2.14.0
   PRIVATE_REGISTRY: registry.hr94.de
 
@@ -9,9 +9,17 @@ on:
   push:
     branches:
       - '**'
+  pull_request:
+    branches:
+      - main
+      - develop
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -40,7 +48,7 @@ jobs:
           cd ./src
           go run golang.org/x/vuln/cmd/govulncheck@latest -json ./... > govulncheck.json
       - name: Create vulnerability issues
-        if: failure()
+        if: failure() && github.event_name == 'push'
         env:
           WORKSPACE: ${{ github.workspace }}
         run: |
@@ -117,8 +125,100 @@ jobs:
       - name: Lint HTML
         run: npm run lint-html
 
+  image-scan:
+    needs:
+      - check
+    if: >-
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+      github.ref == 'refs/heads/develop' ||
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Cold-cache budget: full CGO+npm image build, then the trivy DB download
+    # and the scan. The prod-push job this replaced had no timeout at all, so
+    # this is a ceiling — keep it above the worst realistic build+scan.
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      scan_tag: ${{ steps.push-scan.outputs.scan_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Resolve scan image reference
+        id: imgref
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "repository=$(echo "$REPOSITORY" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Push straight to a scan tag instead of loading into the docker daemon.
+      # Attestations (SBOM + provenance) only exist once an OCI index is in a
+      # registry, and docker-build-and-push promotes this exact digest below, so
+      # the published prod images keep the attestations the previous direct
+      # build-push step produced. Fork PRs never reach this job (see `if`).
+      - name: Build and push image to scan tag
+        uses: docker/build-push-action@v6
+        with:
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64
+          cache-from: type=gha,scope=proviant-scan-prod-amd64
+          cache-to: type=gha,mode=max,scope=proviant-scan-prod-amd64
+          tags: ghcr.io/${{ steps.imgref.outputs.repository }}:ci-scan-${{ github.sha }}
+      - name: Cache trivy vulnerability database
+        uses: actions/cache@v4
+        with:
+          path: .cache/trivy
+          # run_id (not a constant) so the cache is re-saved with the DB trivy
+          # actually used this run. A fixed key makes actions/cache skip every
+          # save after the first, pinning the DB to whatever day one shipped and
+          # re-downloading ~120 MB on every run.
+          key: trivy-db-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            trivy-db-${{ runner.os }}-
+      - name: Scan image
+        env:
+          TRIVY_CACHE_DIR: ${{ github.workspace }}/.cache/trivy
+          SCAN_IMAGE: ghcr.io/${{ steps.imgref.outputs.repository }}:ci-scan-${{ github.sha }}
+        run: bash scripts/image-scan.sh "$SCAN_IMAGE"
+      - name: Upload scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report.json
+          retention-days: 14
+      # The per-SHA tag is already pushed by the build step and is the
+      # immutable promotion source. This only advances a rolling pointer for
+      # humans inspecting the latest scan; main/develop only, so a PR run can
+      # never hijack it. Stale ci-scan-* tags are pruned by cleanup-scan-tags.
+      - name: Publish rolling scan tag
+        id: push-scan
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+        env:
+          SCAN_IMAGE: ghcr.io/${{ steps.imgref.outputs.repository }}:ci-scan-${{ github.sha }}
+          ROLLING_IMAGE: ghcr.io/${{ steps.imgref.outputs.repository }}:ci-scan-latest
+        run: |
+          digest="$(docker buildx imagetools inspect "$SCAN_IMAGE" --format '{{.Manifest.Digest}}')"
+          if [ -z "$digest" ] || [ "$digest" = "null" ]; then
+            echo "::error::could not resolve digest for $SCAN_IMAGE"
+            exit 1
+          fi
+          docker buildx imagetools create --tag "$ROLLING_IMAGE" "$SCAN_IMAGE@$digest"
+          echo "scan_tag=$SCAN_IMAGE" >> "$GITHUB_OUTPUT"
+
   docker-build-and-push:
-    needs: check
+    needs:
+      - check
+      - image-scan
     if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -135,6 +235,7 @@ jobs:
         id: imgref
         run: |
           repository=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
+          echo "repository=$repository" >> "$GITHUB_OUTPUT"
           emit_tags() {
             echo "$1<<PROVIANT_TAGS_EOF" >> "$GITHUB_OUTPUT"
             echo "ghcr.io/$repository:$2" >> "$GITHUB_OUTPUT"
@@ -160,15 +261,30 @@ jobs:
           registry: ${{ env.PRIVATE_REGISTRY }}
           username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
           password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          file: ./Dockerfile
-          push: true
-          platforms: linux/amd64
-          cache-from: type=gha,scope=proviant-prod-amd64
-          cache-to: type=gha,mode=max,scope=proviant-prod-amd64
-          tags: ${{ steps.imgref.outputs.prod_tags }}
+      # Promote the scanned image by digest, exactly like release.yml. The scan
+      # report must vouch for the image that ships, so rebuilding here would
+      # reopen that gap; imagetools create copies the scanned index (attestations
+      # included) and `docker push` of a locally built image would silently drop
+      # them.
+      - name: Promote scanned image to prod tags
+        env:
+          IMAGE: ghcr.io/${{ steps.imgref.outputs.repository }}
+          SCAN_TAG: ${{ needs.image-scan.outputs.scan_tag }}
+          TAGS: ${{ steps.imgref.outputs.prod_tags }}
+        run: |
+          if [ -z "$SCAN_TAG" ]; then
+            echo "::error::image-scan published no scan tag; refusing to build an unverified image"
+            exit 1
+          fi
+          digest="$(docker buildx imagetools inspect "$SCAN_TAG" --format '{{.Manifest.Digest}}')"
+          if [ -z "$digest" ] || [ "$digest" = "null" ]; then
+            echo "::error::could not resolve digest for $SCAN_TAG"
+            exit 1
+          fi
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            docker buildx imagetools create --tag "$tag" "$IMAGE@$digest"
+          done <<< "$TAGS"
       - name: Build and push Demo Docker image
         uses: docker/build-push-action@v6
         with:
@@ -178,6 +294,60 @@ jobs:
           cache-from: type=gha,scope=proviant-demo-amd64
           cache-to: type=gha,mode=max,scope=proviant-demo-amd64
           tags: ${{ steps.imgref.outputs.demo_tags }}
+
+  # image-scan publishes one immutable ci-scan-<sha> tag per run. Nothing else
+  # rewrites them, so without this the package grows by one tag per commit
+  # forever. Rolling the pointer to ci-scan-latest is deliberately not enough:
+  # the per-SHA tags are the promotion source and must stay pullable for as long
+  # as a run can still reference them.
+  cleanup-scan-tags:
+    needs:
+      - image-scan
+      - docker-build-and-push
+    # Only prune after a *successful* promotion. With a bare always() the prune
+    # also ran when docker-build-and-push failed, deleting the very
+    # ci-scan-<sha> tag a promotion retry would still need. Failed runs leak
+    # their tags until the next green run cleans them, which is the right
+    # trade: a stale tag is cheap, an unpromotable release is not.
+    if: >-
+      always() && github.event_name == 'push' &&
+      needs.docker-build-and-push.result == 'success' &&
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Delete stale ci-scan tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          PACKAGE: proviant
+          MAX_AGE_DAYS: 7
+        run: |
+          set -euo pipefail
+          # Container packages hang off /orgs for orgs and /users for personal
+          # accounts; probe once instead of hardcoding the owner type.
+          if gh api --silent "orgs/$OWNER/packages/container/$PACKAGE" >/dev/null 2>&1; then
+            BASE="orgs/$OWNER/packages/container/$PACKAGE"
+          else
+            BASE="users/$OWNER/packages/container/$PACKAGE"
+          fi
+          echo "Pruning ci-scan-* tags older than $MAX_AGE_DAYS days under $BASE"
+          cutoff="$(date -u -d "$MAX_AGE_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)"
+          gh api --paginate "$BASE/versions?per_page=100" \
+            --jq '.[] | {id, updated_at, tags: [.metadata.container.tags[]]}' \
+            | jq -c --arg cutoff "$cutoff" \
+                'select((.tags | length) > 0)
+                 | select(.tags | all(startswith("ci-scan-")))
+                 | select(.updated_at < $cutoff)' \
+            | while IFS= read -r version; do
+                id="$(jq -r '.id' <<< "$version")"
+                echo "Deleting version $id ($(jq -r '.tags | join(",")' <<< "$version")) — updated $(jq -r '.updated_at' <<< "$version")"
+                gh api -X DELETE "$BASE/versions/$id" || echo "::warning::could not delete version $id, continuing"
+              done
+          echo "Prune complete."
 
   sonarcloud-scan:
     needs: check
