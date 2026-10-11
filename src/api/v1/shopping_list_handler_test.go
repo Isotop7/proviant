@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
 
@@ -80,12 +81,12 @@ func TestCreateShoppingListItem(t *testing.T) {
 		if env.W.Code != http.StatusCreated {
 			t.Fatalf("status = %d, want 201; body = %s", env.W.Code, env.W.Body.String())
 		}
-		var item dbModel.ShoppingListItem
+		var item apiModel.ShoppingListItemResponse
 		if err := json.Unmarshal(env.W.Body.Bytes(), &item); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
-		if item.Name != "Milk" || item.Quantity != 2 || item.HouseholdID != env.Household.ID || item.CreatedBy != env.User.ID {
-			t.Errorf("item = %+v, want Milk/2 in household %d", item, env.Household.ID)
+		if item.Name != "Milk" || item.Quantity != 2 || item.CreatedBy != env.User.ID {
+			t.Errorf("item = %+v, want Milk/2 created by %d", item, env.User.ID)
 		}
 	})
 

@@ -17,6 +17,7 @@ import (
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	apperrors "codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -151,7 +152,7 @@ func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
 // @Tags         product
 // @Produce      json
 // @Param        barcode  path  string  true  "Barcode"
-// @Success      200  {object}  dbModel.OpenFoodFactsCache
+// @Success      200  {object}  apiModel.OpenFoodFactsCacheResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Failure      502  {object}  api.APIResponse
@@ -176,7 +177,7 @@ func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 		cached, cacheErr := productRepo.GetOpenFoodFactsCacheByBarcode(barcode)
 		if cacheErr == nil {
 			appCtx.Logger.Info().Msgf("Cache hit for barcode '%s'", barcode)
-			ctx.JSON(http.StatusOK, cached)
+			ctx.JSON(http.StatusOK, apiModel.NewOpenFoodFactsCacheResponse(&cached))
 			return
 		}
 		if cacheErr != gorm.ErrRecordNotFound {
@@ -205,7 +206,7 @@ func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 		storeCacheEntry(productRepo, offacntrl, appCtx.Logger, barcode, &entry)
 	}
 
-	ctx.JSON(http.StatusOK, entry)
+	ctx.JSON(http.StatusOK, apiModel.NewOpenFoodFactsCacheResponse(&entry))
 }
 
 func storeCacheEntry(productRepo *database.ProductRepository, offacntrl *controllers.OpenFoodFactsAPIController, logger *zerolog.Logger, barcode string, entry *dbModel.OpenFoodFactsCache) {

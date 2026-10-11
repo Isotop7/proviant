@@ -196,7 +196,7 @@ func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string) {
 	// Get template cache instance from context and fail if not found
 	templateCache, ok := ctx.MustGet("templateCache").(map[string]*template.Template)
 	if !ok {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrTemplateCacheNotFound)
 		return
 	}
 	templates.RenderError(ctx, templateCache, code, message)

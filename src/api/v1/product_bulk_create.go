@@ -75,7 +75,7 @@ func BulkCreateProducts(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	if len(req.Items) == 0 {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "items missing"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrBulkCreateItemsMissing)
 		return
 	}
 	if len(req.Items) > util.ReceiptBulkMaxItems {

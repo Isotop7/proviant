@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
 	"codeberg.org/isotop7/proviant/util"
@@ -75,12 +76,28 @@ func TestExportProductsJSON(t *testing.T) {
 	if env.W.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
 	}
-	var products []dbModel.Product
+	var products []apiModel.ExportProductResponse
 	if err := json.Unmarshal(env.W.Body.Bytes(), &products); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
 	if len(products) != 1 || products[0].ID != product.ID {
 		t.Errorf("products = %+v, want one product %d", products, product.ID)
+	}
+	if products[0].ArchivedAt != nil {
+		t.Errorf("archivedAt = %v, want nil for an active product", products[0].ArchivedAt)
+	}
+	if products[0].CreatedAt.IsZero() {
+		t.Error("createdAt is zero, want the purchase date an export exists to carry")
+	}
+
+	var raw []map[string]any
+	if err := json.Unmarshal(env.W.Body.Bytes(), &raw); err != nil {
+		t.Fatalf("decode raw: %v", err)
+	}
+	for _, key := range []string{"UpdatedAt", "DeletedAt", "CreatedAt"} {
+		if _, exists := raw[0][key]; exists {
+			t.Errorf("key %q present in export, want it omitted", key)
+		}
 	}
 }
 
@@ -150,6 +167,12 @@ func TestExportFullJSON(t *testing.T) {
 	}
 	if resp.Stats.LastInsertedProduct != "Fresh Milk" {
 		t.Errorf("lastInsertedProduct = %q, want %q", resp.Stats.LastInsertedProduct, "Fresh Milk")
+	}
+	if len(resp.Products.Archived) != 1 || resp.Products.Archived[0].ArchivedAt == nil {
+		t.Errorf("archived product = %+v, want an archivedAt timestamp", resp.Products.Archived)
+	}
+	if len(resp.Products.Active) != 1 || resp.Products.Active[0].ArchivedAt != nil {
+		t.Errorf("active product = %+v, want no archivedAt", resp.Products.Active)
 	}
 	if resp.ExportedAt == "" {
 		t.Errorf("exportedAt empty")

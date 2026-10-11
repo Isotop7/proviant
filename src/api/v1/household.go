@@ -116,7 +116,7 @@ func ApplyForHousehold(ctx *gin.Context, appCtx *AppContext) {
 // @Description  Returns pending join applications for the household the calling user is admin of.
 // @Tags         household
 // @Produce      json
-// @Success      200  {array}   database.HouseholdApplication
+// @Success      200  {array}   apiModel.HouseholdApplicationResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      403  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
@@ -125,7 +125,7 @@ func GetHouseholdApplications(ctx *gin.Context, appCtx *AppContext) {
 	applications, err := appCtx.Repos.Households.GetPendingApplicationsForAdmin(appCtx.UserID)
 	switch err {
 	case nil:
-		ctx.JSON(http.StatusOK, applications)
+		ctx.JSON(http.StatusOK, apiModel.NewHouseholdApplicationResponses(applications))
 	case apperrors.ErrNotHouseholdAdmin:
 		api.RespondError(ctx, http.StatusForbidden, err)
 	default:

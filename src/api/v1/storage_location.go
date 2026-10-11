@@ -5,6 +5,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,7 +21,7 @@ type storageLocationRequest struct {
 // @Description  Returns all storage locations belonging to the user's household, ordered by sort_order.
 // @Tags         household
 // @Produce      json
-// @Success      200  {array}   database.StorageLocation
+// @Success      200  {array}   apiModel.StorageLocationResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/household/storage-locations [get]
 func ListStorageLocations(ctx *gin.Context, appCtx *AppContext) {
@@ -31,7 +32,7 @@ func ListStorageLocations(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, locs)
+	ctx.JSON(http.StatusOK, apiModel.NewStorageLocationResponses(locs))
 }
 
 // CreateStorageLocation adds a new storage location to the calling user's household.
@@ -41,7 +42,7 @@ func ListStorageLocations(ctx *gin.Context, appCtx *AppContext) {
 // @Accept       json
 // @Produce      json
 // @Param        body  body      storageLocationRequest  true  "Location data"
-// @Success      201   {object}  database.StorageLocation
+// @Success      201   {object}  apiModel.StorageLocationResponse
 // @Failure      400   {object}  api.APIResponse
 // @Failure      500   {object}  api.APIResponse
 // @Router       /api/v1/household/storage-locations [post]
@@ -65,7 +66,7 @@ func CreateStorageLocation(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, loc)
+	ctx.JSON(http.StatusCreated, apiModel.NewStorageLocationResponse(&loc))
 }
 
 // UpdateStorageLocation renames or re-icons a storage location.
@@ -76,7 +77,7 @@ func CreateStorageLocation(ctx *gin.Context, appCtx *AppContext) {
 // @Produce      json
 // @Param        id    path      int                     true  "Location ID"
 // @Param        body  body      storageLocationRequest  true  "Location data"
-// @Success      200   {object}  database.StorageLocation
+// @Success      200   {object}  apiModel.StorageLocationResponse
 // @Failure      400   {object}  api.APIResponse
 // @Failure      404   {object}  api.APIResponse
 // @Failure      500   {object}  api.APIResponse
@@ -114,7 +115,7 @@ func UpdateStorageLocation(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, loc)
+	ctx.JSON(http.StatusOK, apiModel.NewStorageLocationResponse(&loc))
 }
 
 // DeleteStorageLocation removes a storage location. Assigned products become unassigned.

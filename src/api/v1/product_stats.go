@@ -30,7 +30,7 @@ func getLastInsertedProductName(repos *database.RepositoryContainer, userID uint
 // @Tags         	product
 // @Accept			json
 // @Produce      	json
-// @Success      	200  {object}  []database.Product
+// @Success      	200  {object}  []apiModel.ProductResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/expired [get]
@@ -39,10 +39,10 @@ func GetExpired(ctx *gin.Context, appCtx *AppContext) {
 
 	if getExpiredErr != nil {
 		appCtx.Logger.Error().Msgf("Error getting expired products: %s", getExpiredErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting expired products"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
-	ctx.JSON(http.StatusOK, products)
+	ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
 }
 
 // GetProductSummary returns a lightweight count summary for Home Assistant sensor polling
@@ -65,7 +65,7 @@ func GetProductSummary(ctx *gin.Context, appCtx *AppContext) {
 	expiredCount, err := appCtx.Repos.Products.GetExpiredProductsCount(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiredProductsCount, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing expired count"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -79,7 +79,7 @@ func GetProductSummary(ctx *gin.Context, appCtx *AppContext) {
 	wasteThisMonth, err := appCtx.Repos.Products.GetWasteThisMonth(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetWasteThisMonth: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing monthly waste count"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -151,7 +151,7 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 	totalArchived, err := appCtx.Repos.Products.GetArchivedProductsCount(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetArchivedProductsCount: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing archived count"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 

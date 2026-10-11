@@ -63,6 +63,7 @@ func CSRFMiddleware(cfg *configuration.ProviantConfiguration) gin.HandlerFunc {
 			headerToken := ctx.GetHeader(csrfHeaderName)
 			if cookieErr != nil || headerToken == "" || !hmac.Equal([]byte(headerToken), []byte(cookieToken)) {
 				api.RespondError(ctx, http.StatusForbidden, apperrors.ErrCSRFTokenInvalid)
+				ctx.Abort()
 				return
 			}
 		}
@@ -71,7 +72,8 @@ func CSRFMiddleware(cfg *configuration.ProviantConfiguration) gin.HandlerFunc {
 		if cookieErr != nil {
 			token, err := generateCSRFToken()
 			if err != nil {
-				ctx.AbortWithStatus(http.StatusInternalServerError)
+				api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrCSRFTokenGenerationFailed)
+				ctx.Abort()
 				return
 			}
 			// Not HttpOnly — JavaScript must read this value to inject it into request headers.

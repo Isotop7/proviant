@@ -9,6 +9,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -20,7 +21,7 @@ import (
 // @Tags         product
 // @Produce      json
 // @Param        barcode   path      int  true  "Barcode"
-// @Success      200  {object}  []database.Product
+// @Success      200  {object}  []apiModel.ProductResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/productsByBarcode [get]
@@ -50,7 +51,7 @@ func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext) {
 
 	switch getError {
 	case nil:
-		ctx.JSON(http.StatusOK, products)
+		ctx.JSON(http.StatusOK, apiModel.NewLabelledProductResponses(products))
 		return
 	case errors.ErrInvalidUserData, gorm.ErrRecordNotFound:
 		// The caller's own account state is unusable (no household / user row
@@ -75,7 +76,7 @@ func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext) {
 // @Param        	queryValue  query  string  true  	"Search value"
 // @Param        	sort        query  string  false  "Sort field (product_name, expire_at, created_at, scanned_at, notified_at, barcode)"  default(product_name)
 // @Param        	order       query  string  false  "Sort order (asc, desc)"  default(asc)
-// @Success      	200  {object}  []database.Product
+// @Success      	200  {object}  []apiModel.ProductResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/search [GET]
@@ -88,7 +89,7 @@ func SearchProducts(ctx *gin.Context, appCtx *AppContext) {
 	enumParam := database.SearchParameterEnumFromString(q.QueryParam)
 	if enumParam == database.InvalidParameter {
 		appCtx.Logger.Warn().Msg(errors.ErrProductSearchInvalidQuery.Error())
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "No valid search parameters found"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrNoValidSearchParameters)
 		return
 	}
 
@@ -118,7 +119,7 @@ func SearchProducts(ctx *gin.Context, appCtx *AppContext) {
 		}
 	}
 
-	ctx.JSON(http.StatusOK, products)
+	ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
 }
 
 func validEAN13Format(barcode string) bool {

@@ -78,14 +78,14 @@ func CreateCalendarToken(ctx *gin.Context, appCtx *AppContext) {
 	rawToken, genErr := generateCalendarToken()
 	if genErr != nil {
 		appCtx.Logger.Error().Msgf("generateCalendarToken: %s", genErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to generate calendar token"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	delErr := appCtx.Repos.CalendarTokens.DeleteByUserID(appCtx.UserID)
 	if delErr != nil {
 		appCtx.Logger.Error().Msgf("DeleteByUserID: %s", delErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to regenerate calendar token"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -98,7 +98,7 @@ func CreateCalendarToken(ctx *gin.Context, appCtx *AppContext) {
 	createErr := appCtx.Repos.CalendarTokens.Create(calendarToken)
 	if createErr != nil {
 		appCtx.Logger.Error().Msgf("Create: %s", createErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to create calendar token"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -133,14 +133,14 @@ func RotateCalendarToken(ctx *gin.Context, appCtx *AppContext) {
 	rawToken, genErr := generateCalendarToken()
 	if genErr != nil {
 		appCtx.Logger.Error().Msgf("generateCalendarToken: %s", genErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to rotate calendar token"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	delErr := appCtx.Repos.CalendarTokens.DeleteByUserID(appCtx.UserID)
 	if delErr != nil {
 		appCtx.Logger.Error().Msgf("DeleteByUserID: %s", delErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to rotate calendar token"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -153,7 +153,7 @@ func RotateCalendarToken(ctx *gin.Context, appCtx *AppContext) {
 	createErr := appCtx.Repos.CalendarTokens.Create(calendarToken)
 	if createErr != nil {
 		appCtx.Logger.Error().Msgf("Create: %s", createErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to rotate calendar token"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -188,7 +188,7 @@ func DeleteCalendarToken(ctx *gin.Context, appCtx *AppContext) {
 	delErr := appCtx.Repos.CalendarTokens.DeleteByUserID(appCtx.UserID)
 	if delErr != nil {
 		appCtx.Logger.Error().Msgf("DeleteByUserID: %s", delErr)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to delete calendar token"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -215,7 +215,7 @@ func GetCalendarTokenStatus(ctx *gin.Context, appCtx *AppContext) {
 			return
 		}
 		appCtx.Logger.Error().Msgf("GetByUserID: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to check calendar token status"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 

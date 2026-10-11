@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/testutil"
 
@@ -20,7 +21,7 @@ func TestListStorageLocationsHandler(t *testing.T) {
 	if env.W.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
 	}
-	var locations []dbModel.StorageLocation
+	var locations []apiModel.StorageLocationResponse
 	if err := json.Unmarshal(env.W.Body.Bytes(), &locations); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
@@ -39,12 +40,12 @@ func TestCreateStorageLocationHandler(t *testing.T) {
 		if env.W.Code != http.StatusCreated {
 			t.Fatalf("status = %d, want 201; body = %s", env.W.Code, env.W.Body.String())
 		}
-		var loc dbModel.StorageLocation
+		var loc apiModel.StorageLocationResponse
 		if err := json.Unmarshal(env.W.Body.Bytes(), &loc); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
-		if loc.Name != "Cellar" || loc.Icon != "📦" || loc.HouseholdID != env.Household.ID {
-			t.Errorf("location = %+v, want Cellar/📦 in household %d", loc, env.Household.ID)
+		if loc.Name != "Cellar" || loc.Icon != "📦" {
+			t.Errorf("location = %+v, want Cellar/📦", loc)
 		}
 	})
 
@@ -57,7 +58,7 @@ func TestCreateStorageLocationHandler(t *testing.T) {
 		if env.W.Code != http.StatusCreated {
 			t.Fatalf("status = %d, want 201", env.W.Code)
 		}
-		var loc dbModel.StorageLocation
+		var loc apiModel.StorageLocationResponse
 		_ = json.Unmarshal(env.W.Body.Bytes(), &loc)
 		if loc.Icon != "🍷" {
 			t.Errorf("icon = %q, want 🍷", loc.Icon)

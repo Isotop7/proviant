@@ -1476,6 +1476,50 @@ var (
     // log: api.RespondError echoes err.Error() back to the client.
     ErrServiceNotReady = errors.New("service not ready")
 
+    // ErrTemplateCacheNotFound is thrown if the template cache can't be found in context.
+    ErrTemplateCacheNotFound = errors.New("failed to get template cache from context")
+
+    // ErrCSRFTokenGenerationFailed is thrown if the CSRF token can't be generated.
+    ErrCSRFTokenGenerationFailed = errors.New("failed to generate CSRF token")
+
+    // ErrAuditLogDateFormat is thrown if the audit log date query parameter is not
+    // a YYYY-MM-DD date.
+    ErrAuditLogDateFormat = errors.New("date must be in YYYY-MM-DD format")
+
+    // ErrBulkCreateItemsMissing is thrown if a bulk create request carries no items.
+    ErrBulkCreateItemsMissing = errors.New("items missing")
+
+    // ErrBarcodeMissing is thrown if a product request carries no barcode.
+    ErrBarcodeMissing = errors.New("barcode missing")
+
+    // ErrNoValidSearchParameters is thrown if a product search yields no usable
+    // query parameters.
+    ErrNoValidSearchParameters = errors.New("no valid search parameters found")
+
+    // ErrShoppingListItemNameRequired is thrown if a shopping list item is created
+    // without a name.
+    ErrShoppingListItemNameRequired = errors.New("name is required")
+
+    // ErrShoppingListItemNotFound is thrown if the requested shopping list item
+    // does not exist in the caller's household.
+    ErrShoppingListItemNotFound = errors.New("shopping list item not found")
+
+    // ErrWasteInvalidPeriod is thrown if the waste analytics period is outside the
+    // accepted set.
+    ErrWasteInvalidPeriod = errors.New("invalid period (allowed: month, 3months, 6months, 12months)")
+
+    // ErrWasteInvalidSort is thrown if the waste analytics sort key is not
+    // accepted.
+    ErrWasteInvalidSort = errors.New("invalid sort (allowed: count, cost)")
+
+    // ErrWasteInvalidLimit is thrown if the waste analytics limit is not a
+    // positive integer.
+    ErrWasteInvalidLimit = errors.New("invalid limit (must be a positive integer)")
+
+    // ErrWasteLimitOutOfRange is thrown if the waste analytics limit exceeds the
+    // accepted maximum.
+    ErrWasteLimitOutOfRange = errors.New("limit must be 1..50")
+
     // ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
     ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
 
@@ -1862,7 +1906,7 @@ var (
 ```
 
 <a name="ReceiptEndpointError"></a>
-## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L493-L495>)
+## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L537-L539>)
 
 ReceiptEndpointError marks an OCR scan failure as originating from the upstream vision endpoint rather than from Proviant itself. The API layer maps it to 502 Bad Gateway instead of 500 via errors.As.
 
@@ -1873,7 +1917,7 @@ type ReceiptEndpointError struct {
 ```
 
 <a name="ReceiptEndpointError.Error"></a>
-### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L497>)
+### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L541>)
 
 ```go
 func (e *ReceiptEndpointError) Error() string
@@ -1882,7 +1926,7 @@ func (e *ReceiptEndpointError) Error() string
 
 
 <a name="ReceiptEndpointError.Unwrap"></a>
-### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L499>)
+### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L543>)
 
 ```go
 func (e *ReceiptEndpointError) Unwrap() error
@@ -3419,7 +3463,7 @@ common implements non\-specifc handlers
 
 
 <a name="GetHealth"></a>
-## func [GetHealth](<https://github.com/Isotop7/proviant/blob/develop/src/api/common/health.go#L43>)
+## func [GetHealth](<https://github.com/Isotop7/proviant/blob/develop/src/api/common/health.go#L54>)
 
 ```go
 func GetHealth(ctx *gin.Context)
@@ -3428,7 +3472,7 @@ func GetHealth(ctx *gin.Context)
 GetHealth returns the health status of the API @Summary Gets health @Description Gets health status of the API @Tags common @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Router /health \[get\]
 
 <a name="GetReadiness"></a>
-## func [GetReadiness](<https://github.com/Isotop7/proviant/blob/develop/src/api/common/health.go#L58>)
+## func [GetReadiness](<https://github.com/Isotop7/proviant/blob/develop/src/api/common/health.go#L69>)
 
 ```go
 func GetReadiness(ctx *gin.Context)
@@ -3752,7 +3796,7 @@ const (
 ```
 
 <a name="AdminResetUserPassword"></a>
-## func [AdminResetUserPassword](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L164>)
+## func [AdminResetUserPassword](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L165>)
 
 ```go
 func AdminResetUserPassword(ctx *gin.Context, appCtx *AppContext)
@@ -3833,7 +3877,7 @@ func CancelHouseholdApplication(ctx *gin.Context, appCtx *AppContext)
 CancelHouseholdApplication cancels a pending application submitted by the caller. @Summary Cancel own household application @Tags household @Produce json @Param id path int true "Application ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications/\{id\} \[delete\]
 
 <a name="CancelInvitation"></a>
-## func [CancelInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/invitation.go#L142>)
+## func [CancelInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/invitation.go#L143>)
 
 ```go
 func CancelInvitation(ctx *gin.Context, appCtx *AppContext)
@@ -3878,7 +3922,7 @@ func CreateHousehold(ctx *gin.Context, appCtx *AppContext)
 CreateHousehold creates a new named household and switches the calling user to it. @Summary Create and switch to a new household @Description Creates a new household with the given name and assigns the user to it. @Tags household @Accept json @Produce json @Param household body createHouseholdRequest true "Household" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/household/create \[post\]
 
 <a name="CreateInvitation"></a>
-## func [CreateInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/invitation.go#L33>)
+## func [CreateInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/invitation.go#L34>)
 
 ```go
 func CreateInvitation(ctx *gin.Context, appCtx *AppContext)
@@ -3893,10 +3937,10 @@ CreateInvitation creates a new household invitation and sends an email to the re
 func CreateProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
-CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
+CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} apiModel.ProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
 
 <a name="CreateShoppingListItem"></a>
-## func [CreateShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L23>)
+## func [CreateShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L25>)
 
 ```go
 func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext)
@@ -3905,13 +3949,13 @@ func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext)
 
 
 <a name="CreateStorageLocation"></a>
-## func [CreateStorageLocation](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/storage_location.go#L48>)
+## func [CreateStorageLocation](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/storage_location.go#L49>)
 
 ```go
 func CreateStorageLocation(ctx *gin.Context, appCtx *AppContext)
 ```
 
-CreateStorageLocation adds a new storage location to the calling user's household. @Summary Create a storage location @Description Creates a named storage location for the household. @Tags household @Accept json @Produce json @Param body body storageLocationRequest true "Location data" @Success 201 \{object\} database.StorageLocation @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations \[post\]
+CreateStorageLocation adds a new storage location to the calling user's household. @Summary Create a storage location @Description Creates a named storage location for the household. @Tags household @Accept json @Produce json @Param body body storageLocationRequest true "Location data" @Success 201 \{object\} apiModel.StorageLocationResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations \[post\]
 
 <a name="CreateUserToken"></a>
 ## func [CreateUserToken](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user_tokens.go#L18>)
@@ -3941,7 +3985,7 @@ func DeleteCalendarToken(ctx *gin.Context, appCtx *AppContext)
 DeleteCalendarToken removes the user's calendar token @Summary Delete calendar token @Description Removes the personal calendar token, invalidating any active iCal/CalDAV subscriptions. @Tags calendar @Accept json @Produce json @Security BearerAuth @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 401 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/calendar/token \[delete\]
 
 <a name="DeleteHouseholdUser"></a>
-## func [DeleteHouseholdUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L120>)
+## func [DeleteHouseholdUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L121>)
 
 ```go
 func DeleteHouseholdUser(ctx *gin.Context, appCtx *AppContext)
@@ -3959,7 +4003,7 @@ func DeleteProduct(ctx *gin.Context, appCtx *AppContext)
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param archiveOnly query bool false "Archive only" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[delete\]
 
 <a name="DeleteShoppingListItem"></a>
-## func [DeleteShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L160>)
+## func [DeleteShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L162>)
 
 ```go
 func DeleteShoppingListItem(ctx *gin.Context, appCtx *AppContext)
@@ -3968,7 +4012,7 @@ func DeleteShoppingListItem(ctx *gin.Context, appCtx *AppContext)
 
 
 <a name="DeleteStorageLocation"></a>
-## func [DeleteStorageLocation](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/storage_location.go#L130>)
+## func [DeleteStorageLocation](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/storage_location.go#L131>)
 
 ```go
 func DeleteStorageLocation(ctx *gin.Context, appCtx *AppContext)
@@ -4037,7 +4081,7 @@ ExportProductsCSV exports the user's active products as CSV. @Summary Export pro
 func ExportProductsJSON(ctx *gin.Context, appCtx *AppContext)
 ```
 
-ExportProductsJSON exports the user's active products as JSON. @Summary Export products as JSON @Description Returns a JSON file with all active products for the user @Tags export @Produce application/json @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{file\} binary "JSON file" @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/products.json \[get\]
+ExportProductsJSON exports the user's active products as JSON. @Summary Export products as JSON @Description Returns a JSON file with all active products for the user @Tags export @Produce application/json @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{object\} \[\]apiModel.ExportProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/products.json \[get\]
 
 <a name="GenerateTelegramLinkToken"></a>
 ## func [GenerateTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L232>)
@@ -4055,19 +4099,19 @@ GenerateTelegramLinkToken generates a one\-time token for linking a Telegram cha
 func GetArchivedProducts(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetArchivedProducts returns the archived products of a user @Summary Return a list of archived products @Description Return a list of archived products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/archived \[get\]
+GetArchivedProducts returns the archived products of a user @Summary Return a list of archived products @Description Return a list of archived products of user @Tags product @Produce json @Success 200 \{object\} \[\]apiModel.ProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/archived \[get\]
 
 <a name="GetAuditLogs"></a>
-## func [GetAuditLogs](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_audit.go#L25>)
+## func [GetAuditLogs](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_audit.go#L27>)
 
 ```go
 func GetAuditLogs(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetAuditLogs returns the audit log entries. @Summary Get audit logs @Description Returns paginated audit log entries for the caller's household. Household admins only; entries are scoped to the caller's household. @Tags admin @Produce json @Param limit query int false "Maximum number of logs to return \(default 100, max 1000\)" @Param date query string false "Filter by date \(YYYY\-MM\-DD format\)" @Success 200 \{array\} database.AuditLog @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/admin/audit\-log \[get\]
+GetAuditLogs returns the audit log entries. @Summary Get audit logs @Description Returns paginated audit log entries for the caller's household. Household admins only; entries are scoped to the caller's household. @Tags admin @Produce json @Param limit query int false "Maximum number of logs to return \(default 100, max 1000\)" @Param date query string false "Filter by date \(YYYY\-MM\-DD format\)" @Success 200 \{array\} apiModel.AuditLogResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/admin/audit\-log \[get\]
 
 <a name="GetAutoShoppingList"></a>
-## func [GetAutoShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L12>)
+## func [GetAutoShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L14>)
 
 ```go
 func GetAutoShoppingList(ctx *gin.Context, appCtx *AppContext)
@@ -4100,7 +4144,7 @@ GetConsumptionRate returns the estimated weekly consumption rate for a product, 
 func GetExpired(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetExpired returns the list of all expired products of a user @Summary Gets expired products @Description Gets a list of expired products of a user @Tags product @Accept json @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/expired \[get\]
+GetExpired returns the list of all expired products of a user @Summary Gets expired products @Description Gets a list of expired products of a user @Tags product @Accept json @Produce json @Success 200 \{object\} \[\]apiModel.ProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/expired \[get\]
 
 <a name="GetHouseholdActivity"></a>
 ## func [GetHouseholdActivity](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L350>)
@@ -4118,7 +4162,7 @@ GetHouseholdActivity returns the activity feed for the caller's household. @Summ
 func GetHouseholdApplications(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetHouseholdApplications returns all pending applications for the household the caller administrates. @Summary List pending household applications @Description Returns pending join applications for the household the calling user is admin of. @Tags household @Produce json @Success 200 \{array\} database.HouseholdApplication @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications \[get\]
+GetHouseholdApplications returns all pending applications for the household the caller administrates. @Summary List pending household applications @Description Returns pending join applications for the household the calling user is admin of. @Tags household @Produce json @Success 200 \{array\} apiModel.HouseholdApplicationResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications \[get\]
 
 <a name="GetHouseholdSettings"></a>
 ## func [GetHouseholdSettings](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L243>)
@@ -4130,22 +4174,22 @@ func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext)
 GetHouseholdSettings returns the caller's household settings.
 
 <a name="GetHouseholdUsers"></a>
-## func [GetHouseholdUsers](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L34>)
+## func [GetHouseholdUsers](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L35>)
 
 ```go
 func GetHouseholdUsers(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetHouseholdUsers returns all users in the household. @Summary List household members @Description Returns all users that belong to the household the caller is admin of @Tags household @Produce json @Success 200 \{array\} authentication.User @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users \[get\]
+GetHouseholdUsers returns all users in the household. @Summary List household members @Description Returns all users that belong to the household the caller is admin of @Tags household @Produce json @Success 200 \{array\} apiModel.HouseholdUserResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users \[get\]
 
 <a name="GetInvitations"></a>
-## func [GetInvitations](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/invitation.go#L106>)
+## func [GetInvitations](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/invitation.go#L107>)
 
 ```go
 func GetInvitations(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetInvitations returns all invitations for the calling user's household. @Summary Get household invitations @Description Returns all invitations for the calling user's household @Tags Invitation @Produce json @Success 200 \{array\} database.HouseholdInvitation @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations \[get\]
+GetInvitations returns all invitations for the calling user's household. @Summary Get household invitations @Description Returns all invitations for the calling user's household @Tags Invitation @Produce json @Success 200 \{array\} apiModel.HouseholdInvitationResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations \[get\]
 
 <a name="GetNotifications"></a>
 ## func [GetNotifications](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/notification.go#L28>)
@@ -4157,7 +4201,7 @@ func GetNotifications(ctx *gin.Context, appCtx *AppContext)
 GetNotifications returns actionable notification items for the current user: pending invitations from their household, incoming join requests \(admin only\), and outgoing join requests the user submitted. @Summary Get notifications @Description Returns pending invitations and household join requests for the current user @Tags Notifications @Produce json @Success 200 \{object\} apiModel.NotificationsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/notifications \[get\]
 
 <a name="GetOpenFoodFactsData"></a>
-## func [GetOpenFoodFactsData](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_scan.go#L159>)
+## func [GetOpenFoodFactsData](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_scan.go#L160>)
 
 ```go
 func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext)
@@ -4165,7 +4209,7 @@ func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext)
 
 GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode, using the database cache when cacheEnabled is true in the OpenFoodFacts configuration.
 
-@Summary Return OpenFoodFacts product data @Description Proxies OpenFoodFacts API with optional database caching @Tags product @Produce json @Param barcode path string true "Barcode" @Success 200 \{object\} dbModel.OpenFoodFactsCache @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Failure 502 \{object\} api.APIResponse @Router /api/v1/products/openfoodfacts/\{barcode\} \[get\]
+@Summary Return OpenFoodFacts product data @Description Proxies OpenFoodFacts API with optional database caching @Tags product @Produce json @Param barcode path string true "Barcode" @Success 200 \{object\} apiModel.OpenFoodFactsCacheResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Failure 502 \{object\} api.APIResponse @Router /api/v1/products/openfoodfacts/\{barcode\} \[get\]
 
 <a name="GetProduct"></a>
 ## func [GetProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L80>)
@@ -4174,7 +4218,7 @@ GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode
 func GetProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetProduct return a single product of a user @Summary Returns a single product @Description Returns a single product of user @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[get\]
+GetProduct return a single product of a user @Summary Returns a single product @Description Returns a single product of user @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} apiModel.ProductResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[get\]
 
 <a name="GetProductStats"></a>
 ## func [GetProductStats](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_stats.go#L103>)
@@ -4201,16 +4245,16 @@ GetProductSummary returns a lightweight count summary for Home Assistant sensor 
 func GetProducts(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetProducts returns the products of a user @Summary Return a list of products @Description Return a list of products of user @Tags product @Produce json @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[get\]
+GetProducts returns the products of a user @Summary Return a list of products @Description Return a list of products of user @Tags product @Produce json @Success 200 \{object\} \[\]apiModel.ProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[get\]
 
 <a name="GetProductsByBarcode"></a>
-## func [GetProductsByBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_search.go#L27>)
+## func [GetProductsByBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_search.go#L28>)
 
 ```go
 func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetProductsByBarcode returns a list of products of a user matching a barcode @Summary Returns a list of products @Description Returns a list of products of user matching the given barcode @Tags product @Produce json @Param barcode path int true "Barcode" @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/productsByBarcode \[get\]
+GetProductsByBarcode returns a list of products of a user matching a barcode @Summary Returns a list of products @Description Returns a list of products of user matching the given barcode @Tags product @Produce json @Param barcode path int true "Barcode" @Success 200 \{object\} \[\]apiModel.ProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/productsByBarcode \[get\]
 
 <a name="GetRecipeSuggestions"></a>
 ## func [GetRecipeSuggestions](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/recipe_suggestions.go#L29>)
@@ -4267,7 +4311,7 @@ func GetUserReceiptScanSettings(ctx *gin.Context, appCtx *AppContext)
 GetUserReceiptScanSettings gets a user's receipt scan settings @Summary Gets a user's receipt scan settings @Description Retrieves the current user's receipt scan vision model override settings and the app\-level defaults. API keys are never returned. @Tags user @Accept json @Produce json @Success 200 \{object\} receiptScanSettingsResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/receipt\-scan\-settings \[get\]
 
 <a name="GetWasteAnalytics"></a>
-## func [GetWasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/waste_analytics.go#L33>)
+## func [GetWasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/waste_analytics.go#L34>)
 
 ```go
 func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext)
@@ -4303,7 +4347,7 @@ func GetWebhookDeliveries(ctx *gin.Context, appCtx *AppContext)
 
 
 <a name="ImportAutoListToShoppingList"></a>
-## func [ImportAutoListToShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L205>)
+## func [ImportAutoListToShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L212>)
 
 ```go
 func ImportAutoListToShoppingList(ctx *gin.Context, appCtx *AppContext)
@@ -4339,7 +4383,7 @@ func LeaveHousehold(ctx *gin.Context, appCtx *AppContext)
 LeaveHousehold removes the calling user from their current household and assigns them a new personal one. @Summary Leave current household @Description Creates a new personal household for the user. Products are moved if they were the sole member. @Tags household @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/household/leave \[post\]
 
 <a name="ListShoppingListItems"></a>
-## func [ListShoppingListItems](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L82>)
+## func [ListShoppingListItems](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L84>)
 
 ```go
 func ListShoppingListItems(ctx *gin.Context, appCtx *AppContext)
@@ -4348,13 +4392,13 @@ func ListShoppingListItems(ctx *gin.Context, appCtx *AppContext)
 
 
 <a name="ListStorageLocations"></a>
-## func [ListStorageLocations](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/storage_location.go#L26>)
+## func [ListStorageLocations](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/storage_location.go#L27>)
 
 ```go
 func ListStorageLocations(ctx *gin.Context, appCtx *AppContext)
 ```
 
-ListStorageLocations returns all storage locations for the calling user's household. @Summary List storage locations @Description Returns all storage locations belonging to the user's household, ordered by sort\_order. @Tags household @Produce json @Success 200 \{array\} database.StorageLocation @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations \[get\]
+ListStorageLocations returns all storage locations for the calling user's household. @Summary List storage locations @Description Returns all storage locations belonging to the user's household, ordered by sort\_order. @Tags household @Produce json @Success 200 \{array\} apiModel.StorageLocationResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations \[get\]
 
 <a name="ListUserTokens"></a>
 ## func [ListUserTokens](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user_tokens.go#L64>)
@@ -4375,7 +4419,7 @@ func ListWebhooks(ctx *gin.Context, appCtx *AppContext)
 
 
 <a name="OpenProduct"></a>
-## func [OpenProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_open.go#L55>)
+## func [OpenProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_open.go#L56>)
 
 ```go
 func OpenProduct(ctx *gin.Context, appCtx *AppContext)
@@ -4388,7 +4432,7 @@ Behaviour:
 - First call returns 200 with the updated product.
 - If the product is already opened and the request does NOT include \`force: true\`, returns 409 with the previous OpenedAt and the current product. The frontend shows a confirm dialog; the user confirms by re\-submitting with \`force: true\`, which overwrites OpenedAt to the new "now" value.
 
-@Summary Mark product as opened @Description Sets the OpenedAt timestamp on a product. Returns 409 with the existing OpenedAt if the product is already opened, prompting the frontend to confirm. Re\-submit with \`force: true\` to overwrite. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param body body OpenProductRequest false "Force overwrite flag" @Success 200 \{object\} database.Product @Success 409 \{object\} OpenProductResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/open \[post\]
+@Summary Mark product as opened @Description Sets the OpenedAt timestamp on a product. Returns 409 with the existing OpenedAt if the product is already opened, prompting the frontend to confirm. Re\-submit with \`force: true\` to overwrite. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param body body OpenProductRequest false "Force overwrite flag" @Success 200 \{object\} apiModel.ProductResponse @Success 409 \{object\} OpenProductResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/open \[post\]
 
 <a name="ParseArchiveOnly"></a>
 ## func [ParseArchiveOnly](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/queryparser.go#L61>)
@@ -4463,7 +4507,7 @@ func ScanExpiryDate(ctx *gin.Context, appCtx *AppContext)
 ScanExpiryDate scans an uploaded image for expiry date @Summary Scan expiry date from product photo @Description Upload an image of product packaging; returns detected expiry date with confidence score @Tags product @Accept multipart/form\-data @Produce json @Param image formData file true "Product packaging image" @Success 200 \{object\} apiModel.ExpiryScanResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/scan\-date \[post\]
 
 <a name="ScanProduct"></a>
-## func [ScanProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_scan.go#L42>)
+## func [ScanProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_scan.go#L43>)
 
 ```go
 func ScanProduct(ctx *gin.Context, appCtx *AppContext)
@@ -4481,13 +4525,13 @@ func ScanReceipt(ctx *gin.Context, appCtx *AppContext)
 ScanReceipt extracts product line items from an uploaded receipt photo via a vision LLM. Stateless: nothing is persisted server\-side. @Summary Scan receipt photo for line items @Description Upload a receipt photo; returns extracted product drafts \(name, amount, unit, price\). An empty items list means the scan succeeded but nothing was recognized. @Tags product @Accept multipart/form\-data @Produce json @Param image formData file true "Receipt photo" @Success 200 \{object\} apiModel.ReceiptScanResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Failure 502 \{object\} api.APIResponse @Failure 504 \{object\} api.APIResponse @Router /api/v1/products/scan\-receipt \[post\]
 
 <a name="SearchProducts"></a>
-## func [SearchProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_search.go#L82>)
+## func [SearchProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_search.go#L83>)
 
 ```go
 func SearchProducts(ctx *gin.Context, appCtx *AppContext)
 ```
 
-SearchProducts returns a list of products based on a query @Summary Search products @Description Returns a list of products based on a query @Tags product @Produce json @Param queryParam query string true "Search field \(product\_name, barcode\)" @Param queryValue query string true "Search value" @Param sort query string false "Sort field \(product\_name, expire\_at, created\_at, scanned\_at, notified\_at, barcode\)" default\(product\_name\) @Param order query string false "Sort order \(asc, desc\)" default\(asc\) @Success 200 \{object\} \[\]database.Product @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/search \[GET\]
+SearchProducts returns a list of products based on a query @Summary Search products @Description Returns a list of products based on a query @Tags product @Produce json @Param queryParam query string true "Search field \(product\_name, barcode\)" @Param queryValue query string true "Search value" @Param sort query string false "Sort field \(product\_name, expire\_at, created\_at, scanned\_at, notified\_at, barcode\)" default\(product\_name\) @Param order query string false "Sort order \(asc, desc\)" default\(asc\) @Success 200 \{object\} \[\]apiModel.ProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/search \[GET\]
 
 <a name="SetExpireAt"></a>
 ## func [SetExpireAt](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L429>)
@@ -4508,7 +4552,7 @@ func SubscribeWebPushNotifications(ctx *gin.Context, appCtx *AppContext)
 
 
 <a name="ToggleShoppingListItem"></a>
-## func [ToggleShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L182>)
+## func [ToggleShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L184>)
 
 ```go
 func ToggleShoppingListItem(ctx *gin.Context, appCtx *AppContext)
@@ -4553,13 +4597,13 @@ func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext)
 UpdateHouseholdSettings updates monthly waste goal for the caller's household \(admin only\).
 
 <a name="UpdateHouseholdUser"></a>
-## func [UpdateHouseholdUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L66>)
+## func [UpdateHouseholdUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/admin_users.go#L67>)
 
 ```go
 func UpdateHouseholdUser(ctx *gin.Context, appCtx *AppContext)
 ```
 
-UpdateHouseholdUser updates a user's username or email. @Summary Update household member @Description Updates the username or email of a user in the household. Caller must be admin. @Tags household @Accept json @Produce json @Param id path int true "User ID" @Param user body updateAdminUserRequest true "User data" @Success 200 \{object\} authentication.User @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users/\{id\} \[patch\]
+UpdateHouseholdUser updates a user's username or email. @Summary Update household member @Description Updates the username or email of a user in the household. Caller must be admin. @Tags household @Accept json @Produce json @Param id path int true "User ID" @Param user body updateAdminUserRequest true "User data" @Success 200 \{object\} apiModel.HouseholdUserResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/users/\{id\} \[patch\]
 
 <a name="UpdateProduct"></a>
 ## func [UpdateProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L221>)
@@ -4568,7 +4612,7 @@ UpdateHouseholdUser updates a user's username or email. @Summary Update househol
 func UpdateProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
-UpdateProduct updates a product of a user @Summary Updates a product @Description Updates a product with new values @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.Product true "Product" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[patch\]
+UpdateProduct updates a product of a user @Summary Updates a product @Description Updates a product with new values @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.ProductDTOPatch true "Product" @Success 200 \{object\} database.ProductDTOPatch @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/product/\{id\} \[patch\]
 
 <a name="UpdateProductAmount"></a>
 ## func [UpdateProductAmount](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L275>)
@@ -4577,10 +4621,10 @@ UpdateProduct updates a product of a user @Summary Updates a product @Descriptio
 func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext)
 ```
 
-UpdateProductAmount updates the amount of a product by a given delta. If the resulting amount is \<= 0, the product is hard\-deleted. @Summary Update product amount @Description Applies a delta to a product's amount. Hard\-deletes the product when amount reaches 0. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param delta body api.ProductAmountDTO true "Amount delta" @Success 200 \{object\} database.Product @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/amount \[patch\]
+UpdateProductAmount updates the amount of a product by a given delta. If the resulting amount is \<= 0, the product is hard\-deleted. @Summary Update product amount @Description Applies a delta to a product's amount. Hard\-deletes the product when amount reaches 0. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param delta body api.ProductAmountDTO true "Amount delta" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/amount \[patch\]
 
 <a name="UpdateShoppingListItem"></a>
-## func [UpdateShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L100>)
+## func [UpdateShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L102>)
 
 ```go
 func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext)
@@ -4589,13 +4633,13 @@ func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext)
 
 
 <a name="UpdateStorageLocation"></a>
-## func [UpdateStorageLocation](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/storage_location.go#L84>)
+## func [UpdateStorageLocation](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/storage_location.go#L85>)
 
 ```go
 func UpdateStorageLocation(ctx *gin.Context, appCtx *AppContext)
 ```
 
-UpdateStorageLocation renames or re\-icons a storage location. @Summary Update a storage location @Description Updates the name, icon, and sort order of an existing storage location. @Tags household @Accept json @Produce json @Param id path int true "Location ID" @Param body body storageLocationRequest true "Location data" @Success 200 \{object\} database.StorageLocation @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations/:id \[patch\]
+UpdateStorageLocation renames or re\-icons a storage location. @Summary Update a storage location @Description Updates the name, icon, and sort order of an existing storage location. @Tags household @Accept json @Produce json @Param id path int true "Location ID" @Param body body storageLocationRequest true "Location data" @Success 200 \{object\} apiModel.StorageLocationResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations/:id \[patch\]
 
 <a name="UpdateUser"></a>
 ## func [UpdateUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L34>)
@@ -4652,7 +4696,7 @@ func WasteProduct(ctx *gin.Context, appCtx *AppContext)
 WasteProduct marks a product as wasted \(hard\-delete, fires product.wasted webhook event\) @Summary Mark product as wasted @Description Hard\-deletes a product and fires the product.wasted webhook event @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/waste \[post\]
 
 <a name="WrapHandler"></a>
-## func [WrapHandler](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/context.go#L76>)
+## func [WrapHandler](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/context.go#L77>)
 
 ```go
 func WrapHandler(fn APIHandler) gin.HandlerFunc
@@ -4686,7 +4730,7 @@ type AppContext struct {
 ```
 
 <a name="SetupTestAppContext"></a>
-### func [SetupTestAppContext](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/context.go#L97>)
+### func [SetupTestAppContext](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/context.go#L98>)
 
 ```go
 func SetupTestAppContext(ctx *gin.Context, userID uint) *AppContext
@@ -4749,8 +4793,8 @@ type FullExportMember struct {
 
 ```go
 type FullExportProducts struct {
-    Active   []dbModel.Product `json:"active"`
-    Archived []dbModel.Product `json:"archived"`
+    Active   []apiModel.ExportProductResponse `json:"active"`
+    Archived []apiModel.ExportProductResponse `json:"archived"`
 }
 ```
 
@@ -4770,7 +4814,7 @@ type FullExportResponse struct {
 ```
 
 <a name="OpenProductRequest"></a>
-## type [OpenProductRequest](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_open.go#L20-L22>)
+## type [OpenProductRequest](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_open.go#L21-L23>)
 
 OpenProductRequest is the body for POST /api/v1/products/\{id\}/open. Force=true overwrites an existing OpenedAt timestamp after confirmation.
 
@@ -4781,7 +4825,7 @@ type OpenProductRequest struct {
 ```
 
 <a name="OpenProductResponse"></a>
-## type [OpenProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_open.go#L26-L30>)
+## type [OpenProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_open.go#L27-L31>)
 
 OpenProductResponse is returned on success \(200\) or on the "already opened" confirmation prompt \(409\).
 
@@ -8175,6 +8219,9 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [Variables](<#variables>)
 - [type ActivityEntry](<#ActivityEntry>)
 - [type ActivityLogResponse](<#ActivityLogResponse>)
+- [type AuditLogResponse](<#AuditLogResponse>)
+  - [func NewAuditLogResponse\(log \*dbModel.AuditLog\) AuditLogResponse](<#NewAuditLogResponse>)
+  - [func NewAuditLogResponses\[T dbModel.AuditLog | \*dbModel.AuditLog\]\(logs \[\]T\) \[\]AuditLogResponse](<#NewAuditLogResponses>)
 - [type BulkCreateRequest](<#BulkCreateRequest>)
 - [type BulkCreateResponse](<#BulkCreateResponse>)
 - [type BulkItemResult](<#BulkItemResult>)
@@ -8190,15 +8237,32 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type DeliveryLogListResponse](<#DeliveryLogListResponse>)
 - [type DeliveryLogResponse](<#DeliveryLogResponse>)
 - [type ExpiryScanResponse](<#ExpiryScanResponse>)
+- [type ExportProductResponse](<#ExportProductResponse>)
+  - [func NewExportProductResponse\(product \*dbModel.Product\) ExportProductResponse](<#NewExportProductResponse>)
+  - [func NewExportProductResponses\[T dbModel.Product | \*dbModel.Product\]\(products \[\]T\) \[\]ExportProductResponse](<#NewExportProductResponses>)
+- [type HouseholdApplicationResponse](<#HouseholdApplicationResponse>)
+  - [func NewHouseholdApplicationResponses\[T dbModel.HouseholdApplication | \*dbModel.HouseholdApplication\]\(applications \[\]T\) \[\]HouseholdApplicationResponse](<#NewHouseholdApplicationResponses>)
+- [type HouseholdInvitationResponse](<#HouseholdInvitationResponse>)
+  - [func NewHouseholdInvitationResponses\[T dbModel.HouseholdInvitation | \*dbModel.HouseholdInvitation\]\(invitations \[\]T\) \[\]HouseholdInvitationResponse](<#NewHouseholdInvitationResponses>)
 - [type HouseholdListItem](<#HouseholdListItem>)
 - [type HouseholdSettingsResponse](<#HouseholdSettingsResponse>)
+- [type HouseholdUserResponse](<#HouseholdUserResponse>)
+  - [func NewHouseholdUserResponse\(user \*authentication.User\) HouseholdUserResponse](<#NewHouseholdUserResponse>)
+  - [func NewHouseholdUserResponses\[T authentication.User | \*authentication.User\]\(users \[\]T\) \[\]HouseholdUserResponse](<#NewHouseholdUserResponses>)
 - [type ImportProductsResponse](<#ImportProductsResponse>)
 - [type ImportRowError](<#ImportRowError>)
 - [type IngredientMatch](<#IngredientMatch>)
 - [type NotificationItem](<#NotificationItem>)
 - [type NotificationsResponse](<#NotificationsResponse>)
 - [type OnboardingStateResponse](<#OnboardingStateResponse>)
+- [type OpenFoodFactsCacheResponse](<#OpenFoodFactsCacheResponse>)
+  - [func NewOpenFoodFactsCacheResponse\(entry \*dbModel.OpenFoodFactsCache\) OpenFoodFactsCacheResponse](<#NewOpenFoodFactsCacheResponse>)
 - [type ProductAmountDTO](<#ProductAmountDTO>)
+- [type ProductResponse](<#ProductResponse>)
+  - [func NewLabelledProductResponse\(product \*dbModel.Product\) ProductResponse](<#NewLabelledProductResponse>)
+  - [func NewLabelledProductResponses\[T dbModel.Product | \*dbModel.Product\]\(products \[\]T\) \[\]ProductResponse](<#NewLabelledProductResponses>)
+  - [func NewProductResponse\(product \*dbModel.Product\) ProductResponse](<#NewProductResponse>)
+  - [func NewProductResponses\[T dbModel.Product | \*dbModel.Product\]\(products \[\]T\) \[\]ProductResponse](<#NewProductResponses>)
 - [type ProductStatsResponse](<#ProductStatsResponse>)
 - [type ProductSummaryResponse](<#ProductSummaryResponse>)
 - [type ReceiptItem](<#ReceiptItem>)
@@ -8206,8 +8270,14 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type RecipeSuggestionResponse](<#RecipeSuggestionResponse>)
 - [type RestockSuggestionResponse](<#RestockSuggestionResponse>)
 - [type SavingsStatsResponse](<#SavingsStatsResponse>)
+- [type ShoppingListItemResponse](<#ShoppingListItemResponse>)
+  - [func NewShoppingListItemResponse\[T dbModel.ShoppingListItem | \*dbModel.ShoppingListItem\]\(item T\) ShoppingListItemResponse](<#NewShoppingListItemResponse>)
+  - [func NewShoppingListItemResponses\[T dbModel.ShoppingListItem | \*dbModel.ShoppingListItem\]\(items \[\]T\) \[\]ShoppingListItemResponse](<#NewShoppingListItemResponses>)
 - [type StatsExpiringProduct](<#StatsExpiringProduct>)
 - [type StatsMonthlyCount](<#StatsMonthlyCount>)
+- [type StorageLocationResponse](<#StorageLocationResponse>)
+  - [func NewStorageLocationResponse\(location \*dbModel.StorageLocation\) StorageLocationResponse](<#NewStorageLocationResponse>)
+  - [func NewStorageLocationResponses\[T dbModel.StorageLocation | \*dbModel.StorageLocation\]\(locations \[\]T\) \[\]StorageLocationResponse](<#NewStorageLocationResponses>)
 - [type StreakResponse](<#StreakResponse>)
 - [type TokenResponse](<#TokenResponse>)
 - [type UpdateHouseholdSettingsRequest](<#UpdateHouseholdSettingsRequest>)
@@ -8275,6 +8345,42 @@ type ActivityLogResponse struct {
     Offset     int             `json:"offset"`
 }
 ```
+
+<a name="AuditLogResponse"></a>
+## type [AuditLogResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L94-L103>)
+
+AuditLogResponse is the client\-facing view of an audit log entry.
+
+```go
+type AuditLogResponse struct {
+    ID          uint      `json:"id"`
+    Timestamp   time.Time `json:"timestamp"`
+    UserID      *uint     `json:"userId"`
+    HouseholdID *uint     `json:"householdId"`
+    Action      string    `json:"action"`
+    IPAddress   string    `json:"ipAddress"`
+    Details     string    `json:"details"`
+    RequestID   string    `json:"requestId"`
+}
+```
+
+<a name="NewAuditLogResponse"></a>
+### func [NewAuditLogResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L106>)
+
+```go
+func NewAuditLogResponse(log *dbModel.AuditLog) AuditLogResponse
+```
+
+NewAuditLogResponse projects an audit log entry onto the wire shape.
+
+<a name="NewAuditLogResponses"></a>
+### func [NewAuditLogResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L123>)
+
+```go
+func NewAuditLogResponses[T dbModel.AuditLog | *dbModel.AuditLog](logs []T) []AuditLogResponse
+```
+
+NewAuditLogResponses projects a slice of audit log entries.
 
 <a name="BulkCreateRequest"></a>
 ## type [BulkCreateRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/receipt.go#L32-L34>)
@@ -8478,6 +8584,106 @@ type ExpiryScanResponse struct {
 }
 ```
 
+<a name="ExportProductResponse"></a>
+## type [ExportProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L15-L39>)
+
+ExportProductResponse is the product shape in a JSON data export. Unlike ProductResponse it keeps createdAt and archivedAt: the CSV export carries the same two as added\_at and archived\_at, so a backup that dropped them would lose when a product was bought and when it was archived. UpdatedAt is the one GORM field left out — the bookkeeping timestamp says nothing to whoever reads the file. ID keeps its uppercase spelling for the same reason ProductResponse does.
+
+```go
+type ExportProductResponse struct {
+    ID                   uint                     `json:"ID"`
+    Barcode              string                   `json:"barcode"`
+    ProductName          string                   `json:"productName"`
+    Categories           string                   `json:"categories"`
+    Countries            string                   `json:"countries"`
+    ImageURL             string                   `json:"imageUrl"`
+    ExpireAt             time.Time                `json:"expireAt"`
+    ScannedAt            time.Time                `json:"scannedAt"`
+    NotifiedAt           time.Time                `json:"notifiedAt"`
+    IsPrivate            bool                     `json:"isPrivate"`
+    Amount               int                      `json:"amount"`
+    Unit                 string                   `json:"unit"`
+    StorageLocationID    *uint                    `json:"storageLocationId"`
+    StorageLocation      *StorageLocationResponse `json:"storageLocation,omitempty"`
+    PriceOverride        *float64                 `json:"priceOverride,omitempty"`
+    CO2KgPerKg           *float64                 `json:"co2KgPerKg,omitempty"`
+    RemovalReason        string                   `json:"removalReason"`
+    NotificationLeadDays *int                     `json:"notificationLeadDays,omitempty"`
+    MinStockAmount       int                      `json:"minStockAmount"`
+    OpenedAt             *time.Time               `json:"openedAt,omitempty"`
+    DaysAfterOpening     *int                     `json:"daysAfterOpening,omitempty"`
+    CreatedAt            time.Time                `json:"createdAt"`
+    ArchivedAt           *time.Time               `json:"archivedAt,omitempty"`
+}
+```
+
+<a name="NewExportProductResponse"></a>
+### func [NewExportProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L43>)
+
+```go
+func NewExportProductResponse(product *dbModel.Product) ExportProductResponse
+```
+
+NewExportProductResponse projects a product onto the export shape. An archived product carries archivedAt; an active one omits the field entirely.
+
+<a name="NewExportProductResponses"></a>
+### func [NewExportProductResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L83>)
+
+```go
+func NewExportProductResponses[T dbModel.Product | *dbModel.Product](products []T) []ExportProductResponse
+```
+
+NewExportProductResponses projects a slice of products onto the export shape. The type parameter covers the \[\]dbModel.Product shape both export queries return.
+
+<a name="HouseholdApplicationResponse"></a>
+## type [HouseholdApplicationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L347-L353>)
+
+HouseholdApplicationResponse is the client\-facing view of a household application.
+
+```go
+type HouseholdApplicationResponse struct {
+    ID          uint      `json:"ID"`
+    ApplicantID uint      `json:"applicantId"`
+    HouseholdID uint      `json:"householdId"`
+    Status      string    `json:"status"`
+    CreatedAt   time.Time `json:"createdAt"`
+}
+```
+
+<a name="NewHouseholdApplicationResponses"></a>
+### func [NewHouseholdApplicationResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L356>)
+
+```go
+func NewHouseholdApplicationResponses[T dbModel.HouseholdApplication | *dbModel.HouseholdApplication](applications []T) []HouseholdApplicationResponse
+```
+
+NewHouseholdApplicationResponses projects a slice of household applications.
+
+<a name="HouseholdInvitationResponse"></a>
+## type [HouseholdInvitationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L306-L313>)
+
+HouseholdInvitationResponse is the client\-facing view of a pending invitation.
+
+```go
+type HouseholdInvitationResponse struct {
+    ID           uint       `json:"ID"`
+    Email        string     `json:"email"`
+    Status       string     `json:"status"`
+    ExpiresAt    time.Time  `json:"expiresAt"`
+    SentAt       *time.Time `json:"sentAt,omitempty"`
+    SendAttempts int        `json:"sendAttempts"`
+}
+```
+
+<a name="NewHouseholdInvitationResponses"></a>
+### func [NewHouseholdInvitationResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L316>)
+
+```go
+func NewHouseholdInvitationResponses[T dbModel.HouseholdInvitation | *dbModel.HouseholdInvitation](invitations []T) []HouseholdInvitationResponse
+```
+
+NewHouseholdInvitationResponses projects a slice of invitations.
+
 <a name="HouseholdListItem"></a>
 ## type [HouseholdListItem](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L40-L45>)
 
@@ -8504,6 +8710,41 @@ type HouseholdSettingsResponse struct {
     MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
 }
 ```
+
+<a name="HouseholdUserResponse"></a>
+## type [HouseholdUserResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L12-L20>)
+
+HouseholdUserResponse is the admin\-facing view of a household member.
+
+```go
+type HouseholdUserResponse struct {
+    ID                 uint   `json:"id"`
+    Username           string `json:"username"`
+    DisplayName        string `json:"displayName"`
+    MailAddress        string `json:"mailAddress"`
+    Role               string `json:"role"`
+    TelegramConfigured bool   `json:"telegramConfigured"`
+    TelegramLinked     bool   `json:"telegramLinked"`
+}
+```
+
+<a name="NewHouseholdUserResponse"></a>
+### func [NewHouseholdUserResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L23>)
+
+```go
+func NewHouseholdUserResponse(user *authentication.User) HouseholdUserResponse
+```
+
+NewHouseholdUserResponse projects a user onto the admin\-facing view.
+
+<a name="NewHouseholdUserResponses"></a>
+### func [NewHouseholdUserResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L39>)
+
+```go
+func NewHouseholdUserResponses[T authentication.User | *authentication.User](users []T) []HouseholdUserResponse
+```
+
+NewHouseholdUserResponses projects a slice of users.
 
 <a name="ImportProductsResponse"></a>
 ## type [ImportProductsResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/import.go#L17-L24>)
@@ -8587,6 +8828,32 @@ type OnboardingStateResponse struct {
 }
 ```
 
+<a name="OpenFoodFactsCacheResponse"></a>
+## type [OpenFoodFactsCacheResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L387-L395>)
+
+OpenFoodFactsCacheResponse is the client\-facing view of a cached OpenFoodFacts lookup.
+
+```go
+type OpenFoodFactsCacheResponse struct {
+    Barcode     string   `json:"barcode"`
+    ProductName string   `json:"productName"`
+    Categories  string   `json:"categories"`
+    Countries   string   `json:"countries"`
+    ImageURL    string   `json:"imageUrl"`
+    CO2KgPerKg  *float64 `json:"co2KgPerKg,omitempty"`
+    StorageHint string   `json:"storageHint,omitempty"`
+}
+```
+
+<a name="NewOpenFoodFactsCacheResponse"></a>
+### func [NewOpenFoodFactsCacheResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L398>)
+
+```go
+func NewOpenFoodFactsCacheResponse(entry *dbModel.OpenFoodFactsCache) OpenFoodFactsCacheResponse
+```
+
+NewOpenFoodFactsCacheResponse projects a cache row onto the wire shape.
+
 <a name="ProductAmountDTO"></a>
 ## type [ProductAmountDTO](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L35-L37>)
 
@@ -8597,6 +8864,77 @@ type ProductAmountDTO struct {
     Delta int `json:"delta" binding:"required,min=-1000"`
 }
 ```
+
+<a name="ProductResponse"></a>
+## type [ProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L145-L171>)
+
+ProductResponse is the client\-facing view of a product. ID keeps its uppercase spelling; the lowercase rename is tracked in \#407.
+
+```go
+type ProductResponse struct {
+    ID                   uint                     `json:"ID"`
+    Barcode              string                   `json:"barcode"`
+    ProductName          string                   `json:"productName"`
+    Categories           string                   `json:"categories"`
+    Countries            string                   `json:"countries"`
+    ImageURL             string                   `json:"imageUrl"`
+    ExpireAt             time.Time                `json:"expireAt"`
+    ScannedAt            time.Time                `json:"scannedAt"`
+    NotifiedAt           time.Time                `json:"notifiedAt"`
+    IsPrivate            bool                     `json:"isPrivate"`
+    Amount               int                      `json:"amount"`
+    Unit                 string                   `json:"unit"`
+    StorageLocationID    *uint                    `json:"storageLocationId"`
+    StorageLocation      *StorageLocationResponse `json:"storageLocation,omitempty"`
+    PriceOverride        *float64                 `json:"priceOverride,omitempty"`
+    CO2KgPerKg           *float64                 `json:"co2KgPerKg,omitempty"`
+    RemovalReason        string                   `json:"removalReason"`
+    NotificationLeadDays *int                     `json:"notificationLeadDays,omitempty"`
+    MinStockAmount       int                      `json:"minStockAmount"`
+    OpenedAt             *time.Time               `json:"openedAt,omitempty"`
+    DaysAfterOpening     *int                     `json:"daysAfterOpening,omitempty"`
+
+    // Label is set only by NewLabelledProductResponse, to keep the format cost
+    // off list responses.
+    Label string `json:"label,omitempty"`
+}
+```
+
+<a name="NewLabelledProductResponse"></a>
+### func [NewLabelledProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L226>)
+
+```go
+func NewLabelledProductResponse(product *dbModel.Product) ProductResponse
+```
+
+NewLabelledProductResponse projects a product and renders its dropdown label.
+
+<a name="NewLabelledProductResponses"></a>
+### func [NewLabelledProductResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L240>)
+
+```go
+func NewLabelledProductResponses[T dbModel.Product | *dbModel.Product](products []T) []ProductResponse
+```
+
+NewLabelledProductResponses projects a slice of products with labels rendered.
+
+<a name="NewProductResponse"></a>
+### func [NewProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L174>)
+
+```go
+func NewProductResponse(product *dbModel.Product) ProductResponse
+```
+
+NewProductResponse projects a product onto the wire shape, without a label.
+
+<a name="NewProductResponses"></a>
+### func [NewProductResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L209>)
+
+```go
+func NewProductResponses[T dbModel.Product | *dbModel.Product](products []T) []ProductResponse
+```
+
+NewProductResponses projects a slice of products. The type parameter covers the two repository shapes: \[\]\*dbModel.Product and \[\]dbModel.Product.
 
 <a name="ProductStatsResponse"></a>
 ## type [ProductStatsResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/stats.go#L44-L55>)
@@ -8717,6 +9055,43 @@ type SavingsStatsResponse struct {
 }
 ```
 
+<a name="ShoppingListItemResponse"></a>
+## type [ShoppingListItemResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L257-L267>)
+
+ShoppingListItemResponse is the client\-facing view of a shopping list entry.
+
+```go
+type ShoppingListItemResponse struct {
+    ID        uint   `json:"ID"`
+    ProductID *uint  `json:"productId"`
+    Name      string `json:"name"`
+    Category  string `json:"category"`
+    Quantity  int    `json:"quantity"`
+    Unit      string `json:"unit"`
+    Checked   bool   `json:"checked"`
+    Notes     string `json:"notes"`
+    CreatedBy uint   `json:"createdBy"`
+}
+```
+
+<a name="NewShoppingListItemResponse"></a>
+### func [NewShoppingListItemResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L270>)
+
+```go
+func NewShoppingListItemResponse[T dbModel.ShoppingListItem | *dbModel.ShoppingListItem](item T) ShoppingListItemResponse
+```
+
+NewShoppingListItemResponse projects a shopping list entry onto the wire shape.
+
+<a name="NewShoppingListItemResponses"></a>
+### func [NewShoppingListItemResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L294>)
+
+```go
+func NewShoppingListItemResponses[T dbModel.ShoppingListItem | *dbModel.ShoppingListItem](items []T) []ShoppingListItemResponse
+```
+
+NewShoppingListItemResponses projects a slice of shopping list entries.
+
 <a name="StatsExpiringProduct"></a>
 ## type [StatsExpiringProduct](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/stats.go#L10-L13>)
 
@@ -8740,6 +9115,38 @@ type StatsMonthlyCount struct {
     Count int    `json:"count"`
 }
 ```
+
+<a name="StorageLocationResponse"></a>
+## type [StorageLocationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L56-L61>)
+
+StorageLocationResponse is the client\-facing view of a storage location.
+
+```go
+type StorageLocationResponse struct {
+    ID        uint   `json:"ID"`
+    Name      string `json:"name"`
+    Icon      string `json:"icon"`
+    SortOrder int    `json:"sortOrder"`
+}
+```
+
+<a name="NewStorageLocationResponse"></a>
+### func [NewStorageLocationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L64>)
+
+```go
+func NewStorageLocationResponse(location *dbModel.StorageLocation) StorageLocationResponse
+```
+
+NewStorageLocationResponse projects a storage location onto the wire shape.
+
+<a name="NewStorageLocationResponses"></a>
+### func [NewStorageLocationResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L77>)
+
+```go
+func NewStorageLocationResponses[T dbModel.StorageLocation | *dbModel.StorageLocation](locations []T) []StorageLocationResponse
+```
+
+NewStorageLocationResponses projects a slice of storage locations.
 
 <a name="StreakResponse"></a>
 ## type [StreakResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/stats.go#L24-L27>)

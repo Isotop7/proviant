@@ -190,3 +190,24 @@ func TestCSRFMiddleware(t *testing.T) {
 		}
 	})
 }
+
+// TestCSRFMiddleware_RejectionStopsChain guards the abort: RespondError writes a
+// body but does not stop the chain, so without ctx.Abort() the protected handler
+// runs on a rejected state-mutating request and appends a second body.
+func TestCSRFMiddleware_RejectionStopsChain(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	ran := false
+	engine.Use(CSRFMiddleware(csrfTestConfig()))
+	engine.POST("/*path", func(ctx *gin.Context) { ran = true; ctx.String(http.StatusOK, "handler-ran") })
+
+	w := httptest.NewRecorder()
+	engine.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/v1/products", nil))
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusForbidden)
+	}
+	if ran {
+		t.Error("protected handler ran after CSRF rejection")
+	}
+}

@@ -53,7 +53,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.AuditLog"
+                                "$ref": "#/definitions/api.AuditLogResponse"
                             }
                         }
                     },
@@ -356,7 +356,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.HouseholdApplication"
+                                "$ref": "#/definitions/api.HouseholdApplicationResponse"
                             }
                         }
                     },
@@ -555,7 +555,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.HouseholdInvitation"
+                                "$ref": "#/definitions/api.HouseholdInvitationResponse"
                             }
                         }
                     },
@@ -878,7 +878,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.StorageLocation"
+                                "$ref": "#/definitions/api.StorageLocationResponse"
                             }
                         }
                     },
@@ -917,7 +917,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/database.StorageLocation"
+                            "$ref": "#/definitions/api.StorageLocationResponse"
                         }
                     },
                     "400": {
@@ -1009,7 +1009,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/database.StorageLocation"
+                            "$ref": "#/definitions/api.StorageLocationResponse"
                         }
                     },
                     "400": {
@@ -1049,7 +1049,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/authentication.User"
+                                "$ref": "#/definitions/api.HouseholdUserResponse"
                             }
                         }
                     },
@@ -1160,7 +1160,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/authentication.User"
+                            "$ref": "#/definitions/api.HouseholdUserResponse"
                         }
                     },
                     "400": {
@@ -1658,7 +1658,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/database.Product"
+                            "$ref": "#/definitions/api.ProductResponse"
                         }
                     },
                     "400": {
@@ -1755,7 +1755,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/database.Product"
+                            "$ref": "#/definitions/database.ProductDTOPatch"
                         }
                     }
                 ],
@@ -1763,7 +1763,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/database.Product"
+                            "$ref": "#/definitions/database.ProductDTOPatch"
                         }
                     },
                     "400": {
@@ -1862,7 +1862,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.Product"
+                                "$ref": "#/definitions/api.ProductResponse"
                             }
                         }
                     },
@@ -1907,7 +1907,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/database.Product"
+                            "$ref": "#/definitions/api.ProductResponse"
                         }
                     },
                     "400": {
@@ -1941,7 +1941,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.Product"
+                                "$ref": "#/definitions/api.ProductResponse"
                             }
                         }
                     },
@@ -2236,7 +2236,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.Product"
+                                "$ref": "#/definitions/api.ProductResponse"
                             }
                         }
                     },
@@ -2405,9 +2405,12 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "JSON file",
+                        "description": "OK",
                         "schema": {
-                            "type": "file"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.ExportProductResponse"
+                            }
                         }
                     },
                     "400": {
@@ -2512,7 +2515,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/database.OpenFoodFactsCache"
+                            "$ref": "#/definitions/api.OpenFoodFactsCacheResponse"
                         }
                     },
                     "400": {
@@ -2723,7 +2726,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.Product"
+                                "$ref": "#/definitions/api.ProductResponse"
                             }
                         }
                     },
@@ -2841,7 +2844,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/database.Product"
+                            "$ref": "#/definitions/api.APIResponse"
                         }
                     },
                     "400": {
@@ -2993,7 +2996,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/database.Product"
+                            "$ref": "#/definitions/api.ProductResponse"
                         }
                     },
                     "400": {
@@ -3192,7 +3195,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.Product"
+                                "$ref": "#/definitions/api.ProductResponse"
                             }
                         }
                     },
@@ -4602,6 +4605,35 @@ const docTemplate = `{
                 }
             }
         },
+        "api.AuditLogResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "details": {
+                    "type": "string"
+                },
+                "householdId": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "ipAddress": {
+                    "type": "string"
+                },
+                "requestId": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.BulkActionResponse": {
             "type": "object",
             "properties": {
@@ -4815,6 +4847,123 @@ const docTemplate = `{
                 }
             }
         },
+        "api.ExportProductResponse": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "type": "integer"
+                },
+                "archivedAt": {
+                    "type": "string"
+                },
+                "barcode": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "co2KgPerKg": {
+                    "type": "number"
+                },
+                "countries": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "daysAfterOpening": {
+                    "type": "integer"
+                },
+                "expireAt": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "minStockAmount": {
+                    "type": "integer"
+                },
+                "notificationLeadDays": {
+                    "type": "integer"
+                },
+                "notifiedAt": {
+                    "type": "string"
+                },
+                "openedAt": {
+                    "type": "string"
+                },
+                "priceOverride": {
+                    "type": "number"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "removalReason": {
+                    "type": "string"
+                },
+                "scannedAt": {
+                    "type": "string"
+                },
+                "storageLocation": {
+                    "$ref": "#/definitions/api.StorageLocationResponse"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.HouseholdApplicationResponse": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "applicantId": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "householdId": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.HouseholdInvitationResponse": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "sendAttempts": {
+                    "type": "integer"
+                },
+                "sentAt": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "api.HouseholdListItem": {
             "type": "object",
             "properties": {
@@ -4828,6 +4977,32 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.HouseholdUserResponse": {
+            "type": "object",
+            "properties": {
+                "displayName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "mailAddress": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "telegramConfigured": {
+                    "type": "boolean"
+                },
+                "telegramLinked": {
+                    "type": "boolean"
+                },
+                "username": {
                     "type": "string"
                 }
             }
@@ -4937,6 +5112,32 @@ const docTemplate = `{
                 }
             }
         },
+        "api.OpenFoodFactsCacheResponse": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "co2KgPerKg": {
+                    "type": "number"
+                },
+                "countries": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "storageHint": {
+                    "type": "string"
+                }
+            }
+        },
         "api.ProductAmountDTO": {
             "type": "object",
             "required": [
@@ -4946,6 +5147,78 @@ const docTemplate = `{
                 "delta": {
                     "type": "integer",
                     "minimum": -1000
+                }
+            }
+        },
+        "api.ProductResponse": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "type": "integer"
+                },
+                "barcode": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "co2KgPerKg": {
+                    "type": "number"
+                },
+                "countries": {
+                    "type": "string"
+                },
+                "daysAfterOpening": {
+                    "type": "integer"
+                },
+                "expireAt": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "label": {
+                    "description": "Label is set only by NewLabelledProductResponse, to keep the format cost\noff list responses.",
+                    "type": "string"
+                },
+                "minStockAmount": {
+                    "type": "integer"
+                },
+                "notificationLeadDays": {
+                    "type": "integer"
+                },
+                "notifiedAt": {
+                    "type": "string"
+                },
+                "openedAt": {
+                    "type": "string"
+                },
+                "priceOverride": {
+                    "type": "number"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "removalReason": {
+                    "type": "string"
+                },
+                "scannedAt": {
+                    "type": "string"
+                },
+                "storageLocation": {
+                    "$ref": "#/definitions/api.StorageLocationResponse"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
                 }
             }
         },
@@ -5176,6 +5449,23 @@ const docTemplate = `{
                 "month": {
                     "description": "format: \"2006-01\"",
                     "type": "string"
+                }
+            }
+        },
+        "api.StorageLocationResponse": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sortOrder": {
+                    "type": "integer"
                 }
             }
         },
@@ -5424,226 +5714,6 @@ const docTemplate = `{
                 }
             }
         },
-        "authentication.User": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "displayName": {
-                    "type": "string"
-                },
-                "emailVerifiedAt": {
-                    "type": "string"
-                },
-                "household": {
-                    "$ref": "#/definitions/database.Household"
-                },
-                "householdID": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "mailAddress": {
-                    "type": "string"
-                },
-                "notificationPreferences": {
-                    "$ref": "#/definitions/authentication.NotificationPreferences"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "database.AuditLog": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "details": {
-                    "type": "string"
-                },
-                "householdId": {
-                    "description": "HouseholdID is written at record time, never derived at read time. Deriving\nit from the user's *current* household would move a member's historical\nentries into whichever household they have since joined — a cross-tenant\nread. NULL means the entry could not be attributed (failed login for an\nunknown username) and is invisible to every household.",
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "ipAddress": {
-                    "type": "string"
-                },
-                "requestId": {
-                    "type": "string"
-                },
-                "timestamp": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "userId": {
-                    "type": "integer"
-                }
-            }
-        },
-        "database.Household": {
-            "type": "object",
-            "properties": {
-                "adminID": {
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "monthlyWasteGoalCount": {
-                    "description": "nil = disabled",
-                    "type": "integer"
-                },
-                "monthlyWasteGoalPercent": {
-                    "description": "nil = disabled",
-                    "type": "number"
-                },
-                "monthlyWasteGoalType": {
-                    "description": "\"\", \"count\", or \"percent\"",
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "database.HouseholdApplication": {
-            "type": "object",
-            "properties": {
-                "applicantId": {
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "householdId": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "database.HouseholdInvitation": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "expiresAt": {
-                    "type": "string"
-                },
-                "householdId": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "inviterId": {
-                    "type": "integer"
-                },
-                "sendAttempts": {
-                    "type": "integer"
-                },
-                "sentAt": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "database.OpenFoodFactsCache": {
-            "type": "object",
-            "properties": {
-                "barcode": {
-                    "type": "string"
-                },
-                "categories": {
-                    "type": "string"
-                },
-                "co2KgPerKg": {
-                    "type": "number"
-                },
-                "countries": {
-                    "type": "string"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "imageUrl": {
-                    "type": "string"
-                },
-                "productName": {
-                    "type": "string"
-                },
-                "storageHint": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
         "database.Product": {
             "type": "object",
             "properties": {
@@ -5743,6 +5813,56 @@ const docTemplate = `{
                 }
             }
         },
+        "database.ProductDTOPatch": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "type": "integer"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "countries": {
+                    "type": "string"
+                },
+                "daysAfterOpening": {
+                    "type": "integer"
+                },
+                "expireAt": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "minStockAmount": {
+                    "type": "integer"
+                },
+                "notificationLeadDays": {
+                    "type": "integer"
+                },
+                "openedAt": {
+                    "type": "string"
+                },
+                "priceOverride": {
+                    "type": "number"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
         "database.StorageLocation": {
             "type": "object",
             "properties": {
@@ -5837,13 +5957,13 @@ const docTemplate = `{
                 "active": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/database.Product"
+                        "$ref": "#/definitions/api.ExportProductResponse"
                     }
                 },
                 "archived": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/database.Product"
+                        "$ref": "#/definitions/api.ExportProductResponse"
                     }
                 }
             }

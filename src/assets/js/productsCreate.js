@@ -165,7 +165,6 @@ function clearScanUI() {
         html5QrCode.clear();
     }
 };
-const formatProductDataAsOption = (product) => `${product.productName}; Created: ${proviant.formatDate(product.CreatedAt)}; Expire at: ${proviant.formatDate(product.expireAt)}; Notified at: ${proviant.formatDate(product.notifiedAt)}`;
 function setProductOptionsState(productState, products) {
     const btnAdd = el.btnAddProduct;
     const btnShow = el.btnShowProduct;
@@ -203,7 +202,7 @@ function setProductOptionsState(productState, products) {
             products.forEach(product => {
                 const option = document.createElement("option");
                 option.value = product.ID; // Set the value to the instance ID
-                option.textContent = formatProductDataAsOption(product);
+                option.textContent = product.label;
                 instanceDropdown.appendChild(option);
             });
             break;

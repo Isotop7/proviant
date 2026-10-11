@@ -88,8 +88,8 @@ type FullExportMember struct {
 }
 
 type FullExportProducts struct {
-	Active   []dbModel.Product `json:"active"`
-	Archived []dbModel.Product `json:"archived"`
+	Active   []apiModel.ExportProductResponse `json:"active"`
+	Archived []apiModel.ExportProductResponse `json:"archived"`
 }
 
 // ExportProductsCSV exports the user's active products as CSV.
@@ -138,7 +138,7 @@ func ExportProductsCSV(ctx *gin.Context, appCtx *AppContext) {
 // @Produce      application/json
 // @Param        from   query  string  false  "From date (2006-01-02)"
 // @Param        to     query  string  false  "To date (2006-01-02)"
-// @Success      200    {file}  binary "JSON file"
+// @Success      200    {object}  []apiModel.ExportProductResponse
 // @Failure      400    {object}  api.APIResponse
 // @Failure      500    {object}  api.APIResponse
 // @Router       /api/v1/products/export/products.json [get]
@@ -154,7 +154,7 @@ func ExportProductsJSON(ctx *gin.Context, appCtx *AppContext) {
 
 	ctx.Header(util.RequestHeaderContentType, "application/json")
 	ctx.Header(util.RequestHeaderContentDisposition, "attachment; filename=\"products.json\"")
-	ctx.JSON(http.StatusOK, products)
+	ctx.JSON(http.StatusOK, apiModel.NewExportProductResponses(products))
 }
 
 // ExportArchiveCSV exports the user's archived products as CSV.
@@ -174,7 +174,7 @@ func ExportArchiveCSV(ctx *gin.Context, appCtx *AppContext) {
 	products, err := appCtx.Repos.Products.GetUserArchivedProductsFiltered(appCtx.UserID, from, to)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(fmtGetUserArchivedProductsFilter, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting archived products"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -216,35 +216,35 @@ func ExportFullJSON(ctx *gin.Context, appCtx *AppContext) {
 	user, err := appCtx.Repos.Products.GetUserByID(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetUserByID: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting user"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	household, err := appCtx.Repos.Products.GetHouseholdByID(user.HouseholdID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetHouseholdByID: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting household"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	members, err := appCtx.Repos.Products.GetUsersByHouseholdID(user.HouseholdID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetUsersByHouseholdID: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting household members"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	activeProducts, err := appCtx.Repos.Products.GetUserActiveProductsFiltered(appCtx.UserID, nil, nil)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(GetUserActiveProductsFiltered, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting active products"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	archivedProducts, err := appCtx.Repos.Products.GetUserArchivedProductsFiltered(appCtx.UserID, nil, nil)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(fmtGetUserArchivedProductsFilter, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error getting archived products"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -270,8 +270,8 @@ func ExportFullJSON(ctx *gin.Context, appCtx *AppContext) {
 		},
 		Members: exportMembers,
 		Products: FullExportProducts{
-			Active:   activeProducts,
-			Archived: archivedProducts,
+			Active:   apiModel.NewExportProductResponses(activeProducts),
+			Archived: apiModel.NewExportProductResponses(archivedProducts),
 		},
 		Stats:      stats,
 		ExportedAt: exportedAt,

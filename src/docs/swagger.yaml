@@ -37,6 +37,25 @@ definitions:
       total:
         type: integer
     type: object
+  api.AuditLogResponse:
+    properties:
+      action:
+        type: string
+      details:
+        type: string
+      householdId:
+        type: integer
+      id:
+        type: integer
+      ipAddress:
+        type: string
+      requestId:
+        type: string
+      timestamp:
+        type: string
+      userId:
+        type: integer
+    type: object
   api.BulkActionResponse:
     properties:
       action:
@@ -179,6 +198,83 @@ definitions:
         description: full OCR text for manual correction
         type: string
     type: object
+  api.ExportProductResponse:
+    properties:
+      ID:
+        type: integer
+      amount:
+        type: integer
+      archivedAt:
+        type: string
+      barcode:
+        type: string
+      categories:
+        type: string
+      co2KgPerKg:
+        type: number
+      countries:
+        type: string
+      createdAt:
+        type: string
+      daysAfterOpening:
+        type: integer
+      expireAt:
+        type: string
+      imageUrl:
+        type: string
+      isPrivate:
+        type: boolean
+      minStockAmount:
+        type: integer
+      notificationLeadDays:
+        type: integer
+      notifiedAt:
+        type: string
+      openedAt:
+        type: string
+      priceOverride:
+        type: number
+      productName:
+        type: string
+      removalReason:
+        type: string
+      scannedAt:
+        type: string
+      storageLocation:
+        $ref: '#/definitions/api.StorageLocationResponse'
+      storageLocationId:
+        type: integer
+      unit:
+        type: string
+    type: object
+  api.HouseholdApplicationResponse:
+    properties:
+      ID:
+        type: integer
+      applicantId:
+        type: integer
+      createdAt:
+        type: string
+      householdId:
+        type: integer
+      status:
+        type: string
+    type: object
+  api.HouseholdInvitationResponse:
+    properties:
+      ID:
+        type: integer
+      email:
+        type: string
+      expiresAt:
+        type: string
+      sendAttempts:
+        type: integer
+      sentAt:
+        type: string
+      status:
+        type: string
+    type: object
   api.HouseholdListItem:
     properties:
       description:
@@ -188,6 +284,23 @@ definitions:
       memberCount:
         type: integer
       name:
+        type: string
+    type: object
+  api.HouseholdUserResponse:
+    properties:
+      displayName:
+        type: string
+      id:
+        type: integer
+      mailAddress:
+        type: string
+      role:
+        type: string
+      telegramConfigured:
+        type: boolean
+      telegramLinked:
+        type: boolean
+      username:
         type: string
     type: object
   api.ImportProductsResponse:
@@ -258,6 +371,23 @@ definitions:
       profileStepDone:
         type: boolean
     type: object
+  api.OpenFoodFactsCacheResponse:
+    properties:
+      barcode:
+        type: string
+      categories:
+        type: string
+      co2KgPerKg:
+        type: number
+      countries:
+        type: string
+      imageUrl:
+        type: string
+      productName:
+        type: string
+      storageHint:
+        type: string
+    type: object
   api.ProductAmountDTO:
     properties:
       delta:
@@ -265,6 +395,56 @@ definitions:
         type: integer
     required:
     - delta
+    type: object
+  api.ProductResponse:
+    properties:
+      ID:
+        type: integer
+      amount:
+        type: integer
+      barcode:
+        type: string
+      categories:
+        type: string
+      co2KgPerKg:
+        type: number
+      countries:
+        type: string
+      daysAfterOpening:
+        type: integer
+      expireAt:
+        type: string
+      imageUrl:
+        type: string
+      isPrivate:
+        type: boolean
+      label:
+        description: |-
+          Label is set only by NewLabelledProductResponse, to keep the format cost
+          off list responses.
+        type: string
+      minStockAmount:
+        type: integer
+      notificationLeadDays:
+        type: integer
+      notifiedAt:
+        type: string
+      openedAt:
+        type: string
+      priceOverride:
+        type: number
+      productName:
+        type: string
+      removalReason:
+        type: string
+      scannedAt:
+        type: string
+      storageLocation:
+        $ref: '#/definitions/api.StorageLocationResponse'
+      storageLocationId:
+        type: integer
+      unit:
+        type: string
     type: object
   api.ProductStatsResponse:
     properties:
@@ -417,6 +597,17 @@ definitions:
       month:
         description: 'format: "2006-01"'
         type: string
+    type: object
+  api.StorageLocationResponse:
+    properties:
+      ID:
+        type: integer
+      icon:
+        type: string
+      name:
+        type: string
+      sortOrder:
+        type: integer
     type: object
   api.StreakResponse:
     properties:
@@ -580,157 +771,6 @@ definitions:
     - password
     - username
     type: object
-  authentication.User:
-    properties:
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      displayName:
-        type: string
-      emailVerifiedAt:
-        type: string
-      household:
-        $ref: '#/definitions/database.Household'
-      householdID:
-        type: integer
-      id:
-        type: integer
-      mailAddress:
-        type: string
-      notificationPreferences:
-        $ref: '#/definitions/authentication.NotificationPreferences'
-      role:
-        type: string
-      updatedAt:
-        type: string
-      username:
-        type: string
-    type: object
-  database.AuditLog:
-    properties:
-      action:
-        type: string
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      details:
-        type: string
-      householdId:
-        description: |-
-          HouseholdID is written at record time, never derived at read time. Deriving
-          it from the user's *current* household would move a member's historical
-          entries into whichever household they have since joined — a cross-tenant
-          read. NULL means the entry could not be attributed (failed login for an
-          unknown username) and is invisible to every household.
-        type: integer
-      id:
-        type: integer
-      ipAddress:
-        type: string
-      requestId:
-        type: string
-      timestamp:
-        type: string
-      updatedAt:
-        type: string
-      userId:
-        type: integer
-    type: object
-  database.Household:
-    properties:
-      adminID:
-        type: integer
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      description:
-        type: string
-      id:
-        type: integer
-      monthlyWasteGoalCount:
-        description: nil = disabled
-        type: integer
-      monthlyWasteGoalPercent:
-        description: nil = disabled
-        type: number
-      monthlyWasteGoalType:
-        description: '"", "count", or "percent"'
-        type: string
-      name:
-        type: string
-      updatedAt:
-        type: string
-    type: object
-  database.HouseholdApplication:
-    properties:
-      applicantId:
-        type: integer
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      householdId:
-        type: integer
-      id:
-        type: integer
-      status:
-        type: string
-      updatedAt:
-        type: string
-    type: object
-  database.HouseholdInvitation:
-    properties:
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      email:
-        type: string
-      expiresAt:
-        type: string
-      householdId:
-        type: integer
-      id:
-        type: integer
-      inviterId:
-        type: integer
-      sendAttempts:
-        type: integer
-      sentAt:
-        type: string
-      status:
-        type: string
-      updatedAt:
-        type: string
-    type: object
-  database.OpenFoodFactsCache:
-    properties:
-      barcode:
-        type: string
-      categories:
-        type: string
-      co2KgPerKg:
-        type: number
-      countries:
-        type: string
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      id:
-        type: integer
-      imageUrl:
-        type: string
-      productName:
-        type: string
-      storageHint:
-        type: string
-      updatedAt:
-        type: string
-    type: object
   database.Product:
     properties:
       amount:
@@ -796,6 +836,39 @@ definitions:
       id:
         type: integer
     type: object
+  database.ProductDTOPatch:
+    properties:
+      ID:
+        type: integer
+      amount:
+        type: integer
+      categories:
+        type: string
+      countries:
+        type: string
+      daysAfterOpening:
+        type: integer
+      expireAt:
+        type: string
+      imageUrl:
+        type: string
+      isPrivate:
+        type: boolean
+      minStockAmount:
+        type: integer
+      notificationLeadDays:
+        type: integer
+      openedAt:
+        type: string
+      priceOverride:
+        type: number
+      productName:
+        type: string
+      storageLocationId:
+        type: integer
+      unit:
+        type: string
+    type: object
   database.StorageLocation:
     properties:
       createdAt:
@@ -857,11 +930,11 @@ definitions:
     properties:
       active:
         items:
-          $ref: '#/definitions/database.Product'
+          $ref: '#/definitions/api.ExportProductResponse'
         type: array
       archived:
         items:
-          $ref: '#/definitions/database.Product'
+          $ref: '#/definitions/api.ExportProductResponse'
         type: array
     type: object
   v1.FullExportResponse:
@@ -1020,7 +1093,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.AuditLog'
+              $ref: '#/definitions/api.AuditLogResponse'
             type: array
         "400":
           description: Bad Request
@@ -1258,7 +1331,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.HouseholdApplication'
+              $ref: '#/definitions/api.HouseholdApplicationResponse'
             type: array
         "400":
           description: Bad Request
@@ -1391,7 +1464,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.HouseholdInvitation'
+              $ref: '#/definitions/api.HouseholdInvitationResponse'
             type: array
         "400":
           description: Bad Request
@@ -1604,7 +1677,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.StorageLocation'
+              $ref: '#/definitions/api.StorageLocationResponse'
             type: array
         "500":
           description: Internal Server Error
@@ -1630,7 +1703,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/database.StorageLocation'
+            $ref: '#/definitions/api.StorageLocationResponse'
         "400":
           description: Bad Request
           schema:
@@ -1691,7 +1764,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.StorageLocation'
+            $ref: '#/definitions/api.StorageLocationResponse'
         "400":
           description: Bad Request
           schema:
@@ -1718,7 +1791,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/authentication.User'
+              $ref: '#/definitions/api.HouseholdUserResponse'
             type: array
         "400":
           description: Bad Request
@@ -1793,7 +1866,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/authentication.User'
+            $ref: '#/definitions/api.HouseholdUserResponse'
         "400":
           description: Bad Request
           schema:
@@ -2119,7 +2192,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.Product'
+            $ref: '#/definitions/api.ProductResponse'
         "400":
           description: Bad Request
           schema:
@@ -2150,14 +2223,14 @@ paths:
         name: product
         required: true
         schema:
-          $ref: '#/definitions/database.Product'
+          $ref: '#/definitions/database.ProductDTOPatch'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.Product'
+            $ref: '#/definitions/database.ProductDTOPatch'
         "400":
           description: Bad Request
           schema:
@@ -2222,7 +2295,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.Product'
+              $ref: '#/definitions/api.ProductResponse'
             type: array
         "400":
           description: Bad Request
@@ -2252,7 +2325,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/database.Product'
+            $ref: '#/definitions/api.ProductResponse'
         "400":
           description: Bad Request
           schema:
@@ -2288,7 +2361,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.Product'
+            $ref: '#/definitions/api.APIResponse'
         "400":
           description: Bad Request
           schema:
@@ -2395,7 +2468,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.Product'
+            $ref: '#/definitions/api.ProductResponse'
         "400":
           description: Bad Request
           schema:
@@ -2525,7 +2598,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.Product'
+              $ref: '#/definitions/api.ProductResponse'
             type: array
         "400":
           description: Bad Request
@@ -2732,7 +2805,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.Product'
+              $ref: '#/definitions/api.ProductResponse'
             type: array
         "400":
           description: Bad Request
@@ -2843,9 +2916,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: JSON file
+          description: OK
           schema:
-            type: file
+            items:
+              $ref: '#/definitions/api.ExportProductResponse'
+            type: array
         "400":
           description: Bad Request
           schema:
@@ -2919,7 +2994,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.OpenFoodFactsCache'
+            $ref: '#/definitions/api.OpenFoodFactsCacheResponse'
         "400":
           description: Bad Request
           schema:
@@ -3063,7 +3138,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.Product'
+              $ref: '#/definitions/api.ProductResponse'
             type: array
         "400":
           description: Bad Request
@@ -3136,7 +3211,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.Product'
+              $ref: '#/definitions/api.ProductResponse'
             type: array
         "400":
           description: Bad Request

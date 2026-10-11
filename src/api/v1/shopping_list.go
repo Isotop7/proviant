@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"github.com/gin-gonic/gin"
 )
@@ -13,11 +15,11 @@ func GetAutoShoppingList(ctx *gin.Context, appCtx *AppContext) {
 	products, err := appCtx.Repos.Products.GetSubThresholdProducts(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error loading auto shopping list: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error loading auto shopping list"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, products)
+	ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
 }
 
 func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
@@ -40,7 +42,7 @@ func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error getting household: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error creating shopping list item"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -55,7 +57,7 @@ func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	if req.Name == "" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "Name is required"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrShoppingListItemNameRequired)
 		return
 	}
 
@@ -72,29 +74,29 @@ func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 
 	if err := appCtx.Repos.ShoppingListItems.Create(item); err != nil {
 		appCtx.Logger.Error().Msgf("Error creating shopping list item: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error creating shopping list item"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, item)
+	ctx.JSON(http.StatusCreated, apiModel.NewShoppingListItemResponse(item))
 }
 
 func ListShoppingListItems(ctx *gin.Context, appCtx *AppContext) {
 	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error getting household: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error loading shopping list"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	items, err := appCtx.Repos.ShoppingListItems.ListByHousehold(householdID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error listing shopping list items: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error loading shopping list"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, items)
+	ctx.JSON(http.StatusOK, apiModel.NewShoppingListItemResponses(items))
 }
 
 func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
@@ -118,14 +120,14 @@ func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error getting household: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error updating shopping list item"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	item, err := appCtx.Repos.ShoppingListItems.GetByID(id, householdID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error getting shopping list item: %s", err)
-		ctx.JSON(http.StatusNotFound, api.APIResponse{Message: "Shopping list item not found"})
+		api.RespondError(ctx, http.StatusNotFound, errors.ErrShoppingListItemNotFound)
 		return
 	}
 
@@ -150,11 +152,11 @@ func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 
 	if err := appCtx.Repos.ShoppingListItems.Update(item); err != nil {
 		appCtx.Logger.Error().Msgf("Error updating shopping list item: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error updating shopping list item"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, item)
+	ctx.JSON(http.StatusOK, apiModel.NewShoppingListItemResponse(item))
 }
 
 func DeleteShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
@@ -166,13 +168,13 @@ func DeleteShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error getting household: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error deleting shopping list item"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	if err := appCtx.Repos.ShoppingListItems.Delete(id, householdID); err != nil {
 		appCtx.Logger.Error().Msgf("Error deleting shopping list item: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error deleting shopping list item"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -188,32 +190,37 @@ func ToggleShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error getting household: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error toggling shopping list item"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	if err := appCtx.Repos.ShoppingListItems.ToggleChecked(id, householdID); err != nil {
 		appCtx.Logger.Error().Msgf("Error toggling shopping list item: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error toggling shopping list item"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	item, _ := appCtx.Repos.ShoppingListItems.GetByID(id, householdID)
-	ctx.JSON(http.StatusOK, item)
+	item, err := appCtx.Repos.ShoppingListItems.GetByID(id, householdID)
+	if err != nil {
+		appCtx.Logger.Error().Msgf("Error reloading toggled shopping list item: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		return
+	}
+	ctx.JSON(http.StatusOK, apiModel.NewShoppingListItemResponse(item))
 }
 
 func ImportAutoListToShoppingList(ctx *gin.Context, appCtx *AppContext) {
 	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error getting household: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error importing auto shopping list"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	autoProducts, err := appCtx.Repos.Products.GetSubThresholdProducts(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error getting sub-threshold products: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error importing auto shopping list"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 

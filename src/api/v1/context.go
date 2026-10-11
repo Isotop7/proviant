@@ -60,7 +60,8 @@ func AppContextMiddleware() gin.HandlerFunc {
 		loggerVal, loggerOk := ctx.Get(util.ContextKeyLogger)
 		logger, _ := loggerVal.(*zerolog.Logger)
 		if !loggerOk || logger == nil {
-			ctx.AbortWithStatus(http.StatusInternalServerError)
+			api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrLoggerContextNotFound)
+			ctx.Abort()
 			return
 		}
 		appCtx := mustGetAppContext(ctx, logger)

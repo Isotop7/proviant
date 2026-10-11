@@ -14,6 +14,7 @@ services:
       - "5114:5114"
     environment:
       - GIN_MODE=debug
+      - TZ=${TZ:-UTC}
       - PROVIANT_LOGGING_ENABLED=true
       - PROVIANT_LOGGING_FILE=logs/proviant.log
       - PROVIANT_DATABASE_ENGINE=sqlite

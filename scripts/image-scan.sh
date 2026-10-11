@@ -30,8 +30,13 @@
 #
 # Trivy is resolved in this order:
 #   1. `trivy` on PATH (CI runners, hosts with trivy installed)
-#   2. the image referenced by $TRIVY_IMAGE (default: digest-pinned, see
-#      AGENTS.md "Container Image Scanning" for the pin and bump procedure)
+#   2. the image referenced by $TRIVY_IMAGE (default digest-pinned, below)
+#
+# The container pin is a digest, never a version tag: Docker Hub tags are
+# mutable and were poisoned in the March 2026 trivy supply-chain compromise
+# (GHSA-69fq-xp46-6x23). Bump procedure: update the default below AND the
+# Taskfile `TRIVY_IMAGE`, then verify with `task vuln-image`. Registry tags are
+# unprefixed (`0.75.0`, not `v0.75.0`).
 #
 # Exit status: 0 when no fixable HIGH/CRITICAL vulnerability is found, 1 otherwise.
 
@@ -45,8 +50,7 @@ fi
 TARGET="$1"
 REPORT_NAME="trivy-report.json"
 
-# Default TRIVY_IMAGE: sync with Taskfile.yml var TRIVY_IMAGE — bump both together when updating
-# See: AGENTS.md "Container Image Scanning" for bump procedure
+# Default TRIVY_IMAGE: sync with Taskfile.yml var TRIVY_IMAGE — bump both together (procedure above)
 TRIVY_IMAGE="${TRIVY_IMAGE:-docker.io/aquasec/trivy@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa}"
 # Vulnerability DB cache, honored by BOTH paths: the local binary receives it via
 # --cache-dir, the container path bind-mounts it. All CI workflows cache this
@@ -59,8 +63,8 @@ fi
 
 # --scanners vuln: trivy image defaults to "vuln,secret". Secret findings carry
 # HIGH/CRITICAL severities too and would trip --exit-code 1, but this gate is
-# scoped to OS packages (see AGENTS.md). Pin the intent instead of relying on
-# the default.
+# scoped to OS packages (policy in the header). Pin the intent instead of
+# relying on the default.
 # shellcheck disable=SC2054 # HIGH,CRITICAL is one comma-separated trivy argument, not two
 SEVERITY_FLAGS=(--scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1)
 

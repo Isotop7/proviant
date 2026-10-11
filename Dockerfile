@@ -30,10 +30,11 @@ COPY --from=buildenv /app/proviant /app/proviant
 RUN addgroup -S proviant && \
     adduser -S -G proviant proviant && \
     mkdir /app/data && \
-    apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng && \
+    apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng tzdata && \
     chown -R proviant:proviant /app
 COPY --chown=proviant:proviant ./src/config.yaml.sqlite.tmpl /app/config.yaml
 ENV GIN_MODE=release
+ENV TZ=UTC
 EXPOSE 5114
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

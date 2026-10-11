@@ -301,16 +301,6 @@ describe("proviant.js pure helpers", () => {
     proviant = freshProviant().proviant;
   });
 
-  describe("formatDate", () => {
-    it("zero-pads every component", () => {
-      expect(proviant.formatDate(new Date(2026, 0, 5, 9, 3, 7))).toBe("2026-01-05 09:03:07");
-    });
-
-    it("does not double-pad two-digit values", () => {
-      expect(proviant.formatDate(new Date(2026, 10, 30, 23, 59, 59))).toBe("2026-11-30 23:59:59");
-    });
-  });
-
   describe("badgifyCategories", () => {
     it("badges a category that carries a sub-label", () => {
       expect(proviant.badgifyCategories("Dairy:Milk", 5)).toBe(

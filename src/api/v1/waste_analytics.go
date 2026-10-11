@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/util"
 
@@ -47,13 +48,13 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 	period := ctx.DefaultQuery("period", "6months")
 	months, ok := periodToMonths(period)
 	if !ok {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid period (allowed: month, 3months, 6months, 12months)"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrWasteInvalidPeriod)
 		return
 	}
 
 	sortBy := ctx.DefaultQuery("sort", "count")
 	if sortBy != "count" && sortBy != "cost" {
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid sort (allowed: count, cost)"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrWasteInvalidSort)
 		return
 	}
 
@@ -61,11 +62,11 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 	if v := ctx.Query("limit"); v != "" {
 		parsed, parseErr := strconv.Atoi(v)
 		if parseErr != nil || parsed <= 0 {
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "invalid limit (must be a positive integer)"})
+			api.RespondError(ctx, http.StatusBadRequest, errors.ErrWasteInvalidLimit)
 			return
 		}
 		if parsed > 50 {
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "limit must be 1..50"})
+			api.RespondError(ctx, http.StatusBadRequest, errors.ErrWasteLimitOutOfRange)
 			return
 		}
 		limit = parsed
@@ -77,28 +78,28 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 	row, err := appCtx.Repos.WasteAnalytics.GetConsumedVsWasted(householdID, since)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetConsumedVsWasted: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing waste analytics"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	monthly, err := appCtx.Repos.WasteAnalytics.GetMonthlyBreakdown(householdID, since, months)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetMonthlyBreakdown: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing monthly breakdown"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	categories, err := appCtx.Repos.WasteAnalytics.GetMostWastedCategories(householdID, since, limit, sortBy)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetMostWastedCategories: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing most-wasted categories"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
 	products, err := appCtx.Repos.WasteAnalytics.GetMostWastedProducts(householdID, since, 3)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetMostWastedProducts: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing most-wasted products"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	for i := range categories {
@@ -110,7 +111,7 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 	trend, err := appCtx.Repos.WasteAnalytics.GetTrendMonths(householdID, 6)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetTrendMonths: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing trend"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
