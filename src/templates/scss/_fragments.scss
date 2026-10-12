@@ -1,0 +1,217 @@
+// ── Fragments ──────────────────────────────────────────────────────────────
+
+// Error page
+.error-icon {
+  font-size: 8rem;
+}
+
+// Onboarding hero image
+.onboarding-hero {
+  max-height: 80px;
+}
+
+// Accept invite icon wrapper
+.invite-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  background: var(--accent);
+  border-radius: 16px;
+  box-shadow: 0 6px 18px oklch(50% .12 162deg / .35);
+}
+
+// Tabular numbers — stable width for stat tiles
+.card-body .display-5 {
+  font-variant-numeric: tabular-nums;
+}
+
+// Skeleton shimmer loading tiles
+.skeleton-block {
+  background:
+    linear-gradient(
+      90deg,
+      var(--bs-secondary-bg) 25%,
+      var(--bs-tertiary-bg) 50%,
+      var(--bs-secondary-bg) 75%
+    );
+  background-size: 200% 100%;
+  border-radius: .375rem;
+  animation: skeleton-shimmer 1.4s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+// Input width utilities
+.input-width-260 {
+  max-width: 260px;
+}
+.input-width-360 {
+  max-width: 360px;
+}
+.input-width-480 {
+  max-width: 480px;
+}
+
+// Mobile bottom navigation
+.bottom-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 60px;
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 20px oklch(18% .022 70deg / .08);
+  transform: translateZ(0);
+}
+
+.bottom-nav-scan {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  align-self: flex-end;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 4px;
+  color: var(--accent-fg);
+  text-decoration: none;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px oklch(50% .12 162deg / .4);
+  transition: transform var(--duration-base), box-shadow var(--duration-base);
+
+  i {
+    font-size: 24px;
+  }
+
+  &:hover {
+    box-shadow: 0 6px 16px oklch(50% .12 162deg / .5);
+    transform: scale(1.05);
+  }
+
+  &.active {
+    background: var(--accent-hover);
+  }
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--fg-3);
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  transition: color 120ms;
+
+  i {
+    display: block;
+    font-size: 20px;
+  }
+  span {
+    font-family: var(--font-ui);
+  }
+
+  &.active {
+    font-weight: 700;
+    color: var(--accent);
+  }
+}
+
+.mobile-top-more {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 10000;
+  display: none;
+
+  @media (max-width: 767.98px) {
+    display: block;
+  }
+}
+
+.mobile-top-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--fg-3);
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px oklch(18% .022 70deg / .12);
+  transition: color 120ms;
+
+  i {
+    font-size: 18px;
+  }
+
+  &:hover,
+  &[aria-expanded="true"] {
+    color: var(--accent);
+  }
+}
+
+.mobile-top-more-dropdown {
+  min-width: 160px;
+  margin-top: 8px;
+
+  .dropdown-item {
+    font-family: var(--font-ui);
+    font-size: 12px;
+  }
+
+  .dropdown-item-danger {
+    color: var(--bs-danger);
+
+    &:hover {
+      background-color: var(--bs-danger-bg-subtle);
+    }
+  }
+}
+
+@media (min-width: 768px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  html,
+  body {
+    height: 100%;
+    min-height: 100vh;
+    padding: 0;
+    margin: 0;
+    overflow-x: hidden;
+  }
+  .pv-sidebar {
+    display: none;
+  }
+  #content-wrapper {
+    min-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0));
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0));
+    margin-left: 0;
+  }
+}
