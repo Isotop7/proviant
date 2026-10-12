@@ -240,21 +240,6 @@
   }
 }
 
-//  Button loading state
-.btn-loading {
-  display: none;
-}
-.btn-proviant-primary.loading,
-.btn-bulk.loading {
-  .btn-text {
-    display: none;
-  }
-  .btn-loading {
-    display: inline-flex;
-    align-items: center;
-  }
-}
-
 //  Waste analytics — nested products list inside expanded category accordion items
 .waste-category-product-list {
   padding-left: 1.25rem;

@@ -202,6 +202,15 @@
     color: var(--fg);
     text-align: center;
   }
+
+  input {
+    width: 50px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    border: none;
+  }
 }
 
 .qty-static {
@@ -392,32 +401,6 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--accent);
-}
-
-.btn-bulk {
-  display: inline-flex;
-  gap: 5px;
-  align-items: center;
-  padding: 5px 10px;
-  font-family: var(--font-ui);
-  font-size: 11px;
-  color: var(--fg-2);
-  cursor: pointer;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-
-  &.danger {
-    color: var(--status-expired);
-    background: var(--status-expired-subtle);
-    border-color: var(--status-expired-border);
-  }
-
-  &.active {
-    color: var(--accent);
-    background: var(--accent-subtle);
-    border-color: var(--accent-border);
-  }
 }
 
 .export-menu {

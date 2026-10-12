@@ -42,6 +42,47 @@
   }
 }
 
+// Button loading state
+.btn-loading {
+  display: none;
+}
+.btn-proviant-primary.loading,
+.btn-bulk.loading {
+  .btn-text {
+    display: none;
+  }
+  .btn-loading {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+.btn-bulk {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 5px 10px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--fg-2);
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+
+  &.danger {
+    color: var(--status-expired);
+    background: var(--status-expired-subtle);
+    border-color: var(--status-expired-border);
+  }
+
+  &.active {
+    color: var(--accent);
+    background: var(--accent-subtle);
+    border-color: var(--accent-border);
+  }
+}
+
 .btn-proviant-secondary {
   color: var(--fg);
   background: var(--surface);
