@@ -18,10 +18,7 @@ $card-bg: #fff; // --surface pure white
 $list-group-border-width: 2px;
 $line-height-base: 1.6;
 
-// Colors — aligned with Proviant design system tokens
-// --accent oklch(0.50 0.12 162) · --brand-slate oklch(0.52 0.08 245)
-// --status-expired oklch(0.55 0.20 25) · --status-critical oklch(0.64 0.18 45)
-// --status-fresh oklch(0.52 0.10 150) · --fg oklch(0.18 0.022 70)
+// Colors map to the Proviant design tokens: $primary ← --accent, $secondary ← --brand-slate, $success ← --status-fresh, $warning ← --status-critical, $danger ← --status-expired, $dark ← --fg.
 $primary: #2d7858; // --accent: brand teal-green
 $secondary: #4a6fa0; // --brand-slate: slate-blue
 $info: #7bc67e; // leaf green (decorative)
@@ -84,11 +81,10 @@ $shadow-color: rgba(34, 30, 24, .1);
 $bootstrap-icons-font-dir: "../fonts";
 @import "bootstrap-icons/font/bootstrap-icons";
 
-//
 // Proviant design system — tokens + component CSS
-//
 
 @import "./tokens";
+@import "./base";
 @import "./components";
 @import "./theme";
 @import "./layout";

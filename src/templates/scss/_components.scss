@@ -1,44 +1,5 @@
 // ── Components ─────────────────────────────────────────────────────────────
 
-// Text hierarchy utilities
-.text-primary-custom { color: var(--text-primary); }
-.text-secondary-custom { color: var(--text-secondary); }
-.text-tertiary { color: var(--text-tertiary); }
-.text-disabled-custom { color: var(--text-disabled); }
-
-// Skip link — visible on focus for keyboard navigation
-.skip-link {
-  position: absolute;
-  top: -100%;
-  left: var(--space-4);
-  z-index: 9999;
-  padding: var(--space-2) var(--space-4);
-  font-weight: 600;
-  color: var(--accent-fg);
-  background: var(--accent);
-  border-radius: var(--radius-md);
-  transition: top var(--duration-fast);
-
-  &:focus {
-    top: var(--space-2);
-  }
-}
-
-// Global focus-visible — ensure keyboard focus is always visible
-*:focus-visible {
-  outline: 2px solid var(--accent) !important;
-  outline-offset: 2px;
-}
-
-// Ensure full page height on mobile
-@media (max-width: 767.98px) {
-  html,
-  body {
-    height: 100%;
-    min-height: 100vh;
-  }
-}
-
 // Buttons — unified size regardless of btn-sm / btn-lg modifier
 .btn-proviant-primary,
 .btn-proviant-secondary,

@@ -1,4 +1,4 @@
-// ── Pages ──────────────────────────────────────────────────────────────────
+// ── Shopping list & waste pages ────────────────────────────────────────────
 
 // Shopping list styles — matches product list layout
 .sl-list-header {
@@ -111,7 +111,7 @@
   }
 }
 
-/* Shopping list styles */
+//  Shopping list styles
 .shopping-list-import-banner {
   overflow: hidden;
   background: var(--accent-subtle);
@@ -240,7 +240,7 @@
   }
 }
 
-/* Button loading state */
+//  Button loading state
 .btn-loading {
   display: none;
 }
@@ -255,7 +255,7 @@
   }
 }
 
-/* Waste analytics — nested products list inside expanded category accordion items */
+//  Waste analytics — nested products list inside expanded category accordion items
 .waste-category-product-list {
   padding-left: 1.25rem;
   font-size: .875rem;
@@ -270,7 +270,7 @@
   }
 }
 
-/* Waste analytics — make accordion headers look like the site's list-group-item pattern */
+//  Waste analytics — make accordion headers look like the site's list-group-item pattern
 #categoryList .accordion-item,
 #categoryList > .list-group-item {
   padding: .5rem 1rem;
