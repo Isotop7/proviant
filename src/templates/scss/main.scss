@@ -89,12 +89,12 @@ $bootstrap-icons-font-dir: "../fonts";
 //
 
 @import "./tokens";
-@import "./foundation";
+@import "./components";
 @import "./theme";
 @import "./layout";
 @import "./mobile";
 @import "./scan";
-@import "./components";
+@import "./pageChrome";
 @import "./editProduct";
 @import "./productList";
 @import "./pages";
