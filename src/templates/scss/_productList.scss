@@ -1,0 +1,590 @@
+// ── Product list view ──────────────────────────────────────────────────────
+
+.list-checkbox-col {
+  width: 32px;
+}
+
+.list-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.list-thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+}
+
+.list-thumb-img {
+  position: absolute;
+  inset: 0;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  background: var(--bg-subtle);
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity var(--duration-slow) var(--ease-out);
+}
+
+.list-thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--bg-subtle);
+  border-radius: 6px;
+}
+
+.list-thumb-icon {
+  font-size: 14px;
+  color: var(--fg-3);
+}
+
+.list-status-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+  background: var(--status-nodate-dot);
+  border: 1.5px solid white;
+  border-radius: 999px;
+
+  &.status-expired { background: var(--status-expired-dot); }
+  &.status-critical { background: var(--status-critical-dot); }
+  &.status-soon { background: var(--status-soon-dot); }
+  &.status-fresh { background: var(--status-fresh-dot); }
+  &.status-nodate { background: var(--status-nodate-dot); }
+}
+
+.list-product-text {
+  min-width: 0;
+}
+
+.list-product-name {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-product-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+}
+
+
+.list-header {
+  display: grid;
+  grid-template-columns: 32px 1fr 120px 140px 90px 80px 50px;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+
+  > div {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--fg-3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+}
+
+.list-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 120px 140px 90px 80px 50px;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 16px;
+  overflow: hidden;
+  cursor: default;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 120ms;
+
+  &:hover {
+    background: var(--bg-subtle);
+  }
+
+  &.selected {
+    background: var(--accent-subtle);
+  }
+}
+
+.col-product {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.col-location {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+}
+
+.col-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-add-to-shopping-list {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--fg-3);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  transition: all 120ms;
+
+  &:hover {
+    color: var(--accent);
+    background: var(--accent-subtle);
+    border-color: var(--accent-border);
+  }
+
+  &:disabled {
+    color: var(--fg-3);
+    cursor: default;
+    opacity: .5;
+  }
+}
+
+.qty-stepper {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 26px;
+    font-size: 13px;
+    color: var(--fg-2);
+    cursor: pointer;
+    background: var(--bg-subtle);
+    border: none;
+    transition: background 120ms;
+
+    &:hover {
+      background: var(--border);
+    }
+  }
+
+  span {
+    width: 24px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--fg);
+    text-align: center;
+  }
+}
+
+.qty-static {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.filter-pill {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 10px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--fg-2);
+  text-decoration: none;
+  white-space: nowrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: all 120ms;
+
+  &:hover {
+    color: var(--fg);
+    background: var(--bg-subtle);
+  }
+
+  &.active {
+    font-weight: 600;
+    border-width: 1.5px;
+  }
+
+  &.active.status-all {
+    color: var(--accent);
+    background: var(--accent-subtle);
+    border-color: var(--accent-border);
+  }
+
+  &.active.status-expired {
+    color: var(--status-expired);
+    background: var(--status-expired-subtle);
+    border-color: var(--status-expired-border);
+  }
+
+  &.active.status-critical {
+    color: var(--status-critical);
+    background: var(--status-critical-subtle);
+    border-color: var(--status-critical-border);
+  }
+
+  &.active.status-soon {
+    color: var(--status-soon);
+    background: var(--status-soon-subtle);
+    border-color: var(--status-soon-border);
+  }
+
+  &.active.status-fresh {
+    color: var(--status-fresh);
+    background: var(--status-fresh-subtle);
+    border-color: var(--status-fresh-border);
+  }
+
+  &.active.status-nodate {
+    color: var(--status-nodate);
+    background: var(--status-nodate-subtle);
+    border-color: var(--status-nodate-border);
+  }
+
+  &.active.status-archived {
+    color: var(--fg-2);
+    background: var(--bg-subtle);
+    border-color: var(--border);
+  }
+}
+
+// Product list pagination — the list is served one page at a time, so these
+// links are the only way through it. Sized to the 44px touch-target minimum.
+.products-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.pagination-link {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 16px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--fg-2);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 120ms;
+
+  &:hover {
+    color: var(--fg);
+    background: var(--bg-subtle);
+  }
+
+  &.is-disabled {
+    color: var(--fg-3);
+    cursor: not-allowed;
+    opacity: .6;
+  }
+}
+
+.pagination-status {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-3);
+}
+
+.filter-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.dot-expired { background: var(--status-expired-dot); }
+.dot-critical { background: var(--status-critical-dot); }
+.dot-soon { background: var(--status-soon-dot); }
+.dot-fresh { background: var(--status-fresh-dot); }
+.dot-nodate { background: var(--status-nodate-dot); }
+
+.filter-separator {
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--border);
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 8px;
+  background: var(--border);
+}
+
+.btn-view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+  color: var(--fg-3);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  transition: all 120ms;
+
+  &:hover {
+    color: var(--fg);
+    background: var(--bg-subtle);
+  }
+
+  &.active {
+    color: var(--accent);
+    background: var(--accent-subtle);
+    border-color: var(--accent-border);
+  }
+}
+
+.bulk-actions-bar {
+  display: none;
+  gap: 6px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.bulk-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.btn-bulk {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 5px 10px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--fg-2);
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+
+  &.danger {
+    color: var(--status-expired);
+    background: var(--status-expired-subtle);
+    border-color: var(--status-expired-border);
+  }
+
+  &.active {
+    color: var(--accent);
+    background: var(--accent-subtle);
+    border-color: var(--accent-border);
+  }
+}
+
+.export-menu {
+  min-width: 200px;
+
+  .dropdown-item {
+    font-family: var(--font-ui);
+    font-size: 12px;
+  }
+}
+
+/* Cook modal per-product rows */
+.cook-item-row {
+  .cook-item-name {
+    font-weight: 600;
+  }
+
+  .cook-item-input {
+    max-width: 110px;
+    text-align: center;
+  }
+}
+
+.nav-badge {
+  min-width: 16px;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 700;
+  color: white;
+  text-align: center;
+  background: var(--status-expired);
+  border-radius: 999px;
+}
+
+.expiry-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+
+  &.status-expired { color: var(--status-expired); }
+  &.status-critical { color: var(--status-critical); }
+  &.status-soon { color: var(--status-soon); }
+  &.status-fresh { color: var(--fg-2); }
+  &.status-nodate { color: var(--fg-3); }
+}
+
+@media (max-width: 767.98px) {
+  .list-header,
+  .list-row {
+    grid-template-columns: 12px 1fr 60px 48px 20px;
+    overflow: hidden;
+  }
+
+  .list-header {
+    .col-qty,
+    .col-actions {
+      justify-content: flex-end;
+      text-align: right;
+    }
+  }
+
+  .col-status,
+  .col-location {
+    display: none;
+  }
+
+  .col-qty {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  .qty-stepper {
+    flex-shrink: 0;
+  }
+
+  .col-actions {
+    flex-shrink: 0;
+  }
+
+  // Hide desktop-only bulk actions and export divider; mobile dropdown remains visible
+  #bulkActions,
+  .toolbar-divider {
+    display: none !important;
+  }
+
+  // Prevent toolbar row 2 from wrapping — keep filters + right-side buttons on one line
+  #toolbarRow2 {
+    flex-wrap: nowrap;
+  }
+
+  // Hide filter pills on mobile; use offcanvas filters instead
+  #toolbarFilters {
+    display: none !important;
+  }
+
+  // Keep mobile dropdown fixed on the right, don't let it shrink
+  #toolbarRight {
+    flex-shrink: 0;
+  }
+
+  // Add bottom padding to content so it doesn't get covered by mobile bulk bar + bottom nav
+  #content-wrapper {
+    padding-bottom: calc(130px + env(safe-area-inset-bottom, 0));
+  }
+
+  // Search bar: prevent input group from collapsing; ensure search button and filters button visible
+  .search-bar {
+    .form-select,
+    .form-control {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .btn {
+      flex-shrink: 0;
+    }
+  }
+
+  // Mobile bulk actions bar (fixed above bottom nav)
+  .mobile-bulk-actions {
+    position: fixed;
+    right: 0;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0) + 6px);
+    left: 0;
+    z-index: 10000; // above bottom nav (9999)
+    display: none;
+    padding: 10px 12px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 16px oklch(18% .022 70deg / .12);
+
+    .bulk-actions-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .btn-bulk {
+      padding: 8px 14px; // larger touch target
+      font-size: 12px;
+    }
+  }
+}
+
+/* Amount update feedback — green background flash (pill shape) */
+[id^="amount-"],
+[id^="qty-"] {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  transition: background .4s ease;
+}
+.amount-updated {
+  color: var(--status-fresh) !important;
+  background: var(--status-fresh-subtle) !important;
+}
+
+.mobile-bulk-actions {
+  display: none;
+}
+
+// Desktop: always hide mobile bulk bar (even if JS sets inline display)
+@media (min-width: 768px) {
+  .mobile-bulk-actions {
+    display: none !important;
+  }
+}
