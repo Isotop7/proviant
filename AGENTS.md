@@ -4,17 +4,10 @@ Agent coding guidelines for Proviant codebase.
 
 **Keep accurate.** Cite symbols not line numbers (`AutoMigrate` in `proviant.go`, not "line 188") — they rot. Cite durable code + docs not issue numbers — `#123` closes, means nothing later; state rule. Exception: underivable exact facts — pinned digests, advisory IDs, version strings — live in script they govern, not here.
 
-## Code Search
-
-Find code by description or symbol via `semble search`, not grep; similar code at a known spot via `semble find-related` (`file_path` + `line`). Full detail is in the Semble section of the global agent config. If `semble` is not on `$PATH`: `uvx --from "semble[mcp]==0.6.1" semble`.
-
 ## Workflow
 
-1. `semble search` first.
-2. Read a full file only when the returned chunk lacks context.
-3. `semble find-related` on a promising `file_path` + `line`.
-4. Grep only for exhaustive literal matches / exact-string confirmation.
-5. Library/API/config questions: Context7 MCP (`resolve-library-id` + `query-docs`), automatically, no asking.
+1. Locate code with search before reading; read a full file only when the located excerpt lacks context.
+2. Library/API/config questions: Context7 MCP (`resolve-library-id` + `query-docs`), automatically, no asking.
 
 ## Build, Lint, and Test Commands
 
