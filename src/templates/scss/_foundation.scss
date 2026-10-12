@@ -1,14 +1,10 @@
-//
 // Text hierarchy utilities
-//
 .text-primary-custom { color: var(--text-primary); }
 .text-secondary-custom { color: var(--text-secondary); }
 .text-tertiary { color: var(--text-tertiary); }
 .text-disabled-custom { color: var(--text-disabled); }
 
-//
 // Skip link — visible on focus for keyboard navigation
-//
 .skip-link {
   position: absolute;
   top: -100%;
@@ -26,9 +22,7 @@
   }
 }
 
-//
 // Global focus-visible — ensure keyboard focus is always visible
-//
 *:focus-visible {
   outline: 2px solid var(--accent) !important;
   outline-offset: 2px;

@@ -1,13 +1,9 @@
-//
 // Light mode surface polish — ensure card and navbar surfaces use the pale green palette
-//
 [data-bs-theme="light"] {
   --bs-tertiary-bg: #f0ece6; // --bg-subtle warm off-white — used by bg-body-tertiary (auth pages, offcanvas)
 }
 
-//
 // Dark theme — warm dark palette
-//
 [data-bs-theme="dark"] {
   color-scheme: dark;
 

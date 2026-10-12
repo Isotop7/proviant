@@ -283,8 +283,7 @@
   }
 }
 
-// Product list pagination — the list is served one page at a time, so these
-// links are the only way through it. Sized to the 44px touch-target minimum.
+// Pagination links are the only way through the page-at-a-time list; sized to the 44px touch-target minimum.
 .products-pagination {
   display: flex;
   flex-wrap: wrap;

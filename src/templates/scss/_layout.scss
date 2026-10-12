@@ -1,6 +1,4 @@
-//
 // Custom styles
-//
 
 // Main content area — offset for fixed sidebar
 #content-wrapper {
@@ -14,10 +12,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 24px;
-  // Negative margins cancel content-wrapper padding. The vertical padding is
-  // --space-6 but the horizontal padding is --space-3, so the sides must cancel
-  // --space-3 — bleeding by --space-6 overshoots by 12px and gives every page
-  // using this bar a horizontal scrollbar.
+  // Negative margins cancel content-wrapper padding: the sides must bleed --space-3, or the bar overflows into a horizontal scrollbar.
   margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-3)) var(--space-5);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -75,8 +70,7 @@ th a {
   font-size: 6rem;
 }
 
-// Search bar — design-token based standalone (not input-group)
-// Follows PRODUCT_LIST_HANDOFF.md design tokens
+// Search bar — design-token based standalone (not input-group).
 .search-bar {
   display: block;
   width: 100%;
@@ -258,9 +252,7 @@ th a {
   }
 }
 
-//
 // Onboarding wizard
-//
 .onboarding-wizard {
   width: 100%;
   max-width: 640px;
@@ -331,9 +323,7 @@ th a {
   }
 }
 
-//
 // Expiry field update flash
-//
 @keyframes expire-flash {
   0% {
     box-shadow: 0 0 0 3px var(--bs-info);
@@ -350,9 +340,7 @@ th a {
   animation: expire-flash .5s ease-out forwards;
 }
 
-//
 // Notification bell
-//
 #notification-badge {
   top: 50%;
   right: 8px;
@@ -382,9 +370,7 @@ th a {
   font-size: .7rem;
 }
 
-//
 // Scrollable stat tile body
-//
 .tile-threshold-info {
   cursor: default;
 }

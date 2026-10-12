@@ -1,6 +1,4 @@
-//
 // Hero scan card — dashboard mobile CTA
-//
 .hero-scan-card {
   position: relative;
   display: block;
@@ -76,9 +74,7 @@
   }
 }
 
-//
 // Scan page — viewfinder + controls
-//
 .scan-page-header {
   padding: 24px 16px 16px;
   text-align: center;
@@ -191,9 +187,7 @@
   }
 }
 
-//
 // Scan page — batch scan mode
-//
 .batch-thumb-wrap {
   display: flex;
   align-items: center;
@@ -232,9 +226,7 @@
   min-width: 0;
 }
 
-//
 // Reduced motion — respect system preference
-//
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -1,6 +1,4 @@
-//
 // Icon chip — small accent-tinted icon square used in card/section headers
-//
 .icon-chip {
   display: flex;
   flex-shrink: 0;
@@ -39,9 +37,7 @@
   box-shadow: 0 2px 8px oklch(50% .12 162deg / .35);
 }
 
-//
 // Page header title / subtitle
-//
 .page-header-title {
   margin: 0;
   font-size: var(--text-lg);
@@ -55,9 +51,7 @@
   color: var(--fg-3);
 }
 
-//
 // Offline banner
-//
 .offline-banner {
   position: fixed;
   top: 0;
@@ -71,9 +65,7 @@
   border-bottom: 1px solid var(--status-soon-border);
 }
 
-//
 // SW update banner
-//
 .sw-update-banner {
   position: fixed;
   top: 0;
@@ -92,9 +84,7 @@
   }
 }
 
-//
 // Modal header extensions
-//
 .modal-icon-danger {
   color: oklch(45% .2 25deg);
   background: oklch(95% .05 25deg);
@@ -122,9 +112,7 @@
   border: none;
 }
 
-//
 // Mode tab switcher
-//
 .tab-switcher {
   display: flex;
   gap: 4px;
@@ -158,9 +146,7 @@
   }
 }
 
-//
 // Input / field helpers
-//
 .field-label {
   margin-bottom: 8px;
   font-size: var(--text-xs);
@@ -189,9 +175,7 @@
   color: var(--fg-3);
 }
 
-//
 // Barcode camera wrapper
-//
 .barcode-camera-wrap {
   position: relative;
   width: 100%;
@@ -231,9 +215,7 @@
   color: var(--accent);
 }
 
-//
 // Scan result banner (shown after barcode lookup)
-//
 .scan-result-banner {
   display: flex;
   gap: 10px;
@@ -271,9 +253,7 @@
   background: var(--accent-subtle);
 }
 
-//
 // Product thumbnail images
-//
 .product-thumb {
   width: 64px;
   height: 64px;
@@ -287,9 +267,7 @@
   background: var(--bg-subtle);
 }
 
-//
 // Modal success banner (add-product step 3)
-//
 .modal-success-banner {
   display: flex;
   gap: 14px;
@@ -327,9 +305,7 @@
   color: var(--fg-3);
 }
 
-//
 // Add-product modal — dialog width + JS-toggled step/footer visibility
-//
 #addProductModal .modal-dialog {
   max-width: 500px;
 }
@@ -360,9 +336,7 @@
   display: none;
 }
 
-//
 // Nav sidebar extensions
-//
 .nav-footer-section {
   padding: 8px;
   border-top: 1px solid var(--border-subtle);
@@ -414,9 +388,7 @@ button.pv-nav-item {
 // Login page
 @import "./login";
 
-//
 // Auth page toast
-//
 .toast-success-icon {
   font-size: 16px;
   color: oklch(52% .1 145deg);
@@ -426,9 +398,7 @@ button.pv-nav-item {
   font-size: var(--text-sm);
 }
 
-//
 // Scan page — product data panel
-//
 .product-data-panel {
   max-width: 480px;
   margin: 0 auto;
@@ -439,16 +409,12 @@ button.pv-nav-item {
   inset: 0;
 }
 
-//
 // Hero scan card inner needs stacking context
-//
 .hero-scan-card > div {
   position: relative;
 }
 
-//
 // Card with accent border (onboarding completion)
-//
 .card-section-accent {
   border: 1px solid oklch(78% .08 162deg);
 }
