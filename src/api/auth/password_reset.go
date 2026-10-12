@@ -41,6 +41,15 @@ type resetPasswordRequest struct {
 // ForgotPassword starts a self-service password reset by emailing a reset link.
 // Always returns the same response to avoid leaking which addresses are
 // registered, and silently skips users with unverified email addresses.
+// @Summary      Requests a password reset
+// @Description  Sends a password reset link to the given email address. Always returns the same generic response so registered addresses are not leaked
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body forgotPasswordRequest true "Mail address"
+// @Success      200 {object} api.APIResponse
+// @Failure      400 {object} api.APIResponse
+// @Router       /auth/forgot-password [post]
 func ForgotPassword(ctx *gin.Context) {
 	logger, ok := mustGetLogger(ctx)
 	if !ok {
@@ -154,6 +163,16 @@ func ForgotPassword(ctx *gin.Context) {
 // password policy checks only run after the token has been confirmed valid
 // and not already consumed, so unauthenticated callers cannot force the
 // server to do expensive CPU work.
+// @Summary      Resets a password
+// @Description  Consumes a password reset token and sets the new password. The token is single-use and expires
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body resetPasswordRequest true "Token and new password"
+// @Success      200 {object} api.APIResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /auth/reset-password [post]
 func ResetPassword(ctx *gin.Context) {
 	logger, ok := mustGetLogger(ctx)
 	if !ok {

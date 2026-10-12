@@ -20,11 +20,11 @@ import (
 // @Description  Returns a list of products of user matching the given barcode
 // @Tags         product
 // @Produce      json
-// @Param        barcode   path      int  true  "Barcode"
+// @Param        barcode   path      string  true  "Barcode"
 // @Success      200  {object}  []apiModel.ProductResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
-// @Router       /api/v1/productsByBarcode [get]
+// @Router       /api/v1/products/byBarcode/{barcode} [get]
 func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext) {
 	barcodeParam := ctx.Param("barcode")
 

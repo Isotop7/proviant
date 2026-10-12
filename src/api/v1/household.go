@@ -240,6 +240,15 @@ func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext) {
 }
 
 // GetHouseholdSettings returns the caller's household settings.
+// @Summary      Gets household settings
+// @Description  Returns the monthly waste goal settings of the caller's household
+// @Tags         household
+// @Produce      json
+// @Success      200 {object} apiModel.HouseholdSettingsResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/household/settings [get]
+// @Security     BearerAuth
 func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
@@ -260,6 +269,19 @@ func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 }
 
 // UpdateHouseholdSettings updates monthly waste goal for the caller's household (admin only).
+// @Summary      Updates household settings
+// @Description  Updates the monthly waste goal of the caller's household (admin only)
+// @Tags         household
+// @Accept       json
+// @Produce      json
+// @Param        request body apiModel.UpdateHouseholdSettingsRequest true "Settings"
+// @Success      200 {object} apiModel.HouseholdSettingsResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      403 {object} api.APIResponse
+// @Failure      404 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/household/settings [patch]
+// @Security     BearerAuth
 func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 	var req apiModel.UpdateHouseholdSettingsRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {

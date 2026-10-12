@@ -254,16 +254,6 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
 }
 
-// Products renders the products list page
-// @Summary      Products page
-// @Description  Renders the products list page with optional search
-// @Tags         web
-// @Produce      html
-// @Success      200  {string}  html
-// @Failure      400  {object}  api.APIResponse
-// @Failure      500  {object}  api.APIResponse
-// @Router       /web/products [get]
-
 type productQueryParams struct {
 	statusFilter   string
 	locationFilter string
@@ -486,6 +476,15 @@ func filterProductsByStatus(products []dbModel.Product, status string, now time.
 	return filtered
 }
 
+// Products renders the products list page
+// @Summary      Products page
+// @Description  Renders the products list page with optional search
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/products [get]
 func (frontend *Frontend) Products(ctx *gin.Context) {
 	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
@@ -631,6 +630,13 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }
 
+// ProductsScan renders the barcode scanning page
+// @Summary      Product scan page
+// @Description  Renders the product barcode scanning page
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Router       /web/products/scan [get]
 func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
 	pageData := map[string]any{
 		"InviteToken": ctx.Query("invite_token"),

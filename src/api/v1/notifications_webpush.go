@@ -19,6 +19,15 @@ type WebPushVAPIDPublicKeyResponse struct {
 	PublicKey string `json:"publicKey"`
 }
 
+// GetWebPushVAPIDPublicKey returns the VAPID public key for web push subscriptions
+// @Summary      Gets web push VAPID public key
+// @Description  Returns the VAPID public key used by the browser to subscribe to web push notifications
+// @Tags         notification
+// @Produce      json
+// @Success      200 {object} WebPushVAPIDPublicKeyResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/notifications/push/vapidPublicKey [get]
+// @Security     BearerAuth
 func GetWebPushVAPIDPublicKey(ctx *gin.Context, appCtx *AppContext) {
 	publicKey, _, err := appCtx.Repos.Notifications.GetVAPIDKeys()
 	if err != nil {
@@ -30,6 +39,18 @@ func GetWebPushVAPIDPublicKey(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, WebPushVAPIDPublicKeyResponse{PublicKey: publicKey})
 }
 
+// SubscribeWebPushNotifications stores a browser web push subscription
+// @Summary      Subscribes to web push notifications
+// @Description  Stores the browser's web push subscription for the authenticated user
+// @Tags         notification
+// @Accept       json
+// @Produce      json
+// @Param        request body WebPushSubscriptionRequest true "Web push subscription"
+// @Success      200 {object} api.APIResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/notifications/push/subscribe [post]
+// @Security     BearerAuth
 func SubscribeWebPushNotifications(ctx *gin.Context, appCtx *AppContext) {
 	var req WebPushSubscriptionRequest
 	if !bindJSON(ctx, appCtx.Logger, &req) {
@@ -46,6 +67,15 @@ func SubscribeWebPushNotifications(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "ok"})
 }
 
+// UnsubscribeWebPushNotifications removes the browser web push subscription
+// @Summary      Unsubscribes from web push notifications
+// @Description  Deletes the stored web push subscription of the authenticated user
+// @Tags         notification
+// @Produce      json
+// @Success      200 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/notifications/push/subscribe [delete]
+// @Security     BearerAuth
 func UnsubscribeWebPushNotifications(ctx *gin.Context, appCtx *AppContext) {
 	if err := appCtx.Repos.Notifications.DeleteWebPushSubscription(appCtx.UserID); err != nil {
 		appCtx.Logger.Error().Msgf("Error deleting push subscription: %s", err)

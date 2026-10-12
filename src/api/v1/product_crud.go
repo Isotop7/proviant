@@ -76,7 +76,7 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      400  {object}  api.APIResponse
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
-// @Router       /api/v1/product/{id} [get]
+// @Router       /api/v1/products/{id} [get]
 func GetProduct(ctx *gin.Context, appCtx *AppContext) {
 	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -217,7 +217,7 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
-// @Router       	/api/v1/product/{id} [patch]
+// @Router       	/api/v1/products/{id} [patch]
 func UpdateProduct(ctx *gin.Context, appCtx *AppContext) {
 	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -370,7 +370,7 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 // @Success      	200  {object}  api.APIResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
-// @Router       	/api/v1/product/{id} [delete]
+// @Router       	/api/v1/products/{id} [delete]
 func DeleteProduct(ctx *gin.Context, appCtx *AppContext) {
 	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -425,7 +425,7 @@ func DeleteProduct(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
-// @Router       	/api/v1/product/{id}/expire [post]
+// @Router       	/api/v1/products/{id}/expire [post]
 func SetExpireAt(ctx *gin.Context, appCtx *AppContext) {
 	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {

@@ -31,7 +31,7 @@ const (
 // @Failure      400  {object}  api.APIResponse
 // @Failure      403  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
-// @Router       /api/v1/household/users [get]
+// @Router       /api/v1/admin/users [get]
 func GetHouseholdUsers(ctx *gin.Context, appCtx *AppContext) {
 	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
@@ -63,7 +63,7 @@ func GetHouseholdUsers(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      403  {object}  api.APIResponse
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
-// @Router       /api/v1/household/users/{id} [patch]
+// @Router       /api/v1/admin/users/{id} [patch]
 func UpdateHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
 	targetUserID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -117,7 +117,7 @@ func UpdateHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      403  {object}  api.APIResponse
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
-// @Router       /api/v1/household/users/{id} [delete]
+// @Router       /api/v1/admin/users/{id} [delete]
 func DeleteHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
 	targetUserID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -161,7 +161,7 @@ func DeleteHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      403  {object}  api.APIResponse
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
-// @Router       /api/v1/household/users/{id}/reset-password [post]
+// @Router       /api/v1/admin/users/{id}/reset-password [post]
 func AdminResetUserPassword(ctx *gin.Context, appCtx *AppContext) {
 	targetUserID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {

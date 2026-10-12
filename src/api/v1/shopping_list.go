@@ -11,6 +11,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GetAutoShoppingList returns the products whose stock fell below their minimum amount
+// @Summary      Gets auto shopping list
+// @Description  Returns all products of the caller whose amount is below their minimum stock amount
+// @Tags         shopping-list
+// @Produce      json
+// @Success      200 {array} apiModel.ProductResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/shopping-list/auto [get]
+// @Security     BearerAuth
 func GetAutoShoppingList(ctx *gin.Context, appCtx *AppContext) {
 	products, err := appCtx.Repos.Products.GetSubThresholdProducts(appCtx.UserID)
 	if err != nil {
@@ -22,15 +31,20 @@ func GetAutoShoppingList(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
 }
 
+// CreateShoppingListItem creates a shopping list item for the caller's household
+// @Summary      Creates a shopping list item
+// @Description  Creates a shopping list item either from a product or with a free-text name
+// @Tags         shopping-list
+// @Accept       json
+// @Produce      json
+// @Param        request body apiModel.CreateShoppingListItemRequest true "Item: productId or name, optional category, quantity, unit, notes"
+// @Success      201 {object} apiModel.ShoppingListItemResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/shopping-list [post]
+// @Security     BearerAuth
 func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
-	var req struct {
-		ProductID *uint  `json:"productId"`
-		Name      string `json:"name"`
-		Category  string `json:"category"`
-		Quantity  int    `json:"quantity"`
-		Unit      string `json:"unit"`
-		Notes     string `json:"notes"`
-	}
+	var req apiModel.CreateShoppingListItemRequest
 	if !bindJSON(ctx, appCtx.Logger, &req) {
 		return
 	}
@@ -81,6 +95,15 @@ func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusCreated, apiModel.NewShoppingListItemResponse(item))
 }
 
+// ListShoppingListItems lists the shopping list items of the caller's household
+// @Summary      Lists shopping list items
+// @Description  Returns all shopping list items of the caller's household
+// @Tags         shopping-list
+// @Produce      json
+// @Success      200 {array} apiModel.ShoppingListItemResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/shopping-list [get]
+// @Security     BearerAuth
 func ListShoppingListItems(ctx *gin.Context, appCtx *AppContext) {
 	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil {
@@ -99,20 +122,27 @@ func ListShoppingListItems(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, apiModel.NewShoppingListItemResponses(items))
 }
 
+// UpdateShoppingListItem updates a shopping list item of the caller's household
+// @Summary      Updates a shopping list item
+// @Description  Updates name, category, quantity, unit, checked state and notes of a shopping list item
+// @Tags         shopping-list
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Shopping list item ID"
+// @Param        request body apiModel.UpdateShoppingListItemRequest true "Fields to update: name, category, quantity, unit, checked, notes"
+// @Success      200 {object} apiModel.ShoppingListItemResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      404 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/shopping-list/{id} [patch]
+// @Security     BearerAuth
 func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	id, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
 		return
 	}
 
-	var req struct {
-		Name     *string `json:"name"`
-		Category *string `json:"category"`
-		Quantity *int    `json:"quantity"`
-		Unit     *string `json:"unit"`
-		Checked  *bool   `json:"checked"`
-		Notes    *string `json:"notes"`
-	}
+	var req apiModel.UpdateShoppingListItemRequest
 	if !bindJSON(ctx, appCtx.Logger, &req) {
 		return
 	}
@@ -159,6 +189,17 @@ func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, apiModel.NewShoppingListItemResponse(item))
 }
 
+// DeleteShoppingListItem deletes a shopping list item of the caller's household
+// @Summary      Deletes a shopping list item
+// @Description  Deletes the shopping list item with the given ID
+// @Tags         shopping-list
+// @Produce      json
+// @Param        id path int true "Shopping list item ID"
+// @Success      200 {object} api.APIResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/shopping-list/{id} [delete]
+// @Security     BearerAuth
 func DeleteShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	id, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -181,6 +222,17 @@ func DeleteShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Shopping list item deleted"})
 }
 
+// ToggleShoppingListItem toggles the checked state of a shopping list item
+// @Summary      Toggles a shopping list item
+// @Description  Flips the checked state of the shopping list item with the given ID and returns it
+// @Tags         shopping-list
+// @Produce      json
+// @Param        id path int true "Shopping list item ID"
+// @Success      200 {object} apiModel.ShoppingListItemResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/shopping-list/{id}/toggle [post]
+// @Security     BearerAuth
 func ToggleShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	id, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -209,6 +261,15 @@ func ToggleShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, apiModel.NewShoppingListItemResponse(item))
 }
 
+// ImportAutoListToShoppingList copies the auto shopping list into the household shopping list
+// @Summary      Imports auto shopping list
+// @Description  Creates shopping list items for all sub-threshold products that are not on the list yet
+// @Tags         shopping-list
+// @Produce      json
+// @Success      200 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/shopping-list/import-auto [post]
+// @Security     BearerAuth
 func ImportAutoListToShoppingList(ctx *gin.Context, appCtx *AppContext) {
 	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil {

@@ -68,6 +68,15 @@ func CreateWebhook(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusCreated, toWebhookResponse(&webhook))
 }
 
+// ListWebhooks lists the webhooks of the authenticated user
+// @Summary      Lists webhooks
+// @Description  Lists all webhooks of the authenticated user
+// @Tags         webhook
+// @Produce      json
+// @Success      200 {object} apiModel.WebhookListResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/webhooks [get]
+// @Security     BearerAuth
 func ListWebhooks(ctx *gin.Context, appCtx *AppContext) {
 	webhooks, err := appCtx.Repos.Webhooks.GetWebhooksByUserID(appCtx.UserID)
 	if err != nil {
@@ -84,6 +93,17 @@ func ListWebhooks(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, apiModel.WebhookListResponse{Webhooks: response})
 }
 
+// GetWebhook returns a single webhook owned by the authenticated user
+// @Summary      Gets a webhook
+// @Description  Returns the webhook with the given ID
+// @Tags         webhook
+// @Produce      json
+// @Param        id path int true "Webhook ID"
+// @Success      200 {object} apiModel.WebhookResponse
+// @Failure      404 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/webhooks/{id} [get]
+// @Security     BearerAuth
 func GetWebhook(ctx *gin.Context, appCtx *AppContext) {
 	webhookID, ok := mustGetOwnedWebhookID(ctx, appCtx.Repos, appCtx.Logger, appCtx.UserID)
 	if !ok {
@@ -99,6 +119,20 @@ func GetWebhook(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, toWebhookResponse(&webhook))
 }
 
+// UpdateWebhook updates a webhook owned by the authenticated user
+// @Summary      Updates a webhook
+// @Description  Updates URL, secret, events and active state of the webhook with the given ID
+// @Tags         webhook
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Webhook ID"
+// @Param        request body apiModel.UpdateWebhookRequest true "Webhook"
+// @Success      200 {object} apiModel.WebhookResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      404 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/webhooks/{id} [patch]
+// @Security     BearerAuth
 func UpdateWebhook(ctx *gin.Context, appCtx *AppContext) {
 	webhookID, ok := mustGetOwnedWebhookID(ctx, appCtx.Repos, appCtx.Logger, appCtx.UserID)
 	if !ok {
@@ -148,6 +182,17 @@ func UpdateWebhook(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, toWebhookResponse(&webhook))
 }
 
+// DeleteWebhook deletes a webhook owned by the authenticated user
+// @Summary      Deletes a webhook
+// @Description  Deletes the webhook with the given ID
+// @Tags         webhook
+// @Produce      json
+// @Param        id path int true "Webhook ID"
+// @Success      200 {object} api.APIResponse
+// @Failure      404 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/webhooks/{id} [delete]
+// @Security     BearerAuth
 func DeleteWebhook(ctx *gin.Context, appCtx *AppContext) {
 	webhookID, ok := mustGetOwnedWebhookID(ctx, appCtx.Repos, appCtx.Logger, appCtx.UserID)
 	if !ok {
@@ -163,6 +208,17 @@ func DeleteWebhook(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Webhook deleted"})
 }
 
+// GetWebhookDeliveries lists the recent delivery attempts of a webhook
+// @Summary      Lists webhook deliveries
+// @Description  Returns the last 50 delivery attempts of the webhook with the given ID
+// @Tags         webhook
+// @Produce      json
+// @Param        id path int true "Webhook ID"
+// @Success      200 {object} apiModel.DeliveryLogListResponse
+// @Failure      404 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/webhooks/{id}/deliveries [get]
+// @Security     BearerAuth
 func GetWebhookDeliveries(ctx *gin.Context, appCtx *AppContext) {
 	webhookID, ok := mustGetOwnedWebhookID(ctx, appCtx.Repos, appCtx.Logger, appCtx.UserID)
 	if !ok {
