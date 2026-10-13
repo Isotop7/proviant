@@ -166,7 +166,7 @@ func mustGetUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
 
 func getNotificationController(ctx *gin.Context) (*controllers.NotificationController, bool) {
 	notificationController, ok := ctx.MustGet(util.ContextKeyNotificationController).(*controllers.NotificationController)
-	return notificationController, ok
+	return notificationController, ok && notificationController != nil
 }
 
 func parseLimitParam(ctx *gin.Context, logger *zerolog.Logger) (int, bool) {

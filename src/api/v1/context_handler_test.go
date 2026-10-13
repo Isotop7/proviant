@@ -459,6 +459,14 @@ func TestGetNotificationController(t *testing.T) {
 		}
 	})
 
+	t.Run("typed nil returns false", func(t *testing.T) {
+		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		ctx.Set(util.ContextKeyNotificationController, (*controllers.NotificationController)(nil))
+		if _, ok := getNotificationController(ctx); ok {
+			t.Error("ok = true, want false for a typed nil")
+		}
+	})
+
 	t.Run("controller is returned", func(t *testing.T) {
 		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 		ctx.Set(util.ContextKeyNotificationController, &controllers.NotificationController{})

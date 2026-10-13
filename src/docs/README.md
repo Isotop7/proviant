@@ -2241,13 +2241,13 @@ type NotificationRecipientInfo struct {
     NtfyEnabled               bool
     NtfyURL                   string
     NtfyTopic                 string
-    NtfyToken                 string
+    NtfyToken                 string `json:"-"`
     TelegramEnabled           bool
-    TelegramChatID            string
-    TelegramBotToken          string
+    TelegramChatID            string `json:"-"`
+    TelegramBotToken          string `json:"-"`
     NotificationThresholdDays int
     WebPushEnabled            bool
-    WebPushSubscriptionJSON   string
+    WebPushSubscriptionJSON   string `json:"-"`
 }
 ```
 
@@ -4098,7 +4098,7 @@ func ExportProductsJSON(ctx *gin.Context, appCtx *AppContext)
 ExportProductsJSON exports the user's active products as JSON. @Summary Export products as JSON @Description Returns a JSON file with all active products for the user @Tags export @Produce application/json @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{object\} \[\]apiModel.ExportProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/products.json \[get\]
 
 <a name="GenerateTelegramLinkToken"></a>
-## func [GenerateTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L232>)
+## func [GenerateTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L234>)
 
 ```go
 func GenerateTelegramLinkToken(ctx *gin.Context, appCtx *AppContext)
@@ -4307,13 +4307,13 @@ func GetStreak(ctx *gin.Context, appCtx *AppContext)
 GetStreak returns the current waste\-free streak for the user's household @Summary Get waste\-free streak @Description Returns the current and longest waste\-free streak for the caller's household @Tags streak @Produce json @Success 200 \{object\} apiModel.StreakResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/streak \[get\]
 
 <a name="GetUserNotificationPreferences"></a>
-## func [GetUserNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L141>)
+## func [GetUserNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L142>)
 
 ```go
 func GetUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetUserNotificationPreferences gets a user's notification preferences @Summary Gets a user's notification preferences @Description Retrieves notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} authentication.NotificationPreferences @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[get\]
+GetUserNotificationPreferences gets a user's notification preferences @Summary Gets a user's notification preferences @Description Retrieves notification preferences for the current user; stored secrets are reported as configured flags only @Tags user @Accept json @Produce json @Success 200 \{object\} apiModel.NotificationPreferencesResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[get\]
 
 <a name="GetUserReceiptScanSettings"></a>
 ## func [GetUserReceiptScanSettings](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user_receipt_scan.go#L67>)
@@ -4656,7 +4656,7 @@ func UpdateStorageLocation(ctx *gin.Context, appCtx *AppContext)
 UpdateStorageLocation renames or re\-icons a storage location. @Summary Update a storage location @Description Updates the name, icon, and sort order of an existing storage location. @Tags household @Accept json @Produce json @Param id path int true "Location ID" @Param body body storageLocationRequest true "Location data" @Success 200 \{object\} apiModel.StorageLocationResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/storage\-locations/:id \[patch\]
 
 <a name="UpdateUser"></a>
-## func [UpdateUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L34>)
+## func [UpdateUser](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L35>)
 
 ```go
 func UpdateUser(ctx *gin.Context, appCtx *AppContext)
@@ -4665,16 +4665,16 @@ func UpdateUser(ctx *gin.Context, appCtx *AppContext)
 UpdateUser updates a user's display name and email address. The login username is never modified by this endpoint. @Summary Updates a user object @Description Updates display name and email of the authenticated user @Tags user @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user \[patch\]
 
 <a name="UpdateUserNotificationPreferences"></a>
-## func [UpdateUserNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L166>)
+## func [UpdateUserNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L164>)
 
 ```go
 func UpdateUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext)
 ```
 
-UpdateUserNotificationPreferences updates a user's notification preferences @Summary Updates a user's notification preferences @Description Updates notification preferences for the current user @Tags user @Accept json @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[post\]
+UpdateUserNotificationPreferences updates a user's notification preferences @Summary Updates a user's notification preferences @Description Updates notification preferences for the current user; empty or omitted secret fields keep their stored value and cannot be cleared through this endpoint, while every other field replaces its stored value @Tags user @Accept json @Produce json @Param preferences body apiModel.UpdateNotificationPreferencesRequest true "Notification preferences" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/notification\-preferences \[post\]
 
 <a name="UpdateUserPassword"></a>
-## func [UpdateUserPassword](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L77>)
+## func [UpdateUserPassword](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L78>)
 
 ```go
 func UpdateUserPassword(ctx *gin.Context, appCtx *AppContext)
@@ -8268,6 +8268,8 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ImportRowError](<#ImportRowError>)
 - [type IngredientMatch](<#IngredientMatch>)
 - [type NotificationItem](<#NotificationItem>)
+- [type NotificationPreferencesResponse](<#NotificationPreferencesResponse>)
+  - [func NewNotificationPreferencesResponse\(prefs \*authentication.NotificationPreferences\) NotificationPreferencesResponse](<#NewNotificationPreferencesResponse>)
 - [type NotificationsResponse](<#NotificationsResponse>)
 - [type OnboardingStateResponse](<#OnboardingStateResponse>)
 - [type OpenFoodFactsCacheResponse](<#OpenFoodFactsCacheResponse>)
@@ -8296,6 +8298,8 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type StreakResponse](<#StreakResponse>)
 - [type TokenResponse](<#TokenResponse>)
 - [type UpdateHouseholdSettingsRequest](<#UpdateHouseholdSettingsRequest>)
+- [type UpdateNotificationPreferencesRequest](<#UpdateNotificationPreferencesRequest>)
+  - [func \(r \*UpdateNotificationPreferencesRequest\) ToNotificationPreferences\(\) authentication.NotificationPreferences](<#UpdateNotificationPreferencesRequest.ToNotificationPreferences>)
 - [type UpdateShoppingListItemRequest](<#UpdateShoppingListItemRequest>)
 - [type UpdateWebhookRequest](<#UpdateWebhookRequest>)
 - [type WasteAnalyticsResponse](<#WasteAnalyticsResponse>)
@@ -8821,7 +8825,7 @@ type IngredientMatch struct {
 ```
 
 <a name="NotificationItem"></a>
-## type [NotificationItem](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/notifications.go#L4-L9>)
+## type [NotificationItem](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/notifications.go#L6-L11>)
 
 NotificationItem represents a single actionable notification entry.
 
@@ -8834,8 +8838,39 @@ type NotificationItem struct {
 }
 ```
 
+<a name="NotificationPreferencesResponse"></a>
+## type [NotificationPreferencesResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/notifications.go#L57-L70>)
+
+NotificationPreferencesResponse is the read shape of the notification preferences. Secrets never leave the server; the configured booleans stand in for them.
+
+```go
+type NotificationPreferencesResponse struct {
+    EmailEnabled              bool   `json:"emailEnabled"`
+    NtfyEnabled               bool   `json:"ntfyEnabled"`
+    NtfyURL                   string `json:"ntfyUrl,omitempty"`
+    NtfyTopic                 string `json:"ntfyTopic,omitempty"`
+    NtfyTokenConfigured       bool   `json:"ntfyTokenConfigured"`
+    NotificationThresholdDays int    `json:"notificationThresholdDays"`
+    MonthlyWasteReportEnabled bool   `json:"monthlyWasteReportEnabled"`
+    TelegramEnabled           bool   `json:"telegramEnabled"`
+    TelegramLinked            bool   `json:"telegramLinked"`
+    TelegramBotConfigured     bool   `json:"telegramBotConfigured"`
+    WebPushEnabled            bool   `json:"webPushEnabled"`
+    MailDigestFrequency       string `json:"mailDigestFrequency"`
+}
+```
+
+<a name="NewNotificationPreferencesResponse"></a>
+### func [NewNotificationPreferencesResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/notifications.go#L74>)
+
+```go
+func NewNotificationPreferencesResponse(prefs *authentication.NotificationPreferences) NotificationPreferencesResponse
+```
+
+NewNotificationPreferencesResponse projects the stored preferences onto the wire shape.
+
 <a name="NotificationsResponse"></a>
-## type [NotificationsResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/notifications.go#L12-L15>)
+## type [NotificationsResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/notifications.go#L14-L17>)
 
 NotificationsResponse wraps the notification items and a total count.
 
@@ -9221,6 +9256,36 @@ type UpdateHouseholdSettingsRequest struct {
 }
 ```
 
+<a name="UpdateNotificationPreferencesRequest"></a>
+## type [UpdateNotificationPreferencesRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/notifications.go#L23-L35>)
+
+UpdateNotificationPreferencesRequest is the write shape of the notification preferences. The two secrets carry normal json tags so the body binds them; everything managed elsewhere \(chat id, link token, bot username, web push subscription\) is absent and survives a save untouched.
+
+```go
+type UpdateNotificationPreferencesRequest struct {
+    EmailEnabled              bool   `json:"emailEnabled"`
+    NtfyEnabled               bool   `json:"ntfyEnabled"`
+    NtfyURL                   string `json:"ntfyUrl,omitempty"`
+    NtfyTopic                 string `json:"ntfyTopic,omitempty"`
+    NtfyToken                 string `json:"ntfyToken,omitempty"`
+    NotificationThresholdDays int    `json:"notificationThresholdDays"`
+    MonthlyWasteReportEnabled bool   `json:"monthlyWasteReportEnabled"`
+    TelegramEnabled           bool   `json:"telegramEnabled"`
+    TelegramBotToken          string `json:"telegramBotToken"`
+    WebPushEnabled            bool   `json:"webPushEnabled"`
+    MailDigestFrequency       string `json:"mailDigestFrequency"`
+}
+```
+
+<a name="UpdateNotificationPreferencesRequest.ToNotificationPreferences"></a>
+### func \(\*UpdateNotificationPreferencesRequest\) [ToNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/notifications.go#L38>)
+
+```go
+func (r *UpdateNotificationPreferencesRequest) ToNotificationPreferences() authentication.NotificationPreferences
+```
+
+ToNotificationPreferences projects the request onto the stored preferences.
+
 <a name="UpdateShoppingListItemRequest"></a>
 ## type [UpdateShoppingListItemRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/shopping_list.go#L14-L21>)
 
@@ -9455,13 +9520,13 @@ type NotificationPreferences struct {
     NtfyEnabled               bool   `json:"ntfyEnabled" gorm:"default:false"`
     NtfyURL                   string `json:"ntfyUrl,omitempty"`
     NtfyTopic                 string `json:"ntfyTopic,omitempty"`
-    NtfyToken                 string `json:"ntfyToken,omitempty"`
+    NtfyToken                 string `json:"-"`
     NotificationThresholdDays int    `json:"notificationThresholdDays" gorm:"default:0"`
     MonthlyWasteReportEnabled bool   `json:"monthlyWasteReportEnabled" gorm:"default:false"`
     TelegramEnabled           bool   `json:"telegramEnabled" gorm:"default:false"`
     TelegramChatID            string `json:"-"`
     TelegramLinkToken         string `json:"-"`
-    TelegramBotToken          string `json:"telegramBotToken"`
+    TelegramBotToken          string `json:"-"`
     TelegramBotUsername       string `json:"-"`
     TelegramLinked            bool   `json:"telegramLinked" gorm:"-"`
     TelegramBotConfigured     bool   `json:"telegramBotConfigured" gorm:"-"`

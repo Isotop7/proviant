@@ -167,6 +167,47 @@ func TestNewHouseholdUserResponse_DerivesTelegramBools(t *testing.T) {
 	}
 }
 
+// TestNotificationPreferencesResponse_OmitsSecrets covers the fields the raw
+// authentication.NotificationPreferences serialized into every preferences read.
+func TestNotificationPreferencesResponse_OmitsSecrets(t *testing.T) {
+	prefs := authentication.NotificationPreferences{
+		NtfyToken: "SECRET-NTFY", TelegramBotToken: "SECRET-BOT",
+		TelegramChatID: "chat-1", TelegramLinkToken: "link-1",
+		TelegramBotUsername: "bot", WebPushSubscriptionJSON: `{"endpoint":"x"}`,
+	}
+	prefs.NotificationThresholdDays = 3
+
+	data, err := json.Marshal(NewNotificationPreferencesResponse(&prefs))
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	for _, key := range []string{
+		"ntfyToken", "telegramBotToken", "telegramChatId", "telegramLinkToken",
+		"telegramBotUsername", "webPushSubscriptionJSON",
+		"NtfyToken", "TelegramBotToken", "TelegramChatID", "TelegramLinkToken",
+		"TelegramBotUsername", "WebPushSubscriptionJSON",
+	} {
+		if _, exists := decoded[key]; exists {
+			t.Errorf("key %q present, want it omitted", key)
+		}
+	}
+	for key, want := range map[string]bool{
+		"ntfyTokenConfigured":   true,
+		"telegramBotConfigured": true,
+		"telegramLinked":        true,
+	} {
+		if decoded[key] != want {
+			t.Errorf("%s = %v, want %v", key, decoded[key], want)
+		}
+	}
+}
+
 // TestStorageLocationResponse_OmitsGORMInternals covers what the raw
 // database.StorageLocation shipped.
 func TestStorageLocationResponse_OmitsGORMInternals(t *testing.T) {
