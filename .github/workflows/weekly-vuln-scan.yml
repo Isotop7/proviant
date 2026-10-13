@@ -80,12 +80,20 @@ jobs:
           key: trivy-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             trivy-db-${{ runner.os }}-
+      - name: Export image tarball for the scan
+        env:
+          SCAN_TARBALL: ${{ runner.temp }}/proviant-image.tar
+        run: docker save -o "$SCAN_TARBALL" proviant:scan
       - name: Scan image
+        id: scan
         env:
           TRIVY_CACHE_DIR: ${{ github.workspace }}/.cache/trivy
-        run: bash scripts/image-scan.sh proviant:scan
+          SCAN_TARBALL: ${{ runner.temp }}/proviant-image.tar
+        run: bash scripts/image-scan.sh "$SCAN_TARBALL"
+      # Skip when the scan never ran: an empty upload warns "No files were
+      # found" and buries the real failure above it.
       - name: Upload scan report
-        if: always()
+        if: always() && steps.scan.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
           name: trivy-weekly-report

@@ -18,18 +18,21 @@
 # see classify().
 #
 # This script is the single source of truth for that policy. It is invoked by
-# both CI workflows (ci.yml image-scan job, release.yml docker-publish job) and
-# by `task vuln-image`, so the gate can never drift between them.
+# all three CI workflows (ci.yml image-scan job, release.yml docker-publish
+# job, weekly-vuln-scan.yml image-scan job) and by `task vuln-image`, so the
+# gate can never drift between them.
 #
 # Usage: scripts/image-scan.sh <image-ref-or-tarball>
-#   image-ref    e.g. proviant:scan — scanned via the local trivy binary
-#                (GitHub runners ship trivy; CI always uses this path)
-#   tarball      path to a `docker/podman save` archive — required when trivy
-#                must run inside a container (task vuln-image), because the
-#                container has no access to the host runtime socket
+#   image-ref    e.g. proviant:scan — only with the local trivy binary: a trivy
+#                running in a container cannot see images in the host runtime
+#   tarball      path to a `docker/podman save` archive — accepted by both
+#                paths, and the only target the container path accepts (the
+#                container has no access to the host runtime socket). All CI
+#                callers export a tarball, so which scanner runs never changes
+#                what is scanned.
 #
 # Trivy is resolved in this order:
-#   1. `trivy` on PATH (CI runners, hosts with trivy installed)
+#   1. `trivy` on PATH (hosts with trivy installed — CI does not rely on this)
 #   2. the image referenced by $TRIVY_IMAGE (default digest-pinned, below)
 #
 # The container pin is a digest, never a version tag: Docker Hub tags are
@@ -169,9 +172,10 @@ scan_in_container() {
 
 if command -v trivy >/dev/null 2>&1; then
   # The local binary is not digest-pinned — log its version so the CI record
-  # shows exactly which scanner ran (the digest pin only covers the container path).
-  # A runner image that stops shipping trivy would silently switch CI to the
-  # container path, so mirror this into the step summary when there is one.
+  # shows exactly which scanner ran (the digest pin only covers the container
+  # path), and mirror it into the step summary when there is one. CI callers
+  # pass a tarball, so a runner image that stops shipping trivy switches paths
+  # without changing what is scanned.
   trivy_version="$(trivy --version 2>&1 | head -n1 || true)"
   echo "Using local trivy: $trivy_version"
   if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
