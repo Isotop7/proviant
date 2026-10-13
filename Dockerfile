@@ -1,4 +1,4 @@
-FROM docker.io/golang:1.26.8-alpine AS buildenv
+FROM docker.io/golang:1.26.9-alpine AS buildenv
 WORKDIR /app
 
 RUN apk add --no-cache --update g++ gcc go npm
@@ -30,11 +30,17 @@ COPY --from=buildenv /app/proviant /app/proviant
 RUN addgroup -S proviant && \
     adduser -S -G proviant proviant && \
     mkdir /app/data && \
-    apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng && \
+    apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng tzdata && \
     chown -R proviant:proviant /app
 COPY --chown=proviant:proviant ./src/config.yaml.sqlite.tmpl /app/config.yaml
 ENV GIN_MODE=release
+ENV TZ=UTC
 EXPOSE 5114
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD probe_host="${PROVIANT_SERVER_HOST:-127.0.0.1}"; \
+    case "$probe_host" in ""|"::"|"0.0.0.0") probe_host=127.0.0.1 ;; *:*) probe_host="[$probe_host]" ;; esac; \
+    wget --quiet -O /dev/null "http://$probe_host:${PROVIANT_SERVER_PORT:-5114}/health" || exit 1
 
 USER proviant
 ENTRYPOINT [ "/app/proviant" ]

@@ -219,15 +219,13 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 
 		// Fire webhooks asynchronously
 		go func(p *dbModel.Product, expired, expiringSoon bool) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
 			webhookService := GetWebhookService()
 			if webhookService == nil {
 				return
 			}
 			if expired {
 				daysUntilExpiry := int(time.Since(effective).Hours() / 24)
-				webhookService.FireEventContext(ctx, "product.expired", map[string]any{
+				webhookService.FireEventContext(context.Background(), "product.expired", map[string]any{
 					"id":              p.ID,
 					"productName":     p.ProductName,
 					"daysUntilExpiry": daysUntilExpiry,
@@ -238,7 +236,7 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 			}
 			if expiringSoon {
 				daysUntilExpiry := int(time.Until(effective).Hours() / 24)
-				webhookService.FireEventContext(ctx, "product.expiring_soon", map[string]any{
+				webhookService.FireEventContext(context.Background(), "product.expiring_soon", map[string]any{
 					"id":              p.ID,
 					"productName":     p.ProductName,
 					"daysUntilExpiry": daysUntilExpiry,

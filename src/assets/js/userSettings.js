@@ -399,7 +399,7 @@ function UpdateReceiptScanSettings() {
   const timeoutVal = inputTimeout ? inputTimeout.value.trim() : "";
 
   if (endpointVal) {
-    let valid = false;
+    let valid;
     try {
       const parsed = new URL(endpointVal);
       valid = (parsed.protocol === "http:" || parsed.protocol === "https:") && parsed.host !== "";

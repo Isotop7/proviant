@@ -37,6 +37,25 @@ definitions:
       total:
         type: integer
     type: object
+  api.AuditLogResponse:
+    properties:
+      action:
+        type: string
+      details:
+        type: string
+      householdId:
+        type: integer
+      id:
+        type: integer
+      ipAddress:
+        type: string
+      requestId:
+        type: string
+      timestamp:
+        type: string
+      userId:
+        type: integer
+    type: object
   api.BulkActionResponse:
     properties:
       action:
@@ -145,6 +164,43 @@ definitions:
       partial:
         type: integer
     type: object
+  api.CreateShoppingListItemRequest:
+    properties:
+      category:
+        type: string
+      name:
+        type: string
+      notes:
+        type: string
+      productId:
+        type: integer
+      quantity:
+        type: integer
+      unit:
+        type: string
+    type: object
+  api.CreateTokenRequest:
+    properties:
+      expiresAt:
+        type: string
+      name:
+        type: string
+      scopes:
+        type: string
+    required:
+    - name
+    type: object
+  api.CreateTokenResponse:
+    properties:
+      expiresAt:
+        type: string
+      name:
+        type: string
+      scopes:
+        type: string
+      token:
+        type: string
+    type: object
   api.CreateWebhookRequest:
     properties:
       active:
@@ -164,6 +220,28 @@ definitions:
     - secret
     - url
     type: object
+  api.DeliveryLogListResponse:
+    properties:
+      deliveries:
+        items:
+          $ref: '#/definitions/api.DeliveryLogResponse'
+        type: array
+    type: object
+  api.DeliveryLogResponse:
+    properties:
+      attempt:
+        type: integer
+      createdAt:
+        type: string
+      error:
+        type: string
+      id:
+        type: integer
+      responseBody:
+        type: string
+      statusCode:
+        type: integer
+    type: object
   api.ExpiryScanResponse:
     properties:
       confidence:
@@ -179,6 +257,83 @@ definitions:
         description: full OCR text for manual correction
         type: string
     type: object
+  api.ExportProductResponse:
+    properties:
+      ID:
+        type: integer
+      amount:
+        type: integer
+      archivedAt:
+        type: string
+      barcode:
+        type: string
+      categories:
+        type: string
+      co2KgPerKg:
+        type: number
+      countries:
+        type: string
+      createdAt:
+        type: string
+      daysAfterOpening:
+        type: integer
+      expireAt:
+        type: string
+      imageUrl:
+        type: string
+      isPrivate:
+        type: boolean
+      minStockAmount:
+        type: integer
+      notificationLeadDays:
+        type: integer
+      notifiedAt:
+        type: string
+      openedAt:
+        type: string
+      priceOverride:
+        type: number
+      productName:
+        type: string
+      removalReason:
+        type: string
+      scannedAt:
+        type: string
+      storageLocation:
+        $ref: '#/definitions/api.StorageLocationResponse'
+      storageLocationId:
+        type: integer
+      unit:
+        type: string
+    type: object
+  api.HouseholdApplicationResponse:
+    properties:
+      ID:
+        type: integer
+      applicantId:
+        type: integer
+      createdAt:
+        type: string
+      householdId:
+        type: integer
+      status:
+        type: string
+    type: object
+  api.HouseholdInvitationResponse:
+    properties:
+      ID:
+        type: integer
+      email:
+        type: string
+      expiresAt:
+        type: string
+      sendAttempts:
+        type: integer
+      sentAt:
+        type: string
+      status:
+        type: string
+    type: object
   api.HouseholdListItem:
     properties:
       description:
@@ -188,6 +343,32 @@ definitions:
       memberCount:
         type: integer
       name:
+        type: string
+    type: object
+  api.HouseholdSettingsResponse:
+    properties:
+      monthlyWasteGoalCount:
+        type: integer
+      monthlyWasteGoalPercent:
+        type: number
+      monthlyWasteGoalType:
+        type: string
+    type: object
+  api.HouseholdUserResponse:
+    properties:
+      displayName:
+        type: string
+      id:
+        type: integer
+      mailAddress:
+        type: string
+      role:
+        type: string
+      telegramConfigured:
+        type: boolean
+      telegramLinked:
+        type: boolean
+      username:
         type: string
     type: object
   api.ImportProductsResponse:
@@ -238,6 +419,33 @@ definitions:
       type:
         type: string
     type: object
+  api.NotificationPreferencesResponse:
+    properties:
+      emailEnabled:
+        type: boolean
+      mailDigestFrequency:
+        type: string
+      monthlyWasteReportEnabled:
+        type: boolean
+      notificationThresholdDays:
+        type: integer
+      ntfyEnabled:
+        type: boolean
+      ntfyTokenConfigured:
+        type: boolean
+      ntfyTopic:
+        type: string
+      ntfyUrl:
+        type: string
+      telegramBotConfigured:
+        type: boolean
+      telegramEnabled:
+        type: boolean
+      telegramLinked:
+        type: boolean
+      webPushEnabled:
+        type: boolean
+    type: object
   api.NotificationsResponse:
     properties:
       items:
@@ -258,6 +466,23 @@ definitions:
       profileStepDone:
         type: boolean
     type: object
+  api.OpenFoodFactsCacheResponse:
+    properties:
+      barcode:
+        type: string
+      categories:
+        type: string
+      co2KgPerKg:
+        type: number
+      countries:
+        type: string
+      imageUrl:
+        type: string
+      productName:
+        type: string
+      storageHint:
+        type: string
+    type: object
   api.ProductAmountDTO:
     properties:
       delta:
@@ -265,6 +490,56 @@ definitions:
         type: integer
     required:
     - delta
+    type: object
+  api.ProductResponse:
+    properties:
+      ID:
+        type: integer
+      amount:
+        type: integer
+      barcode:
+        type: string
+      categories:
+        type: string
+      co2KgPerKg:
+        type: number
+      countries:
+        type: string
+      daysAfterOpening:
+        type: integer
+      expireAt:
+        type: string
+      imageUrl:
+        type: string
+      isPrivate:
+        type: boolean
+      label:
+        description: |-
+          Label is set only by NewLabelledProductResponse, to keep the format cost
+          off list responses.
+        type: string
+      minStockAmount:
+        type: integer
+      notificationLeadDays:
+        type: integer
+      notifiedAt:
+        type: string
+      openedAt:
+        type: string
+      priceOverride:
+        type: number
+      productName:
+        type: string
+      removalReason:
+        type: string
+      scannedAt:
+        type: string
+      storageLocation:
+        $ref: '#/definitions/api.StorageLocationResponse'
+      storageLocationId:
+        type: integer
+      unit:
+        type: string
     type: object
   api.ProductStatsResponse:
     properties:
@@ -402,6 +677,27 @@ definitions:
       wastedEurThisMonth:
         type: number
     type: object
+  api.ShoppingListItemResponse:
+    properties:
+      ID:
+        type: integer
+      category:
+        type: string
+      checked:
+        type: boolean
+      createdBy:
+        type: integer
+      name:
+        type: string
+      notes:
+        type: string
+      productId:
+        type: integer
+      quantity:
+        type: integer
+      unit:
+        type: string
+    type: object
   api.StatsExpiringProduct:
     properties:
       expireAt:
@@ -418,12 +714,102 @@ definitions:
         description: 'format: "2006-01"'
         type: string
     type: object
+  api.StorageLocationResponse:
+    properties:
+      ID:
+        type: integer
+      icon:
+        type: string
+      name:
+        type: string
+      sortOrder:
+        type: integer
+    type: object
   api.StreakResponse:
     properties:
       currentStreak:
         type: integer
       longestStreak:
         type: integer
+    type: object
+  api.TokenResponse:
+    properties:
+      createdAt:
+        type: string
+      expiresAt:
+        type: string
+      id:
+        type: integer
+      lastUsedAt:
+        type: string
+      name:
+        type: string
+      scopes:
+        type: string
+    type: object
+  api.UpdateHouseholdSettingsRequest:
+    properties:
+      monthlyWasteGoalCount:
+        type: integer
+      monthlyWasteGoalPercent:
+        type: number
+      monthlyWasteGoalType:
+        type: string
+    type: object
+  api.UpdateNotificationPreferencesRequest:
+    properties:
+      emailEnabled:
+        type: boolean
+      mailDigestFrequency:
+        type: string
+      monthlyWasteReportEnabled:
+        type: boolean
+      notificationThresholdDays:
+        type: integer
+      ntfyEnabled:
+        type: boolean
+      ntfyToken:
+        type: string
+      ntfyTopic:
+        type: string
+      ntfyUrl:
+        type: string
+      telegramBotToken:
+        type: string
+      telegramEnabled:
+        type: boolean
+      webPushEnabled:
+        type: boolean
+    type: object
+  api.UpdateShoppingListItemRequest:
+    properties:
+      category:
+        type: string
+      checked:
+        type: boolean
+      name:
+        type: string
+      notes:
+        type: string
+      quantity:
+        type: integer
+      unit:
+        type: string
+    type: object
+  api.UpdateWebhookRequest:
+    properties:
+      active:
+        type: boolean
+      events:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      secret:
+        minLength: 16
+        type: string
+      url:
+        type: string
     type: object
   api.WasteAnalyticsResponse:
     properties:
@@ -502,6 +888,13 @@ definitions:
       productName:
         type: string
     type: object
+  api.WebhookListResponse:
+    properties:
+      webhooks:
+        items:
+          $ref: '#/definitions/api.WebhookResponse'
+        type: array
+    type: object
   api.WebhookResponse:
     properties:
       active:
@@ -519,11 +912,37 @@ definitions:
       url:
         type: string
     type: object
+  auth.LoginResponse:
+    properties:
+      code:
+        type: integer
+      expire:
+        type: string
+      token:
+        type: string
+    type: object
   auth.acceptInvitationRequest:
     properties:
       token:
         type: string
     required:
+    - token
+    type: object
+  auth.forgotPasswordRequest:
+    properties:
+      mailAddress:
+        type: string
+    required:
+    - mailAddress
+    type: object
+  auth.resetPasswordRequest:
+    properties:
+      password:
+        type: string
+      token:
+        type: string
+    required:
+    - password
     - token
     type: object
   authentication.Login:
@@ -535,35 +954,6 @@ definitions:
     required:
     - password
     - username
-    type: object
-  authentication.NotificationPreferences:
-    properties:
-      emailEnabled:
-        type: boolean
-      mailDigestFrequency:
-        type: string
-      monthlyWasteReportEnabled:
-        type: boolean
-      notificationThresholdDays:
-        type: integer
-      ntfyEnabled:
-        type: boolean
-      ntfyToken:
-        type: string
-      ntfyTopic:
-        type: string
-      ntfyUrl:
-        type: string
-      telegramBotConfigured:
-        type: boolean
-      telegramBotToken:
-        type: string
-      telegramEnabled:
-        type: boolean
-      telegramLinked:
-        type: boolean
-      webPushEnabled:
-        type: boolean
     type: object
   authentication.Signup:
     properties:
@@ -579,157 +969,6 @@ definitions:
     - mailAddress
     - password
     - username
-    type: object
-  authentication.User:
-    properties:
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      displayName:
-        type: string
-      emailVerifiedAt:
-        type: string
-      household:
-        $ref: '#/definitions/database.Household'
-      householdID:
-        type: integer
-      id:
-        type: integer
-      mailAddress:
-        type: string
-      notificationPreferences:
-        $ref: '#/definitions/authentication.NotificationPreferences'
-      role:
-        type: string
-      updatedAt:
-        type: string
-      username:
-        type: string
-    type: object
-  database.AuditLog:
-    properties:
-      action:
-        type: string
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      details:
-        type: string
-      householdId:
-        description: |-
-          HouseholdID is written at record time, never derived at read time. Deriving
-          it from the user's *current* household would move a member's historical
-          entries into whichever household they have since joined — a cross-tenant
-          read. NULL means the entry could not be attributed (failed login for an
-          unknown username) and is invisible to every household.
-        type: integer
-      id:
-        type: integer
-      ipAddress:
-        type: string
-      requestId:
-        type: string
-      timestamp:
-        type: string
-      updatedAt:
-        type: string
-      userId:
-        type: integer
-    type: object
-  database.Household:
-    properties:
-      adminID:
-        type: integer
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      description:
-        type: string
-      id:
-        type: integer
-      monthlyWasteGoalCount:
-        description: nil = disabled
-        type: integer
-      monthlyWasteGoalPercent:
-        description: nil = disabled
-        type: number
-      monthlyWasteGoalType:
-        description: '"", "count", or "percent"'
-        type: string
-      name:
-        type: string
-      updatedAt:
-        type: string
-    type: object
-  database.HouseholdApplication:
-    properties:
-      applicantId:
-        type: integer
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      householdId:
-        type: integer
-      id:
-        type: integer
-      status:
-        type: string
-      updatedAt:
-        type: string
-    type: object
-  database.HouseholdInvitation:
-    properties:
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      email:
-        type: string
-      expiresAt:
-        type: string
-      householdId:
-        type: integer
-      id:
-        type: integer
-      inviterId:
-        type: integer
-      sendAttempts:
-        type: integer
-      sentAt:
-        type: string
-      status:
-        type: string
-      updatedAt:
-        type: string
-    type: object
-  database.OpenFoodFactsCache:
-    properties:
-      barcode:
-        type: string
-      categories:
-        type: string
-      co2KgPerKg:
-        type: number
-      countries:
-        type: string
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      id:
-        type: integer
-      imageUrl:
-        type: string
-      productName:
-        type: string
-      storageHint:
-        type: string
-      updatedAt:
-        type: string
     type: object
   database.Product:
     properties:
@@ -796,6 +1035,39 @@ definitions:
       id:
         type: integer
     type: object
+  database.ProductDTOPatch:
+    properties:
+      ID:
+        type: integer
+      amount:
+        type: integer
+      categories:
+        type: string
+      countries:
+        type: string
+      daysAfterOpening:
+        type: integer
+      expireAt:
+        type: string
+      imageUrl:
+        type: string
+      isPrivate:
+        type: boolean
+      minStockAmount:
+        type: integer
+      notificationLeadDays:
+        type: integer
+      openedAt:
+        type: string
+      priceOverride:
+        type: number
+      productName:
+        type: string
+      storageLocationId:
+        type: integer
+      unit:
+        type: string
+    type: object
   database.StorageLocation:
     properties:
       createdAt:
@@ -857,11 +1129,11 @@ definitions:
     properties:
       active:
         items:
-          $ref: '#/definitions/database.Product'
+          $ref: '#/definitions/api.ExportProductResponse'
         type: array
       archived:
         items:
-          $ref: '#/definitions/database.Product'
+          $ref: '#/definitions/api.ExportProductResponse'
         type: array
     type: object
   v1.FullExportResponse:
@@ -890,6 +1162,29 @@ definitions:
         type: string
       product: {}
       triggeredBy:
+        type: string
+    type: object
+  v1.WebPushSubscriptionRequest:
+    properties:
+      endpoint:
+        type: string
+      keys:
+        properties:
+          auth:
+            type: string
+          p256dh:
+            type: string
+        required:
+        - auth
+        - p256dh
+        type: object
+    required:
+    - endpoint
+    - keys
+    type: object
+  v1.WebPushVAPIDPublicKeyResponse:
+    properties:
+      publicKey:
         type: string
     type: object
   v1.createHouseholdRequest:
@@ -1000,21 +1295,6 @@ info:
   title: proviant
   version: 0.2.0
 paths:
-  /api/health:
-    get:
-      consumes:
-      - application/json
-      description: Gets health status of the API
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Gets health
-      tags:
-      - common
   /api/v1/admin/audit-log:
     get:
       description: Returns paginated audit log entries for the caller's household.
@@ -1035,7 +1315,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.AuditLog'
+              $ref: '#/definitions/api.AuditLogResponse'
             type: array
         "400":
           description: Bad Request
@@ -1048,6 +1328,148 @@ paths:
       summary: Get audit logs
       tags:
       - admin
+  /api/v1/admin/users:
+    get:
+      description: Returns all users that belong to the household the caller is admin
+        of
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.HouseholdUserResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: List household members
+      tags:
+      - household
+  /api/v1/admin/users/{id}:
+    delete:
+      description: Deletes a user from the household. Caller must be admin.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Delete household member
+      tags:
+      - household
+    patch:
+      consumes:
+      - application/json
+      description: Updates the username or email of a user in the household. Caller
+        must be admin.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/v1.updateAdminUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HouseholdUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Update household member
+      tags:
+      - household
+  /api/v1/admin/users/{id}/reset-password:
+    post:
+      description: Sends a password reset email to the specified user. Caller must
+        be admin.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Reset user password
+      tags:
+      - household
   /api/v1/calendar/export.ics:
     get:
       description: Returns an iCalendar (RFC 5545) feed with VEVENTs for products
@@ -1273,7 +1695,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.HouseholdApplication'
+              $ref: '#/definitions/api.HouseholdApplicationResponse'
             type: array
         "400":
           description: Bad Request
@@ -1406,7 +1828,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.HouseholdInvitation'
+              $ref: '#/definitions/api.HouseholdInvitationResponse'
             type: array
         "400":
           description: Bad Request
@@ -1608,6 +2030,69 @@ paths:
       summary: Rename household
       tags:
       - household
+  /api/v1/household/settings:
+    get:
+      description: Returns the monthly waste goal settings of the caller's household
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HouseholdSettingsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Gets household settings
+      tags:
+      - household
+    patch:
+      consumes:
+      - application/json
+      description: Updates the monthly waste goal of the caller's household (admin
+        only)
+      parameters:
+      - description: Settings
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateHouseholdSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HouseholdSettingsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Updates household settings
+      tags:
+      - household
   /api/v1/household/storage-locations:
     get:
       description: Returns all storage locations belonging to the user's household,
@@ -1619,7 +2104,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.StorageLocation'
+              $ref: '#/definitions/api.StorageLocationResponse'
             type: array
         "500":
           description: Internal Server Error
@@ -1645,7 +2130,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/database.StorageLocation'
+            $ref: '#/definitions/api.StorageLocationResponse'
         "400":
           description: Bad Request
           schema:
@@ -1706,7 +2191,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.StorageLocation'
+            $ref: '#/definitions/api.StorageLocationResponse'
         "400":
           description: Bad Request
           schema:
@@ -1720,148 +2205,6 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Update a storage location
-      tags:
-      - household
-  /api/v1/household/users:
-    get:
-      description: Returns all users that belong to the household the caller is admin
-        of
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/authentication.User'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: List household members
-      tags:
-      - household
-  /api/v1/household/users/{id}:
-    delete:
-      description: Deletes a user from the household. Caller must be admin.
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Delete household member
-      tags:
-      - household
-    patch:
-      consumes:
-      - application/json
-      description: Updates the username or email of a user in the household. Caller
-        must be admin.
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: User data
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/v1.updateAdminUserRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/authentication.User'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Update household member
-      tags:
-      - household
-  /api/v1/household/users/{id}/reset-password:
-    post:
-      description: Sends a password reset email to the specified user. Caller must
-        be admin.
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Reset user password
       tags:
       - household
   /api/v1/notifications:
@@ -1886,6 +2229,77 @@ paths:
       summary: Get notifications
       tags:
       - Notifications
+  /api/v1/notifications/push/subscribe:
+    delete:
+      description: Deletes the stored web push subscription of the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Unsubscribes from web push notifications
+      tags:
+      - notification
+    post:
+      consumes:
+      - application/json
+      description: Stores the browser's web push subscription for the authenticated
+        user
+      parameters:
+      - description: Web push subscription
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.WebPushSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Subscribes to web push notifications
+      tags:
+      - notification
+  /api/v1/notifications/push/vapidPublicKey:
+    get:
+      description: Returns the VAPID public key used by the browser to subscribe to
+        web push notifications
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.WebPushVAPIDPublicKeyResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Gets web push VAPID public key
+      tags:
+      - notification
   /api/v1/onboarding/apply-household:
     post:
       consumes:
@@ -2087,7 +2501,59 @@ paths:
       summary: Get onboarding state
       tags:
       - onboarding
-  /api/v1/product/{id}:
+  /api/v1/products:
+    get:
+      description: Return a list of products of user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.ProductResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Return a list of products
+      tags:
+      - product
+    post:
+      consumes:
+      - application/json
+      description: Creates a new product of a user
+      parameters:
+      - description: Product
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/database.Product'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.ProductResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Creates a new product
+      tags:
+      - product
+  /api/v1/products/{id}:
     delete:
       consumes:
       - application/json
@@ -2134,7 +2600,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.Product'
+            $ref: '#/definitions/api.ProductResponse'
         "400":
           description: Bad Request
           schema:
@@ -2165,14 +2631,14 @@ paths:
         name: product
         required: true
         schema:
-          $ref: '#/definitions/database.Product'
+          $ref: '#/definitions/database.ProductDTOPatch'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.Product'
+            $ref: '#/definitions/database.ProductDTOPatch'
         "400":
           description: Bad Request
           schema:
@@ -2186,97 +2652,6 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Updates a product
-      tags:
-      - product
-  /api/v1/product/{id}/expire:
-    post:
-      consumes:
-      - application/json
-      description: Updates the expire date of a product
-      parameters:
-      - description: Product ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Timestamp
-        in: body
-        name: timestamp
-        required: true
-        schema:
-          $ref: '#/definitions/database.Timestamp'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/database.ProductDTOExpire'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Updates the expire date
-      tags:
-      - product
-  /api/v1/products:
-    get:
-      description: Return a list of products of user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/database.Product'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Return a list of products
-      tags:
-      - product
-    post:
-      consumes:
-      - application/json
-      description: Creates a new product of a user
-      parameters:
-      - description: Product
-        in: body
-        name: product
-        required: true
-        schema:
-          $ref: '#/definitions/database.Product'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/database.Product'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Creates a new product
       tags:
       - product
   /api/v1/products/{id}/amount:
@@ -2303,7 +2678,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.Product'
+            $ref: '#/definitions/api.APIResponse'
         "400":
           description: Bad Request
           schema:
@@ -2386,6 +2761,45 @@ paths:
       summary: Get consumption rate estimate
       tags:
       - product
+  /api/v1/products/{id}/expire:
+    post:
+      consumes:
+      - application/json
+      description: Updates the expire date of a product
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Timestamp
+        in: body
+        name: timestamp
+        required: true
+        schema:
+          $ref: '#/definitions/database.Timestamp'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/database.ProductDTOExpire'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Updates the expire date
+      tags:
+      - product
   /api/v1/products/{id}/open:
     post:
       consumes:
@@ -2410,7 +2824,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.Product'
+            $ref: '#/definitions/api.ProductResponse'
         "400":
           description: Bad Request
           schema:
@@ -2540,7 +2954,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.Product'
+              $ref: '#/definitions/api.ProductResponse'
             type: array
         "400":
           description: Bad Request
@@ -2701,6 +3115,35 @@ paths:
       summary: Mark multiple products as wasted
       tags:
       - product
+  /api/v1/products/byBarcode/{barcode}:
+    get:
+      description: Returns a list of products of user matching the given barcode
+      parameters:
+      - description: Barcode
+        in: path
+        name: barcode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.ProductResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Returns a list of products
+      tags:
+      - product
   /api/v1/products/cook:
     post:
       consumes:
@@ -2747,7 +3190,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.Product'
+              $ref: '#/definitions/api.ProductResponse'
             type: array
         "400":
           description: Bad Request
@@ -2858,9 +3301,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: JSON file
+          description: OK
           schema:
-            type: file
+            items:
+              $ref: '#/definitions/api.ExportProductResponse'
+            type: array
         "400":
           description: Bad Request
           schema:
@@ -2934,7 +3379,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/database.OpenFoodFactsCache'
+            $ref: '#/definitions/api.OpenFoodFactsCacheResponse'
         "400":
           description: Bad Request
           schema:
@@ -3078,7 +3523,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/database.Product'
+              $ref: '#/definitions/api.ProductResponse'
             type: array
         "400":
           description: Bad Request
@@ -3135,35 +3580,6 @@ paths:
       summary: Return product summary
       tags:
       - product
-  /api/v1/productsByBarcode:
-    get:
-      description: Returns a list of products of user matching the given barcode
-      parameters:
-      - description: Barcode
-        in: path
-        name: barcode
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/database.Product'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Returns a list of products
-      tags:
-      - product
   /api/v1/recipes/suggestions:
     get:
       description: Returns up to 6 recipe suggestions matching products expiring within
@@ -3217,6 +3633,202 @@ paths:
       summary: Get savings statistics
       tags:
       - savings
+  /api/v1/shopping-list:
+    get:
+      description: Returns all shopping list items of the caller's household
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.ShoppingListItemResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Lists shopping list items
+      tags:
+      - shopping-list
+    post:
+      consumes:
+      - application/json
+      description: Creates a shopping list item either from a product or with a free-text
+        name
+      parameters:
+      - description: 'Item: productId or name, optional category, quantity, unit,
+          notes'
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateShoppingListItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.ShoppingListItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Creates a shopping list item
+      tags:
+      - shopping-list
+  /api/v1/shopping-list/{id}:
+    delete:
+      description: Deletes the shopping list item with the given ID
+      parameters:
+      - description: Shopping list item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Deletes a shopping list item
+      tags:
+      - shopping-list
+    patch:
+      consumes:
+      - application/json
+      description: Updates name, category, quantity, unit, checked state and notes
+        of a shopping list item
+      parameters:
+      - description: Shopping list item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 'Fields to update: name, category, quantity, unit, checked, notes'
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateShoppingListItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ShoppingListItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Updates a shopping list item
+      tags:
+      - shopping-list
+  /api/v1/shopping-list/{id}/toggle:
+    post:
+      description: Flips the checked state of the shopping list item with the given
+        ID and returns it
+      parameters:
+      - description: Shopping list item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ShoppingListItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Toggles a shopping list item
+      tags:
+      - shopping-list
+  /api/v1/shopping-list/auto:
+    get:
+      description: Returns all products of the caller whose amount is below their
+        minimum stock amount
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.ProductResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Gets auto shopping list
+      tags:
+      - shopping-list
+  /api/v1/shopping-list/import-auto:
+    post:
+      description: Creates shopping list items for all sub-threshold products that
+        are not on the list yet
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Imports auto shopping list
+      tags:
+      - shopping-list
   /api/v1/stats/waste:
     get:
       description: |-
@@ -3360,14 +3972,15 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieves notification preferences for the current user
+      description: Retrieves notification preferences for the current user; stored
+        secrets are reported as configured flags only
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/authentication.NotificationPreferences'
+            $ref: '#/definitions/api.NotificationPreferencesResponse'
         "400":
           description: Bad Request
           schema:
@@ -3382,7 +3995,16 @@ paths:
     post:
       consumes:
       - application/json
-      description: Updates notification preferences for the current user
+      description: Updates notification preferences for the current user; empty or
+        omitted secret fields keep their stored value and cannot be cleared through
+        this endpoint, while every other field replaces its stored value
+      parameters:
+      - description: Notification preferences
+        in: body
+        name: preferences
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateNotificationPreferencesRequest'
       produces:
       - application/json
       responses:
@@ -3505,7 +4127,111 @@ paths:
       summary: Generate Telegram link token
       tags:
       - user
+  /api/v1/user/tokens:
+    get:
+      description: Returns all personal access tokens of the authenticated user without
+        their secrets
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.TokenResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Lists personal access tokens
+      tags:
+      - user
+    post:
+      consumes:
+      - application/json
+      description: Creates a new personal access token and returns its raw value once
+      parameters:
+      - description: Token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.CreateTokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Creates a personal access token
+      tags:
+      - user
+  /api/v1/user/tokens/{id}:
+    delete:
+      description: Deletes the personal access token with the given ID
+      parameters:
+      - description: Token ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Deletes a personal access token
+      tags:
+      - user
   /api/v1/webhooks:
+    get:
+      description: Lists all webhooks of the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.WebhookListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Lists webhooks
+      tags:
+      - webhook
     post:
       consumes:
       - application/json
@@ -3537,6 +4263,161 @@ paths:
       summary: Create a webhook
       tags:
       - webhook
+  /api/v1/webhooks/{id}:
+    delete:
+      description: Deletes the webhook with the given ID
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Deletes a webhook
+      tags:
+      - webhook
+    get:
+      description: Returns the webhook with the given ID
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.WebhookResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Gets a webhook
+      tags:
+      - webhook
+    patch:
+      consumes:
+      - application/json
+      description: Updates URL, secret, events and active state of the webhook with
+        the given ID
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Webhook
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.WebhookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Updates a webhook
+      tags:
+      - webhook
+  /api/v1/webhooks/{id}/deliveries:
+    get:
+      description: Returns the last 50 delivery attempts of the webhook with the given
+        ID
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.DeliveryLogListResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Lists webhook deliveries
+      tags:
+      - webhook
+  /auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Sends a password reset link to the given email address. Always
+        returns the same generic response so registered addresses are not leaked
+      parameters:
+      - description: Mail address
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.forgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Requests a password reset
+      tags:
+      - auth
   /auth/invite/accept:
     post:
       consumes:
@@ -3575,6 +4456,37 @@ paths:
       summary: Accept invitation
       tags:
       - Invitation
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Issues a JWT access token for valid credentials. The handler is
+        provided by the gin-jwt middleware
+      parameters:
+      - description: Credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/authentication.Login'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Authenticates a user
+      tags:
+      - auth
   /auth/logout:
     post:
       consumes:
@@ -3598,6 +4510,55 @@ paths:
       security:
       - BearerAuth: []
       summary: Logout user by revoking token
+      tags:
+      - auth
+  /auth/refresh_token:
+    get:
+      description: Issues a new JWT access token from a valid, unexpired token. The
+        handler is provided by the gin-jwt middleware
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Refreshes the JWT token
+      tags:
+      - auth
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Consumes a password reset token and sets the new password. The
+        token is single-use and expires
+      parameters:
+      - description: Token and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.resetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Resets a password
       tags:
       - auth
   /auth/signup:
@@ -3660,6 +4621,55 @@ paths:
       summary: Verify email
       tags:
       - auth
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Gets health status of the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Gets health
+      tags:
+      - common
+  /health/ready:
+    get:
+      consumes:
+      - application/json
+      description: Pings the database and returns 200 when it is reachable, 503 otherwise
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Readiness probe
+      tags:
+      - common
+  /metrics:
+    get:
+      description: Exposes the Prometheus scrape endpoint in the text exposition format.
+        Served without authentication, so network access must be restricted to trusted
+        scrapers
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Prometheus metrics
+      tags:
+      - common
   /web:
     get:
       description: Renders the home page showing product dashboard
@@ -3763,6 +4773,27 @@ paths:
       summary: Onboarding page
       tags:
       - web
+  /web/products:
+    get:
+      description: Renders the products list page with optional search
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Products page
+      tags:
+      - web
   /web/products/{id}/edit:
     get:
       description: Renders the page for editing a product
@@ -3815,6 +4846,19 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Product view page
+      tags:
+      - web
+  /web/products/scan:
+    get:
+      description: Renders the product barcode scanning page
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Product scan page
       tags:
       - web
   /web/products/scan-receipt:

@@ -87,7 +87,7 @@ func writeBulkActionResult(ctx *gin.Context, appCtx *AppContext, ids, failed []u
 // @Description  Return a list of archived products of user
 // @Tags         product
 // @Produce      json
-// @Success      200  {object}  []database.Product
+// @Success      200  {object}  []apiModel.ProductResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/archived [get]
@@ -111,7 +111,7 @@ func GetArchivedProducts(ctx *gin.Context, appCtx *AppContext) {
 		}
 		return
 	}
-	ctx.JSON(http.StatusOK, products)
+	ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
 }
 
 // RestoreProduct restores an archived product of a user

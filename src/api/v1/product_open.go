@@ -10,6 +10,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	apperrors "codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -46,7 +47,7 @@ type OpenProductResponse struct {
 // @Produce      json
 // @Param        id    path      int                 true   "Product ID"
 // @Param        body  body      OpenProductRequest  false  "Force overwrite flag"
-// @Success      200   {object}  database.Product
+// @Success      200   {object}  apiModel.ProductResponse
 // @Success      409   {object}  OpenProductResponse
 // @Failure      400   {object}  api.APIResponse
 // @Failure      404   {object}  api.APIResponse
@@ -119,5 +120,5 @@ func OpenProduct(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, product)
+	ctx.JSON(http.StatusOK, apiModel.NewProductResponse(&product))
 }

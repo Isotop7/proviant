@@ -144,10 +144,8 @@ func (s *ProductService) WasteProduct(productID, userID uint) error {
 	}
 
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
 		if ws := controllers.GetWebhookService(); ws != nil {
-			ws.FireEventContext(ctx, "product.wasted", map[string]any{
+			ws.FireEventContext(context.Background(), "product.wasted", map[string]any{
 				"productId": productID,
 			})
 		}

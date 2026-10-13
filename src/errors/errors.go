@@ -98,6 +98,55 @@ var (
 	// ErrDatabaseContextNotFound is thrown if database handle can't be found in context
 	ErrDatabaseContextNotFound = errors.New("failed to get database from context")
 
+	// ErrServiceNotReady is what the readiness probe reports to an unauthenticated
+	// caller. The reason (which handle was missing, which ping failed) goes to the
+	// log: api.RespondError echoes err.Error() back to the client.
+	ErrServiceNotReady = errors.New("service not ready")
+
+	// ErrTemplateCacheNotFound is thrown if the template cache can't be found in context.
+	ErrTemplateCacheNotFound = errors.New("failed to get template cache from context")
+
+	// ErrCSRFTokenGenerationFailed is thrown if the CSRF token can't be generated.
+	ErrCSRFTokenGenerationFailed = errors.New("failed to generate CSRF token")
+
+	// ErrAuditLogDateFormat is thrown if the audit log date query parameter is not
+	// a YYYY-MM-DD date.
+	ErrAuditLogDateFormat = errors.New("date must be in YYYY-MM-DD format")
+
+	// ErrBulkCreateItemsMissing is thrown if a bulk create request carries no items.
+	ErrBulkCreateItemsMissing = errors.New("items missing")
+
+	// ErrBarcodeMissing is thrown if a product request carries no barcode.
+	ErrBarcodeMissing = errors.New("barcode missing")
+
+	// ErrNoValidSearchParameters is thrown if a product search yields no usable
+	// query parameters.
+	ErrNoValidSearchParameters = errors.New("no valid search parameters found")
+
+	// ErrShoppingListItemNameRequired is thrown if a shopping list item is created
+	// without a name.
+	ErrShoppingListItemNameRequired = errors.New("name is required")
+
+	// ErrShoppingListItemNotFound is thrown if the requested shopping list item
+	// does not exist in the caller's household.
+	ErrShoppingListItemNotFound = errors.New("shopping list item not found")
+
+	// ErrWasteInvalidPeriod is thrown if the waste analytics period is outside the
+	// accepted set.
+	ErrWasteInvalidPeriod = errors.New("invalid period (allowed: month, 3months, 6months, 12months)")
+
+	// ErrWasteInvalidSort is thrown if the waste analytics sort key is not
+	// accepted.
+	ErrWasteInvalidSort = errors.New("invalid sort (allowed: count, cost)")
+
+	// ErrWasteInvalidLimit is thrown if the waste analytics limit is not a
+	// positive integer.
+	ErrWasteInvalidLimit = errors.New("invalid limit (must be a positive integer)")
+
+	// ErrWasteLimitOutOfRange is thrown if the waste analytics limit exceeds the
+	// accepted maximum.
+	ErrWasteLimitOutOfRange = errors.New("limit must be 1..50")
+
 	// ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
 	ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
 

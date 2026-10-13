@@ -15,6 +15,18 @@ import (
 	"gorm.io/gorm"
 )
 
+// CreateUserToken creates a new personal access token for the authenticated user
+// @Summary      Creates a personal access token
+// @Description  Creates a new personal access token and returns its raw value once
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Param        request body apiModel.CreateTokenRequest true "Token"
+// @Success      201 {object} apiModel.CreateTokenResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/user/tokens [post]
+// @Security     BearerAuth
 func CreateUserToken(ctx *gin.Context, appCtx *AppContext) {
 	var req apiModel.CreateTokenRequest
 	if err := ctx.ShouldBind(&req); err != nil {
@@ -61,6 +73,15 @@ func CreateUserToken(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusCreated, resp)
 }
 
+// ListUserTokens lists the personal access tokens of the authenticated user
+// @Summary      Lists personal access tokens
+// @Description  Returns all personal access tokens of the authenticated user without their secrets
+// @Tags         user
+// @Produce      json
+// @Success      200 {array} apiModel.TokenResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/user/tokens [get]
+// @Security     BearerAuth
 func ListUserTokens(ctx *gin.Context, appCtx *AppContext) {
 	pats, err := appCtx.Repos.PATs.GetPATsByUserID(appCtx.UserID)
 	if err != nil {
@@ -91,6 +112,18 @@ func ListUserTokens(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusOK, tokens)
 }
 
+// DeleteUserToken deletes a personal access token of the authenticated user
+// @Summary      Deletes a personal access token
+// @Description  Deletes the personal access token with the given ID
+// @Tags         user
+// @Produce      json
+// @Param        id path int true "Token ID"
+// @Success      200 {object} api.APIResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      404 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/user/tokens/{id} [delete]
+// @Security     BearerAuth
 func DeleteUserToken(ctx *gin.Context, appCtx *AppContext) {
 	patIDStr := ctx.Param("id")
 	patIDRaw, err := strconv.ParseUint(patIDStr, 10, 64)

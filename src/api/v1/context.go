@@ -60,7 +60,8 @@ func AppContextMiddleware() gin.HandlerFunc {
 		loggerVal, loggerOk := ctx.Get(util.ContextKeyLogger)
 		logger, _ := loggerVal.(*zerolog.Logger)
 		if !loggerOk || logger == nil {
-			ctx.AbortWithStatus(http.StatusInternalServerError)
+			api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrLoggerContextNotFound)
+			ctx.Abort()
 			return
 		}
 		appCtx := mustGetAppContext(ctx, logger)
@@ -165,7 +166,7 @@ func mustGetUserID(ctx *gin.Context, logger *zerolog.Logger) (uint, bool) {
 
 func getNotificationController(ctx *gin.Context) (*controllers.NotificationController, bool) {
 	notificationController, ok := ctx.MustGet(util.ContextKeyNotificationController).(*controllers.NotificationController)
-	return notificationController, ok
+	return notificationController, ok && notificationController != nil
 }
 
 func parseLimitParam(ctx *gin.Context, logger *zerolog.Logger) (int, bool) {

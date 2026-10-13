@@ -147,6 +147,7 @@ func loadConfig(configDir string) *configuration.ProviantConfiguration {
 	viper.SetDefault("server.rateLimit.export_per_minute", 1)
 	viper.SetDefault("server.rateLimit.recipes_per_minute", 6)
 	viper.SetDefault("server.demoMode", false)
+	viper.SetDefault("server.metricsEnabled", false)
 
 	// Receipt scan defaults (issue #61): the OpenAI-compatible endpoint is
 	// assumed unless another is configured; timeout follows the vision-LLM

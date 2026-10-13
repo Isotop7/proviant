@@ -86,7 +86,10 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		}
 	}
 
-	// Inject logging middleware
+	if proviantConfiguration.Server.MetricsEnabled {
+		engine.Use(MetricsMiddleware())
+	}
+
 	engine.Use(ZerologMiddleware(logger), gin.Recovery())
 
 	// Setup cors
@@ -186,8 +189,16 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	)
 
 	// Map routes to handlers
-	// Health routes
-	engine.GET("/health", common.GetHealth)
+	// /health is liveness, /health/ready is readiness — a database outage must
+	// withdraw traffic, not trigger a restart loop.
+	engine.GET(util.RouteHealth, common.GetHealth)
+	engine.GET(util.RouteHealthReady, common.GetReadiness)
+
+	if proviantConfiguration.Server.MetricsEnabled {
+		logger.Warn().Str("path", util.RouteMetrics).Msg("Prometheus metrics are exposed without authentication; restrict network access to trusted scrapers")
+		engine.GET(util.RouteMetrics, MetricsHandler(logger))
+		logger.Info().Str("path", util.RouteMetrics).Msg("Prometheus metrics enabled")
+	}
 
 	// Favicon redirect
 	engine.GET("/favicon.ico", func(ctx *gin.Context) {

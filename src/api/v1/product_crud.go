@@ -28,7 +28,7 @@ const (
 // @Description  Return a list of products of user
 // @Tags         product
 // @Produce      json
-// @Success      200  {object}  []database.Product
+// @Success      200  {object}  []apiModel.ProductResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products [get]
@@ -46,7 +46,7 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 			ctx.JSON(http.StatusInternalServerError, api.InternalError())
 			return
 		}
-		ctx.JSON(http.StatusOK, products)
+		ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
 		return
 	}
 
@@ -63,7 +63,7 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 		}
 		return
 	}
-	ctx.JSON(http.StatusOK, products)
+	ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
 }
 
 // GetProduct return a single product of a user
@@ -72,11 +72,11 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 // @Tags         product
 // @Produce      json
 // @Param        id   path      int  true  "Product ID"
-// @Success      200  {object}  database.Product
+// @Success      200  {object}  apiModel.ProductResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
-// @Router       /api/v1/product/{id} [get]
+// @Router       /api/v1/products/{id} [get]
 func GetProduct(ctx *gin.Context, appCtx *AppContext) {
 	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -87,7 +87,7 @@ func GetProduct(ctx *gin.Context, appCtx *AppContext) {
 
 	switch getError {
 	case nil:
-		ctx.JSON(http.StatusOK, product)
+		ctx.JSON(http.StatusOK, apiModel.NewProductResponse(&product))
 		return
 	case gorm.ErrRecordNotFound, errors.ErrMismatcherUserID:
 		// Unknown and foreign ids fall through to the same body on purpose:
@@ -115,7 +115,7 @@ func GetProduct(ctx *gin.Context, appCtx *AppContext) {
 // @Accept			json
 // @Produce      	json
 // @Param			product	body	database.Product	true	"Product"
-// @Success      	201  {object}  database.Product
+// @Success      	201  {object}  apiModel.ProductResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products [post]
@@ -131,7 +131,7 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 
 	if product.Barcode == "" {
 		logger.Warn().Msgf("Body is missing barcode")
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "barcode missing"})
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrBarcodeMissing)
 		return
 	}
 
@@ -202,7 +202,7 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 		}
 	}()
 
-	ctx.JSON(http.StatusCreated, product)
+	ctx.JSON(http.StatusCreated, apiModel.NewProductResponse(&product))
 }
 
 // UpdateProduct updates a product of a user
@@ -212,12 +212,12 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 // @Accept			json
 // @Produce      	json
 // @Param        	id   	path	int					true  	"Product ID"
-// @Param			product	body	database.Product	true	"Product"
-// @Success      	200  {object}  database.Product
+// @Param			product	body	database.ProductDTOPatch	true	"Product"
+// @Success      	200  {object}  database.ProductDTOPatch
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
-// @Router       	/api/v1/product/{id} [patch]
+// @Router       	/api/v1/products/{id} [patch]
 func UpdateProduct(ctx *gin.Context, appCtx *AppContext) {
 	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -267,7 +267,7 @@ func UpdateProduct(ctx *gin.Context, appCtx *AppContext) {
 // @Produce      	json
 // @Param        	id   	path	int							true  	"Product ID"
 // @Param        	delta	body	api.ProductAmountDTO		true	"Amount delta"
-// @Success      	200  {object}  database.Product
+// @Success      	200  {object}  api.APIResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
@@ -370,7 +370,7 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 // @Success      	200  {object}  api.APIResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
-// @Router       	/api/v1/product/{id} [delete]
+// @Router       	/api/v1/products/{id} [delete]
 func DeleteProduct(ctx *gin.Context, appCtx *AppContext) {
 	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -425,7 +425,7 @@ func DeleteProduct(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
-// @Router       	/api/v1/product/{id}/expire [post]
+// @Router       	/api/v1/products/{id}/expire [post]
 func SetExpireAt(ctx *gin.Context, appCtx *AppContext) {
 	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {

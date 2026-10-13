@@ -84,6 +84,7 @@ type ServerConfiguration struct {
 	MaxUploadSizeMB int                    `mapstructure:"maxUploadSizeMB"`
 	Debug           bool                   `mapstructure:"debug"`
 	DemoMode        bool                   `mapstructure:"demoMode"`
+	MetricsEnabled  bool                   `mapstructure:"metricsEnabled"`
 }
 
 // CalendarConfiguration contains settings for calendar token expiry and warnings.

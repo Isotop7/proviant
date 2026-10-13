@@ -40,6 +40,11 @@ const (
 	RouteForgotPassword = "/web/forgot-password"
 	RouteResetPassword  = "/web/reset-password" //nolint:gosec // G101: route path constant, not a credential
 
+	// Health probes and metrics
+	RouteHealth      = "/health"
+	RouteHealthReady = "/health/ready"
+	RouteMetrics     = "/metrics"
+
 	// Consumption rate estimation
 	ConsumptionHistoryWindowDays = 90
 	ConsumptionMinSamples        = 2

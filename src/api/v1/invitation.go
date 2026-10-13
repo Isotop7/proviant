@@ -10,6 +10,7 @@ import (
 
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/util"
 
@@ -98,7 +99,7 @@ func CreateInvitation(ctx *gin.Context, appCtx *AppContext) {
 // @Description Returns all invitations for the calling user's household
 // @Tags Invitation
 // @Produce json
-// @Success 200 {array} database.HouseholdInvitation
+// @Success 200 {array} apiModel.HouseholdInvitationResponse
 // @Failure 400 {object} api.APIResponse
 // @Failure 404 {object} api.APIResponse
 // @Failure 500 {object} api.APIResponse
@@ -124,7 +125,7 @@ func GetInvitations(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, invitations)
+	ctx.JSON(http.StatusOK, apiModel.NewHouseholdInvitationResponses(invitations))
 }
 
 // CancelInvitation cancels a pending invitation.

@@ -8,6 +8,7 @@ import (
 	"codeberg.org/isotop7/proviant/audit"
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
@@ -26,11 +27,11 @@ const (
 // @Description  Returns all users that belong to the household the caller is admin of
 // @Tags         household
 // @Produce      json
-// @Success      200  {array}   authentication.User
+// @Success      200  {array}   apiModel.HouseholdUserResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      403  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
-// @Router       /api/v1/household/users [get]
+// @Router       /api/v1/admin/users [get]
 func GetHouseholdUsers(ctx *gin.Context, appCtx *AppContext) {
 	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
@@ -46,7 +47,7 @@ func GetHouseholdUsers(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, users)
+	ctx.JSON(http.StatusOK, apiModel.NewHouseholdUserResponses(users))
 }
 
 // UpdateHouseholdUser updates a user's username or email.
@@ -57,12 +58,12 @@ func GetHouseholdUsers(ctx *gin.Context, appCtx *AppContext) {
 // @Produce      json
 // @Param        id   path      int  true  "User ID"
 // @Param        user body      updateAdminUserRequest  true  "User data"
-// @Success      200  {object}  authentication.User
+// @Success      200  {object}  apiModel.HouseholdUserResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      403  {object}  api.APIResponse
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
-// @Router       /api/v1/household/users/{id} [patch]
+// @Router       /api/v1/admin/users/{id} [patch]
 func UpdateHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
 	targetUserID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -102,7 +103,7 @@ func UpdateHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
 	targetUser.Username = newUsername
 	targetUser.MailAddress = newMailAddress
 
-	ctx.JSON(http.StatusOK, targetUser)
+	ctx.JSON(http.StatusOK, apiModel.NewHouseholdUserResponse(&targetUser))
 }
 
 // DeleteHouseholdUser deletes a user from the household.
@@ -116,7 +117,7 @@ func UpdateHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      403  {object}  api.APIResponse
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
-// @Router       /api/v1/household/users/{id} [delete]
+// @Router       /api/v1/admin/users/{id} [delete]
 func DeleteHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
 	targetUserID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
@@ -160,7 +161,7 @@ func DeleteHouseholdUser(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      403  {object}  api.APIResponse
 // @Failure      404  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
-// @Router       /api/v1/household/users/{id}/reset-password [post]
+// @Router       /api/v1/admin/users/{id}/reset-password [post]
 func AdminResetUserPassword(ctx *gin.Context, appCtx *AppContext) {
 	targetUserID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {

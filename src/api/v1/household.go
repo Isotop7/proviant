@@ -15,6 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
 const (
@@ -115,7 +116,7 @@ func ApplyForHousehold(ctx *gin.Context, appCtx *AppContext) {
 // @Description  Returns pending join applications for the household the calling user is admin of.
 // @Tags         household
 // @Produce      json
-// @Success      200  {array}   database.HouseholdApplication
+// @Success      200  {array}   apiModel.HouseholdApplicationResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      403  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
@@ -124,7 +125,7 @@ func GetHouseholdApplications(ctx *gin.Context, appCtx *AppContext) {
 	applications, err := appCtx.Repos.Households.GetPendingApplicationsForAdmin(appCtx.UserID)
 	switch err {
 	case nil:
-		ctx.JSON(http.StatusOK, applications)
+		ctx.JSON(http.StatusOK, apiModel.NewHouseholdApplicationResponses(applications))
 	case apperrors.ErrNotHouseholdAdmin:
 		api.RespondError(ctx, http.StatusForbidden, err)
 	default:
@@ -239,6 +240,15 @@ func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext) {
 }
 
 // GetHouseholdSettings returns the caller's household settings.
+// @Summary      Gets household settings
+// @Description  Returns the monthly waste goal settings of the caller's household
+// @Tags         household
+// @Produce      json
+// @Success      200 {object} apiModel.HouseholdSettingsResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/household/settings [get]
+// @Security     BearerAuth
 func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
@@ -259,6 +269,19 @@ func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 }
 
 // UpdateHouseholdSettings updates monthly waste goal for the caller's household (admin only).
+// @Summary      Updates household settings
+// @Description  Updates the monthly waste goal of the caller's household (admin only)
+// @Tags         household
+// @Accept       json
+// @Produce      json
+// @Param        request body apiModel.UpdateHouseholdSettingsRequest true "Settings"
+// @Success      200 {object} apiModel.HouseholdSettingsResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      403 {object} api.APIResponse
+// @Failure      404 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/household/settings [patch]
+// @Security     BearerAuth
 func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 	var req apiModel.UpdateHouseholdSettingsRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -364,8 +387,15 @@ func GetHouseholdActivity(ctx *gin.Context, appCtx *AppContext) {
 
 	user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Unknown caller is a client error; siblings answer the same way.
+			appCtx.Logger.Warn().Msgf("GetHouseholdActivity: unknown user: %s", err)
+			api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserID)
+			return
+		}
+		// A lookup failure is a server-side problem, not a bad caller.
 		appCtx.Logger.Error().Msgf("GetHouseholdActivity: failed to get user: %s", err)
-		api.RespondError(ctx, http.StatusInternalServerError, err)
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrInternalServer)
 		return
 	}
 

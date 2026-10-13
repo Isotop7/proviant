@@ -15,6 +15,8 @@ design-system/
 docs/
 issues/
 screenshots/
+tests/
+vitest.config.mjs
 .htmlhintrc
 .ignore
 .stylelintrc.json

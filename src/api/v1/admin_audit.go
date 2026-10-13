@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 
@@ -18,7 +20,7 @@ import (
 // @Produce      json
 // @Param        limit query int false "Maximum number of logs to return (default 100, max 1000)"
 // @Param        date  query string false "Filter by date (YYYY-MM-DD format)"
-// @Success      200  {array}  database.AuditLog
+// @Success      200  {array}  apiModel.AuditLogResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/admin/audit-log [get]
@@ -34,13 +36,13 @@ func GetAuditLogs(ctx *gin.Context, appCtx *AppContext) {
 	householdIDValue, exists := ctx.Get(util.ContextKeyHouseholdID)
 	if !exists {
 		appCtx.Logger.Error().Msg("household id missing from context")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to fetch audit logs"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 	householdID, ok := householdIDValue.(uint)
 	if !ok || householdID == 0 {
 		appCtx.Logger.Error().Msg("household id in context is not a valid uint")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to fetch audit logs"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -53,7 +55,7 @@ func GetAuditLogs(ctx *gin.Context, appCtx *AppContext) {
 		// input and must surface as 400, not as a parse-failure 500.
 		if _, parseErr := time.Parse(util.DefaultDateFormatParseStr, dateParam); parseErr != nil {
 			appCtx.Logger.Warn().Msgf("Invalid audit log date '%s'", dateParam)
-			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: "date must be in YYYY-MM-DD format"})
+			api.RespondError(ctx, http.StatusBadRequest, errors.ErrAuditLogDateFormat)
 			return
 		}
 		logs, err = appCtx.Repos.AuditLogs.GetAuditLogsByDate(ctx.Request.Context(), householdID, limit, dateParam)
@@ -63,9 +65,9 @@ func GetAuditLogs(ctx *gin.Context, appCtx *AppContext) {
 
 	if err != nil {
 		appCtx.Logger.Error().Err(err).Msg("failed to fetch audit logs")
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Failed to fetch audit logs"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, logs)
+	ctx.JSON(http.StatusOK, apiModel.NewAuditLogResponses(logs))
 }

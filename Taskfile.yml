@@ -4,6 +4,7 @@ vars:
   CONTAINER_RUNTIME:
     sh: command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo ""
   GOLANGCI_VERSION: "v2.14.0"
+  TRIVY_IMAGE: "docker.io/aquasec/trivy@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa"
 
 tasks:
   default:
@@ -42,6 +43,11 @@ tasks:
     cmds:
       - go test -race -vet=off ./...
       - go mod verify
+
+  test-js:
+    desc: Run frontend (vitest) tests
+    cmds:
+      - npm run test-js
 
   cover:
     desc: Get code coverage report
@@ -136,8 +142,6 @@ tasks:
       - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
         msg: "No container runtime found. Please install podman or docker."
     cmds:
-      # Dev-only secret, same value as src/config.yaml. The shipped config
-      # template carries none, so the container cannot start without one.
       - '{{.CONTAINER_RUNTIME}} run -t --rm -p 5114:5114 -v ./src/config.yaml.sqlite.tmpl:/app/config.yaml:Z -e PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD=dev-only-local-secret proviant:latest'
 
   runcontainerdebug:
@@ -212,8 +216,23 @@ tasks:
     cmds:
       - bash scripts/npm-audit.sh
 
+  vuln-image:
+    desc: Scan container image for vulnerabilities (requires podman or docker)
+    deps: [containerimage]
+    preconditions:
+      - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
+        msg: "No container runtime found. Please install podman or docker."
+    cmds:
+      - |
+        WORK_DIR="$(mktemp -d)"
+        trap 'rm -rf "$WORK_DIR"' EXIT
+        # No --format: `docker save` has no such flag (podman-only), and
+        # docker-archive is the default for both runtimes.
+        {{.CONTAINER_RUNTIME}} save -o "$WORK_DIR/proviant-image.tar" proviant:latest
+        CONTAINER_RUNTIME={{.CONTAINER_RUNTIME}} TRIVY_IMAGE={{.TRIVY_IMAGE}} bash scripts/image-scan.sh "$WORK_DIR/proviant-image.tar"
+
   vuln:
-    desc: Scan all dependencies for vulnerabilities
+    desc: Scan Go and npm dependencies for vulnerabilities
     deps: [vuln-go, vuln-npm]
 
   sonar-issues:

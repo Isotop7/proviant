@@ -17,29 +17,6 @@
     "host": "localhost:5050",
     "basePath": "/",
     "paths": {
-        "/api/health": {
-            "get": {
-                "description": "Gets health status of the API",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "common"
-                ],
-                "summary": "Gets health",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/admin/audit-log": {
             "get": {
                 "description": "Returns paginated audit log entries for the caller's household. Household admins only; entries are scoped to the caller's household.",
@@ -70,12 +47,222 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.AuditLog"
+                                "$ref": "#/definitions/api.AuditLogResponse"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users": {
+            "get": {
+                "description": "Returns all users that belong to the household the caller is admin of",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "List household members",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.HouseholdUserResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{id}": {
+            "delete": {
+                "description": "Deletes a user from the household. Caller must be admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Delete household member",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Updates the username or email of a user in the household. Caller must be admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Update household member",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User data",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.updateAdminUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.HouseholdUserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{id}/reset-password": {
+            "post": {
+                "description": "Sends a password reset email to the specified user. Caller must be admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Reset user password",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -373,7 +560,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.HouseholdApplication"
+                                "$ref": "#/definitions/api.HouseholdApplicationResponse"
                             }
                         }
                     },
@@ -572,7 +759,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.HouseholdInvitation"
+                                "$ref": "#/definitions/api.HouseholdInvitationResponse"
                             }
                         }
                     },
@@ -879,6 +1066,104 @@
                 }
             }
         },
+        "/api/v1/household/settings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the monthly waste goal settings of the caller's household",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Gets household settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.HouseholdSettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates the monthly waste goal of the caller's household (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Updates household settings",
+                "parameters": [
+                    {
+                        "description": "Settings",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.UpdateHouseholdSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.HouseholdSettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/household/storage-locations": {
             "get": {
                 "description": "Returns all storage locations belonging to the user's household, ordered by sort_order.",
@@ -895,7 +1180,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.StorageLocation"
+                                "$ref": "#/definitions/api.StorageLocationResponse"
                             }
                         }
                     },
@@ -934,7 +1219,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/database.StorageLocation"
+                            "$ref": "#/definitions/api.StorageLocationResponse"
                         }
                     },
                     "400": {
@@ -1026,221 +1311,11 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/database.StorageLocation"
+                            "$ref": "#/definitions/api.StorageLocationResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/household/users": {
-            "get": {
-                "description": "Returns all users that belong to the household the caller is admin of",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "household"
-                ],
-                "summary": "List household members",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/authentication.User"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/household/users/{id}": {
-            "delete": {
-                "description": "Deletes a user from the household. Caller must be admin.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "household"
-                ],
-                "summary": "Delete household member",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            },
-            "patch": {
-                "description": "Updates the username or email of a user in the household. Caller must be admin.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "household"
-                ],
-                "summary": "Update household member",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "User data",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/v1.updateAdminUserRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/authentication.User"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/household/users/{id}/reset-password": {
-            "post": {
-                "description": "Sends a password reset email to the specified user. Caller must be admin.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "household"
-                ],
-                "summary": "Reset user password",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -1334,6 +1409,117 @@
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/notifications/push/subscribe": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Stores the browser's web push subscription for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notification"
+                ],
+                "summary": "Subscribes to web push notifications",
+                "parameters": [
+                    {
+                        "description": "Web push subscription",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.WebPushSubscriptionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes the stored web push subscription of the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notification"
+                ],
+                "summary": "Unsubscribes from web push notifications",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/notifications/push/vapidPublicKey": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the VAPID public key used by the browser to subscribe to web push notifications",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notification"
+                ],
+                "summary": "Gets web push VAPID public key",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.WebPushVAPIDPublicKeyResponse"
                         }
                     },
                     "500": {
@@ -1652,217 +1838,6 @@
                 }
             }
         },
-        "/api/v1/product/{id}": {
-            "get": {
-                "description": "Returns a single product of user",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "product"
-                ],
-                "summary": "Returns a single product",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Product ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/database.Product"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Deletes a product of a user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "product"
-                ],
-                "summary": "Deletes a product",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Product ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Archive only",
-                        "name": "archiveOnly",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            },
-            "patch": {
-                "description": "Updates a product with new values",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "product"
-                ],
-                "summary": "Updates a product",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Product ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Product",
-                        "name": "product",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/database.Product"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/database.Product"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/product/{id}/expire": {
-            "post": {
-                "description": "Updates the expire date of a product",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "product"
-                ],
-                "summary": "Updates the expire date",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Product ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Timestamp",
-                        "name": "timestamp",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/database.Timestamp"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/database.ProductDTOExpire"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/products": {
             "get": {
                 "description": "Return a list of products of user",
@@ -1879,7 +1854,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.Product"
+                                "$ref": "#/definitions/api.ProductResponse"
                             }
                         }
                     },
@@ -1924,7 +1899,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/database.Product"
+                            "$ref": "#/definitions/api.ProductResponse"
                         }
                     },
                     "400": {
@@ -1958,7 +1933,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.Product"
+                                "$ref": "#/definitions/api.ProductResponse"
                             }
                         }
                     },
@@ -2188,6 +2163,50 @@
                 }
             }
         },
+        "/api/v1/products/byBarcode/{barcode}": {
+            "get": {
+                "description": "Returns a list of products of user matching the given barcode",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Returns a list of products",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Barcode",
+                        "name": "barcode",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.ProductResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/cook": {
             "post": {
                 "description": "Consumes the given products by reducing their amounts. An amount of 0 or one that reaches or exceeds the current amount fully consumes (archives) the product.",
@@ -2253,7 +2272,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.Product"
+                                "$ref": "#/definitions/api.ProductResponse"
                             }
                         }
                     },
@@ -2422,9 +2441,12 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "JSON file",
+                        "description": "OK",
                         "schema": {
-                            "type": "file"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.ExportProductResponse"
+                            }
                         }
                     },
                     "400": {
@@ -2529,7 +2551,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/database.OpenFoodFactsCache"
+                            "$ref": "#/definitions/api.OpenFoodFactsCacheResponse"
                         }
                     },
                     "400": {
@@ -2740,7 +2762,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/database.Product"
+                                "$ref": "#/definitions/api.ProductResponse"
                             }
                         }
                     },
@@ -2823,6 +2845,158 @@
                 }
             }
         },
+        "/api/v1/products/{id}": {
+            "get": {
+                "description": "Returns a single product of user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Returns a single product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Deletes a product of a user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Deletes a product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Archive only",
+                        "name": "archiveOnly",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Updates a product with new values",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Updates a product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Product",
+                        "name": "product",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/database.ProductDTOPatch"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.ProductDTOPatch"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/{id}/amount": {
             "patch": {
                 "description": "Applies a delta to a product's amount. Hard-deletes the product when amount reaches 0.",
@@ -2858,7 +3032,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/database.Product"
+                            "$ref": "#/definitions/api.APIResponse"
                         }
                     },
                     "400": {
@@ -2976,6 +3150,65 @@
                 }
             }
         },
+        "/api/v1/products/{id}/expire": {
+            "post": {
+                "description": "Updates the expire date of a product",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Updates the expire date",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Timestamp",
+                        "name": "timestamp",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/database.Timestamp"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.ProductDTOExpire"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/{id}/open": {
             "post": {
                 "description": "Sets the OpenedAt timestamp on a product. Returns 409 with the existing OpenedAt if the product is already opened, prompting the frontend to confirm. Re-submit with `force: true` to overwrite.",
@@ -3010,7 +3243,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/database.Product"
+                            "$ref": "#/definitions/api.ProductResponse"
                         }
                     },
                     "400": {
@@ -3184,50 +3417,6 @@
                 }
             }
         },
-        "/api/v1/productsByBarcode": {
-            "get": {
-                "description": "Returns a list of products of user matching the given barcode",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "product"
-                ],
-                "summary": "Returns a list of products",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Barcode",
-                        "name": "barcode",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/database.Product"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/recipes/suggestions": {
             "get": {
                 "description": "Returns up to 6 recipe suggestions matching products expiring within 7 days. Results are ranked by expiry proximity first, then match percentage. Set refresh=1 to bypass the suggestion cache.",
@@ -3292,6 +3481,308 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.SavingsStatsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/shopping-list": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all shopping list items of the caller's household",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shopping-list"
+                ],
+                "summary": "Lists shopping list items",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.ShoppingListItemResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a shopping list item either from a product or with a free-text name",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shopping-list"
+                ],
+                "summary": "Creates a shopping list item",
+                "parameters": [
+                    {
+                        "description": "Item: productId or name, optional category, quantity, unit, notes",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.CreateShoppingListItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.ShoppingListItemResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/shopping-list/auto": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all products of the caller whose amount is below their minimum stock amount",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shopping-list"
+                ],
+                "summary": "Gets auto shopping list",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.ProductResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/shopping-list/import-auto": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates shopping list items for all sub-threshold products that are not on the list yet",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shopping-list"
+                ],
+                "summary": "Imports auto shopping list",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/shopping-list/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes the shopping list item with the given ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shopping-list"
+                ],
+                "summary": "Deletes a shopping list item",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Shopping list item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates name, category, quantity, unit, checked state and notes of a shopping list item",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shopping-list"
+                ],
+                "summary": "Updates a shopping list item",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Shopping list item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update: name, category, quantity, unit, checked, notes",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.UpdateShoppingListItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ShoppingListItemResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/shopping-list/{id}/toggle": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Flips the checked state of the shopping list item with the given ID and returns it",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shopping-list"
+                ],
+                "summary": "Toggles a shopping list item",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Shopping list item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ShoppingListItemResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
                         }
                     },
                     "500": {
@@ -3502,7 +3993,7 @@
         },
         "/api/v1/user/notification-preferences": {
             "get": {
-                "description": "Retrieves notification preferences for the current user",
+                "description": "Retrieves notification preferences for the current user; stored secrets are reported as configured flags only",
                 "consumes": [
                     "application/json"
                 ],
@@ -3517,7 +4008,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/authentication.NotificationPreferences"
+                            "$ref": "#/definitions/api.NotificationPreferencesResponse"
                         }
                     },
                     "400": {
@@ -3535,7 +4026,7 @@
                 }
             },
             "post": {
-                "description": "Updates notification preferences for the current user",
+                "description": "Updates notification preferences for the current user; empty or omitted secret fields keep their stored value and cannot be cleared through this endpoint, while every other field replaces its stored value",
                 "consumes": [
                     "application/json"
                 ],
@@ -3546,6 +4037,17 @@
                     "user"
                 ],
                 "summary": "Updates a user's notification preferences",
+                "parameters": [
+                    {
+                        "description": "Notification preferences",
+                        "name": "preferences",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.UpdateNotificationPreferencesRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3722,7 +4224,171 @@
                 }
             }
         },
+        "/api/v1/user/tokens": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all personal access tokens of the authenticated user without their secrets",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Lists personal access tokens",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.TokenResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new personal access token and returns its raw value once",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Creates a personal access token",
+                "parameters": [
+                    {
+                        "description": "Token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.CreateTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.CreateTokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/tokens/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes the personal access token with the given ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Deletes a personal access token",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Token ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/webhooks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists all webhooks of the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhook"
+                ],
+                "summary": "Lists webhooks",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.WebhookListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -3766,6 +4432,244 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/webhooks/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the webhook with the given ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhook"
+                ],
+                "summary": "Gets a webhook",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Webhook ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.WebhookResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes the webhook with the given ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhook"
+                ],
+                "summary": "Deletes a webhook",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Webhook ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates URL, secret, events and active state of the webhook with the given ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhook"
+                ],
+                "summary": "Updates a webhook",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Webhook ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Webhook",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.UpdateWebhookRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.WebhookResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/webhooks/{id}/deliveries": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the last 50 delivery attempts of the webhook with the given ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhook"
+                ],
+                "summary": "Lists webhook deliveries",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Webhook ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.DeliveryLogListResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/forgot-password": {
+            "post": {
+                "description": "Sends a password reset link to the given email address. Always returns the same generic response so registered addresses are not leaked",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Requests a password reset",
+                "parameters": [
+                    {
+                        "description": "Mail address",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.forgotPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -3831,6 +4735,52 @@
                 }
             }
         },
+        "/auth/login": {
+            "post": {
+                "description": "Issues a JWT access token for valid credentials. The handler is provided by the gin-jwt middleware",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Authenticates a user",
+                "parameters": [
+                    {
+                        "description": "Credentials",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authentication.Login"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.LoginResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/logout": {
             "post": {
                 "security": [
@@ -3858,6 +4808,78 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh_token": {
+            "get": {
+                "description": "Issues a new JWT access token from a valid, unexpired token. The handler is provided by the gin-jwt middleware",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refreshes the JWT token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.LoginResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "description": "Consumes a password reset token and sets the new password. The token is single-use and expires",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Resets a password",
+                "parameters": [
+                    {
+                        "description": "Token and new password",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.resetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -3956,6 +4978,78 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Gets health status of the API",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "common"
+                ],
+                "summary": "Gets health",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health/ready": {
+            "get": {
+                "description": "Pings the database and returns 200 when it is reachable, 503 otherwise",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "common"
+                ],
+                "summary": "Readiness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/metrics": {
+            "get": {
+                "description": "Exposes the Prometheus scrape endpoint in the text exposition format. Served without authentication, so network access must be restricted to trusted scrapers",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "common"
+                ],
+                "summary": "Prometheus metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -4112,6 +5206,58 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/products": {
+            "get": {
+                "description": "Renders the products list page with optional search",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Products page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/products/scan": {
+            "get": {
+                "description": "Renders the product barcode scanning page",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Product scan page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -4547,6 +5693,35 @@
                 }
             }
         },
+        "api.AuditLogResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "details": {
+                    "type": "string"
+                },
+                "householdId": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "ipAddress": {
+                    "type": "string"
+                },
+                "requestId": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.BulkActionResponse": {
             "type": "object",
             "properties": {
@@ -4712,6 +5887,63 @@
                 }
             }
         },
+        "api.CreateShoppingListItemRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.CreateTokenRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "scopes": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.CreateTokenResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "scopes": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "api.CreateWebhookRequest": {
             "type": "object",
             "required": [
@@ -4739,6 +5971,40 @@
                 }
             }
         },
+        "api.DeliveryLogListResponse": {
+            "type": "object",
+            "properties": {
+                "deliveries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.DeliveryLogResponse"
+                    }
+                }
+            }
+        },
+        "api.DeliveryLogResponse": {
+            "type": "object",
+            "properties": {
+                "attempt": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "responseBody": {
+                    "type": "string"
+                },
+                "statusCode": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.ExpiryScanResponse": {
             "type": "object",
             "properties": {
@@ -4760,6 +6026,123 @@
                 }
             }
         },
+        "api.ExportProductResponse": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "type": "integer"
+                },
+                "archivedAt": {
+                    "type": "string"
+                },
+                "barcode": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "co2KgPerKg": {
+                    "type": "number"
+                },
+                "countries": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "daysAfterOpening": {
+                    "type": "integer"
+                },
+                "expireAt": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "minStockAmount": {
+                    "type": "integer"
+                },
+                "notificationLeadDays": {
+                    "type": "integer"
+                },
+                "notifiedAt": {
+                    "type": "string"
+                },
+                "openedAt": {
+                    "type": "string"
+                },
+                "priceOverride": {
+                    "type": "number"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "removalReason": {
+                    "type": "string"
+                },
+                "scannedAt": {
+                    "type": "string"
+                },
+                "storageLocation": {
+                    "$ref": "#/definitions/api.StorageLocationResponse"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.HouseholdApplicationResponse": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "applicantId": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "householdId": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.HouseholdInvitationResponse": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "sendAttempts": {
+                    "type": "integer"
+                },
+                "sentAt": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "api.HouseholdListItem": {
             "type": "object",
             "properties": {
@@ -4773,6 +6156,46 @@
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.HouseholdSettingsResponse": {
+            "type": "object",
+            "properties": {
+                "monthlyWasteGoalCount": {
+                    "type": "integer"
+                },
+                "monthlyWasteGoalPercent": {
+                    "type": "number"
+                },
+                "monthlyWasteGoalType": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.HouseholdUserResponse": {
+            "type": "object",
+            "properties": {
+                "displayName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "mailAddress": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "telegramConfigured": {
+                    "type": "boolean"
+                },
+                "telegramLinked": {
+                    "type": "boolean"
+                },
+                "username": {
                     "type": "string"
                 }
             }
@@ -4851,6 +6274,47 @@
                 }
             }
         },
+        "api.NotificationPreferencesResponse": {
+            "type": "object",
+            "properties": {
+                "emailEnabled": {
+                    "type": "boolean"
+                },
+                "mailDigestFrequency": {
+                    "type": "string"
+                },
+                "monthlyWasteReportEnabled": {
+                    "type": "boolean"
+                },
+                "notificationThresholdDays": {
+                    "type": "integer"
+                },
+                "ntfyEnabled": {
+                    "type": "boolean"
+                },
+                "ntfyTokenConfigured": {
+                    "type": "boolean"
+                },
+                "ntfyTopic": {
+                    "type": "string"
+                },
+                "ntfyUrl": {
+                    "type": "string"
+                },
+                "telegramBotConfigured": {
+                    "type": "boolean"
+                },
+                "telegramEnabled": {
+                    "type": "boolean"
+                },
+                "telegramLinked": {
+                    "type": "boolean"
+                },
+                "webPushEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
         "api.NotificationsResponse": {
             "type": "object",
             "properties": {
@@ -4882,6 +6346,32 @@
                 }
             }
         },
+        "api.OpenFoodFactsCacheResponse": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "co2KgPerKg": {
+                    "type": "number"
+                },
+                "countries": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "storageHint": {
+                    "type": "string"
+                }
+            }
+        },
         "api.ProductAmountDTO": {
             "type": "object",
             "required": [
@@ -4891,6 +6381,78 @@
                 "delta": {
                     "type": "integer",
                     "minimum": -1000
+                }
+            }
+        },
+        "api.ProductResponse": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "type": "integer"
+                },
+                "barcode": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "co2KgPerKg": {
+                    "type": "number"
+                },
+                "countries": {
+                    "type": "string"
+                },
+                "daysAfterOpening": {
+                    "type": "integer"
+                },
+                "expireAt": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "label": {
+                    "description": "Label is set only by NewLabelledProductResponse, to keep the format cost\noff list responses.",
+                    "type": "string"
+                },
+                "minStockAmount": {
+                    "type": "integer"
+                },
+                "notificationLeadDays": {
+                    "type": "integer"
+                },
+                "notifiedAt": {
+                    "type": "string"
+                },
+                "openedAt": {
+                    "type": "string"
+                },
+                "priceOverride": {
+                    "type": "number"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "removalReason": {
+                    "type": "string"
+                },
+                "scannedAt": {
+                    "type": "string"
+                },
+                "storageLocation": {
+                    "$ref": "#/definitions/api.StorageLocationResponse"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
                 }
             }
         },
@@ -5100,6 +6662,38 @@
                 }
             }
         },
+        "api.ShoppingListItemResponse": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "checked": {
+                    "type": "boolean"
+                },
+                "createdBy": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
         "api.StatsExpiringProduct": {
             "type": "object",
             "properties": {
@@ -5124,6 +6718,23 @@
                 }
             }
         },
+        "api.StorageLocationResponse": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sortOrder": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.StreakResponse": {
             "type": "object",
             "properties": {
@@ -5132,6 +6743,126 @@
                 },
                 "longestStreak": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lastUsedAt": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "scopes": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.UpdateHouseholdSettingsRequest": {
+            "type": "object",
+            "properties": {
+                "monthlyWasteGoalCount": {
+                    "type": "integer"
+                },
+                "monthlyWasteGoalPercent": {
+                    "type": "number"
+                },
+                "monthlyWasteGoalType": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.UpdateNotificationPreferencesRequest": {
+            "type": "object",
+            "properties": {
+                "emailEnabled": {
+                    "type": "boolean"
+                },
+                "mailDigestFrequency": {
+                    "type": "string"
+                },
+                "monthlyWasteReportEnabled": {
+                    "type": "boolean"
+                },
+                "notificationThresholdDays": {
+                    "type": "integer"
+                },
+                "ntfyEnabled": {
+                    "type": "boolean"
+                },
+                "ntfyToken": {
+                    "type": "string"
+                },
+                "ntfyTopic": {
+                    "type": "string"
+                },
+                "ntfyUrl": {
+                    "type": "string"
+                },
+                "telegramBotToken": {
+                    "type": "string"
+                },
+                "telegramEnabled": {
+                    "type": "boolean"
+                },
+                "webPushEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "api.UpdateShoppingListItemRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "checked": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.UpdateWebhookRequest": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "events": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "secret": {
+                    "type": "string",
+                    "minLength": 16
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         },
@@ -5251,6 +6982,17 @@
                 }
             }
         },
+        "api.WebhookListResponse": {
+            "type": "object",
+            "properties": {
+                "webhooks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.WebhookResponse"
+                    }
+                }
+            }
+        },
         "api.WebhookResponse": {
             "type": "object",
             "properties": {
@@ -5277,12 +7019,52 @@
                 }
             }
         },
+        "auth.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "expire": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "auth.acceptInvitationRequest": {
             "type": "object",
             "required": [
                 "token"
             ],
             "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.forgotPasswordRequest": {
+            "type": "object",
+            "required": [
+                "mailAddress"
+            ],
+            "properties": {
+                "mailAddress": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.resetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "token"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
                 "token": {
                     "type": "string"
                 }
@@ -5300,50 +7082,6 @@
                 },
                 "username": {
                     "type": "string"
-                }
-            }
-        },
-        "authentication.NotificationPreferences": {
-            "type": "object",
-            "properties": {
-                "emailEnabled": {
-                    "type": "boolean"
-                },
-                "mailDigestFrequency": {
-                    "type": "string"
-                },
-                "monthlyWasteReportEnabled": {
-                    "type": "boolean"
-                },
-                "notificationThresholdDays": {
-                    "type": "integer"
-                },
-                "ntfyEnabled": {
-                    "type": "boolean"
-                },
-                "ntfyToken": {
-                    "type": "string"
-                },
-                "ntfyTopic": {
-                    "type": "string"
-                },
-                "ntfyUrl": {
-                    "type": "string"
-                },
-                "telegramBotConfigured": {
-                    "type": "boolean"
-                },
-                "telegramBotToken": {
-                    "type": "string"
-                },
-                "telegramEnabled": {
-                    "type": "boolean"
-                },
-                "telegramLinked": {
-                    "type": "boolean"
-                },
-                "webPushEnabled": {
-                    "type": "boolean"
                 }
             }
         },
@@ -5365,226 +7103,6 @@
                     "type": "string"
                 },
                 "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "authentication.User": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "displayName": {
-                    "type": "string"
-                },
-                "emailVerifiedAt": {
-                    "type": "string"
-                },
-                "household": {
-                    "$ref": "#/definitions/database.Household"
-                },
-                "householdID": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "mailAddress": {
-                    "type": "string"
-                },
-                "notificationPreferences": {
-                    "$ref": "#/definitions/authentication.NotificationPreferences"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "database.AuditLog": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "details": {
-                    "type": "string"
-                },
-                "householdId": {
-                    "description": "HouseholdID is written at record time, never derived at read time. Deriving\nit from the user's *current* household would move a member's historical\nentries into whichever household they have since joined — a cross-tenant\nread. NULL means the entry could not be attributed (failed login for an\nunknown username) and is invisible to every household.",
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "ipAddress": {
-                    "type": "string"
-                },
-                "requestId": {
-                    "type": "string"
-                },
-                "timestamp": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "userId": {
-                    "type": "integer"
-                }
-            }
-        },
-        "database.Household": {
-            "type": "object",
-            "properties": {
-                "adminID": {
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "monthlyWasteGoalCount": {
-                    "description": "nil = disabled",
-                    "type": "integer"
-                },
-                "monthlyWasteGoalPercent": {
-                    "description": "nil = disabled",
-                    "type": "number"
-                },
-                "monthlyWasteGoalType": {
-                    "description": "\"\", \"count\", or \"percent\"",
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "database.HouseholdApplication": {
-            "type": "object",
-            "properties": {
-                "applicantId": {
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "householdId": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "database.HouseholdInvitation": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "expiresAt": {
-                    "type": "string"
-                },
-                "householdId": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "inviterId": {
-                    "type": "integer"
-                },
-                "sendAttempts": {
-                    "type": "integer"
-                },
-                "sentAt": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "database.OpenFoodFactsCache": {
-            "type": "object",
-            "properties": {
-                "barcode": {
-                    "type": "string"
-                },
-                "categories": {
-                    "type": "string"
-                },
-                "co2KgPerKg": {
-                    "type": "number"
-                },
-                "countries": {
-                    "type": "string"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "imageUrl": {
-                    "type": "string"
-                },
-                "productName": {
-                    "type": "string"
-                },
-                "storageHint": {
-                    "type": "string"
-                },
-                "updatedAt": {
                     "type": "string"
                 }
             }
@@ -5688,6 +7206,56 @@
                 }
             }
         },
+        "database.ProductDTOPatch": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "type": "integer"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "countries": {
+                    "type": "string"
+                },
+                "daysAfterOpening": {
+                    "type": "integer"
+                },
+                "expireAt": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "minStockAmount": {
+                    "type": "integer"
+                },
+                "notificationLeadDays": {
+                    "type": "integer"
+                },
+                "openedAt": {
+                    "type": "string"
+                },
+                "priceOverride": {
+                    "type": "number"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
         "database.StorageLocation": {
             "type": "object",
             "properties": {
@@ -5782,13 +7350,13 @@
                 "active": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/database.Product"
+                        "$ref": "#/definitions/api.ExportProductResponse"
                     }
                 },
                 "archived": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/database.Product"
+                        "$ref": "#/definitions/api.ExportProductResponse"
                     }
                 }
             }
@@ -5832,6 +7400,41 @@
                 },
                 "product": {},
                 "triggeredBy": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.WebPushSubscriptionRequest": {
+            "type": "object",
+            "required": [
+                "endpoint",
+                "keys"
+            ],
+            "properties": {
+                "endpoint": {
+                    "type": "string"
+                },
+                "keys": {
+                    "type": "object",
+                    "required": [
+                        "auth",
+                        "p256dh"
+                    ],
+                    "properties": {
+                        "auth": {
+                            "type": "string"
+                        },
+                        "p256dh": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "v1.WebPushVAPIDPublicKeyResponse": {
+            "type": "object",
+            "properties": {
+                "publicKey": {
                     "type": "string"
                 }
             }

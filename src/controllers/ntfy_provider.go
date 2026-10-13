@@ -32,8 +32,8 @@ func (n *NtfyNotificationProvider) IsConfigured() bool {
 }
 
 func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo any) error {
-	recipient, ok := recipientInfo.(models.NotificationRecipientInfo)
-	if !ok {
+	recipient, ok := recipientInfo.(*models.NotificationRecipientInfo)
+	if !ok || recipient == nil {
 		return fmt.Errorf("invalid recipient type for ntfy provider")
 	}
 

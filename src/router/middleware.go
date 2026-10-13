@@ -126,6 +126,11 @@ func ZerologMiddleware(logger *zerolog.Logger) gin.HandlerFunc {
 		// Process the request
 		ctx.Next()
 
+		switch ctx.FullPath() {
+		case util.RouteHealth, util.RouteHealthReady, util.RouteMetrics:
+			return
+		}
+
 		// Read request_id and user_id from context
 		reqID, _ := ctx.Get(util.ContextKeyRequestID)
 		userID, _ := ctx.Get(util.ContextKeyUserID)
@@ -191,7 +196,7 @@ func UnauthorizedFrontendFunc(ctx *gin.Context, code int, message string) {
 	// Get template cache instance from context and fail if not found
 	templateCache, ok := ctx.MustGet("templateCache").(map[string]*template.Template)
 	if !ok {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrTemplateCacheNotFound)
 		return
 	}
 	templates.RenderError(ctx, templateCache, code, message)

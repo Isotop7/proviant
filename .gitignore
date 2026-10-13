@@ -15,6 +15,10 @@
 sonar-report.txt
 sonar-export.json
 
+# CI scan reports
+trivy-report.json
+govulncheck.json
+
 # Go workspace file
 go.work
 

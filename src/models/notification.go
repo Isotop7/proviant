@@ -7,11 +7,11 @@ type NotificationRecipientInfo struct {
 	NtfyEnabled               bool
 	NtfyURL                   string
 	NtfyTopic                 string
-	NtfyToken                 string
+	NtfyToken                 string `json:"-"`
 	TelegramEnabled           bool
-	TelegramChatID            string
-	TelegramBotToken          string
+	TelegramChatID            string `json:"-"`
+	TelegramBotToken          string `json:"-"`
 	NotificationThresholdDays int
 	WebPushEnabled            bool
-	WebPushSubscriptionJSON   string
+	WebPushSubscriptionJSON   string `json:"-"`
 }

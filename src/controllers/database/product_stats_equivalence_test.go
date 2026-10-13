@@ -97,7 +97,11 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 
 	wantExpired := 0
 	for i := range fullRows {
-		if fullRows[i].EffectiveExpireAt().Before(now) {
+		eff := fullRows[i].EffectiveExpireAt()
+		if eff.IsZero() {
+			continue
+		}
+		if eff.Before(now) {
 			wantExpired++
 		}
 	}

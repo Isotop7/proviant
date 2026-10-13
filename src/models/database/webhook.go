@@ -12,7 +12,10 @@ type Webhook struct {
 	URL    string `gorm:"not null" json:"url"`
 	Secret string `gorm:"not null" json:"-"`
 	Events string `gorm:"not null" json:"events"`
-	Active bool   `gorm:"default:true" json:"active"`
+	// No gorm default tag: GORM drops zero-value bools on create when a default
+	// is set, so Active=false would silently persist as true. Handlers set the
+	// value explicitly.
+	Active bool `json:"active"`
 }
 
 type WebhookDeliveryLog struct {

@@ -1031,6 +1031,9 @@ func (r *ProductRepository) MarkProductOpened(productID, userID uint, openedAt t
 	return updated, updated.OpenedAt, true, nil
 }
 
+// GetProductsExpired returns the user's products whose effective expiry lies in
+// the past, matching GetExpiredProductsCount. A zero effective expiry means the
+// product has no expiry set — it is never expired.
 func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product, error) {
 	userProducts, getBulkErr := r.GetUserProductsBulk(userID, 0)
 	if getBulkErr != nil {
@@ -1040,7 +1043,8 @@ func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product
 	var expiredProducts []*database.Product
 	timestamp := time.Now()
 	for idx := range userProducts {
-		if userProducts[idx].EffectiveExpireAt().After(timestamp) {
+		effective := userProducts[idx].EffectiveExpireAt()
+		if !effective.IsZero() && effective.Before(timestamp) {
 			expiredProducts = append(expiredProducts, &userProducts[idx])
 		}
 	}
@@ -1054,7 +1058,7 @@ func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product
 // (opened_at + days_after_opening) has no portable SQL form.
 //
 // The prune deliberately also matches rows with a zero expire_at, which the Go
-// loop below counts as expired exactly as the full-table version did.
+// loop below skips — a product with no expiry set is never expired.
 func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
@@ -1081,7 +1085,8 @@ func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error) {
 
 	count := 0
 	for i := range rows {
-		if database.EffectiveExpireAt(rows[i].ExpireAt, rows[i].OpenedAt, rows[i].DaysAfterOpening).Before(now) {
+		effective := database.EffectiveExpireAt(rows[i].ExpireAt, rows[i].OpenedAt, rows[i].DaysAfterOpening)
+		if !effective.IsZero() && effective.Before(now) {
 			count++
 		}
 	}

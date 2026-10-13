@@ -26,6 +26,11 @@ var (
 	webhookOnce    sync.Once
 )
 
+// webhookDeliveryTimeout bounds a single webhook's full delivery (all retry
+// attempts) and is threaded into the HTTP request, so a slow endpoint cannot
+// pin a goroutine indefinitely.
+const webhookDeliveryTimeout = 10 * time.Second
+
 type WebhookService struct {
 	DB         *gorm.DB
 	HTTPClient *http.Client
@@ -49,43 +54,37 @@ func GetWebhookService() *WebhookService {
 }
 
 func (s *WebhookService) FireEvent(event string, payload map[string]any) {
-	webhooks, err := s.Repo.GetActiveWebhooksByEvent(event)
-	if err != nil {
-		s.Logger.Error().Msgf("Error fetching webhooks for event %s: %v", event, err)
-		return
-	}
-
-	for i := range webhooks {
-		go s.deliverWebhook(&webhooks[i], event, payload)
-	}
+	s.FireEventContext(context.Background(), event, payload)
 }
 
 func (s *WebhookService) FireEventContext(ctx context.Context, event string, payload map[string]any) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
 	webhooks, err := s.Repo.GetActiveWebhooksByEvent(event)
 	if err != nil {
 		s.Logger.Error().Msgf("Error fetching webhooks for event %s: %v", event, err)
 		return
 	}
 
+	// Each delivery gets its own timeout context derived from ctx: one slow
+	// webhook cannot consume a shared budget, and this function returning does
+	// not abort deliveries still in flight. The context is threaded into the
+	// HTTP request, so the timeout actually bounds the delivery.
 	for i := range webhooks {
-		go s.deliverWebhookWithContext(ctx, &webhooks[i], event, payload)
+		go func(webhook *dbModel.Webhook) {
+			dctx, cancel := context.WithTimeout(ctx, webhookDeliveryTimeout)
+			defer cancel()
+			s.deliverWebhook(dctx, webhook, event, payload)
+		}(&webhooks[i])
 	}
 }
 
-func (s *WebhookService) deliverWebhookWithContext(ctx context.Context, webhook *dbModel.Webhook, event string, payload map[string]any) {
+func (s *WebhookService) deliverWebhook(ctx context.Context, webhook *dbModel.Webhook, event string, payload map[string]any) {
 	select {
 	case <-ctx.Done():
 		s.Logger.Warn().Msgf("Webhook delivery timed out for event %s to URL %s", event, webhook.URL)
 		return
 	default:
-		s.deliverWebhook(webhook, event, payload)
 	}
-}
 
-func (s *WebhookService) deliverWebhook(webhook *dbModel.Webhook, event string, payload map[string]any) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		s.Logger.Error().Msgf("Error marshaling webhook payload: %v", err)
@@ -95,7 +94,7 @@ func (s *WebhookService) deliverWebhook(webhook *dbModel.Webhook, event string, 
 	signature := s.computeSignature(webhook.Secret, payloadBytes)
 
 	for attempt := 1; attempt <= 3; attempt++ {
-		statusCode, responseBody, deliveryErr := s.doDelivery(webhook.URL, payloadBytes, signature)
+		statusCode, responseBody, deliveryErr := s.doDelivery(ctx, webhook.URL, payloadBytes, signature)
 
 		deliveryLog := dbModel.WebhookDeliveryLog{
 			WebhookID:    webhook.ID,
@@ -116,14 +115,18 @@ func (s *WebhookService) deliverWebhook(webhook *dbModel.Webhook, event string, 
 		}
 
 		if attempt < 3 {
-			backoff := time.Duration(1<<(attempt-1)) * time.Second
-			time.Sleep(backoff)
+			select {
+			case <-ctx.Done():
+				s.Logger.Warn().Msgf("Webhook delivery cancelled for event %s to URL %s", event, webhook.URL)
+				return
+			case <-time.After(time.Duration(1<<(attempt-1)) * time.Second):
+			}
 		}
 	}
 }
 
-func (s *WebhookService) doDelivery(url string, payload []byte, signature string) (int, string, error) {
-	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
+func (s *WebhookService) doDelivery(ctx context.Context, url string, payload []byte, signature string) (int, string, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payload))
 	if err != nil {
 		return 0, "", err
 	}

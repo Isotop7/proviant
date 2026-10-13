@@ -92,9 +92,16 @@ func TestProductListPerformance10k(t *testing.T) {
 	if len(products) != seedProductsPerHousehold {
 		t.Errorf("expected %d products, got %d", seedProductsPerHousehold, len(products))
 	}
-	// Allow 150ms to account for in-memory sort of 1000 products
-	if elapsed >= 150*time.Millisecond {
-		t.Errorf("product list query exceeded budget: got %v, want <150ms", elapsed)
+	// Allow 150ms to account for in-memory sort of 1000 products. The race
+	// detector inflates the row scan ~6x (raw find alone measures ~180ms
+	// under -race vs ~15ms clean), so a clean-build budget would fail every
+	// `task test` run without any query regression.
+	budget := 150 * time.Millisecond
+	if raceEnabled {
+		budget = 300 * time.Millisecond
+	}
+	if elapsed >= budget {
+		t.Errorf("product list query exceeded budget: got %v, want <%v", elapsed, budget)
 	}
 }
 

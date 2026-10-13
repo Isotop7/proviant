@@ -254,7 +254,7 @@
   margin-bottom: 16px;
 }
 
-// Override Bootstrap's .field-label in main.scss (too generic) for auth context
+// Scoped override: the generic .field-label in _pageChrome.scss is too blunt for auth.
 .login-form-inner .field-label {
   margin-bottom: 0;
   font-size: 11px;

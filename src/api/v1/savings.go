@@ -31,7 +31,7 @@ func GetSavingsStats(ctx *gin.Context, appCtx *AppContext) {
 	stats, err := appCtx.Repos.Savings.GetSavingsStats(householdID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetSavingsStats: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: "Error computing savings statistics"})
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 

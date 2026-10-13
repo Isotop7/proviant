@@ -1,0 +1,248 @@
+// ── Scan ───────────────────────────────────────────────────────────────────
+
+// Hero scan card — dashboard mobile CTA
+.hero-scan-card {
+  position: relative;
+  display: block;
+  padding: 18px;
+  overflow: hidden;
+  text-decoration: none;
+  background: var(--accent);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px oklch(50% .12 162deg / .3);
+  transition: opacity 120ms;
+
+  &:hover {
+    opacity: .92;
+  }
+
+  &::before {
+    position: absolute;
+    top: -16px;
+    right: -16px;
+    width: 100px;
+    height: 100px;
+    content: "";
+    background: var(--hero-decorative);
+    border-radius: 999px;
+  }
+
+  &::after {
+    position: absolute;
+    right: 16px;
+    bottom: -24px;
+    width: 70px;
+    height: 70px;
+    content: "";
+    background: var(--hero-decorative-2);
+    border-radius: 999px;
+  }
+}
+
+.hero-scan-card > div {
+  position: relative;
+}
+
+.hero-label {
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--hero-label-fg);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.hero-title {
+  margin-bottom: 3px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--hero-title-fg);
+}
+.hero-sub {
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--hero-sub-fg);
+}
+.hero-pill {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hero-pill-fg);
+  background: var(--hero-pill-bg);
+  border-radius: 99px;
+}
+
+@media (min-width: 768px) {
+  .hero-scan-card {
+    display: none;
+  }
+}
+
+// Scan page — viewfinder + controls
+.scan-page-header {
+  padding: 24px 16px 16px;
+  text-align: center;
+
+  .scan-page-title {
+    margin-bottom: 4px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--fg);
+    letter-spacing: -.02em;
+  }
+  .scan-page-sub {
+    font-size: 13px;
+    color: var(--fg-3);
+  }
+}
+
+.viewfinder-wrap {
+  max-width: 360px;
+  padding: 0 16px;
+  margin: 0 auto 20px;
+}
+
+.viewfinder {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #0d0d0d;
+  border-radius: 16px;
+}
+
+.viewfinder-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-color: white;
+  border-style: solid;
+
+  &.tl {
+    top: 14px;
+    left: 14px;
+    border-width: 3px 0 0 3px;
+    border-top-left-radius: 4px;
+  }
+  &.tr {
+    top: 14px;
+    right: 14px;
+    border-width: 3px 3px 0 0;
+    border-top-right-radius: 4px;
+  }
+  &.bl {
+    bottom: 14px;
+    left: 14px;
+    border-width: 0 0 3px 3px;
+    border-bottom-left-radius: 4px;
+  }
+  &.br {
+    right: 14px;
+    bottom: 14px;
+    border-width: 0 3px 3px 0;
+    border-bottom-right-radius: 4px;
+  }
+}
+
+.scan-line {
+  position: absolute;
+  right: 10%;
+  left: 10%;
+  display: none;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: scan-sweep 2s ease-in-out infinite;
+
+  &.active {
+    display: block;
+  }
+}
+
+@keyframes scan-sweep {
+  0%,
+  100% {
+    top: 20%;
+  }
+  50% {
+    top: 78%;
+  }
+}
+
+.scan-actions {
+  max-width: 360px;
+  padding: 0 16px;
+  margin: 0 auto;
+}
+
+.scan-divider {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 14px 0;
+  font-size: 12px;
+  color: var(--fg-3);
+
+  &::before,
+  &::after {
+    flex: 1;
+    height: 1px;
+    content: "";
+    background: var(--border);
+  }
+}
+
+// Scan page — batch scan mode
+.batch-thumb-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.batch-thumb-icon {
+  font-size: 22px;
+  color: var(--fg-3);
+}
+
+.batch-tally {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1030;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 16px oklch(0% 0 0deg / 8%);
+}
+
+.batch-tally-info {
+  min-width: 0;
+}
+
+// Reduced motion — respect system preference
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .skeleton-block {
+    animation: none;
+  }
+}
