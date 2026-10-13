@@ -35,8 +35,8 @@ func TestExportProductResponse_DropsGORMInternals(t *testing.T) {
 			t.Errorf("key %q present, want it omitted", key)
 		}
 	}
-	if decoded["ID"] != float64(7) {
-		t.Errorf("ID = %v, want 7", decoded["ID"])
+	if decoded["id"] != float64(7) {
+		t.Errorf("id = %v, want 7", decoded["id"])
 	}
 	if decoded["productName"] != "Oat Milk" {
 		t.Errorf("productName = %v, want Oat Milk", decoded["productName"])
@@ -81,8 +81,8 @@ func TestExportProductResponse_StorageLocationOmitsHouseholdID(t *testing.T) {
 			t.Errorf("storageLocation.%s present, want it omitted", key)
 		}
 	}
-	if decoded.StorageLocation["ID"] != float64(3) {
-		t.Errorf("storageLocation.ID = %v, want 3", decoded.StorageLocation["ID"])
+	if decoded.StorageLocation["id"] != float64(3) {
+		t.Errorf("storageLocation.id = %v, want 3", decoded.StorageLocation["id"])
 	}
 }
 

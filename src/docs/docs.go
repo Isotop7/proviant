@@ -6035,9 +6035,6 @@ const docTemplate = `{
         "api.ExportProductResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "amount": {
                     "type": "integer"
                 },
@@ -6064,6 +6061,9 @@ const docTemplate = `{
                 },
                 "expireAt": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "imageUrl": {
                     "type": "string"
@@ -6109,9 +6109,6 @@ const docTemplate = `{
         "api.HouseholdApplicationResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "applicantId": {
                     "type": "integer"
                 },
@@ -6119,6 +6116,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "householdId": {
+                    "type": "integer"
+                },
+                "id": {
                     "type": "integer"
                 },
                 "status": {
@@ -6129,14 +6129,14 @@ const docTemplate = `{
         "api.HouseholdInvitationResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "email": {
                     "type": "string"
                 },
                 "expiresAt": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "sendAttempts": {
                     "type": "integer"
@@ -6393,9 +6393,6 @@ const docTemplate = `{
         "api.ProductResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "amount": {
                     "type": "integer"
                 },
@@ -6416,6 +6413,9 @@ const docTemplate = `{
                 },
                 "expireAt": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "imageUrl": {
                     "type": "string"
@@ -6671,9 +6671,6 @@ const docTemplate = `{
         "api.ShoppingListItemResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "category": {
                     "type": "string"
                 },
@@ -6681,6 +6678,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "createdBy": {
+                    "type": "integer"
+                },
+                "id": {
                     "type": "integer"
                 },
                 "name": {
@@ -6727,11 +6727,11 @@ const docTemplate = `{
         "api.StorageLocationResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "icon": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"

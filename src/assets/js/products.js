@@ -594,7 +594,7 @@ function fetchFreshProducts(ids) {
             return res.json().then(function (products) {
                 var map = new Map();
                 (Array.isArray(products) ? products : []).forEach(function (p) {
-                    if (p && p.ID) map.set(+p.ID, p);
+                    if (p && p.id) map.set(+p.id, p);
                 });
                 return map;
             });

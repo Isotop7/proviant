@@ -11,9 +11,9 @@ import (
 // same two as added_at and archived_at, so a backup that dropped them would lose
 // when a product was bought and when it was archived. UpdatedAt is the one GORM
 // field left out — the bookkeeping timestamp says nothing to whoever reads the
-// file. ID keeps its uppercase spelling for the same reason ProductResponse does.
+// file. ID is serialized as the lowercase wire field "id".
 type ExportProductResponse struct {
-	ID                   uint                     `json:"ID"`
+	ID                   uint                     `json:"id"`
 	Barcode              string                   `json:"barcode"`
 	ProductName          string                   `json:"productName"`
 	Categories           string                   `json:"categories"`

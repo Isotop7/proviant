@@ -54,7 +54,7 @@ func NewHouseholdUserResponses[T authentication.User | *authentication.User](use
 
 // StorageLocationResponse is the client-facing view of a storage location.
 type StorageLocationResponse struct {
-	ID        uint   `json:"ID"`
+	ID        uint   `json:"id"`
 	Name      string `json:"name"`
 	Icon      string `json:"icon"`
 	SortOrder int    `json:"sortOrder"`
@@ -141,10 +141,10 @@ func NewAuditLogResponses[T dbModel.AuditLog | *dbModel.AuditLog](logs []T) []Au
 // Dockerfiles install tzdata because an unresolvable zone falls back to UTC.
 const productLabelTimeFormat = "2006-01-02 15:04:05"
 
-// ProductResponse is the client-facing view of a product. ID keeps its uppercase
-// spelling; the lowercase rename is tracked in #407.
+// ProductResponse is the client-facing view of a product. ID is serialized as
+// the lowercase wire field "id".
 type ProductResponse struct {
-	ID                   uint                     `json:"ID"`
+	ID                   uint                     `json:"id"`
 	Barcode              string                   `json:"barcode"`
 	ProductName          string                   `json:"productName"`
 	Categories           string                   `json:"categories"`
@@ -256,7 +256,7 @@ func NewLabelledProductResponses[T dbModel.Product | *dbModel.Product](products 
 
 // ShoppingListItemResponse is the client-facing view of a shopping list entry.
 type ShoppingListItemResponse struct {
-	ID        uint   `json:"ID"`
+	ID        uint   `json:"id"`
 	ProductID *uint  `json:"productId"`
 	Name      string `json:"name"`
 	Category  string `json:"category"`
@@ -305,7 +305,7 @@ func NewShoppingListItemResponses[T dbModel.ShoppingListItem | *dbModel.Shopping
 
 // HouseholdInvitationResponse is the client-facing view of a pending invitation.
 type HouseholdInvitationResponse struct {
-	ID           uint       `json:"ID"`
+	ID           uint       `json:"id"`
 	Email        string     `json:"email"`
 	Status       string     `json:"status"`
 	ExpiresAt    time.Time  `json:"expiresAt"`
@@ -346,7 +346,7 @@ func newHouseholdInvitationResponse(invitation *dbModel.HouseholdInvitation) Hou
 
 // HouseholdApplicationResponse is the client-facing view of a household application.
 type HouseholdApplicationResponse struct {
-	ID          uint      `json:"ID"`
+	ID          uint      `json:"id"`
 	ApplicantID uint      `json:"applicantId"`
 	HouseholdID uint      `json:"householdId"`
 	Status      string    `json:"status"`

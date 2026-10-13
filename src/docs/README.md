@@ -8623,11 +8623,11 @@ type ExpiryScanResponse struct {
 <a name="ExportProductResponse"></a>
 ## type [ExportProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L15-L39>)
 
-ExportProductResponse is the product shape in a JSON data export. Unlike ProductResponse it keeps createdAt and archivedAt: the CSV export carries the same two as added\_at and archived\_at, so a backup that dropped them would lose when a product was bought and when it was archived. UpdatedAt is the one GORM field left out — the bookkeeping timestamp says nothing to whoever reads the file. ID keeps its uppercase spelling for the same reason ProductResponse does.
+ExportProductResponse is the product shape in a JSON data export. Unlike ProductResponse it keeps createdAt and archivedAt: the CSV export carries the same two as added\_at and archived\_at, so a backup that dropped them would lose when a product was bought and when it was archived. UpdatedAt is the one GORM field left out — the bookkeeping timestamp says nothing to whoever reads the file. ID is serialized as the lowercase wire field "id".
 
 ```go
 type ExportProductResponse struct {
-    ID                   uint                     `json:"ID"`
+    ID                   uint                     `json:"id"`
     Barcode              string                   `json:"barcode"`
     ProductName          string                   `json:"productName"`
     Categories           string                   `json:"categories"`
@@ -8678,7 +8678,7 @@ HouseholdApplicationResponse is the client\-facing view of a household applicati
 
 ```go
 type HouseholdApplicationResponse struct {
-    ID          uint      `json:"ID"`
+    ID          uint      `json:"id"`
     ApplicantID uint      `json:"applicantId"`
     HouseholdID uint      `json:"householdId"`
     Status      string    `json:"status"`
@@ -8702,7 +8702,7 @@ HouseholdInvitationResponse is the client\-facing view of a pending invitation.
 
 ```go
 type HouseholdInvitationResponse struct {
-    ID           uint       `json:"ID"`
+    ID           uint       `json:"id"`
     Email        string     `json:"email"`
     Status       string     `json:"status"`
     ExpiresAt    time.Time  `json:"expiresAt"`
@@ -8935,11 +8935,11 @@ type ProductAmountDTO struct {
 <a name="ProductResponse"></a>
 ## type [ProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L146-L172>)
 
-ProductResponse is the client\-facing view of a product. ID keeps its uppercase spelling; the lowercase rename is tracked in \#407.
+ProductResponse is the client\-facing view of a product. ID is serialized as the lowercase wire field "id".
 
 ```go
 type ProductResponse struct {
-    ID                   uint                     `json:"ID"`
+    ID                   uint                     `json:"id"`
     Barcode              string                   `json:"barcode"`
     ProductName          string                   `json:"productName"`
     Categories           string                   `json:"categories"`
@@ -9129,7 +9129,7 @@ ShoppingListItemResponse is the client\-facing view of a shopping list entry.
 
 ```go
 type ShoppingListItemResponse struct {
-    ID        uint   `json:"ID"`
+    ID        uint   `json:"id"`
     ProductID *uint  `json:"productId"`
     Name      string `json:"name"`
     Category  string `json:"category"`
@@ -9190,7 +9190,7 @@ StorageLocationResponse is the client\-facing view of a storage location.
 
 ```go
 type StorageLocationResponse struct {
-    ID        uint   `json:"ID"`
+    ID        uint   `json:"id"`
     Name      string `json:"name"`
     Icon      string `json:"icon"`
     SortOrder int    `json:"sortOrder"`

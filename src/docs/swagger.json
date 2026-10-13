@@ -6029,9 +6029,6 @@
         "api.ExportProductResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "amount": {
                     "type": "integer"
                 },
@@ -6058,6 +6055,9 @@
                 },
                 "expireAt": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "imageUrl": {
                     "type": "string"
@@ -6103,9 +6103,6 @@
         "api.HouseholdApplicationResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "applicantId": {
                     "type": "integer"
                 },
@@ -6113,6 +6110,9 @@
                     "type": "string"
                 },
                 "householdId": {
+                    "type": "integer"
+                },
+                "id": {
                     "type": "integer"
                 },
                 "status": {
@@ -6123,14 +6123,14 @@
         "api.HouseholdInvitationResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "email": {
                     "type": "string"
                 },
                 "expiresAt": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "sendAttempts": {
                     "type": "integer"
@@ -6387,9 +6387,6 @@
         "api.ProductResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "amount": {
                     "type": "integer"
                 },
@@ -6410,6 +6407,9 @@
                 },
                 "expireAt": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "imageUrl": {
                     "type": "string"
@@ -6665,9 +6665,6 @@
         "api.ShoppingListItemResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "category": {
                     "type": "string"
                 },
@@ -6675,6 +6672,9 @@
                     "type": "boolean"
                 },
                 "createdBy": {
+                    "type": "integer"
+                },
+                "id": {
                     "type": "integer"
                 },
                 "name": {
@@ -6721,11 +6721,11 @@
         "api.StorageLocationResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "icon": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"

@@ -259,8 +259,6 @@ definitions:
     type: object
   api.ExportProductResponse:
     properties:
-      ID:
-        type: integer
       amount:
         type: integer
       archivedAt:
@@ -279,6 +277,8 @@ definitions:
         type: integer
       expireAt:
         type: string
+      id:
+        type: integer
       imageUrl:
         type: string
       isPrivate:
@@ -308,25 +308,25 @@ definitions:
     type: object
   api.HouseholdApplicationResponse:
     properties:
-      ID:
-        type: integer
       applicantId:
         type: integer
       createdAt:
         type: string
       householdId:
         type: integer
+      id:
+        type: integer
       status:
         type: string
     type: object
   api.HouseholdInvitationResponse:
     properties:
-      ID:
-        type: integer
       email:
         type: string
       expiresAt:
         type: string
+      id:
+        type: integer
       sendAttempts:
         type: integer
       sentAt:
@@ -493,8 +493,6 @@ definitions:
     type: object
   api.ProductResponse:
     properties:
-      ID:
-        type: integer
       amount:
         type: integer
       barcode:
@@ -509,6 +507,8 @@ definitions:
         type: integer
       expireAt:
         type: string
+      id:
+        type: integer
       imageUrl:
         type: string
       isPrivate:
@@ -679,13 +679,13 @@ definitions:
     type: object
   api.ShoppingListItemResponse:
     properties:
-      ID:
-        type: integer
       category:
         type: string
       checked:
         type: boolean
       createdBy:
+        type: integer
+      id:
         type: integer
       name:
         type: string
@@ -716,10 +716,10 @@ definitions:
     type: object
   api.StorageLocationResponse:
     properties:
-      ID:
-        type: integer
       icon:
         type: string
+      id:
+        type: integer
       name:
         type: string
       sortOrder:

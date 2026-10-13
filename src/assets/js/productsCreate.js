@@ -201,7 +201,7 @@ function setProductOptionsState(productState, products) {
             // Add new options based on the array
             products.forEach(product => {
                 const option = document.createElement("option");
-                option.value = product.ID; // Set the value to the instance ID
+                option.value = product.id; // Set the value to the instance ID
                 option.textContent = product.label;
                 instanceDropdown.appendChild(option);
             });
@@ -327,7 +327,7 @@ async function loadBatchStorageLocations() {
         if (response.code === 200 && Array.isArray(response.message)) {
             response.message.forEach((location) => {
                 const option = document.createElement('option');
-                option.value = location.ID;
+                option.value = location.id;
                 option.textContent = location.name || location.Name;
                 select.appendChild(option);
             });

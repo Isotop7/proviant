@@ -65,13 +65,13 @@ func TestProductResponse_OmitsGORMInternals(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	for _, key := range []string{"CreatedAt", "UpdatedAt", "DeletedAt", "label"} {
+	for _, key := range []string{"CreatedAt", "UpdatedAt", "DeletedAt", "label", "ID"} {
 		if _, exists := decoded[key]; exists {
 			t.Errorf("key %q present, want it omitted", key)
 		}
 	}
-	if decoded["ID"] != float64(7) {
-		t.Errorf("ID = %v, want 7", decoded["ID"])
+	if decoded["id"] != float64(7) {
+		t.Errorf("id = %v, want 7", decoded["id"])
 	}
 	if decoded["productName"] != "Oat Milk" {
 		t.Errorf("productName = %v, want Oat Milk", decoded["productName"])
@@ -224,13 +224,13 @@ func TestStorageLocationResponse_OmitsGORMInternals(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	for _, key := range []string{"CreatedAt", "UpdatedAt", "DeletedAt", "householdId", "Household"} {
+	for _, key := range []string{"CreatedAt", "UpdatedAt", "DeletedAt", "householdId", "Household", "ID"} {
 		if _, exists := decoded[key]; exists {
 			t.Errorf("key %q present, want it omitted", key)
 		}
 	}
-	if decoded["ID"] != float64(4) {
-		t.Errorf("ID = %v, want 4", decoded["ID"])
+	if decoded["id"] != float64(4) {
+		t.Errorf("id = %v, want 4", decoded["id"])
 	}
 }
 
