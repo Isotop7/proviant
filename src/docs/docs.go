@@ -3999,7 +3999,7 @@ const docTemplate = `{
         },
         "/api/v1/user/notification-preferences": {
             "get": {
-                "description": "Retrieves notification preferences for the current user",
+                "description": "Retrieves notification preferences for the current user; stored secrets are reported as configured flags only",
                 "consumes": [
                     "application/json"
                 ],
@@ -4014,7 +4014,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/authentication.NotificationPreferences"
+                            "$ref": "#/definitions/api.NotificationPreferencesResponse"
                         }
                     },
                     "400": {
@@ -4032,7 +4032,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Updates notification preferences for the current user",
+                "description": "Updates notification preferences for the current user; empty or omitted secret fields keep their stored value and cannot be cleared through this endpoint, while every other field replaces its stored value",
                 "consumes": [
                     "application/json"
                 ],
@@ -4043,6 +4043,17 @@ const docTemplate = `{
                     "user"
                 ],
                 "summary": "Updates a user's notification preferences",
+                "parameters": [
+                    {
+                        "description": "Notification preferences",
+                        "name": "preferences",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.UpdateNotificationPreferencesRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -6269,6 +6280,47 @@ const docTemplate = `{
                 }
             }
         },
+        "api.NotificationPreferencesResponse": {
+            "type": "object",
+            "properties": {
+                "emailEnabled": {
+                    "type": "boolean"
+                },
+                "mailDigestFrequency": {
+                    "type": "string"
+                },
+                "monthlyWasteReportEnabled": {
+                    "type": "boolean"
+                },
+                "notificationThresholdDays": {
+                    "type": "integer"
+                },
+                "ntfyEnabled": {
+                    "type": "boolean"
+                },
+                "ntfyTokenConfigured": {
+                    "type": "boolean"
+                },
+                "ntfyTopic": {
+                    "type": "string"
+                },
+                "ntfyUrl": {
+                    "type": "string"
+                },
+                "telegramBotConfigured": {
+                    "type": "boolean"
+                },
+                "telegramEnabled": {
+                    "type": "boolean"
+                },
+                "telegramLinked": {
+                    "type": "boolean"
+                },
+                "webPushEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
         "api.NotificationsResponse": {
             "type": "object",
             "properties": {
@@ -6737,6 +6789,44 @@ const docTemplate = `{
                 }
             }
         },
+        "api.UpdateNotificationPreferencesRequest": {
+            "type": "object",
+            "properties": {
+                "emailEnabled": {
+                    "type": "boolean"
+                },
+                "mailDigestFrequency": {
+                    "type": "string"
+                },
+                "monthlyWasteReportEnabled": {
+                    "type": "boolean"
+                },
+                "notificationThresholdDays": {
+                    "type": "integer"
+                },
+                "ntfyEnabled": {
+                    "type": "boolean"
+                },
+                "ntfyToken": {
+                    "type": "string"
+                },
+                "ntfyTopic": {
+                    "type": "string"
+                },
+                "ntfyUrl": {
+                    "type": "string"
+                },
+                "telegramBotToken": {
+                    "type": "string"
+                },
+                "telegramEnabled": {
+                    "type": "boolean"
+                },
+                "webPushEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
         "api.UpdateShoppingListItemRequest": {
             "type": "object",
             "properties": {
@@ -6998,50 +7088,6 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
-                }
-            }
-        },
-        "authentication.NotificationPreferences": {
-            "type": "object",
-            "properties": {
-                "emailEnabled": {
-                    "type": "boolean"
-                },
-                "mailDigestFrequency": {
-                    "type": "string"
-                },
-                "monthlyWasteReportEnabled": {
-                    "type": "boolean"
-                },
-                "notificationThresholdDays": {
-                    "type": "integer"
-                },
-                "ntfyEnabled": {
-                    "type": "boolean"
-                },
-                "ntfyToken": {
-                    "type": "string"
-                },
-                "ntfyTopic": {
-                    "type": "string"
-                },
-                "ntfyUrl": {
-                    "type": "string"
-                },
-                "telegramBotConfigured": {
-                    "type": "boolean"
-                },
-                "telegramBotToken": {
-                    "type": "string"
-                },
-                "telegramEnabled": {
-                    "type": "boolean"
-                },
-                "telegramLinked": {
-                    "type": "boolean"
-                },
-                "webPushEnabled": {
-                    "type": "boolean"
                 }
             }
         },

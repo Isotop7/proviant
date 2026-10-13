@@ -36,13 +36,13 @@ type NotificationPreferences struct {
 	NtfyEnabled               bool   `json:"ntfyEnabled" gorm:"default:false"`
 	NtfyURL                   string `json:"ntfyUrl,omitempty"`
 	NtfyTopic                 string `json:"ntfyTopic,omitempty"`
-	NtfyToken                 string `json:"ntfyToken,omitempty"`
+	NtfyToken                 string `json:"-"`
 	NotificationThresholdDays int    `json:"notificationThresholdDays" gorm:"default:0"`
 	MonthlyWasteReportEnabled bool   `json:"monthlyWasteReportEnabled" gorm:"default:false"`
 	TelegramEnabled           bool   `json:"telegramEnabled" gorm:"default:false"`
 	TelegramChatID            string `json:"-"`
 	TelegramLinkToken         string `json:"-"`
-	TelegramBotToken          string `json:"telegramBotToken"`
+	TelegramBotToken          string `json:"-"`
 	TelegramBotUsername       string `json:"-"`
 	TelegramLinked            bool   `json:"telegramLinked" gorm:"-"`
 	TelegramBotConfigured     bool   `json:"telegramBotConfigured" gorm:"-"`

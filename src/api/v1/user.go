@@ -10,6 +10,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/audit"
 	apperrors "codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -130,11 +131,11 @@ func UpdateUserPassword(ctx *gin.Context, appCtx *AppContext) {
 
 // GetUserNotificationPreferences gets a user's notification preferences
 // @Summary			Gets a user's notification preferences
-// @Description		Retrieves notification preferences for the current user
+// @Description		Retrieves notification preferences for the current user; stored secrets are reported as configured flags only
 // @Tags          	user
 // @Accept        	json
 // @Produce       	json
-// @Success       	200  {object}  authentication.NotificationPreferences
+// @Success       	200  {object}  apiModel.NotificationPreferencesResponse
 // @Failure       	400  {object}  api.APIResponse
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user/notification-preferences [get]
@@ -146,31 +147,29 @@ func GetUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	prefs := user.NotificationPreferences
-	prefs.TelegramLinked = prefs.TelegramChatID != ""
-	prefs.TelegramBotConfigured = prefs.TelegramBotToken != ""
-	prefs.TelegramBotToken = ""
-	ctx.JSON(http.StatusOK, prefs)
+	ctx.JSON(http.StatusOK, apiModel.NewNotificationPreferencesResponse(&user.NotificationPreferences))
 }
 
 // UpdateUserNotificationPreferences updates a user's notification preferences
 // @Summary			Updates a user's notification preferences
-// @Description		Updates notification preferences for the current user
+// @Description		Updates notification preferences for the current user; empty or omitted secret fields keep their stored value and cannot be cleared through this endpoint, while every other field replaces its stored value
 // @Tags          	user
 // @Accept        	json
 // @Produce       	json
+// @Param			preferences body apiModel.UpdateNotificationPreferencesRequest true "Notification preferences"
 // @Success       	200  {object}  api.APIResponse
 // @Failure       	400  {object}  api.APIResponse
 // @Failure       	500  {object}  api.APIResponse
 // @Router        	/api/v1/user/notification-preferences [post]
 func UpdateUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext) {
-	var preferences authentication.NotificationPreferences
-	if err := ctx.ShouldBindJSON(&preferences); err != nil {
+	var request apiModel.UpdateNotificationPreferencesRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
 		appCtx.Logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
 		api.RespondError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
+	preferences := request.ToNotificationPreferences()
 	if preferences.NotificationThresholdDays < 0 {
 		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNotificationInvalidThreshold)
 		return
@@ -199,6 +198,9 @@ func UpdateUserNotificationPreferences(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	newToken, tokenChanged := resolveTelegramTokenUpdate(&user, &preferences)
+	resolveNtfyTokenUpdate(&user, &preferences)
+	// Written only by the webpush endpoints, never by this request body.
+	preferences.WebPushSubscriptionJSON = user.NotificationPreferences.WebPushSubscriptionJSON
 
 	oldMailDigestFrequency := user.NotificationPreferences.MailDigestFrequency
 	user.NotificationPreferences = preferences
@@ -289,21 +291,22 @@ func resolveTelegramTokenUpdate(user *authentication.User, prefs *authentication
 		newToken = oldToken
 	}
 	tokenChanged = newToken != oldToken
-	if tokenChanged && newToken == "" {
-		// Token cleared — disable Telegram and wipe linked state.
-		prefs.TelegramEnabled = false
-		prefs.TelegramChatID = ""
-		prefs.TelegramBotUsername = ""
-	} else {
-		// Preserve linking fields — managed by the dedicated link-token endpoint.
-		prefs.TelegramChatID = user.NotificationPreferences.TelegramChatID
-		prefs.TelegramLinkToken = user.NotificationPreferences.TelegramLinkToken
-		if !tokenChanged {
-			prefs.TelegramBotUsername = user.NotificationPreferences.TelegramBotUsername
-		}
+	// Preserve linking fields — managed by the dedicated link-token endpoint.
+	prefs.TelegramChatID = user.NotificationPreferences.TelegramChatID
+	prefs.TelegramLinkToken = user.NotificationPreferences.TelegramLinkToken
+	if !tokenChanged {
+		prefs.TelegramBotUsername = user.NotificationPreferences.TelegramBotUsername
 	}
 	prefs.TelegramBotToken = newToken
 	return
+}
+
+// resolveNtfyTokenUpdate keeps the stored token when the request carries none,
+// so a save cannot wipe a credential the owner did not retype.
+func resolveNtfyTokenUpdate(user *authentication.User, prefs *authentication.NotificationPreferences) {
+	if prefs.NtfyToken == "" {
+		prefs.NtfyToken = user.NotificationPreferences.NtfyToken
+	}
 }
 
 func manageUserTelegramPoller(ctx *gin.Context, userID uint, tokenChanged bool, newToken string) {
