@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.22.0] - 2026-10-13
+
+### Added
+- (dfb9a015): Feat: add readiness probe and Prometheus metrics endpoint
+Closes: #395
+
+
+### CI/CD
+- (b7f88516): Ci: gate prod image builds on trivy scan, promote by digest
+Closes: #393
+- (407a990d): Scan exported image tarball instead of image ref
+
+
+### Changed
+- (8a2c6883): **scss:** Split main.scss into partials
+- (8c0cb622): **scss:** Rename partials to match contents
+- (687eed64): **scss:** Hoist login import to main.scss
+- (397b7835): **scss:** Rename _mobile to _fragments
+- (864b263c): **scss:** Extract base reset to _base
+- (27dfd805): **scss:** Move stray rules to owning partials
+
+
+### Documentation
+- (6b6b2dde): Refresh readme
+- (fc908feb): **scss:** Fix stale .field-label comment
+- (28035d6b): Docs: add missing @Router Swagger annotations
+Closes: #398
+
+
+### Fixed
+- (82162569): Fix(api): stop leaking secrets and GORM internals in responses
+Closes: #396
+
+
+### Miscellaneous
+- (1388215f): Update CHANGELOG.md for v0.21.0
+- (568bd3d8): Condense agent guidelines
+- (ab4dfd90): **scss:** Collapse comment blocks to one line
+- (dfff5189): **scss:** Give every partial a file banner
+
+
+### Security
+- (0b25932f): Security(api)!: stop serializing notification secrets in responses
+Closes: #408
+
+
+### Testing
+- (2526d48e): Test: add coverage for repositories, router, templates and web handlers
+Closes: #392
+- (7991777c): Expand handler and repo coverage, fix expiry and webhook bugsfix
+- (933f1504): Test: add vitest suite for classic script bundles
+Closes: #394
+
+
 ## [0.21.0] - 2026-10-09
 
 ### Added
