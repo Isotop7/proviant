@@ -8,12 +8,10 @@ import { loadClassicScript } from "./helpers/loadScript.js";
  * this is the only load, so exactly one listener exists.
  */
 const PAGE_MARKUP = `
-<span id="weekLabel"></span>
+<span id="monthLabel"></span>
 <select id="inputMealDate"></select>
 <select id="inputMealRecipe"></select>
 <input id="inputMealServings">
-<button id="btnPrevWeek"></button>
-<button id="btnNextWeek"></button>
 <button id="btnAddMeal"></button>
 <button id="btnGenerateShoppingList"></button>
 <div id="mealPlanGrid"></div>
@@ -21,14 +19,8 @@ const PAGE_MARKUP = `
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function toISODate(date) {
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
-}
-
 describe("mealPlan.js click delegation", () => {
-  it("renders the week grid, adds meals and confirms deletions", async () => {
+  it("renders the month grid, adds meals and confirms deletions", async () => {
     const createMealPlan = vi.fn().mockResolvedValue({ code: 201, entry: {} });
     const showConfirm = vi.fn();
     const { exports: captured, realm } = loadClassicScript("mealPlan.js", ["renderMealPlanEntries"], {
@@ -52,8 +44,10 @@ describe("mealPlan.js click delegation", () => {
     doc.dispatchEvent(new realm.Event("DOMContentLoaded"));
     await flush();
 
-    expect(doc.querySelectorAll(".mp-day").length).toBe(7);
-    expect(doc.getElementById("weekLabel").textContent).not.toBe("");
+    const dayNodes = doc.querySelectorAll(".mp-day");
+    expect(dayNodes.length).toBeGreaterThanOrEqual(28);
+    expect(dayNodes.length % 7).toBe(0);
+    expect(doc.getElementById("monthLabel").textContent).not.toBe("");
     expect(doc.getElementById("inputMealRecipe").options.length).toBe(1);
 
     doc.getElementById("inputMealServings").value = "3";
@@ -63,10 +57,9 @@ describe("mealPlan.js click delegation", () => {
     expect(createMealPlan).toHaveBeenCalledTimes(1);
     expect(createMealPlan.mock.calls[0][0]).toMatchObject({ recipeId: 5, servings: 3 });
 
-    const monday = new Date();
-    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    const plannedDate = doc.getElementById("inputMealDate").value;
     captured.renderMealPlanEntries([
-      { id: 11, date: toISODate(monday), recipeId: 5, recipeName: "Soup", servings: 2 },
+      { id: 11, date: plannedDate, recipeId: 5, recipeName: "Soup", servings: 2 },
     ]);
     doc.querySelector("[data-meal-delete]").dispatchEvent(new realm.MouseEvent("click", { bubbles: true }));
     expect(showConfirm).toHaveBeenCalledTimes(1);

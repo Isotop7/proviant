@@ -2712,7 +2712,7 @@ func (s *ProductService) WasteProduct(productID, userID uint) error
 
 
 <a name="RecipeService"></a>
-## type [RecipeService](<https://github.com/Isotop7/proviant/blob/develop/src/services/recipe_service.go#L15-L19>)
+## type [RecipeService](<https://github.com/Isotop7/proviant/blob/develop/src/services/recipe_service.go#L16-L20>)
 
 RecipeService turns saved recipes into bulk consumes.
 
@@ -2723,7 +2723,7 @@ type RecipeService struct {
 ```
 
 <a name="NewRecipeService"></a>
-### func [NewRecipeService](<https://github.com/Isotop7/proviant/blob/develop/src/services/recipe_service.go#L21>)
+### func [NewRecipeService](<https://github.com/Isotop7/proviant/blob/develop/src/services/recipe_service.go#L22>)
 
 ```go
 func NewRecipeService(repos *database.RepositoryContainer, logger *zerolog.Logger) *RecipeService
@@ -2732,7 +2732,7 @@ func NewRecipeService(repos *database.RepositoryContainer, logger *zerolog.Logge
 
 
 <a name="RecipeService.CookRecipe"></a>
-### func \(\*RecipeService\) [CookRecipe](<https://github.com/Isotop7/proviant/blob/develop/src/services/recipe_service.go#L49>)
+### func \(\*RecipeService\) [CookRecipe](<https://github.com/Isotop7/proviant/blob/develop/src/services/recipe_service.go#L50>)
 
 ```go
 func (s *RecipeService) CookRecipe(recipeID uint, servings int, userID uint) (consumed, partial int, errs []string, internalErr error)
@@ -3046,12 +3046,13 @@ const (
     ContextKeyHouseholdID            = "householdID"
 
     // Database query wrappers
-    QueryId               = "id = ?"
-    QueryHouseholdId      = "household_id = ?"
-    QueryUserId           = "user_id = ?"
-    QueryWebhookId        = "webhook_id = ?"
-    WhereDeletedIsNotNull = "deleted_at IS NOT NULL"
-    WhereDeletedIsNull    = "deleted_at IS NULL"
+    QueryId                     = "id = ?"
+    QueryHouseholdId            = "household_id = ?"
+    QueryUserId                 = "user_id = ?"
+    QueryWebhookId              = "webhook_id = ?"
+    WhereDeletedIsNotNull       = "deleted_at IS NOT NULL"
+    WhereDeletedIsNull          = "deleted_at IS NULL"
+    WhereRemovalReasonUnclaimed = "(removal_reason IS NULL OR removal_reason = '')"
 
     // Mail digest
     LabelMailDigest       = "mailDigest"
@@ -5671,7 +5672,7 @@ func (b *BulkOperationError) ProductID() uint
 ProductID exposes which product a bulk operation error refers to, so callers can distinguish failed items from succeeded ones \(the error list is sparse — it only contains failures, not one entry per requested id\).
 
 <a name="CalendarTokenRepository"></a>
-## type [CalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2093-L2095>)
+## type [CalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2098-L2100>)
 
 
 
@@ -5682,7 +5683,7 @@ type CalendarTokenRepository struct {
 ```
 
 <a name="NewCalendarTokenRepository"></a>
-### func [NewCalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2097>)
+### func [NewCalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2102>)
 
 ```go
 func NewCalendarTokenRepository(db *gorm.DB) *CalendarTokenRepository
@@ -5691,7 +5692,7 @@ func NewCalendarTokenRepository(db *gorm.DB) *CalendarTokenRepository
 
 
 <a name="CalendarTokenRepository.Create"></a>
-### func \(\*CalendarTokenRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2123>)
+### func \(\*CalendarTokenRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2128>)
 
 ```go
 func (r *CalendarTokenRepository) Create(ct *authentication.CalendarToken) error
@@ -5700,7 +5701,7 @@ func (r *CalendarTokenRepository) Create(ct *authentication.CalendarToken) error
 
 
 <a name="CalendarTokenRepository.DeleteByUserID"></a>
-### func \(\*CalendarTokenRepository\) [DeleteByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2113>)
+### func \(\*CalendarTokenRepository\) [DeleteByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2118>)
 
 ```go
 func (r *CalendarTokenRepository) DeleteByUserID(userID uint) error
@@ -5709,7 +5710,7 @@ func (r *CalendarTokenRepository) DeleteByUserID(userID uint) error
 
 
 <a name="CalendarTokenRepository.GetByToken"></a>
-### func \(\*CalendarTokenRepository\) [GetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2101>)
+### func \(\*CalendarTokenRepository\) [GetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2106>)
 
 ```go
 func (r *CalendarTokenRepository) GetByToken(token string) (authentication.CalendarToken, error)
@@ -5718,7 +5719,7 @@ func (r *CalendarTokenRepository) GetByToken(token string) (authentication.Calen
 
 
 <a name="CalendarTokenRepository.GetByUserID"></a>
-### func \(\*CalendarTokenRepository\) [GetByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2117>)
+### func \(\*CalendarTokenRepository\) [GetByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2122>)
 
 ```go
 func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.CalendarToken, error)
@@ -5727,7 +5728,7 @@ func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.Calen
 
 
 <a name="CalendarTokenRepository.Update"></a>
-### func \(\*CalendarTokenRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2127>)
+### func \(\*CalendarTokenRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2132>)
 
 ```go
 func (r *CalendarTokenRepository) Update(ct *authentication.CalendarToken) error
@@ -5736,7 +5737,7 @@ func (r *CalendarTokenRepository) Update(ct *authentication.CalendarToken) error
 
 
 <a name="CalendarTokenRepositoryInterface"></a>
-## type [CalendarTokenRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2083-L2089>)
+## type [CalendarTokenRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2088-L2094>)
 
 
 
@@ -6763,7 +6764,7 @@ func NewProductRepository(db *gorm.DB) *ProductRepository
 
 
 <a name="ProductRepository.BulkConsumeProducts"></a>
-### func \(\*ProductRepository\) [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2063>)
+### func \(\*ProductRepository\) [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2068>)
 
 ```go
 func (r *ProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
@@ -6781,7 +6782,7 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) 
 
 
 <a name="ProductRepository.BulkWasteProducts"></a>
-### func \(\*ProductRepository\) [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2073>)
+### func \(\*ProductRepository\) [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2078>)
 
 ```go
 func (r *ProductRepository) BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
@@ -6799,13 +6800,13 @@ func (r *ProductRepository) ConsumeProduct(productID, userID uint) error
 
 
 <a name="ProductRepository.ConsumeProductPartial"></a>
-### func \(\*ProductRepository\) [ConsumeProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1953>)
+### func \(\*ProductRepository\) [ConsumeProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1958>)
 
 ```go
 func (r *ProductRepository) ConsumeProductPartial(product *database.Product, amount int) (consumed int, fullyConsumed bool, err error)
 ```
 
-ConsumeProductPartial reduces an active product's amount by the given amount, based on the product state read by the caller. A partial reduce is a single guarded UPDATE on the still\-active row scoped to the product's household. A full consume \(amount of 0 or negative, or one that covers the whole stock\) re\-reads the current amount inside a transaction before deciding, so a stale caller read never archives more than actually exists: if the concurrent reduction still leaves more than the requested amount, it falls back to a partial reduce, otherwise it soft\-deletes with RemovalReasonConsumed and returns the current amount. fullyConsumed reports whether the product was archived. Both transactional writes carry an updated\_at optimistic\-lock precondition, so any concurrent row change \(amount, opened\_at, removal\_reason\) fails the guarded write. When a guarded precondition fails \(the row changed between read and write inside the transaction\) the transaction is retried once with a fresh read; only a second failure surfaces ErrProductConcurrentModification instead of silently applying.
+ConsumeProductPartial reduces an active product's amount by the given amount, based on the product state read by the caller. A partial reduce is a single guarded UPDATE on the still\-active row scoped to the product's household. A full consume \(amount of 0 or negative, or one that covers the whole stock\) re\-reads the current amount inside a transaction before deciding, so a stale caller read never archives more than actually exists: if the concurrent reduction still leaves more than the requested amount, it falls back to a partial reduce, otherwise it soft\-deletes with RemovalReasonConsumed and returns the current amount. fullyConsumed reports whether the product was archived. The guarded writes compare data values only \(amount, removal\_reason, deleted\_at\) — never updated\_at: a timestamp that was not round\-tripped through the GORM driver \(NULL on legacy rows, or text written by raw SQL\) never matches the bound form and fails every guarded write with ErrProductConcurrentModification. The removal\_reason precondition is the double\-apply guard: once one request claims the row \(consumed or wasted\), a second full consume cannot archive it again and duplicate the savings/activity entries. When a guarded precondition fails \(the row changed between read and write inside the transaction\) the transaction is retried once with a fresh read; only a second failure surfaces ErrProductConcurrentModification instead of silently applying.
 
 <a name="ProductRepository.CreateOpenFoodFactsCache"></a>
 ### func \(\*ProductRepository\) [CreateOpenFoodFactsCache](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1489>)
@@ -6902,7 +6903,7 @@ func (r *ProductRepository) GetArchivedProductsCount(userID uint) (int, error)
 GetArchivedProductsCount returns how many products the household has archived. It is the count\-only sibling of GetUserArchivedProductsBulk, which materialises every archived row \(and preloads StorageLocation\) for callers that only need a number.
 
 <a name="ProductRepository.GetConsumedSamples"></a>
-### func \(\*ProductRepository\) [GetConsumedSamples](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2131>)
+### func \(\*ProductRepository\) [GetConsumedSamples](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2136>)
 
 ```go
 func (r *ProductRepository) GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error)
@@ -7348,7 +7349,7 @@ func (r *ProductRepository) UserHasProductAccess(userID uint, productID int) boo
 
 
 <a name="ProductRepository.WasteProduct"></a>
-### func \(\*ProductRepository\) [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2037>)
+### func \(\*ProductRepository\) [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2042>)
 
 ```go
 func (r *ProductRepository) WasteProduct(productID, userID uint) error
@@ -14185,7 +14186,7 @@ static implements "constants" used in proviant
 ```go
 const (
     // Version is the current proviant version
-    Version = "v0.19.0"
+    Version = "v0.23.0"
 
     // TokenRealm is the realm of tokens
     TokenRealm = "proviant"

@@ -2,7 +2,7 @@
 <div class="page-header">
     <div>
         <h1 class="page-header-title">Meal Plan</h1>
-        <p class="page-header-subtitle">Plan the week and generate your shopping list</p>
+        <p class="page-header-subtitle">Plan a full month and generate your shopping list</p>
     </div>
     <button class="btn btn-proviant-secondary d-none d-md-flex align-items-center gap-2" id="btnGenerateShoppingList" type="button">
         <i class="bi bi-cart-plus"></i> Generate shopping list
@@ -10,13 +10,16 @@
 </div>
 
 {{ if .HasHousehold }}
-<div class="mp-week-nav mb-3">
-    <button class="btn btn-proviant-secondary" id="btnPrevWeek" type="button" aria-label="Previous week">
-        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+<div class="d-flex align-items-center gap-2 mb-3">
+    <span id="monthLabel" class="mp-range-label me-auto" aria-live="polite"></span>
+    <button class="btn btn-proviant-secondary" id="btnPrevMonth" type="button" aria-label="Load previous month">
+        <i class="bi bi-chevron-left" aria-hidden="true"></i> Previous
     </button>
-    <span id="weekLabel" class="mp-week-label" aria-live="polite"></span>
-    <button class="btn btn-proviant-secondary" id="btnNextWeek" type="button" aria-label="Next week">
-        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+    <button class="btn btn-proviant-secondary" id="btnTodayMonth" type="button" aria-label="Jump to the current month">
+        Today
+    </button>
+    <button class="btn btn-proviant-secondary" id="btnNextMonth" type="button" aria-label="Load next month">
+        Next <i class="bi bi-chevron-right" aria-hidden="true"></i>
     </button>
 </div>
 
@@ -31,7 +34,7 @@
     </div>
 </div>
 
-<div id="mealPlanGrid" class="mp-grid" aria-live="polite">
+<div id="mealPlanGrid" class="mp-weeks" aria-live="polite">
     <div class="loading-state">
         <div class="spinner-border text-secondary-custom" role="status">
             <span class="visually-hidden">Loading...</span>

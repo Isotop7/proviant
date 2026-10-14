@@ -1,4 +1,56 @@
+function updateScrollBounds() {
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    atTop = window.scrollY <= 8;
+    atBottom = window.scrollY >= maxScroll - 8;
+}
+
 document.addEventListener("DOMContentLoaded", function () {
+    const container = document.getElementById("mealPlanGrid");
+    if (container) {
+        let wheelBuffer = 0;
+        let wheelTimer = null;
+
+        updateScrollBounds();
+
+        window.addEventListener("scroll", updateScrollBounds, { passive: true });
+        window.addEventListener("resize", updateScrollBounds, { passive: true });
+
+        window.addEventListener("wheel", function (e) {
+            if (isNavigating || Date.now() < navCooldownUntil) return;
+            updateScrollBounds();
+            const deltaModeFactor = e.deltaMode === 1 ? 40 : (e.deltaMode === 2 ? window.innerHeight || 800 : 1);
+            const delta = (Number(e.deltaY) || 0) * deltaModeFactor;
+            if (!(atBottom || atTop)) {
+                wheelBuffer = 0;
+                return;
+            }
+            if (atBottom && delta > 0) {
+                wheelBuffer += delta;
+                if (wheelTimer) clearTimeout(wheelTimer);
+                wheelTimer = setTimeout(function () { wheelBuffer = 0; }, 1500);
+                const threshold = 2500;
+                if (wheelBuffer >= threshold) {
+                    wheelBuffer = 0;
+                    navCooldownUntil = Date.now() + 1000;
+                    loadNextWindow();
+                }
+                return;
+            }
+            if (atTop && delta < 0) {
+                wheelBuffer += delta;
+                if (wheelTimer) clearTimeout(wheelTimer);
+                wheelTimer = setTimeout(function () { wheelBuffer = 0; }, 1500);
+                const threshold = 2500;
+                if (wheelBuffer <= -threshold) {
+                    wheelBuffer = 0;
+                    navCooldownUntil = Date.now() + 1000;
+                    loadPreviousWindow();
+                }
+                return;
+            }
+            wheelBuffer = 0;
+        }, { passive: true });
+    }
     loadMealPlanRecipes();
     loadMealPlanEntries();
 });
@@ -7,16 +59,6 @@ document.addEventListener("click", function (e) {
     const target = e.target;
     if (!target || !target.closest) return;
 
-    if (target.closest("#btnPrevWeek")) {
-        e.preventDefault();
-        shiftMealPlanWeek(-7);
-        return;
-    }
-    if (target.closest("#btnNextWeek")) {
-        e.preventDefault();
-        shiftMealPlanWeek(7);
-        return;
-    }
     if (target.closest("#btnAddMeal")) {
         e.preventDefault();
         createMealPlanEntry();
@@ -43,7 +85,77 @@ document.addEventListener("click", function (e) {
     if (deleteButton) {
         e.preventDefault();
         confirmDeletePlannedMeal(deleteButton.getAttribute("data-meal-delete"), deleteButton.getAttribute("data-recipe-name") || "this meal");
+        return;
     }
+    if (target.closest("#btnPrevMonth")) {
+        e.preventDefault();
+        loadPreviousWindow();
+        return;
+    }
+    if (target.closest("#btnNextMonth")) {
+        e.preventDefault();
+        loadNextWindow();
+        return;
+    }
+    if (target.closest("#btnTodayMonth")) {
+        e.preventDefault();
+        resetToCurrentWindow();
+        return;
+    }
+});
+
+document.addEventListener("dragstart", function (e) {
+    if (!e.target || !e.target.closest) return;
+    if (e.target.closest("button, select, input")) {
+        e.preventDefault();
+        return;
+    }
+    const entry = e.target.closest(".mp-entry");
+    if (!entry) return;
+    if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", entry.getAttribute("data-meal-id") || "");
+    }
+    entry.classList.add("mp-dragging");
+});
+
+document.addEventListener("dragend", function (e) {
+    const entry = e.target && e.target.closest ? e.target.closest(".mp-entry") : null;
+    if (entry) entry.classList.remove("mp-dragging");
+    document.querySelectorAll(".mp-day.mp-drop-target").forEach(function (day) {
+        day.classList.remove("mp-drop-target");
+    });
+});
+
+document.addEventListener("dragover", function (e) {
+    const day = e.target && e.target.closest ? e.target.closest(".mp-day") : null;
+    if (!day) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    document.querySelectorAll(".mp-day.mp-drop-target").forEach(function (target) {
+        if (target !== day) target.classList.remove("mp-drop-target");
+    });
+    day.classList.add("mp-drop-target");
+});
+
+document.addEventListener("dragleave", function (e) {
+    const day = e.target && e.target.closest ? e.target.closest(".mp-day") : null;
+    if (!day || day.contains(e.relatedTarget)) return;
+    day.classList.remove("mp-drop-target");
+});
+
+document.addEventListener("drop", function (e) {
+    const day = e.target && e.target.closest ? e.target.closest(".mp-day") : null;
+    if (!day) return;
+    e.preventDefault();
+    day.classList.remove("mp-drop-target");
+    const mealID = e.dataTransfer ? e.dataTransfer.getData("text/plain") : "";
+    const targetDate = day.getAttribute("data-date");
+    if (!mealID || !targetDate) return;
+    const entry = document.getElementById("meal-" + parseInt(mealID, 10));
+    const currentDay = entry && entry.closest ? entry.closest(".mp-day") : null;
+    if (currentDay && currentDay.getAttribute("data-date") === targetDate) return;
+    movePlannedMeal(parseInt(mealID, 10), targetDate);
 });
 
 document.addEventListener("change", function (e) {
@@ -54,7 +166,11 @@ document.addEventListener("change", function (e) {
     }
 });
 
-let mealPlanWeekStart = startOfWeek(new Date());
+let currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let isNavigating = false;
+let navCooldownUntil = 0;
+let atTop = true;
+let atBottom = false;
 let mealPlanRecipes = [];
 
 function escapeMealHtml(text) {
@@ -70,37 +186,31 @@ function toISODate(date) {
     return `${date.getFullYear()}-${month}-${day}`;
 }
 
-function startOfWeek(date) {
-    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const weekday = (start.getDay() + 6) % 7;
-    start.setDate(start.getDate() - weekday);
-    return start;
-}
-
 function addDays(date, days) {
     const next = new Date(date);
     next.setDate(next.getDate() + days);
     return next;
 }
 
-function shiftMealPlanWeek(days) {
-    mealPlanWeekStart = addDays(mealPlanWeekStart, days);
-    loadMealPlanEntries();
-}
-
-function weekDays() {
+function planDays() {
     const days = [];
-    for (let i = 0; i < 7; i++) {
-        days.push(addDays(mealPlanWeekStart, i));
+    const daysInMonth = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth() + 1, 0).getDate();
+    const firstDay = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth(), 1);
+    const offset = (firstDay.getDay() + 6) % 7;
+    const monthStartGrid = addDays(firstDay, -offset);
+    const lastDay = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth(), daysInMonth);
+    const tailOffset = (7 - lastDay.getDay()) % 7;
+    const monthEndGrid = addDays(lastDay, tailOffset);
+    const totalDays = Math.round((monthEndGrid - monthStartGrid) / 86400000) + 1;
+    for (let i = 0; i < totalDays; i++) {
+        days.push(addDays(monthStartGrid, i));
     }
     return days;
 }
 
-function weekRangeLabel() {
-    const days = weekDays();
-    const startLabel = days[0].toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    const endLabel = days[6].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-    return `${startLabel} – ${endLabel}`;
+function planRange() {
+    const days = planDays();
+    return { from: toISODate(days[0]), to: toISODate(days[days.length - 1]) };
 }
 
 async function loadMealPlanRecipes() {
@@ -124,26 +234,39 @@ async function loadMealPlanRecipes() {
 function renderMealPlanDaySelect() {
     const select = document.getElementById("inputMealDate");
     if (!select) return;
-    select.innerHTML = weekDays().map(function (day) {
+    const previousValue = select.value;
+    const days = planDays();
+    const isoDays = days.map(toISODate);
+    select.innerHTML = days.map(function (day, index) {
         const label = day.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-        return `<option value="${toISODate(day)}">${escapeMealHtml(label)}</option>`;
+        return `<option value="${isoDays[index]}">${escapeMealHtml(label)}</option>`;
     }).join("");
+    const todayISO = toISODate(new Date());
+    const firstOfMonthISO = toISODate(currentMonthStart);
+    if (previousValue && isoDays.indexOf(previousValue) !== -1) {
+        select.value = previousValue;
+    } else if (isoDays.indexOf(todayISO) !== -1) {
+        select.value = todayISO;
+    } else if (isoDays.indexOf(firstOfMonthISO) !== -1) {
+        select.value = firstOfMonthISO;
+    }
 }
 
 async function loadMealPlanEntries() {
     const grid = document.getElementById("mealPlanGrid");
     if (!grid) return;
-    const label = document.getElementById("weekLabel");
-    if (label) label.textContent = weekRangeLabel();
+    const label = document.getElementById("monthLabel");
+    if (label) label.textContent = currentMonthStart.toLocaleDateString(undefined, { month: "long", year: "numeric" });
     renderMealPlanDaySelect();
     try {
-        const res = await proviant.getMealPlans(toISODate(weekDays()[0]), toISODate(weekDays()[6]));
+        const range = planRange();
+        const res = await proviant.getMealPlans(range.from, range.to);
         if (res.code !== 200) {
             proviant.showFeedback("error", "Meal plan not loaded", res.message || `Request failed with status ${res.code}`);
             renderMealPlanEntries([]);
             return;
         }
-        renderMealPlanEntries(res.entries);
+        renderMealPlanEntries(Array.isArray(res.entries) ? res.entries : []);
     } catch (error) {
         proviant.showFeedback("error", "Meal plan not loaded", error.message);
         renderMealPlanEntries([]);
@@ -151,14 +274,14 @@ async function loadMealPlanEntries() {
 }
 
 function mealPlanEntryHtml(entry, day) {
-    const days = weekDays();
+    const days = planDays();
     const moveOptions = days.map(function (candidate) {
         const selected = toISODate(candidate) === toISODate(day) ? " selected" : "";
-        const label = candidate.toLocaleDateString(undefined, { weekday: "short" });
+        const label = candidate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
         return `<option value="${toISODate(candidate)}"${selected}>${escapeMealHtml(label)}</option>`;
     }).join("");
     return `
-        <div class="mp-entry" id="meal-${entry.id}" data-meal-servings="${entry.servings}">
+        <div class="mp-entry" id="meal-${entry.id}" data-meal-id="${entry.id}" data-meal-servings="${entry.servings}" draggable="true">
             <div class="mp-entry-name">${escapeMealHtml(entry.recipeName || `Recipe #${entry.recipeId}`)}</div>
             <div class="mp-entry-meta" id="meal-servings-${entry.id}">${entry.servings} serving(s)</div>
             <div class="mp-entry-actions">
@@ -182,24 +305,45 @@ function mealPlanEntryHtml(entry, day) {
 function renderMealPlanEntries(entries) {
     const grid = document.getElementById("mealPlanGrid");
     if (!grid) return;
-    const days = weekDays();
+    const allDays = planDays();
     const todayISO = toISODate(new Date());
-    grid.innerHTML = days.map(function (day) {
-        const dayISO = toISODate(day);
-        const dayEntries = (entries || []).filter(function (entry) {
-            return entry.date === dayISO;
-        });
-        const header = day.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+    const weeks = [];
+    for (let offset = 0; offset < allDays.length; offset += 7) {
+        weeks.push(allDays.slice(offset, offset + 7));
+    }
+    grid.innerHTML = weeks.map(function (weekDays, weekIndex) {
+        const weekStart = weekDays[0];
+        const weekEnd = weekDays[weekDays.length - 1];
+        const weekLabel = `${weekStart.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${weekEnd.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+        const dayCards = weekDays.map(function (day) {
+            const dayISO = toISODate(day);
+            const dayEntries = (entries || []).filter(function (entry) {
+                return entry.date === dayISO;
+            });
+            const header = day.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+            const isToday = dayISO === todayISO;
+            const isPast = dayISO < todayISO;
+            const isOtherMonth = day.getMonth() !== currentMonthStart.getMonth() || day.getFullYear() !== currentMonthStart.getFullYear();
+            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+            return `
+                <section class="mp-day${isToday ? " mp-day-current" : ""}${isPast || isOtherMonth ? " mp-day-past" : ""}${isWeekend ? " mp-day-weekend" : ""}" data-date="${dayISO}" aria-label="${escapeMealHtml(header)}">
+                    <div class="mp-day-header">
+                        <span class="${isToday ? "mp-day-today" : ""}">${escapeMealHtml(header)}</span>
+                    </div>
+                    ${dayEntries.length > 0
+                        ? dayEntries.map(function (entry) { return mealPlanEntryHtml(entry, day); }).join("")
+                        : '<div class="mp-entry-empty">—</div>'}
+                </section>`;
+        }).join("");
         return `
-            <section class="mp-day" aria-label="${escapeMealHtml(header)}">
-                <div class="mp-day-header">
-                    <span class="${dayISO === todayISO ? "mp-day-today" : ""}">${escapeMealHtml(header)}</span>
+            <section class="mp-week${weekIndex % 2 === 1 ? " mp-week-alt" : ""}" aria-label="${escapeMealHtml(weekLabel)}">
+                <h2 class="mp-week-header">${escapeMealHtml(weekLabel)}</h2>
+                <div class="mp-grid">
+                    ${dayCards}
                 </div>
-                ${dayEntries.length > 0
-                    ? dayEntries.map(function (entry) { return mealPlanEntryHtml(entry, day); }).join("")
-                    : '<div class="mp-entry-empty">No meals planned</div>'}
             </section>`;
     }).join("");
+    updateScrollBounds();
 }
 
 async function createMealPlanEntry() {
@@ -258,6 +402,49 @@ async function changeMealServings(button) {
     }
 }
 
+function resetMonthView() {
+    if (!/jsdom/i.test((navigator && navigator.userAgent) || "")) {
+        window.scrollTo(0, 0);
+    }
+    updateScrollBounds();
+}
+
+async function loadPreviousWindow() {
+    if (isNavigating) return;
+    isNavigating = true;
+    try {
+        currentMonthStart = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth() - 1, 1);
+        await loadMealPlanEntries();
+        resetMonthView();
+    } finally {
+        isNavigating = false;
+    }
+}
+
+async function loadNextWindow() {
+    if (isNavigating) return;
+    isNavigating = true;
+    try {
+        currentMonthStart = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth() + 1, 1);
+        await loadMealPlanEntries();
+        resetMonthView();
+    } finally {
+        isNavigating = false;
+    }
+}
+
+async function resetToCurrentWindow() {
+    if (isNavigating) return;
+    isNavigating = true;
+    try {
+        currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        await loadMealPlanEntries();
+        resetMonthView();
+    } finally {
+        isNavigating = false;
+    }
+}
+
 async function movePlannedMeal(mealID, date) {
     try {
         const res = await proviant.updateMealPlan(parseInt(mealID, 10), { date: date });
@@ -306,7 +493,8 @@ function confirmCookPlannedMeal(mealID, recipeName) {
 
 async function cookPlannedMeal(mealID) {
     try {
-        const listRes = await proviant.getMealPlans(toISODate(weekDays()[0]), toISODate(weekDays()[6]));
+        const range = planRange();
+        const listRes = await proviant.getMealPlans(range.from, range.to);
         const entry = (listRes.entries || []).find(function (candidate) {
             return candidate.id === parseInt(mealID, 10);
         });
@@ -339,7 +527,12 @@ async function cookPlannedMeal(mealID) {
 
 async function generateShoppingList() {
     try {
-        const res = await proviant.generateShoppingListFromMealPlan(toISODate(weekDays()[0]), toISODate(weekDays()[6]));
+        const firstDayISO = toISODate(currentMonthStart);
+        const lastDay = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth() + 1, 0);
+        const lastDayISO = toISODate(lastDay);
+        const todayISO = toISODate(new Date());
+        const fromISO = firstDayISO < todayISO && todayISO <= lastDayISO ? todayISO : firstDayISO;
+        const res = await proviant.generateShoppingListFromMealPlan(fromISO, lastDayISO);
         if (res.code !== 200) {
             proviant.showFeedback("error", "Shopping list not generated", res.message || `Request failed with status ${res.code}`);
             return;
