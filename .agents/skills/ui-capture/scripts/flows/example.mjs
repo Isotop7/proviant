@@ -2,8 +2,8 @@
 //
 // Run it with:
 //
-//   node .kilo/skills/ui-capture/scripts/uicapture.mjs \
-//     --script .kilo/skills/ui-capture/scripts/flows/example.mjs
+//   node .agents/skills/ui-capture/scripts/uicapture.mjs \
+//     --script .agents/skills/ui-capture/scripts/flows/example.mjs
 //
 // The flow receives helpers only and must import nothing, so the same file
 // runs unchanged under the Playwright container's Node and under host Node.

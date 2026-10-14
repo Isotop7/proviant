@@ -28,7 +28,7 @@
 
 ## Preview
 
-<!-- ui-capture-preview:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->
+<!-- ui-capture-preview:begin — regenerate with `node .agents/skills/ui-capture/scripts/uicapture.mjs --publish` -->
 
 **Dashboard — metric tiles, waste rate donut, category breakdown and expiry trend charts**
 
@@ -359,7 +359,7 @@ Documentation is generated with `gomarkdoc` and `swagger`:
 
 ## Screenshots
 
-<!-- ui-capture:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->
+<!-- ui-capture:begin — regenerate with `node .agents/skills/ui-capture/scripts/uicapture.mjs --publish` -->
 
 <table>
   <tr>
@@ -389,8 +389,52 @@ Documentation is generated with `gomarkdoc` and `swagger`:
     <th>Mobile</th>
   </tr>
   <tr>
+    <td width="50%"><img src="./screenshots/products-expired.png" alt="Products (expired) — filter view of past-expiry items — desktop"></td>
+    <td width="25%"><img src="./screenshots/products-expired_mobile.png" alt="Products (expired) — filter view of past-expiry items — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/products-consumed.png" alt="Products (consumed) — filter view of archived items — desktop"></td>
+    <td width="25%"><img src="./screenshots/products-consumed_mobile.png" alt="Products (consumed) — filter view of archived items — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/products-grid.png" alt="Products (grid) — grid view of your inventory — desktop"></td>
+    <td width="25%"><img src="./screenshots/products-grid_mobile.png" alt="Products (grid) — grid view of your inventory — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
     <td width="50%"><img src="./screenshots/product-detail.png" alt="Product detail — expiry status, actions and history — desktop"></td>
     <td width="25%"><img src="./screenshots/product-detail_mobile.png" alt="Product detail — expiry status, actions and history — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/product-edit.png" alt="Product edit — adjust expiry, stock, and details — desktop"></td>
+    <td width="25%"><img src="./screenshots/product-edit_mobile.png" alt="Product edit — adjust expiry, stock, and details — mobile"></td>
   </tr>
 </table>
 
@@ -424,6 +468,17 @@ Documentation is generated with `gomarkdoc` and `swagger`:
   <tr>
     <td width="50%"><img src="./screenshots/recipe.png" alt="Recipes — suggestions built from the products you already have — desktop"></td>
     <td width="25%"><img src="./screenshots/recipe_mobile.png" alt="Recipes — suggestions built from the products you already have — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/mealplan.png" alt="Meal plan — monthly calendar for planning saved recipes — desktop"></td>
+    <td width="25%"><img src="./screenshots/mealplan_mobile.png" alt="Meal plan — monthly calendar for planning saved recipes — mobile"></td>
   </tr>
 </table>
 
@@ -471,9 +526,51 @@ Documentation is generated with `gomarkdoc` and `swagger`:
   </tr>
 </table>
 
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/user.png" alt="User — profile and household — desktop"></td>
+    <td width="25%"><img src="./screenshots/user_mobile.png" alt="User — profile and household — mobile"></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th>Desktop</th>
+    <th>Mobile</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/not-found.png" alt="Not found — error page — desktop"></td>
+    <td width="25%"><img src="./screenshots/not-found_mobile.png" alt="Not found — error page — mobile"></td>
+  </tr>
+</table>
+
 **Sign in**
 
 ![Sign in](./screenshots/login.png)
+
+**Forgot password**
+
+![Forgot password](./screenshots/forgot-password.png)
+
+**Reset password**
+
+![Reset password](./screenshots/reset-password.png)
+
+**Accept invite**
+
+![Accept invite](./screenshots/invite-accept.png)
+
+**Verify email**
+
+![Verify email](./screenshots/verify-email.png)
+
+**Unsubscribe**
+
+![Unsubscribe](./screenshots/unsubscribe.png)
 
 <!-- ui-capture:end -->
 

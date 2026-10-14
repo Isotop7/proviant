@@ -406,14 +406,18 @@ async function main() {
   try {
     if (PUBLISH) {
       // Anonymous screens first: /web/auth redirects a logged-in user to /web,
-      // so the login card only exists before anything authenticates.
+      // so these cards only exist before anything authenticates. Each enabled
+      // variant (desktop, and mobile where the screen's `mobile` flag is set)
+      // is shot in its own session before moving on.
       const anonymous = PUBLISH_SCREENS.filter((entry) => entry.anonymous);
-      if (anonymous.length > 0) {
-        const anon = await openSession(VIEWPORT);
-        for (const entry of anonymous) {
+      for (const [label, size] of [['desktop', VIEWPORT], ['mobile', MOBILE_VIEWPORT]]) {
+        const entries = anonymous.filter((entry) => label === 'desktop' || entry.mobile);
+        if (entries.length === 0) continue;
+        const anon = await openSession(size);
+        for (const entry of entries) {
           await anon.goto(PRESETS[entry.preset].path);
           await anon.settle(PRESETS[entry.preset].ready);
-          await anon.shot(entry.file, true);
+          await anon.shot(label === 'mobile' ? `${entry.file}_mobile` : entry.file, true);
         }
         await anon.context.close();
         sessions.length = 0;

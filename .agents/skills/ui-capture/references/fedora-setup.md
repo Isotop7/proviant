@@ -19,7 +19,7 @@ own, so the tag is derived at runtime from the package the runner installed and
 must equal that version exactly. The pin is `PLAYWRIGHT_VERSION` in
 `scripts/uicapture.mjs` (exact, no caret range) for the same reason.
 
-The runner installs it into `.kilo/skills/ui-capture/node_modules` with
+The runner installs it into `.agents/skills/ui-capture/node_modules` with
 `--ignore-scripts`, so no browser download happens — the image already has the
 browsers and the host must not acquire a second copy.
 

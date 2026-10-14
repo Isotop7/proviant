@@ -1,8 +1,8 @@
 // Onboarding wizard steps 2 and 3, which no route preset can reach — the `onboarding`
 // preset stops at step 1 because that is where a fresh state lands.
 //
-//   node .kilo/skills/ui-capture/scripts/uicapture.mjs \
-//     --script .kilo/skills/ui-capture/scripts/flows/onboarding-steps.mjs
+//   node .agents/skills/ui-capture/scripts/uicapture.mjs \
+//     --script .agents/skills/ui-capture/scripts/flows/onboarding-steps.mjs
 //
 // The demo user's OnboardingState has nothing marked done, so restoreState()
 // shows step 1. Clicking through mirrors a real signup; the profile step writes

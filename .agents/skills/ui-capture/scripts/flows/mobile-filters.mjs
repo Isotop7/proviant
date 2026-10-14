@@ -1,7 +1,7 @@
 // Mobile-only overlay: the products filter sheet.
 //
-//   node .kilo/skills/ui-capture/scripts/uicapture.mjs \
-//     --preset all --viewport mobile --script .kilo/skills/ui-capture/scripts/flows/mobile-filters.mjs
+//   node .agents/skills/ui-capture/scripts/uicapture.mjs \
+//     --preset all --viewport mobile --script .agents/skills/ui-capture/scripts/flows/mobile-filters.mjs
 //
 // The trigger is inside a `d-block d-md-none` dropdown (products.tmpl:91), so
 // this flow only produces a shot at `--viewport mobile`. At desktop width the

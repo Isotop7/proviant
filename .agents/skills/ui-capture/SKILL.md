@@ -40,7 +40,7 @@ podman pull mcr.microsoft.com/playwright:v1.63.0-noble
 ```
 
 `playwright` is a skill-local dependency, not a repo one: the runner installs
-`playwright@1.63.0` into `.kilo/skills/ui-capture/node_modules` on first use
+`playwright@1.63.0` into `.agents/skills/ui-capture/node_modules` on first use
 (`--ignore-scripts`, so no browser download — the image has the browsers). As a
 repo devDependency it was installed by every Docker build and every CI job for a
 tool no build step invokes. `.kilo/.gitignore` keeps that directory out of git.
@@ -56,29 +56,29 @@ The runner never pulls mid-run. A missing image exits 9 and prints the command.
 
 ```bash
 # Desktop still + webm of the dashboard
-node .kilo/skills/ui-capture/scripts/uicapture.mjs --preset dashboard
+node .agents/skills/ui-capture/scripts/uicapture.mjs --preset dashboard
 
 # Every page, phone width, plus a shareable GIF
-node .kilo/skills/ui-capture/scripts/uicapture.mjs --preset all --viewport mobile --gif
+node .agents/skills/ui-capture/scripts/uicapture.mjs --preset all --viewport mobile --gif
 
 # Stills only (stills are viewport-sized by default)
-node .kilo/skills/ui-capture/scripts/uicapture.mjs --preset products --no-video
+node .agents/skills/ui-capture/scripts/uicapture.mjs --preset products --no-video
 
 # Stills that span the whole document instead
-node .kilo/skills/ui-capture/scripts/uicapture.mjs --preset products --full-page
+node .agents/skills/ui-capture/scripts/uicapture.mjs --preset products --full-page
 
 # Refresh screenshots/ and the README gallery
-node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish
+node .agents/skills/ui-capture/scripts/uicapture.mjs --publish
 
 # One route, exactly
-node .kilo/skills/ui-capture/scripts/uicapture.mjs --preset dashboard --url /web/products/7/view
+node .agents/skills/ui-capture/scripts/uicapture.mjs --preset dashboard --url /web/products/7/view
 
 # A click-through
-node .kilo/skills/ui-capture/scripts/uicapture.mjs \
-  --script .kilo/skills/ui-capture/scripts/flows/example.mjs
+node .agents/skills/ui-capture/scripts/uicapture.mjs \
+  --script .agents/skills/ui-capture/scripts/flows/example.mjs
 
 # Alongside a running `task run`
-node .kilo/skills/ui-capture/scripts/uicapture.mjs --preset all --port 0
+node .agents/skills/ui-capture/scripts/uicapture.mjs --preset all --port 0
 ```
 
 Every produced file is printed as an absolute path, one per line, followed by a
@@ -87,7 +87,7 @@ count. Default output: `.cache/ui-captures/<preset>-<YYYYMMDD-HHMMSS>/`.
 ## Refreshing the README gallery
 
 ```bash
-node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish
+node .agents/skills/ui-capture/scripts/uicapture.mjs --publish
 ```
 
 One command, no arguments. It shoots eleven screens at both viewports, copies
@@ -112,13 +112,13 @@ already committed, so existing links keep resolving.
 ```markdown
 ## Preview
 
-<!-- ui-capture-preview:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->
+<!-- ui-capture-preview:begin — regenerate with `node .agents/skills/ui-capture/scripts/uicapture.mjs --publish` -->
 …desktop-only embeds…
 <!-- ui-capture-preview:end -->
 
 ## Screenshots
 
-<!-- ui-capture:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->
+<!-- ui-capture:begin — regenerate with `node .agents/skills/ui-capture/scripts/uicapture.mjs --publish` -->
 …desktop/mobile tables…
 <!-- ui-capture:end -->
 ```
@@ -166,7 +166,7 @@ the same file runs under container Node and host Node. The runner has already
 logged in as `demo` before the flow starts.
 
 ```js
-// .kilo/skills/ui-capture/scripts/flows/x.mjs
+// .agents/skills/ui-capture/scripts/flows/x.mjs
 export default async function flow({ page, shot, goto, settle }) {
   await goto('/web/products');
   await settle('#productRows .list-row');

@@ -1,8 +1,8 @@
 // Overlay states that no single-route preset can reach: modals, dropdowns and
 // the shared feedback dialog.
 //
-//   node .kilo/skills/ui-capture/scripts/uicapture.mjs \
-//     --script .kilo/skills/ui-capture/scripts/flows/overlays.mjs
+//   node .agents/skills/ui-capture/scripts/uicapture.mjs \
+//     --script .agents/skills/ui-capture/scripts/flows/overlays.mjs
 //
 // The runner logs in as demo/demo before the flow starts.
 

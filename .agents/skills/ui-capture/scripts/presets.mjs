@@ -22,6 +22,7 @@ export const PRESETS = {
     // waiting on the container alone would screenshot the pre-fetch blank state.
     ready: '#recipe-suggestions-container .recipe-card, #recipe-error-container:not(.d-none)',
   },
+  'mealplan': { path: '/web/mealplan', login: true, ready: '#mealPlanGrid .mp-week' },
   'waste': { path: '/web/waste-analytics', login: true, ready: '#waste-status:has-text("Waste analytics loaded")' },
   'shopping-list': { path: '/web/shopping-list', login: true, ready: '#shoppingListContainer .sl-list-row' },
   'settings': { path: '/web/user/settings', login: true, ready: 'h1:has-text("User Settings")' },
@@ -58,16 +59,20 @@ export const PRESETS = {
 export const ALL_WALK = [
   'dashboard',
   'products',
+  'products-grid',
+  'products-expired',
+  'products-consumed',
   'product-detail',
   'product-edit',
   'add-product',
-  'products-expired',
-  'products-consumed',
+  'receipt-scan',
   'recipes',
+  'mealplan',
   'waste',
   'shopping-list',
   'settings',
   'user',
+  'onboarding',
 ];
 
 // --help renders this, so the documented set can never lag the implemented one.

@@ -17,6 +17,7 @@ seeded demo user unless noted. Output lands in
 | `add-product` | `/web/products/scan` | yes | `#viewfinder` |
 | `receipt-scan` | `/web/products/scan-receipt` | yes | `#receiptUploadForm` |
 | `recipes` | `/web/recipes` | yes | `.recipe-card`, or the error container becoming visible |
+| `mealplan` | `/web/mealplan` | yes | `#mealPlanGrid .mp-week` |
 | `waste` | `/web/waste-analytics` | yes | `#waste-status` reading `Waste analytics loaded` |
 | `shopping-list` | `/web/shopping-list` | yes | `#shoppingListContainer .sl-list-row` |
 | `settings` | `/web/user/settings` | yes | `h1` reading `User Settings` |
@@ -28,7 +29,7 @@ seeded demo user unless noted. Output lands in
 | `verify-email` | `/web/verify-email?token=demo-verify-token` | no | spinner, then success or failure alert |
 | `unsubscribe` | `/web/unsubscribe?token=demo-unsubscribe-token` | no | `h1` reading `Unsubscribed` |
 | `not-found` | `/web/this-page-does-not-exist` | yes | `.display-5` reading `Something went wrong` |
-| `all` | walk of the twelve above | yes | — |
+| `all` | walk of the authenticated pages above | yes | — |
 
 `login`, `forgot-password`, `reset-password`, `invite-accept`, `verify-email` and
 `unsubscribe` are the presets reachable without a session; every other preset logs

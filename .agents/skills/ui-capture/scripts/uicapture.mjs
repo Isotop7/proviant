@@ -6,7 +6,7 @@
 // Deliberately split from browser-capture.mjs so the browser stage runs
 // unchanged under the Playwright container's Node or under host Node.
 //
-//   node .kilo/skills/ui-capture/scripts/uicapture.mjs --preset dashboard
+//   node .agents/skills/ui-capture/scripts/uicapture.mjs --preset dashboard
 //
 // Exit codes (see SKILL.md):
 //   0  success, or ffmpeg missing with --mp4/--gif (warn, keep webm and stills)
@@ -247,7 +247,7 @@ function installPlaywright() {
     if (installed === PLAYWRIGHT_VERSION) return installed;
   }
 
-  step(`installing playwright@${PLAYWRIGHT_VERSION} into .kilo/skills/ui-capture/node_modules`);
+  step(`installing playwright@${PLAYWRIGHT_VERSION} into .agents/skills/ui-capture/node_modules`);
   const npm = runSync('npm', [
     'install',
     '--prefix', SKILL_DIR,
@@ -261,7 +261,7 @@ function installPlaywright() {
     throw new UiCaptureError(
       3,
       `could not install playwright@${PLAYWRIGHT_VERSION}.\n` +
-        `  Run it by hand:  npm install --prefix .kilo/skills/ui-capture --no-save --ignore-scripts playwright@${PLAYWRIGHT_VERSION}`,
+        `  Run it by hand:  npm install --prefix .agents/skills/ui-capture --no-save --ignore-scripts playwright@${PLAYWRIGHT_VERSION}`,
     );
   }
   return JSON.parse(fsSync.readFileSync(PLAYWRIGHT_PKG, 'utf8')).version;
@@ -452,7 +452,7 @@ function browserEnv(opts, outDir) {
 // renders user-supplied product image URLs and Chromium runs as container root,
 // so a writable mount would hand a renderer compromise a foothold in the host's
 // build pipeline.
-const FIXED_MOUNTS = ['.kilo'];
+const FIXED_MOUNTS = ['.agents'];
 
 function planMount(dir) {
   if (dir === path.parse(dir).root) {
@@ -523,7 +523,7 @@ function containerArgs(info, opts, outDir) {
     args.push('-v', `${hostPath}:${mountPoint}:Z${readOnly ? ',ro' : ''}`);
   }
   for (const [key, value] of Object.entries(env)) args.push('-e', `${key}=${value}`);
-  args.push(info.image, 'node', '/work/.kilo/skills/ui-capture/scripts/browser-capture.mjs');
+  args.push(info.image, 'node', '/work/.agents/skills/ui-capture/scripts/browser-capture.mjs');
   return args;
 }
 
@@ -561,9 +561,9 @@ async function runBrowser(info, opts, outDir) {
 // several MB in git. The README already documents itself with viewport-sized
 // desktop/mobile PNG pairs, and those are what this produces.
 
-const README_BEGIN = '<!-- ui-capture:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->';
+const README_BEGIN = '<!-- ui-capture:begin — regenerate with `node .agents/skills/ui-capture/scripts/uicapture.mjs --publish` -->';
 const README_END = '<!-- ui-capture:end -->';
-const README_PREVIEW_BEGIN = '<!-- ui-capture-preview:begin — regenerate with `node .kilo/skills/ui-capture/scripts/uicapture.mjs --publish` -->';
+const README_PREVIEW_BEGIN = '<!-- ui-capture-preview:begin — regenerate with `node .agents/skills/ui-capture/scripts/uicapture.mjs --publish` -->';
 const README_PREVIEW_END = '<!-- ui-capture-preview:end -->';
 const SCREENSHOT_DIR = path.join(REPO_ROOT, 'screenshots');
 
@@ -579,15 +579,27 @@ const SCREENSHOT_DIR = path.join(REPO_ROOT, 'screenshots');
 const PUBLISHED_SCREENS = [
   { file: 'portal', caption: 'Dashboard — metric tiles, waste rate, category breakdown and expiry trend charts', preset: 'dashboard', anonymous: false, mobile: true },
   { file: 'search', caption: 'Products — search, filter, adjust and manage what is in your household', preset: 'products', anonymous: false, mobile: true },
+  { file: 'products-expired', caption: 'Products (expired) — filter view of past-expiry items', preset: 'products-expired', anonymous: false, mobile: true },
+  { file: 'products-consumed', caption: 'Products (consumed) — filter view of archived items', preset: 'products-consumed', anonymous: false, mobile: true },
+  { file: 'products-grid', caption: 'Products (grid) — grid view of your inventory', preset: 'products-grid', anonymous: false, mobile: true },
   { file: 'product-detail', caption: 'Product detail — expiry status, actions and history', preset: 'product-detail', anonymous: false, mobile: true },
+  { file: 'product-edit', caption: 'Product edit — adjust expiry, stock, and details', preset: 'product-edit', anonymous: false, mobile: true },
   { file: 'create', caption: 'Add product — barcode scan with auto-fill from OpenFoodFacts', preset: 'add-product', anonymous: false, mobile: true },
   { file: 'receipt', caption: 'Receipt scan — OCR bulk entry from a grocery receipt photo', preset: 'receipt-scan', anonymous: false, mobile: true },
   { file: 'recipe', caption: 'Recipes — suggestions built from the products you already have', preset: 'recipes', anonymous: false, mobile: true },
+  { file: 'mealplan', caption: 'Meal plan — monthly calendar for planning saved recipes', preset: 'mealplan', anonymous: false, mobile: true },
   { file: 'waste', caption: 'Waste analytics — consumed vs wasted, monthly breakdown and cost of waste', preset: 'waste', anonymous: false, mobile: true },
   { file: 'shopping', caption: 'Shopping list — shared household list with low-stock import', preset: 'shopping-list', anonymous: false, mobile: true },
   { file: 'onboarding', caption: 'Onboarding — profile, notifications and household setup', preset: 'onboarding', anonymous: false, mobile: true },
   { file: 'settings', caption: 'Settings — notifications, household, tokens and security', preset: 'settings', anonymous: false, mobile: true },
+  { file: 'user', caption: 'User — profile and household', preset: 'user', anonymous: false, mobile: true },
+  { file: 'not-found', caption: 'Not found — error page', preset: 'not-found', anonymous: false, mobile: true },
   { file: 'login', caption: 'Sign in', preset: 'login', anonymous: true, mobile: false },
+  { file: 'forgot-password', caption: 'Forgot password', preset: 'forgot-password', anonymous: true, mobile: false },
+  { file: 'reset-password', caption: 'Reset password', preset: 'reset-password', anonymous: true, mobile: false },
+  { file: 'invite-accept', caption: 'Accept invite', preset: 'invite-accept', anonymous: true, mobile: false },
+  { file: 'verify-email', caption: 'Verify email', preset: 'verify-email', anonymous: true, mobile: false },
+  { file: 'unsubscribe', caption: 'Unsubscribe', preset: 'unsubscribe', anonymous: true, mobile: false },
 ];
 
 // The ## Preview section near the top of the README. Desktop-only, curated
