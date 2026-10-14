@@ -1364,3 +1364,40 @@ func TestReceiptOCRConfigurationUsesInsecureTransport(t *testing.T) {
 		})
 	}
 }
+
+// TestShoppingListSyncConfigurationIsProviderEnabled verifies instance-level provider gating.
+func TestShoppingListSyncConfigurationIsProviderEnabled(t *testing.T) {
+	t.Run("master switch disabled rejects all providers", func(t *testing.T) {
+		cfg := ShoppingListSyncConfiguration{
+			Enabled:        false,
+			BringEnabled:   true,
+			TodoistEnabled: true,
+		}
+		if cfg.IsProviderEnabled(util.ShoppingListProviderBring) {
+			t.Error("expected bring to be disabled when master switch is off")
+		}
+		if cfg.IsProviderEnabled(util.ShoppingListProviderTodoist) {
+			t.Error("expected todoist to be disabled when master switch is off")
+		}
+	})
+
+	t.Run("individual provider toggles gate each provider", func(t *testing.T) {
+		cfg := ShoppingListSyncConfiguration{
+			Enabled:        true,
+			BringEnabled:   false,
+			TodoistEnabled: true,
+		}
+		if cfg.IsProviderEnabled(util.ShoppingListProviderBring) {
+			t.Error("expected bring to be disabled")
+		}
+		if !cfg.IsProviderEnabled(util.ShoppingListProviderTodoist) {
+			t.Error("expected todoist to be enabled")
+		}
+		if !cfg.IsProviderEnabled(util.ShoppingListProviderNoop) {
+			t.Error("expected noop to be enabled when master switch is on")
+		}
+		if cfg.IsProviderEnabled("unknown") {
+			t.Error("expected unknown provider to be disabled")
+		}
+	})
+}

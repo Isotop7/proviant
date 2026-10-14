@@ -131,6 +131,24 @@ var (
 	// does not exist in the caller's household.
 	ErrShoppingListItemNotFound = errors.New("shopping list item not found")
 
+	// ErrIntegrationInvalidProvider is thrown if the requested shopping list sync provider is unknown.
+	ErrIntegrationInvalidProvider = errors.New("invalid shopping list sync provider")
+
+	// ErrIntegrationProviderDisabled is thrown if the requested shopping list sync provider is disabled in server configuration.
+	ErrIntegrationProviderDisabled = errors.New("shopping list sync provider is not enabled on this server")
+
+	// ErrIntegrationNotFound is thrown if the requested household integration does not exist.
+	ErrIntegrationNotFound = errors.New("household integration not found")
+
+	// ErrIntegrationMissingCredentials is thrown if an integration is missing its required authentication token.
+	ErrIntegrationMissingCredentials = errors.New("integration credentials are required")
+
+	// ErrIntegrationMissingListID is thrown if an integration requires a target list or project ID that was not provided.
+	ErrIntegrationMissingListID = errors.New("integration list ID is required")
+
+	// ErrIntegrationSyncFailed is thrown when an external shopping list provider fails during synchronization.
+	ErrIntegrationSyncFailed = errors.New("shopping list sync failed")
+
 	// ErrWasteInvalidPeriod is thrown if the waste analytics period is outside the
 	// accepted set.
 	ErrWasteInvalidPeriod = errors.New("invalid period (allowed: month, 3months, 6months, 12months)")

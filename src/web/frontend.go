@@ -16,6 +16,7 @@ import (
 	v1 "codeberg.org/isotop7/proviant/api/v1"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
@@ -209,6 +210,9 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"Timeout":          receiptScanDefaultTimeout,
 		"APIKeyConfigured": false,
 	}
+	shoppingListSyncEnabled := false
+	bringSyncEnabled := false
+	todoistSyncEnabled := false
 
 	if cfgVal, ok := ctx.Get(util.ContextKeyProviantConfig); ok {
 		if cfg, ok := cfgVal.(*configuration.ProviantConfiguration); ok {
@@ -224,6 +228,9 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 				"Timeout":          receiptScanDefaultTimeout,
 				"APIKeyConfigured": cfg.OCR.Receipt.APIKey != "",
 			}
+			shoppingListSyncEnabled = cfg.ShoppingListSync.Enabled
+			bringSyncEnabled = cfg.ShoppingListSync.IsProviderEnabled(util.ShoppingListProviderBring)
+			todoistSyncEnabled = cfg.ShoppingListSync.IsProviderEnabled(util.ShoppingListProviderTodoist)
 		}
 	}
 
@@ -245,11 +252,30 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"PasswordRequireSpecial":    requireSpecial,
 		"ReceiptScanFeatureEnabled": receiptScanFeatureEnabled,
 		"ReceiptScanDefaults":       receiptScanDefaults,
+		"ShoppingListSyncEnabled":   shoppingListSyncEnabled,
+		"BringSyncEnabled":          bringSyncEnabled,
+		"TodoistSyncEnabled":        todoistSyncEnabled,
 	}
 
 	if isAdmin {
 		invitations, _ := repos.Invitations.GetInvitationsForHousehold(user.HouseholdID, userID)
 		pageData["Invitations"] = invitations
+
+		var bringIntegration, todoistIntegration apiModel.HouseholdIntegrationResponse
+		if repos.HouseholdIntegrations != nil {
+			integrations, _ := repos.HouseholdIntegrations.ListByHousehold(user.HouseholdID)
+			for i := range integrations {
+				resp := apiModel.NewHouseholdIntegrationResponse(&integrations[i])
+				switch resp.Provider {
+				case util.ShoppingListProviderBring:
+					bringIntegration = resp
+				case util.ShoppingListProviderTodoist:
+					todoistIntegration = resp
+				}
+			}
+		}
+		pageData["BringIntegration"] = bringIntegration
+		pageData["TodoistIntegration"] = todoistIntegration
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
 }

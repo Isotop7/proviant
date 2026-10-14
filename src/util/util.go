@@ -189,6 +189,17 @@ const (
 	ReceiptItemMaxUnitLength       = 20
 	ReceiptItemMaxAmount           = 999
 	ReceiptItemMaxPrice            = 100000.0
+
+	ShoppingListProviderBring              = "bring"
+	ShoppingListProviderTodoist            = "todoist"
+	ShoppingListProviderNoop               = "noop"
+	DefaultShoppingListSyncIntervalMinutes = 15
+	DefaultShoppingListSyncTimeoutSeconds  = 15
+	DefaultTodoistAPIBaseURL               = "https://api.todoist.com/rest/v2"
+	DefaultBringAPIBaseURL                 = "https://api.getbring.com/rest/v2"
+	SyncRefStatusSynced                    = "synced"
+	SyncRefStatusPending                   = "pending"
+	SyncRefStatusOrphaned                  = "orphaned"
 )
 
 // CsvImportColumnAliases maps an accepted alternative column header to its

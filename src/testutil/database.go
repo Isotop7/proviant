@@ -38,6 +38,8 @@ var testModels = []any{
 	&dbModel.WebPushConfig{},
 	&dbModel.MailDigestUnsubscribeToken{},
 	&dbModel.ShoppingListItem{},
+	&dbModel.HouseholdIntegration{},
+	&dbModel.ShoppingListItemSyncRef{},
 
 	&dbModel.Recipe{},
 	&dbModel.RecipeIngredient{},

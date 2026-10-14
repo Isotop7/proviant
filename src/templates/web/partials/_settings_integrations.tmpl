@@ -1,0 +1,239 @@
+{{ define "_settings_integrations" }}
+{{ if .IsAdmin }}
+<div class="card card-section mb-4" id="householdIntegrationsCard">
+    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
+        <div class="d-flex align-items-center gap-2">
+            <div class="icon-chip" aria-hidden="true">
+                <i class="bi bi-arrow-left-right"></i>
+            </div>
+            <h2 class="h5 mb-0 fw-semibold">Shopping List Sync</h2>
+        </div>
+        {{ if .ShoppingListSyncEnabled }}
+        <span class="badge-status badge-fresh">Enabled</span>
+        {{ else }}
+        <span class="badge-status badge-nodate">Disabled on server</span>
+        {{ end }}
+    </div>
+    <div class="card-body px-4 py-4">
+        <p class="text-secondary-custom small mb-3">
+            Push the household shopping list to external providers (Bring!, Todoist) and sync item-checked states back. Managed by household admins; credentials are stored per household and never displayed once saved.
+        </p>
+
+        <div class="list-group list-group-flush border rounded-3">
+            <div class="list-group-item px-3 py-3" id="integrationSection-bring">
+                <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+                    <div>
+                        <div class="fw-medium small d-flex align-items-center gap-2">
+                            <span>Bring!</span>
+                            {{ if not .BringSyncEnabled }}
+                            <span class="badge-status badge-nodate">Disabled in server config</span>
+                            {{ else if .BringIntegration.AccessTokenConfigured }}
+                            <span class="badge-status badge-fresh" id="badgeConfigured-bring">Credentials configured</span>
+                            {{ end }}
+                        </div>
+                        <div class="text-secondary-custom small">Sync household shopping list items and checked status with a shared Bring! list.</div>
+                    </div>
+                    <div class="form-check form-switch mb-0 flex-shrink-0">
+                        {{ if .BringSyncEnabled }}
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="toggleIntegration-bring"
+                               data-integration-toggle="bring"
+                               {{if .BringIntegration.Enabled}}checked{{end}}>
+                        {{ else }}
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="toggleIntegration-bring"
+                               data-integration-toggle="bring"
+                               disabled>
+                        {{ end }}
+                        <label class="visually-hidden" for="toggleIntegration-bring">Enable Bring! sync</label>
+                    </div>
+                </div>
+
+                <div id="integrationFields-bring" class="pt-2{{ if not .BringIntegration.Enabled }} d-none{{ end }}">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="inputIntegrationEmail-bring" class="form-label fw-medium small">Account Email</label>
+                            <input type="email" class="form-control" id="inputIntegrationEmail-bring"
+                                   placeholder="family@example.com"
+                                   value="{{ .BringIntegration.AccountEmail }}"
+                                   autocomplete="off">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputIntegrationListId-bring" class="form-label fw-medium small">Bring! List UUID <span class="text-danger" aria-hidden="true">*</span></label>
+                            <input type="text" class="form-control" id="inputIntegrationListId-bring"
+                                   placeholder="e.g. e542307c-..."
+                                   value="{{ .BringIntegration.ListID }}"
+                                   autocomplete="off">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputIntegrationListName-bring" class="form-label fw-medium small">List Name (optional)</label>
+                            <input type="text" class="form-control" id="inputIntegrationListName-bring"
+                                   placeholder="Household Groceries"
+                                   value="{{ .BringIntegration.ListName }}"
+                                   autocomplete="off">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputIntegrationToken-bring" class="form-label fw-medium small">Access Token</label>
+                            <input type="password" class="form-control" id="inputIntegrationToken-bring"
+                                   placeholder="Leave empty to keep current"
+                                   autocomplete="new-password">
+                            <div class="form-text text-secondary-custom" id="tokenHint-bring">
+                                {{ if .BringIntegration.AccessTokenConfigured }}
+                                <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Token stored.</span> Enter a new token to replace it.
+                                {{ else }}
+                                No token configured yet.
+                                {{ end }}
+                            </div>
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" id="clearIntegrationToken-bring">
+                                <label class="form-check-label small" for="clearIntegrationToken-bring">Clear stored token</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="integrationStatus-bring" class="small mb-3" aria-live="polite">
+                        {{ if .BringIntegration.LastSyncAt }}
+                        <div class="text-secondary-custom"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>Last synced: {{ humanDateTime .BringIntegration.LastSyncAt }}</div>
+                        {{ end }}
+                        {{ if .BringIntegration.LastError }}
+                        <div class="alert alert-danger py-2 px-3 mt-2 mb-0 small" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ .BringIntegration.LastError }}
+                        </div>
+                        {{ end }}
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-proviant-primary btn-sm"
+                                data-integration-action="save" data-provider="bring"
+                                id="btnSaveIntegration-bring"
+                                {{ if not .BringSyncEnabled }}disabled{{ end }}>
+                            <i class="bi bi-save me-1" aria-hidden="true"></i>Save
+                        </button>
+                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                                data-integration-action="test" data-provider="bring"
+                                id="btnTestIntegration-bring"
+                                {{ if not .BringSyncEnabled }}disabled{{ end }}>
+                            <i class="bi bi-plug me-1" aria-hidden="true"></i>Test Connection
+                        </button>
+                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                                data-integration-action="sync" data-provider="bring"
+                                id="btnSyncIntegration-bring"
+                                {{ if not .BringSyncEnabled }}disabled{{ end }}>
+                            <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Sync Now
+                        </button>
+                        <button type="button" class="btn btn-proviant-danger btn-sm"
+                                data-integration-action="delete" data-provider="bring"
+                                id="btnDeleteIntegration-bring">
+                            <i class="bi bi-trash me-1" aria-hidden="true"></i>Disconnect
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="list-group-item px-3 py-3" id="integrationSection-todoist">
+                <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+                    <div>
+                        <div class="fw-medium small d-flex align-items-center gap-2">
+                            <span>Todoist</span>
+                            {{ if not .TodoistSyncEnabled }}
+                            <span class="badge-status badge-nodate">Disabled in server config</span>
+                            {{ else if .TodoistIntegration.AccessTokenConfigured }}
+                            <span class="badge-status badge-fresh" id="badgeConfigured-todoist">Credentials configured</span>
+                            {{ end }}
+                        </div>
+                        <div class="text-secondary-custom small">Push shopping list items as Todoist tasks and sync task completion back.</div>
+                    </div>
+                    <div class="form-check form-switch mb-0 flex-shrink-0">
+                        {{ if .TodoistSyncEnabled }}
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="toggleIntegration-todoist"
+                               data-integration-toggle="todoist"
+                               {{if .TodoistIntegration.Enabled}}checked{{end}}>
+                        {{ else }}
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="toggleIntegration-todoist"
+                               data-integration-toggle="todoist"
+                               disabled>
+                        {{ end }}
+                        <label class="visually-hidden" for="toggleIntegration-todoist">Enable Todoist sync</label>
+                    </div>
+                </div>
+
+                <div id="integrationFields-todoist" class="pt-2{{ if not .TodoistIntegration.Enabled }} d-none{{ end }}">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="inputIntegrationListId-todoist" class="form-label fw-medium small">Todoist Project ID</label>
+                            <input type="text" class="form-control" id="inputIntegrationListId-todoist"
+                                   placeholder="e.g. 2203306141"
+                                   value="{{ .TodoistIntegration.ListID }}"
+                                   autocomplete="off">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputIntegrationListName-todoist" class="form-label fw-medium small">Project Name (optional)</label>
+                            <input type="text" class="form-control" id="inputIntegrationListName-todoist"
+                                   placeholder="Shopping"
+                                   value="{{ .TodoistIntegration.ListName }}"
+                                   autocomplete="off">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputIntegrationToken-todoist" class="form-label fw-medium small">API Token</label>
+                            <input type="password" class="form-control" id="inputIntegrationToken-todoist"
+                                   placeholder="Leave empty to keep current"
+                                   autocomplete="new-password">
+                            <div class="form-text text-secondary-custom" id="tokenHint-todoist">
+                                {{ if .TodoistIntegration.AccessTokenConfigured }}
+                                <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Token stored.</span> Enter a new token to replace it.
+                                {{ else }}
+                                No token configured yet.
+                                {{ end }}
+                            </div>
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" id="clearIntegrationToken-todoist">
+                                <label class="form-check-label small" for="clearIntegrationToken-todoist">Clear stored token</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="integrationStatus-todoist" class="small mb-3" aria-live="polite">
+                        {{ if .TodoistIntegration.LastSyncAt }}
+                        <div class="text-secondary-custom"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>Last synced: {{ humanDateTime .TodoistIntegration.LastSyncAt }}</div>
+                        {{ end }}
+                        {{ if .TodoistIntegration.LastError }}
+                        <div class="alert alert-danger py-2 px-3 mt-2 mb-0 small" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ .TodoistIntegration.LastError }}
+                        </div>
+                        {{ end }}
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-proviant-primary btn-sm"
+                                data-integration-action="save" data-provider="todoist"
+                                id="btnSaveIntegration-todoist"
+                                {{ if not .TodoistSyncEnabled }}disabled{{ end }}>
+                            <i class="bi bi-save me-1" aria-hidden="true"></i>Save
+                        </button>
+                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                                data-integration-action="test" data-provider="todoist"
+                                id="btnTestIntegration-todoist"
+                                {{ if not .TodoistSyncEnabled }}disabled{{ end }}>
+                            <i class="bi bi-plug me-1" aria-hidden="true"></i>Test Connection
+                        </button>
+                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                                data-integration-action="sync" data-provider="todoist"
+                                id="btnSyncIntegration-todoist"
+                                {{ if not .TodoistSyncEnabled }}disabled{{ end }}>
+                            <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Sync Now
+                        </button>
+                        <button type="button" class="btn btn-proviant-danger btn-sm"
+                                data-integration-action="delete" data-provider="todoist"
+                                id="btnDeleteIntegration-todoist">
+                            <i class="bi bi-trash me-1" aria-hidden="true"></i>Disconnect
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
+{{ end }}

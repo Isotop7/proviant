@@ -170,6 +170,21 @@ definitions:
       partial:
         type: integer
     type: object
+  api.CreateHouseholdIntegrationRequest:
+    properties:
+      accessToken:
+        type: string
+      accountEmail:
+        type: string
+      enabled:
+        type: boolean
+      listId:
+        type: string
+      listName:
+        type: string
+      refreshToken:
+        type: string
+    type: object
   api.CreateMealPlanEntryRequest:
     properties:
       date:
@@ -373,6 +388,29 @@ definitions:
         type: integer
       status:
         type: string
+    type: object
+  api.HouseholdIntegrationResponse:
+    properties:
+      accessTokenConfigured:
+        type: boolean
+      accountEmail:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: integer
+      lastError:
+        type: string
+      lastSyncAt:
+        type: string
+      listId:
+        type: string
+      listName:
+        type: string
+      provider:
+        type: string
+      refreshTokenConfigured:
+        type: boolean
     type: object
   api.HouseholdInvitationResponse:
     properties:
@@ -873,6 +911,25 @@ definitions:
       name:
         type: string
       scopes:
+        type: string
+    type: object
+  api.UpdateHouseholdIntegrationRequest:
+    properties:
+      accessToken:
+        type: string
+      accountEmail:
+        type: string
+      clearAccessToken:
+        type: boolean
+      clearRefreshToken:
+        type: boolean
+      enabled:
+        type: boolean
+      listId:
+        type: string
+      listName:
+        type: string
+      refreshToken:
         type: string
     type: object
   api.UpdateHouseholdSettingsRequest:
@@ -1978,6 +2035,237 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Reject a household application
+      tags:
+      - household
+  /api/v1/household/integrations:
+    get:
+      description: Returns all configured shopping list sync integrations for the
+        caller's household (admin only). Secret tokens are never returned.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.HouseholdIntegrationResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Lists household shopping list integrations
+      tags:
+      - household
+  /api/v1/household/integrations/{provider}:
+    delete:
+      description: Deletes the specified shopping list sync integration and its item
+        mappings for the caller's household (admin only).
+      parameters:
+      - description: Provider identifier (bring or todoist)
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Deletes a household shopping list integration
+      tags:
+      - household
+    patch:
+      consumes:
+      - application/json
+      description: Updates settings or credentials for a shopping list sync integration
+        (admin only). Empty token fields keep stored credentials unless clear flags
+        are set.
+      parameters:
+      - description: Provider identifier (bring or todoist)
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Integration fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateHouseholdIntegrationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HouseholdIntegrationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Updates a household shopping list integration
+      tags:
+      - household
+    post:
+      consumes:
+      - application/json
+      description: Configures a shopping list sync integration for the caller's household
+        (admin only). Secret tokens are write-only and never returned.
+      parameters:
+      - description: Provider identifier (bring or todoist)
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Integration configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateHouseholdIntegrationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.HouseholdIntegrationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Creates a household shopping list integration
+      tags:
+      - household
+  /api/v1/household/integrations/{provider}/sync:
+    post:
+      description: Pushes current household shopping list items to the external provider
+        and pulls checked states back (admin only).
+      parameters:
+      - description: Provider identifier (bring or todoist)
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HouseholdIntegrationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Synchronizes a household shopping list integration now
+      tags:
+      - household
+  /api/v1/household/integrations/{provider}/test:
+    post:
+      description: Verifies credentials and connectivity for the specified household
+        shopping list integration (admin only).
+      parameters:
+      - description: Provider identifier (bring or todoist)
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Tests a household shopping list integration
       tags:
       - household
   /api/v1/household/invitations:

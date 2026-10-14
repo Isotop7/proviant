@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/errors"
 	"codeberg.org/isotop7/proviant/models"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
@@ -816,43 +817,189 @@ func (m *MockCalendarTokenRepository) Update(ct *authentication.CalendarToken) e
 
 var _ database.CalendarTokenRepositoryInterface = (*MockCalendarTokenRepository)(nil)
 
+// MockHouseholdIntegrationRepository mocks HouseholdIntegrationRepository.
+type MockHouseholdIntegrationRepository struct {
+	Integrations []dbModel.HouseholdIntegration
+	Err          error
+}
+
+func (m *MockHouseholdIntegrationRepository) GetByHouseholdAndProvider(householdID uint, provider string) (*dbModel.HouseholdIntegration, error) {
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	for i := range m.Integrations {
+		if m.Integrations[i].HouseholdID == householdID && m.Integrations[i].Provider == provider {
+			cp := m.Integrations[i]
+			return &cp, nil
+		}
+	}
+	return nil, errors.ErrIntegrationNotFound
+}
+
+func (m *MockHouseholdIntegrationRepository) ListByHousehold(householdID uint) ([]dbModel.HouseholdIntegration, error) {
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	var out []dbModel.HouseholdIntegration
+	for i := range m.Integrations {
+		if m.Integrations[i].HouseholdID == householdID {
+			out = append(out, m.Integrations[i])
+		}
+	}
+	return out, nil
+}
+
+func (m *MockHouseholdIntegrationRepository) ListEnabled() ([]dbModel.HouseholdIntegration, error) {
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	var out []dbModel.HouseholdIntegration
+	for i := range m.Integrations {
+		if m.Integrations[i].Enabled {
+			out = append(out, m.Integrations[i])
+		}
+	}
+	return out, nil
+}
+
+func (m *MockHouseholdIntegrationRepository) Create(integration *dbModel.HouseholdIntegration) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	m.Integrations = append(m.Integrations, *integration)
+	return nil
+}
+
+func (m *MockHouseholdIntegrationRepository) Update(integration *dbModel.HouseholdIntegration) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	for i := range m.Integrations {
+		if m.Integrations[i].HouseholdID == integration.HouseholdID && m.Integrations[i].Provider == integration.Provider {
+			m.Integrations[i] = *integration
+			return nil
+		}
+	}
+	return nil
+}
+
+func (m *MockHouseholdIntegrationRepository) Upsert(integration *dbModel.HouseholdIntegration) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	for i := range m.Integrations {
+		if m.Integrations[i].HouseholdID == integration.HouseholdID && m.Integrations[i].Provider == integration.Provider {
+			m.Integrations[i] = *integration
+			return nil
+		}
+	}
+	m.Integrations = append(m.Integrations, *integration)
+	return nil
+}
+
+func (m *MockHouseholdIntegrationRepository) Delete(householdID uint, provider string) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	for i := range m.Integrations {
+		if m.Integrations[i].HouseholdID == householdID && m.Integrations[i].Provider == provider {
+			m.Integrations = append(m.Integrations[:i], m.Integrations[i+1:]...)
+			return nil
+		}
+	}
+	return errors.ErrIntegrationNotFound
+}
+
+var _ database.HouseholdIntegrationRepository = (*MockHouseholdIntegrationRepository)(nil)
+
+// MockShoppingListItemSyncRefRepository mocks ShoppingListItemSyncRefRepository.
+type MockShoppingListItemSyncRefRepository struct {
+	Refs []dbModel.ShoppingListItemSyncRef
+	Err  error
+}
+
+func (m *MockShoppingListItemSyncRefRepository) ListByHouseholdAndProvider(householdID uint, provider string) ([]dbModel.ShoppingListItemSyncRef, error) {
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	var out []dbModel.ShoppingListItemSyncRef
+	for i := range m.Refs {
+		if m.Refs[i].HouseholdID == householdID && m.Refs[i].Provider == provider {
+			out = append(out, m.Refs[i])
+		}
+	}
+	return out, nil
+}
+
+func (m *MockShoppingListItemSyncRefRepository) Upsert(ref *dbModel.ShoppingListItemSyncRef) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	for i := range m.Refs {
+		if m.Refs[i].HouseholdID == ref.HouseholdID && m.Refs[i].Provider == ref.Provider && m.Refs[i].ExternalID == ref.ExternalID {
+			m.Refs[i] = *ref
+			return nil
+		}
+	}
+	m.Refs = append(m.Refs, *ref)
+	return nil
+}
+
+func (m *MockShoppingListItemSyncRefRepository) DeleteByID(id, householdID uint) error {
+	return m.Err
+}
+
+func (m *MockShoppingListItemSyncRefRepository) DeleteByExternalID(householdID uint, provider, externalID string) error {
+	return m.Err
+}
+
+func (m *MockShoppingListItemSyncRefRepository) DeleteByHouseholdAndProvider(householdID uint, provider string) error {
+	return m.Err
+}
+
+var _ database.ShoppingListItemSyncRefRepository = (*MockShoppingListItemSyncRefRepository)(nil)
+
 // MockRepositoryContainer holds mock implementations of all repository interfaces.
 type MockRepositoryContainer struct {
-	Products         *MockProductRepository
-	Users            *MockUserRepository
-	Households       *MockHouseholdRepository
-	Invitations      *MockInvitationRepository
-	StorageLocations *MockStorageLocationRepository
-	Webhooks         *MockWebhookRepository
-	PATs             *MockPATRepository
-	Savings          *MockSavingsRepository
-	RecipeCaches     *MockRecipeCacheRepository
-	Recipes          *MockRecipeRepository
-	MealPlans        *MockMealPlanRepository
-	Notifications    *MockNotificationRepository
-	Streaks          *MockStreakRepository
-	ExpiryScan       *MockExpiryScanRepository
-	CalendarTokens   *MockCalendarTokenRepository
+	Products              *MockProductRepository
+	Users                 *MockUserRepository
+	Households            *MockHouseholdRepository
+	Invitations           *MockInvitationRepository
+	StorageLocations      *MockStorageLocationRepository
+	Webhooks              *MockWebhookRepository
+	PATs                  *MockPATRepository
+	Savings               *MockSavingsRepository
+	RecipeCaches          *MockRecipeCacheRepository
+	Recipes               *MockRecipeRepository
+	MealPlans             *MockMealPlanRepository
+	Notifications         *MockNotificationRepository
+	Streaks               *MockStreakRepository
+	ExpiryScan            *MockExpiryScanRepository
+	CalendarTokens        *MockCalendarTokenRepository
+	HouseholdIntegrations *MockHouseholdIntegrationRepository
+	ShoppingListSyncRefs  *MockShoppingListItemSyncRefRepository
 }
 
 // NewMockRepositoryContainer creates a MockRepositoryContainer with all mocks initialised.
 func NewMockRepositoryContainer() *MockRepositoryContainer {
 	return &MockRepositoryContainer{
-		Products:         &MockProductRepository{},
-		Users:            &MockUserRepository{},
-		Households:       &MockHouseholdRepository{},
-		Invitations:      &MockInvitationRepository{},
-		StorageLocations: &MockStorageLocationRepository{},
-		Webhooks:         &MockWebhookRepository{},
-		PATs:             &MockPATRepository{},
-		Savings:          &MockSavingsRepository{},
-		RecipeCaches:     &MockRecipeCacheRepository{},
-		Recipes:          &MockRecipeRepository{},
-		MealPlans:        &MockMealPlanRepository{},
-		Notifications:    &MockNotificationRepository{},
-		Streaks:          &MockStreakRepository{},
-		ExpiryScan:       &MockExpiryScanRepository{},
-		CalendarTokens:   &MockCalendarTokenRepository{},
+		Products:              &MockProductRepository{},
+		Users:                 &MockUserRepository{},
+		Households:            &MockHouseholdRepository{},
+		Invitations:           &MockInvitationRepository{},
+		StorageLocations:      &MockStorageLocationRepository{},
+		Webhooks:              &MockWebhookRepository{},
+		PATs:                  &MockPATRepository{},
+		Savings:               &MockSavingsRepository{},
+		RecipeCaches:          &MockRecipeCacheRepository{},
+		Recipes:               &MockRecipeRepository{},
+		MealPlans:             &MockMealPlanRepository{},
+		Notifications:         &MockNotificationRepository{},
+		Streaks:               &MockStreakRepository{},
+		ExpiryScan:            &MockExpiryScanRepository{},
+		CalendarTokens:        &MockCalendarTokenRepository{},
+		HouseholdIntegrations: &MockHouseholdIntegrationRepository{},
+		ShoppingListSyncRefs:  &MockShoppingListItemSyncRefRepository{},
 	}
 }
 
@@ -860,20 +1007,22 @@ func NewMockRepositoryContainer() *MockRepositoryContainer {
 // suitable for injection into the Gin context via ctx.Set(util.ContextKeyRepos, ...).
 func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryContainer {
 	return &database.RepositoryContainer{
-		Products:         m.Products,
-		Users:            m.Users,
-		Households:       m.Households,
-		Invitations:      m.Invitations,
-		StorageLocations: m.StorageLocations,
-		Webhooks:         m.Webhooks,
-		PATs:             m.PATs,
-		RecipeCaches:     m.RecipeCaches,
-		Recipes:          m.Recipes,
-		MealPlans:        m.MealPlans,
-		Savings:          m.Savings,
-		Notifications:    m.Notifications,
-		Streaks:          m.Streaks,
-		ExpiryScan:       m.ExpiryScan,
-		CalendarTokens:   m.CalendarTokens,
+		Products:              m.Products,
+		Users:                 m.Users,
+		Households:            m.Households,
+		Invitations:           m.Invitations,
+		StorageLocations:      m.StorageLocations,
+		Webhooks:              m.Webhooks,
+		PATs:                  m.PATs,
+		RecipeCaches:          m.RecipeCaches,
+		Recipes:               m.Recipes,
+		MealPlans:             m.MealPlans,
+		Savings:               m.Savings,
+		Notifications:         m.Notifications,
+		Streaks:               m.Streaks,
+		ExpiryScan:            m.ExpiryScan,
+		CalendarTokens:        m.CalendarTokens,
+		HouseholdIntegrations: m.HouseholdIntegrations,
+		ShoppingListSyncRefs:  m.ShoppingListSyncRefs,
 	}
 }

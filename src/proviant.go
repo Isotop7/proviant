@@ -155,6 +155,11 @@ func loadConfig(configDir string) *configuration.ProviantConfiguration {
 	viper.SetDefault("ocr.receipt.provider", util.ReceiptOCRProviderOpenAI)
 	viper.SetDefault("ocr.receipt.timeout", util.ReceiptScanDefaultTimeout)
 
+	viper.SetDefault("shopping_list_sync.enabled", false)
+	viper.SetDefault("shopping_list_sync.interval_minutes", util.DefaultShoppingListSyncIntervalMinutes)
+	viper.SetDefault("shopping_list_sync.bring_enabled", false)
+	viper.SetDefault("shopping_list_sync.todoist_enabled", false)
+
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
 		panic(err.Error())
@@ -341,6 +346,8 @@ func main() {
 		&dbModel.WebPushConfig{},
 		&dbModel.MailDigestUnsubscribeToken{},
 		&dbModel.ShoppingListItem{},
+		&dbModel.HouseholdIntegration{},
+		&dbModel.ShoppingListItemSyncRef{},
 		&dbModel.Recipe{},
 		&dbModel.RecipeIngredient{},
 		&dbModel.MealPlanEntry{},
@@ -396,6 +403,9 @@ func main() {
 
 	// Initialize OCR controller
 	ocrController := controllers.NewOCRController(logger, &proviantConfiguration.OCR)
+
+	shoppingListSyncController := controllers.NewShoppingListSyncController(logger, &proviantConfiguration.ShoppingListSync, dbHandle)
+	shoppingListSyncController.Dispatch()
 
 	// Start background cleanup of expired revoked tokens
 	go startRevokedTokenCleanup(logger, dbHandle)

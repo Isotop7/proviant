@@ -355,6 +355,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAdminAPI.POST("/invitations", v1.WrapHandler(v1.CreateInvitation))
 	householdAdminAPI.GET("/invitations", v1.WrapHandler(v1.GetInvitations))
 	householdAdminAPI.DELETE("/invitations/:id", v1.WrapHandler(v1.CancelInvitation))
+	householdAdminAPI.GET("/integrations", v1.WrapHandler(v1.ListHouseholdIntegrations))
+	householdAdminAPI.POST("/integrations/:provider", v1.WrapHandler(v1.CreateHouseholdIntegration))
+	householdAdminAPI.PATCH("/integrations/:provider", v1.WrapHandler(v1.UpdateHouseholdIntegration))
+	householdAdminAPI.DELETE("/integrations/:provider", v1.WrapHandler(v1.DeleteHouseholdIntegration))
+	householdAdminAPI.POST("/integrations/:provider/test", v1.WrapHandler(v1.TestHouseholdIntegration))
+	householdAdminAPI.POST("/integrations/:provider/sync", v1.WrapHandler(v1.SyncHouseholdIntegrationNow))
 
 	// Storage location routes
 	householdAPI.GET("/storage-locations", v1.WrapHandler(v1.ListStorageLocations))

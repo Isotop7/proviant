@@ -194,18 +194,44 @@ type ExpiryConfiguration struct {
 	SoonThresholdDays     int `mapstructure:"soon_threshold_days"`     // days before expiry to mark as expiring soon (default: 7)
 }
 
+// ShoppingListSyncConfiguration contains instance-level settings for external shopping list synchronization.
+type ShoppingListSyncConfiguration struct {
+	Enabled         bool `mapstructure:"enabled"`
+	IntervalMinutes int  `mapstructure:"interval_minutes"`
+	BringEnabled    bool `mapstructure:"bring_enabled"`
+	TodoistEnabled  bool `mapstructure:"todoist_enabled"`
+}
+
+// IsProviderEnabled reports whether the given provider is enabled at the instance level.
+func (c ShoppingListSyncConfiguration) IsProviderEnabled(provider string) bool {
+	if !c.Enabled {
+		return false
+	}
+	switch provider {
+	case util.ShoppingListProviderBring:
+		return c.BringEnabled
+	case util.ShoppingListProviderTodoist:
+		return c.TodoistEnabled
+	case util.ShoppingListProviderNoop:
+		return true
+	default:
+		return false
+	}
+}
+
 // ProviantConfiguration is the configuration wrapper struct
 type ProviantConfiguration struct {
-	Database      DatabaseConfiguration
-	Server        ServerConfiguration
-	Calendar      CalendarConfiguration `mapstructure:"calendar"`
-	Logging       LoggingConfiguration
-	Notification  NotificationConfiguration
-	OpenFoodFacts OpenFoodFactsConfiguration
-	OCR           OCRConfiguration       `mapstructure:"ocr"`
-	RecipeAPI     RecipeAPIConfiguration `mapstructure:"recipe_api"`
-	Expiry        ExpiryConfiguration    `mapstructure:"expiry"`
-	TemplateCache map[string]*template.Template
+	Database         DatabaseConfiguration
+	Server           ServerConfiguration
+	Calendar         CalendarConfiguration `mapstructure:"calendar"`
+	Logging          LoggingConfiguration
+	Notification     NotificationConfiguration
+	OpenFoodFacts    OpenFoodFactsConfiguration
+	OCR              OCRConfiguration              `mapstructure:"ocr"`
+	RecipeAPI        RecipeAPIConfiguration        `mapstructure:"recipe_api"`
+	Expiry           ExpiryConfiguration           `mapstructure:"expiry"`
+	ShoppingListSync ShoppingListSyncConfiguration `mapstructure:"shopping_list_sync"`
+	TemplateCache    map[string]*template.Template
 
 	// RecipeAPIDisabled is set at startup when the recipe feature cannot work
 	// at all — currently only a self-hosted provider without its API key. It

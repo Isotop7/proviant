@@ -259,3 +259,52 @@ func TestAuditLogResponse_OmitsGORMInternals(t *testing.T) {
 		t.Errorf("id = %v, want 9", decoded["id"])
 	}
 }
+
+// TestHouseholdIntegrationResponse_OmitsSecretsAndGORMInternals verifies that
+// integration secret tokens and GORM internals are never serialized in responses.
+func TestHouseholdIntegrationResponse_OmitsSecretsAndGORMInternals(t *testing.T) {
+	integration := dbModel.HouseholdIntegration{
+		HouseholdID:  2,
+		Provider:     "todoist",
+		Enabled:      true,
+		AccessToken:  "SECRET-ACCESS-TOKEN",
+		RefreshToken: "SECRET-REFRESH-TOKEN",
+		AccountEmail: "admin@example.com",
+		ListID:       "proj-1",
+		ListName:     "Groceries",
+	}
+	integration.ID = 12
+
+	data, err := json.Marshal(NewHouseholdIntegrationResponse(&integration))
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	for _, key := range []string{
+		"accessToken", "refreshToken", "AccessToken", "RefreshToken",
+		"CreatedAt", "UpdatedAt", "DeletedAt", "householdId", "HouseholdID", "ID",
+	} {
+		if _, exists := decoded[key]; exists {
+			t.Errorf("key %q present, want it omitted", key)
+		}
+	}
+	if decoded["accessTokenConfigured"] != true {
+		t.Errorf("accessTokenConfigured = %v, want true", decoded["accessTokenConfigured"])
+	}
+	if decoded["refreshTokenConfigured"] != true {
+		t.Errorf("refreshTokenConfigured = %v, want true", decoded["refreshTokenConfigured"])
+	}
+
+	rawData, err := json.Marshal(integration)
+	if err != nil {
+		t.Fatalf("marshal raw model: %v", err)
+	}
+	if strings.Contains(string(rawData), "SECRET-ACCESS-TOKEN") || strings.Contains(string(rawData), "SECRET-REFRESH-TOKEN") {
+		t.Errorf("raw model JSON leaked secret token: %s", rawData)
+	}
+}
