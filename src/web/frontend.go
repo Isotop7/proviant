@@ -709,63 +709,6 @@ func (frontend *Frontend) ProductsScanReceipt(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsScanReceipt.tmpl", pageData)
 }
 
-// ProductsView renders the product view page
-// @Summary      Product view page
-// @Description  Renders the product details page
-// @Tags         web
-// @Produce      html
-// @Param        id   path      int  true  "Product ID"
-// @Success      200  {string}  html
-// @Failure      400  {object}  api.APIResponse
-// @Failure      500  {object}  api.APIResponse
-// @Router       /web/products/{id}/view [get]
-func (frontend *Frontend) ProductsView(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	// Get and parse parameter id
-	idParam := ctx.Param("id")
-	var productIDRaw uint64
-	var err error
-	if productIDRaw, err = strconv.ParseUint(idParam, 10, 64); err != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Get database instance from context
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
-	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
-		return
-	}
-
-	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusUnauthorized, errors.ErrUserIDFromToken.Error())
-		return
-	}
-
-	product, productErr := repos.Products.GetArchivedProductByID(uint(productIDRaw), userID) //nolint:gosec
-	if productErr != nil {
-		logger.Error().Msgf("Error getting product: %s", productErr)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusNotFound, errors.ErrUserNoProductsFound.Error())
-		return
-	}
-
-	pageData := map[string]any{
-		"InviteToken": ctx.Query("invite_token"),
-		"Title":       "Products",
-		"Product":     product,
-		"IsArchived":  product.DeletedAt.Valid,
-	}
-	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsView.tmpl", pageData)
-}
-
 // ProductsEdit renders the product edit page
 // @Summary      Product edit page
 // @Description  Renders the page for editing a product

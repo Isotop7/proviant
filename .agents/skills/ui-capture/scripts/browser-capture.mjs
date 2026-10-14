@@ -224,7 +224,7 @@ function log(message) {
   process.stderr.write(`[capture] ${message}\n`);
 }
 
-// /web/products/7/view -> web-products-7-view
+// /web/products/7/edit -> web-products-7-edit
 function routeSlug(route) {
   return route.replace(/^\/+|\/+$/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'page';
 }

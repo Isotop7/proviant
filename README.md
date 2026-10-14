@@ -422,17 +422,6 @@ Documentation is generated with `gomarkdoc` and `swagger`:
     <th>Mobile</th>
   </tr>
   <tr>
-    <td width="50%"><img src="./screenshots/product-detail.png" alt="Product detail — expiry status, actions and history — desktop"></td>
-    <td width="25%"><img src="./screenshots/product-detail_mobile.png" alt="Product detail — expiry status, actions and history — mobile"></td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <th>Desktop</th>
-    <th>Mobile</th>
-  </tr>
-  <tr>
     <td width="50%"><img src="./screenshots/product-edit.png" alt="Product edit — adjust expiry, stock, and details — desktop"></td>
     <td width="25%"><img src="./screenshots/product-edit_mobile.png" alt="Product edit — adjust expiry, stock, and details — mobile"></td>
   </tr>

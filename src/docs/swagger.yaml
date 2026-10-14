@@ -5381,33 +5381,6 @@ paths:
       summary: Product edit page
       tags:
       - web
-  /web/products/{id}/view:
-    get:
-      description: Renders the product details page
-      parameters:
-      - description: Product ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - text/html
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Product view page
-      tags:
-      - web
   /web/products/scan:
     get:
       description: Renders the product barcode scanning page

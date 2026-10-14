@@ -498,7 +498,6 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")
 	protectedWebFrontend.Use(jwtFrontendUserAwareMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware())
-	protectedWebFrontend.GET("/products/:id/view", webFrontendHandler.ProductsView)
 	protectedWebFrontend.GET("/products/:id/edit", webFrontendHandler.ProductsEdit)
 
 	// Static redirects

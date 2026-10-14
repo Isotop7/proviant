@@ -274,11 +274,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 
-/* Add-to-shopping-list flow. The button may live on the product detail
-   page (productsView.tmpl) or the product edit page (productsEdit.tmpl);
-   both render a button with class .btn-add-to-shopping-list and a
-   data-product-id attribute. The modal markup (#restockSuggestionModal)
-   is provided by the host template. */
+/* Add-to-shopping-list flow. The button lives on the product edit page
+   (productsEdit.tmpl), which renders a button with class
+   .btn-add-to-shopping-list and a data-product-id attribute. The modal
+   markup (#restockSuggestionModal) is provided by the host template. */
 function handleAddToShoppingList(btn) {
     var productId = btn.dataset.productId;
     if (!productId) return;

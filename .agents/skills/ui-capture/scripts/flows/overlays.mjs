@@ -63,12 +63,12 @@ export default async function flow({ page, shot, goto, settle }) {
   await shot('nav-notifications-dropdown');
   await page.keyboard.press('Escape');
 
-  // ── Product detail: add-to-shopping-list restock suggestion ─────────────────
+  // ── Product edit: add-to-shopping-list restock suggestion ───────────────────
   // The seeded archive gives products 1, 2 and 14 two consumed samples each, so
   // the suggestion endpoint answers with a real quantity rather than falling
   // back to a direct add.
-  await goto('/web/products/1/view');
-  await settle('h1.page-header-title');
+  await goto('/web/products/1/edit');
+  await settle('#editProductForm');
   await page.click('.btn-add-to-shopping-list');
   await settle('#restockSuggestionModal.show', 'visible');
   await shot('product-restock-suggestion');

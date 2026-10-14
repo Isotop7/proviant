@@ -71,7 +71,7 @@ node .agents/skills/ui-capture/scripts/uicapture.mjs --preset products --full-pa
 node .agents/skills/ui-capture/scripts/uicapture.mjs --publish
 
 # One route, exactly
-node .agents/skills/ui-capture/scripts/uicapture.mjs --preset dashboard --url /web/products/7/view
+node .agents/skills/ui-capture/scripts/uicapture.mjs --preset dashboard --url /web/products/7/edit
 
 # A click-through
 node .agents/skills/ui-capture/scripts/uicapture.mjs \
@@ -101,7 +101,7 @@ full walk would add megabytes to git for something a reader cannot pause. The
 README already documents itself with viewport-sized desktop/mobile PNG pairs, so
 that is what it keeps producing.
 
-**Where it writes.** `screenshots/portal.png`, `search.png`, `product-detail.png`,
+**Where it writes.** `screenshots/portal.png`, `search.png`, `product-edit.png`,
 `create.png`, `receipt.png`, `recipe.png`, `waste.png`, `shopping.png`,
 `onboarding.png`, `settings.png` and `login.png`, plus `_mobile` variants for
 all but `login`. The four original filenames are reused from the versions

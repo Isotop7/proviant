@@ -12,7 +12,6 @@ seeded demo user unless noted. Output lands in
 | `products-expired` | `/web/products?status=expired` | yes | `#productRows .list-row` |
 | `products-consumed` | `/web/products?status=archived` | yes | `#productRows .list-row` |
 | `products-grid` | `/web/products?view=grid` | yes | `.product-card` |
-| `product-detail` | `/web/products/1/view` | yes | `.text-bg-tertiary h2` |
 | `product-edit` | `/web/products/1/edit` | yes | `#editProductForm` |
 | `add-product` | `/web/products/scan` | yes | `#viewfinder` |
 | `receipt-scan` | `/web/products/scan-receipt` | yes | `#receiptUploadForm` |
@@ -83,7 +82,7 @@ settle. If the target fetches its content late enough to matter, use a custom
 flow with an explicit `settle()` instead.
 
 The still is named after the route actually visited, not the preset:
-`--url /web/products/7/view` → `01-web-products-7-view.png`.
+`--url /web/products/7/edit` → `01-web-products-7-edit.png`.
 
 ## Things a preset cannot show you
 
@@ -94,7 +93,7 @@ The still is named after the route actually visited, not the preset:
   `OnboardingState`, and the demo state is empty, so the route always lands on
   step 1.
 - **Products other than id 1.** The demo seed creates 30 active products with
-  predictable ids plus 22 archived ones from id 31, so `/web/products/<n>/view` is
+  predictable ids plus 22 archived ones from id 31, so `/web/products/<n>/edit` is
   reachable with `--url`.
 
 ## Camera-dependent presets
@@ -124,7 +123,7 @@ read:
 | `dashboard` | `activity_logs`, `waste_streaks`, `savings_records` |
 | `products-consumed` | soft-deleted `products` with `removal_reason` |
 | `products-expired` | a product past its `expire_at` (seed id 7) |
-| `product-detail` restock modal | ≥2 consumed samples in the 90-day rate window |
+| `product-edit` restock modal | ≥2 consumed samples in the 90-day rate window |
 
 Adding a page to `PUBLISHED_SCREENS` in `scripts/uicapture.mjs` without adding its
 rows to the seed produces a screenshot of an empty feature.

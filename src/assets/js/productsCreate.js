@@ -716,7 +716,7 @@ function handleBtnAddProduct() {
 function handleBtnShowProduct() {
     const dropdown = el.instanceDropdown;
     const productId = dropdown[dropdown.selectedIndex].value;
-    globalThis.location = `/web/products/${productId}/view`;
+    globalThis.location = `/web/products/${productId}/edit`;
 }
 function handleBtnDeleteProductModal() {
     const dropdown = el.instanceDropdown;

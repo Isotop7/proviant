@@ -229,7 +229,7 @@ func seedConsumptionHistory(db *gorm.DB, now time.Time, catalog []dbModel.Produc
 		{id: 49, name: "Yogurt", amount: 4, unit: "pcs", priceEUR: 4.80, co2Kg: 0.88, location: 1, monthsAgo: 0, daysOffset: -16},
 		{id: 50, name: "Salmon Fillet", amount: 300, unit: "g", priceEUR: 6.00, co2Kg: 1.62, location: 2, monthsAgo: 0, daysOffset: -21, wasted: true},
 		// Two more Milk consumptions inside the 90-day rate window, >7 days apart.
-		// With the events above, /web/products/1/view's add-to-shopping-list button
+		// With the events above, /web/products/1/edit's add-to-shopping-list button
 		// answers with a real per-week rate instead of the min-stock fallback.
 		{id: 51, name: "Milk", amount: 1, unit: "L", priceEUR: 0.90, co2Kg: 1.60, location: 1, monthsAgo: 0, daysOffset: -52},
 		{id: 52, name: "Milk", amount: 1, unit: "L", priceEUR: 0.90, co2Kg: 1.60, location: 1, monthsAgo: 0, daysOffset: -24},

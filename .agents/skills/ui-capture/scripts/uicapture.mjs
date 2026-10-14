@@ -582,7 +582,6 @@ const PUBLISHED_SCREENS = [
   { file: 'products-expired', caption: 'Products (expired) — filter view of past-expiry items', preset: 'products-expired', anonymous: false, mobile: true },
   { file: 'products-consumed', caption: 'Products (consumed) — filter view of archived items', preset: 'products-consumed', anonymous: false, mobile: true },
   { file: 'products-grid', caption: 'Products (grid) — grid view of your inventory', preset: 'products-grid', anonymous: false, mobile: true },
-  { file: 'product-detail', caption: 'Product detail — expiry status, actions and history', preset: 'product-detail', anonymous: false, mobile: true },
   { file: 'product-edit', caption: 'Product edit — adjust expiry, stock, and details', preset: 'product-edit', anonymous: false, mobile: true },
   { file: 'create', caption: 'Add product — barcode scan with auto-fill from OpenFoodFacts', preset: 'add-product', anonymous: false, mobile: true },
   { file: 'receipt', caption: 'Receipt scan — OCR bulk entry from a grocery receipt photo', preset: 'receipt-scan', anonymous: false, mobile: true },

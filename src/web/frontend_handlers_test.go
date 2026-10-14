@@ -311,28 +311,6 @@ func TestProductsScanReceiptHandler(t *testing.T) {
 	})
 }
 
-func TestProductsViewHandler(t *testing.T) {
-	env := newHandlerEnv(t)
-
-	t.Run("invalid id renders error page", func(t *testing.T) {
-		w := env.runWithParams(1, nil, gin.Params{{Key: "id", Value: "abc"}}, env.frontend.ProductsView)
-		requireStatus(t, w, http.StatusBadRequest)
-	})
-
-	t.Run("missing product renders error page", func(t *testing.T) {
-		w := env.runWithParams(1, nil, gin.Params{{Key: "id", Value: "123"}}, env.frontend.ProductsView)
-		requireStatus(t, w, http.StatusNotFound)
-	})
-
-	t.Run("renders product page", func(t *testing.T) {
-		household, user := seedHouseholdUser(t, env.db)
-		product := testutil.CreateTestProduct(env.db, household.ID, user.ID)
-		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsView)
-		requireStatus(t, w, http.StatusOK)
-		requireContains(t, w, "Test Product")
-	})
-}
-
 func TestProductsEditHandler(t *testing.T) {
 	env := newHandlerEnv(t)
 
