@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v120';
+const CACHE_NAME = 'proviant-v121';
 
 const PRECACHE_URLS = [
   '/manifest.json',
@@ -58,9 +58,14 @@ const OFFLINE_PAGE = `<!doctype html>
 </html>`;
 
 // ── Install: pre-cache static shell ──────────────────────────────────────────
+// Precache fetches bypass the HTTP cache: its heuristic freshness can serve a
+// pre-deploy main.css and pin stale bytes into a brand-new cache, defeating
+// every CACHE_NAME bump until a hard reload.
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(PRECACHE_URLS.map((url) => new Request(url, { cache: 'no-cache' })))
+    )
   );
   self.skipWaiting();
 });
