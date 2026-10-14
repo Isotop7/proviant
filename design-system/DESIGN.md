@@ -427,3 +427,18 @@ Stand 2026-06. Token-Werte spiegeln `main.scss` und `baseAuth.tmpl` aus
 Erstellung. Folgeänderungen am proviant-Code, die diese Werte
 aktualisieren, müssen zuerst `tokens.css` und `tokens.json` anpassen,
 bevor die Komponenten geändert werden.
+
+## 10. Dark Theme (neu)
+
+Dark Mode ist opt-in: Entweder `<html data-theme="dark">` oder
+Automatik über `prefers-color-scheme: dark`. Überschreibt ausschließlich
+die Slots aus § 2 / § 3 und hält Status-Quadrupel + Akzent bei
+identischem Hue, aber erhöhter Lightness.
+
+- Tokens: `design-system/tokens.dark.css` (überschreibt `tokens.css`).
+- Selbst-gehostete Fonts (VendSans / DMMono) bleiben unverändert;
+  `font-display: swap` beibehalten.
+- Komponenten erben Dark-Mode automatisch über CSS-Variablen — keine
+  separate Dark-Komponente nötig.
+- Akzent darf im Dark Mode **leicht heller** sein (`oklch(60% .12 155deg`)
+  um Kontrast auf dunklem Grund zu wahren, aber gleiches Hue (155°).
