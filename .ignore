@@ -3,3 +3,5 @@
 !src/config.yaml
 !sonar-export.json
 !handoff*.md
+!src/config.yaml
+!src/data
