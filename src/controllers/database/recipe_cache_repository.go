@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type RecipeRepositoryInterface interface {
+type RecipeCacheRepositoryInterface interface {
 	GetCacheByQueryHash(hash string) (database.RecipeCache, error)
 	CreateCache(cache *database.RecipeCache) error
 	HasPopulatedCache(hash string) (bool, error)
@@ -18,18 +18,18 @@ type RecipeRepositoryInterface interface {
 	CleanupExpiredCaches() error
 }
 
-var _ RecipeRepositoryInterface = (*RecipeRepository)(nil)
+var _ RecipeCacheRepositoryInterface = (*RecipeCacheRepository)(nil)
 
-type RecipeRepository struct {
+type RecipeCacheRepository struct {
 	DB *gorm.DB
 }
 
-func NewRecipeRepository(db *gorm.DB) *RecipeRepository {
-	return &RecipeRepository{DB: db}
+func NewRecipeCacheRepository(db *gorm.DB) *RecipeCacheRepository {
+	return &RecipeCacheRepository{DB: db}
 }
 
 // GetCacheByQueryHash retrieves a cache entry by its query hash if not expired.
-func (r *RecipeRepository) GetCacheByQueryHash(hash string) (database.RecipeCache, error) {
+func (r *RecipeCacheRepository) GetCacheByQueryHash(hash string) (database.RecipeCache, error) {
 	var cache database.RecipeCache
 	err := r.DB.Where("query_hash = ? AND expires_at > ?", hash, time.Now()).First(&cache).Error
 	return cache, err
@@ -37,7 +37,7 @@ func (r *RecipeRepository) GetCacheByQueryHash(hash string) (database.RecipeCach
 
 // CreateCache inserts or replaces a cache entry atomically using ON CONFLICT (upsert).
 // If an entry with the same query_hash exists, it is overwritten (resetting hit_count and updated_at).
-func (r *RecipeRepository) CreateCache(cache *database.RecipeCache) error {
+func (r *RecipeCacheRepository) CreateCache(cache *database.RecipeCache) error {
 	// gorm.io/clause OnConflict generates INSERT ... ON CONFLICT DO UPDATE
 	return r.DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "query_hash"}},
@@ -56,7 +56,7 @@ func (r *RecipeRepository) CreateCache(cache *database.RecipeCache) error {
 // unpopulated here, or a degraded run could not repair the entry it just called
 // stale and every later request would repeat the provider fan-out until the TTL
 // elapsed.
-func (r *RecipeRepository) HasPopulatedCache(hash string) (bool, error) {
+func (r *RecipeCacheRepository) HasPopulatedCache(hash string) (bool, error) {
 	cache, err := r.GetCacheByQueryHash(hash)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -81,7 +81,7 @@ func (r *RecipeRepository) HasPopulatedCache(hash string) (bool, error) {
 }
 
 // UpdateCacheHit increments the hit count for a cache entry.
-func (r *RecipeRepository) UpdateCacheHit(hash string) error {
+func (r *RecipeCacheRepository) UpdateCacheHit(hash string) error {
 	return r.DB.Model(&database.RecipeCache{}).Where("query_hash = ?", hash).UpdateColumn("hit_count", gorm.Expr("hit_count + ?", 1)).Error
 }
 
@@ -89,6 +89,6 @@ func (r *RecipeRepository) UpdateCacheHit(hash string) error {
 // Unscoped hard delete: soft-deleted tombstones would keep occupying the
 // query_hash unique index and redirect later CreateCache upserts into an
 // invisible row.
-func (r *RecipeRepository) CleanupExpiredCaches() error {
+func (r *RecipeCacheRepository) CleanupExpiredCaches() error {
 	return r.DB.Unscoped().Where("expires_at < ?", time.Now()).Delete(&database.RecipeCache{}).Error
 }

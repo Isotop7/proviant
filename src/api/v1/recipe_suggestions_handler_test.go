@@ -35,7 +35,7 @@ func setupRecipeController(env *handlerTestEnv, provider controllers.RecipeProvi
 	recipeCtrl := &controllers.RecipeController{
 		Logger:     &logger,
 		Config:     configuration.RecipeAPIConfiguration{Provider: "fake"},
-		RecipeRepo: repomocks.NewMockRepositoryContainer().Recipes,
+		RecipeRepo: repomocks.NewMockRepositoryContainer().RecipeCaches,
 		Provider:   provider,
 	}
 	env.Ctx.Set("recipeController", recipeCtrl)

@@ -634,6 +634,29 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 		}
 	})
 
+	t.Run("legacy row without GORM timestamps still consumes", func(t *testing.T) {
+		db, repo, user := setup(t)
+		// Rows written by raw SQL or predating the timestamp columns do not
+		// round-trip through the driver's time binding; the guarded writes
+		// must still apply to them.
+		product := createProduct(db, user.HouseholdID, "Legacy", 3)
+		if err := db.Exec("UPDATE products SET updated_at = NULL WHERE id = ?", product.ID).Error; err != nil {
+			t.Fatalf("raw update: %v", err)
+		}
+
+		var current dbModel.Product
+		if err := db.First(&current, product.ID).Error; err != nil {
+			t.Fatalf("reload product: %v", err)
+		}
+		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&current, 3)
+		if err != nil {
+			t.Fatalf("ConsumeProductPartial() error = %v", err)
+		}
+		if consumed != 3 || !fullyConsumed {
+			t.Errorf("consumed/fullyConsumed = %d/%v, want 3/true", consumed, fullyConsumed)
+		}
+	})
+
 	t.Run("not found", func(t *testing.T) {
 		_, repo, _ := setup(t)
 
@@ -796,12 +819,12 @@ func TestProductRepository_WasteProduct_ConcurrentModification(t *testing.T) {
 	}
 	db.Create(&product)
 
-	// Simulate a concurrent write landing between the repository's read and
-	// its guarded write: bump updated_at before any UPDATE on products runs,
-	// so the optimistic-lock precondition (updated_at = read value) fails.
+	// Simulate a concurrent request claiming the row between the repository's
+	// read and its guarded write: set a removal reason before any UPDATE on
+	// products runs, so the unclaimed-row precondition fails.
 	db.Callback().Update().Before("gorm:before_update").Register("test:concurrent_write", func(tx *gorm.DB) {
 		_, _ = tx.Statement.ConnPool.ExecContext(tx.Statement.Context,
-			"UPDATE products SET updated_at = ? WHERE id = ?", time.Now(), product.ID)
+			"UPDATE products SET removal_reason = ? WHERE id = ?", dbModel.RemovalReasonConsumed, product.ID)
 	})
 
 	err := repo.WasteProduct(product.ID, user.ID)
@@ -1359,9 +1382,9 @@ func TestWebhookRepository_CreateDeliveryLog(t *testing.T) {
 	}
 }
 
-func TestRecipeRepository_CreateAndGetCache(t *testing.T) {
+func TestRecipeCacheRepository_CreateAndGetCache(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewRecipeRepository(db)
+	repo := NewRecipeCacheRepository(db)
 
 	cacheEntry := dbModel.RecipeCache{
 		QueryHash:    "testhash123",
@@ -1385,9 +1408,9 @@ func TestRecipeRepository_CreateAndGetCache(t *testing.T) {
 	}
 }
 
-func TestRecipeRepository_GetCacheByQueryHash_NotFound(t *testing.T) {
+func TestRecipeCacheRepository_GetCacheByQueryHash_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewRecipeRepository(db)
+	repo := NewRecipeCacheRepository(db)
 
 	_, err := repo.GetCacheByQueryHash("nonexistent")
 	if err == nil {
@@ -1395,9 +1418,9 @@ func TestRecipeRepository_GetCacheByQueryHash_NotFound(t *testing.T) {
 	}
 }
 
-func TestRecipeRepository_UpdateCacheHit(t *testing.T) {
+func TestRecipeCacheRepository_UpdateCacheHit(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewRecipeRepository(db)
+	repo := NewRecipeCacheRepository(db)
 
 	cacheEntry := dbModel.RecipeCache{
 		QueryHash:    "testhash",

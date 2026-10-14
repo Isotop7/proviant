@@ -468,6 +468,21 @@ var (
 	// ErrRecipeNoMatchesFound is thrown when no recipes match the given products
 	ErrRecipeNoMatchesFound = errors.New("no matching recipes found")
 
+	// ErrRecipeNameRequired is thrown when a saved recipe is created without a name
+	ErrRecipeNameRequired = errors.New("recipe name is required")
+
+	// ErrRecipeNotFound is thrown when the requested saved recipe does not exist in the caller's household
+	ErrRecipeNotFound = errors.New("recipe not found")
+
+	// ErrMealPlanEntryNotFound is thrown when the requested meal plan entry does not exist in the caller's household
+	ErrMealPlanEntryNotFound = errors.New("meal plan entry not found")
+
+	// ErrMealPlanInvalidDate is thrown when a meal plan date is not a YYYY-MM-DD date
+	ErrMealPlanInvalidDate = errors.New("invalid meal plan date")
+
+	// ErrMealPlanInvalidRange is thrown when the requested meal plan range ends before it starts
+	ErrMealPlanInvalidRange = errors.New("invalid meal plan date range")
+
 	// ErrUserHasNoHousehold is thrown when a user does not belong to a household
 	ErrUserHasNoHousehold = errors.New("user has no household")
 

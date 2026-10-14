@@ -25,6 +25,11 @@
 			data-bs-toggle="tooltip" data-bs-placement="right" title="Shopping List">
 			<i class="bi bi-cart3" aria-hidden="true"></i> Shopping List
 		</a>
+		<a href="/web/mealplan" class="pv-nav-item {{ if eq .Title "Meal Plan" }}active{{ end }}"
+			{{ if eq .Title "Meal Plan" }}aria-current="page"{{ end }}
+			data-bs-toggle="tooltip" data-bs-placement="right" title="Meal Plan">
+			<i class="bi bi-calendar-week" aria-hidden="true"></i> Meal Plan
+		</a>
 		<a href="/web/recipes" class="pv-nav-item {{ if eq .Title "Recipes" }}active{{ end }}"
 			{{ if eq .Title "Recipes" }}aria-current="page"{{ end }}
 			data-bs-toggle="tooltip" data-bs-placement="right" title="Recipes">

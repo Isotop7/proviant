@@ -1,0 +1,57 @@
+{{ define "content" }}
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Meal Plan</h1>
+        <p class="page-header-subtitle">Plan the week and generate your shopping list</p>
+    </div>
+    <button class="btn btn-proviant-secondary d-none d-md-flex align-items-center gap-2" id="btnGenerateShoppingList" type="button">
+        <i class="bi bi-cart-plus"></i> Generate shopping list
+    </button>
+</div>
+
+{{ if .HasHousehold }}
+<div class="mp-week-nav mb-3">
+    <button class="btn btn-proviant-secondary" id="btnPrevWeek" type="button" aria-label="Previous week">
+        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+    </button>
+    <span id="weekLabel" class="mp-week-label" aria-live="polite"></span>
+    <button class="btn btn-proviant-secondary" id="btnNextWeek" type="button" aria-label="Next week">
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+    </button>
+</div>
+
+<div class="shopping-list-add-form mb-3" id="addMealForm">
+    <div class="add-item-form-inner">
+        <select class="form-select" id="inputMealDate" aria-label="Day"></select>
+        <select class="form-select" id="inputMealRecipe" aria-label="Recipe"></select>
+        <input type="number" class="form-control" id="inputMealServings" value="2" min="1" placeholder="Servings" aria-label="Servings">
+        <button type="button" class="btn btn-proviant-primary" id="btnAddMeal" aria-label="Add meal">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        </button>
+    </div>
+</div>
+
+<div id="mealPlanGrid" class="mp-grid" aria-live="polite">
+    <div class="loading-state">
+        <div class="spinner-border text-secondary-custom" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-secondary-custom">Loading meal plan...</p>
+    </div>
+</div>
+
+<button class="btn btn-proviant-primary w-100 d-md-none mt-3" id="btnGenerateShoppingListMobile" type="button">
+    <i class="bi bi-cart-plus me-1"></i> Generate shopping list
+</button>
+{{ else }}
+<div class="empty">
+    <div class="empty-icon">
+        <i class="bi bi-people"></i>
+    </div>
+    <div class="empty-title">No household yet</div>
+    <div class="empty-desc">Join or create a household to plan meals together.</div>
+</div>
+{{ end }}
+
+<script src="/assets/js/mealPlan.js" defer></script>
+{{ end }}

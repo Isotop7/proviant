@@ -303,10 +303,29 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	wasteAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	wasteAPI.GET("", v1.WrapHandler(v1.GetWasteAnalytics))
 
-	// Recipe suggestion routes
+	// Recipe suggestion and saved recipe routes
 	recipeAPI := engine.Group("/api/v1/recipes")
 	recipeAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	recipeAPI.GET("/suggestions", recipesRateLimitMiddleware, v1.WrapHandler(v1.GetRecipeSuggestions))
+	recipeAPI.GET("", v1.WrapHandler(v1.ListRecipes))
+	recipeAPI.GET("/:id", v1.WrapHandler(v1.GetRecipe))
+	recipeMemberAPI := recipeAPI.Group("")
+	recipeMemberAPI.Use(RequireHouseholdRole(authentication.RoleAdmin, authentication.RoleMember))
+	recipeMemberAPI.POST("", v1.WrapHandler(v1.CreateRecipe))
+	recipeMemberAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateRecipe))
+	recipeMemberAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteRecipe))
+	recipeMemberAPI.POST("/:id/cook", v1.WrapHandler(v1.CookRecipe))
+
+	// Meal plan routes
+	mealPlanAPI := engine.Group("/api/v1/mealplans")
+	mealPlanAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
+	mealPlanAPI.GET("", v1.WrapHandler(v1.ListMealPlanEntries))
+	mealPlanMemberAPI := mealPlanAPI.Group("")
+	mealPlanMemberAPI.Use(RequireHouseholdRole(authentication.RoleAdmin, authentication.RoleMember))
+	mealPlanMemberAPI.POST("", v1.WrapHandler(v1.CreateMealPlanEntry))
+	mealPlanMemberAPI.POST("/shopping-list", v1.WrapHandler(v1.GenerateMealPlanShoppingList))
+	mealPlanMemberAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateMealPlanEntry))
+	mealPlanMemberAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteMealPlanEntry))
 
 	// Notification routes
 	notificationAPI := engine.Group("/api/v1/notifications")
@@ -457,6 +476,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products/scan-receipt", webFrontendHandler.ProductsScanReceipt)
 	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
 	publicWebFrontend.GET("/recipes", webFrontendHandler.Recipes)
+	publicWebFrontend.GET("/mealplan", webFrontendHandler.MealPlan)
 	publicWebFrontend.GET("/waste-analytics", webFrontendHandler.WasteAnalytics)
 	publicWebFrontend.GET("/shopping-list", webFrontendHandler.ShoppingList)
 

@@ -1943,10 +1943,15 @@ func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
 // if the concurrent reduction still leaves more than the requested amount,
 // it falls back to a partial reduce, otherwise it soft-deletes with
 // RemovalReasonConsumed and returns the current amount. fullyConsumed
-// reports whether the product was archived. Both transactional writes carry
-// an updated_at optimistic-lock precondition, so any concurrent row change
-// (amount, opened_at, removal_reason) fails the guarded write. When a
-// guarded precondition fails (the row changed between read and write inside
+// reports whether the product was archived. The guarded writes compare data
+// values only (amount, removal_reason, deleted_at) — never updated_at: a
+// timestamp that was not round-tripped through the GORM driver (NULL on
+// legacy rows, or text written by raw SQL) never matches the bound form and
+// fails every guarded write with ErrProductConcurrentModification. The
+// removal_reason precondition is the double-apply guard: once one request
+// claims the row (consumed or wasted), a second full consume cannot archive
+// it again and duplicate the savings/activity entries. When a guarded
+// precondition fails (the row changed between read and write inside
 // the transaction)
 // the transaction is retried once with a fresh read; only a second failure
 // surfaces ErrProductConcurrentModification instead of silently applying.
@@ -1959,6 +1964,7 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, amo
 			Where("id = ?", product.ID).
 			Where("household_id = ?", product.HouseholdID).
 			Where(util.WhereDeletedIsNull).
+			Where(util.WhereRemovalReasonUnclaimed).
 			Where("amount > ?", amount).
 			Update("amount", gorm.Expr("amount - ?", amount))
 		if result.Error != nil {
@@ -1991,8 +1997,8 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, amo
 					Where("id = ?", current.ID).
 					Where("household_id = ?", current.HouseholdID).
 					Where(util.WhereDeletedIsNull).
+					Where(util.WhereRemovalReasonUnclaimed).
 					Where("amount > ?", amount).
-					Where("updated_at = ?", current.UpdatedAt).
 					Update("amount", gorm.Expr("amount - ?", amount))
 				if result.Error != nil {
 					return result.Error
@@ -2005,16 +2011,15 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, amo
 			}
 			consumed = current.Amount
 			fullyConsumed = true
-			// Guarded flag-and-archive: the amount and updated_at preconditions
-			// make the write fail if the row changed in any way since the read
-			// (amount, opened_at, removal_reason), so a concurrent full consume
-			// cannot be applied twice (double savings/activity entries).
+			// The unclaimed-row precondition is the double-apply guard: only
+			// one request may claim the row, so concurrent full consumes
+			// cannot duplicate the savings/activity entries.
 			result := tx.Model(&database.Product{}).
 				Where("id = ?", current.ID).
 				Where("household_id = ?", current.HouseholdID).
 				Where(util.WhereDeletedIsNull).
+				Where(util.WhereRemovalReasonUnclaimed).
 				Where("amount = ?", current.Amount).
-				Where("updated_at = ?", current.UpdatedAt).
 				Update("removal_reason", database.RemovalReasonConsumed)
 			if result.Error != nil {
 				return result.Error
@@ -2040,15 +2045,15 @@ func (r *ProductRepository) WasteProduct(productID, userID uint) error {
 		return err
 	}
 	// Single transaction: the removal-reason update and the soft-delete must
-	// succeed together, or neither lands. The update is guarded by updated_at,
-	// so a concurrent row change between the caller's read and the write fails
-	// instead of silently overwriting it.
+	// succeed together, or neither lands. The unclaimed-row precondition fails
+	// the write when a concurrent request already claimed the row, instead of
+	// silently overwriting its removal reason.
 	return r.DB.Transaction(func(tx *gorm.DB) error {
 		result := tx.Model(&database.Product{}).
 			Where("id = ?", product.ID).
 			Where("household_id = ?", product.HouseholdID).
 			Where(util.WhereDeletedIsNull).
-			Where("updated_at = ?", product.UpdatedAt).
+			Where(util.WhereRemovalReasonUnclaimed).
 			Update("removal_reason", database.RemovalReasonWasted)
 		if result.Error != nil {
 			return result.Error

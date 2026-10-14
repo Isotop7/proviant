@@ -8,9 +8,9 @@ import (
 	"codeberg.org/isotop7/proviant/testutil"
 )
 
-func TestRecipeRepository_HasPopulatedCache(t *testing.T) {
+func TestRecipeCacheRepository_HasPopulatedCache(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewRecipeRepository(db)
+	repo := NewRecipeCacheRepository(db)
 
 	seed := func(t *testing.T, hash, response string, expiresAt time.Time) dbModel.RecipeCache {
 		t.Helper()
@@ -103,9 +103,9 @@ func TestRecipeRepository_HasPopulatedCache(t *testing.T) {
 	})
 }
 
-func TestRecipeRepository_CreateCacheUpsert(t *testing.T) {
+func TestRecipeCacheRepository_CreateCacheUpsert(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewRecipeRepository(db)
+	repo := NewRecipeCacheRepository(db)
 
 	entry := dbModel.RecipeCache{
 		QueryHash:    "upsert-hash",
@@ -148,9 +148,9 @@ func TestRecipeRepository_CreateCacheUpsert(t *testing.T) {
 	}
 }
 
-func TestRecipeRepository_CleanupExpiredCaches(t *testing.T) {
+func TestRecipeCacheRepository_CleanupExpiredCaches(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewRecipeRepository(db)
+	repo := NewRecipeCacheRepository(db)
 
 	expired := dbModel.RecipeCache{
 		QueryHash:    "cleanup-expired",

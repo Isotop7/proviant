@@ -303,15 +303,15 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 		product := seed(t, 5)
 		stale := product
 		stale.Amount = 3
-		// Simulate a concurrent write landing between the transactional
-		// re-read and the guarded UPDATE: bump updated_at so the
-		// optimistic-lock precondition fails.
+		// Simulate a concurrent request claiming the row between the
+		// transactional re-read and the guarded UPDATE: set a removal reason
+		// so the unclaimed-row precondition fails on every attempt.
 		db.Callback().Update().Before("gorm:before_update").Register("test:consume_partial_concurrent", func(tx *gorm.DB) {
 			if tx.Statement.Table != "products" {
 				return
 			}
 			_, _ = tx.Statement.ConnPool.ExecContext(tx.Statement.Context,
-				"UPDATE products SET updated_at = ? WHERE id = ?", time.Now(), product.ID)
+				"UPDATE products SET removal_reason = ? WHERE id = ?", dbModel.RemovalReasonWasted, product.ID)
 		})
 		t.Cleanup(func() { db.Callback().Update().Remove("test:consume_partial_concurrent") })
 
@@ -497,9 +497,9 @@ func TestPATRepository_ErrorInjection(t *testing.T) {
 	})
 }
 
-func TestRecipeRepository_ErrorInjection(t *testing.T) {
+func TestRecipeCacheRepository_ErrorInjection(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewRecipeRepository(db)
+	repo := NewRecipeCacheRepository(db)
 
 	t.Run("non-not-found lookup failure makes cache unpopulated with error", func(t *testing.T) {
 		failQueriesOnTable(t, db, "recipe_caches")

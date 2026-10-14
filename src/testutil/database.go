@@ -38,6 +38,10 @@ var testModels = []any{
 	&dbModel.WebPushConfig{},
 	&dbModel.MailDigestUnsubscribeToken{},
 	&dbModel.ShoppingListItem{},
+
+	&dbModel.Recipe{},
+	&dbModel.RecipeIngredient{},
+	&dbModel.MealPlanEntry{},
 }
 
 func SetupTestDB(t *testing.T) *gorm.DB {

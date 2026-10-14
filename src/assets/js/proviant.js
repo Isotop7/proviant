@@ -828,3 +828,77 @@ proviant.getAuditLogs = async function (date) {
   const body = await res.json();
   return { code: res.status, message: body };
 };
+/* ── Saved recipes API ───────────────────────────────────────────────────────── */
+proviant.getRecipes = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, recipes: Array.isArray(body) ? body : [], message: body.message };
+};
+
+proviant.getRecipe = async function (id) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes/${id}`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, recipe: body, message: body.message };
+};
+
+proviant.createRecipe = async function (recipe) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(recipe) });
+  const body = await res.json();
+  return { code: res.status, recipe: body, message: body.message };
+};
+
+proviant.updateRecipe = async function (id, recipe) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(recipe) });
+  const body = await res.json();
+  return { code: res.status, recipe: body, message: body.message };
+};
+
+proviant.deleteRecipe = async function (id) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes/${id}`, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.cookRecipe = async function (id, servings) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes/${id}/cook`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ servings: servings || 0 }) });
+  const body = await res.json();
+  return { code: res.status, consumed: body.consumed, partial: body.partial, errors: body.errors || [], message: body.message };
+};
+
+/* ── Meal plan API ───────────────────────────────────────────────────────────── */
+proviant.getMealPlans = async function (from, to) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/mealplans?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, entries: Array.isArray(body) ? body : [], message: body.message };
+};
+
+proviant.createMealPlan = async function (entry) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/mealplans`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
+  const body = await res.json();
+  return { code: res.status, entry: body, message: body.message };
+};
+
+proviant.updateMealPlan = async function (id, entry) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/mealplans/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
+  const body = await res.json();
+  return { code: res.status, entry: body, message: body.message };
+};
+
+proviant.deleteMealPlan = async function (id) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/mealplans/${id}`, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.generateShoppingListFromMealPlan = async function (from, to) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/mealplans/shopping-list`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from, to }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+/* ── Product lookup for recipe ingredients ───────────────────────────────────── */
+proviant.getProducts = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, products: Array.isArray(body) ? body : [], message: body.message };
+};

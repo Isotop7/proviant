@@ -1,10 +1,71 @@
 {{ define "content" }}
 <div class="page-header">
     <div>
-        <h1 class="page-header-title">Recipe Suggestions</h1>
-        <p class="page-header-subtitle">Based on products expiring soon</p>
+        <h1 class="page-header-title">Recipes</h1>
+        <p class="page-header-subtitle">Your saved recipes and suggestions based on products expiring soon</p>
     </div>
-    <button class="btn btn-proviant-secondary d-none d-md-flex align-items-center gap-2" id="refreshRecipesBtn" type="button">
+    <button class="btn btn-proviant-primary d-none d-md-flex align-items-center gap-2" id="btnNewRecipe" type="button">
+        <i class="bi bi-plus-lg"></i> New recipe
+    </button>
+</div>
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <h2 class="h5 mb-0">My Recipes</h2>
+    <button class="btn btn-proviant-primary d-md-none" id="btnNewRecipeMobile" type="button" aria-label="New recipe">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+    </button>
+</div>
+
+<div id="recipeEditor" class="card mb-3 d-none">
+    <div class="card-body">
+        <h3 class="h6" id="recipeEditorTitle">New recipe</h3>
+        <div class="row g-2 mb-2">
+            <div class="col-12 col-md-5">
+                <label class="form-label" for="recipeName">Name</label>
+                <input type="text" class="form-control" id="recipeName" maxlength="255" required>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label" for="recipeServings">Servings</label>
+                <input type="number" class="form-control" id="recipeServings" value="2" min="1">
+            </div>
+            <div class="col-6 col-md-5">
+                <label class="form-label" for="recipeSourceUrl">Source URL</label>
+                <input type="url" class="form-control" id="recipeSourceUrl">
+            </div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label" for="recipeDescription">Description</label>
+            <textarea class="form-control" id="recipeDescription" rows="2"></textarea>
+        </div>
+        <div class="mb-2">
+            <label class="form-label" for="recipeInstructions">Instructions</label>
+            <textarea class="form-control" id="recipeInstructions" rows="4"></textarea>
+        </div>
+        <h4 class="h6">Ingredients</h4>
+        <div id="ingredientRows" class="mb-2"></div>
+        <button type="button" class="btn btn-proviant-secondary btn-sm mb-3" id="btnAddIngredient">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Add ingredient
+        </button>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-proviant-primary" id="btnSaveRecipe">Save recipe</button>
+            <button type="button" class="btn btn-proviant-secondary" id="btnCancelRecipe">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="savedRecipesContainer" aria-live="polite">
+    <div class="loading-state">
+        <div class="spinner-border text-secondary-custom" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-secondary-custom">Loading your recipes...</p>
+    </div>
+</div>
+
+<h2 class="h5 mb-2 mt-4">Recipe Suggestions</h2>
+
+<div class="d-flex justify-content-end mb-2">
+    <button class="btn btn-proviant-secondary d-flex align-items-center gap-2" id="refreshRecipesBtn" type="button">
         <i class="bi bi-arrow-clockwise"></i> Refresh
     </button>
 </div>
@@ -32,4 +93,5 @@
 </div>
 
 <script src="/assets/js/recipes.js" defer></script>
+<script src="/assets/js/savedRecipes.js" defer></script>
 {{ end }}

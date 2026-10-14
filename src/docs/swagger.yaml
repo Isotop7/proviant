@@ -153,6 +153,12 @@ definitions:
     required:
     - items
     type: object
+  api.CookRecipeRequest:
+    properties:
+      servings:
+        minimum: 0
+        type: integer
+    type: object
   api.CookResponse:
     properties:
       consumed:
@@ -163,6 +169,45 @@ definitions:
         type: array
       partial:
         type: integer
+    type: object
+  api.CreateMealPlanEntryRequest:
+    properties:
+      date:
+        type: string
+      notes:
+        type: string
+      recipeId:
+        type: integer
+      servings:
+        minimum: 0
+        type: integer
+    required:
+    - date
+    - recipeId
+    type: object
+  api.CreateRecipeRequest:
+    properties:
+      description:
+        type: string
+      imageUrl:
+        type: string
+      ingredients:
+        items:
+          $ref: '#/definitions/api.RecipeIngredientInput'
+        maxItems: 100
+        type: array
+      instructions:
+        type: string
+      name:
+        maxLength: 255
+        type: string
+      servings:
+        minimum: 0
+        type: integer
+      sourceUrl:
+        type: string
+    required:
+    - name
     type: object
   api.CreateShoppingListItemRequest:
     properties:
@@ -306,6 +351,16 @@ definitions:
       unit:
         type: string
     type: object
+  api.GenerateShoppingListRequest:
+    properties:
+      from:
+        type: string
+      to:
+        type: string
+    required:
+    - from
+    - to
+    type: object
   api.HouseholdApplicationResponse:
     properties:
       applicantId:
@@ -407,6 +462,23 @@ definitions:
         type: boolean
       name:
         type: string
+    type: object
+  api.MealPlanEntryResponse:
+    properties:
+      createdBy:
+        type: integer
+      date:
+        type: string
+      id:
+        type: integer
+      notes:
+        type: string
+      recipeId:
+        type: integer
+      recipeName:
+        type: string
+      servings:
+        type: integer
     type: object
   api.NotificationItem:
     properties:
@@ -599,6 +671,62 @@ definitions:
           $ref: '#/definitions/api.ReceiptItem'
         type: array
     type: object
+  api.RecipeIngredientInput:
+    properties:
+      amount:
+        minimum: 0
+        type: integer
+      name:
+        maxLength: 255
+        type: string
+      productId:
+        type: integer
+      sortOrder:
+        type: integer
+      unit:
+        maxLength: 20
+        type: string
+    required:
+    - name
+    type: object
+  api.RecipeIngredientResponse:
+    properties:
+      amount:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      productId:
+        type: integer
+      sortOrder:
+        type: integer
+      unit:
+        type: string
+    type: object
+  api.RecipeResponse:
+    properties:
+      createdBy:
+        type: integer
+      description:
+        type: string
+      id:
+        type: integer
+      imageUrl:
+        type: string
+      ingredients:
+        items:
+          $ref: '#/definitions/api.RecipeIngredientResponse'
+        type: array
+      instructions:
+        type: string
+      name:
+        type: string
+      servings:
+        type: integer
+      sourceUrl:
+        type: string
+    type: object
   api.RecipeSuggestionResponse:
     properties:
       id:
@@ -756,6 +884,18 @@ definitions:
       monthlyWasteGoalType:
         type: string
     type: object
+  api.UpdateMealPlanEntryRequest:
+    properties:
+      date:
+        type: string
+      notes:
+        type: string
+      recipeId:
+        type: integer
+      servings:
+        minimum: 1
+        type: integer
+    type: object
   api.UpdateNotificationPreferencesRequest:
     properties:
       emailEnabled:
@@ -780,6 +920,28 @@ definitions:
         type: boolean
       webPushEnabled:
         type: boolean
+    type: object
+  api.UpdateRecipeRequest:
+    properties:
+      description:
+        type: string
+      imageUrl:
+        type: string
+      ingredients:
+        items:
+          $ref: '#/definitions/api.RecipeIngredientInput'
+        maxItems: 100
+        type: array
+      instructions:
+        type: string
+      name:
+        maxLength: 255
+        type: string
+      servings:
+        minimum: 1
+        type: integer
+      sourceUrl:
+        type: string
     type: object
   api.UpdateShoppingListItemRequest:
     properties:
@@ -2207,6 +2369,182 @@ paths:
       summary: Update a storage location
       tags:
       - household
+  /api/v1/mealplans:
+    get:
+      description: Returns all meal plan entries of the caller's household within
+        the given date range
+      parameters:
+      - description: Range start (YYYY-MM-DD)
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: Range end (YYYY-MM-DD)
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.MealPlanEntryResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Lists planned meals
+      tags:
+      - mealplans
+    post:
+      consumes:
+      - application/json
+      description: Schedules a saved recipe on the given date; servings of 0 use the
+        recipe's own serving count
+      parameters:
+      - description: Planned meal
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateMealPlanEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.MealPlanEntryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Creates a planned meal
+      tags:
+      - mealplans
+  /api/v1/mealplans/{id}:
+    delete:
+      description: Deletes the meal plan entry with the given ID
+      parameters:
+      - description: Meal plan entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Deletes a planned meal
+      tags:
+      - mealplans
+    patch:
+      consumes:
+      - application/json
+      description: Updates date, recipe, servings and notes of a meal plan entry
+      parameters:
+      - description: Meal plan entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateMealPlanEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MealPlanEntryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Updates a planned meal
+      tags:
+      - mealplans
+  /api/v1/mealplans/shopping-list:
+    post:
+      consumes:
+      - application/json
+      description: Aggregates the ingredients of all meals planned within the date
+        range and creates shopping list entries for the missing amounts (stock on
+        hand subtracted when units match)
+      parameters:
+      - description: Date range (YYYY-MM-DD)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.GenerateShoppingListRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Generates shopping list from meal plan
+      tags:
+      - mealplans
   /api/v1/notifications:
     get:
       description: Returns pending invitations and household join requests for the
@@ -3580,6 +3918,206 @@ paths:
       summary: Return product summary
       tags:
       - product
+  /api/v1/recipes:
+    get:
+      description: Returns all saved recipes of the caller's household
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.RecipeResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Lists saved recipes
+      tags:
+      - recipes
+    post:
+      consumes:
+      - application/json
+      description: Creates a saved recipe with its ingredients; a nil productId marks
+        a free-text ingredient
+      parameters:
+      - description: Recipe with ingredients
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateRecipeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.RecipeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Creates a saved recipe
+      tags:
+      - recipes
+  /api/v1/recipes/{id}:
+    delete:
+      description: Deletes the saved recipe with the given ID including its ingredients
+      parameters:
+      - description: Recipe ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Deletes a saved recipe
+      tags:
+      - recipes
+    get:
+      description: Returns the saved recipe with the given ID including its ingredients
+      parameters:
+      - description: Recipe ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.RecipeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Gets a saved recipe
+      tags:
+      - recipes
+    patch:
+      consumes:
+      - application/json
+      description: Updates the given fields of a saved recipe; supplying ingredients
+        replaces them atomically
+      parameters:
+      - description: Recipe ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateRecipeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.RecipeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Updates a saved recipe
+      tags:
+      - recipes
+  /api/v1/recipes/{id}/cook:
+    post:
+      consumes:
+      - application/json
+      description: Consumes the recipe's linked products by their scaled amounts.
+        Unlinked ingredients and unit mismatches are reported as errors and skipped;
+        an amount reaching the current stock fully consumes (archives) the product.
+      parameters:
+      - description: Recipe ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Servings to cook (0 = recipe servings)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CookRecipeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CookResponse'
+        "400":
+          description: Returned when no item was processed (invalid body or all ingredients
+            failed)
+          schema:
+            $ref: '#/definitions/api.CookResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Returned when no item was processed and a server-side error
+            occurred
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Cook a saved recipe
+      tags:
+      - recipes
   /api/v1/recipes/suggestions:
     get:
       description: Returns up to 6 recipe suggestions matching products expiring within
@@ -4750,6 +5288,28 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Accept invitation page
+      tags:
+      - web
+  /web/mealplan:
+    get:
+      description: Renders the weekly meal plan with planned meals and shopping list
+        generation
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Meal Plan page
       tags:
       - web
   /web/onboarding:

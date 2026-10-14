@@ -778,7 +778,7 @@ func (s *stubRecipeProvider) FetchRecipes([]string) ([]Recipe, bool, error) {
 	return s.recipes, s.complete, nil
 }
 
-func newCachingRecipeController(provider RecipeProvider, populatedCache bool) (*RecipeController, *repomocks.MockRecipeRepository) {
+func newCachingRecipeController(provider RecipeProvider, populatedCache bool) (*RecipeController, *repomocks.MockRecipeCacheRepository) {
 	logger := zerolog.Nop()
 	config := configuration.RecipeAPIConfiguration{
 		URL:          "https://provider.test/api",
@@ -787,7 +787,7 @@ func newCachingRecipeController(provider RecipeProvider, populatedCache bool) (*
 		CacheTTL:     24,
 		Provider:     util.RecipeProviderThemealDB,
 	}
-	repo := &repomocks.MockRecipeRepository{PopulatedCache: populatedCache}
+	repo := &repomocks.MockRecipeCacheRepository{PopulatedCache: populatedCache}
 	return &RecipeController{
 		Logger:     &logger,
 		Config:     config,

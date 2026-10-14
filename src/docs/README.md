@@ -1020,7 +1020,7 @@ type RecipeController struct {
     // RecipeRepo is the interface rather than the concrete type so the cache
     // read/write decisions — which decide whether a degraded provider run is
     // allowed to replace a good cached entry — can be tested without a database.
-    RecipeRepo recipeRepo.RecipeRepositoryInterface
+    RecipeRepo recipeRepo.RecipeCacheRepositoryInterface
     Provider   RecipeProvider
     // contains filtered or unexported fields
 }
@@ -1841,6 +1841,21 @@ var (
     // ErrRecipeNoMatchesFound is thrown when no recipes match the given products
     ErrRecipeNoMatchesFound = errors.New("no matching recipes found")
 
+    // ErrRecipeNameRequired is thrown when a saved recipe is created without a name
+    ErrRecipeNameRequired = errors.New("recipe name is required")
+
+    // ErrRecipeNotFound is thrown when the requested saved recipe does not exist in the caller's household
+    ErrRecipeNotFound = errors.New("recipe not found")
+
+    // ErrMealPlanEntryNotFound is thrown when the requested meal plan entry does not exist in the caller's household
+    ErrMealPlanEntryNotFound = errors.New("meal plan entry not found")
+
+    // ErrMealPlanInvalidDate is thrown when a meal plan date is not a YYYY-MM-DD date
+    ErrMealPlanInvalidDate = errors.New("invalid meal plan date")
+
+    // ErrMealPlanInvalidRange is thrown when the requested meal plan range ends before it starts
+    ErrMealPlanInvalidRange = errors.New("invalid meal plan date range")
+
     // ErrUserHasNoHousehold is thrown when a user does not belong to a household
     ErrUserHasNoHousehold = errors.New("user has no household")
 
@@ -1906,7 +1921,7 @@ var (
 ```
 
 <a name="ReceiptEndpointError"></a>
-## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L537-L539>)
+## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L552-L554>)
 
 ReceiptEndpointError marks an OCR scan failure as originating from the upstream vision endpoint rather than from Proviant itself. The API layer maps it to 502 Bad Gateway instead of 500 via errors.As.
 
@@ -1917,7 +1932,7 @@ type ReceiptEndpointError struct {
 ```
 
 <a name="ReceiptEndpointError.Error"></a>
-### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L541>)
+### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L556>)
 
 ```go
 func (e *ReceiptEndpointError) Error() string
@@ -1926,7 +1941,7 @@ func (e *ReceiptEndpointError) Error() string
 
 
 <a name="ReceiptEndpointError.Unwrap"></a>
-### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L543>)
+### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L558>)
 
 ```go
 func (e *ReceiptEndpointError) Unwrap() error
@@ -2500,6 +2515,9 @@ import "codeberg.org/isotop7/proviant/services"
   - [func NewConsumptionService\(repos \*database.RepositoryContainer, logger \*zerolog.Logger\) \*ConsumptionService](<#NewConsumptionService>)
   - [func \(s \*ConsumptionService\) ComputeConsumptionRate\(householdID, userID uint, barcode, name string\) \(ConsumptionRate, error\)](<#ConsumptionService.ComputeConsumptionRate>)
   - [func \(s \*ConsumptionService\) ComputeRestockSuggestionFromProduct\(householdID, userID uint, product \*dbModel.Product\) RestockSuggestion](<#ConsumptionService.ComputeRestockSuggestionFromProduct>)
+- [type MealPlanService](<#MealPlanService>)
+  - [func NewMealPlanService\(repos \*database.RepositoryContainer, logger \*zerolog.Logger\) \*MealPlanService](<#NewMealPlanService>)
+  - [func \(s \*MealPlanService\) GenerateShoppingList\(from, to time.Time, userID uint\) \(int, error\)](<#MealPlanService.GenerateShoppingList>)
 - [type ProductService](<#ProductService>)
   - [func NewProductService\(repos \*database.RepositoryContainer, logger \*zerolog.Logger\) \*ProductService](<#NewProductService>)
   - [func \(s \*ProductService\) BulkConsumeProducts\(productIDs \[\]uint, userID uint\) \(\[\]uint, error\)](<#ProductService.BulkConsumeProducts>)
@@ -2510,6 +2528,9 @@ import "codeberg.org/isotop7/proviant/services"
   - [func \(s \*ProductService\) DeleteProduct\(productID, userID uint, archiveOnly bool\) error](<#ProductService.DeleteProduct>)
   - [func \(s \*ProductService\) RestoreProduct\(productID, userID uint\) error](<#ProductService.RestoreProduct>)
   - [func \(s \*ProductService\) WasteProduct\(productID, userID uint\) error](<#ProductService.WasteProduct>)
+- [type RecipeService](<#RecipeService>)
+  - [func NewRecipeService\(repos \*database.RepositoryContainer, logger \*zerolog.Logger\) \*RecipeService](<#NewRecipeService>)
+  - [func \(s \*RecipeService\) CookRecipe\(recipeID uint, servings int, userID uint\) \(consumed, partial int, errs \[\]string, internalErr error\)](<#RecipeService.CookRecipe>)
 - [type RestockSuggestion](<#RestockSuggestion>)
 
 
@@ -2568,6 +2589,35 @@ func (s *ConsumptionService) ComputeRestockSuggestionFromProduct(householdID, us
 ```
 
 ComputeRestockSuggestionFromProduct returns a restock suggestion for an already\-loaded product. If a stable consumption rate is available it is preferred \(ceil\(PerWeek\)\). Otherwise, when the current amount is below the configured minimum stock, the deficit is suggested. When the minimum is already met \(or not configured\) no suggestion is produced.
+
+<a name="MealPlanService"></a>
+## type [MealPlanService](<https://github.com/Isotop7/proviant/blob/develop/src/services/meal_plan_service.go#L14-L17>)
+
+MealPlanService turns planned meals into shopping list entries.
+
+```go
+type MealPlanService struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewMealPlanService"></a>
+### func [NewMealPlanService](<https://github.com/Isotop7/proviant/blob/develop/src/services/meal_plan_service.go#L19>)
+
+```go
+func NewMealPlanService(repos *database.RepositoryContainer, logger *zerolog.Logger) *MealPlanService
+```
+
+
+
+<a name="MealPlanService.GenerateShoppingList"></a>
+### func \(\*MealPlanService\) [GenerateShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/services/meal_plan_service.go#L55>)
+
+```go
+func (s *MealPlanService) GenerateShoppingList(from, to time.Time, userID uint) (int, error)
+```
+
+GenerateShoppingList aggregates the ingredients of every meal planned within \[from, to\] and creates shopping list entries for what is still missing: product\-linked needs are reduced by the stock on hand when the units match, and needs already on the list are skipped. Returns the number of created entries.
 
 <a name="ProductService"></a>
 ## type [ProductService](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L24-L27>)
@@ -2661,6 +2711,35 @@ func (s *ProductService) WasteProduct(productID, userID uint) error
 
 
 
+<a name="RecipeService"></a>
+## type [RecipeService](<https://github.com/Isotop7/proviant/blob/develop/src/services/recipe_service.go#L15-L19>)
+
+RecipeService turns saved recipes into bulk consumes.
+
+```go
+type RecipeService struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewRecipeService"></a>
+### func [NewRecipeService](<https://github.com/Isotop7/proviant/blob/develop/src/services/recipe_service.go#L21>)
+
+```go
+func NewRecipeService(repos *database.RepositoryContainer, logger *zerolog.Logger) *RecipeService
+```
+
+
+
+<a name="RecipeService.CookRecipe"></a>
+### func \(\*RecipeService\) [CookRecipe](<https://github.com/Isotop7/proviant/blob/develop/src/services/recipe_service.go#L49>)
+
+```go
+func (s *RecipeService) CookRecipe(recipeID uint, servings int, userID uint) (consumed, partial int, errs []string, internalErr error)
+```
+
+CookRecipe consumes the ingredients of a recipe scaled to the requested servings \(0 = the recipe's own serving count\). Free\-text ingredients, missing products and unit mismatches are reported as per\-ingredient gaps and skipped; everything else is delegated to CookProducts. internalErr carries the first server\-side failure so the handler can answer 5xx instead of blaming the client.
+
 <a name="RestockSuggestion"></a>
 ## type [RestockSuggestion](<https://github.com/Isotop7/proviant/blob/develop/src/services/consumption_service.go#L45-L56>)
 
@@ -2753,7 +2832,9 @@ import "codeberg.org/isotop7/proviant/testutil"
 - [func CreateTestEmailVerification\(db \*gorm.DB, userID uint, token string\) \*dbModel.EmailVerification](<#CreateTestEmailVerification>)
 - [func CreateTestHousehold\(db \*gorm.DB, adminID uint\) \*dbModel.Household](<#CreateTestHousehold>)
 - [func CreateTestInvitation\(db \*gorm.DB, householdID, inviterID uint, email string\) \*dbModel.HouseholdInvitation](<#CreateTestInvitation>)
+- [func CreateTestMealPlanEntry\(db \*gorm.DB, householdID, recipeID uint, date time.Time, servings int, userID ...uint\) \*dbModel.MealPlanEntry](<#CreateTestMealPlanEntry>)
 - [func CreateTestProduct\(db \*gorm.DB, householdID uint, userID ...uint\) \*dbModel.Product](<#CreateTestProduct>)
+- [func CreateTestRecipe\(db \*gorm.DB, householdID uint, userID ...uint\) \*dbModel.Recipe](<#CreateTestRecipe>)
 - [func CreateTestRequest\(ctx \*gin.Context, body interface\{\}\)](<#CreateTestRequest>)
 - [func CreateTestStorageLocation\(db \*gorm.DB, householdID uint\) \*dbModel.StorageLocation](<#CreateTestStorageLocation>)
 - [func CreateTestUser\(db \*gorm.DB, householdID uint\) \*authentication.User](<#CreateTestUser>)
@@ -2784,7 +2865,7 @@ func CreateJSONRequest(method string, path string, body interface{}) *http.Reque
 
 
 <a name="CreateTestEmailVerification"></a>
-## func [CreateTestEmailVerification](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/fixtures.go#L83>)
+## func [CreateTestEmailVerification](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/fixtures.go#L119>)
 
 ```go
 func CreateTestEmailVerification(db *gorm.DB, userID uint, token string) *dbModel.EmailVerification
@@ -2802,10 +2883,19 @@ func CreateTestHousehold(db *gorm.DB, adminID uint) *dbModel.Household
 
 
 <a name="CreateTestInvitation"></a>
-## func [CreateTestInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/fixtures.go#L72>)
+## func [CreateTestInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/fixtures.go#L108>)
 
 ```go
 func CreateTestInvitation(db *gorm.DB, householdID, inviterID uint, email string) *dbModel.HouseholdInvitation
+```
+
+
+
+<a name="CreateTestMealPlanEntry"></a>
+## func [CreateTestMealPlanEntry](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/fixtures.go#L80>)
+
+```go
+func CreateTestMealPlanEntry(db *gorm.DB, householdID, recipeID uint, date time.Time, servings int, userID ...uint) *dbModel.MealPlanEntry
 ```
 
 
@@ -2815,6 +2905,15 @@ func CreateTestInvitation(db *gorm.DB, householdID, inviterID uint, email string
 
 ```go
 func CreateTestProduct(db *gorm.DB, householdID uint, userID ...uint) *dbModel.Product
+```
+
+
+
+<a name="CreateTestRecipe"></a>
+## func [CreateTestRecipe](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/fixtures.go#L60>)
+
+```go
+func CreateTestRecipe(db *gorm.DB, householdID uint, userID ...uint) *dbModel.Recipe
 ```
 
 
@@ -2847,7 +2946,7 @@ func CreateTestUser(db *gorm.DB, householdID uint) *authentication.User
 
 
 <a name="CreateTestWebhook"></a>
-## func [CreateTestWebhook](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/fixtures.go#L60>)
+## func [CreateTestWebhook](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/fixtures.go#L96>)
 
 ```go
 func CreateTestWebhook(db *gorm.DB, userID uint) *dbModel.Webhook
@@ -2856,7 +2955,7 @@ func CreateTestWebhook(db *gorm.DB, userID uint) *dbModel.Webhook
 
 
 <a name="MigrateAllModels"></a>
-## func [MigrateAllModels](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/database.go#L104>)
+## func [MigrateAllModels](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/database.go#L108>)
 
 ```go
 func MigrateAllModels(db *gorm.DB) error
@@ -2883,7 +2982,7 @@ func MockJWTClaimsWithKey(ctx *gin.Context, userID uint, key string)
 
 
 <a name="SeedConsumedProduct"></a>
-## func [SeedConsumedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/fixtures.go#L97>)
+## func [SeedConsumedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/fixtures.go#L133>)
 
 ```go
 func SeedConsumedProduct(t *testing.T, db *gorm.DB, householdID, userID uint, isPrivate bool, barcode, name, unit string, amount int, deletedAt time.Time)
@@ -2901,7 +3000,7 @@ func SetupGinContext(db *gorm.DB) (*gin.Context, *httptest.ResponseRecorder)
 
 
 <a name="SetupTestDB"></a>
-## func [SetupTestDB](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/database.go#L43>)
+## func [SetupTestDB](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/database.go#L47>)
 
 ```go
 func SetupTestDB(t *testing.T) *gorm.DB
@@ -3154,6 +3253,7 @@ import "codeberg.org/isotop7/proviant/web"
   - [func \(frontend \*Frontend\) AcceptInvite\(ctx \*gin.Context\)](<#Frontend.AcceptInvite>)
   - [func \(frontend \*Frontend\) Auth\(ctx \*gin.Context\)](<#Frontend.Auth>)
   - [func \(frontend \*Frontend\) ForgotPassword\(ctx \*gin.Context\)](<#Frontend.ForgotPassword>)
+  - [func \(frontend \*Frontend\) MealPlan\(ctx \*gin.Context\)](<#Frontend.MealPlan>)
   - [func \(frontend \*Frontend\) Onboarding\(ctx \*gin.Context\)](<#Frontend.Onboarding>)
   - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
   - [func \(frontend \*Frontend\) ProductsEdit\(ctx \*gin.Context\)](<#Frontend.ProductsEdit>)
@@ -3183,7 +3283,7 @@ const (
 ```
 
 <a name="BrandFeature"></a>
-## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1254-L1257>)
+## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1283-L1286>)
 
 BrandFeature is a single icon\+text row in the brand panel of the split\-panel auth pages. Consumed by the partials/loginBrand.tmpl template.
 
@@ -3224,13 +3324,22 @@ func (frontend *Frontend) Auth(ctx *gin.Context)
 Auth renders the authentication page @Summary Auth page @Description Renders the authentication page for login/signup @Tags web @Produce html @Success 200 \{string\} html @Router /web/auth \[get\]
 
 <a name="Frontend.ForgotPassword"></a>
-### func \(\*Frontend\) [ForgotPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1212>)
+### func \(\*Frontend\) [ForgotPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1241>)
 
 ```go
 func (frontend *Frontend) ForgotPassword(ctx *gin.Context)
 ```
 
 ForgotPassword renders the forgot\-password page \(form to request a reset link\). @Summary Forgot password page @Description Renders the page that lets users request a password reset link via email. @Tags web @Produce html @Success 200 \{string\} html @Router /web/forgot\-password \[get\]
+
+<a name="Frontend.MealPlan"></a>
+### func \(\*Frontend\) [MealPlan](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1041>)
+
+```go
+func (frontend *Frontend) MealPlan(ctx *gin.Context)
+```
+
+MealPlan renders the weekly meal plan page @Summary Meal Plan page @Description Renders the weekly meal plan with planned meals and shopping list generation @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/mealplan \[get\]
 
 <a name="Frontend.Onboarding"></a>
 ### func \(\*Frontend\) [Onboarding](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L983>)
@@ -3296,7 +3405,7 @@ func (frontend *Frontend) Recipes(ctx *gin.Context)
 Recipes renders the recipe suggestions page @Summary Recipes page @Description Shows recipe suggestions for expiring products @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/recipes \[get\]
 
 <a name="Frontend.ResetPassword"></a>
-### func \(\*Frontend\) [ResetPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1231>)
+### func \(\*Frontend\) [ResetPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1260>)
 
 ```go
 func (frontend *Frontend) ResetPassword(ctx *gin.Context)
@@ -3314,7 +3423,7 @@ func (frontend *Frontend) Root(ctx *gin.Context)
 Root renders the home page for authenticated users @Summary Home page @Description Renders the home page showing product dashboard @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web \[get\]
 
 <a name="Frontend.ShoppingList"></a>
-### func \(\*Frontend\) [ShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1070>)
+### func \(\*Frontend\) [ShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1099>)
 
 ```go
 func (frontend *Frontend) ShoppingList(ctx *gin.Context)
@@ -3323,7 +3432,7 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context)
 ShoppingList renders the shopping list page @Summary Shopping List page @Description Renders the shared household shopping list with custom items and import banner @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/shopping\-list \[get\]
 
 <a name="Frontend.Unsubscribe"></a>
-### func \(\*Frontend\) [Unsubscribe](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1152>)
+### func \(\*Frontend\) [Unsubscribe](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1181>)
 
 ```go
 func (frontend *Frontend) Unsubscribe(ctx *gin.Context)
@@ -3359,7 +3468,7 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context)
 VerifyEmail renders the email verification page @Summary Verify email page @Description Renders the email verification status page @Tags web @Produce html @Param token query string false "Verification token" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Router /web/verify\-email \[get\]
 
 <a name="Frontend.WasteAnalytics"></a>
-### func \(\*Frontend\) [WasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1041>)
+### func \(\*Frontend\) [WasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1070>)
 
 ```go
 func (frontend *Frontend) WasteAnalytics(ctx *gin.Context)
@@ -3635,17 +3744,22 @@ v1 implements version 1 of the proviant API
 - [func CancelInvitation\(ctx \*gin.Context, appCtx \*AppContext\)](<#CancelInvitation>)
 - [func ConsumeProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#ConsumeProduct>)
 - [func CookProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#CookProducts>)
+- [func CookRecipe\(ctx \*gin.Context, appCtx \*AppContext\)](<#CookRecipe>)
 - [func CreateCalendarToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateCalendarToken>)
 - [func CreateHousehold\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateHousehold>)
 - [func CreateInvitation\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateInvitation>)
+- [func CreateMealPlanEntry\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateMealPlanEntry>)
 - [func CreateProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateProduct>)
+- [func CreateRecipe\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateRecipe>)
 - [func CreateShoppingListItem\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateShoppingListItem>)
 - [func CreateStorageLocation\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateStorageLocation>)
 - [func CreateUserToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateUserToken>)
 - [func CreateWebhook\(ctx \*gin.Context, appCtx \*AppContext\)](<#CreateWebhook>)
 - [func DeleteCalendarToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteCalendarToken>)
 - [func DeleteHouseholdUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteHouseholdUser>)
+- [func DeleteMealPlanEntry\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteMealPlanEntry>)
 - [func DeleteProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteProduct>)
+- [func DeleteRecipe\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteRecipe>)
 - [func DeleteShoppingListItem\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteShoppingListItem>)
 - [func DeleteStorageLocation\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteStorageLocation>)
 - [func DeleteUserToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#DeleteUserToken>)
@@ -3655,6 +3769,7 @@ v1 implements version 1 of the proviant API
 - [func ExportICalendar\(ctx \*gin.Context\)](<#ExportICalendar>)
 - [func ExportProductsCSV\(ctx \*gin.Context, appCtx \*AppContext\)](<#ExportProductsCSV>)
 - [func ExportProductsJSON\(ctx \*gin.Context, appCtx \*AppContext\)](<#ExportProductsJSON>)
+- [func GenerateMealPlanShoppingList\(ctx \*gin.Context, appCtx \*AppContext\)](<#GenerateMealPlanShoppingList>)
 - [func GenerateTelegramLinkToken\(ctx \*gin.Context, appCtx \*AppContext\)](<#GenerateTelegramLinkToken>)
 - [func GetArchivedProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetArchivedProducts>)
 - [func GetAuditLogs\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetAuditLogs>)
@@ -3674,6 +3789,7 @@ v1 implements version 1 of the proviant API
 - [func GetProductSummary\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProductSummary>)
 - [func GetProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProducts>)
 - [func GetProductsByBarcode\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetProductsByBarcode>)
+- [func GetRecipe\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetRecipe>)
 - [func GetRecipeSuggestions\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetRecipeSuggestions>)
 - [func GetRestockSuggestion\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetRestockSuggestion>)
 - [func GetSavingsStats\(ctx \*gin.Context, appCtx \*AppContext\)](<#GetSavingsStats>)
@@ -3688,6 +3804,8 @@ v1 implements version 1 of the proviant API
 - [func ImportProducts\(ctx \*gin.Context, appCtx \*AppContext\)](<#ImportProducts>)
 - [func ImportTemplateCSV\(ctx \*gin.Context, \_ \*AppContext\)](<#ImportTemplateCSV>)
 - [func LeaveHousehold\(ctx \*gin.Context, appCtx \*AppContext\)](<#LeaveHousehold>)
+- [func ListMealPlanEntries\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListMealPlanEntries>)
+- [func ListRecipes\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListRecipes>)
 - [func ListShoppingListItems\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListShoppingListItems>)
 - [func ListStorageLocations\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListStorageLocations>)
 - [func ListUserTokens\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListUserTokens>)
@@ -3712,8 +3830,10 @@ v1 implements version 1 of the proviant API
 - [func UpdateHouseholdName\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdName>)
 - [func UpdateHouseholdSettings\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdSettings>)
 - [func UpdateHouseholdUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateHouseholdUser>)
+- [func UpdateMealPlanEntry\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateMealPlanEntry>)
 - [func UpdateProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateProduct>)
 - [func UpdateProductAmount\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateProductAmount>)
+- [func UpdateRecipe\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateRecipe>)
 - [func UpdateShoppingListItem\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateShoppingListItem>)
 - [func UpdateStorageLocation\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateStorageLocation>)
 - [func UpdateUser\(ctx \*gin.Context, appCtx \*AppContext\)](<#UpdateUser>)
@@ -3917,6 +4037,15 @@ func CookProducts(ctx *gin.Context, appCtx *AppContext)
 
 CookProducts consumes multiple products, partially or fully \(cook workflow\) @Summary Cook products @Description Consumes the given products by reducing their amounts. An amount of 0 or one that reaches or exceeds the current amount fully consumes \(archives\) the product. @Tags product @Accept json @Produce json @Param request body apiModel.CookProductsAPIModel true "Cook items" @Success 200 \{object\} apiModel.CookResponse @Failure 400 \{object\} apiModel.CookResponse "Returned when no item was processed \(invalid body or all items failed\)" @Failure 500 \{object\} api.APIResponse "Returned when no item was processed and a server\-side error occurred" @Router /api/v1/products/cook \[post\]
 
+<a name="CookRecipe"></a>
+## func [CookRecipe](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/recipes.go#L273>)
+
+```go
+func CookRecipe(ctx *gin.Context, appCtx *AppContext)
+```
+
+CookRecipe consumes the ingredients of a saved recipe \(cook workflow\) @Summary Cook a saved recipe @Description Consumes the recipe's linked products by their scaled amounts. Unlinked ingredients and unit mismatches are reported as errors and skipped; an amount reaching the current stock fully consumes \(archives\) the product. @Tags recipes @Accept json @Produce json @Param id path int true "Recipe ID" @Param request body apiModel.CookRecipeRequest true "Servings to cook \(0 = recipe servings\)" @Success 200 \{object\} apiModel.CookResponse @Failure 400 \{object\} apiModel.CookResponse "Returned when no item was processed \(invalid body or all ingredients failed\)" @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse "Returned when no item was processed and a server\-side error occurred" @Router /api/v1/recipes/\{id\}/cook \[post\] @Security BearerAuth
+
 <a name="CreateCalendarToken"></a>
 ## func [CreateCalendarToken](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/calendar_token.go#L77>)
 
@@ -3944,6 +4073,15 @@ func CreateInvitation(ctx *gin.Context, appCtx *AppContext)
 
 CreateInvitation creates a new household invitation and sends an email to the recipient. @Summary Create invitation @Description Creates a new household invitation and sends an email to the recipient @Tags Invitation @Accept json @Produce json @Param request body createInvitationRequest true "Invitation request" @Success 201 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations \[post\]
 
+<a name="CreateMealPlanEntry"></a>
+## func [CreateMealPlanEntry](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/meal_plans.go#L94>)
+
+```go
+func CreateMealPlanEntry(ctx *gin.Context, appCtx *AppContext)
+```
+
+CreateMealPlanEntry schedules a recipe on one day of the meal plan @Summary Creates a planned meal @Description Schedules a saved recipe on the given date; servings of 0 use the recipe's own serving count @Tags mealplans @Accept json @Produce json @Param request body apiModel.CreateMealPlanEntryRequest true "Planned meal" @Success 201 \{object\} apiModel.MealPlanEntryResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/mealplans \[post\] @Security BearerAuth
+
 <a name="CreateProduct"></a>
 ## func [CreateProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L122>)
 
@@ -3952,6 +4090,15 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
 CreateProduct creates a new product of a user @Summary Creates a new product @Description Creates a new product of a user @Tags product @Accept json @Produce json @Param product body database.Product true "Product" @Success 201 \{object\} apiModel.ProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products \[post\]
+
+<a name="CreateRecipe"></a>
+## func [CreateRecipe](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/recipes.go#L70>)
+
+```go
+func CreateRecipe(ctx *gin.Context, appCtx *AppContext)
+```
+
+CreateRecipe creates a saved recipe for the caller's household @Summary Creates a saved recipe @Description Creates a saved recipe with its ingredients; a nil productId marks a free\-text ingredient @Tags recipes @Accept json @Produce json @Param request body apiModel.CreateRecipeRequest true "Recipe with ingredients" @Success 201 \{object\} apiModel.RecipeResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes \[post\] @Security BearerAuth
 
 <a name="CreateShoppingListItem"></a>
 ## func [CreateShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L46>)
@@ -4007,6 +4154,15 @@ func DeleteHouseholdUser(ctx *gin.Context, appCtx *AppContext)
 
 DeleteHouseholdUser deletes a user from the household. @Summary Delete household member @Description Deletes a user from the household. Caller must be admin. @Tags household @Produce json @Param id path int true "User ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/admin/users/\{id\} \[delete\]
 
+<a name="DeleteMealPlanEntry"></a>
+## func [DeleteMealPlanEntry](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/meal_plans.go#L235>)
+
+```go
+func DeleteMealPlanEntry(ctx *gin.Context, appCtx *AppContext)
+```
+
+DeleteMealPlanEntry removes a planned meal @Summary Deletes a planned meal @Description Deletes the meal plan entry with the given ID @Tags mealplans @Produce json @Param id path int true "Meal plan entry ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/mealplans/\{id\} \[delete\] @Security BearerAuth
+
 <a name="DeleteProduct"></a>
 ## func [DeleteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L374>)
 
@@ -4015,6 +4171,15 @@ func DeleteProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
 DeleteProduct deletes a product of a user @Summary Deletes a product @Description Deletes a product of a user @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param archiveOnly query bool false "Archive only" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\} \[delete\]
+
+<a name="DeleteRecipe"></a>
+## func [DeleteRecipe](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/recipes.go#L237>)
+
+```go
+func DeleteRecipe(ctx *gin.Context, appCtx *AppContext)
+```
+
+DeleteRecipe deletes a saved recipe and its ingredients @Summary Deletes a saved recipe @Description Deletes the saved recipe with the given ID including its ingredients @Tags recipes @Produce json @Param id path int true "Recipe ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes/\{id\} \[delete\] @Security BearerAuth
 
 <a name="DeleteShoppingListItem"></a>
 ## func [DeleteShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L203>)
@@ -4096,6 +4261,15 @@ func ExportProductsJSON(ctx *gin.Context, appCtx *AppContext)
 ```
 
 ExportProductsJSON exports the user's active products as JSON. @Summary Export products as JSON @Description Returns a JSON file with all active products for the user @Tags export @Produce application/json @Param from query string false "From date \(2006\-01\-02\)" @Param to query string false "To date \(2006\-01\-02\)" @Success 200 \{object\} \[\]apiModel.ExportProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/export/products.json \[get\]
+
+<a name="GenerateMealPlanShoppingList"></a>
+## func [GenerateMealPlanShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/meal_plans.go#L269>)
+
+```go
+func GenerateMealPlanShoppingList(ctx *gin.Context, appCtx *AppContext)
+```
+
+GenerateMealPlanShoppingList turns planned meals into shopping list entries @Summary Generates shopping list from meal plan @Description Aggregates the ingredients of all meals planned within the date range and creates shopping list entries for the missing amounts \(stock on hand subtracted when units match\) @Tags mealplans @Accept json @Produce json @Param request body apiModel.GenerateShoppingListRequest true "Date range \(YYYY\-MM\-DD\)" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/mealplans/shopping\-list \[post\] @Security BearerAuth
 
 <a name="GenerateTelegramLinkToken"></a>
 ## func [GenerateTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user.go#L234>)
@@ -4270,6 +4444,15 @@ func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext)
 
 GetProductsByBarcode returns a list of products of a user matching a barcode @Summary Returns a list of products @Description Returns a list of products of user matching the given barcode @Tags product @Produce json @Param barcode path string true "Barcode" @Success 200 \{object\} \[\]apiModel.ProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/byBarcode/\{barcode\} \[get\]
 
+<a name="GetRecipe"></a>
+## func [GetRecipe](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/recipes.go#L125>)
+
+```go
+func GetRecipe(ctx *gin.Context, appCtx *AppContext)
+```
+
+GetRecipe returns one saved recipe with its ingredients @Summary Gets a saved recipe @Description Returns the saved recipe with the given ID including its ingredients @Tags recipes @Produce json @Param id path int true "Recipe ID" @Success 200 \{object\} apiModel.RecipeResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes/\{id\} \[get\] @Security BearerAuth
+
 <a name="GetRecipeSuggestions"></a>
 ## func [GetRecipeSuggestions](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/recipe_suggestions.go#L29>)
 
@@ -4395,6 +4578,24 @@ func LeaveHousehold(ctx *gin.Context, appCtx *AppContext)
 ```
 
 LeaveHousehold removes the calling user from their current household and assigns them a new personal one. @Summary Leave current household @Description Creates a new personal household for the user. Products are moved if they were the sole member. @Tags household @Produce json @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/household/leave \[post\]
+
+<a name="ListMealPlanEntries"></a>
+## func [ListMealPlanEntries](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/meal_plans.go#L54>)
+
+```go
+func ListMealPlanEntries(ctx *gin.Context, appCtx *AppContext)
+```
+
+ListMealPlanEntries lists the planned meals in a date range @Summary Lists planned meals @Description Returns all meal plan entries of the caller's household within the given date range @Tags mealplans @Produce json @Param from query string true "Range start \(YYYY\-MM\-DD\)" @Param to query string true "Range end \(YYYY\-MM\-DD\)" @Success 200 \{array\} apiModel.MealPlanEntryResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/mealplans \[get\] @Security BearerAuth
+
+<a name="ListRecipes"></a>
+## func [ListRecipes](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/recipes.go#L40>)
+
+```go
+func ListRecipes(ctx *gin.Context, appCtx *AppContext)
+```
+
+ListRecipes lists the saved recipes of the caller's household @Summary Lists saved recipes @Description Returns all saved recipes of the caller's household @Tags recipes @Produce json @Success 200 \{array\} apiModel.RecipeResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes \[get\] @Security BearerAuth
 
 <a name="ListShoppingListItems"></a>
 ## func [ListShoppingListItems](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L107>)
@@ -4619,6 +4820,15 @@ func UpdateHouseholdUser(ctx *gin.Context, appCtx *AppContext)
 
 UpdateHouseholdUser updates a user's username or email. @Summary Update household member @Description Updates the username or email of a user in the household. Caller must be admin. @Tags household @Accept json @Produce json @Param id path int true "User ID" @Param user body updateAdminUserRequest true "User data" @Success 200 \{object\} apiModel.HouseholdUserResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/admin/users/\{id\} \[patch\]
 
+<a name="UpdateMealPlanEntry"></a>
+## func [UpdateMealPlanEntry](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/meal_plans.go#L159>)
+
+```go
+func UpdateMealPlanEntry(ctx *gin.Context, appCtx *AppContext)
+```
+
+UpdateMealPlanEntry updates a planned meal @Summary Updates a planned meal @Description Updates date, recipe, servings and notes of a meal plan entry @Tags mealplans @Accept json @Produce json @Param id path int true "Meal plan entry ID" @Param request body apiModel.UpdateMealPlanEntryRequest true "Fields to update" @Success 200 \{object\} apiModel.MealPlanEntryResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/mealplans/\{id\} \[patch\] @Security BearerAuth
+
 <a name="UpdateProduct"></a>
 ## func [UpdateProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L221>)
 
@@ -4636,6 +4846,15 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext)
 ```
 
 UpdateProductAmount updates the amount of a product by a given delta. If the resulting amount is \<= 0, the product is hard\-deleted. @Summary Update product amount @Description Applies a delta to a product's amount. Hard\-deletes the product when amount reaches 0. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param delta body api.ProductAmountDTO true "Amount delta" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/amount \[patch\]
+
+<a name="UpdateRecipe"></a>
+## func [UpdateRecipe](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/recipes.go#L166>)
+
+```go
+func UpdateRecipe(ctx *gin.Context, appCtx *AppContext)
+```
+
+UpdateRecipe updates a saved recipe and replaces its ingredients @Summary Updates a saved recipe @Description Updates the given fields of a saved recipe; supplying ingredients replaces them atomically @Tags recipes @Accept json @Produce json @Param id path int true "Recipe ID" @Param request body apiModel.UpdateRecipeRequest true "Fields to update" @Success 200 \{object\} apiModel.RecipeResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes/\{id\} \[patch\] @Security BearerAuth
 
 <a name="UpdateShoppingListItem"></a>
 ## func [UpdateShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L139>)
@@ -5019,6 +5238,14 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*InvitationRepository\) MarkInvitationSentTx\(tx \*gorm.DB, invitationID uint\) error](<#InvitationRepository.MarkInvitationSentTx>)
 - [type InvitationRepositoryInterface](<#InvitationRepositoryInterface>)
 - [type MailDigestProductGroup](<#MailDigestProductGroup>)
+- [type MealPlanRepository](<#MealPlanRepository>)
+  - [func NewMealPlanRepository\(db \*gorm.DB\) \*MealPlanRepository](<#NewMealPlanRepository>)
+  - [func \(r \*MealPlanRepository\) Create\(entry \*database.MealPlanEntry\) error](<#MealPlanRepository.Create>)
+  - [func \(r \*MealPlanRepository\) Delete\(id, householdID uint\) error](<#MealPlanRepository.Delete>)
+  - [func \(r \*MealPlanRepository\) GetByID\(id, householdID uint\) \(\*database.MealPlanEntry, error\)](<#MealPlanRepository.GetByID>)
+  - [func \(r \*MealPlanRepository\) ListByRange\(householdID uint, from, to time.Time\) \(\[\]database.MealPlanEntry, error\)](<#MealPlanRepository.ListByRange>)
+  - [func \(r \*MealPlanRepository\) Update\(entry \*database.MealPlanEntry\) error](<#MealPlanRepository.Update>)
+- [type MealPlanRepositoryInterface](<#MealPlanRepositoryInterface>)
 - [type NotificationRepository](<#NotificationRepository>)
   - [func NewNotificationRepository\(db \*gorm.DB\) \*NotificationRepository](<#NewNotificationRepository>)
   - [func NewNotificationRepositoryWithLogger\(db \*gorm.DB, logger \*zerolog.Logger\) \*NotificationRepository](<#NewNotificationRepositoryWithLogger>)
@@ -5134,13 +5361,21 @@ import "codeberg.org/isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#ProductRepository.UserHasProductAccess>)
   - [func \(r \*ProductRepository\) WasteProduct\(productID, userID uint\) error](<#ProductRepository.WasteProduct>)
 - [type ProductRepositoryInterface](<#ProductRepositoryInterface>)
+- [type RecipeCacheRepository](<#RecipeCacheRepository>)
+  - [func NewRecipeCacheRepository\(db \*gorm.DB\) \*RecipeCacheRepository](<#NewRecipeCacheRepository>)
+  - [func \(r \*RecipeCacheRepository\) CleanupExpiredCaches\(\) error](<#RecipeCacheRepository.CleanupExpiredCaches>)
+  - [func \(r \*RecipeCacheRepository\) CreateCache\(cache \*database.RecipeCache\) error](<#RecipeCacheRepository.CreateCache>)
+  - [func \(r \*RecipeCacheRepository\) GetCacheByQueryHash\(hash string\) \(database.RecipeCache, error\)](<#RecipeCacheRepository.GetCacheByQueryHash>)
+  - [func \(r \*RecipeCacheRepository\) HasPopulatedCache\(hash string\) \(bool, error\)](<#RecipeCacheRepository.HasPopulatedCache>)
+  - [func \(r \*RecipeCacheRepository\) UpdateCacheHit\(hash string\) error](<#RecipeCacheRepository.UpdateCacheHit>)
+- [type RecipeCacheRepositoryInterface](<#RecipeCacheRepositoryInterface>)
 - [type RecipeRepository](<#RecipeRepository>)
   - [func NewRecipeRepository\(db \*gorm.DB\) \*RecipeRepository](<#NewRecipeRepository>)
-  - [func \(r \*RecipeRepository\) CleanupExpiredCaches\(\) error](<#RecipeRepository.CleanupExpiredCaches>)
-  - [func \(r \*RecipeRepository\) CreateCache\(cache \*database.RecipeCache\) error](<#RecipeRepository.CreateCache>)
-  - [func \(r \*RecipeRepository\) GetCacheByQueryHash\(hash string\) \(database.RecipeCache, error\)](<#RecipeRepository.GetCacheByQueryHash>)
-  - [func \(r \*RecipeRepository\) HasPopulatedCache\(hash string\) \(bool, error\)](<#RecipeRepository.HasPopulatedCache>)
-  - [func \(r \*RecipeRepository\) UpdateCacheHit\(hash string\) error](<#RecipeRepository.UpdateCacheHit>)
+  - [func \(r \*RecipeRepository\) Create\(recipe \*database.Recipe\) error](<#RecipeRepository.Create>)
+  - [func \(r \*RecipeRepository\) Delete\(id, householdID uint\) error](<#RecipeRepository.Delete>)
+  - [func \(r \*RecipeRepository\) GetByID\(id, householdID uint\) \(\*database.Recipe, error\)](<#RecipeRepository.GetByID>)
+  - [func \(r \*RecipeRepository\) ListByHousehold\(householdID uint\) \(\[\]database.Recipe, error\)](<#RecipeRepository.ListByHousehold>)
+  - [func \(r \*RecipeRepository\) Update\(recipe \*database.Recipe\) error](<#RecipeRepository.Update>)
 - [type RecipeRepositoryInterface](<#RecipeRepositoryInterface>)
 - [type RepositoryContainer](<#RepositoryContainer>)
   - [func NewRepositoryContainer\(db \*gorm.DB, logger \*zerolog.Logger\) \*RepositoryContainer](<#NewRepositoryContainer>)
@@ -5944,6 +6179,86 @@ type MailDigestProductGroup struct {
     Today    []database.Product
     ThisWeek []database.Product
     NextWeek []database.Product
+}
+```
+
+<a name="MealPlanRepository"></a>
+## type [MealPlanRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/meal_plan_repository.go#L21-L23>)
+
+
+
+```go
+type MealPlanRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewMealPlanRepository"></a>
+### func [NewMealPlanRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/meal_plan_repository.go#L25>)
+
+```go
+func NewMealPlanRepository(db *gorm.DB) *MealPlanRepository
+```
+
+
+
+<a name="MealPlanRepository.Create"></a>
+### func \(\*MealPlanRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/meal_plan_repository.go#L29>)
+
+```go
+func (r *MealPlanRepository) Create(entry *database.MealPlanEntry) error
+```
+
+
+
+<a name="MealPlanRepository.Delete"></a>
+### func \(\*MealPlanRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/meal_plan_repository.go#L54>)
+
+```go
+func (r *MealPlanRepository) Delete(id, householdID uint) error
+```
+
+
+
+<a name="MealPlanRepository.GetByID"></a>
+### func \(\*MealPlanRepository\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/meal_plan_repository.go#L33>)
+
+```go
+func (r *MealPlanRepository) GetByID(id, householdID uint) (*database.MealPlanEntry, error)
+```
+
+
+
+<a name="MealPlanRepository.ListByRange"></a>
+### func \(\*MealPlanRepository\) [ListByRange](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/meal_plan_repository.go#L43>)
+
+```go
+func (r *MealPlanRepository) ListByRange(householdID uint, from, to time.Time) ([]database.MealPlanEntry, error)
+```
+
+ListByRange returns the entries whose date lies within \[from, to\], ordered by date.
+
+<a name="MealPlanRepository.Update"></a>
+### func \(\*MealPlanRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/meal_plan_repository.go#L50>)
+
+```go
+func (r *MealPlanRepository) Update(entry *database.MealPlanEntry) error
+```
+
+
+
+<a name="MealPlanRepositoryInterface"></a>
+## type [MealPlanRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/meal_plan_repository.go#L11-L17>)
+
+MealPlanRepositoryInterface persists household meal plan entries.
+
+```go
+type MealPlanRepositoryInterface interface {
+    Create(entry *database.MealPlanEntry) error
+    GetByID(id, householdID uint) (*database.MealPlanEntry, error)
+    ListByRange(householdID uint, from, to time.Time) ([]database.MealPlanEntry, error)
+    Update(entry *database.MealPlanEntry) error
+    Delete(id, householdID uint) error
 }
 ```
 
@@ -7113,8 +7428,90 @@ type ProductRepositoryInterface interface {
 }
 ```
 
+<a name="RecipeCacheRepository"></a>
+## type [RecipeCacheRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_cache_repository.go#L23-L25>)
+
+
+
+```go
+type RecipeCacheRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewRecipeCacheRepository"></a>
+### func [NewRecipeCacheRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_cache_repository.go#L27>)
+
+```go
+func NewRecipeCacheRepository(db *gorm.DB) *RecipeCacheRepository
+```
+
+
+
+<a name="RecipeCacheRepository.CleanupExpiredCaches"></a>
+### func \(\*RecipeCacheRepository\) [CleanupExpiredCaches](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_cache_repository.go#L92>)
+
+```go
+func (r *RecipeCacheRepository) CleanupExpiredCaches() error
+```
+
+CleanupExpiredCaches deletes all cache entries where expires\_at \< now. Unscoped hard delete: soft\-deleted tombstones would keep occupying the query\_hash unique index and redirect later CreateCache upserts into an invisible row.
+
+<a name="RecipeCacheRepository.CreateCache"></a>
+### func \(\*RecipeCacheRepository\) [CreateCache](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_cache_repository.go#L40>)
+
+```go
+func (r *RecipeCacheRepository) CreateCache(cache *database.RecipeCache) error
+```
+
+CreateCache inserts or replaces a cache entry atomically using ON CONFLICT \(upsert\). If an entry with the same query\_hash exists, it is overwritten \(resetting hit\_count and updated\_at\).
+
+<a name="RecipeCacheRepository.GetCacheByQueryHash"></a>
+### func \(\*RecipeCacheRepository\) [GetCacheByQueryHash](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_cache_repository.go#L32>)
+
+```go
+func (r *RecipeCacheRepository) GetCacheByQueryHash(hash string) (database.RecipeCache, error)
+```
+
+GetCacheByQueryHash retrieves a cache entry by its query hash if not expired.
+
+<a name="RecipeCacheRepository.HasPopulatedCache"></a>
+### func \(\*RecipeCacheRepository\) [HasPopulatedCache](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_cache_repository.go#L59>)
+
+```go
+func (r *RecipeCacheRepository) HasPopulatedCache(hash string) (bool, error)
+```
+
+HasPopulatedCache reports whether hash already has an unexpired entry holding real suggestions. CreateCache is an unconditional upsert, so a caller about to store an empty or partial result calls this first: without it, one degraded run would overwrite a good entry and the household would see the degraded answer for the remainder of that entry's TTL.
+
+Staleness is judged by RecipeCache.HasStaleSuggestions, the same predicate the read path uses. Anything the read path refuses to serve must also read as unpopulated here, or a degraded run could not repair the entry it just called stale and every later request would repeat the provider fan\-out until the TTL elapsed.
+
+<a name="RecipeCacheRepository.UpdateCacheHit"></a>
+### func \(\*RecipeCacheRepository\) [UpdateCacheHit](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_cache_repository.go#L84>)
+
+```go
+func (r *RecipeCacheRepository) UpdateCacheHit(hash string) error
+```
+
+UpdateCacheHit increments the hit count for a cache entry.
+
+<a name="RecipeCacheRepositoryInterface"></a>
+## type [RecipeCacheRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_cache_repository.go#L13-L19>)
+
+
+
+```go
+type RecipeCacheRepositoryInterface interface {
+    GetCacheByQueryHash(hash string) (database.RecipeCache, error)
+    CreateCache(cache *database.RecipeCache) error
+    HasPopulatedCache(hash string) (bool, error)
+    UpdateCacheHit(hash string) error
+    CleanupExpiredCaches() error
+}
+```
+
 <a name="RecipeRepository"></a>
-## type [RecipeRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L23-L25>)
+## type [RecipeRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L19-L21>)
 
 
 
@@ -7125,7 +7522,7 @@ type RecipeRepository struct {
 ```
 
 <a name="NewRecipeRepository"></a>
-### func [NewRecipeRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L27>)
+### func [NewRecipeRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L23>)
 
 ```go
 func NewRecipeRepository(db *gorm.DB) *RecipeRepository
@@ -7133,70 +7530,68 @@ func NewRecipeRepository(db *gorm.DB) *RecipeRepository
 
 
 
-<a name="RecipeRepository.CleanupExpiredCaches"></a>
-### func \(\*RecipeRepository\) [CleanupExpiredCaches](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L92>)
+<a name="RecipeRepository.Create"></a>
+### func \(\*RecipeRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L28>)
 
 ```go
-func (r *RecipeRepository) CleanupExpiredCaches() error
+func (r *RecipeRepository) Create(recipe *database.Recipe) error
 ```
 
-CleanupExpiredCaches deletes all cache entries where expires\_at \< now. Unscoped hard delete: soft\-deleted tombstones would keep occupying the query\_hash unique index and redirect later CreateCache upserts into an invisible row.
+Create stores a recipe together with its ingredient rows.
 
-<a name="RecipeRepository.CreateCache"></a>
-### func \(\*RecipeRepository\) [CreateCache](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L40>)
+<a name="RecipeRepository.Delete"></a>
+### func \(\*RecipeRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L73>)
 
 ```go
-func (r *RecipeRepository) CreateCache(cache *database.RecipeCache) error
+func (r *RecipeRepository) Delete(id, householdID uint) error
 ```
 
-CreateCache inserts or replaces a cache entry atomically using ON CONFLICT \(upsert\). If an entry with the same query\_hash exists, it is overwritten \(resetting hit\_count and updated\_at\).
+Delete removes a recipe and its ingredient rows in one transaction.
 
-<a name="RecipeRepository.GetCacheByQueryHash"></a>
-### func \(\*RecipeRepository\) [GetCacheByQueryHash](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L32>)
+<a name="RecipeRepository.GetByID"></a>
+### func \(\*RecipeRepository\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L33>)
 
 ```go
-func (r *RecipeRepository) GetCacheByQueryHash(hash string) (database.RecipeCache, error)
+func (r *RecipeRepository) GetByID(id, householdID uint) (*database.Recipe, error)
 ```
 
-GetCacheByQueryHash retrieves a cache entry by its query hash if not expired.
+GetByID retrieves a recipe with its ingredients ordered by SortOrder.
 
-<a name="RecipeRepository.HasPopulatedCache"></a>
-### func \(\*RecipeRepository\) [HasPopulatedCache](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L59>)
+<a name="RecipeRepository.ListByHousehold"></a>
+### func \(\*RecipeRepository\) [ListByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L45>)
 
 ```go
-func (r *RecipeRepository) HasPopulatedCache(hash string) (bool, error)
+func (r *RecipeRepository) ListByHousehold(householdID uint) ([]database.Recipe, error)
 ```
 
-HasPopulatedCache reports whether hash already has an unexpired entry holding real suggestions. CreateCache is an unconditional upsert, so a caller about to store an empty or partial result calls this first: without it, one degraded run would overwrite a good entry and the household would see the degraded answer for the remainder of that entry's TTL.
+ListByHousehold retrieves all recipes of a household without their ingredients.
 
-Staleness is judged by RecipeCache.HasStaleSuggestions, the same predicate the read path uses. Anything the read path refuses to serve must also read as unpopulated here, or a degraded run could not repair the entry it just called stale and every later request would repeat the provider fan\-out until the TTL elapsed.
-
-<a name="RecipeRepository.UpdateCacheHit"></a>
-### func \(\*RecipeRepository\) [UpdateCacheHit](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L84>)
+<a name="RecipeRepository.Update"></a>
+### func \(\*RecipeRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L53>)
 
 ```go
-func (r *RecipeRepository) UpdateCacheHit(hash string) error
+func (r *RecipeRepository) Update(recipe *database.Recipe) error
 ```
 
-UpdateCacheHit increments the hit count for a cache entry.
+Update replaces the recipe fields and its ingredient rows in one transaction, so a half\-written ingredient set can never be observed by a later cook.
 
 <a name="RecipeRepositoryInterface"></a>
-## type [RecipeRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L13-L19>)
+## type [RecipeRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/recipe_repository.go#L9-L15>)
 
-
+RecipeRepositoryInterface persists household\-scoped saved recipes with their ingredients.
 
 ```go
 type RecipeRepositoryInterface interface {
-    GetCacheByQueryHash(hash string) (database.RecipeCache, error)
-    CreateCache(cache *database.RecipeCache) error
-    HasPopulatedCache(hash string) (bool, error)
-    UpdateCacheHit(hash string) error
-    CleanupExpiredCaches() error
+    Create(recipe *database.Recipe) error
+    GetByID(id, householdID uint) (*database.Recipe, error)
+    ListByHousehold(householdID uint) ([]database.Recipe, error)
+    Update(recipe *database.Recipe) error
+    Delete(id, householdID uint) error
 }
 ```
 
 <a name="RepositoryContainer"></a>
-## type [RepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/container.go#L11-L29>)
+## type [RepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/container.go#L11-L31>)
 
 RepositoryContainer holds all repository interfaces. Injected into the Gin context under the key "repos" so handlers can depend on interfaces rather than constructing concrete types.
 
@@ -7209,7 +7604,9 @@ type RepositoryContainer struct {
     StorageLocations  StorageLocationRepositoryInterface
     Webhooks          WebhookRepositoryInterface
     PATs              PATRepositoryInterface
+    RecipeCaches      RecipeCacheRepositoryInterface
     Recipes           RecipeRepositoryInterface
+    MealPlans         MealPlanRepositoryInterface
     Savings           SavingsRepositoryInterface
     WasteAnalytics    *WasteAnalyticsRepository
     Notifications     NotificationRepositoryInterface
@@ -7223,7 +7620,7 @@ type RepositoryContainer struct {
 ```
 
 <a name="NewRepositoryContainer"></a>
-### func [NewRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/container.go#L35>)
+### func [NewRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/container.go#L37>)
 
 ```go
 func NewRepositoryContainer(db *gorm.DB, logger *zerolog.Logger) *RepositoryContainer
@@ -8231,6 +8628,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 
 - [Constants](<#constants>)
 - [Variables](<#variables>)
+- [func ParseMealPlanDate\(raw string\) \(time.Time, error\)](<#ParseMealPlanDate>)
 - [type ActivityEntry](<#ActivityEntry>)
 - [type ActivityLogResponse](<#ActivityLogResponse>)
 - [type AuditLogResponse](<#AuditLogResponse>)
@@ -8244,7 +8642,10 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ConsumptionRateResponse](<#ConsumptionRateResponse>)
 - [type CookItemAPIModel](<#CookItemAPIModel>)
 - [type CookProductsAPIModel](<#CookProductsAPIModel>)
+- [type CookRecipeRequest](<#CookRecipeRequest>)
 - [type CookResponse](<#CookResponse>)
+- [type CreateMealPlanEntryRequest](<#CreateMealPlanEntryRequest>)
+- [type CreateRecipeRequest](<#CreateRecipeRequest>)
 - [type CreateShoppingListItemRequest](<#CreateShoppingListItemRequest>)
 - [type CreateTokenRequest](<#CreateTokenRequest>)
 - [type CreateTokenResponse](<#CreateTokenResponse>)
@@ -8255,6 +8656,7 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ExportProductResponse](<#ExportProductResponse>)
   - [func NewExportProductResponse\(product \*dbModel.Product\) ExportProductResponse](<#NewExportProductResponse>)
   - [func NewExportProductResponses\[T dbModel.Product | \*dbModel.Product\]\(products \[\]T\) \[\]ExportProductResponse](<#NewExportProductResponses>)
+- [type GenerateShoppingListRequest](<#GenerateShoppingListRequest>)
 - [type HouseholdApplicationResponse](<#HouseholdApplicationResponse>)
   - [func NewHouseholdApplicationResponses\[T dbModel.HouseholdApplication | \*dbModel.HouseholdApplication\]\(applications \[\]T\) \[\]HouseholdApplicationResponse](<#NewHouseholdApplicationResponses>)
 - [type HouseholdInvitationResponse](<#HouseholdInvitationResponse>)
@@ -8267,6 +8669,9 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ImportProductsResponse](<#ImportProductsResponse>)
 - [type ImportRowError](<#ImportRowError>)
 - [type IngredientMatch](<#IngredientMatch>)
+- [type MealPlanEntryResponse](<#MealPlanEntryResponse>)
+  - [func NewMealPlanEntryResponse\(entry \*dbModel.MealPlanEntry, recipeName string\) MealPlanEntryResponse](<#NewMealPlanEntryResponse>)
+  - [func NewMealPlanEntryResponses\(entries \[\]dbModel.MealPlanEntry, recipeNames map\[uint\]string\) \[\]MealPlanEntryResponse](<#NewMealPlanEntryResponses>)
 - [type NotificationItem](<#NotificationItem>)
 - [type NotificationPreferencesResponse](<#NotificationPreferencesResponse>)
   - [func NewNotificationPreferencesResponse\(prefs \*authentication.NotificationPreferences\) NotificationPreferencesResponse](<#NewNotificationPreferencesResponse>)
@@ -8284,6 +8689,11 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type ProductSummaryResponse](<#ProductSummaryResponse>)
 - [type ReceiptItem](<#ReceiptItem>)
 - [type ReceiptScanResponse](<#ReceiptScanResponse>)
+- [type RecipeIngredientInput](<#RecipeIngredientInput>)
+- [type RecipeIngredientResponse](<#RecipeIngredientResponse>)
+- [type RecipeResponse](<#RecipeResponse>)
+  - [func NewRecipeResponse\(recipe \*dbModel.Recipe\) RecipeResponse](<#NewRecipeResponse>)
+  - [func NewRecipeResponses\(recipes \[\]dbModel.Recipe\) \[\]RecipeResponse](<#NewRecipeResponses>)
 - [type RecipeSuggestionResponse](<#RecipeSuggestionResponse>)
 - [type RestockSuggestionResponse](<#RestockSuggestionResponse>)
 - [type SavingsStatsResponse](<#SavingsStatsResponse>)
@@ -8298,8 +8708,10 @@ import "codeberg.org/isotop7/proviant/models/api"
 - [type StreakResponse](<#StreakResponse>)
 - [type TokenResponse](<#TokenResponse>)
 - [type UpdateHouseholdSettingsRequest](<#UpdateHouseholdSettingsRequest>)
+- [type UpdateMealPlanEntryRequest](<#UpdateMealPlanEntryRequest>)
 - [type UpdateNotificationPreferencesRequest](<#UpdateNotificationPreferencesRequest>)
   - [func \(r \*UpdateNotificationPreferencesRequest\) ToNotificationPreferences\(\) authentication.NotificationPreferences](<#UpdateNotificationPreferencesRequest.ToNotificationPreferences>)
+- [type UpdateRecipeRequest](<#UpdateRecipeRequest>)
 - [type UpdateShoppingListItemRequest](<#UpdateShoppingListItemRequest>)
 - [type UpdateWebhookRequest](<#UpdateWebhookRequest>)
 - [type WasteAnalyticsResponse](<#WasteAnalyticsResponse>)
@@ -8321,6 +8733,12 @@ const (
 )
 ```
 
+<a name="MealPlanDateFormat"></a>MealPlanDateFormat is the wire format of meal plan dates.
+
+```go
+const MealPlanDateFormat = "2006-01-02"
+```
+
 ## Variables
 
 <a name="ValidWebhookEvents"></a>
@@ -8334,6 +8752,15 @@ var ValidWebhookEvents = []string{
     "household.member_joined",
 }
 ```
+
+<a name="ParseMealPlanDate"></a>
+## func [ParseMealPlanDate](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/meal_plan.go#L53>)
+
+```go
+func ParseMealPlanDate(raw string) (time.Time, error)
+```
+
+ParseMealPlanDate parses a YYYY\-MM\-DD wire date.
 
 <a name="ActivityEntry"></a>
 ## type [ActivityEntry](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/activity.go#L10-L18>)
@@ -8509,6 +8936,17 @@ type CookProductsAPIModel struct {
 }
 ```
 
+<a name="CookRecipeRequest"></a>
+## type [CookRecipeRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L70-L72>)
+
+CookRecipeRequest is the request body for POST /api/v1/recipes/\{id\}/cook. Servings scales the recipe amounts; zero cooks the recipe's own serving count.
+
+```go
+type CookRecipeRequest struct {
+    Servings int `json:"servings" binding:"min=0"`
+}
+```
+
 <a name="CookResponse"></a>
 ## type [CookResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L20-L24>)
 
@@ -8519,6 +8957,37 @@ type CookResponse struct {
     Consumed int      `json:"consumed"`
     Partial  int      `json:"partial"`
     Errors   []string `json:"errors"`
+}
+```
+
+<a name="CreateMealPlanEntryRequest"></a>
+## type [CreateMealPlanEntryRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/meal_plan.go#L58-L63>)
+
+CreateMealPlanEntryRequest is the request body for POST /api/v1/mealplans.
+
+```go
+type CreateMealPlanEntryRequest struct {
+    Date     string `json:"date" binding:"required"`
+    RecipeID uint   `json:"recipeId" binding:"required"`
+    Servings int    `json:"servings" binding:"min=0"`
+    Notes    string `json:"notes"`
+}
+```
+
+<a name="CreateRecipeRequest"></a>
+## type [CreateRecipeRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L47-L55>)
+
+CreateRecipeRequest is the request body for POST /api/v1/recipes.
+
+```go
+type CreateRecipeRequest struct {
+    Name         string                  `json:"name" binding:"required,max=255"`
+    Description  string                  `json:"description"`
+    Instructions string                  `json:"instructions"`
+    Servings     int                     `json:"servings" binding:"min=0"`
+    SourceURL    string                  `json:"sourceUrl"`
+    ImageURL     string                  `json:"imageUrl"`
+    Ingredients  []RecipeIngredientInput `json:"ingredients" binding:"max=100"`
 }
 ```
 
@@ -8671,6 +9140,18 @@ func NewExportProductResponses[T dbModel.Product | *dbModel.Product](products []
 
 NewExportProductResponses projects a slice of products onto the export shape. The type parameter covers the \[\]dbModel.Product shape both export queries return.
 
+<a name="GenerateShoppingListRequest"></a>
+## type [GenerateShoppingListRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/meal_plan.go#L74-L77>)
+
+GenerateShoppingListRequest is the request body for POST /api/v1/mealplans/shopping\-list.
+
+```go
+type GenerateShoppingListRequest struct {
+    From string `json:"from" binding:"required"`
+    To   string `json:"to" binding:"required"`
+}
+```
+
 <a name="HouseholdApplicationResponse"></a>
 ## type [HouseholdApplicationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L348-L354>)
 
@@ -8813,7 +9294,7 @@ type ImportRowError struct {
 ```
 
 <a name="IngredientMatch"></a>
-## type [IngredientMatch](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L4-L7>)
+## type [IngredientMatch](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L8-L11>)
 
 IngredientMatch represents a single ingredient with its matched status
 
@@ -8823,6 +9304,41 @@ type IngredientMatch struct {
     Matched bool   `json:"matched"`
 }
 ```
+
+<a name="MealPlanEntryResponse"></a>
+## type [MealPlanEntryResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/meal_plan.go#L11-L19>)
+
+MealPlanEntryResponse is the client\-facing view of a planned meal. Date is rendered as a YYYY\-MM\-DD string, the same format the request accepts.
+
+```go
+type MealPlanEntryResponse struct {
+    ID         uint   `json:"id"`
+    Date       string `json:"date"`
+    RecipeID   uint   `json:"recipeId"`
+    RecipeName string `json:"recipeName"`
+    Servings   int    `json:"servings"`
+    Notes      string `json:"notes"`
+    CreatedBy  uint   `json:"createdBy"`
+}
+```
+
+<a name="NewMealPlanEntryResponse"></a>
+### func [NewMealPlanEntryResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/meal_plan.go#L25>)
+
+```go
+func NewMealPlanEntryResponse(entry *dbModel.MealPlanEntry, recipeName string) MealPlanEntryResponse
+```
+
+NewMealPlanEntryResponse projects a planned meal onto the wire shape.
+
+<a name="NewMealPlanEntryResponses"></a>
+### func [NewMealPlanEntryResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/meal_plan.go#L41>)
+
+```go
+func NewMealPlanEntryResponses(entries []dbModel.MealPlanEntry, recipeNames map[uint]string) []MealPlanEntryResponse
+```
+
+NewMealPlanEntryResponses projects a slice of planned meals onto the wire shape.
 
 <a name="NotificationItem"></a>
 ## type [NotificationItem](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/notifications.go#L6-L11>)
@@ -9062,8 +9578,76 @@ type ReceiptScanResponse struct {
 }
 ```
 
+<a name="RecipeIngredientInput"></a>
+## type [RecipeIngredientInput](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L28-L34>)
+
+RecipeIngredientInput is one ingredient row of a recipe create/update request.
+
+```go
+type RecipeIngredientInput struct {
+    ProductID *uint  `json:"productId"`
+    Name      string `json:"name" binding:"required,max=255"`
+    Amount    int    `json:"amount" binding:"min=0"`
+    Unit      string `json:"unit" binding:"max=20"`
+    SortOrder int    `json:"sortOrder"`
+}
+```
+
+<a name="RecipeIngredientResponse"></a>
+## type [RecipeIngredientResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L37-L44>)
+
+RecipeIngredientResponse is the client\-facing view of a recipe ingredient.
+
+```go
+type RecipeIngredientResponse struct {
+    ID        uint   `json:"id"`
+    ProductID *uint  `json:"productId"`
+    Name      string `json:"name"`
+    Amount    int    `json:"amount"`
+    Unit      string `json:"unit"`
+    SortOrder int    `json:"sortOrder"`
+}
+```
+
+<a name="RecipeResponse"></a>
+## type [RecipeResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L75-L85>)
+
+RecipeResponse is the client\-facing view of a saved recipe.
+
+```go
+type RecipeResponse struct {
+    ID           uint                       `json:"id"`
+    Name         string                     `json:"name"`
+    Description  string                     `json:"description"`
+    Instructions string                     `json:"instructions"`
+    Servings     int                        `json:"servings"`
+    SourceURL    string                     `json:"sourceUrl"`
+    ImageURL     string                     `json:"imageUrl"`
+    CreatedBy    uint                       `json:"createdBy"`
+    Ingredients  []RecipeIngredientResponse `json:"ingredients"`
+}
+```
+
+<a name="NewRecipeResponse"></a>
+### func [NewRecipeResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L88>)
+
+```go
+func NewRecipeResponse(recipe *dbModel.Recipe) RecipeResponse
+```
+
+NewRecipeResponse projects a saved recipe onto the wire shape.
+
+<a name="NewRecipeResponses"></a>
+### func [NewRecipeResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L117>)
+
+```go
+func NewRecipeResponses(recipes []dbModel.Recipe) []RecipeResponse
+```
+
+NewRecipeResponses projects a slice of saved recipes onto the wire shape.
+
 <a name="RecipeSuggestionResponse"></a>
-## type [RecipeSuggestionResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L10-L21>)
+## type [RecipeSuggestionResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L14-L25>)
 
 RecipeSuggestionResponse represents a single recipe suggestion for expiring products
 
@@ -9256,6 +9840,20 @@ type UpdateHouseholdSettingsRequest struct {
 }
 ```
 
+<a name="UpdateMealPlanEntryRequest"></a>
+## type [UpdateMealPlanEntryRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/meal_plan.go#L66-L71>)
+
+UpdateMealPlanEntryRequest is the request body for PATCH /api/v1/mealplans/\{id\}.
+
+```go
+type UpdateMealPlanEntryRequest struct {
+    Date     *string `json:"date"`
+    RecipeID *uint   `json:"recipeId"`
+    Servings *int    `json:"servings" binding:"omitempty,min=1"`
+    Notes    *string `json:"notes"`
+}
+```
+
 <a name="UpdateNotificationPreferencesRequest"></a>
 ## type [UpdateNotificationPreferencesRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/notifications.go#L23-L35>)
 
@@ -9285,6 +9883,23 @@ func (r *UpdateNotificationPreferencesRequest) ToNotificationPreferences() authe
 ```
 
 ToNotificationPreferences projects the request onto the stored preferences.
+
+<a name="UpdateRecipeRequest"></a>
+## type [UpdateRecipeRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/recipe.go#L58-L66>)
+
+UpdateRecipeRequest is the request body for PATCH /api/v1/recipes/\{id\}.
+
+```go
+type UpdateRecipeRequest struct {
+    Name         *string                  `json:"name" binding:"omitempty,max=255"`
+    Description  *string                  `json:"description"`
+    Instructions *string                  `json:"instructions"`
+    Servings     *int                     `json:"servings" binding:"omitempty,min=1"`
+    SourceURL    *string                  `json:"sourceUrl"`
+    ImageURL     *string                  `json:"imageUrl"`
+    Ingredients  *[]RecipeIngredientInput `json:"ingredients" binding:"omitempty,max=100"`
+}
+```
 
 <a name="UpdateShoppingListItemRequest"></a>
 ## type [UpdateShoppingListItemRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/shopping_list.go#L14-L21>)
@@ -10232,6 +10847,7 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type HouseholdInvitation](<#HouseholdInvitation>)
 - [type HouseholdWithMemberCount](<#HouseholdWithMemberCount>)
 - [type MailDigestUnsubscribeToken](<#MailDigestUnsubscribeToken>)
+- [type MealPlanEntry](<#MealPlanEntry>)
 - [type OnboardingState](<#OnboardingState>)
 - [type OpenFoodFactsCache](<#OpenFoodFactsCache>)
 - [type PasswordReset](<#PasswordReset>)
@@ -10242,9 +10858,11 @@ import "codeberg.org/isotop7/proviant/models/database"
 - [type ProductDTOBarcode](<#ProductDTOBarcode>)
 - [type ProductDTOExpire](<#ProductDTOExpire>)
 - [type ProductDTOPatch](<#ProductDTOPatch>)
+- [type Recipe](<#Recipe>)
 - [type RecipeCache](<#RecipeCache>)
   - [func \(r \*RecipeCache\) HasStaleSuggestions\(\) \(bool, error\)](<#RecipeCache.HasStaleSuggestions>)
   - [func \(r \*RecipeCache\) IsExpired\(\) bool](<#RecipeCache.IsExpired>)
+- [type RecipeIngredient](<#RecipeIngredient>)
 - [type SavingsRecord](<#SavingsRecord>)
 - [type ShoppingListItem](<#ShoppingListItem>)
 - [type StorageLocation](<#StorageLocation>)
@@ -10590,6 +11208,23 @@ type MailDigestUnsubscribeToken struct {
 }
 ```
 
+<a name="MealPlanEntry"></a>
+## type [MealPlanEntry](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/meal_plan.go#L11-L19>)
+
+MealPlanEntry schedules one recipe on one day of the household meal plan. Date is stored date\-only \(midnight\); Servings scales the recipe amounts.
+
+```go
+type MealPlanEntry struct {
+    gorm.Model
+    HouseholdID uint      `gorm:"index, not null"`
+    Date        time.Time `gorm:"index" json:"date"`
+    RecipeID    uint      `gorm:"index, not null"`
+    Servings    int       `gorm:"not null;default:1" json:"servings"`
+    Notes       string    `json:"notes"`
+    CreatedBy   uint      `gorm:"not null;default:0" json:"createdBy"`
+}
+```
+
 <a name="OnboardingState"></a>
 ## type [OnboardingState](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/onboarding_state.go#L6-L13>)
 
@@ -10763,6 +11398,26 @@ type ProductDTOPatch struct {
 }
 ```
 
+<a name="Recipe"></a>
+## type [Recipe](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/recipe.go#L6-L17>)
+
+Recipe is a household\-scoped saved recipe with structured ingredients.
+
+```go
+type Recipe struct {
+    gorm.Model
+    HouseholdID  uint               `gorm:"index, not null"`
+    Name         string             `gorm:"not null" json:"name"`
+    Description  string             `json:"description"`
+    Instructions string             `json:"instructions"`
+    Servings     int                `gorm:"not null;default:1" json:"servings"`
+    SourceURL    string             `json:"sourceUrl"`
+    ImageURL     string             `json:"imageUrl"`
+    CreatedBy    uint               `gorm:"not null;default:0" json:"createdBy"`
+    Ingredients  []RecipeIngredient `gorm:"foreignKey:RecipeID" json:"ingredients"`
+}
+```
+
 <a name="RecipeCache"></a>
 ## type [RecipeCache](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/recipe_cache.go#L15-L22>)
 
@@ -10801,6 +11456,23 @@ func (r *RecipeCache) IsExpired() bool
 ```
 
 IsExpired returns true if the cache entry has passed its expiry time.
+
+<a name="RecipeIngredient"></a>
+## type [RecipeIngredient](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/recipe.go#L21-L29>)
+
+RecipeIngredient is one recipe entry. Amount is expressed in Unit; a nil ProductID marks a free\-text ingredient that is not linked to household stock.
+
+```go
+type RecipeIngredient struct {
+    gorm.Model
+    RecipeID  uint   `gorm:"index, not null"`
+    ProductID *uint  `gorm:"index"`
+    Name      string `gorm:"not null" json:"name"`
+    Amount    int    `json:"amount"`
+    Unit      string `json:"unit"`
+    SortOrder int    `json:"sortOrder"`
+}
+```
 
 <a name="SavingsRecord"></a>
 ## type [SavingsRecord](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/savings.go#L20-L29>)
@@ -11057,6 +11729,12 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockInvitationRepository\) MarkInvitationSendFailed\(invitationID uint\) error](<#MockInvitationRepository.MarkInvitationSendFailed>)
   - [func \(m \*MockInvitationRepository\) MarkInvitationSent\(invitationID uint\) error](<#MockInvitationRepository.MarkInvitationSent>)
   - [func \(m \*MockInvitationRepository\) MarkInvitationSentTx\(tx \*gorm.DB, invitationID uint\) error](<#MockInvitationRepository.MarkInvitationSentTx>)
+- [type MockMealPlanRepository](<#MockMealPlanRepository>)
+  - [func \(m \*MockMealPlanRepository\) Create\(entry \*dbModel.MealPlanEntry\) error](<#MockMealPlanRepository.Create>)
+  - [func \(m \*MockMealPlanRepository\) Delete\(id, householdID uint\) error](<#MockMealPlanRepository.Delete>)
+  - [func \(m \*MockMealPlanRepository\) GetByID\(id, householdID uint\) \(\*dbModel.MealPlanEntry, error\)](<#MockMealPlanRepository.GetByID>)
+  - [func \(m \*MockMealPlanRepository\) ListByRange\(householdID uint, from, to time.Time\) \(\[\]dbModel.MealPlanEntry, error\)](<#MockMealPlanRepository.ListByRange>)
+  - [func \(m \*MockMealPlanRepository\) Update\(entry \*dbModel.MealPlanEntry\) error](<#MockMealPlanRepository.Update>)
 - [type MockNotificationRepository](<#MockNotificationRepository>)
   - [func \(m \*MockNotificationRepository\) AcceptInvitation\(token, email string, userID uint\) error](<#MockNotificationRepository.AcceptInvitation>)
   - [func \(m \*MockNotificationRepository\) CancelInvitation\(invitationID, userID uint\) error](<#MockNotificationRepository.CancelInvitation>)
@@ -11163,12 +11841,18 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) UpdateProductAmount\(productID uint, userID uint, delta int\) \(bool, error\)](<#MockProductRepository.UpdateProductAmount>)
   - [func \(m \*MockProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#MockProductRepository.UserHasProductAccess>)
   - [func \(m \*MockProductRepository\) WasteProduct\(productID, userID uint\) error](<#MockProductRepository.WasteProduct>)
+- [type MockRecipeCacheRepository](<#MockRecipeCacheRepository>)
+  - [func \(m \*MockRecipeCacheRepository\) CleanupExpiredCaches\(\) error](<#MockRecipeCacheRepository.CleanupExpiredCaches>)
+  - [func \(m \*MockRecipeCacheRepository\) CreateCache\(cache \*dbModel.RecipeCache\) error](<#MockRecipeCacheRepository.CreateCache>)
+  - [func \(m \*MockRecipeCacheRepository\) GetCacheByQueryHash\(hash string\) \(dbModel.RecipeCache, error\)](<#MockRecipeCacheRepository.GetCacheByQueryHash>)
+  - [func \(m \*MockRecipeCacheRepository\) HasPopulatedCache\(hash string\) \(bool, error\)](<#MockRecipeCacheRepository.HasPopulatedCache>)
+  - [func \(m \*MockRecipeCacheRepository\) UpdateCacheHit\(hash string\) error](<#MockRecipeCacheRepository.UpdateCacheHit>)
 - [type MockRecipeRepository](<#MockRecipeRepository>)
-  - [func \(m \*MockRecipeRepository\) CleanupExpiredCaches\(\) error](<#MockRecipeRepository.CleanupExpiredCaches>)
-  - [func \(m \*MockRecipeRepository\) CreateCache\(cache \*dbModel.RecipeCache\) error](<#MockRecipeRepository.CreateCache>)
-  - [func \(m \*MockRecipeRepository\) GetCacheByQueryHash\(hash string\) \(dbModel.RecipeCache, error\)](<#MockRecipeRepository.GetCacheByQueryHash>)
-  - [func \(m \*MockRecipeRepository\) HasPopulatedCache\(hash string\) \(bool, error\)](<#MockRecipeRepository.HasPopulatedCache>)
-  - [func \(m \*MockRecipeRepository\) UpdateCacheHit\(hash string\) error](<#MockRecipeRepository.UpdateCacheHit>)
+  - [func \(m \*MockRecipeRepository\) Create\(recipe \*dbModel.Recipe\) error](<#MockRecipeRepository.Create>)
+  - [func \(m \*MockRecipeRepository\) Delete\(id, householdID uint\) error](<#MockRecipeRepository.Delete>)
+  - [func \(m \*MockRecipeRepository\) GetByID\(id, householdID uint\) \(\*dbModel.Recipe, error\)](<#MockRecipeRepository.GetByID>)
+  - [func \(m \*MockRecipeRepository\) ListByHousehold\(householdID uint\) \(\[\]dbModel.Recipe, error\)](<#MockRecipeRepository.ListByHousehold>)
+  - [func \(m \*MockRecipeRepository\) Update\(recipe \*dbModel.Recipe\) error](<#MockRecipeRepository.Update>)
 - [type MockRepositoryContainer](<#MockRepositoryContainer>)
   - [func NewMockRepositoryContainer\(\) \*MockRepositoryContainer](<#NewMockRepositoryContainer>)
   - [func \(m \*MockRepositoryContainer\) ToRepositoryContainer\(\) \*database.RepositoryContainer](<#MockRepositoryContainer.ToRepositoryContainer>)
@@ -11260,7 +11944,7 @@ func SetupGinContextWithMocks(m *MockRepositoryContainer) (*gin.Context, *httpte
 SetupGinContextWithMocks creates a Gin test context backed by mock repositories. No database connection is needed; use this for handler unit tests.
 
 <a name="MockCalendarTokenRepository"></a>
-## type [MockCalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L764-L767>)
+## type [MockCalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L802-L805>)
 
 MockCalendarTokenRepository is a configurable in\-memory stub for CalendarTokenRepositoryInterface.
 
@@ -11272,7 +11956,7 @@ type MockCalendarTokenRepository struct {
 ```
 
 <a name="MockCalendarTokenRepository.Create"></a>
-### func \(\*MockCalendarTokenRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L776>)
+### func \(\*MockCalendarTokenRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L814>)
 
 ```go
 func (m *MockCalendarTokenRepository) Create(ct *authentication.CalendarToken) error
@@ -11281,7 +11965,7 @@ func (m *MockCalendarTokenRepository) Create(ct *authentication.CalendarToken) e
 
 
 <a name="MockCalendarTokenRepository.DeleteByUserID"></a>
-### func \(\*MockCalendarTokenRepository\) [DeleteByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L772>)
+### func \(\*MockCalendarTokenRepository\) [DeleteByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L810>)
 
 ```go
 func (m *MockCalendarTokenRepository) DeleteByUserID(userID uint) error
@@ -11290,7 +11974,7 @@ func (m *MockCalendarTokenRepository) DeleteByUserID(userID uint) error
 
 
 <a name="MockCalendarTokenRepository.GetByToken"></a>
-### func \(\*MockCalendarTokenRepository\) [GetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L769>)
+### func \(\*MockCalendarTokenRepository\) [GetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L807>)
 
 ```go
 func (m *MockCalendarTokenRepository) GetByToken(token string) (authentication.CalendarToken, error)
@@ -11299,7 +11983,7 @@ func (m *MockCalendarTokenRepository) GetByToken(token string) (authentication.C
 
 
 <a name="MockCalendarTokenRepository.GetByUserID"></a>
-### func \(\*MockCalendarTokenRepository\) [GetByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L773>)
+### func \(\*MockCalendarTokenRepository\) [GetByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L811>)
 
 ```go
 func (m *MockCalendarTokenRepository) GetByUserID(userID uint) (authentication.CalendarToken, error)
@@ -11308,7 +11992,7 @@ func (m *MockCalendarTokenRepository) GetByUserID(userID uint) (authentication.C
 
 
 <a name="MockCalendarTokenRepository.Update"></a>
-### func \(\*MockCalendarTokenRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L777>)
+### func \(\*MockCalendarTokenRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L815>)
 
 ```go
 func (m *MockCalendarTokenRepository) Update(ct *authentication.CalendarToken) error
@@ -11317,7 +12001,7 @@ func (m *MockCalendarTokenRepository) Update(ct *authentication.CalendarToken) e
 
 
 <a name="MockExpiryScanRepository"></a>
-## type [MockExpiryScanRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L751-L754>)
+## type [MockExpiryScanRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L789-L792>)
 
 MockExpiryScanRepository is a configurable in\-memory stub for ExpiryScanRepositoryInterface.
 
@@ -11329,7 +12013,7 @@ type MockExpiryScanRepository struct {
 ```
 
 <a name="MockExpiryScanRepository.Create"></a>
-### func \(\*MockExpiryScanRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L756>)
+### func \(\*MockExpiryScanRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L794>)
 
 ```go
 func (m *MockExpiryScanRepository) Create(scan *dbModel.ExpiryScan) error
@@ -11338,7 +12022,7 @@ func (m *MockExpiryScanRepository) Create(scan *dbModel.ExpiryScan) error
 
 
 <a name="MockExpiryScanRepository.GetByUser"></a>
-### func \(\*MockExpiryScanRepository\) [GetByUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L757>)
+### func \(\*MockExpiryScanRepository\) [GetByUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L795>)
 
 ```go
 func (m *MockExpiryScanRepository) GetByUser(userID uint, limit int) ([]dbModel.ExpiryScan, error)
@@ -11627,8 +12311,66 @@ func (m *MockInvitationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationI
 
 
 
+<a name="MockMealPlanRepository"></a>
+## type [MockMealPlanRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L638-L642>)
+
+MockMealPlanRepository is a configurable in\-memory stub for MealPlanRepositoryInterface.
+
+```go
+type MockMealPlanRepository struct {
+    Entry   *dbModel.MealPlanEntry
+    Entries []dbModel.MealPlanEntry
+    Err     error
+}
+```
+
+<a name="MockMealPlanRepository.Create"></a>
+### func \(\*MockMealPlanRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L644>)
+
+```go
+func (m *MockMealPlanRepository) Create(entry *dbModel.MealPlanEntry) error
+```
+
+
+
+<a name="MockMealPlanRepository.Delete"></a>
+### func \(\*MockMealPlanRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L652>)
+
+```go
+func (m *MockMealPlanRepository) Delete(id, householdID uint) error
+```
+
+
+
+<a name="MockMealPlanRepository.GetByID"></a>
+### func \(\*MockMealPlanRepository\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L645>)
+
+```go
+func (m *MockMealPlanRepository) GetByID(id, householdID uint) (*dbModel.MealPlanEntry, error)
+```
+
+
+
+<a name="MockMealPlanRepository.ListByRange"></a>
+### func \(\*MockMealPlanRepository\) [ListByRange](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L648>)
+
+```go
+func (m *MockMealPlanRepository) ListByRange(householdID uint, from, to time.Time) ([]dbModel.MealPlanEntry, error)
+```
+
+
+
+<a name="MockMealPlanRepository.Update"></a>
+### func \(\*MockMealPlanRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L651>)
+
+```go
+func (m *MockMealPlanRepository) Update(entry *dbModel.MealPlanEntry) error
+```
+
+
+
 <a name="MockNotificationRepository"></a>
-## type [MockNotificationRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L619-L634>)
+## type [MockNotificationRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L657-L672>)
 
 MockNotificationRepository is a configurable in\-memory stub for NotificationRepositoryInterface.
 
@@ -11652,7 +12394,7 @@ type MockNotificationRepository struct {
 ```
 
 <a name="MockNotificationRepository.AcceptInvitation"></a>
-### func \(\*MockNotificationRepository\) [AcceptInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L656>)
+### func \(\*MockNotificationRepository\) [AcceptInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L694>)
 
 ```go
 func (m *MockNotificationRepository) AcceptInvitation(token, email string, userID uint) error
@@ -11661,7 +12403,7 @@ func (m *MockNotificationRepository) AcceptInvitation(token, email string, userI
 
 
 <a name="MockNotificationRepository.CancelInvitation"></a>
-### func \(\*MockNotificationRepository\) [CancelInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L659>)
+### func \(\*MockNotificationRepository\) [CancelInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L697>)
 
 ```go
 func (m *MockNotificationRepository) CancelInvitation(invitationID, userID uint) error
@@ -11670,7 +12412,7 @@ func (m *MockNotificationRepository) CancelInvitation(invitationID, userID uint)
 
 
 <a name="MockNotificationRepository.CreateInvitation"></a>
-### func \(\*MockNotificationRepository\) [CreateInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L647>)
+### func \(\*MockNotificationRepository\) [CreateInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L685>)
 
 ```go
 func (m *MockNotificationRepository) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error)
@@ -11679,7 +12421,7 @@ func (m *MockNotificationRepository) CreateInvitation(householdID, inviterID uin
 
 
 <a name="MockNotificationRepository.DeleteMailDigestUnsubscribeToken"></a>
-### func \(\*MockNotificationRepository\) [DeleteMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L723>)
+### func \(\*MockNotificationRepository\) [DeleteMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L761>)
 
 ```go
 func (m *MockNotificationRepository) DeleteMailDigestUnsubscribeToken(token string) error
@@ -11688,7 +12430,7 @@ func (m *MockNotificationRepository) DeleteMailDigestUnsubscribeToken(token stri
 
 
 <a name="MockNotificationRepository.DeleteWebPushSubscription"></a>
-### func \(\*MockNotificationRepository\) [DeleteWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L711>)
+### func \(\*MockNotificationRepository\) [DeleteWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L749>)
 
 ```go
 func (m *MockNotificationRepository) DeleteWebPushSubscription(userID uint) error
@@ -11697,7 +12439,7 @@ func (m *MockNotificationRepository) DeleteWebPushSubscription(userID uint) erro
 
 
 <a name="MockNotificationRepository.FindUserByTelegramLinkToken"></a>
-### func \(\*MockNotificationRepository\) [FindUserByTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L693>)
+### func \(\*MockNotificationRepository\) [FindUserByTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L731>)
 
 ```go
 func (m *MockNotificationRepository) FindUserByTelegramLinkToken(token string) (authentication.User, error)
@@ -11706,7 +12448,7 @@ func (m *MockNotificationRepository) FindUserByTelegramLinkToken(token string) (
 
 
 <a name="MockNotificationRepository.GenerateMailDigestUnsubscribeToken"></a>
-### func \(\*MockNotificationRepository\) [GenerateMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L717>)
+### func \(\*MockNotificationRepository\) [GenerateMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L755>)
 
 ```go
 func (m *MockNotificationRepository) GenerateMailDigestUnsubscribeToken(userID uint) (string, error)
@@ -11715,7 +12457,7 @@ func (m *MockNotificationRepository) GenerateMailDigestUnsubscribeToken(userID u
 
 
 <a name="MockNotificationRepository.GetAllUsersWithTelegramBotToken"></a>
-### func \(\*MockNotificationRepository\) [GetAllUsersWithTelegramBotToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L705>)
+### func \(\*MockNotificationRepository\) [GetAllUsersWithTelegramBotToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L743>)
 
 ```go
 func (m *MockNotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentication.User, error)
@@ -11724,7 +12466,7 @@ func (m *MockNotificationRepository) GetAllUsersWithTelegramBotToken() ([]authen
 
 
 <a name="MockNotificationRepository.GetHouseholdByID"></a>
-### func \(\*MockNotificationRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L665>)
+### func \(\*MockNotificationRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L703>)
 
 ```go
 func (m *MockNotificationRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error)
@@ -11733,7 +12475,7 @@ func (m *MockNotificationRepository) GetHouseholdByID(householdID uint) (dbModel
 
 
 <a name="MockNotificationRepository.GetHouseholdMembersMailAddressesByID"></a>
-### func \(\*MockNotificationRepository\) [GetHouseholdMembersMailAddressesByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L640>)
+### func \(\*MockNotificationRepository\) [GetHouseholdMembersMailAddressesByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L678>)
 
 ```go
 func (m *MockNotificationRepository) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
@@ -11742,7 +12484,7 @@ func (m *MockNotificationRepository) GetHouseholdMembersMailAddressesByID(househ
 
 
 <a name="MockNotificationRepository.GetHouseholdMembersNotificationPreferences"></a>
-### func \(\*MockNotificationRepository\) [GetHouseholdMembersNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L643>)
+### func \(\*MockNotificationRepository\) [GetHouseholdMembersNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L681>)
 
 ```go
 func (m *MockNotificationRepository) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
@@ -11751,7 +12493,7 @@ func (m *MockNotificationRepository) GetHouseholdMembersNotificationPreferences(
 
 
 <a name="MockNotificationRepository.GetHouseholdsWithMailDigestEnabled"></a>
-### func \(\*MockNotificationRepository\) [GetHouseholdsWithMailDigestEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L726>)
+### func \(\*MockNotificationRepository\) [GetHouseholdsWithMailDigestEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L764>)
 
 ```go
 func (m *MockNotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error)
@@ -11760,7 +12502,7 @@ func (m *MockNotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]mod
 
 
 <a name="MockNotificationRepository.GetHouseholdsWithMonthlyWasteReportEnabled"></a>
-### func \(\*MockNotificationRepository\) [GetHouseholdsWithMonthlyWasteReportEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L678>)
+### func \(\*MockNotificationRepository\) [GetHouseholdsWithMonthlyWasteReportEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L716>)
 
 ```go
 func (m *MockNotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error)
@@ -11769,7 +12511,7 @@ func (m *MockNotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled(
 
 
 <a name="MockNotificationRepository.GetInvitationByToken"></a>
-### func \(\*MockNotificationRepository\) [GetInvitationByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L653>)
+### func \(\*MockNotificationRepository\) [GetInvitationByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L691>)
 
 ```go
 func (m *MockNotificationRepository) GetInvitationByToken(token string) (dbModel.HouseholdInvitation, error)
@@ -11778,7 +12520,7 @@ func (m *MockNotificationRepository) GetInvitationByToken(token string) (dbModel
 
 
 <a name="MockNotificationRepository.GetInvitationsForHousehold"></a>
-### func \(\*MockNotificationRepository\) [GetInvitationsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L650>)
+### func \(\*MockNotificationRepository\) [GetInvitationsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L688>)
 
 ```go
 func (m *MockNotificationRepository) GetInvitationsForHousehold(householdID, inviterID uint) ([]dbModel.HouseholdInvitation, error)
@@ -11787,7 +12529,7 @@ func (m *MockNotificationRepository) GetInvitationsForHousehold(householdID, inv
 
 
 <a name="MockNotificationRepository.GetMaxNotificationThresholdDays"></a>
-### func \(\*MockNotificationRepository\) [GetMaxNotificationThresholdDays](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L639>)
+### func \(\*MockNotificationRepository\) [GetMaxNotificationThresholdDays](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L677>)
 
 ```go
 func (m *MockNotificationRepository) GetMaxNotificationThresholdDays() int
@@ -11796,7 +12538,7 @@ func (m *MockNotificationRepository) GetMaxNotificationThresholdDays() int
 
 
 <a name="MockNotificationRepository.GetOnboardingState"></a>
-### func \(\*MockNotificationRepository\) [GetOnboardingState](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L684>)
+### func \(\*MockNotificationRepository\) [GetOnboardingState](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L722>)
 
 ```go
 func (m *MockNotificationRepository) GetOnboardingState(userID uint) (dbModel.OnboardingState, error)
@@ -11805,7 +12547,7 @@ func (m *MockNotificationRepository) GetOnboardingState(userID uint) (dbModel.On
 
 
 <a name="MockNotificationRepository.GetPendingInvitationsNotSent"></a>
-### func \(\*MockNotificationRepository\) [GetPendingInvitationsNotSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L668>)
+### func \(\*MockNotificationRepository\) [GetPendingInvitationsNotSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L706>)
 
 ```go
 func (m *MockNotificationRepository) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]dbModel.HouseholdInvitation, error)
@@ -11814,7 +12556,7 @@ func (m *MockNotificationRepository) GetPendingInvitationsNotSent(retryInterval 
 
 
 <a name="MockNotificationRepository.GetProductsExpiredAndNotificationPending"></a>
-### func \(\*MockNotificationRepository\) [GetProductsExpiredAndNotificationPending](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L636>)
+### func \(\*MockNotificationRepository\) [GetProductsExpiredAndNotificationPending](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L674>)
 
 ```go
 func (m *MockNotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]dbModel.Product, error)
@@ -11823,7 +12565,7 @@ func (m *MockNotificationRepository) GetProductsExpiredAndNotificationPending(sl
 
 
 <a name="MockNotificationRepository.GetPublicHouseholds"></a>
-### func \(\*MockNotificationRepository\) [GetPublicHouseholds](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L690>)
+### func \(\*MockNotificationRepository\) [GetPublicHouseholds](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L728>)
 
 ```go
 func (m *MockNotificationRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]dbModel.HouseholdWithMemberCount, error)
@@ -11832,7 +12574,7 @@ func (m *MockNotificationRepository) GetPublicHouseholds(excludeHouseholdID uint
 
 
 <a name="MockNotificationRepository.GetUserByID"></a>
-### func \(\*MockNotificationRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L662>)
+### func \(\*MockNotificationRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L700>)
 
 ```go
 func (m *MockNotificationRepository) GetUserByID(userID uint) (authentication.User, error)
@@ -11841,7 +12583,7 @@ func (m *MockNotificationRepository) GetUserByID(userID uint) (authentication.Us
 
 
 <a name="MockNotificationRepository.GetUserByMailDigestUnsubscribeToken"></a>
-### func \(\*MockNotificationRepository\) [GetUserByMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L720>)
+### func \(\*MockNotificationRepository\) [GetUserByMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L758>)
 
 ```go
 func (m *MockNotificationRepository) GetUserByMailDigestUnsubscribeToken(token string) (authentication.User, error)
@@ -11850,7 +12592,7 @@ func (m *MockNotificationRepository) GetUserByMailDigestUnsubscribeToken(token s
 
 
 <a name="MockNotificationRepository.GetVAPIDKeys"></a>
-### func \(\*MockNotificationRepository\) [GetVAPIDKeys](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L714>)
+### func \(\*MockNotificationRepository\) [GetVAPIDKeys](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L752>)
 
 ```go
 func (m *MockNotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, err error)
@@ -11859,7 +12601,7 @@ func (m *MockNotificationRepository) GetVAPIDKeys() (publicKey, privateKey strin
 
 
 <a name="MockNotificationRepository.GetWasteStatsForHousehold"></a>
-### func \(\*MockNotificationRepository\) [GetWasteStatsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L681>)
+### func \(\*MockNotificationRepository\) [GetWasteStatsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L719>)
 
 ```go
 func (m *MockNotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error)
@@ -11868,7 +12610,7 @@ func (m *MockNotificationRepository) GetWasteStatsForHousehold(householdID uint,
 
 
 <a name="MockNotificationRepository.MarkHouseholdStepDone"></a>
-### func \(\*MockNotificationRepository\) [MarkHouseholdStepDone](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L688>)
+### func \(\*MockNotificationRepository\) [MarkHouseholdStepDone](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L726>)
 
 ```go
 func (m *MockNotificationRepository) MarkHouseholdStepDone(userID uint) error
@@ -11877,7 +12619,7 @@ func (m *MockNotificationRepository) MarkHouseholdStepDone(userID uint) error
 
 
 <a name="MockNotificationRepository.MarkInvitationSendFailed"></a>
-### func \(\*MockNotificationRepository\) [MarkInvitationSendFailed](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L675>)
+### func \(\*MockNotificationRepository\) [MarkInvitationSendFailed](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L713>)
 
 ```go
 func (m *MockNotificationRepository) MarkInvitationSendFailed(invitationID uint) error
@@ -11886,7 +12628,7 @@ func (m *MockNotificationRepository) MarkInvitationSendFailed(invitationID uint)
 
 
 <a name="MockNotificationRepository.MarkInvitationSent"></a>
-### func \(\*MockNotificationRepository\) [MarkInvitationSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L671>)
+### func \(\*MockNotificationRepository\) [MarkInvitationSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L709>)
 
 ```go
 func (m *MockNotificationRepository) MarkInvitationSent(invitationID uint) error
@@ -11895,7 +12637,7 @@ func (m *MockNotificationRepository) MarkInvitationSent(invitationID uint) error
 
 
 <a name="MockNotificationRepository.MarkInvitationSentTx"></a>
-### func \(\*MockNotificationRepository\) [MarkInvitationSentTx](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L672>)
+### func \(\*MockNotificationRepository\) [MarkInvitationSentTx](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L710>)
 
 ```go
 func (m *MockNotificationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
@@ -11904,7 +12646,7 @@ func (m *MockNotificationRepository) MarkInvitationSentTx(tx *gorm.DB, invitatio
 
 
 <a name="MockNotificationRepository.MarkNotificationsSetup"></a>
-### func \(\*MockNotificationRepository\) [MarkNotificationsSetup](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L687>)
+### func \(\*MockNotificationRepository\) [MarkNotificationsSetup](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L725>)
 
 ```go
 func (m *MockNotificationRepository) MarkNotificationsSetup(userID uint) error
@@ -11913,7 +12655,7 @@ func (m *MockNotificationRepository) MarkNotificationsSetup(userID uint) error
 
 
 <a name="MockNotificationRepository.MarkOnboardingComplete"></a>
-### func \(\*MockNotificationRepository\) [MarkOnboardingComplete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L689>)
+### func \(\*MockNotificationRepository\) [MarkOnboardingComplete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L727>)
 
 ```go
 func (m *MockNotificationRepository) MarkOnboardingComplete(userID uint) error
@@ -11922,7 +12664,7 @@ func (m *MockNotificationRepository) MarkOnboardingComplete(userID uint) error
 
 
 <a name="MockNotificationRepository.SaveWebPushSubscription"></a>
-### func \(\*MockNotificationRepository\) [SaveWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L708>)
+### func \(\*MockNotificationRepository\) [SaveWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L746>)
 
 ```go
 func (m *MockNotificationRepository) SaveWebPushSubscription(userID uint, subscriptionJSON string) error
@@ -11931,7 +12673,7 @@ func (m *MockNotificationRepository) SaveWebPushSubscription(userID uint, subscr
 
 
 <a name="MockNotificationRepository.SetProductNotifiedAt"></a>
-### func \(\*MockNotificationRepository\) [SetProductNotifiedAt](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L646>)
+### func \(\*MockNotificationRepository\) [SetProductNotifiedAt](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L684>)
 
 ```go
 func (m *MockNotificationRepository) SetProductNotifiedAt(productID uint) error
@@ -11940,7 +12682,7 @@ func (m *MockNotificationRepository) SetProductNotifiedAt(productID uint) error
 
 
 <a name="MockNotificationRepository.SetTelegramBotUsername"></a>
-### func \(\*MockNotificationRepository\) [SetTelegramBotUsername](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L702>)
+### func \(\*MockNotificationRepository\) [SetTelegramBotUsername](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L740>)
 
 ```go
 func (m *MockNotificationRepository) SetTelegramBotUsername(userID uint, username string) error
@@ -11949,7 +12691,7 @@ func (m *MockNotificationRepository) SetTelegramBotUsername(userID uint, usernam
 
 
 <a name="MockNotificationRepository.SetTelegramChatID"></a>
-### func \(\*MockNotificationRepository\) [SetTelegramChatID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L696>)
+### func \(\*MockNotificationRepository\) [SetTelegramChatID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L734>)
 
 ```go
 func (m *MockNotificationRepository) SetTelegramChatID(userID uint, chatID string) error
@@ -11958,7 +12700,7 @@ func (m *MockNotificationRepository) SetTelegramChatID(userID uint, chatID strin
 
 
 <a name="MockNotificationRepository.SetTelegramLinkToken"></a>
-### func \(\*MockNotificationRepository\) [SetTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L699>)
+### func \(\*MockNotificationRepository\) [SetTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L737>)
 
 ```go
 func (m *MockNotificationRepository) SetTelegramLinkToken(userID uint, token string) error
@@ -12626,13 +13368,13 @@ func (m *MockProductRepository) WasteProduct(productID, userID uint) error
 
 
 
-<a name="MockRecipeRepository"></a>
-## type [MockRecipeRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L592-L601>)
+<a name="MockRecipeCacheRepository"></a>
+## type [MockRecipeCacheRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L592-L601>)
 
-MockRecipeRepository is a configurable in\-memory stub for RecipeRepositoryInterface.
+MockRecipeCacheRepository is a configurable in\-memory stub for RecipeCacheRepositoryInterface.
 
 ```go
-type MockRecipeRepository struct {
+type MockRecipeCacheRepository struct {
     Cache dbModel.RecipeCache
     Err   error
     // PopulatedCache is what HasPopulatedCache reports; its zero value means
@@ -12644,53 +13386,111 @@ type MockRecipeRepository struct {
 }
 ```
 
-<a name="MockRecipeRepository.CleanupExpiredCaches"></a>
-### func \(\*MockRecipeRepository\) [CleanupExpiredCaches](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L614>)
+<a name="MockRecipeCacheRepository.CleanupExpiredCaches"></a>
+### func \(\*MockRecipeCacheRepository\) [CleanupExpiredCaches](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L614>)
 
 ```go
-func (m *MockRecipeRepository) CleanupExpiredCaches() error
+func (m *MockRecipeCacheRepository) CleanupExpiredCaches() error
 ```
 
 
 
-<a name="MockRecipeRepository.CreateCache"></a>
-### func \(\*MockRecipeRepository\) [CreateCache](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L606>)
+<a name="MockRecipeCacheRepository.CreateCache"></a>
+### func \(\*MockRecipeCacheRepository\) [CreateCache](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L606>)
 
 ```go
-func (m *MockRecipeRepository) CreateCache(cache *dbModel.RecipeCache) error
+func (m *MockRecipeCacheRepository) CreateCache(cache *dbModel.RecipeCache) error
 ```
 
 
 
-<a name="MockRecipeRepository.GetCacheByQueryHash"></a>
-### func \(\*MockRecipeRepository\) [GetCacheByQueryHash](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L603>)
+<a name="MockRecipeCacheRepository.GetCacheByQueryHash"></a>
+### func \(\*MockRecipeCacheRepository\) [GetCacheByQueryHash](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L603>)
 
 ```go
-func (m *MockRecipeRepository) GetCacheByQueryHash(hash string) (dbModel.RecipeCache, error)
+func (m *MockRecipeCacheRepository) GetCacheByQueryHash(hash string) (dbModel.RecipeCache, error)
 ```
 
 
 
-<a name="MockRecipeRepository.HasPopulatedCache"></a>
-### func \(\*MockRecipeRepository\) [HasPopulatedCache](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L610>)
+<a name="MockRecipeCacheRepository.HasPopulatedCache"></a>
+### func \(\*MockRecipeCacheRepository\) [HasPopulatedCache](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L610>)
 
 ```go
-func (m *MockRecipeRepository) HasPopulatedCache(hash string) (bool, error)
+func (m *MockRecipeCacheRepository) HasPopulatedCache(hash string) (bool, error)
 ```
 
 
 
-<a name="MockRecipeRepository.UpdateCacheHit"></a>
-### func \(\*MockRecipeRepository\) [UpdateCacheHit](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L613>)
+<a name="MockRecipeCacheRepository.UpdateCacheHit"></a>
+### func \(\*MockRecipeCacheRepository\) [UpdateCacheHit](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L613>)
 
 ```go
-func (m *MockRecipeRepository) UpdateCacheHit(hash string) error
+func (m *MockRecipeCacheRepository) UpdateCacheHit(hash string) error
+```
+
+
+
+<a name="MockRecipeRepository"></a>
+## type [MockRecipeRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L619-L623>)
+
+MockRecipeRepository is a configurable in\-memory stub for RecipeRepositoryInterface.
+
+```go
+type MockRecipeRepository struct {
+    Recipe  *dbModel.Recipe
+    Recipes []dbModel.Recipe
+    Err     error
+}
+```
+
+<a name="MockRecipeRepository.Create"></a>
+### func \(\*MockRecipeRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L625>)
+
+```go
+func (m *MockRecipeRepository) Create(recipe *dbModel.Recipe) error
+```
+
+
+
+<a name="MockRecipeRepository.Delete"></a>
+### func \(\*MockRecipeRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L633>)
+
+```go
+func (m *MockRecipeRepository) Delete(id, householdID uint) error
+```
+
+
+
+<a name="MockRecipeRepository.GetByID"></a>
+### func \(\*MockRecipeRepository\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L626>)
+
+```go
+func (m *MockRecipeRepository) GetByID(id, householdID uint) (*dbModel.Recipe, error)
+```
+
+
+
+<a name="MockRecipeRepository.ListByHousehold"></a>
+### func \(\*MockRecipeRepository\) [ListByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L629>)
+
+```go
+func (m *MockRecipeRepository) ListByHousehold(householdID uint) ([]dbModel.Recipe, error)
+```
+
+
+
+<a name="MockRecipeRepository.Update"></a>
+### func \(\*MockRecipeRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L632>)
+
+```go
+func (m *MockRecipeRepository) Update(recipe *dbModel.Recipe) error
 ```
 
 
 
 <a name="MockRepositoryContainer"></a>
-## type [MockRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L782-L796>)
+## type [MockRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L820-L836>)
 
 MockRepositoryContainer holds mock implementations of all repository interfaces.
 
@@ -12704,7 +13504,9 @@ type MockRepositoryContainer struct {
     Webhooks         *MockWebhookRepository
     PATs             *MockPATRepository
     Savings          *MockSavingsRepository
+    RecipeCaches     *MockRecipeCacheRepository
     Recipes          *MockRecipeRepository
+    MealPlans        *MockMealPlanRepository
     Notifications    *MockNotificationRepository
     Streaks          *MockStreakRepository
     ExpiryScan       *MockExpiryScanRepository
@@ -12713,7 +13515,7 @@ type MockRepositoryContainer struct {
 ```
 
 <a name="NewMockRepositoryContainer"></a>
-### func [NewMockRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L799>)
+### func [NewMockRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L839>)
 
 ```go
 func NewMockRepositoryContainer() *MockRepositoryContainer
@@ -12722,7 +13524,7 @@ func NewMockRepositoryContainer() *MockRepositoryContainer
 NewMockRepositoryContainer creates a MockRepositoryContainer with all mocks initialised.
 
 <a name="MockRepositoryContainer.ToRepositoryContainer"></a>
-### func \(\*MockRepositoryContainer\) [ToRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L819>)
+### func \(\*MockRepositoryContainer\) [ToRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L861>)
 
 ```go
 func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryContainer
@@ -12829,7 +13631,7 @@ func (m *MockStorageLocationRepository) Update(locationID, userID uint, name, ic
 
 
 <a name="MockStreakRepository"></a>
-## type [MockStreakRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L733-L737>)
+## type [MockStreakRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L771-L775>)
 
 MockStreakRepository is a configurable in\-memory stub for StreakRepositoryInterface.
 
@@ -12842,7 +13644,7 @@ type MockStreakRepository struct {
 ```
 
 <a name="MockStreakRepository.GetAllStreaks"></a>
-### func \(\*MockStreakRepository\) [GetAllStreaks](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L744>)
+### func \(\*MockStreakRepository\) [GetAllStreaks](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L782>)
 
 ```go
 func (m *MockStreakRepository) GetAllStreaks() ([]dbModel.WasteStreak, error)
@@ -12851,7 +13653,7 @@ func (m *MockStreakRepository) GetAllStreaks() ([]dbModel.WasteStreak, error)
 
 
 <a name="MockStreakRepository.GetOrCreateStreakForHousehold"></a>
-### func \(\*MockStreakRepository\) [GetOrCreateStreakForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L739>)
+### func \(\*MockStreakRepository\) [GetOrCreateStreakForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L777>)
 
 ```go
 func (m *MockStreakRepository) GetOrCreateStreakForHousehold(householdID uint) (*dbModel.WasteStreak, error)
@@ -12860,7 +13662,7 @@ func (m *MockStreakRepository) GetOrCreateStreakForHousehold(householdID uint) (
 
 
 <a name="MockStreakRepository.RecordWasteEvent"></a>
-### func \(\*MockStreakRepository\) [RecordWasteEvent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L742>)
+### func \(\*MockStreakRepository\) [RecordWasteEvent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L780>)
 
 ```go
 func (m *MockStreakRepository) RecordWasteEvent(householdID uint) error
@@ -12869,7 +13671,7 @@ func (m *MockStreakRepository) RecordWasteEvent(householdID uint) error
 
 
 <a name="MockStreakRepository.UpdateStreak"></a>
-### func \(\*MockStreakRepository\) [UpdateStreak](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L743>)
+### func \(\*MockStreakRepository\) [UpdateStreak](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L781>)
 
 ```go
 func (m *MockStreakRepository) UpdateStreak(streak *dbModel.WasteStreak) error

@@ -57,6 +57,42 @@ func CreateTestStorageLocation(db *gorm.DB, householdID uint) *dbModel.StorageLo
 	return &location
 }
 
+func CreateTestRecipe(db *gorm.DB, householdID uint, userID ...uint) *dbModel.Recipe {
+	uid := uint(0)
+	if len(userID) > 0 {
+		uid = userID[0]
+	}
+	recipe := dbModel.Recipe{
+		HouseholdID:  householdID,
+		Name:         "Test Recipe",
+		Description:  "A test recipe",
+		Instructions: "Mix everything.",
+		Servings:     2,
+		CreatedBy:    uid,
+		Ingredients: []dbModel.RecipeIngredient{
+			{Name: "Test Product", Amount: 1, Unit: "pcs", SortOrder: 0},
+		},
+	}
+	db.Create(&recipe)
+	return &recipe
+}
+
+func CreateTestMealPlanEntry(db *gorm.DB, householdID, recipeID uint, date time.Time, servings int, userID ...uint) *dbModel.MealPlanEntry {
+	uid := uint(0)
+	if len(userID) > 0 {
+		uid = userID[0]
+	}
+	entry := dbModel.MealPlanEntry{
+		HouseholdID: householdID,
+		Date:        date,
+		RecipeID:    recipeID,
+		Servings:    servings,
+		CreatedBy:   uid,
+	}
+	db.Create(&entry)
+	return &entry
+}
+
 func CreateTestWebhook(db *gorm.DB, userID uint) *dbModel.Webhook {
 	webhook := dbModel.Webhook{
 		UserID: userID,

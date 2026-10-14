@@ -65,12 +65,17 @@ async function loadRecipeSuggestions(forceRefresh = false) {
     }
 }
 
+const renderedSuggestions = [];
+
 function renderRecipes(recipes) {
     const container = document.getElementById("recipe-suggestions-container");
 
+    renderedSuggestions.length = 0;
+    recipes.forEach(recipe => renderedSuggestions.push(recipe));
+
     const html = `
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-            ${recipes.map(recipe => {
+            ${recipes.map((recipe, index) => {
                 const ingredients = recipe.ingredients || [];
                 const cookIds = recipe.matchedProductIds || [];
                 return `
@@ -114,6 +119,11 @@ function renderRecipes(recipes) {
                             <a href="${escapeHtml(recipe.sourceUrl)}" target="_blank" rel="noopener" class="btn btn-proviant-primary btn-sm${cookIds.length ? '' : ' stretched-link'}">
                                 View Recipe <i class="bi bi-box-arrow-up-right"></i>
                             </a>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ms-2 save-suggestion-btn"
+                                    data-suggestion-index="${index}"
+                                    aria-label="Save ${escapeHtml(recipe.title)} as a new recipe">
+                                <i class="bi bi-save"></i> Save recipe
+                            </button>
                             ${cookIds.length ? `
                             <button type="button" class="btn btn-outline-secondary btn-sm ms-2 cook-recipe-btn"
                                     data-product-ids='${JSON.stringify(cookIds)}'
@@ -132,6 +142,16 @@ function renderRecipes(recipes) {
 }
 
 document.addEventListener("click", function(e) {
+    const saveBtn = e.target.closest(".save-suggestion-btn");
+    if (saveBtn) {
+        e.preventDefault();
+        const suggestion = renderedSuggestions[parseInt(saveBtn.getAttribute("data-suggestion-index"), 10)];
+        if (suggestion) {
+            document.dispatchEvent(new CustomEvent("proviant:save-recipe-suggestion", { detail: suggestion }));
+        }
+        return;
+    }
+
     const btn = e.target.closest(".cook-recipe-btn");
     if (!btn) return;
     e.preventDefault();

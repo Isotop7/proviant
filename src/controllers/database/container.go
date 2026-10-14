@@ -16,7 +16,9 @@ type RepositoryContainer struct {
 	StorageLocations  StorageLocationRepositoryInterface
 	Webhooks          WebhookRepositoryInterface
 	PATs              PATRepositoryInterface
+	RecipeCaches      RecipeCacheRepositoryInterface
 	Recipes           RecipeRepositoryInterface
+	MealPlans         MealPlanRepositoryInterface
 	Savings           SavingsRepositoryInterface
 	WasteAnalytics    *WasteAnalyticsRepository
 	Notifications     NotificationRepositoryInterface
@@ -41,7 +43,9 @@ func NewRepositoryContainer(db *gorm.DB, logger *zerolog.Logger) *RepositoryCont
 		StorageLocations:  NewStorageLocationRepository(db),
 		Webhooks:          NewWebhookRepository(db),
 		PATs:              NewPATRepository(db),
+		RecipeCaches:      NewRecipeCacheRepository(db),
 		Recipes:           NewRecipeRepository(db),
+		MealPlans:         NewMealPlanRepository(db),
 		Savings:           NewSavingsRepository(db),
 		WasteAnalytics:    NewWasteAnalyticsRepository(db),
 		Notifications:     NewNotificationRepository(db),

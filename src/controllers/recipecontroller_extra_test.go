@@ -132,7 +132,7 @@ func validCacheEntry(t *testing.T, ttl time.Duration) dbModel.RecipeCache {
 }
 
 func TestTryGetCache(t *testing.T) {
-	newCtrl := func(cacheEnabled bool, repo *repomocks.MockRecipeRepository) *RecipeController {
+	newCtrl := func(cacheEnabled bool, repo *repomocks.MockRecipeCacheRepository) *RecipeController {
 		logger := zerolog.Nop()
 		return &RecipeController{
 			Logger:     &logger,
@@ -142,14 +142,14 @@ func TestTryGetCache(t *testing.T) {
 	}
 
 	t.Run("cache disabled misses", func(t *testing.T) {
-		ctrl := newCtrl(false, &repomocks.MockRecipeRepository{})
+		ctrl := newCtrl(false, &repomocks.MockRecipeCacheRepository{})
 		if _, hit := ctrl.tryGetCache("hash"); hit {
 			t.Error("tryGetCache() hit, want miss when caching is disabled")
 		}
 	})
 
 	t.Run("repository error misses", func(t *testing.T) {
-		repo := &repomocks.MockRecipeRepository{Err: errors.New("db down")}
+		repo := &repomocks.MockRecipeCacheRepository{Err: errors.New("db down")}
 		ctrl := newCtrl(true, repo)
 		if _, hit := ctrl.tryGetCache("hash"); hit {
 			t.Error("tryGetCache() hit, want miss on repository error")
@@ -157,7 +157,7 @@ func TestTryGetCache(t *testing.T) {
 	})
 
 	t.Run("expired entry misses", func(t *testing.T) {
-		repo := &repomocks.MockRecipeRepository{Cache: validCacheEntry(t, -time.Hour)}
+		repo := &repomocks.MockRecipeCacheRepository{Cache: validCacheEntry(t, -time.Hour)}
 		ctrl := newCtrl(true, repo)
 		if _, hit := ctrl.tryGetCache("hash"); hit {
 			t.Error("tryGetCache() hit, want miss for an expired entry")
@@ -165,7 +165,7 @@ func TestTryGetCache(t *testing.T) {
 	})
 
 	t.Run("unparseable payload misses", func(t *testing.T) {
-		repo := &repomocks.MockRecipeRepository{Cache: dbModel.RecipeCache{ResponseJSON: []byte("{broken"), ExpiresAt: time.Now().Add(time.Hour)}}
+		repo := &repomocks.MockRecipeCacheRepository{Cache: dbModel.RecipeCache{ResponseJSON: []byte("{broken"), ExpiresAt: time.Now().Add(time.Hour)}}
 		ctrl := newCtrl(true, repo)
 		if _, hit := ctrl.tryGetCache("hash"); hit {
 			t.Error("tryGetCache() hit, want miss for an unparseable payload")
@@ -174,7 +174,7 @@ func TestTryGetCache(t *testing.T) {
 
 	t.Run("stale entry misses", func(t *testing.T) {
 		// Pre-change payload shape: ingredients absent but total > 0.
-		repo := &repomocks.MockRecipeRepository{Cache: dbModel.RecipeCache{
+		repo := &repomocks.MockRecipeCacheRepository{Cache: dbModel.RecipeCache{
 			ResponseJSON: []byte(`[{"totalIngredients":2}]`),
 			ExpiresAt:    time.Now().Add(time.Hour),
 		}}
@@ -185,7 +185,7 @@ func TestTryGetCache(t *testing.T) {
 	})
 
 	t.Run("valid entry hits", func(t *testing.T) {
-		repo := &repomocks.MockRecipeRepository{Cache: validCacheEntry(t, time.Hour)}
+		repo := &repomocks.MockRecipeCacheRepository{Cache: validCacheEntry(t, time.Hour)}
 		ctrl := newCtrl(true, repo)
 		suggestions, hit := ctrl.tryGetCache("hash")
 		if !hit {
@@ -202,7 +202,7 @@ func TestStoreCacheWithTTL(t *testing.T) {
 
 	t.Run("cache disabled writes nothing", func(t *testing.T) {
 		logger := zerolog.Nop()
-		repo := &repomocks.MockRecipeRepository{}
+		repo := &repomocks.MockRecipeCacheRepository{}
 		ctrl := &RecipeController{
 			Logger:     &logger,
 			Config:     configuration.RecipeAPIConfiguration{CacheEnabled: false},
@@ -216,7 +216,7 @@ func TestStoreCacheWithTTL(t *testing.T) {
 
 	t.Run("repository error is logged", func(t *testing.T) {
 		logger := zerolog.Nop()
-		repo := &repomocks.MockRecipeRepository{Err: errors.New("db down")}
+		repo := &repomocks.MockRecipeCacheRepository{Err: errors.New("db down")}
 		ctrl := &RecipeController{
 			Logger:     &logger,
 			Config:     configuration.RecipeAPIConfiguration{CacheEnabled: true, Provider: util.RecipeProviderThemealDB},
@@ -227,7 +227,7 @@ func TestStoreCacheWithTTL(t *testing.T) {
 
 	t.Run("entry stored with TTL", func(t *testing.T) {
 		logger := zerolog.Nop()
-		repo := &repomocks.MockRecipeRepository{}
+		repo := &repomocks.MockRecipeCacheRepository{}
 		ctrl := &RecipeController{
 			Logger:     &logger,
 			Config:     configuration.RecipeAPIConfiguration{CacheEnabled: true, Provider: util.RecipeProviderThemealDB},
@@ -249,7 +249,7 @@ func TestStoreCacheWithTTL(t *testing.T) {
 }
 
 func TestStoreUnlessDowngrade(t *testing.T) {
-	newCtrl := func(repo *repomocks.MockRecipeRepository) *RecipeController {
+	newCtrl := func(repo *repomocks.MockRecipeCacheRepository) *RecipeController {
 		logger := zerolog.Nop()
 		return &RecipeController{
 			Logger:     &logger,
@@ -259,7 +259,7 @@ func TestStoreUnlessDowngrade(t *testing.T) {
 	}
 
 	t.Run("populated entry is kept", func(t *testing.T) {
-		repo := &repomocks.MockRecipeRepository{PopulatedCache: true}
+		repo := &repomocks.MockRecipeCacheRepository{PopulatedCache: true}
 		ctrl := newCtrl(repo)
 		ctrl.storeUnlessDowngrade("hash", []RecipeSuggestion{}, time.Hour)
 		if len(repo.CacheWrites) != 0 {
@@ -268,7 +268,7 @@ func TestStoreUnlessDowngrade(t *testing.T) {
 	})
 
 	t.Run("empty cache is written", func(t *testing.T) {
-		repo := &repomocks.MockRecipeRepository{PopulatedCache: false}
+		repo := &repomocks.MockRecipeCacheRepository{PopulatedCache: false}
 		ctrl := newCtrl(repo)
 		ctrl.storeUnlessDowngrade("hash", []RecipeSuggestion{}, time.Hour)
 		if len(repo.CacheWrites) != 1 {
@@ -277,7 +277,7 @@ func TestStoreUnlessDowngrade(t *testing.T) {
 	})
 
 	t.Run("check error still writes", func(t *testing.T) {
-		repo := &repomocks.MockRecipeRepository{Err: errors.New("db down")}
+		repo := &repomocks.MockRecipeCacheRepository{Err: errors.New("db down")}
 		ctrl := newCtrl(repo)
 		ctrl.storeUnlessDowngrade("hash", []RecipeSuggestion{}, time.Hour)
 		if len(repo.CacheWrites) != 1 {
@@ -355,7 +355,7 @@ func TestGetSuggestionsExtraPaths(t *testing.T) {
 
 	t.Run("fingerprint error fails the cache lookup open", func(t *testing.T) {
 		logger := zerolog.Nop()
-		repo := &repomocks.MockRecipeRepository{}
+		repo := &repomocks.MockRecipeCacheRepository{}
 		provider := &countingRecipeProvider{recipes: matchingRecipe, complete: true}
 		ctrl := &RecipeController{
 			Logger:     &logger,
@@ -383,7 +383,7 @@ func TestGetSuggestionsExtraPaths(t *testing.T) {
 
 	t.Run("cache hit serves without calling the provider", func(t *testing.T) {
 		logger := zerolog.Nop()
-		repo := &repomocks.MockRecipeRepository{Cache: validCacheEntry(t, time.Hour)}
+		repo := &repomocks.MockRecipeCacheRepository{Cache: validCacheEntry(t, time.Hour)}
 		provider := &countingRecipeProvider{recipes: matchingRecipe, complete: true}
 		ctrl := &RecipeController{
 			Logger:     &logger,
@@ -406,7 +406,7 @@ func TestGetSuggestionsExtraPaths(t *testing.T) {
 
 	t.Run("refresh bypasses the cache", func(t *testing.T) {
 		logger := zerolog.Nop()
-		repo := &repomocks.MockRecipeRepository{Cache: validCacheEntry(t, time.Hour)}
+		repo := &repomocks.MockRecipeCacheRepository{Cache: validCacheEntry(t, time.Hour)}
 		provider := &countingRecipeProvider{recipes: matchingRecipe, complete: true}
 		ctrl := &RecipeController{
 			Logger:     &logger,

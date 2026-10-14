@@ -588,8 +588,8 @@ func (m *MockSavingsRepository) GetSavingsStats(householdID uint) (apiModel.Savi
 
 var _ database.SavingsRepositoryInterface = (*MockSavingsRepository)(nil)
 
-// MockRecipeRepository is a configurable in-memory stub for RecipeRepositoryInterface.
-type MockRecipeRepository struct {
+// MockRecipeCacheRepository is a configurable in-memory stub for RecipeCacheRepositoryInterface.
+type MockRecipeCacheRepository struct {
 	Cache dbModel.RecipeCache
 	Err   error
 	// PopulatedCache is what HasPopulatedCache reports; its zero value means
@@ -600,20 +600,58 @@ type MockRecipeRepository struct {
 	CacheWrites []dbModel.RecipeCache
 }
 
-func (m *MockRecipeRepository) GetCacheByQueryHash(hash string) (dbModel.RecipeCache, error) {
+func (m *MockRecipeCacheRepository) GetCacheByQueryHash(hash string) (dbModel.RecipeCache, error) {
 	return m.Cache, m.Err
 }
-func (m *MockRecipeRepository) CreateCache(cache *dbModel.RecipeCache) error {
+func (m *MockRecipeCacheRepository) CreateCache(cache *dbModel.RecipeCache) error {
 	m.CacheWrites = append(m.CacheWrites, *cache)
 	return m.Err
 }
-func (m *MockRecipeRepository) HasPopulatedCache(hash string) (bool, error) {
+func (m *MockRecipeCacheRepository) HasPopulatedCache(hash string) (bool, error) {
 	return m.PopulatedCache, m.Err
 }
-func (m *MockRecipeRepository) UpdateCacheHit(hash string) error { return m.Err }
-func (m *MockRecipeRepository) CleanupExpiredCaches() error      { return m.Err }
+func (m *MockRecipeCacheRepository) UpdateCacheHit(hash string) error { return m.Err }
+func (m *MockRecipeCacheRepository) CleanupExpiredCaches() error      { return m.Err }
+
+var _ database.RecipeCacheRepositoryInterface = (*MockRecipeCacheRepository)(nil)
+
+// MockRecipeRepository is a configurable in-memory stub for RecipeRepositoryInterface.
+type MockRecipeRepository struct {
+	Recipe  *dbModel.Recipe
+	Recipes []dbModel.Recipe
+	Err     error
+}
+
+func (m *MockRecipeRepository) Create(recipe *dbModel.Recipe) error { return m.Err }
+func (m *MockRecipeRepository) GetByID(id, householdID uint) (*dbModel.Recipe, error) {
+	return m.Recipe, m.Err
+}
+func (m *MockRecipeRepository) ListByHousehold(householdID uint) ([]dbModel.Recipe, error) {
+	return m.Recipes, m.Err
+}
+func (m *MockRecipeRepository) Update(recipe *dbModel.Recipe) error { return m.Err }
+func (m *MockRecipeRepository) Delete(id, householdID uint) error   { return m.Err }
 
 var _ database.RecipeRepositoryInterface = (*MockRecipeRepository)(nil)
+
+// MockMealPlanRepository is a configurable in-memory stub for MealPlanRepositoryInterface.
+type MockMealPlanRepository struct {
+	Entry   *dbModel.MealPlanEntry
+	Entries []dbModel.MealPlanEntry
+	Err     error
+}
+
+func (m *MockMealPlanRepository) Create(entry *dbModel.MealPlanEntry) error { return m.Err }
+func (m *MockMealPlanRepository) GetByID(id, householdID uint) (*dbModel.MealPlanEntry, error) {
+	return m.Entry, m.Err
+}
+func (m *MockMealPlanRepository) ListByRange(householdID uint, from, to time.Time) ([]dbModel.MealPlanEntry, error) {
+	return m.Entries, m.Err
+}
+func (m *MockMealPlanRepository) Update(entry *dbModel.MealPlanEntry) error { return m.Err }
+func (m *MockMealPlanRepository) Delete(id, householdID uint) error         { return m.Err }
+
+var _ database.MealPlanRepositoryInterface = (*MockMealPlanRepository)(nil)
 
 // MockNotificationRepository is a configurable in-memory stub for NotificationRepositoryInterface.
 type MockNotificationRepository struct {
@@ -788,7 +826,9 @@ type MockRepositoryContainer struct {
 	Webhooks         *MockWebhookRepository
 	PATs             *MockPATRepository
 	Savings          *MockSavingsRepository
+	RecipeCaches     *MockRecipeCacheRepository
 	Recipes          *MockRecipeRepository
+	MealPlans        *MockMealPlanRepository
 	Notifications    *MockNotificationRepository
 	Streaks          *MockStreakRepository
 	ExpiryScan       *MockExpiryScanRepository
@@ -806,7 +846,9 @@ func NewMockRepositoryContainer() *MockRepositoryContainer {
 		Webhooks:         &MockWebhookRepository{},
 		PATs:             &MockPATRepository{},
 		Savings:          &MockSavingsRepository{},
+		RecipeCaches:     &MockRecipeCacheRepository{},
 		Recipes:          &MockRecipeRepository{},
+		MealPlans:        &MockMealPlanRepository{},
 		Notifications:    &MockNotificationRepository{},
 		Streaks:          &MockStreakRepository{},
 		ExpiryScan:       &MockExpiryScanRepository{},
@@ -825,7 +867,9 @@ func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryCo
 		StorageLocations: m.StorageLocations,
 		Webhooks:         m.Webhooks,
 		PATs:             m.PATs,
+		RecipeCaches:     m.RecipeCaches,
 		Recipes:          m.Recipes,
+		MealPlans:        m.MealPlans,
 		Savings:          m.Savings,
 		Notifications:    m.Notifications,
 		Streaks:          m.Streaks,

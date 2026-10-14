@@ -22,12 +22,13 @@ const (
 	ContextKeyHouseholdID            = "householdID"
 
 	// Database query wrappers
-	QueryId               = "id = ?"
-	QueryHouseholdId      = "household_id = ?"
-	QueryUserId           = "user_id = ?"
-	QueryWebhookId        = "webhook_id = ?"
-	WhereDeletedIsNotNull = "deleted_at IS NOT NULL"
-	WhereDeletedIsNull    = "deleted_at IS NULL"
+	QueryId                     = "id = ?"
+	QueryHouseholdId            = "household_id = ?"
+	QueryUserId                 = "user_id = ?"
+	QueryWebhookId              = "webhook_id = ?"
+	WhereDeletedIsNotNull       = "deleted_at IS NOT NULL"
+	WhereDeletedIsNull          = "deleted_at IS NULL"
+	WhereRemovalReasonUnclaimed = "(removal_reason IS NULL OR removal_reason = '')"
 
 	// Mail digest
 	LabelMailDigest       = "mailDigest"

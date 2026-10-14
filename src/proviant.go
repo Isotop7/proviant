@@ -341,6 +341,9 @@ func main() {
 		&dbModel.WebPushConfig{},
 		&dbModel.MailDigestUnsubscribeToken{},
 		&dbModel.ShoppingListItem{},
+		&dbModel.Recipe{},
+		&dbModel.RecipeIngredient{},
+		&dbModel.MealPlanEntry{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
@@ -453,12 +456,12 @@ func cleanupExpiredRevokedTokens(logger *zerolog.Logger, dbHandle *gorm.DB) {
 
 // startRecipeCacheCleanup runs a goroutine that periodically cleans up expired recipe caches
 func startRecipeCacheCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
-	recipeRepository := dbController.NewRecipeRepository(dbHandle)
+	recipeCacheRepository := dbController.NewRecipeCacheRepository(dbHandle)
 	ticker := time.NewTicker(24 * time.Hour) // Clean up once per day
 	defer ticker.Stop()
 
 	for range ticker.C {
-		if err := recipeRepository.CleanupExpiredCaches(); err != nil {
+		if err := recipeCacheRepository.CleanupExpiredCaches(); err != nil {
 			logger.Warn().Msgf("Failed to cleanup expired recipe caches: %s", err.Error())
 		}
 	}
