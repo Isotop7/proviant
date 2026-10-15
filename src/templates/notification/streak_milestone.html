@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>Waste-free streak milestone</title></head>
+<html lang="{{ t "notify.common.langCode" }}">
+<head><meta charset="UTF-8"><title>{{ t "notify.streakMilestone.title" }}</title></head>
 <body style="font-family:sans-serif;color:#1f1f1f;padding:24px;">
-  <h2 style="margin-bottom:8px;">{{ .Milestone }}-day waste-free streak</h2>
-  <p>Your household has gone {{ .Milestone }} consecutive days without wasting food.</p>
-  <p style="color:#555;">Keep going — every day counts.</p>
+  <h2 style="margin-bottom:8px;">{{ t "notify.streakMilestone.heading" .Milestone }}</h2>
+  <p>{{ t "notify.streakMilestone.body" .Milestone }}</p>
+  <p style="color:#555;">{{ t "notify.streakMilestone.encouragement" }}</p>
 </body>
 </html>

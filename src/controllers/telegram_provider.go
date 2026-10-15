@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
+	"codeberg.org/isotop7/proviant/i18n"
 	"codeberg.org/isotop7/proviant/models"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
@@ -28,7 +30,7 @@ func (t *TelegramNotificationProvider) IsConfigured() bool {
 	return t.BotToken != ""
 }
 
-func (t *TelegramNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo any) error {
+func (t *TelegramNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo any, lang string) error {
 	chatID, ok := recipientInfo.(string)
 	if !ok {
 		return fmt.Errorf("invalid recipient type for telegram provider")
@@ -41,42 +43,40 @@ func (t *TelegramNotificationProvider) SendNotification(product *dbModel.Product
 	var text string
 	switch {
 	case daysUntilExpiry < 0:
-		text = fmt.Sprintf("⚠️ *%s* has expired (%d days ago)", product.ProductName, -daysUntilExpiry)
+		text = i18n.T(lang, "notify.telegram.expired", product.ProductName, -daysUntilExpiry)
 	case daysUntilExpiry == 0:
-		text = fmt.Sprintf("⚠️ *%s* expires today", product.ProductName)
+		text = i18n.T(lang, "notify.telegram.expiresToday", product.ProductName)
 	default:
-		text = fmt.Sprintf("⚠️ *%s* expires in %d day(s)", product.ProductName, daysUntilExpiry)
+		text = i18n.T(lang, "notify.telegram.expiresInDays", product.ProductName, daysUntilExpiry)
 	}
 
 	return t.sendMessage(chatID, text)
 }
 
 // SendMonthlyWasteReport sends the monthly waste report to a Telegram chat.
-func (t *TelegramNotificationProvider) SendMonthlyWasteReport(chatID string, stats *models.WasteStats) error {
-	text := fmt.Sprintf(
-		"📊 *Monthly Waste Report — %s*\n\n"+
-			"Household: *%s*\n"+
-			"Items wasted: *%d* (removed: %d, expired in pantry: %d)\n"+
-			"Waste rate: *%.1f%%*\n"+
-			"vs. previous month: *%s%.1f%%*",
-		stats.MonthLabel,
-		stats.HouseholdName,
-		stats.WastedCount, stats.DeletedCount, stats.ExpiredCount,
-		stats.WasteRatePct,
-		stats.DeltaSymbol, stats.Delta,
-	)
+func (t *TelegramNotificationProvider) SendMonthlyWasteReport(chatID string, stats *models.WasteStats, lang string) error {
+	text := strings.Join([]string{
+		i18n.T(lang, "notify.telegram.monthlyTitle", stats.MonthLabel),
+		"",
+		i18n.T(lang, "notify.telegram.monthlyHousehold", stats.HouseholdName),
+		i18n.T(lang, "notify.telegram.monthlyItems", stats.WastedCount, stats.DeletedCount, stats.ExpiredCount),
+		i18n.T(lang, "notify.telegram.monthlyWasteRate", fmt.Sprintf("%.1f%%", stats.WasteRatePct)),
+		i18n.T(lang, "notify.telegram.monthlyDelta", stats.DeltaSymbol, fmt.Sprintf("%+.1f%%", stats.Delta)),
+	}, "\n")
 	return t.sendMessage(chatID, text)
 }
 
 // SendStreakMilestone sends a streak milestone notification to a Telegram chat.
-func (t *TelegramNotificationProvider) SendStreakMilestone(milestone int, chatID string) error {
-	text := fmt.Sprintf("*%d-day waste-free streak!*\n\nYour household has gone %d consecutive days without wasting food.", milestone, milestone)
+func (t *TelegramNotificationProvider) SendStreakMilestone(milestone int, chatID string, lang string) error {
+	text := i18n.T(lang, "notify.telegram.streakMilestoneTitle", milestone) + "\n\n" +
+		i18n.T(lang, "notify.streakMilestone.body", milestone)
 	return t.sendMessage(chatID, text)
 }
 
 // SendStreakReset sends a streak-reset notification to a Telegram chat.
-func (t *TelegramNotificationProvider) SendStreakReset(previousStreak int, chatID string) error {
-	text := fmt.Sprintf("*Waste-free streak reset*\n\nYour previous streak of %d day%s has ended. Start a new one today!", previousStreak, pluralS(previousStreak))
+func (t *TelegramNotificationProvider) SendStreakReset(previousStreak int, chatID string, lang string) error {
+	text := i18n.T(lang, "notify.telegram.streakResetTitle") + "\n\n" +
+		i18n.Tn(lang, "notify.telegram.streakResetBody", previousStreak)
 	return t.sendMessage(chatID, text)
 }
 

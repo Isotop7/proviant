@@ -1,0 +1,20 @@
+{
+  "pageTitle.AcceptInvitation": "Accept Invitation",
+  "pageTitle.Authentication": "Authentication",
+  "pageTitle.EditProduct": "Edit Product",
+  "pageTitle.ForgotPassword": "Forgot Password",
+  "pageTitle.Home": "Home",
+  "pageTitle.MealPlan": "Meal Plan",
+  "pageTitle.Onboarding": "Onboarding",
+  "pageTitle.Products": "Products",
+  "pageTitle.Recipes": "Recipes",
+  "pageTitle.ResetPassword": "Reset Password",
+  "pageTitle.ScanProduct": "Scan Product",
+  "pageTitle.ScanReceipt": "Scan Receipt",
+  "pageTitle.ShoppingList": "Shopping List",
+  "pageTitle.Unsubscribe": "Unsubscribe",
+  "pageTitle.User": "User",
+  "pageTitle.UserSettings": "User Settings",
+  "pageTitle.VerifyEmail": "Verify Email",
+  "pageTitle.WasteAnalytics": "Waste Analytics"
+}

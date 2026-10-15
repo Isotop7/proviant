@@ -14,6 +14,7 @@ import (
 	"time"
 
 	dbController "codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/i18n"
 	"codeberg.org/isotop7/proviant/models"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
@@ -203,6 +204,23 @@ func (nc *NotificationController) Dispatch() {
 	}()
 }
 
+// recipientLanguage resolves the notification language for a known user with
+// the household language as fallback; zero IDs skip that lookup.
+func (nc *NotificationController) recipientLanguage(userID, householdID uint) string {
+	var userLanguage, householdLanguage string
+	if userID != 0 {
+		if user, err := nc.NotificationRepo.GetUserByID(userID); err == nil {
+			userLanguage = user.Language
+		}
+	}
+	if householdID != 0 {
+		if household, err := nc.NotificationRepo.GetHouseholdByID(householdID); err == nil {
+			householdLanguage = household.Language
+		}
+	}
+	return i18n.ResolveLanguage(userLanguage, householdLanguage, "")
+}
+
 // generateNotifications uses a list of products and generates a notification for it
 func (nc *NotificationController) generateNotifications(notificationProducts *[]dbModel.Product) {
 	// Loop through products
@@ -254,14 +272,16 @@ func (nc *NotificationController) generateNotifications(notificationProducts *[]
 			continue
 		}
 
+		lang := nc.recipientLanguage(0, product.HouseholdID)
+
 		// Send notifications for each recipient
 		for i := range preferences {
-			nc.sendNotificationsForRecipient(product, &preferences[i])
+			nc.sendNotificationsForRecipient(product, &preferences[i], lang)
 		}
 	}
 }
 
-func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) {
+func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo, lang string) {
 	if !nc.isWithinNotificationThreshold(product, recipientInfo) {
 		return
 	}
@@ -269,7 +289,7 @@ func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel
 	notified := false
 
 	for _, provider := range nc.Providers {
-		if err := nc.sendViaProvider(provider, product, recipientInfo); err != nil {
+		if err := nc.sendViaProvider(provider, product, recipientInfo, lang); err != nil {
 			nc.Logger.Error().Msgf("Failed to send %s notification: %s", provider.GetProviderType(), err.Error())
 			continue
 		}
@@ -279,11 +299,11 @@ func (nc *NotificationController) sendNotificationsForRecipient(product *dbModel
 		}
 	}
 
-	if nc.sendTelegram(product, recipientInfo) && !notified {
+	if nc.sendTelegram(product, recipientInfo, lang) && !notified {
 		notified = nc.markNotified(product.ID)
 	}
 
-	if nc.sendWebPush(product, recipientInfo) && !notified {
+	if nc.sendWebPush(product, recipientInfo, lang) && !notified {
 		notified = nc.markNotified(product.ID)
 	}
 
@@ -313,27 +333,27 @@ func (nc *NotificationController) isWithinNotificationThreshold(product *dbModel
 	return true
 }
 
-func (nc *NotificationController) sendViaProvider(provider NotificationProvider, product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) error {
+func (nc *NotificationController) sendViaProvider(provider NotificationProvider, product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo, lang string) error {
 	switch provider.GetProviderType() {
 	case "email":
 		if recipientInfo.EmailEnabled && recipientInfo.EmailAddress != "" {
 			nc.Logger.Info().Msgf("Attempting email notification for product '%s' (ID: %d)", product.ProductName, product.ID)
-			return provider.SendNotification(product, recipientInfo.EmailAddress)
+			return provider.SendNotification(product, recipientInfo.EmailAddress, lang)
 		}
 	case "ntfy":
 		if recipientInfo.NtfyEnabled {
 			nc.Logger.Info().Msgf("Attempting ntfy notification for product '%s' (ID: %d)", product.ProductName, product.ID)
-			return provider.SendNotification(product, recipientInfo)
+			return provider.SendNotification(product, recipientInfo, lang)
 		}
 	}
 	return nil
 }
 
-func (nc *NotificationController) sendTelegram(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) bool {
+func (nc *NotificationController) sendTelegram(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo, lang string) bool {
 	if recipientInfo.TelegramEnabled && recipientInfo.TelegramChatID != "" && recipientInfo.TelegramBotToken != "" {
 		nc.Logger.Info().Msgf("Attempting telegram notification for product '%s' (ID: %d)", product.ProductName, product.ID)
 		telegramProvider := nc.newTelegramProvider(recipientInfo.TelegramBotToken)
-		if err := telegramProvider.SendNotification(product, recipientInfo.TelegramChatID); err != nil {
+		if err := telegramProvider.SendNotification(product, recipientInfo.TelegramChatID, lang); err != nil {
 			nc.Logger.Error().Msgf("Failed to send telegram notification: %s", err)
 			return false
 		}
@@ -343,14 +363,14 @@ func (nc *NotificationController) sendTelegram(product *dbModel.Product, recipie
 	return false
 }
 
-func (nc *NotificationController) sendWebPush(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo) bool {
+func (nc *NotificationController) sendWebPush(product *dbModel.Product, recipientInfo *models.NotificationRecipientInfo, lang string) bool {
 	if recipientInfo.WebPushEnabled && recipientInfo.WebPushSubscriptionJSON != "" {
 		nc.Logger.Info().Msgf("Attempting webpush notification for product '%s' (ID: %d)", product.ProductName, product.ID)
 		webPushProvider := nc.newWebPushProvider()
 		if webPushProvider == nil {
 			return false
 		}
-		if err := webPushProvider.SendNotification(product, recipientInfo.WebPushSubscriptionJSON); err != nil {
+		if err := webPushProvider.SendNotification(product, recipientInfo.WebPushSubscriptionJSON, lang); err != nil {
 			nc.Logger.Error().Msgf("Failed to send webpush notification: %s", err)
 			return false
 		}
@@ -395,14 +415,14 @@ func (nc *NotificationController) DispatchInvitations(baseURL string) {
 // SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database.
 // If tx is provided (non-nil), the "mark as sent" update will run within that transaction to avoid
 // SQLite "database is locked" conflicts when the transaction holds a write lock.
-func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, tx *gorm.DB) error {
+func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, tx *gorm.DB, lang string) error {
 	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
 		return errors.New(MsgEmailProviderNotConfigured)
 	}
 
-	if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
+	if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL, lang); err != nil {
 		nc.Logger.Error().Msgf("Failed to send invitation email to %s: %s", invitation.Email, err)
 		if markErr := nc.NotificationRepo.MarkInvitationSendFailed(invitation.ID); markErr != nil {
 			nc.Logger.Error().Msgf("Failed to mark invitation %d as send-failed: %s", invitation.ID, markErr)
@@ -427,14 +447,14 @@ func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.Househ
 }
 
 // SendVerificationEmail sends an email verification link using the invitation email system.
-func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.HouseholdInvitation, username, baseURL string) error {
+func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.HouseholdInvitation, username, baseURL string, lang string) error {
 	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
 		return errors.New(MsgEmailProviderNotConfigured)
 	}
 
-	if err := emailProvider.SendInvitationEmail(invitation, username, "your household", baseURL); err != nil {
+	if err := emailProvider.SendInvitationEmail(invitation, username, "your household", baseURL, lang); err != nil {
 		nc.Logger.Error().Msgf("Failed to send verification email to %s: %s", invitation.Email, err)
 		if markErr := nc.NotificationRepo.MarkInvitationSendFailed(invitation.ID); markErr != nil {
 			nc.Logger.Error().Msgf("Failed to mark verification invitation %d as send-failed: %s", invitation.ID, markErr)
@@ -452,14 +472,14 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 }
 
 // SendEmailVerification sends a verification email directly to the user with a verification token.
-func (nc *NotificationController) SendEmailVerification(email, username, token, baseURL string, expiresAt time.Time) error {
+func (nc *NotificationController) SendEmailVerification(email, username, token, baseURL string, expiresAt time.Time, lang string) error {
 	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
 		return errors.New(MsgEmailProviderNotConfigured)
 	}
 
-	if err := emailProvider.SendEmailVerificationEmail(email, username, token, baseURL, expiresAt); err != nil {
+	if err := emailProvider.SendEmailVerificationEmail(email, username, token, baseURL, expiresAt, lang); err != nil {
 		nc.Logger.Error().Msgf("Failed to send email verification to %s: %s", email, err)
 		return err
 	}
@@ -469,14 +489,14 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 }
 
 // SendPasswordReset sends a password reset email directly to the user.
-func (nc *NotificationController) SendPasswordReset(email, username, token, baseURL string, expiresAt time.Time) error {
+func (nc *NotificationController) SendPasswordReset(email, username, token, baseURL string, expiresAt time.Time, lang string) error {
 	emailProvider := nc.newEmailProvider()
 
 	if !emailProvider.IsConfigured() {
 		return errors.New(MsgEmailProviderNotConfigured)
 	}
 
-	if err := emailProvider.SendPasswordResetEmail(email, username, token, baseURL, expiresAt); err != nil {
+	if err := emailProvider.SendPasswordResetEmail(email, username, token, baseURL, expiresAt, lang); err != nil {
 		nc.Logger.Error().Msgf("Failed to send password reset email to %s: %s", email, err)
 		return err
 	}
@@ -520,8 +540,10 @@ func (nc *NotificationController) processMonthlyWasteReports(emailProvider *Emai
 		}
 		stats.HouseholdName = target.HouseholdName
 
-		nc.sendMonthlyWasteReportToEmailRecipients(emailProvider, target.Recipients, &stats, target.HouseholdID)
-		nc.sendMonthlyWasteReportToTelegramRecipients(target.TelegramRecipients, &stats, target.HouseholdID)
+		lang := nc.recipientLanguage(0, target.HouseholdID)
+
+		nc.sendMonthlyWasteReportToEmailRecipients(emailProvider, target.Recipients, &stats, target.HouseholdID, lang)
+		nc.sendMonthlyWasteReportToTelegramRecipients(target.TelegramRecipients, &stats, target.HouseholdID, lang)
 	}
 }
 
@@ -530,12 +552,13 @@ func (nc *NotificationController) sendMonthlyWasteReportToEmailRecipients(
 	recipients []string,
 	stats *models.WasteStats,
 	householdID uint,
+	lang string,
 ) {
 	if !provider.IsConfigured() {
 		return
 	}
 	for _, recipient := range recipients {
-		if sendErr := provider.SendMonthlyWasteReport(recipient, stats); sendErr != nil {
+		if sendErr := provider.SendMonthlyWasteReport(recipient, stats, lang); sendErr != nil {
 			nc.Logger.Error().Msgf("Monthly waste report: email send failed to %s: %s", recipient, sendErr)
 		} else {
 			nc.Logger.Info().Msgf("Monthly waste report: email sent to %s (household %d)", recipient, householdID)
@@ -547,10 +570,11 @@ func (nc *NotificationController) sendMonthlyWasteReportToTelegramRecipients(
 	recipients []models.TelegramRecipient,
 	stats *models.WasteStats,
 	householdID uint,
+	lang string,
 ) {
 	for _, tr := range recipients {
 		telegramProvider := &TelegramNotificationProvider{BotToken: tr.BotToken, Logger: nc.Logger, HTTPClient: nc.telegramClient}
-		if sendErr := telegramProvider.SendMonthlyWasteReport(tr.ChatID, stats); sendErr != nil {
+		if sendErr := telegramProvider.SendMonthlyWasteReport(tr.ChatID, stats, lang); sendErr != nil {
 			nc.Logger.Error().Msgf("Monthly waste report: telegram send failed to chat %s: %s", tr.ChatID, sendErr)
 		} else {
 			nc.Logger.Info().Msgf("Monthly waste report: telegram sent to chat %s (household %d)", tr.ChatID, householdID)
@@ -655,11 +679,12 @@ func (nc *NotificationController) sendStreakResetNotifications(householdID uint,
 
 	emailProvider := nc.newEmailProvider()
 	ntfyProvider := nc.newNtfyProvider()
+	lang := nc.recipientLanguage(0, householdID)
 
 	for i := range preferences {
-		nc.sendStreakResetEmailIfEnabled(previousStreak, &preferences[i], emailProvider)
-		nc.sendStreakResetNtfyIfEnabled(previousStreak, &preferences[i], ntfyProvider)
-		nc.sendStreakResetTelegramIfEnabled(previousStreak, &preferences[i])
+		nc.sendStreakResetEmailIfEnabled(previousStreak, &preferences[i], emailProvider, lang)
+		nc.sendStreakResetNtfyIfEnabled(previousStreak, &preferences[i], ntfyProvider, lang)
+		nc.sendStreakResetTelegramIfEnabled(previousStreak, &preferences[i], lang)
 	}
 }
 
@@ -667,9 +692,10 @@ func (nc *NotificationController) sendStreakResetEmailIfEnabled(
 	previousStreak int,
 	pref *models.NotificationRecipientInfo,
 	provider *EmailNotificationProvider,
+	lang string,
 ) {
 	if pref.EmailEnabled && pref.EmailAddress != "" && provider.IsConfigured() {
-		if sendErr := provider.SendStreakReset(previousStreak, pref.EmailAddress); sendErr != nil {
+		if sendErr := provider.SendStreakReset(previousStreak, pref.EmailAddress, lang); sendErr != nil {
 			nc.Logger.Error().Msgf("Streak reset: email failed: %s", sendErr)
 		}
 	}
@@ -679,9 +705,10 @@ func (nc *NotificationController) sendStreakResetNtfyIfEnabled(
 	previousStreak int,
 	pref *models.NotificationRecipientInfo,
 	provider *NtfyNotificationProvider,
+	lang string,
 ) {
 	if pref.NtfyEnabled && provider.IsConfigured() {
-		if sendErr := provider.SendStreakReset(previousStreak, pref); sendErr != nil {
+		if sendErr := provider.SendStreakReset(previousStreak, pref, lang); sendErr != nil {
 			nc.Logger.Error().Msgf("Streak reset: ntfy failed: %s", sendErr)
 		}
 	}
@@ -690,10 +717,11 @@ func (nc *NotificationController) sendStreakResetNtfyIfEnabled(
 func (nc *NotificationController) sendStreakResetTelegramIfEnabled(
 	previousStreak int,
 	pref *models.NotificationRecipientInfo,
+	lang string,
 ) {
 	if pref.TelegramEnabled && pref.TelegramChatID != "" && pref.TelegramBotToken != "" {
 		telegramProvider := nc.newTelegramProvider(pref.TelegramBotToken)
-		if sendErr := telegramProvider.SendStreakReset(previousStreak, pref.TelegramChatID); sendErr != nil {
+		if sendErr := telegramProvider.SendStreakReset(previousStreak, pref.TelegramChatID, lang); sendErr != nil {
 			nc.Logger.Error().Msgf("Streak reset: telegram failed: %s", sendErr)
 		}
 	}
@@ -708,11 +736,12 @@ func (nc *NotificationController) sendStreakMilestoneNotifications(householdID u
 
 	emailProvider := nc.newEmailProvider()
 	ntfyProvider := nc.newNtfyProvider()
+	lang := nc.recipientLanguage(0, householdID)
 
 	for i := range preferences {
-		nc.sendStreakEmailIfEnabled(milestone, &preferences[i], emailProvider)
-		nc.sendStreakNtfyIfEnabled(milestone, &preferences[i], ntfyProvider)
-		nc.sendStreakTelegramIfEnabled(milestone, &preferences[i])
+		nc.sendStreakEmailIfEnabled(milestone, &preferences[i], emailProvider, lang)
+		nc.sendStreakNtfyIfEnabled(milestone, &preferences[i], ntfyProvider, lang)
+		nc.sendStreakTelegramIfEnabled(milestone, &preferences[i], lang)
 	}
 }
 
@@ -720,9 +749,10 @@ func (nc *NotificationController) sendStreakEmailIfEnabled(
 	milestone int,
 	pref *models.NotificationRecipientInfo,
 	provider *EmailNotificationProvider,
+	lang string,
 ) {
 	if pref.EmailEnabled && pref.EmailAddress != "" && provider.IsConfigured() {
-		if sendErr := provider.SendStreakMilestone(milestone, pref.EmailAddress); sendErr != nil {
+		if sendErr := provider.SendStreakMilestone(milestone, pref.EmailAddress, lang); sendErr != nil {
 			nc.Logger.Error().Msgf("Streak milestone: email failed: %s", sendErr)
 		}
 	}
@@ -732,9 +762,10 @@ func (nc *NotificationController) sendStreakNtfyIfEnabled(
 	milestone int,
 	pref *models.NotificationRecipientInfo,
 	provider *NtfyNotificationProvider,
+	lang string,
 ) {
 	if pref.NtfyEnabled && provider.IsConfigured() {
-		if sendErr := provider.SendStreakMilestone(milestone, pref); sendErr != nil {
+		if sendErr := provider.SendStreakMilestone(milestone, pref, lang); sendErr != nil {
 			nc.Logger.Error().Msgf("Streak milestone: ntfy failed: %s", sendErr)
 		}
 	}
@@ -743,10 +774,11 @@ func (nc *NotificationController) sendStreakNtfyIfEnabled(
 func (nc *NotificationController) sendStreakTelegramIfEnabled(
 	milestone int,
 	pref *models.NotificationRecipientInfo,
+	lang string,
 ) {
 	if pref.TelegramEnabled && pref.TelegramChatID != "" && pref.TelegramBotToken != "" {
 		telegramProvider := nc.newTelegramProvider(pref.TelegramBotToken)
-		if sendErr := telegramProvider.SendStreakMilestone(milestone, pref.TelegramChatID); sendErr != nil {
+		if sendErr := telegramProvider.SendStreakMilestone(milestone, pref.TelegramChatID, lang); sendErr != nil {
 			nc.Logger.Error().Msgf("Streak milestone: telegram failed: %s", sendErr)
 		}
 	}
@@ -812,8 +844,10 @@ func (nc *NotificationController) processMailDigestEmails(baseURL, defaultTime s
 				continue
 			}
 
+			lang := nc.recipientLanguage(user.UserID, target.HouseholdID)
+
 			digestGroups := &digestProductGroupAdapter{group: productGroups}
-			if sendErr := emailProvider.SendExpiryDigestEmail(digestGroups, user.Email, target.HouseholdName, unsubscribeURL); sendErr != nil {
+			if sendErr := emailProvider.SendExpiryDigestEmail(digestGroups, user.Email, target.HouseholdName, unsubscribeURL, lang); sendErr != nil {
 				nc.Logger.Error().Msgf("Digest scheduler: failed to send digest to %s: %s", user.Email, sendErr)
 			} else {
 				nc.Logger.Info().Msgf("Digest scheduler: sent digest to %s (household %d)", user.Email, target.HouseholdID)
@@ -1051,10 +1085,12 @@ func (nc *NotificationController) handleTelegramStartCommand(text, chatID, baseU
 		return false
 	}
 
+	lang := nc.recipientLanguage(userID, 0)
+
 	parts := strings.Fields(text)
 	if len(parts) < 2 {
 		nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
-			"Send `/start <token>` with the token from your Proviant notification settings to link this chat.")
+			i18n.T(lang, "notify.telegram.linkInstructions"))
 		return true
 	}
 
@@ -1063,20 +1099,20 @@ func (nc *NotificationController) handleTelegramStartCommand(text, chatID, baseU
 	if findErr != nil || user.ID != userID {
 		nc.Logger.Warn().Msgf("Telegram poller (user %d): invalid link token from chat %s", userID, chatID)
 		nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
-			"Invalid or expired token. Please generate a new one in Proviant settings.")
+			i18n.T(lang, "notify.telegram.linkInvalidToken"))
 		return true
 	}
 
 	if setErr := nc.NotificationRepo.SetTelegramChatID(userID, chatID); setErr != nil {
 		nc.Logger.Error().Msgf("Telegram poller (user %d): failed to save chat ID: %s", userID, setErr)
 		nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
-			"Something went wrong. Please try again.")
+			i18n.T(lang, "notify.telegram.linkError"))
 		return true
 	}
 
 	nc.Logger.Info().Msgf("Telegram poller (user %d): linked chat %s", userID, chatID)
 	nc.sendTelegramText(nc.telegramClient, baseURL, chatID,
-		"✅ Linked! You will now receive Proviant notifications here.")
+		i18n.T(lang, "notify.telegram.linked"))
 	return true
 }
 
@@ -1120,7 +1156,8 @@ func (nc *NotificationController) processPendingInvitations(emailProvider *Email
 		invitation := &invitations[i]
 		inviterName := nc.resolveInviterName(invitation.InviterID)
 		householdName := nc.resolveHouseholdName(invitation.HouseholdID)
-		nc.dispatchPendingInvitation(emailProvider, invitation, inviterName, householdName, baseURL)
+		lang := nc.recipientLanguage(0, invitation.HouseholdID)
+		nc.dispatchPendingInvitation(emailProvider, invitation, inviterName, householdName, baseURL, lang)
 	}
 }
 
@@ -1144,8 +1181,9 @@ func (nc *NotificationController) dispatchPendingInvitation(
 	emailProvider *EmailNotificationProvider,
 	invitation *dbModel.HouseholdInvitation,
 	inviterName, householdName, baseURL string,
+	lang string,
 ) {
-	if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL); err != nil {
+	if err := emailProvider.SendInvitationEmail(invitation, inviterName, householdName, baseURL, lang); err != nil {
 		nc.Logger.Error().Msgf("Failed to send invitation %d to %s: %s", invitation.ID, invitation.Email, err)
 		if markErr := nc.NotificationRepo.MarkInvitationSendFailed(invitation.ID); markErr != nil {
 			nc.Logger.Error().Msgf("Failed to mark invitation %d as send-failed: %s", invitation.ID, markErr)

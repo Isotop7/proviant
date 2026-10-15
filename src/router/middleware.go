@@ -12,6 +12,7 @@ import (
 	"codeberg.org/isotop7/proviant/audit"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	apperrors "codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/i18n"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
@@ -113,6 +114,26 @@ func UserContextLoggerMiddleware() gin.HandlerFunc {
 				}
 			}
 		}
+		ctx.Next()
+	}
+}
+
+// LanguageMiddleware resolves the UI language for web page renders: user
+// preference, household preference, Accept-Language header, default. It must
+// run after UserContextLoggerMiddleware so ContextKeyUserID is populated.
+func LanguageMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userLanguage, householdLanguage := "", ""
+		if raw, ok := ctx.Get(util.ContextKeyUserID); ok {
+			if userID, ok := raw.(uint); ok && userID > 0 {
+				if repos, reposOk := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer); reposOk {
+					if userLang, householdLang, err := repos.Users.GetUserLanguagePreferencesByID(userID); err == nil {
+						userLanguage, householdLanguage = userLang, householdLang
+					}
+				}
+			}
+		}
+		ctx.Set(util.ContextKeyLanguage, i18n.ResolveLanguage(userLanguage, householdLanguage, ctx.GetHeader("Accept-Language")))
 		ctx.Next()
 	}
 }

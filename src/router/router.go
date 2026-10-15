@@ -474,11 +474,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Create frontend handler with template cache
 	webFrontendHandler := web.Frontend{TemplateCache: proviantConfiguration.TemplateCache}
 	webFrontend := engine.Group("/web")
-	webFrontend.GET("/auth", webFrontendHandler.Auth)
+	webFrontend.GET("/auth", LanguageMiddleware(), webFrontendHandler.Auth)
 
 	// Public web frontend routes
 	publicWebFrontend := engine.Group("/web")
-	publicWebFrontend.Use(jwtFrontendMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware())
+	publicWebFrontend.Use(jwtFrontendMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware(), LanguageMiddleware())
 	publicWebFrontend.GET("/", webFrontendHandler.Root)
 	publicWebFrontend.GET("/user", webFrontendHandler.User)
 	publicWebFrontend.GET("/user/settings", webFrontendHandler.UserSettings)
@@ -492,23 +492,23 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/shopping-list", webFrontendHandler.ShoppingList)
 
 	// Public invite acceptance page (no auth required)
-	engine.GET("/web/invite/accept", webFrontendHandler.AcceptInvite)
+	engine.GET("/web/invite/accept", LanguageMiddleware(), webFrontendHandler.AcceptInvite)
 
 	// Public email verification page (no auth required)
-	engine.GET("/web/verify-email", webFrontendHandler.VerifyEmail)
+	engine.GET("/web/verify-email", LanguageMiddleware(), webFrontendHandler.VerifyEmail)
 
 	// Public forgot-password page (no auth required)
-	engine.GET("/web/forgot-password", webFrontendHandler.ForgotPassword)
+	engine.GET("/web/forgot-password", LanguageMiddleware(), webFrontendHandler.ForgotPassword)
 
 	// Public password reset page (no auth required)
-	engine.GET("/web/reset-password", webFrontendHandler.ResetPassword)
+	engine.GET("/web/reset-password", LanguageMiddleware(), webFrontendHandler.ResetPassword)
 
 	// Public unsubscribe page (no auth required)
-	engine.GET("/web/unsubscribe", webFrontendHandler.Unsubscribe)
+	engine.GET("/web/unsubscribe", LanguageMiddleware(), webFrontendHandler.Unsubscribe)
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")
-	protectedWebFrontend.Use(jwtFrontendUserAwareMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware())
+	protectedWebFrontend.Use(jwtFrontendUserAwareMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware(), LanguageMiddleware())
 	protectedWebFrontend.GET("/products/:id/edit", webFrontendHandler.ProductsEdit)
 
 	// Static redirects

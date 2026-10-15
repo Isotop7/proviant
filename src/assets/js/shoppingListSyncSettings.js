@@ -15,7 +15,7 @@
     if (data && data.lastSyncAt) {
       const syncDiv = document.createElement("div");
       syncDiv.className = "text-secondary-custom";
-      syncDiv.textContent = "Last synced: " + data.lastSyncAt;
+      syncDiv.textContent = proviant.t("js.syncSettings.lastSynced", data.lastSyncAt);
       statusEl.appendChild(syncDiv);
     }
 
@@ -33,9 +33,9 @@
     const hintEl = document.getElementById("tokenHint-" + provider);
     if (!hintEl) return;
     if (configured) {
-      hintEl.textContent = "Token stored. Enter a new token to replace it.";
+      hintEl.textContent = proviant.t("js.syncSettings.tokenStored");
     } else {
-      hintEl.textContent = "No token configured yet.";
+      hintEl.textContent = proviant.t("js.syncSettings.noToken");
     }
   }
 
@@ -77,10 +77,10 @@
       })
       .then(function (result) {
         if (!result.ok) {
-          const msg = (result.body && result.body.message) || "Failed to save integration";
+          const msg = (result.body && result.body.message) || proviant.t("js.syncSettings.saveFailed");
           renderIntegrationStatus(provider, null, msg);
           if (typeof proviant !== "undefined" && proviant.showFeedback) {
-            proviant.showFeedback("error", "Error", msg);
+            proviant.showFeedback("error", proviant.t("common.error"), msg);
           }
           return;
         }
@@ -90,12 +90,12 @@
         updateTokenHint(provider, Boolean(result.body && result.body.accessTokenConfigured));
         renderIntegrationStatus(provider, result.body, "");
         if (typeof proviant !== "undefined" && proviant.showFeedback) {
-          proviant.showFeedback("success", "Saved", getProviderLabel(provider) + " settings saved.");
+          proviant.showFeedback("success", proviant.t("js.syncSettings.savedTitle"), proviant.t("js.syncSettings.settingsSaved", getProviderLabel(provider)));
         }
       })
       .catch(function () {
         if (typeof proviant !== "undefined" && proviant.showFeedback) {
-          proviant.showFeedback("error", "Error", "Failed to save integration.");
+          proviant.showFeedback("error", proviant.t("common.error"), proviant.t("js.syncSettings.saveRequestFailed"));
         }
       })
       .finally(function () {
@@ -117,19 +117,19 @@
         if (result.ok) {
           renderIntegrationStatus(provider, null, "");
           if (typeof proviant !== "undefined" && proviant.showFeedback) {
-            proviant.showFeedback("success", "Connected", getProviderLabel(provider) + " connection succeeded.");
+            proviant.showFeedback("success", proviant.t("js.syncSettings.connectedTitle"), proviant.t("js.syncSettings.connectionSucceeded", getProviderLabel(provider)));
           }
         } else {
-          const msg = (result.body && result.body.message) || "Connection test failed";
+          const msg = (result.body && result.body.message) || proviant.t("js.syncSettings.connectionTestFailed");
           renderIntegrationStatus(provider, null, msg);
           if (typeof proviant !== "undefined" && proviant.showFeedback) {
-            proviant.showFeedback("error", "Connection Failed", msg);
+            proviant.showFeedback("error", proviant.t("js.syncSettings.connectionFailedTitle"), msg);
           }
         }
       })
       .catch(function () {
         if (typeof proviant !== "undefined" && proviant.showFeedback) {
-          proviant.showFeedback("error", "Connection Failed", "Request failed.");
+          proviant.showFeedback("error", proviant.t("js.syncSettings.connectionFailedTitle"), proviant.t("js.syncSettings.requestFailed"));
         }
       })
       .finally(function () {
@@ -151,19 +151,19 @@
         if (result.ok) {
           renderIntegrationStatus(provider, result.body, "");
           if (typeof proviant !== "undefined" && proviant.showFeedback) {
-            proviant.showFeedback("success", "Synced", getProviderLabel(provider) + " shopping list synchronized.");
+            proviant.showFeedback("success", proviant.t("js.syncSettings.syncedTitle"), proviant.t("js.syncSettings.syncSucceeded", getProviderLabel(provider)));
           }
         } else {
-          const msg = (result.body && result.body.message) || "Sync failed";
+          const msg = (result.body && result.body.message) || proviant.t("js.syncSettings.syncFailed");
           renderIntegrationStatus(provider, null, msg);
           if (typeof proviant !== "undefined" && proviant.showFeedback) {
-            proviant.showFeedback("error", "Sync Failed", msg);
+            proviant.showFeedback("error", proviant.t("js.syncSettings.syncFailedTitle"), msg);
           }
         }
       })
       .catch(function () {
         if (typeof proviant !== "undefined" && proviant.showFeedback) {
-          proviant.showFeedback("error", "Sync Failed", "Request failed.");
+          proviant.showFeedback("error", proviant.t("js.syncSettings.syncFailedTitle"), proviant.t("js.syncSettings.requestFailed"));
         }
       })
       .finally(function () {
@@ -198,18 +198,18 @@
           updateTokenHint(provider, false);
           renderIntegrationStatus(provider, null, "");
           if (typeof proviant !== "undefined" && proviant.showFeedback) {
-            proviant.showFeedback("success", "Disconnected", getProviderLabel(provider) + " integration removed.");
+            proviant.showFeedback("success", proviant.t("js.syncSettings.disconnectedTitle"), proviant.t("js.syncSettings.integrationRemoved", getProviderLabel(provider)));
           }
         } else {
-          const msg = (result.body && result.body.message) || "Failed to disconnect integration";
+          const msg = (result.body && result.body.message) || proviant.t("js.syncSettings.disconnectFailed");
           if (typeof proviant !== "undefined" && proviant.showFeedback) {
-            proviant.showFeedback("error", "Error", msg);
+            proviant.showFeedback("error", proviant.t("common.error"), msg);
           }
         }
       })
       .catch(function () {
         if (typeof proviant !== "undefined" && proviant.showFeedback) {
-          proviant.showFeedback("error", "Error", "Failed to disconnect integration.");
+          proviant.showFeedback("error", proviant.t("common.error"), proviant.t("js.syncSettings.disconnectRequestFailed"));
         }
       })
       .finally(function () {
@@ -220,12 +220,12 @@
   function deleteIntegration(provider, triggerBtn) {
     if (typeof proviant !== "undefined" && typeof proviant.showConfirm === "function") {
       proviant.showConfirm(
-        "Disconnect " + getProviderLabel(provider),
-        "Remove stored credentials and stop syncing with " + getProviderLabel(provider) + "?",
+        proviant.t("js.syncSettings.disconnectTitle", getProviderLabel(provider)),
+        proviant.t("js.syncSettings.disconnectConfirmBody", getProviderLabel(provider)),
         function () {
           performDeleteIntegration(provider, triggerBtn);
         },
-        "Disconnect",
+        proviant.t("js.syncSettings.disconnectConfirmButton"),
         "danger"
       );
       return;

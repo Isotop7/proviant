@@ -12,7 +12,7 @@ const STRENGTH_COLORS = [
     'var(--status-soon)',
     'var(--status-fresh)',
 ];
-const STRENGTH_LABELS = ['Weak', 'Fair', 'Good', 'Strong'];
+const STRENGTH_LABEL_KEYS = ['js.auth.strengthWeak', 'js.auth.strengthFair', 'js.auth.strengthGood', 'js.auth.strengthStrong'];
 
 function getStrengthScore(value) {
     let score = 0;
@@ -33,7 +33,7 @@ function updateStrengthMeter(value) {
         bar.style.background = i < score ? STRENGTH_COLORS[score - 1] : '';
     });
     if (label) {
-        label.textContent  = score > 0 ? STRENGTH_LABELS[score - 1] : '';
+        label.textContent  = score > 0 ? proviant.t(STRENGTH_LABEL_KEYS[score - 1]) : '';
         label.style.color  = score > 0 ? STRENGTH_COLORS[score - 1] : 'var(--fg-3)';
     }
 }
@@ -120,14 +120,14 @@ function switchMode(mode) {
     // Heading
     const title = document.getElementById('auth-heading-title');
     const sub   = document.getElementById('auth-heading-sub');
-    if (title) title.textContent = mode === 'signin' ? 'Welcome back'         : 'Get started free';
-    if (sub)   sub.textContent   = mode === 'signin' ? 'Sign in to your Proviant account' : 'Create your household account';
+    if (title) title.textContent = mode === 'signin' ? proviant.t('auth.welcomeBack')       : proviant.t('js.auth.getStartedFree');
+    if (sub)   sub.textContent   = mode === 'signin' ? proviant.t('auth.signInSubtitle')    : proviant.t('js.auth.createHouseholdAccount');
 
     // Submit button
     const icon  = document.getElementById('btn-auth-icon');
     const label = document.getElementById('btn-auth-label');
     if (icon)  icon.className  = mode === 'signin' ? 'bi bi-box-arrow-in-right' : 'bi bi-person-plus';
-    if (label) label.textContent = mode === 'signin' ? 'Sign in' : 'Create account';
+    if (label) label.textContent = mode === 'signin' ? proviant.t('auth.signIn') : proviant.t('auth.createAccount');
 
     clearAllErrors();
 
@@ -148,11 +148,11 @@ function setSubmitLoading(loading) {
     btn.disabled = loading;
     if (loading) {
         if (icon)  icon.className   = 'bi bi-arrow-clockwise spin-icon';
-        if (label) label.textContent = 'Please wait…';
+        if (label) label.textContent = proviant.t('js.auth.pleaseWait');
     } else {
         const mode = document.getElementById('auth-mode')?.value || 'signin';
         if (icon)  icon.className   = mode === 'signin' ? 'bi bi-box-arrow-in-right' : 'bi bi-person-plus';
-        if (label) label.textContent = mode === 'signin' ? 'Sign in' : 'Create account';
+        if (label) label.textContent = mode === 'signin' ? proviant.t('auth.signIn') : proviant.t('auth.createAccount');
     }
 }
 
@@ -161,7 +161,7 @@ function showEmailVerificationModal(email) {
     const modal = document.getElementById('emailVerificationModal');
     if (!modal) return;
     const addressEl = document.getElementById('emailVerificationAddress');
-    if (addressEl) addressEl.textContent = email || 'your email address';
+    if (addressEl) addressEl.textContent = email || proviant.t('js.auth.yourEmailAddress');
     new bootstrap.Modal(modal).show();
 }
 
@@ -175,11 +175,11 @@ function Login() {
     let valid = true;
 
     if (!username) {
-        showFieldError('auth-username', 'Username is required');
+        showFieldError('auth-username', proviant.t('js.auth.usernameRequired'));
         valid = false;
     }
     if (!password) {
-        showFieldError('auth-password', 'Password is required');
+        showFieldError('auth-password', proviant.t('js.auth.passwordRequired'));
         valid = false;
     }
     if (!valid) return;
@@ -201,35 +201,34 @@ function Login() {
                 });
                 break;
             case 401:
-                proviant.showFeedback('error', 'Login Failed', response.body || 'Invalid username or password.');
+                proviant.showFeedback('error', proviant.t('js.auth.loginFailed'), response.body || proviant.t('js.auth.invalidCredentials'));
                 if (pwdInput) pwdInput.value = '';
                 break;
             case 403:
                 if (response.body?.toLowerCase().includes('verify')) {
                     showEmailVerificationModal(username);
                 } else {
-                    proviant.showFeedback('error', 'Login Failed', response.body || 'Access denied.');
+                    proviant.showFeedback('error', proviant.t('js.auth.loginFailed'), response.body || proviant.t('js.auth.accessDenied'));
                 }
                 if (pwdInput) pwdInput.value = '';
                 break;
             case 429: {
                 const mins = response.retryAfter ? Math.ceil(Number.parseInt(response.retryAfter, 10) / 60) : null;
-                const s = mins !== 1 ? 's' : '';
                 const msg = mins
-                    ? `Too many failed attempts. Account locked — try again in ${mins} minute${s}.`
-                    : (response.body || 'Too many failed attempts. Account is temporarily locked.');
-                proviant.showFeedback('error', 'Account Locked', msg);
+                    ? proviant.tn('js.auth.accountLockedRetry', mins)
+                    : (response.body || proviant.t('js.auth.accountLockedTemporary'));
+                proviant.showFeedback('error', proviant.t('js.auth.accountLockedTitle'), msg);
                 if (pwdInput) pwdInput.value = '';
                 break;
             }
             default:
-                proviant.showFeedback('error', 'Login Failed', response.body || 'Login failed. Please try again.');
+                proviant.showFeedback('error', proviant.t('js.auth.loginFailed'), response.body || proviant.t('js.auth.loginFailedMessage'));
                 if (pwdInput) pwdInput.value = '';
                 break;
         }
     }).catch(() => {
         setSubmitLoading(false);
-        proviant.showFeedback('error', 'Login Failed', 'Network error. Please try again.');
+        proviant.showFeedback('error', proviant.t('js.auth.loginFailed'), proviant.t('js.auth.networkError'));
     });
 }
 
@@ -245,30 +244,30 @@ function Signup() {
     let valid = true;
 
     if (!name) {
-        showFieldError('auth-name', 'Display name is required');
+        showFieldError('auth-name', proviant.t('js.auth.displayNameRequired'));
         valid = false;
     }
     if (!email) {
-        showFieldError('auth-email', 'Email is required');
+        showFieldError('auth-email', proviant.t('js.auth.emailRequired'));
         valid = false;
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-        showFieldError('auth-email', 'Enter a valid email address');
+        showFieldError('auth-email', proviant.t('js.auth.emailInvalid'));
         valid = false;
     }
     if (!password) {
-        showFieldError('auth-password', 'Password is required');
+        showFieldError('auth-password', proviant.t('js.auth.passwordRequired'));
         valid = false;
     } else if (password.length < PWD_MIN_LENGTH) {
-        showFieldError('auth-password', `Password must be at least ${PWD_MIN_LENGTH} characters`);
+        showFieldError('auth-password', proviant.t('js.auth.passwordMinLength', PWD_MIN_LENGTH));
         valid = false;
     } else if (PWD_REQUIRE_UPPERCASE && !/[A-Z]/.test(password)) {
-        showFieldError('auth-password', 'Password must contain at least one uppercase letter');
+        showFieldError('auth-password', proviant.t('js.auth.passwordRequiresUppercase'));
         valid = false;
     } else if (PWD_REQUIRE_DIGIT && !/[0-9]/.test(password)) {
-        showFieldError('auth-password', 'Password must contain at least one number');
+        showFieldError('auth-password', proviant.t('js.auth.passwordRequiresDigit'));
         valid = false;
     } else if (PWD_REQUIRE_SPECIAL && !/[^A-Za-z0-9]/.test(password)) {
-        showFieldError('auth-password', 'Password must contain at least one special character');
+        showFieldError('auth-password', proviant.t('js.auth.passwordRequiresSpecial'));
         valid = false;
     }
     if (!valid) return;
@@ -287,17 +286,17 @@ function Signup() {
                 updateRequirements('');
                 break;
             case 400:
-                proviant.showFeedback('error', 'Signup Failed', `Invalid data: ${response.body}`);
+                proviant.showFeedback('error', proviant.t('js.auth.signupFailed'), proviant.t('js.auth.invalidData', response.body));
                 if (pwdInput) pwdInput.value = '';
                 break;
             default:
-                proviant.showFeedback('error', 'Signup Failed', response.body || 'Signup failed. Please try again.');
+                proviant.showFeedback('error', proviant.t('js.auth.signupFailed'), response.body || proviant.t('js.auth.signupFailedMessage'));
                 if (pwdInput) pwdInput.value = '';
                 break;
         }
     }).catch(() => {
         setSubmitLoading(false);
-        proviant.showFeedback('error', 'Signup Failed', 'Network error. Please try again.');
+        proviant.showFeedback('error', proviant.t('js.auth.signupFailed'), proviant.t('js.auth.networkError'));
     });
 }
 

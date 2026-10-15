@@ -7328,6 +7328,9 @@ const docTemplate = `{
         "api.HouseholdSettingsResponse": {
             "type": "object",
             "properties": {
+                "language": {
+                    "type": "string"
+                },
                 "monthlyWasteGoalCount": {
                     "type": "integer"
                 },
@@ -8096,6 +8099,9 @@ const docTemplate = `{
         "api.UpdateHouseholdSettingsRequest": {
             "type": "object",
             "properties": {
+                "language": {
+                    "type": "string"
+                },
                 "monthlyWasteGoalCount": {
                     "type": "integer"
                 },

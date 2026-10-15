@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const mailAddress = (emailInput?.value || "").trim();
     if (!mailAddress) {
-      showError("Please enter your email address.");
+      showError(proviant.t("js.auth.enterEmail"));
       if (emailInput) {
         emailInput.focus();
       }
@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
       submitBtn.disabled = true;
     }
     if (submitLabel) {
-      submitLabel.textContent = "Sending...";
+      submitLabel.textContent = proviant.t("js.auth.sending");
     }
     if (submitIcon) {
       submitIcon.className = "bi bi-hourglass-split";
@@ -69,17 +69,17 @@ document.addEventListener("DOMContentLoaded", function () {
           if (formInner) {
             formInner.innerHTML =
               '<div class="form-heading">' +
-              '<div class="form-heading-title">Check your email</div>' +
-              '<div class="form-heading-sub">If an account with that email address exists, we just sent a reset link.</div>' +
+              '<div class="form-heading-title">' + proviant.t("js.auth.checkYourEmail") + '</div>' +
+              '<div class="form-heading-sub">' + proviant.t("js.auth.resetLinkSentHint") + '</div>' +
               "</div>" +
               '<div class="alert alert-success" role="alert">' +
               '<i class="bi bi-check-circle me-2"></i>' +
               (result.data && result.data.message
                 ? result.data.message
-                : "If an account with that email address exists, a password reset link has been sent.") +
+                : proviant.t("js.auth.resetLinkSentFallback")) +
               "</div>" +
               '<div class="text-center mt-3">' +
-              '<a href="' + routeAuth + '" class="btn btn-proviant-secondary">Back to Sign In</a>' +
+              '<a href="' + routeAuth + '" class="btn btn-proviant-secondary">' + proviant.t("reset.backToSignIn") + '</a>' +
               "</div>";
           }
           return;
@@ -87,25 +87,25 @@ document.addEventListener("DOMContentLoaded", function () {
         const message =
           result.data && result.data.message
             ? result.data.message
-            : "Something went wrong. Please try again.";
+            : proviant.t("js.auth.genericError");
         showError(message);
         if (submitBtn) {
           submitBtn.disabled = false;
         }
         if (submitLabel) {
-          submitLabel.textContent = "Send Reset Link";
+          submitLabel.textContent = proviant.t("reset.sendResetLink");
         }
         if (submitIcon) {
           submitIcon.className = "bi bi-envelope";
         }
       })
       .catch(function () {
-        showError("Network error. Please try again.");
+        showError(proviant.t("js.auth.networkError"));
         if (submitBtn) {
           submitBtn.disabled = false;
         }
         if (submitLabel) {
-          submitLabel.textContent = "Send Reset Link";
+          submitLabel.textContent = proviant.t("reset.sendResetLink");
         }
         if (submitIcon) {
           submitIcon.className = "bi bi-envelope";

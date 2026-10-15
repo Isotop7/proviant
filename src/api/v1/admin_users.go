@@ -8,6 +8,7 @@ import (
 	"codeberg.org/isotop7/proviant/audit"
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/i18n"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -199,7 +200,12 @@ func AdminResetUserPassword(ctx *gin.Context, appCtx *AppContext) {
 		if proviantConfig != nil {
 			baseURL = proviantConfig.Server.BaseURL
 		}
-		if sendErr := notificationController.SendEmailVerification(targetUser.MailAddress, targetUser.Username, token.String(), baseURL, expiresAt); sendErr != nil {
+		householdLanguage := ""
+		if household, householdErr := appCtx.Repos.Users.GetHouseholdByID(householdID); householdErr == nil {
+			householdLanguage = household.Language
+		}
+		lang := i18n.ResolveLanguage(targetUser.Language, householdLanguage, "")
+		if sendErr := notificationController.SendEmailVerification(targetUser.MailAddress, targetUser.Username, token.String(), baseURL, expiresAt, lang); sendErr != nil {
 			appCtx.Logger.Error().Msgf("Error sending reset email: %s", sendErr)
 			ctx.JSON(http.StatusInternalServerError, api.InternalError())
 			return

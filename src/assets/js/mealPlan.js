@@ -78,13 +78,13 @@ document.addEventListener("click", function (e) {
     const cookButton = target.closest("[data-meal-cook]");
     if (cookButton) {
         e.preventDefault();
-        confirmCookPlannedMeal(cookButton.getAttribute("data-meal-cook"), cookButton.getAttribute("data-recipe-name") || "this meal");
+        confirmCookPlannedMeal(cookButton.getAttribute("data-meal-cook"), cookButton.getAttribute("data-recipe-name") || proviant.t("js.mealPlan.thisMeal"));
         return;
     }
     const deleteButton = target.closest("[data-meal-delete]");
     if (deleteButton) {
         e.preventDefault();
-        confirmDeletePlannedMeal(deleteButton.getAttribute("data-meal-delete"), deleteButton.getAttribute("data-recipe-name") || "this meal");
+        confirmDeletePlannedMeal(deleteButton.getAttribute("data-meal-delete"), deleteButton.getAttribute("data-recipe-name") || proviant.t("js.mealPlan.thisMeal"));
         return;
     }
     if (target.closest("#btnPrevMonth")) {
@@ -223,7 +223,7 @@ async function loadMealPlanRecipes() {
     const select = document.getElementById("inputMealRecipe");
     if (!select) return;
     if (mealPlanRecipes.length === 0) {
-        select.innerHTML = '<option value="">No saved recipes</option>';
+        select.innerHTML = `<option value="">${proviant.t("js.mealPlan.noSavedRecipes")}</option>`;
         return;
     }
     select.innerHTML = mealPlanRecipes.map(function (recipe) {
@@ -238,7 +238,7 @@ function renderMealPlanDaySelect() {
     const days = planDays();
     const isoDays = days.map(toISODate);
     select.innerHTML = days.map(function (day, index) {
-        const label = day.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+        const label = day.toLocaleDateString(window.proviantLang, { weekday: "short", month: window.proviantLang === "de" ? "long" : "short", day: "numeric" });
         return `<option value="${isoDays[index]}">${escapeMealHtml(label)}</option>`;
     }).join("");
     const todayISO = toISODate(new Date());
@@ -256,19 +256,19 @@ async function loadMealPlanEntries() {
     const grid = document.getElementById("mealPlanGrid");
     if (!grid) return;
     const label = document.getElementById("monthLabel");
-    if (label) label.textContent = currentMonthStart.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    if (label) label.textContent = currentMonthStart.toLocaleDateString(window.proviantLang, { month: "long", year: "numeric" });
     renderMealPlanDaySelect();
     try {
         const range = planRange();
         const res = await proviant.getMealPlans(range.from, range.to);
         if (res.code !== 200) {
-            proviant.showFeedback("error", "Meal plan not loaded", res.message || `Request failed with status ${res.code}`);
+            proviant.showFeedback("error", proviant.t("js.mealPlan.notLoadedTitle"), res.message || proviant.t("js.mealPlan.requestFailed", res.code));
             renderMealPlanEntries([]);
             return;
         }
         renderMealPlanEntries(Array.isArray(res.entries) ? res.entries : []);
     } catch (error) {
-        proviant.showFeedback("error", "Meal plan not loaded", error.message);
+        proviant.showFeedback("error", proviant.t("js.mealPlan.notLoadedTitle"), error.message);
         renderMealPlanEntries([]);
     }
 }
@@ -277,25 +277,25 @@ function mealPlanEntryHtml(entry, day) {
     const days = planDays();
     const moveOptions = days.map(function (candidate) {
         const selected = toISODate(candidate) === toISODate(day) ? " selected" : "";
-        const label = candidate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+        const label = candidate.toLocaleDateString(window.proviantLang, { weekday: "short", month: window.proviantLang === "de" ? "long" : "short", day: "numeric" });
         return `<option value="${toISODate(candidate)}"${selected}>${escapeMealHtml(label)}</option>`;
     }).join("");
     return `
         <div class="mp-entry" id="meal-${entry.id}" data-meal-id="${entry.id}" data-meal-servings="${entry.servings}" draggable="true">
-            <div class="mp-entry-name">${escapeMealHtml(entry.recipeName || `Recipe #${entry.recipeId}`)}</div>
-            <div class="mp-entry-meta" id="meal-servings-${entry.id}">${entry.servings} serving(s)</div>
+            <div class="mp-entry-name">${escapeMealHtml(entry.recipeName || proviant.t("js.mealPlan.recipeFallback", entry.recipeId))}</div>
+            <div class="mp-entry-meta" id="meal-servings-${entry.id}">${proviant.tn("js.mealPlan.servings", entry.servings)}</div>
             <div class="mp-entry-actions">
                 <div class="qty-stepper">
-                    <button type="button" data-meal-servings-action="dec" data-meal-id="${entry.id}" aria-label="Decrease servings of ${escapeMealHtml(entry.recipeName)}">−</button>
-                    <button type="button" data-meal-servings-action="inc" data-meal-id="${entry.id}" aria-label="Increase servings of ${escapeMealHtml(entry.recipeName)}">+</button>
+                    <button type="button" data-meal-servings-action="dec" data-meal-id="${entry.id}" aria-label="${proviant.t("js.mealPlan.decreaseServingsLabel", escapeMealHtml(entry.recipeName))}">−</button>
+                    <button type="button" data-meal-servings-action="inc" data-meal-id="${entry.id}" aria-label="${proviant.t("js.mealPlan.increaseServingsLabel", escapeMealHtml(entry.recipeName))}">+</button>
                 </div>
-                <select class="form-select form-select-sm" data-meal-move="${entry.id}" aria-label="Move ${escapeMealHtml(entry.recipeName)} to another day">
+                <select class="form-select form-select-sm" data-meal-move="${entry.id}" aria-label="${proviant.t("js.mealPlan.moveToDayLabel", escapeMealHtml(entry.recipeName))}">
                     ${moveOptions}
                 </select>
-                <button type="button" class="btn-icon" data-meal-cook="${entry.id}" data-recipe-name="${escapeMealHtml(entry.recipeName)}" title="Cook" aria-label="Cook ${escapeMealHtml(entry.recipeName)}">
+                <button type="button" class="btn-icon" data-meal-cook="${entry.id}" data-recipe-name="${escapeMealHtml(entry.recipeName)}" title="${proviant.t("js.mealPlan.cook")}" aria-label="${proviant.t("js.mealPlan.cookLabel", escapeMealHtml(entry.recipeName))}">
                     <i class="bi bi-fire" aria-hidden="true"></i>
                 </button>
-                <button type="button" class="btn-icon text-danger" data-meal-delete="${entry.id}" data-recipe-name="${escapeMealHtml(entry.recipeName)}" title="Delete" aria-label="Delete ${escapeMealHtml(entry.recipeName)}">
+                <button type="button" class="btn-icon text-danger" data-meal-delete="${entry.id}" data-recipe-name="${escapeMealHtml(entry.recipeName)}" title="${proviant.t("common.delete")}" aria-label="${proviant.t("js.mealPlan.deleteLabel", escapeMealHtml(entry.recipeName))}">
                     <i class="bi bi-trash3" aria-hidden="true"></i>
                 </button>
             </div>
@@ -314,13 +314,13 @@ function renderMealPlanEntries(entries) {
     grid.innerHTML = weeks.map(function (weekDays, weekIndex) {
         const weekStart = weekDays[0];
         const weekEnd = weekDays[weekDays.length - 1];
-        const weekLabel = `${weekStart.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${weekEnd.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+        const weekLabel = `${weekStart.toLocaleDateString(window.proviantLang, { month: window.proviantLang === "de" ? "long" : "short", day: "numeric" })} – ${weekEnd.toLocaleDateString(window.proviantLang, { month: window.proviantLang === "de" ? "long" : "short", day: "numeric", year: "numeric" })}`;
         const dayCards = weekDays.map(function (day) {
             const dayISO = toISODate(day);
             const dayEntries = (entries || []).filter(function (entry) {
                 return entry.date === dayISO;
             });
-            const header = day.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+            const header = day.toLocaleDateString(window.proviantLang, { weekday: "short", day: "numeric", month: window.proviantLang === "de" ? "long" : "short" });
             const isToday = dayISO === todayISO;
             const isPast = dayISO < todayISO;
             const isOtherMonth = day.getMonth() !== currentMonthStart.getMonth() || day.getFullYear() !== currentMonthStart.getFullYear();
@@ -352,7 +352,7 @@ async function createMealPlanEntry() {
     const servingsInput = document.getElementById("inputMealServings");
     if (!recipeSelect || !dateSelect) return;
     if (!recipeSelect.value) {
-        proviant.showFeedback("warning", "No recipe selected", "Save a recipe first, then plan it here.");
+        proviant.showFeedback("warning", proviant.t("js.mealPlan.noRecipeSelectedTitle"), proviant.t("js.mealPlan.noRecipeSelectedDesc"));
         return;
     }
     try {
@@ -363,12 +363,12 @@ async function createMealPlanEntry() {
             notes: "",
         });
         if (res.code !== 201) {
-            proviant.showFeedback("error", "Meal not planned", res.message || `Request failed with status ${res.code}`);
+            proviant.showFeedback("error", proviant.t("js.mealPlan.notPlannedTitle"), res.message || proviant.t("js.mealPlan.requestFailed", res.code));
             return;
         }
         loadMealPlanEntries();
     } catch (error) {
-        proviant.showFeedback("error", "Meal not planned", error.message);
+        proviant.showFeedback("error", proviant.t("js.mealPlan.notPlannedTitle"), error.message);
     }
 }
 
@@ -384,21 +384,21 @@ async function changeMealServings(button) {
     const label = document.getElementById("meal-servings-" + mealID);
     const revert = function () {
         if (entry) entry.setAttribute("data-meal-servings", String(current));
-        if (label) label.textContent = current + " serving(s)";
+        if (label) label.textContent = proviant.tn("js.mealPlan.servings", current);
     };
     if (entry) entry.setAttribute("data-meal-servings", String(next));
-    if (label) label.textContent = next + " serving(s)";
+    if (label) label.textContent = proviant.tn("js.mealPlan.servings", next);
     try {
         const res = await proviant.updateMealPlan(mealID, { servings: next });
         if (res.code !== 200) {
             revert();
-            proviant.showFeedback("error", "Servings not changed", res.message || `Request failed with status ${res.code}`);
+            proviant.showFeedback("error", proviant.t("js.mealPlan.servingsNotChangedTitle"), res.message || proviant.t("js.mealPlan.requestFailed", res.code));
             return;
         }
         loadMealPlanEntries();
     } catch (error) {
         revert();
-        proviant.showFeedback("error", "Servings not changed", error.message);
+        proviant.showFeedback("error", proviant.t("js.mealPlan.servingsNotChangedTitle"), error.message);
     }
 }
 
@@ -449,21 +449,21 @@ async function movePlannedMeal(mealID, date) {
     try {
         const res = await proviant.updateMealPlan(parseInt(mealID, 10), { date: date });
         if (res.code !== 200) {
-            proviant.showFeedback("error", "Meal not moved", res.message || `Request failed with status ${res.code}`);
+            proviant.showFeedback("error", proviant.t("js.mealPlan.notMovedTitle"), res.message || proviant.t("js.mealPlan.requestFailed", res.code));
             return;
         }
         loadMealPlanEntries();
     } catch (error) {
-        proviant.showFeedback("error", "Meal not moved", error.message);
+        proviant.showFeedback("error", proviant.t("js.mealPlan.notMovedTitle"), error.message);
     }
 }
 
 function confirmDeletePlannedMeal(mealID, recipeName) {
     proviant.showConfirm(
-        "Remove meal",
-        `This will remove "${recipeName}" from the meal plan.`,
+        proviant.t("js.mealPlan.removeConfirmTitle"),
+        proviant.t("js.mealPlan.removeConfirmBody", recipeName),
         function () { deletePlannedMeal(mealID); },
-        "Remove",
+        proviant.t("js.mealPlan.removeConfirmAction"),
         "danger"
     );
 }
@@ -472,21 +472,21 @@ async function deletePlannedMeal(mealID) {
     try {
         const res = await proviant.deleteMealPlan(parseInt(mealID, 10));
         if (res.code !== 200) {
-            proviant.showFeedback("error", "Meal not removed", res.message || `Request failed with status ${res.code}`);
+            proviant.showFeedback("error", proviant.t("js.mealPlan.notRemovedTitle"), res.message || proviant.t("js.mealPlan.requestFailed", res.code));
             return;
         }
         loadMealPlanEntries();
     } catch (error) {
-        proviant.showFeedback("error", "Meal not removed", error.message);
+        proviant.showFeedback("error", proviant.t("js.mealPlan.notRemovedTitle"), error.message);
     }
 }
 
 function confirmCookPlannedMeal(mealID, recipeName) {
     proviant.showConfirm(
-        "Cook meal",
-        `This will consume the linked ingredients of "${recipeName}" from your stock. This cannot be undone.`,
+        proviant.t("js.mealPlan.cookConfirmTitle"),
+        proviant.t("js.mealPlan.cookConfirmBody", recipeName),
         function () { cookPlannedMeal(mealID); },
-        "Cook",
+        proviant.t("js.mealPlan.cook"),
         "warning"
     );
 }
@@ -499,29 +499,29 @@ async function cookPlannedMeal(mealID) {
             return candidate.id === parseInt(mealID, 10);
         });
         if (!entry) {
-            proviant.showFeedback("error", "Cook failed", "The planned meal no longer exists.");
+            proviant.showFeedback("error", proviant.t("js.mealPlan.cookFailedTitle"), proviant.t("js.mealPlan.cookMissingEntry"));
             return;
         }
         const res = await proviant.cookRecipe(entry.recipeId, entry.servings);
         if (res.code !== 200) {
             const itemErrors = res.errors || [];
             const detail = itemErrors.length > 0 ? `: ${itemErrors.join("; ")}` : "";
-            proviant.showFeedback("error", "Cook failed", `The cook request failed (HTTP ${res.code})${detail}.`);
+            proviant.showFeedback("error", proviant.t("js.mealPlan.cookFailedTitle"), proviant.t("js.mealPlan.cookRequestFailed", res.code, detail));
             return;
         }
         const consumed = res.consumed || 0;
         const partial = res.partial || 0;
         const itemErrors = res.errors || [];
         if (itemErrors.length > 0) {
-            proviant.showFeedback("warning", "Partially cooked",
-                `${consumed} product(s) fully consumed, ${partial} partially, ${itemErrors.length} ingredient(s) skipped: ${itemErrors.join("; ")}`);
+            proviant.showFeedback("warning", proviant.t("js.mealPlan.partiallyCookedTitle"),
+                `${proviant.tn("js.mealPlan.cookConsumed", consumed)}, ${proviant.t("js.mealPlan.cookPartial", partial)}, ${proviant.tn("js.mealPlan.cookSkipped", itemErrors.length)}: ${itemErrors.join("; ")}`);
         } else if (partial > 0) {
-            proviant.showFeedback("success", "Meal cooked", `${consumed} product(s) fully consumed, ${partial} partially.`);
+            proviant.showFeedback("success", proviant.t("js.mealPlan.cookedTitle"), `${proviant.tn("js.mealPlan.cookConsumed", consumed)}, ${proviant.t("js.mealPlan.cookPartial", partial)}.`);
         } else {
-            proviant.showFeedback("success", "Meal cooked", `${consumed} product(s) marked as fully consumed.`);
+            proviant.showFeedback("success", proviant.t("js.mealPlan.cookedTitle"), proviant.tn("js.mealPlan.cookConsumedAll", consumed));
         }
     } catch (error) {
-        proviant.showFeedback("error", "Cook failed", error.message);
+        proviant.showFeedback("error", proviant.t("js.mealPlan.cookFailedTitle"), error.message);
     }
 }
 
@@ -534,11 +534,11 @@ async function generateShoppingList() {
         const fromISO = firstDayISO < todayISO && todayISO <= lastDayISO ? todayISO : firstDayISO;
         const res = await proviant.generateShoppingListFromMealPlan(fromISO, lastDayISO);
         if (res.code !== 200) {
-            proviant.showFeedback("error", "Shopping list not generated", res.message || `Request failed with status ${res.code}`);
+            proviant.showFeedback("error", proviant.t("js.mealPlan.shoppingListNotGeneratedTitle"), res.message || proviant.t("js.mealPlan.requestFailed", res.code));
             return;
         }
-        proviant.showFeedback("success", "Shopping list updated", `${res.message || "Items added"}.`);
+        proviant.showFeedback("success", proviant.t("js.mealPlan.shoppingListUpdatedTitle"), `${res.message || proviant.t("js.mealPlan.itemsAdded")}.`);
     } catch (error) {
-        proviant.showFeedback("error", "Shopping list not generated", error.message);
+        proviant.showFeedback("error", proviant.t("js.mealPlan.shoppingListNotGeneratedTitle"), error.message);
     }
 }

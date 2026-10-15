@@ -1,11 +1,11 @@
 {{define "baseAuth"}}
 <!doctype html>
-<html lang="en" class="h-100">
+<html lang="{{ .Lang }}" class="h-100">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ if .Title }}proviant - {{ .Title}}{{ else }}proviant{{ end }}</title>
+    <title>{{ if .TitleText }}proviant - {{ .TitleText}}{{ else }}proviant{{ end }}</title>
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
@@ -19,11 +19,12 @@
     <script src="/assets/js/theme.js"></script>
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="stylesheet" href="/assets/css/auth.css">
+    <script nonce="{{ .CSPNonce }}">window.proviantI18n = {{ .I18nJSON }};window.proviantLang = "{{ .Lang }}";</script>
     <script src="/assets/js/proviant.js"></script>
 </head>
 
 <body>
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a href="#main-content" class="skip-link">{{ t "a11y.skipToContent" }}</a>
     <main id="main-content">
     {{template "content" .}}
     </main>
@@ -39,7 +40,7 @@
                     <div class="modal-header-body">
                         <h5 id="proviantConfirmTitle" class="modal-title mb-0"></h5>
                     </div>
-                    <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
                         <i class="bi bi-x"></i>
                     </button>
                 </div>
@@ -47,8 +48,8 @@
                     <p id="proviantConfirmMessage" class="text-secondary-custom small mb-0"></p>
                 </div>
                 <div class="modal-footer justify-content-end gap-2 flex-nowrap">
-                    <button type="button" class="btn btn-proviant-secondary text-nowrap" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-proviant-danger text-nowrap" id="proviantConfirmBtn">Confirm</button>
+                    <button type="button" class="btn btn-proviant-secondary text-nowrap" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
+                    <button type="button" class="btn btn-proviant-danger text-nowrap" id="proviantConfirmBtn">{{ t "common.confirm" }}</button>
                 </div>
             </div>
         </div>
@@ -66,7 +67,7 @@
                     <div class="modal-header-body">
                         <h5 id="proviantFeedbackTitle" class="modal-title mb-0"></h5>
                     </div>
-                    <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
                         <i class="bi bi-x"></i>
                     </button>
                 </div>
@@ -75,7 +76,7 @@
                 </div>
                 <div class="modal-footer justify-content-end">
                     <button type="button" class="btn btn-proviant-primary"
-                            id="proviantFeedbackBtn" data-bs-dismiss="modal">OK</button>
+                            id="proviantFeedbackBtn" data-bs-dismiss="modal">{{ t "common.ok" }}</button>
                 </div>
             </div>
         </div>

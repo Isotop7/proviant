@@ -1,0 +1,19 @@
+{
+  "brand.auth.featureNotify": "Get notified before items expire",
+  "brand.auth.featureRecipes": "Recipe suggestions from your pantry",
+  "brand.auth.featureSavings": "Track savings and reduce food waste",
+  "brand.auth.featureScan": "Scan barcodes to add products instantly",
+  "brand.auth.headlineBottom": "More meals.",
+  "brand.auth.headlineTop": "Less waste.",
+  "brand.auth.sub": "Track what's in your pantry, get notified before things expire, and discover recipes with what you already have.",
+  "brand.forgot.featureBack": "Back to your pantry in minutes",
+  "brand.forgot.featureLink": "A secure reset link in your inbox",
+  "brand.forgot.featureProtected": "Your account stays protected",
+  "brand.forgot.headline": "Forgot your password?",
+  "brand.forgot.sub": "Enter your email and we'll send you a link to choose a new password.",
+  "brand.reset.featureDone": "Then you're back in",
+  "brand.reset.featureEncrypted": "Encrypted in transit and at rest",
+  "brand.reset.featureLength": "12+ characters keeps it strong",
+  "brand.reset.headline": "Choose a new password",
+  "brand.reset.sub": "Pick something strong. We'll get you back to your pantry in no time."
+}

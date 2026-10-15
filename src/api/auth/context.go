@@ -6,6 +6,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/i18n"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/util"
@@ -103,8 +104,13 @@ func trySendEmailVerification(ctx *gin.Context, repos *database.RepositoryContai
 		logger.Error().Msgf("Failed to create email verification record: %s", err.Error())
 		return
 	}
+	householdLanguage := ""
+	if household, householdErr := repos.Users.GetHouseholdByID(user.HouseholdID); householdErr == nil {
+		householdLanguage = household.Language
+	}
+	lang := i18n.ResolveLanguage(user.Language, householdLanguage, "")
 	go func() {
-		if sendErr := nc.SendEmailVerification(user.MailAddress, user.EffectiveName(), token, proviantConfig.Server.BaseURL, expiresAt); sendErr != nil {
+		if sendErr := nc.SendEmailVerification(user.MailAddress, user.EffectiveName(), token, proviantConfig.Server.BaseURL, expiresAt, lang); sendErr != nil {
 			logger.Error().Msgf("Failed to send email verification: %s", sendErr.Error())
 		} else {
 			logger.Info().Msgf("Email verification sent to %s", user.MailAddress)

@@ -52,6 +52,9 @@ var (
 	// ErrInvalidUserID is thrown when supplied user data is invalid
 	ErrInvalidUserID = errors.New("invalid user ID")
 
+	// ErrUnsupportedLanguage is thrown when a language has no message catalog
+	ErrUnsupportedLanguage = errors.New("unsupported language")
+
 	// ErrInvalidUserIDWrapper is used to interpolate a invalid user id
 	ErrInvalidUserIDWrapper            = "User with id '%d' not found"
 	ErrInvalidUserIDWrapperWithMessage = ErrInvalidUserIDWrapper + ": %s"

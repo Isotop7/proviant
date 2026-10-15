@@ -2,11 +2,11 @@
 
 <div class="page-header">
     <div>
-        <h1 class="page-header-title">Shopping List</h1>
-        <p class="page-header-subtitle">{{ .ItemCount }} items in your list</p>
+        <h1 class="page-header-title">{{ t "nav.shoppingList" }}</h1>
+        <p class="page-header-subtitle">{{ tn "shoppingList.itemCount" .ItemCount }}</p>
     </div>
     <button class="btn btn-proviant-secondary d-none d-md-flex align-items-center gap-2" id="btnPrintShoppingList" type="button">
-        <i class="bi bi-printer"></i> Print list
+        <i class="bi bi-printer"></i> {{ t "shoppingList.printList" }}
     </button>
 </div>
 
@@ -15,18 +15,18 @@
     <div class="import-banner-header" data-bs-toggle="collapse" data-bs-target="#importCollapse" aria-expanded="false">
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-cart-plus"></i>
-            <span>{{ .AutoItemCount }} products below stock threshold</span>
+            <span>{{ tn "shoppingList.belowThresholdCount" .AutoItemCount }}</span>
         </div>
         <div class="d-flex align-items-center gap-2">
             <button type="button" class="btn btn-sm btn-proviant-primary" id="btnImportAll">
-                Import all
+                {{ t "shoppingList.importAll" }}
             </button>
             <i class="bi bi-chevron-down"></i>
         </div>
     </div>
     <div class="collapse" id="importCollapse">
         <div class="import-banner-body">
-            <p class="mb-2 small text-secondary-custom">These products are below their minimum stock threshold. Import them to your shopping list.</p>
+            <p class="mb-2 small text-secondary-custom">{{ t "shoppingList.importBannerDesc" }}</p>
             <div class="d-flex flex-wrap gap-2">
                 {{ range .AutoItems }}
                 <span class="filter-pill">{{ .ProductName }}</span>
@@ -39,10 +39,10 @@
 
 <div class="shopping-list-add-form mb-3" id="addItemForm">
     <div class="add-item-form-inner">
-        <input type="text" class="form-control" id="inputItemName" placeholder="Item name" aria-label="Item name">
-        <input type="number" class="form-control" id="inputItemQuantity" value="1" min="1" placeholder="Qty" aria-label="Quantity">
-        <input type="text" class="form-control" id="inputItemUnit" placeholder="Unit" aria-label="Unit">
-        <button type="button" class="btn btn-proviant-primary" id="btnAddItem" aria-label="Add item">
+        <input type="text" class="form-control" id="inputItemName" placeholder="{{ t "shoppingList.itemName" }}" aria-label="{{ t "shoppingList.itemName" }}">
+        <input type="number" class="form-control" id="inputItemQuantity" value="1" min="1" placeholder="{{ t "shoppingList.qty" }}" aria-label="{{ t "shoppingList.quantity" }}">
+        <input type="text" class="form-control" id="inputItemUnit" placeholder="{{ t "shoppingList.unit" }}" aria-label="{{ t "shoppingList.unit" }}">
+        <button type="button" class="btn btn-proviant-primary" id="btnAddItem" aria-label="{{ t "shoppingList.addItem" }}">
             <i class="bi bi-plus-lg" aria-hidden="true"></i>
         </button>
     </div>
@@ -52,17 +52,17 @@
 <div id="shoppingListContainer">
     <div class="sl-list-header">
         <div class="sl-checkbox-col">
-            <input type="checkbox" id="selectAll" class="list-checkbox" aria-label="Select all items">
+            <input type="checkbox" id="selectAll" class="list-checkbox" aria-label="{{ t "shoppingList.selectAllItems" }}">
         </div>
-        <div class="sl-product-col">Item</div>
-        <div class="sl-qty-col">Qty</div>
+        <div class="sl-product-col">{{ t "shoppingList.itemColumn" }}</div>
+        <div class="sl-qty-col">{{ t "shoppingList.qty" }}</div>
         <div class="sl-actions-col"></div>
     </div>
 
     {{ range $item := .ItemsSorted }}
     <div class="sl-list-row{{ if $item.Checked }} checked{{ end }}" data-id="{{ $item.ID }}" id="item-{{ $item.ID }}">
         <div class="sl-checkbox-col">
-            <input type="checkbox" class="item-checkbox list-checkbox"{{ if $item.Checked }} checked{{ end }} data-item-id="{{ $item.ID }}" aria-label="Mark {{ $item.Name }} as done">
+            <input type="checkbox" class="item-checkbox list-checkbox"{{ if $item.Checked }} checked{{ end }} data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.markAsDone" $item.Name }}">
         </div>
         <div class="sl-product-col">
             <div class="sl-item-content">
@@ -71,22 +71,22 @@
         </div>
         <div class="sl-qty-col">
             <div class="qty-stepper">
-                <button type="button" data-qty-action="dec" data-item-id="{{ $item.ID }}" aria-label="Decrease quantity of {{ $item.Name }}">−</button>
+                <button type="button" data-qty-action="dec" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.decreaseQuantity" $item.Name }}">−</button>
                 <span id="qty-{{ $item.ID }}">{{ $item.Quantity }}</span>
-                <button type="button" data-qty-action="inc" data-item-id="{{ $item.ID }}" aria-label="Increase quantity of {{ $item.Name }}">+</button>
+                <button type="button" data-qty-action="inc" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.increaseQuantity" $item.Name }}">+</button>
             </div>
         </div>
         <div class="sl-actions-col">
-            <button type="button" class="btn-icon text-secondary-custom" data-notes-toggle="{{ $item.ID }}" title="Notes" aria-label="Toggle notes for {{ $item.Name }}">
+            <button type="button" class="btn-icon text-secondary-custom" data-notes-toggle="{{ $item.ID }}" title="{{ t "shoppingList.notes" }}" aria-label="{{ t "shoppingList.toggleNotes" $item.Name }}">
                 <i class="bi bi-chat-left-text" aria-hidden="true"></i>
             </button>
-            <button type="button" class="btn-icon text-danger" data-delete-item="{{ $item.ID }}" title="Delete" aria-label="Delete {{ $item.Name }}">
+            <button type="button" class="btn-icon text-danger" data-delete-item="{{ $item.ID }}" title="{{ t "common.delete" }}" aria-label="{{ t "shoppingList.deleteItemLabel" $item.Name }}">
                 <i class="bi bi-trash3" aria-hidden="true"></i>
             </button>
         </div>
     </div>
     <div class="sl-notes-row" id="notes-{{ $item.ID }}">
-        <input type="text" class="form-control form-control-sm" placeholder="Add notes..." value="{{ $item.Notes }}" data-notes-input="{{ $item.ID }}">
+        <input type="text" class="form-control form-control-sm" placeholder="{{ t "shoppingList.addNotes" }}" value="{{ $item.Notes }}" data-notes-input="{{ $item.ID }}">
     </div>
     {{ end }}
 </div>
@@ -95,8 +95,8 @@
     <div class="empty-icon">
         <i class="bi bi-cart3"></i>
     </div>
-    <div class="empty-title">Your shopping list is empty</div>
-    <div class="empty-desc">Add items manually or import from low-stock products.</div>
+    <div class="empty-title">{{ t "shoppingList.emptyTitle" }}</div>
+    <div class="empty-desc">{{ t "shoppingList.emptyDesc" }}</div>
 </div>
 {{ end }}
 

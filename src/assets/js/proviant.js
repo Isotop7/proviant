@@ -6,6 +6,28 @@ proviant._getCsrfToken = function () {
   return match ? decodeURIComponent(match[1]) : null;
 };
 
+// Translate a catalog key. The server injects window.proviantI18n per page
+// (see i18n.FuncMap); %s / %d / %v placeholders fill from the remaining args.
+proviant.t = function (key) {
+  const args = Array.prototype.slice.call(arguments, 1);
+  const catalog = window.proviantI18n || {};
+  let text = Object.prototype.hasOwnProperty.call(catalog, key) ? catalog[key] : key;
+  args.forEach(function (arg) {
+    text = text.replace(/%[sdv]/, String(arg));
+  });
+  return text;
+};
+
+// Translate a plural key: picks key_one for n === 1, key_other otherwise, with
+// n as the first %s / %d placeholder (mirrors i18n.Tn on the server).
+proviant.tn = function (key, n) {
+  const suffix = n === 1 ? "_one" : "_other";
+  const catalog = window.proviantI18n || {};
+  const suffixed = key + suffix;
+  const lookup = Object.prototype.hasOwnProperty.call(catalog, suffixed) ? suffixed : key;
+  return proviant.t.apply(null, [lookup, n].concat(Array.prototype.slice.call(arguments, 2)));
+};
+
 // Intercept all fetch calls to inject X-CSRF-Token on state-mutating requests.
 (function () {
   const _originalFetch = window.fetch;
@@ -95,7 +117,7 @@ proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confir
   const titleEl = document.getElementById("proviantConfirmTitle");
   const msgEl = document.getElementById("proviantConfirmMessage");
   const btnEl = document.getElementById("proviantConfirmBtn");
-  if (titleEl) titleEl.textContent = title || "Are you sure?";
+  if (titleEl) titleEl.textContent = title || proviant.t("js.feedback.confirmDefaultTitle");
   if (msgEl) msgEl.textContent = message || "";
   if (btnEl) {
     const confirmClasses = {
@@ -104,7 +126,7 @@ proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confir
       warning: "btn btn-proviant-warning",
       danger: "btn btn-proviant-danger",
     };
-    btnEl.textContent = confirmLabel || "Confirm";
+    btnEl.textContent = confirmLabel || proviant.t("common.confirm");
     btnEl.className = confirmClasses[confirmType] || confirmClasses.danger;
     btnEl.onclick = function () { bootstrap.Modal.getInstance(modal).hide(); onConfirm(); };
   }
@@ -162,7 +184,7 @@ proviant._updateOfflineBadge = function () {
   const el = document.getElementById('offlineQueueCount');
   if (!el) return;
   const n = proviant._offlineQueue.length;
-  if (n > 0) { el.textContent = `(${n} pending)`; el.classList.remove('d-none'); }
+  if (n > 0) { el.textContent = proviant.tn("js.app.offlineQueuePending", n); el.classList.remove('d-none'); }
   else { el.classList.add('d-none'); }
 };
 
@@ -266,7 +288,7 @@ proviant.addToShoppingList = async function (productId, quantity, unit) {
   });
   if (!res.ok) {
     const body = await res.json().catch(function () { return {}; });
-    throw new Error(body.message || "Could not add to shopping list");
+    throw new Error(body.message || proviant.t("js.feedback.addToShoppingListFailed"));
   }
   const body = await res.json();
   return { code: res.status, message: body };
@@ -309,7 +331,7 @@ proviant.runWithButtonBusyState = async function (btn, work, successMessage, onE
   setTimeout(() => { setBusy(false); }, 1500);
 
   if (successMessage) {
-    proviant.showFeedback('success', 'Added', successMessage);
+    proviant.showFeedback('success', proviant.t("js.feedback.added"), successMessage);
   }
 };
 
@@ -408,12 +430,12 @@ proviant.bulkAction = async function (type, ids, options = {}) {
   // partial run with 200 + failedIds, so status alone is not enough to detect
   // it. Status first: a 404 carries failedIds for every id, which must read as
   // a failure, not as a partial success.
-  const verb = { restore: "restored", archive: "marked as consumed", delete: "marked as wasted" }[type];
+  const verb = { restore: proviant.t("js.feedback.bulkVerbRestored"), archive: proviant.t("js.feedback.bulkVerbConsumed"), delete: proviant.t("js.feedback.bulkVerbWasted") }[type];
   const finish = (res) => {
     if (res.code !== 200) {
-      proviant.showFeedback("error", "Bulk action failed", res.message || `Request failed with status ${res.code}`, onDone);
+      proviant.showFeedback("error", proviant.t("js.feedback.bulkActionFailed"), res.message || proviant.t("js.feedback.requestFailedWithStatus", res.code), onDone);
     } else if (res.failedIds && res.failedIds.length) {
-      proviant.showFeedback("warning", `Not all products were ${verb}`, `${res.failedIds.length} of ${ids.length} products were not ${verb} (not found or no access).`, onDone);
+      proviant.showFeedback("warning", proviant.t("js.feedback.bulkPartialTitle", verb), proviant.t("js.feedback.bulkPartialMessage", res.failedIds.length, ids.length, verb), onDone);
     } else {
       onDone();
     }
@@ -426,15 +448,15 @@ proviant.bulkAction = async function (type, ids, options = {}) {
     try {
       finish(await fn(ids));
     } catch (err) {
-      proviant.showFeedback("error", "Bulk action failed", (err && err.message) || "Request failed", onDone);
+      proviant.showFeedback("error", proviant.t("js.feedback.bulkActionFailed"), (err && err.message) || proviant.t("js.feedback.requestFailed"), onDone);
     }
   };
   if (needsConfirm) {
     proviant.showConfirm(
-      confirmTitle || (type === 'delete' ? 'Mark as wasted' : type === 'archive' ? 'Mark as consumed' : 'Confirm'),
-      confirmMsg || `${ids.length} product${ids.length !== 1 ? 's' : ''}?${type === 'delete' ? ' This cannot be undone.' : ''}`,
+      confirmTitle || (type === 'delete' ? proviant.t("js.feedback.confirmMarkWasted") : type === 'archive' ? proviant.t("js.feedback.confirmMarkConsumed") : proviant.t("common.confirm")),
+      confirmMsg || proviant.tn("js.feedback.bulkConfirmCount", ids.length) + (type === 'delete' ? ' ' + proviant.t("js.feedback.bulkConfirmIrreversible") : ''),
       run,
-      type === 'delete' ? 'Wasted' : type === 'archive' ? 'Consumed' : 'Restore',
+      type === 'delete' ? proviant.t("js.feedback.bulkConfirmBtnWasted") : type === 'archive' ? proviant.t("js.feedback.bulkConfirmBtnConsumed") : proviant.t("js.feedback.bulkConfirmBtnRestore"),
       type === 'delete' ? 'danger' : type === 'archive' ? 'warning' : 'primary'
     );
   } else {
@@ -456,10 +478,14 @@ proviant.signupUser = async function (username, mailAddress, password, inviteTok
   return { code: res.status, body: body.message };
 };
 
-proviant.updateUser = async function (displayName, mailAddress) {
-  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ displayName, mailAddress }) });
-  const body = await res.json();
-  return { code: res.status, message: body.message };
+proviant.updateUser = async function (displayName, mailAddress, language) {
+  const body = { displayName, mailAddress };
+  if (language !== undefined) {
+    body.language = language;
+  }
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json();
+  return { code: res.status, message: data.message };
 };
 
 proviant.updateUserPassword = async function (username, password) {

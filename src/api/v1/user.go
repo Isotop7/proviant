@@ -10,6 +10,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/audit"
 	apperrors "codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/i18n"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
@@ -34,12 +35,17 @@ import (
 // @Router        	/api/v1/user [patch]
 func UpdateUser(ctx *gin.Context, appCtx *AppContext) {
 	var req struct {
-		DisplayName string `json:"displayName" binding:"max=100"`
-		MailAddress string `json:"mailAddress" binding:"required,email"`
+		DisplayName string  `json:"displayName" binding:"max=100"`
+		MailAddress string  `json:"mailAddress" binding:"required,email"`
+		Language    *string `json:"language"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		appCtx.Logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
 		api.RespondError(ctx, http.StatusBadRequest, err)
+		return
+	}
+	if req.Language != nil && *req.Language != "" && !i18n.Supported(*req.Language) {
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrUnsupportedLanguage)
 		return
 	}
 
@@ -52,6 +58,9 @@ func UpdateUser(ctx *gin.Context, appCtx *AppContext) {
 
 	user.DisplayName = req.DisplayName
 	user.MailAddress = req.MailAddress
+	if req.Language != nil {
+		user.Language = *req.Language
+	}
 
 	updateErr := appCtx.Repos.Users.UpdateUser(user.ID, &user)
 	if updateErr != nil {

@@ -1,0 +1,11 @@
+{
+  "status.critical": "Kritisch",
+  "status.expired": "Abgelaufen",
+  "status.expiredDaysAgo": "Vor %d Tag(en) abgelaufen",
+  "status.expiredToday": "Heute abgelaufen",
+  "status.expiresInDays": "Läuft in %d Tagen ab",
+  "status.expiresTomorrow": "Läuft morgen ab",
+  "status.fresh": "Frisch",
+  "status.noDate": "Kein Datum",
+  "status.soon": "Läuft bald ab"
+}

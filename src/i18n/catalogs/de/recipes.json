@@ -1,0 +1,21 @@
+{
+  "recipes.addIngredient": "Zutat hinzufügen",
+  "recipes.descriptionLabel": "Beschreibung",
+  "recipes.error.desc": "Rezeptvorschläge konnten gerade nicht geladen werden. Bitte versuchen Sie es später erneut.",
+  "recipes.error.title": "Rezepte konnten nicht geladen werden",
+  "recipes.ingredients": "Zutaten",
+  "recipes.instructionsLabel": "Zubereitung",
+  "recipes.loading": "Wird geladen...",
+  "recipes.loadingSaved": "Ihre Rezepte werden geladen...",
+  "recipes.myRecipes": "Meine Rezepte",
+  "recipes.nameLabel": "Name",
+  "recipes.newRecipe": "Neues Rezept",
+  "recipes.refresh": "Aktualisieren",
+  "recipes.saveRecipe": "Rezept speichern",
+  "recipes.servingsLabel": "Portionen",
+  "recipes.sourceUrlLabel": "Quell-URL",
+  "recipes.subtitle": "Ihre gespeicherten Rezepte und Vorschläge für Produkte, die bald ablaufen",
+  "recipes.suggestions.loading": "Rezeptvorschläge werden geladen...",
+  "recipes.suggestions.title": "Rezeptvorschläge",
+  "recipes.tryAgain": "Erneut versuchen"
+}

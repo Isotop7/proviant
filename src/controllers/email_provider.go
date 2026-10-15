@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"path/filepath"
 	"time"
 
+	"codeberg.org/isotop7/proviant/i18n"
 	"codeberg.org/isotop7/proviant/models"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -26,13 +28,20 @@ var emailSendFunc = func(d *gomail.Dialer, m *gomail.Message) error {
 	return d.DialAndSend(m)
 }
 
+// parseNotificationTemplate parses a notification template with the i18n
+// functions bound to lang; the FuncMap must be attached before parsing so the
+// template actions can resolve t/tn/tlang.
+func parseNotificationTemplate(templatePath, lang string) (*template.Template, error) {
+	return template.New(filepath.Base(templatePath)).Funcs(i18n.FuncMap(lang)).ParseFS(templates.TemplateFiles, templatePath)
+}
+
 // sendHTML renders the named template from templates.TemplateFiles, executes
 // it with data, and sends the result as an HTML email. It centralizes the
 // From/To/Subject/Body header setup and the SMTP dialer construction so the
 // per-feature senders (verification, password reset, invitation, etc.) only
 // need to provide the subject, template path, and template data.
-func (e *EmailNotificationProvider) sendHTML(recipient, subject, templatePath string, data any) error {
-	templ, err := template.ParseFS(templates.TemplateFiles, templatePath)
+func (e *EmailNotificationProvider) sendHTML(recipient, subject, templatePath string, data any, lang string) error {
+	templ, err := parseNotificationTemplate(templatePath, lang)
 	if err != nil {
 		return err
 	}
@@ -72,7 +81,7 @@ func (e *EmailNotificationProvider) IsConfigured() bool {
 	return e.Configuration.Host != "" && e.Configuration.Port > 0
 }
 
-func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo interface{}) error {
+func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo interface{}, lang string) error {
 	recipient, ok := recipientInfo.(string)
 	if !ok {
 		return fmt.Errorf("invalid recipient type for email provider")
@@ -81,10 +90,10 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 	mail := gomail.NewMessage()
 	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
 	mail.SetHeader(headerTo, recipient)
-	subject := fmt.Sprintf("proviant - Warning - Product '%s' expired", product.ProductName)
+	subject := i18n.T(lang, "notify.subject.productExpired", product.ProductName)
 	mail.SetHeader(headerSubject, subject)
 
-	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/expired.html")
+	templ, templErr := parseNotificationTemplate("notification/expired.html", lang)
 	if templErr != nil {
 		return templErr
 	}
@@ -122,8 +131,8 @@ func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, r
 }
 
 // SendMonthlyWasteReport sends the monthly household waste report to a single recipient.
-func (e *EmailNotificationProvider) SendMonthlyWasteReport(recipient string, stats *models.WasteStats) error {
-	templ, err := template.ParseFS(templates.TemplateFiles, "notification/monthly_waste_report.html")
+func (e *EmailNotificationProvider) SendMonthlyWasteReport(recipient string, stats *models.WasteStats, lang string) error {
+	templ, err := parseNotificationTemplate("notification/monthly_waste_report.html", lang)
 	if err != nil {
 		return err
 	}
@@ -135,8 +144,7 @@ func (e *EmailNotificationProvider) SendMonthlyWasteReport(recipient string, sta
 	mail := gomail.NewMessage()
 	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
 	mail.SetHeader(headerTo, recipient)
-	mail.SetHeader(headerSubject, fmt.Sprintf("%s — Monthly Waste Report for %s",
-		stats.HouseholdName, stats.MonthLabel))
+	mail.SetHeader(headerSubject, i18n.T(lang, "notify.subject.monthlyWasteReport", stats.HouseholdName, stats.MonthLabel))
 	mail.SetBody(mimeTypeHTML, buf.String())
 
 	dialer := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
@@ -148,8 +156,8 @@ func (e *EmailNotificationProvider) SendMonthlyWasteReport(recipient string, sta
 }
 
 // SendStreakMilestone sends a streak milestone notification email.
-func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient string) error {
-	templ, err := template.ParseFS(templates.TemplateFiles, "notification/streak_milestone.html")
+func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient string, lang string) error {
+	templ, err := parseNotificationTemplate("notification/streak_milestone.html", lang)
 	if err != nil {
 		return err
 	}
@@ -161,7 +169,7 @@ func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient
 	mail := gomail.NewMessage()
 	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
 	mail.SetHeader(headerTo, recipient)
-	mail.SetHeader(headerSubject, fmt.Sprintf("proviant - %d-day waste-free streak", milestone))
+	mail.SetHeader(headerSubject, i18n.T(lang, "notify.subject.streakMilestone", milestone))
 	mail.SetBody(mimeTypeHTML, buf.String())
 
 	dialer := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
@@ -173,8 +181,8 @@ func (e *EmailNotificationProvider) SendStreakMilestone(milestone int, recipient
 }
 
 // SendStreakReset sends a streak-reset notification email.
-func (e *EmailNotificationProvider) SendStreakReset(previousStreak int, recipient string) error {
-	templ, err := template.ParseFS(templates.TemplateFiles, "notification/streak_reset.html")
+func (e *EmailNotificationProvider) SendStreakReset(previousStreak int, recipient string, lang string) error {
+	templ, err := parseNotificationTemplate("notification/streak_reset.html", lang)
 	if err != nil {
 		return err
 	}
@@ -186,7 +194,7 @@ func (e *EmailNotificationProvider) SendStreakReset(previousStreak int, recipien
 	mail := gomail.NewMessage()
 	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
 	mail.SetHeader(headerTo, recipient)
-	mail.SetHeader(headerSubject, "proviant - waste-free streak reset")
+	mail.SetHeader(headerSubject, i18n.T(lang, "notify.subject.streakReset"))
 	mail.SetBody(mimeTypeHTML, buf.String())
 
 	dialer := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
@@ -198,9 +206,9 @@ func (e *EmailNotificationProvider) SendStreakReset(previousStreak int, recipien
 }
 
 // SendEmailVerificationEmail sends an email verification email to the recipient
-func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, token, baseURL string, expiresAt time.Time) error {
+func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, token, baseURL string, expiresAt time.Time, lang string) error {
 	magicLink := fmt.Sprintf("%s/web/verify-email?token=%s", baseURL, token)
-	return e.sendHTML(email, "Verify your email address for Proviant", "notification/verification.html", struct {
+	return e.sendHTML(email, i18n.T(lang, "notify.subject.emailVerification"), "notification/verification.html", struct {
 		Username  string
 		MagicLink string
 		ExpiresAt string
@@ -210,13 +218,13 @@ func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, 
 		MagicLink: magicLink,
 		ExpiresAt: expiresAt.Format("2006-01-02 15:04"),
 		Email:     email,
-	})
+	}, lang)
 }
 
 // SendPasswordResetEmail sends a password reset email to the recipient
-func (e *EmailNotificationProvider) SendPasswordResetEmail(email, username, token, baseURL string, expiresAt time.Time) error {
+func (e *EmailNotificationProvider) SendPasswordResetEmail(email, username, token, baseURL string, expiresAt time.Time, lang string) error {
 	resetLink := fmt.Sprintf("%s/web/reset-password?token=%s", baseURL, token)
-	return e.sendHTML(email, "Reset your Proviant password", "notification/password_reset.html", struct {
+	return e.sendHTML(email, i18n.T(lang, "notify.subject.passwordReset"), "notification/password_reset.html", struct {
 		Username  string
 		ResetLink string
 		ExpiresAt string
@@ -226,7 +234,7 @@ func (e *EmailNotificationProvider) SendPasswordResetEmail(email, username, toke
 		ResetLink: resetLink,
 		ExpiresAt: expiresAt.Format("2006-01-02 15:04"),
 		Email:     email,
-	})
+	}, lang)
 }
 
 // SendExpiryDigestEmail sends an expiry digest email to a single recipient.
@@ -235,13 +243,13 @@ func (e *EmailNotificationProvider) SendExpiryDigestEmail(productGroups interfac
 	GetToday() []dbModel.Product
 	GetThisWeek() []dbModel.Product
 	GetNextWeek() []dbModel.Product
-}, recipientEmail, householdName, unsubscribeURL string) error {
+}, recipientEmail, householdName, unsubscribeURL string, lang string) error {
 	groups := productGroups
 	if len(groups.GetToday()) == 0 && len(groups.GetThisWeek()) == 0 && len(groups.GetNextWeek()) == 0 {
 		return nil
 	}
 
-	templ, err := template.ParseFS(templates.TemplateFiles, "notification/expiry_mail_digest.html")
+	templ, err := parseNotificationTemplate("notification/expiry_mail_digest.html", lang)
 	if err != nil {
 		return err
 	}
@@ -270,7 +278,7 @@ func (e *EmailNotificationProvider) SendExpiryDigestEmail(productGroups interfac
 	mail := gomail.NewMessage()
 	mail.SetHeader(headerFrom, e.Configuration.FromAddress)
 	mail.SetHeader(headerTo, recipientEmail)
-	mail.SetHeader(headerSubject, fmt.Sprintf("Proviant — Expiry Digest for %s", householdName))
+	mail.SetHeader(headerSubject, i18n.T(lang, "notify.subject.expiryDigest", householdName))
 	mail.SetBody(mimeTypeHTML, buf.String())
 
 	dialer := gomail.Dialer{Host: e.Configuration.Host, Port: e.Configuration.Port, SSL: e.Configuration.SSL}
@@ -282,9 +290,9 @@ func (e *EmailNotificationProvider) SendExpiryDigestEmail(productGroups interfac
 }
 
 // SendInvitationEmail sends an invitation email to the recipient
-func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string) error {
+func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, lang string) error {
 	magicLink := fmt.Sprintf("%s/web/invite/accept?token=%s", baseURL, invitation.Token)
-	return e.sendHTML(invitation.Email, fmt.Sprintf("You're invited to join '%s' on Proviant", householdName), "notification/invitation.html", struct {
+	return e.sendHTML(invitation.Email, i18n.T(lang, "notify.subject.invitation", householdName), "notification/invitation.html", struct {
 		InviterName   string
 		HouseholdName string
 		MagicLink     string
@@ -296,5 +304,5 @@ func (e *EmailNotificationProvider) SendInvitationEmail(invitation *dbModel.Hous
 		MagicLink:     magicLink,
 		ExpiresAt:     invitation.ExpiresAt.Format("2006-01-02 15:04"),
 		Email:         invitation.Email,
-	})
+	}, lang)
 }

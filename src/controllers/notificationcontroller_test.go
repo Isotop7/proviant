@@ -119,7 +119,7 @@ func TestSendNotificationsForRecipient(t *testing.T) {
 				EmailEnabled:              tt.emailEnabled,
 				EmailAddress:              "test@example.com",
 			}
-			nc.sendNotificationsForRecipient(product, &pref)
+			nc.sendNotificationsForRecipient(product, &pref, "")
 		})
 	}
 }
@@ -262,7 +262,7 @@ func TestSendInvitationEmail(t *testing.T) {
 			NotificationRepo: mockRepos.Notifications,
 			ProductRepo:      mockRepos.Products,
 		}
-		err := ncBad.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com", nil)
+		err := ncBad.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com", nil, "")
 		assert.Error(t, err)
 	})
 
@@ -273,7 +273,7 @@ func TestSendInvitationEmail(t *testing.T) {
 		}
 		defer func() { emailSendFunc = origFunc }()
 
-		err := nc.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com", nil)
+		err := nc.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com", nil, "")
 		assert.NoError(t, err)
 	})
 
@@ -284,7 +284,7 @@ func TestSendInvitationEmail(t *testing.T) {
 		}
 		defer func() { emailSendFunc = origFunc }()
 
-		err := nc.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com", nil)
+		err := nc.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com", nil, "")
 		assert.Error(t, err)
 	})
 }
@@ -312,7 +312,7 @@ func TestSendVerificationEmail(t *testing.T) {
 			NotificationRepo: mockRepos.Notifications,
 			ProductRepo:      mockRepos.Products,
 		}
-		err := ncBad.SendVerificationEmail(invitation, "user1", "http://example.com")
+		err := ncBad.SendVerificationEmail(invitation, "user1", "http://example.com", "")
 		assert.Error(t, err)
 	})
 
@@ -323,7 +323,7 @@ func TestSendVerificationEmail(t *testing.T) {
 		}
 		defer func() { emailSendFunc = origFunc }()
 
-		err := nc.SendVerificationEmail(invitation, "user1", "http://example.com")
+		err := nc.SendVerificationEmail(invitation, "user1", "http://example.com", "")
 		assert.NoError(t, err)
 	})
 }
@@ -345,7 +345,7 @@ func TestSendEmailVerification(t *testing.T) {
 			NotificationRepo: mockRepos.Notifications,
 			ProductRepo:      mockRepos.Products,
 		}
-		err := ncBad.SendEmailVerification("test@example.com", "user1", "token", "http://example.com", time.Now())
+		err := ncBad.SendEmailVerification("test@example.com", "user1", "token", "http://example.com", time.Now(), "")
 		assert.Error(t, err)
 	})
 
@@ -356,7 +356,7 @@ func TestSendEmailVerification(t *testing.T) {
 		}
 		defer func() { emailSendFunc = origFunc }()
 
-		err := nc.SendEmailVerification("test@example.com", "user1", "token", "http://example.com", time.Now())
+		err := nc.SendEmailVerification("test@example.com", "user1", "token", "http://example.com", time.Now(), "")
 		assert.NoError(t, err)
 	})
 }

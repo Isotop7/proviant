@@ -119,7 +119,7 @@ type unknownProvider struct{ sent bool }
 
 func (p *unknownProvider) GetProviderType() string { return "webpush" }
 func (p *unknownProvider) IsConfigured() bool      { return true }
-func (p *unknownProvider) SendNotification(*dbModel.Product, any) error {
+func (p *unknownProvider) SendNotification(*dbModel.Product, any, string) error {
 	p.sent = true
 	return nil
 }
@@ -246,7 +246,7 @@ func TestSendPasswordReset(t *testing.T) {
 
 	t.Run("not configured returns error", func(t *testing.T) {
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
-		err := nc.SendPasswordReset("test@example.com", "user1", "token", "http://example.com", time.Now())
+		err := nc.SendPasswordReset("test@example.com", "user1", "token", "http://example.com", time.Now(), "")
 		if err == nil || err.Error() != MsgEmailProviderNotConfigured {
 			t.Errorf("err = %v, want %q", err, MsgEmailProviderNotConfigured)
 		}
@@ -265,7 +265,7 @@ func TestSendPasswordReset(t *testing.T) {
 		}
 		defer func() { emailSendFunc = origFunc }()
 
-		if err := nc.SendPasswordReset("test@example.com", "user1", "token", "http://example.com", time.Now()); err != nil {
+		if err := nc.SendPasswordReset("test@example.com", "user1", "token", "http://example.com", time.Now(), ""); err != nil {
 			t.Errorf("SendPasswordReset() error = %v", err)
 		}
 		if sent != 1 {
@@ -279,7 +279,7 @@ func TestSendPasswordReset(t *testing.T) {
 		emailSendFunc = func(d *gomail.Dialer, m *gomail.Message) error { return fmt.Errorf("smtp down") }
 		defer func() { emailSendFunc = origFunc }()
 
-		if err := nc.SendPasswordReset("test@example.com", "user1", "token", "http://example.com", time.Now()); err == nil {
+		if err := nc.SendPasswordReset("test@example.com", "user1", "token", "http://example.com", time.Now(), ""); err == nil {
 			t.Error("SendPasswordReset() error = nil, want send failure")
 		}
 	})
@@ -384,7 +384,7 @@ func TestSendMonthlyWasteReportToEmailRecipients(t *testing.T) {
 		defer func() { emailSendFunc = origFunc }()
 
 		provider := &EmailNotificationProvider{}
-		nc.sendMonthlyWasteReportToEmailRecipients(provider, []string{"a@example.com"}, stats, 1)
+		nc.sendMonthlyWasteReportToEmailRecipients(provider, []string{"a@example.com"}, stats, 1, "")
 		if emails != 0 {
 			t.Errorf("emails = %d, want 0 (unconfigured provider must not send)", emails)
 		}
@@ -401,7 +401,7 @@ func TestSendMonthlyWasteReportToEmailRecipients(t *testing.T) {
 		defer func() { emailSendFunc = origFunc }()
 
 		provider := &EmailNotificationProvider{Configuration: configuration.SMTPConfiguration{Host: "h", Port: 587}}
-		nc.sendMonthlyWasteReportToEmailRecipients(provider, []string{"a@example.com"}, stats, 1)
+		nc.sendMonthlyWasteReportToEmailRecipients(provider, []string{"a@example.com"}, stats, 1, "")
 		if emails != 1 {
 			t.Errorf("send attempts = %d, want 1 (failure is logged, not fatal)", emails)
 		}
@@ -428,7 +428,7 @@ func TestSendMonthlyWasteReportToTelegramRecipients(t *testing.T) {
 		nc.telegramClient = redirectClient(server)
 
 		recipients := []models.TelegramRecipient{{ChatID: "1", BotToken: "OK"}, {ChatID: "2", BotToken: "BAD"}}
-		nc.sendMonthlyWasteReportToTelegramRecipients(recipients, stats, 9)
+		nc.sendMonthlyWasteReportToTelegramRecipients(recipients, stats, 9, "")
 		if got := atomic.LoadInt32(&hits); got != 1 {
 			t.Errorf("telegram hits = %d, want 1 (only the OK bot succeeds)", got)
 		}
@@ -748,7 +748,7 @@ func TestSendStreakResetEmailIfEnabled(t *testing.T) {
 		}
 		defer func() { emailSendFunc = origFunc }()
 
-		nc.sendStreakResetEmailIfEnabled(3, &models.NotificationRecipientInfo{}, configured)
+		nc.sendStreakResetEmailIfEnabled(3, &models.NotificationRecipientInfo{}, configured, "")
 		if emails != 0 {
 			t.Errorf("emails = %d, want 0 (disabled recipient must not send)", emails)
 		}
@@ -766,7 +766,7 @@ func TestSendStreakResetEmailIfEnabled(t *testing.T) {
 		defer func() { emailSendFunc = origFunc }()
 
 		pref := &models.NotificationRecipientInfo{EmailEnabled: true, EmailAddress: "a@example.com"}
-		nc.sendStreakResetEmailIfEnabled(3, pref, &EmailNotificationProvider{})
+		nc.sendStreakResetEmailIfEnabled(3, pref, &EmailNotificationProvider{}, "")
 		if emails != 0 {
 			t.Errorf("emails = %d, want 0 (unconfigured provider must not send)", emails)
 		}
@@ -784,7 +784,7 @@ func TestSendStreakResetEmailIfEnabled(t *testing.T) {
 		defer func() { emailSendFunc = origFunc }()
 
 		pref := &models.NotificationRecipientInfo{EmailEnabled: true, EmailAddress: "a@example.com"}
-		nc.sendStreakResetEmailIfEnabled(3, pref, configured)
+		nc.sendStreakResetEmailIfEnabled(3, pref, configured, "")
 		if emails != 1 {
 			t.Errorf("emails = %d, want 1", emails)
 		}
@@ -802,7 +802,7 @@ func TestSendStreakResetEmailIfEnabled(t *testing.T) {
 		defer func() { emailSendFunc = origFunc }()
 
 		pref := &models.NotificationRecipientInfo{EmailEnabled: true, EmailAddress: "a@example.com"}
-		nc.sendStreakResetEmailIfEnabled(3, pref, configured)
+		nc.sendStreakResetEmailIfEnabled(3, pref, configured, "")
 		if emails != 1 {
 			t.Errorf("send attempts = %d, want 1 (failure is logged, not fatal)", emails)
 		}
@@ -830,7 +830,7 @@ func TestSendStreakResetNtfyIfEnabled(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		pref := &models.NotificationRecipientInfo{NtfyEnabled: true}
-		nc.sendStreakResetNtfyIfEnabled(3, pref, newNtfy(server))
+		nc.sendStreakResetNtfyIfEnabled(3, pref, newNtfy(server), "")
 		if got := atomic.LoadInt32(&hits); got != 1 {
 			t.Errorf("ntfy hits = %d, want 1", got)
 		}
@@ -844,7 +844,7 @@ func TestSendStreakResetNtfyIfEnabled(t *testing.T) {
 
 		mockRepos := repomocks.NewMockRepositoryContainer()
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
-		nc.sendStreakResetNtfyIfEnabled(3, &models.NotificationRecipientInfo{}, newNtfy(server))
+		nc.sendStreakResetNtfyIfEnabled(3, &models.NotificationRecipientInfo{}, newNtfy(server), "")
 	})
 }
 
@@ -861,7 +861,7 @@ func TestSendStreakResetTelegramIfEnabled(t *testing.T) {
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		nc.telegramClient = redirectClient(server)
 		pref := &models.NotificationRecipientInfo{TelegramEnabled: true, TelegramChatID: "77", TelegramBotToken: "BT"}
-		nc.sendStreakResetTelegramIfEnabled(3, pref)
+		nc.sendStreakResetTelegramIfEnabled(3, pref, "")
 		if got := atomic.LoadInt32(&hits); got != 1 {
 			t.Errorf("telegram hits = %d, want 1", got)
 		}
@@ -876,7 +876,7 @@ func TestSendStreakResetTelegramIfEnabled(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		nc.telegramClient = redirectClient(server)
-		nc.sendStreakResetTelegramIfEnabled(3, &models.NotificationRecipientInfo{})
+		nc.sendStreakResetTelegramIfEnabled(3, &models.NotificationRecipientInfo{}, "")
 	})
 }
 
@@ -897,7 +897,7 @@ func TestSendStreakNtfyIfEnabled(t *testing.T) {
 	mockRepos := repomocks.NewMockRepositoryContainer()
 	nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 	pref := &models.NotificationRecipientInfo{NtfyEnabled: true}
-	nc.sendStreakNtfyIfEnabled(7, pref, provider)
+	nc.sendStreakNtfyIfEnabled(7, pref, provider, "")
 	if got := atomic.LoadInt32(&hits); got != 1 {
 		t.Errorf("ntfy hits = %d, want 1", got)
 	}
@@ -1538,7 +1538,7 @@ func TestDispatchPendingInvitation(t *testing.T) {
 		emailSendFunc = func(d *gomail.Dialer, m *gomail.Message) error { return errors.New("smtp down") }
 		defer func() { emailSendFunc = origFunc }()
 
-		nc.dispatchPendingInvitation(configured, invitation, "inviter", "Home", "http://example.com")
+		nc.dispatchPendingInvitation(configured, invitation, "inviter", "Home", "http://example.com", "")
 		if len(recorder.markFailed) != 1 || recorder.markFailed[0] != invitation.ID {
 			t.Errorf("MarkInvitationSendFailed calls = %v, want [%d]", recorder.markFailed, invitation.ID)
 		}
@@ -1560,7 +1560,7 @@ func TestDispatchPendingInvitation(t *testing.T) {
 		}
 		defer func() { emailSendFunc = origFunc }()
 
-		nc.dispatchPendingInvitation(configured, invitation, "inviter", "Home", "http://example.com")
+		nc.dispatchPendingInvitation(configured, invitation, "inviter", "Home", "http://example.com", "")
 		if emails != 1 {
 			t.Errorf("emails = %d, want 1", emails)
 		}
@@ -1583,7 +1583,7 @@ func TestSendTelegram(t *testing.T) {
 	t.Run("recipient disabled returns false", func(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
-		if nc.sendTelegram(product, &models.NotificationRecipientInfo{}) {
+		if nc.sendTelegram(product, &models.NotificationRecipientInfo{}, "") {
 			t.Error("sendTelegram() = true, want false for a disabled recipient")
 		}
 	})
@@ -1600,7 +1600,7 @@ func TestSendTelegram(t *testing.T) {
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		nc.telegramClient = redirectClient(server)
 		pref := &models.NotificationRecipientInfo{TelegramEnabled: true, TelegramChatID: "77", TelegramBotToken: "BT"}
-		if !nc.sendTelegram(product, pref) {
+		if !nc.sendTelegram(product, pref, "") {
 			t.Error("sendTelegram() = false, want true")
 		}
 		if got := atomic.LoadInt32(&hits); got != 1 {
@@ -1618,7 +1618,7 @@ func TestSendTelegram(t *testing.T) {
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		nc.telegramClient = redirectClient(server)
 		pref := &models.NotificationRecipientInfo{TelegramEnabled: true, TelegramChatID: "77", TelegramBotToken: "BT"}
-		if nc.sendTelegram(product, pref) {
+		if nc.sendTelegram(product, pref, "") {
 			t.Error("sendTelegram() = true, want false on API error")
 		}
 	})
@@ -1634,7 +1634,7 @@ func TestSendWebPush(t *testing.T) {
 	t.Run("recipient disabled returns false", func(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
-		if nc.sendWebPush(product, &models.NotificationRecipientInfo{}) {
+		if nc.sendWebPush(product, &models.NotificationRecipientInfo{}, "") {
 			t.Error("sendWebPush() = true, want false for a disabled recipient")
 		}
 	})
@@ -1643,7 +1643,7 @@ func TestSendWebPush(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		pref := &models.NotificationRecipientInfo{WebPushEnabled: true, WebPushSubscriptionJSON: "{not json"}
-		if nc.sendWebPush(product, pref) {
+		if nc.sendWebPush(product, pref, "") {
 			t.Error("sendWebPush() = true, want false for an invalid subscription")
 		}
 	})
@@ -1661,7 +1661,7 @@ func TestSendWebPush(t *testing.T) {
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		nc.NotificationRepo = &vapidKeyRepo{MockNotificationRepository: mockRepos.Notifications, publicKey: publicKey, privateKey: privateKey}
 		pref := &models.NotificationRecipientInfo{WebPushEnabled: true, WebPushSubscriptionJSON: subscriptionJSON}
-		if !nc.sendWebPush(product, pref) {
+		if !nc.sendWebPush(product, pref, "") {
 			t.Error("sendWebPush() = false, want true")
 		}
 		if got := atomic.LoadInt32(&hits); got != 1 {
@@ -1697,7 +1697,7 @@ func TestSendViaProvider(t *testing.T) {
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		provider := &EmailNotificationProvider{Configuration: configuration.SMTPConfiguration{Host: "h", Port: 587}}
 		pref := &models.NotificationRecipientInfo{EmailAddress: "a@example.com"}
-		if err := nc.sendViaProvider(provider, product, pref); err != nil {
+		if err := nc.sendViaProvider(provider, product, pref, ""); err != nil {
 			t.Errorf("sendViaProvider() = %v, want nil", err)
 		}
 	})
@@ -1715,7 +1715,7 @@ func TestSendViaProvider(t *testing.T) {
 
 		provider := &EmailNotificationProvider{Configuration: configuration.SMTPConfiguration{Host: "h", Port: 587}}
 		pref := &models.NotificationRecipientInfo{EmailEnabled: true, EmailAddress: "a@example.com"}
-		if err := nc.sendViaProvider(provider, product, pref); err != nil {
+		if err := nc.sendViaProvider(provider, product, pref, ""); err != nil {
 			t.Errorf("sendViaProvider() = %v, want nil", err)
 		}
 		if emails != 1 {
@@ -1738,7 +1738,7 @@ func TestSendViaProvider(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		pref := &models.NotificationRecipientInfo{NtfyEnabled: true, NtfyURL: server.URL, NtfyTopic: "t"}
-		if err := nc.sendViaProvider(provider, product, pref); err != nil {
+		if err := nc.sendViaProvider(provider, product, pref, ""); err != nil {
 			t.Errorf("sendViaProvider() = %v, want nil", err)
 		}
 	})
@@ -1748,7 +1748,7 @@ func TestSendViaProvider(t *testing.T) {
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		provider := &unknownProvider{}
 		pref := &models.NotificationRecipientInfo{}
-		if err := nc.sendViaProvider(provider, product, pref); err != nil {
+		if err := nc.sendViaProvider(provider, product, pref, ""); err != nil {
 			t.Errorf("sendViaProvider() = %v, want nil", err)
 		}
 		if provider.sent {

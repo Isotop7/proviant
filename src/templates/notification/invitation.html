@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ t "notify.common.langCode" }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proviant — Invitation</title>
+    <title>{{ t "notify.invitation.title" }}</title>
     <!--[if mso]>
     <noscript>
         <xml>
@@ -35,19 +35,19 @@
                     <!-- Body -->
                     <tr>
                         <td style="padding:24px 32px 32px 32px;">
-                            <h1 style="margin:0 0 8px 0;font-size:24px;font-weight:700;color:#1A3028;text-align:center;">You're invited to join a household</h1>
+                            <h1 style="margin:0 0 8px 0;font-size:24px;font-weight:700;color:#1A3028;text-align:center;">{{ t "notify.invitation.heading" }}</h1>
                             <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:#6A9580;text-align:center;">
-                                <strong style="color:#2D4F3C;">{{.InviterName}}</strong> has invited you to join the household <strong style="color:#2D4F3C;">{{.HouseholdName}}</strong> on Proviant.
+                                <strong style="color:#2D4F3C;">{{.InviterName}}</strong> {{ t "notify.invitation.invitedPrefix" }} <strong style="color:#2D4F3C;">{{.HouseholdName}}</strong> {{ t "notify.invitation.invitedSuffix" }}
                             </p>
                             <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#6A9580;text-align:center;">
-                                Proviant helps you manage your household's pantry, track expiration dates, and share shopping lists with family members.
+                                {{ t "notify.invitation.productPitch" }}
                             </p>
 
                             <!-- CTA Button -->
                             <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
                                 <tr>
                                     <td style="border-radius:8px;background-color:#3D7A5C;">
-                                        <a href="{{.MagicLink}}" target="_blank" style="display:inline-block;padding:14px 32px;font-size:16px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">Accept Invitation</a>
+                                        <a href="{{.MagicLink}}" target="_blank" style="display:inline-block;padding:14px 32px;font-size:16px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">{{ t "notify.invitation.acceptCta" }}</a>
                                     </td>
                                 </tr>
                             </table>
@@ -57,7 +57,7 @@
                                 <tr>
                                     <td style="padding:16px;">
                                         <p style="margin:0;font-size:14px;line-height:1.6;color:#6A9580;">
-                                            <strong style="color:#2D4F3C;">Important:</strong> You must use the email address <strong style="color:#2D4F3C;">{{.Email}}</strong> to accept this invitation. If you already have an account, log in with that email. If you are new, sign up with this exact email address.
+                                            <strong style="color:#2D4F3C;">{{ t "notify.invitation.importantLabel" }}</strong> {{ t "notify.invitation.emailNotePrefix" }} <strong style="color:#2D4F3C;">{{.Email}}</strong> {{ t "notify.invitation.emailNoteSuffix" }}
                                         </p>
                                     </td>
                                 </tr>
@@ -69,10 +69,10 @@
                     <tr>
                         <td style="padding:0 32px 32px 32px;border-top:1px solid #C8DDD0;">
                             <p style="margin:16px 0 0 0;font-size:14px;line-height:1.6;color:#6A9580;text-align:center;">
-                                If you didn't expect this invitation, you can safely ignore this email.
+                                {{ t "notify.invitation.ignoreHint" }}
                             </p>
                             <p style="margin:8px 0 0 0;font-size:14px;line-height:1.6;color:#6A9580;text-align:center;">
-                                Thank you for using <strong style="color:#2D4F3C;">Proviant</strong>!
+                                {{ t "notify.common.thanksBefore" }} <strong style="color:#2D4F3C;">Proviant</strong>!
                             </p>
                         </td>
                     </tr>

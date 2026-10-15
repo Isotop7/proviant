@@ -1,0 +1,22 @@
+{
+  "receipt.category.label": "Kategorie",
+  "receipt.category.placeholder": "z. B. Milchprodukte",
+  "receipt.defaults.title": "Vorgaben für alle Positionen",
+  "receipt.empty.addManually": "Produkt manuell hinzufügen",
+  "receipt.empty.text": "Auf diesem Foto wurden keine Produkte erkannt. Versuchen Sie es mit einem schärferen Bild oder fügen Sie die Produkte manuell hinzu.",
+  "receipt.empty.tryAgain": "Erneut versuchen",
+  "receipt.import.addPrefix": "Hinzufügen:",
+  "receipt.import.items": "Produkte",
+  "receipt.import.items_one": "Produkt",
+  "receipt.import.items_other": "Produkte",
+  "receipt.import.progress": "Produkte werden hinzugefügt…",
+  "receipt.noneOption": "— kein Lagerort —",
+  "receipt.photo.help": "Gesamter Kassenbon im Fokus, alle Positionen sichtbar",
+  "receipt.photo.label": "Foto des Kassenbons",
+  "receipt.rescan": "Erneut scannen",
+  "receipt.scan.button": "Kassenbon scannen",
+  "receipt.scan.progress": "Kassenbon wird analysiert … dies kann bis zu einer Minute dauern.",
+  "receipt.scan.progressLabel": "Kassenbon wird gescannt",
+  "receipt.subtitle": "Fotografieren Sie einen Kassenbon, um mehrere Produkte auf einmal hinzuzufügen.",
+  "receipt.title": "Kassenbon scannen"
+}

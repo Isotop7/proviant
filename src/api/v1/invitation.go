@@ -2,6 +2,7 @@ package v1
 
 import (
 	apperrors "codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/i18n"
 	"codeberg.org/isotop7/proviant/models/database"
 	"errors"
 	"fmt"
@@ -65,10 +66,13 @@ func CreateInvitation(ctx *gin.Context, appCtx *AppContext) {
 		if notificationController != nil {
 			inviterName := user.EffectiveName()
 			householdName := fmt.Sprintf("Household #%d", user.HouseholdID)
+			householdLanguage := ""
 			if household, householdErr := appCtx.Repos.Users.GetHouseholdByID(user.HouseholdID); householdErr == nil {
 				householdName = household.Name
+				householdLanguage = household.Language
 			}
-			if emailErr := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL, tx); emailErr != nil {
+			lang := i18n.ResolveLanguage("", householdLanguage, "")
+			if emailErr := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL, tx, lang); emailErr != nil {
 				return emailErr
 			}
 		}

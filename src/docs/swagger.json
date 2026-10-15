@@ -7322,6 +7322,9 @@
         "api.HouseholdSettingsResponse": {
             "type": "object",
             "properties": {
+                "language": {
+                    "type": "string"
+                },
                 "monthlyWasteGoalCount": {
                     "type": "integer"
                 },
@@ -8090,6 +8093,9 @@
         "api.UpdateHouseholdSettingsRequest": {
             "type": "object",
             "properties": {
+                "language": {
+                    "type": "string"
+                },
                 "monthlyWasteGoalCount": {
                     "type": "integer"
                 },

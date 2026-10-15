@@ -9,12 +9,12 @@ document.addEventListener("submit", function (event) {
 
     proviant.acceptInvitation(token).then((response) => {
       if (response.code === 200) {
-        proviant.showFeedback('success', 'Invitation Accepted', 'Welcome! You will be redirected to the dashboard.', function () {
+        proviant.showFeedback('success', proviant.t('js.auth.invitationAccepted'), proviant.t('js.auth.invitationAcceptedMessage'), function () {
           globalThis.location.href = "/web";
         });
         setTimeout(() => { globalThis.location.href = "/web"; }, 4000);
       } else {
-        proviant.showFeedback('error', 'Could Not Accept', response.message || 'Unknown error');
+        proviant.showFeedback('error', proviant.t('js.auth.invitationAcceptFailed'), response.message || proviant.t('js.auth.unknownError'));
       }
     });
   }

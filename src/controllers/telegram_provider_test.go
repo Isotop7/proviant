@@ -39,7 +39,7 @@ func TestTelegramProvider_SendNotification(t *testing.T) {
 	t.Run("invalid recipient type", func(t *testing.T) {
 		tp := &TelegramNotificationProvider{HTTPClient: &http.Client{Timeout: 5 * time.Second}}
 		product := &dbModel.Product{ProductName: "Test"}
-		err := tp.SendNotification(product, 123) // not a string
+		err := tp.SendNotification(product, 123, "") // not a string
 		if err == nil {
 			t.Error("expected error for invalid recipient type")
 		}
@@ -48,7 +48,7 @@ func TestTelegramProvider_SendNotification(t *testing.T) {
 	t.Run("empty chat ID", func(t *testing.T) {
 		tp := &TelegramNotificationProvider{HTTPClient: &http.Client{Timeout: 5 * time.Second}}
 		product := &dbModel.Product{ProductName: "Test"}
-		err := tp.SendNotification(product, "") // empty chat ID
+		err := tp.SendNotification(product, "", "") // empty chat ID
 		if err == nil {
 			t.Error("expected error for empty chat ID")
 		}

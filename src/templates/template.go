@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 
+	"codeberg.org/isotop7/proviant/i18n"
 	"codeberg.org/isotop7/proviant/models/configuration/static"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
@@ -37,16 +38,16 @@ func SetExpiryThresholds(critical, soon int) {
 	soonThresholdDays = soon
 }
 
-func humanDateTime(t time.Time) string {
-	return t.Format("02.01.2006, 15:04")
+func humanDateTime(lang string, t time.Time) string {
+	return t.Format(i18n.T(lang, "date.format.dateTime"))
 }
 
-func humanDateTimeFromSQL(t gorm.DeletedAt) string {
-	return t.Time.Format("02.01.2006, 15:04")
+func humanDateTimeFromSQL(lang string, t gorm.DeletedAt) string {
+	return t.Time.Format(i18n.T(lang, "date.format.dateTime"))
 }
 
-func humanDate(t time.Time) string {
-	return t.Format("02.01.2006")
+func humanDate(lang string, t time.Time) string {
+	return t.Format(i18n.T(lang, "date.format.date"))
 }
 
 func inputDate(t time.Time) string {
@@ -114,18 +115,18 @@ func expiryStatusIcon(t time.Time) string {
 	}
 }
 
-func expiryStatusLabel(t time.Time) string {
+func expiryStatusLabel(lang string, t time.Time) string {
 	switch expiryStatusClass(t) {
 	case "expired":
-		return "Expired"
+		return i18n.T(lang, "status.expired")
 	case "critical":
-		return "Critical"
+		return i18n.T(lang, "status.critical")
 	case "soon":
-		return "Expiring soon"
+		return i18n.T(lang, "status.soon")
 	case "fresh":
-		return "Fresh"
+		return i18n.T(lang, "status.fresh")
 	default:
-		return "No date"
+		return i18n.T(lang, "status.noDate")
 	}
 }
 
@@ -172,7 +173,7 @@ func stringSlice(vals ...string) []string {
 	return vals
 }
 
-func expiryUrgencyText(t time.Time) string {
+func expiryUrgencyText(lang string, t time.Time) string {
 	if t.IsZero() {
 		return ""
 	}
@@ -180,16 +181,16 @@ func expiryUrgencyText(t time.Time) string {
 	if t.Before(now) {
 		days := int(now.Sub(t).Hours() / 24)
 		if days == 0 {
-			return "Expired today"
+			return i18n.T(lang, "status.expiredToday")
 		}
-		return fmt.Sprintf("Expired %d day(s) ago", days)
+		return i18n.T(lang, "status.expiredDaysAgo", days)
 	}
 	days := int(t.Sub(now).Hours()/24) + 1
 	if days == 1 {
-		return "Expires tomorrow"
+		return i18n.T(lang, "status.expiresTomorrow")
 	}
 	if days <= 7 {
-		return fmt.Sprintf("Expires in %d days", days)
+		return i18n.T(lang, "status.expiresInDays", days)
 	}
 	return ""
 }
@@ -315,29 +316,53 @@ func flagReplace(source string) template.HTML {
 	return template.HTML(output.String())
 }
 
-var customTemplateFunctions = template.FuncMap{
-	"humanDate":            humanDate,
-	"humanDateTime":        humanDateTime,
-	"humanDateTimeFromSQL": humanDateTimeFromSQL,
-	"inputDate":            inputDate,
-	"now":                  now,
-	"today":                today,
-	"hasPassed":            hasPassed,
-	"expiryBadgeClass":     expiryBadgeClass,
-	"expiryStatusClass":    expiryStatusClass,
-	"expiryStatusIcon":     expiryStatusIcon,
-	"expiryStatusLabel":    expiryStatusLabel,
-	"expiryUrgencyText":    expiryUrgencyText,
-	"expiryDays":           expiryDays,
-	"expiryTextClass":      expiryTextClass,
-	"expiryColor":          expiryColor,
-	"queryWith":            queryWith,
-	"stringSlice":          stringSlice,
-	"badgifyCategories":    badgifyCategories,
-	"splitString":          splitString,
-	"flagReplace":          flagReplace,
-	"derefUint":            derefUint,
-	"effectiveExpireAt":    effectiveExpireAt,
+func templateFunctions(lang string) template.FuncMap {
+	functions := template.FuncMap{
+		"humanDate":            func(t time.Time) string { return humanDate(lang, t) },
+		"humanDateTime":        func(t time.Time) string { return humanDateTime(lang, t) },
+		"humanDateTimeFromSQL": func(t gorm.DeletedAt) string { return humanDateTimeFromSQL(lang, t) },
+		"inputDate":            inputDate,
+		"now":                  now,
+		"today":                today,
+		"hasPassed":            hasPassed,
+		"expiryBadgeClass":     expiryBadgeClass,
+		"expiryStatusClass":    expiryStatusClass,
+		"expiryStatusIcon":     expiryStatusIcon,
+		"expiryStatusLabel":    func(t time.Time) string { return expiryStatusLabel(lang, t) },
+		"expiryUrgencyText":    func(t time.Time) string { return expiryUrgencyText(lang, t) },
+		"expiryDays":           expiryDays,
+		"expiryTextClass":      expiryTextClass,
+		"expiryColor":          expiryColor,
+		"queryWith":            queryWith,
+		"stringSlice":          stringSlice,
+		"badgifyCategories":    badgifyCategories,
+		"splitString":          splitString,
+		"flagReplace":          flagReplace,
+		"derefUint":            derefUint,
+		"effectiveExpireAt":    effectiveExpireAt,
+	}
+	for name, fn := range i18n.FuncMap(lang) {
+		functions[name] = fn
+	}
+	return functions
+}
+
+// templateCacheKey names the per-language template set for a page.
+func templateCacheKey(lang, page string) string {
+	return lang + "/" + page
+}
+
+// lookupTemplate finds the page template set for lang with fallback to the
+// default language and finally to an unqualified key (hand-built test caches).
+func lookupTemplate(cache map[string]*template.Template, lang, page string) (*template.Template, bool) {
+	if ts, ok := cache[templateCacheKey(lang, page)]; ok {
+		return ts, true
+	}
+	if ts, ok := cache[templateCacheKey(i18n.DefaultLanguage, page)]; ok {
+		return ts, true
+	}
+	ts, ok := cache[page]
+	return ts, ok
 }
 
 func NewTemplateCache() (map[string]*template.Template, error) {
@@ -348,26 +373,65 @@ func NewTemplateCache() (map[string]*template.Template, error) {
 		return nil, err
 	}
 
-	for _, page := range pages {
-		name := filepath.Base(page)
+	for _, lang := range i18n.Languages() {
+		for _, page := range pages {
+			name := filepath.Base(page)
 
-		patterns := []string{
-			"web/layout/base.tmpl",
-			"web/layout/baseAuth.tmpl",
-			"web/partials/*.tmpl",
-			page,
+			patterns := []string{
+				"web/layout/base.tmpl",
+				"web/layout/baseAuth.tmpl",
+				"web/partials/*.tmpl",
+				page,
+			}
+
+			ts, err := template.New(name).Funcs(templateFunctions(lang)).ParseFS(TemplateFiles, patterns...)
+			if err != nil {
+				return nil, err
+			}
+
+			cache[templateCacheKey(lang, name)] = ts
 		}
-
-		ts, err := template.New(name).Funcs(customTemplateFunctions).ParseFS(TemplateFiles, patterns...)
-		if err != nil {
-			return nil, err
-		}
-
-		cache[name] = ts
 	}
 
 	// Return the map.
 	return cache, nil
+}
+
+// requestLanguage resolves the UI language for a render: an explicit Lang in
+// the page data wins, then the language resolved by middleware, then the
+// Accept-Language header.
+func requestLanguage(ctx *gin.Context, data map[string]any) string {
+	var fromData, fromContext string
+	if lang, ok := data["Lang"].(string); ok {
+		fromData = lang
+	}
+	if lang, ok := ctx.Get(util.ContextKeyLanguage); ok {
+		if langString, ok := lang.(string); ok {
+			fromContext = langString
+		}
+	}
+	acceptLanguage := ""
+	if ctx.Request != nil {
+		acceptLanguage = ctx.GetHeader("Accept-Language")
+	}
+	return i18n.ResolveLanguage(fromData, fromContext, acceptLanguage)
+}
+
+// injectI18nData fills the language, frontend catalog and translated page
+// title into the render data.
+func injectI18nData(ctx *gin.Context, data map[string]any) string {
+	lang := requestLanguage(ctx, data)
+	data["Lang"] = lang
+	data["I18nJSON"] = template.JS(i18n.JSON(lang))
+	if title, ok := data["Title"].(string); ok && title != "" {
+		key := "pageTitle." + strings.ReplaceAll(title, " ", "")
+		if i18n.Has(lang, key) {
+			data["TitleText"] = i18n.T(lang, key)
+		} else {
+			data["TitleText"] = title
+		}
+	}
+	return lang
 }
 
 func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base, page string, data map[string]any) {
@@ -375,7 +439,8 @@ func Render(ctx *gin.Context, tc map[string]*template.Template, status int, base
 	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	writer := ctx.Writer
-	ts, ok := tc[page]
+	lang := injectI18nData(ctx, data)
+	ts, ok := lookupTemplate(tc, lang, page)
 	if !ok {
 		mapErr := errors.New("error getting template")
 		logger.Error().Msg(mapErr.Error())
@@ -419,7 +484,15 @@ func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, m
 	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
 
 	writer := ctx.Writer
-	ts, ok := tc["error.tmpl"]
+	data := map[string]any{
+		"Code":    code,
+		"Message": message,
+	}
+	lang := injectI18nData(ctx, data)
+	data["Title"] = fmt.Sprintf("Error %d", code)
+	data["TitleText"] = i18n.T(lang, "error.title", code)
+
+	ts, ok := lookupTemplate(tc, lang, "error.tmpl")
 	if !ok {
 		mapErr := errors.New("error getting error template")
 		logger.Error().Msg(mapErr.Error())
@@ -432,13 +505,6 @@ func RenderError(ctx *gin.Context, tc map[string]*template.Template, code int, m
 
 	// Create temporary buffer for content
 	buf := new(bytes.Buffer)
-
-	// Create data map
-	data := map[string]any{
-		"Title":   fmt.Sprintf("Error %d", code),
-		"Code":    code,
-		"Message": message,
-	}
 
 	// Inject CSP nonce if available
 	if nonce, ok := ctx.Get(util.ContextKeyCSPNonce); ok {

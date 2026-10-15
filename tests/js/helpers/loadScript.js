@@ -1,10 +1,37 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // tests/js/helpers/ -> tests/js/ -> tests/ -> project root
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const assetDir = resolve(projectRoot, "src", "assets", "js");
+const catalogDir = resolve(projectRoot, "src", "i18n", "catalogs", "en");
+
+// The server injects window.proviantI18n per page (see i18n.FuncMap); scripts
+// under test read it through proviant.t. The merged English catalog stands in
+// for that injection so tests exercise the real lookup path.
+function loadMessageCatalog() {
+  return readdirSync(catalogDir)
+    .filter((name) => name.endsWith(".json"))
+    .reduce((catalog, name) => {
+      Object.assign(catalog, JSON.parse(readFileSync(resolve(catalogDir, name), "utf8")));
+      return catalog;
+    }, {});
+}
+
+// Mirrors proviant.t / proviant.tn from src/assets/js/proviant.js so partial
+// proviant mocks in click tests resolve keys exactly like the shipped script.
+function createTranslator(catalog) {
+  const format = (text, args) =>
+    args.reduce((out, arg) => out.replace(/%[sdv]/, String(arg)), text);
+  const t = (key, ...args) =>
+    format(Object.prototype.hasOwnProperty.call(catalog, key) ? catalog[key] : key, args);
+  const tn = (key, n, ...args) => {
+    const suffixed = key + (n === 1 ? "_one" : "_other");
+    return t(Object.prototype.hasOwnProperty.call(catalog, suffixed) ? suffixed : key, n, ...args);
+  };
+  return { t, tn };
+}
 
 const CARRIER = "__proviantSetup";
 const REALM = "__proviantRealm";
@@ -51,6 +78,11 @@ const CAPTURE = "__proviantCaptured";
  */
 export function loadClassicScript(fileName, exportNames, options = {}) {
   const { prelude = "", globals = {} } = options;
+  const catalog = loadMessageCatalog();
+  const environment = { proviantI18n: catalog, proviantLang: "en", ...globals };
+  if (environment.proviant && typeof environment.proviant === "object") {
+    environment.proviant = { ...createTranslator(catalog), ...environment.proviant };
+  }
 
   // These names are interpolated into generated source below. A malformed name
   // would produce broken or injected code, and the failure would surface as a
@@ -65,8 +97,8 @@ export function loadClassicScript(fileName, exportNames, options = {}) {
 
   const source = readFileSync(resolve(assetDir, fileName), "utf8");
 
-  if (Object.keys(globals).length > 0) {
-    document[CARRIER] = globals;
+  if (Object.keys(environment).length > 0) {
+    document[CARRIER] = environment;
   }
 
   // `typeof x` is the only reference to an identifier that stays quiet when the
@@ -85,7 +117,7 @@ export function loadClassicScript(fileName, exportNames, options = {}) {
     // defineProperty rather than Object.assign: jsdom exposes globals such as
     // `navigator` as getter-only accessors, and a plain assignment to one of
     // those is either ignored or throws.
-    (Object.keys(globals).length > 0
+    (Object.keys(environment).length > 0
       ? `Object.keys(document[${JSON.stringify(CARRIER)}]).forEach(function (k) { ` +
         `Object.defineProperty(window, k, { ` +
         `value: document[${JSON.stringify(CARRIER)}][k], writable: true, configurable: true }); });\n`

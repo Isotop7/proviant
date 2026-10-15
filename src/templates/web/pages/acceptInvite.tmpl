@@ -8,7 +8,7 @@
                         <div class="d-inline-flex align-items-center justify-content-center rounded-3 invite-icon-wrapper">
                             <i class="bi bi-envelope-paper fs-3 text-white"></i>
                         </div>
-                        <h3 class="mt-3 mb-1">Household Invitation</h3>
+                        <h3 class="mt-3 mb-1">{{ t "invite.title" }}</h3>
                     </div>
 
                     {{ if .Error }}
@@ -16,7 +16,7 @@
                         <i class="bi bi-exclamation-triangle me-2"></i>{{ .Error }}
                     </div>
                     <div class="text-center mt-3">
-                        <a href="/web" class="btn btn-proviant-secondary">Go to Dashboard</a>
+                        <a href="/web" class="btn btn-proviant-secondary">{{ t "auth.goToDashboard" }}</a>
                     </div>
 
                     {{ else if .Success }}
@@ -24,33 +24,33 @@
                         <i class="bi bi-check-circle me-2"></i>{{ .Success }}
                     </div>
                     <div class="text-center mt-3">
-                        <a href="/web" class="btn btn-proviant-primary">Go to Dashboard</a>
+                        <a href="/web" class="btn btn-proviant-primary">{{ t "auth.goToDashboard" }}</a>
                     </div>
 
                     {{ else if .NeedsAuth }}
-                    <p class="text-center text-secondary-custom">You've been invited to join <strong>{{ .HouseholdName }}</strong>.</p>
+                    <p class="text-center text-secondary-custom">{{ t "invite.needsAuthPrefix" }}<strong>{{ .HouseholdName }}</strong>{{ t "invite.needsAuthSuffix" }}</p>
                     <div class="alert alert-info mt-3" role="alert">
-                        <i class="bi bi-info-circle me-2"></i>You must use the email address <strong>{{ .InvitationEmail }}</strong> to accept this invitation. If you already have an account, log in with that email. If you are new, sign up with this exact email address.
+                        <i class="bi bi-info-circle me-2"></i>{{ t "invite.needsAuthAlertPrefix" }}<strong>{{ .InvitationEmail }}</strong>{{ t "invite.needsAuthAlertSuffix" }}
                     </div>
                     <div class="d-grid gap-2 mt-4">
                         <a href="/web/auth?invite_token={{ .Token }}" class="btn btn-proviant-primary btn-lg">
-                            <i class="bi bi-box-arrow-in-right me-2"></i>Log In / Sign Up
+                            <i class="bi bi-box-arrow-in-right me-2"></i>{{ t "invite.loginSignup" }}
                         </a>
                     </div>
 
                     {{ else if .ConfirmAccept }}
-                    <p class="text-center fs-5">You are invited to join the household <strong>{{ .HouseholdName }}</strong>.</p>
+                    <p class="text-center fs-5">{{ t "invite.confirmAcceptPrefix" }}<strong>{{ .HouseholdName }}</strong>{{ t "invite.confirmAcceptSuffix" }}</p>
                     <div class="alert alert-info mt-3" role="alert">
-                        <i class="bi bi-info-circle me-2"></i>You are logged in as <strong>{{ .InvitationEmail }}</strong>. Click below to join the household.
+                        <i class="bi bi-info-circle me-2"></i>{{ t "invite.loggedInPrefix" }}<strong>{{ .InvitationEmail }}</strong>{{ t "invite.loggedInSuffix" }}
                     </div>
-                    <p class="text-center text-secondary-custom small mt-2">Your current household membership will be replaced.</p>
+                    <p class="text-center text-secondary-custom small mt-2">{{ t "invite.membershipReplaced" }}</p>
                     <form id="acceptInviteForm" class="mt-4">
                         <input type="hidden" id="inviteToken" value="{{ .Token }}">
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-proviant-primary btn-lg" id="btnAcceptInvite">
-                                <i class="bi bi-check-lg me-2"></i>Accept &amp; Join
+                                <i class="bi bi-check-lg me-2"></i>{{ t "invite.acceptJoin" }}
                             </button>
-                            <a href="/web" class="btn btn-proviant-secondary">Cancel</a>
+                            <a href="/web" class="btn btn-proviant-secondary">{{ t "common.cancel" }}</a>
                         </div>
                     </form>
                     {{ end }}

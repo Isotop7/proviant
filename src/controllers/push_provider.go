@@ -6,6 +6,7 @@ import (
 	"math"
 	"time"
 
+	"codeberg.org/isotop7/proviant/i18n"
 	"codeberg.org/isotop7/proviant/models/database"
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/rs/zerolog"
@@ -51,7 +52,7 @@ func (p *WebPushNotificationProvider) ensureVAPIDKeys() error {
 	return nil
 }
 
-func (p *WebPushNotificationProvider) SendNotification(product *database.Product, recipientInfo any) error {
+func (p *WebPushNotificationProvider) SendNotification(product *database.Product, recipientInfo any, lang string) error {
 	if err := p.ensureVAPIDKeys(); err != nil {
 		return err
 	}
@@ -67,10 +68,10 @@ func (p *WebPushNotificationProvider) SendNotification(product *database.Product
 	}
 
 	msg := webPushMessage{
-		Title: fmt.Sprintf("⚠️ %s", product.ProductName),
+		Title: i18n.T(lang, "notify.push.title", product.ProductName),
 		// EffectiveExpireAt, not ExpireAt: an opened product may carry no
 		// printed expiry and expire relative to opened_at instead.
-		Body: formatWebPushExpiryDays(product.EffectiveExpireAt()),
+		Body: formatWebPushExpiryDays(product.EffectiveExpireAt(), lang),
 		Tag:  "proviant-notification",
 		URL:  "/web/products",
 	}
@@ -101,29 +102,29 @@ func (p *WebPushNotificationProvider) SendNotification(product *database.Product
 // A time.Time is formatted relative to now ("expires in N days", "expires
 // tomorrow", "expires today", "expired"); strings pass through unchanged and
 // unsupported inputs fall back to a vague phrase.
-func formatWebPushExpiryDays(expireAt any) string {
+func formatWebPushExpiryDays(expireAt any, lang string) string {
 	switch v := expireAt.(type) {
 	case string:
 		return v
 	case time.Time:
 		if v.IsZero() {
-			return "expires soon"
+			return i18n.T(lang, "notify.push.expiresSoon")
 		}
 		remaining := time.Until(v)
 		if remaining < 0 {
-			return "expired"
+			return i18n.T(lang, "notify.push.expired")
 		}
 		// Round, not floor: a product 71.99h out should still read "3 days".
 		days := int(math.Round(remaining.Hours() / 24))
 		switch days {
 		case 0:
-			return "expires today"
+			return i18n.T(lang, "notify.push.expiresToday")
 		case 1:
-			return "expires tomorrow"
+			return i18n.T(lang, "notify.push.expiresTomorrow")
 		default:
-			return fmt.Sprintf("expires in %d days", days)
+			return i18n.T(lang, "notify.push.expiresInDays", days)
 		}
 	default:
-		return "expires soon"
+		return i18n.T(lang, "notify.push.expiresSoon")
 	}
 }

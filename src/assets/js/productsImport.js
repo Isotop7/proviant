@@ -17,7 +17,7 @@ proviant.importProductsCSV = async function (file) {
   try {
     result = await res.json();
   } catch (_parseErr) {
-    result = { message: res.statusText || "The CSV could not be imported." };
+    result = { message: res.statusText || proviant.t("js.products.csvImportFailed") };
   }
   return { code: res.status, message: result };
 };
@@ -38,7 +38,7 @@ proviant.restoreBackupJSON = async function (file) {
   try {
     result = await res.json();
   } catch (_parseErr) {
-    result = { message: res.statusText || "The backup could not be restored." };
+    result = { message: res.statusText || proviant.t("js.products.backupRestoreFailed") };
   }
   return { code: res.status, message: result };
 };
@@ -54,15 +54,15 @@ document.addEventListener("DOMContentLoaded", function () {
       .then(function (result) {
         const data = result.message;
         if (result.code !== 200) {
-          proviant.showFeedback("error", "Import failed", importFailureText(data));
+          proviant.showFeedback("error", proviant.t("js.products.importFailed"), importFailureText(data));
           return;
         }
-        proviant.showFeedback("success", "Import complete", importSummary(data), function () {
+        proviant.showFeedback("success", proviant.t("js.products.importComplete"), importSummary(data), function () {
           globalThis.location.reload();
         });
       })
       .catch(function () {
-        proviant.showFeedback("error", "Import failed", "Could not reach the server.");
+        proviant.showFeedback("error", proviant.t("js.products.importFailed"), proviant.t("js.products.serverUnreachable"));
       });
   }
 
@@ -70,14 +70,14 @@ document.addEventListener("DOMContentLoaded", function () {
   function importReasons(data) {
     if (!data.errors || !data.errors.length) return "";
     return " " + data.errors.slice(0, 3).map(function (e) {
-      return `Row ${e.row}: ${e.reason}`;
+      return proviant.t("js.products.importRowReason", e.row, e.reason);
     }).join(" · ");
   }
 
   function importSummary(data) {
-    let summary = `${data.imported} imported, ${data.failed} failed of ${data.totalRows} rows.`;
+    let summary = proviant.t("js.products.importSummaryCounts", data.imported, data.failed, data.totalRows);
     if (data.createdLocations && data.createdLocations.length) {
-      summary += ` Created storage locations: ${data.createdLocations.join(", ")}.`;
+      summary += proviant.t("js.products.createdLocationsSuffix", data.createdLocations.join(", "));
     }
     return summary + importReasons(data);
   }
@@ -89,20 +89,20 @@ document.addEventListener("DOMContentLoaded", function () {
     if (data && data.errors && data.errors.length) {
       return importSummary(data);
     }
-    return (data && data.message) || "The CSV could not be imported.";
+    return (data && data.message) || proviant.t("js.products.csvImportFailed");
   }
 
   // showFeedback renders a single line, so the restore summary stays short.
   function restoreSummary(data) {
-    let summary = `${data.productsImported} active and ${data.productsArchived} archived products restored.`;
+    let summary = proviant.t("js.products.restoreSummaryCounts", data.productsImported, data.productsArchived);
     if (data.locationsCreated) {
-      summary += ` ${data.locationsCreated} storage locations created.`;
+      summary += proviant.t("js.products.restoreLocationsSuffix", data.locationsCreated);
     }
     return summary;
   }
 
   function restoreFailureText(data) {
-    return (data && data.message) || "The backup could not be restored.";
+    return (data && data.message) || proviant.t("js.products.backupRestoreFailed");
   }
 
   function setRestoreBusy(trigger, busy) {
@@ -111,7 +111,7 @@ document.addEventListener("DOMContentLoaded", function () {
     trigger.setAttribute("aria-disabled", busy ? "true" : "false");
     if (busy) {
       trigger.dataset.restoreOriginalHtml = trigger.innerHTML;
-      trigger.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Restoring…';
+      trigger.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>' + proviant.t("js.products.restoring");
       return;
     }
     trigger.innerHTML = trigger.dataset.restoreOriginalHtml || trigger.innerHTML;
@@ -121,29 +121,29 @@ document.addEventListener("DOMContentLoaded", function () {
   function restoreBackupFile(file, trigger) {
     if (!file) return;
     proviant.showConfirm(
-      "Restore backup?",
-      `"${file.name}" will replace this household's products and storage locations, overwrite household settings, and unlink shopping list, recipe and scan history entries from their products. This cannot be undone.`,
+      proviant.t("js.products.restoreBackupTitle"),
+      proviant.t("js.products.restoreBackupConfirm", file.name),
       function () {
         setRestoreBusy(trigger, true);
         proviant.restoreBackupJSON(file)
           .then(function (result) {
             const data = result.message;
             if (result.code !== 200) {
-              proviant.showFeedback("error", "Restore failed", restoreFailureText(data));
+              proviant.showFeedback("error", proviant.t("js.products.backupRestoreFailedTitle"), restoreFailureText(data));
               return;
             }
-            proviant.showFeedback("success", "Restore complete", restoreSummary(data), function () {
+            proviant.showFeedback("success", proviant.t("js.products.restoreComplete"), restoreSummary(data), function () {
               globalThis.location.reload();
             });
           })
           .catch(function () {
-            proviant.showFeedback("error", "Restore failed", "Could not reach the server.");
+            proviant.showFeedback("error", proviant.t("js.products.backupRestoreFailedTitle"), proviant.t("js.products.serverUnreachable"));
           })
           .finally(function () {
             setRestoreBusy(trigger, false);
           });
       },
-      "Restore and replace",
+      proviant.t("js.products.restoreAndReplace"),
       "danger"
     );
   }

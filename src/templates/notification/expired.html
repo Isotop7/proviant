@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ t "notify.common.langCode" }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proviant — Product Expired</title>
+    <title>{{ t "notify.expired.title" }}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F5FAF5;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5FAF5;">
@@ -26,9 +26,9 @@
                     <!-- Body -->
                     <tr>
                         <td style="padding:24px 32px 32px 32px;">
-                            <h1 style="margin:0 0 8px 0;font-size:24px;font-weight:700;color:#1A3028;text-align:center;">Product Expired</h1>
+                            <h1 style="margin:0 0 8px 0;font-size:24px;font-weight:700;color:#1A3028;text-align:center;">{{ t "notify.expired.heading" }}</h1>
                             <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#6A9580;text-align:center;">
-                                The following product in your household has expired:
+                                {{ t "notify.expired.intro" }}
                             </p>
 
                             <!-- Product Details Card -->
@@ -39,17 +39,17 @@
                                         <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
                                             <tr>
                                                 <td style="padding:4px 0;font-size:14px;color:#6A9580;">
-                                                    <strong style="color:#2D4F3C;">Barcode:</strong> {{.Barcode}}
+                                                    <strong style="color:#2D4F3C;">{{ t "notify.expired.barcodeLabel" }}</strong> {{.Barcode}}
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td style="padding:4px 0;font-size:14px;color:#6A9580;">
-                                                    <strong style="color:#2D4F3C;">ID:</strong> {{.ID}}
+                                                    <strong style="color:#2D4F3C;">{{ t "notify.expired.idLabel" }}</strong> {{.ID}}
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td style="padding:4px 0;font-size:14px;color:#DC2626;">
-                                                    <strong style="color:#2D4F3C;">Expired:</strong> {{.EffectiveExpiry.Format "Jan 2, 2006"}}
+                                                    <strong style="color:#2D4F3C;">{{ t "notify.expired.expiryLabel" }}</strong> {{.EffectiveExpiry.Format "Jan 2, 2006"}}
                                                 </td>
                                             </tr>
                                         </table>
@@ -58,7 +58,7 @@
                             </table>
 
                             <p style="margin:24px 0 0 0;font-size:16px;line-height:1.6;color:#6A9580;text-align:center;">
-                                Please take the necessary actions to ensure the safety and quality of your products.
+                                {{ t "notify.expired.actionHint" }}
                             </p>
                         </td>
                     </tr>
@@ -67,7 +67,7 @@
                     <tr>
                         <td style="padding:0 32px 32px 32px;border-top:1px solid #C8DDD0;">
                             <p style="margin:16px 0 0 0;font-size:14px;line-height:1.6;color:#6A9580;text-align:center;">
-                                Thank you for using <strong style="color:#2D4F3C;">Proviant</strong>!
+                                {{ t "notify.common.thanksBefore" }} <strong style="color:#2D4F3C;">Proviant</strong>!
                             </p>
                         </td>
                     </tr>

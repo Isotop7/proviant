@@ -1,0 +1,19 @@
+{
+  "brand.auth.featureNotify": "Benachrichtigung, bevor Produkte ablaufen",
+  "brand.auth.featureRecipes": "Rezeptvorschläge aus Ihrem Vorrat",
+  "brand.auth.featureSavings": "Einsparungen verfolgen und Lebensmittelverschwendung reduzieren",
+  "brand.auth.featureScan": "Barcodes scannen und Produkte sofort hinzufügen",
+  "brand.auth.headlineBottom": "Mehr Mahlzeiten.",
+  "brand.auth.headlineTop": "Weniger Abfall.",
+  "brand.auth.sub": "Behalten Sie Ihren Vorrat im Blick, werden Sie benachrichtigt, bevor Produkte ablaufen, und entdecken Sie Rezepte mit dem, was Sie bereits haben.",
+  "brand.forgot.featureBack": "In wenigen Minuten zurück zu Ihrem Vorrat",
+  "brand.forgot.featureLink": "Ein sicherer Zurücksetzungslink in Ihrem Postfach",
+  "brand.forgot.featureProtected": "Ihr Konto bleibt geschützt",
+  "brand.forgot.headline": "Passwort vergessen?",
+  "brand.forgot.sub": "Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link, mit dem Sie ein neues Passwort wählen können.",
+  "brand.reset.featureDone": "Dann sind Sie wieder dabei",
+  "brand.reset.featureEncrypted": "Verschlüsselt bei der Übertragung und im Ruhezustand",
+  "brand.reset.featureLength": "12+ Zeichen halten es stark",
+  "brand.reset.headline": "Neues Passwort wählen",
+  "brand.reset.sub": "Wählen Sie etwas Starkes. Sie sind in Kürze wieder bei Ihrem Vorrat."
+}

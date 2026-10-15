@@ -17,6 +17,7 @@ type UserRepositoryInterface interface {
 	GetUserByUsername(username string) (authentication.User, error)
 	GetUserByID(userID uint) (authentication.User, error)
 	GetUserHouseholdByID(userID uint) (uint, error)
+	GetUserLanguagePreferencesByID(userID uint) (string, string, error)
 	GetUserHouseholdRole(userID uint) (string, error)
 	UpdateUserHouseholdRole(userID, householdID uint, role string) error
 	UserExistsByUsername(user *authentication.User) bool
@@ -96,6 +97,21 @@ func (r *UserRepository) GetUserHouseholdByID(userID uint) (uint, error) {
 	var user authentication.User
 	selectErr := r.DB.First(&user, userID)
 	return user.HouseholdID, selectErr.Error
+}
+
+// GetUserLanguagePreferencesByID returns the user language preference and the
+// language preference of the user's household (empty string = automatic).
+func (r *UserRepository) GetUserLanguagePreferencesByID(userID uint) (string, string, error) {
+	var result struct {
+		UserLanguage      string
+		HouseholdLanguage string
+	}
+	row := r.DB.Model(&authentication.User{}).
+		Select("users.language AS user_language, households.language AS household_language").
+		Joins("LEFT JOIN households ON households.id = users.household_id AND households.deleted_at IS NULL").
+		Where("users.id = ?", userID).
+		Scan(&result)
+	return result.UserLanguage, result.HouseholdLanguage, row.Error
 }
 
 func (r *UserRepository) GetUserHouseholdRole(userID uint) (string, error) {
@@ -193,6 +209,7 @@ func (r *UserRepository) UpdateUser(userID uint, user *authentication.User) erro
 
 	dbUser.DisplayName = user.DisplayName
 	dbUser.MailAddress = user.MailAddress
+	dbUser.Language = user.Language
 	dbUser.NotificationPreferences = user.NotificationPreferences
 
 	// Receipt-scan columns (including the API key) are owned exclusively by

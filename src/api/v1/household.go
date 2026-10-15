@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
+	"codeberg.org/isotop7/proviant/i18n"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
@@ -265,6 +266,7 @@ func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 		MonthlyWasteGoalType:    household.MonthlyWasteGoalType,
 		MonthlyWasteGoalCount:   household.MonthlyWasteGoalCount,
 		MonthlyWasteGoalPercent: household.MonthlyWasteGoalPercent,
+		Language:                household.Language,
 	})
 }
 
@@ -305,6 +307,10 @@ func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 		req.MonthlyWasteGoalCount = nil
 		req.MonthlyWasteGoalPercent = nil
 	}
+	if req.Language != nil && *req.Language != "" && !i18n.Supported(*req.Language) {
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrUnsupportedLanguage)
+		return
+	}
 	user, userErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if userErr != nil {
 		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserData)
@@ -313,10 +319,22 @@ func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 	updateErr := appCtx.Repos.Households.UpdateHouseholdSettings(
 		user.HouseholdID, appCtx.UserID,
 		req.MonthlyWasteGoalType, req.MonthlyWasteGoalCount, req.MonthlyWasteGoalPercent,
+		req.Language,
 	)
 	switch updateErr {
 	case nil:
-		ctx.JSON(http.StatusOK, apiModel.HouseholdSettingsResponse(req))
+		updated, getErr := appCtx.Repos.Households.GetHouseholdByID(user.HouseholdID)
+		if getErr != nil {
+			appCtx.Logger.Error().Msgf("UpdateHouseholdSettings: %s", getErr)
+			api.RespondError(ctx, http.StatusInternalServerError, getErr)
+			return
+		}
+		ctx.JSON(http.StatusOK, apiModel.HouseholdSettingsResponse{
+			MonthlyWasteGoalType:    updated.MonthlyWasteGoalType,
+			MonthlyWasteGoalCount:   updated.MonthlyWasteGoalCount,
+			MonthlyWasteGoalPercent: updated.MonthlyWasteGoalPercent,
+			Language:                updated.Language,
+		})
 	case apperrors.ErrHouseholdNotFound:
 		api.RespondError(ctx, http.StatusNotFound, updateErr)
 	case apperrors.ErrNotHouseholdAdmin:

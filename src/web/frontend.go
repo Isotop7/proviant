@@ -3,7 +3,6 @@ package web
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -16,6 +15,7 @@ import (
 	v1 "codeberg.org/isotop7/proviant/api/v1"
 	"codeberg.org/isotop7/proviant/controllers/database"
 	"codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/i18n"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
@@ -120,6 +120,7 @@ func (frontend *Frontend) Auth(ctx *gin.Context) {
 		}
 	}
 
+	brand := authBrand(pageLanguage(ctx))
 	pageData := map[string]any{
 		"InviteToken":              ctx.Query("invite_token"),
 		"Title":                    "Authentication",
@@ -128,9 +129,9 @@ func (frontend *Frontend) Auth(ctx *gin.Context) {
 		"PasswordRequireDigit":     requireDigit,
 		"PasswordRequireSpecial":   requireSpecial,
 		"RouteForgotPassword":      util.RouteForgotPassword,
-		"BrandHeadline":            authBrandHeadline,
-		"BrandSub":                 authBrandSub,
-		"BrandFeatures":            authBrandFeatures,
+		"BrandHeadline":            brand.Headline,
+		"BrandSub":                 brand.Sub,
+		"BrandFeatures":            brand.Features,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "auth.tmpl", pageData)
 }
@@ -255,6 +256,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"ShoppingListSyncEnabled":   shoppingListSyncEnabled,
 		"BringSyncEnabled":          bringSyncEnabled,
 		"TodoistSyncEnabled":        todoistSyncEnabled,
+		"AvailableLanguages":        i18n.LanguageOptions(),
 	}
 
 	if isAdmin {
@@ -827,7 +829,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	if token == "" {
 		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "base", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
-			"Error": "No invitation token provided.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteTokenMissing"),
 		})
 		return
 	}
@@ -837,7 +839,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
-			"Error": "Internal server error.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.internalError"),
 		})
 		return
 	}
@@ -847,14 +849,14 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		if invErr == errors.ErrInvitationNotFound {
 			templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "base", AcceptInviteFileName, map[string]any{
 				"Title": AcceptInvitationTitle,
-				"Error": "This invitation does not exist or has been deleted.",
+				"Error": i18n.T(pageLanguage(ctx), "pageError.inviteNotFound"),
 			})
 			return
 		}
 		logger.Error().Msg(invErr.Error())
 		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
-			"Error": "An error occurred while processing this invitation.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteProcessError"),
 		})
 		return
 	}
@@ -863,11 +865,11 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		var msg string
 		switch invitation.Status {
 		case dbModel.InvitationStatusCancelled:
-			msg = "This invitation has been cancelled by the sender."
+			msg = i18n.T(pageLanguage(ctx), "pageError.inviteCancelled")
 		case dbModel.InvitationStatusExpired:
-			msg = "This invitation has expired."
+			msg = i18n.T(pageLanguage(ctx), "pageError.inviteExpired")
 		default:
-			msg = "This invitation has already been used."
+			msg = i18n.T(pageLanguage(ctx), "pageError.inviteAlreadyUsed")
 		}
 		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
@@ -880,13 +882,13 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		_ = repos.Invitations.MarkInvitationExpired(invitation.ID)
 		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
-			"Error": "This invitation has expired.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteExpired"),
 		})
 		return
 	}
 
 	household, householdErr := repos.Households.GetHouseholdByID(invitation.HouseholdID)
-	householdName := fmt.Sprintf("Household #%d", invitation.HouseholdID)
+	householdName := i18n.T(pageLanguage(ctx), "pageError.householdFallback", invitation.HouseholdID)
 	if householdErr == nil {
 		householdName = household.Name
 	}
@@ -933,7 +935,7 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context) {
 	if token == "" {
 		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "baseAuth", "verifyEmail.tmpl", map[string]any{
 			"Title": "Verify Email",
-			"Error": "No verification token provided.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.verifyTokenMissing"),
 		})
 		return
 	}
@@ -1157,7 +1159,7 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 	if token == "" {
 		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "baseAuth", "unsubscribe.tmpl", map[string]any{
 			"Title": "Unsubscribe",
-			"Error": "No unsubscribe token provided.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.unsubscribeTokenMissing"),
 		})
 		return
 	}
@@ -1168,7 +1170,7 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "baseAuth", "unsubscribe.tmpl", map[string]any{
 			"Title": "Unsubscribe",
-			"Error": "Internal server error.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.internalError"),
 		})
 		return
 	}
@@ -1177,7 +1179,7 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 	if userErr != nil {
 		templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "baseAuth", "unsubscribe.tmpl", map[string]any{
 			"Title": "Unsubscribe",
-			"Error": "Invalid or expired unsubscribe link.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.unsubscribeInvalid"),
 		})
 		return
 	}
@@ -1193,7 +1195,7 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 		logger.Error().Msgf("Unsubscribe: failed to update user: %s", updateErr)
 		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "baseAuth", "unsubscribe.tmpl", map[string]any{
 			"Title": "Unsubscribe",
-			"Error": "Failed to update preferences.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.unsubscribeUpdateFailed"),
 		})
 		return
 	}
@@ -1213,13 +1215,14 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 // @Success      200  {string}  html
 // @Router       /web/forgot-password [get]
 func (frontend *Frontend) ForgotPassword(ctx *gin.Context) {
+	brand := forgotPasswordBrand(pageLanguage(ctx))
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "forgotPassword.tmpl", map[string]any{
 		"Title":               "Forgot Password",
 		"RouteForgotPassword": util.RouteForgotPassword,
 		"RouteAuth":           util.RouteAuth,
-		"BrandHeadline":       forgotPasswordBrandHeadline,
-		"BrandSub":            forgotPasswordBrandSub,
-		"BrandFeatures":       forgotPasswordBrandFeatures,
+		"BrandHeadline":       brand.Headline,
+		"BrandSub":            brand.Sub,
+		"BrandFeatures":       brand.Features,
 	})
 }
 
@@ -1234,17 +1237,18 @@ func (frontend *Frontend) ForgotPassword(ctx *gin.Context) {
 func (frontend *Frontend) ResetPassword(ctx *gin.Context) {
 	token := ctx.Query("token")
 
+	brand := resetPasswordBrand(pageLanguage(ctx))
 	data := map[string]any{
 		"Title":               "Reset Password",
 		"RouteAuth":           util.RouteAuth,
 		"RouteForgotPassword": util.RouteForgotPassword,
-		"BrandHeadline":       resetPasswordBrandHeadline,
-		"BrandSub":            resetPasswordBrandSub,
-		"BrandFeatures":       resetPasswordBrandFeatures,
+		"BrandHeadline":       brand.Headline,
+		"BrandSub":            brand.Sub,
+		"BrandFeatures":       brand.Features,
 	}
 
 	if token == "" {
-		data["Error"] = "Please request a new reset link to continue."
+		data["Error"] = i18n.T(pageLanguage(ctx), "pageError.resetTokenMissing")
 	} else {
 		data["Token"] = token
 	}
@@ -1259,27 +1263,71 @@ type BrandFeature struct {
 	Text string
 }
 
-var (
-	authBrandHeadline = template.HTML("Less waste.<br>More meals.")
-	authBrandSub      = "Track what's in your pantry, get notified before things expire, and discover recipes with what you already have."
-	authBrandFeatures = []BrandFeature{
-		{Icon: "bi-upc-scan", Text: "Scan barcodes to add products instantly"},
-		{Icon: "bi-bell", Text: "Get notified before items expire"},
-		{Icon: "bi-journal-richtext", Text: "Recipe suggestions from your pantry"},
-		{Icon: "bi-graph-down-arrow", Text: "Track savings and reduce food waste"},
+// brandContent is the translated brand panel of the split-panel auth pages.
+type brandContent struct {
+	Headline template.HTML
+	Sub      string
+	Features []BrandFeature
+}
+
+// pageLanguage resolves the UI language for handler-side strings.
+func pageLanguage(ctx *gin.Context) string {
+	if raw, ok := ctx.Get(util.ContextKeyLanguage); ok {
+		if lang, ok := raw.(string); ok && lang != "" {
+			return lang
+		}
 	}
-	forgotPasswordBrandHeadline = "Forgot your password?"
-	forgotPasswordBrandSub      = "Enter your email and we'll send you a link to choose a new password."
-	forgotPasswordBrandFeatures = []BrandFeature{
-		{Icon: "bi-shield-lock", Text: "Your account stays protected"},
-		{Icon: "bi-envelope", Text: "A secure reset link in your inbox"},
-		{Icon: "bi-arrow-counterclockwise", Text: "Back to your pantry in minutes"},
+	acceptLanguage := ""
+	if ctx.Request != nil {
+		acceptLanguage = ctx.GetHeader("Accept-Language")
 	}
-	resetPasswordBrandHeadline = "Choose a new password"
-	resetPasswordBrandSub      = "Pick something strong. We'll get you back to your pantry in no time."
-	resetPasswordBrandFeatures = []BrandFeature{
-		{Icon: "bi-shield-check", Text: "Encrypted in transit and at rest"},
-		{Icon: "bi-key", Text: "12+ characters keeps it strong"},
-		{Icon: "bi-check2-circle", Text: "Then you're back in"},
+	return i18n.ResolveLanguage("", "", acceptLanguage)
+}
+
+func brandFeatures(lang string, features []BrandFeature) []BrandFeature {
+	translated := make([]BrandFeature, 0, len(features))
+	for _, feature := range features {
+		translated = append(translated, BrandFeature{Icon: feature.Icon, Text: i18n.T(lang, feature.Text)})
 	}
-)
+	return translated
+}
+
+func authBrand(lang string) brandContent {
+	return brandContent{
+		//nolint:gosec // trusted catalog content, not user input
+		Headline: template.HTML(i18n.T(lang, "brand.auth.headlineTop") + "<br>" + i18n.T(lang, "brand.auth.headlineBottom")),
+		Sub:      i18n.T(lang, "brand.auth.sub"),
+		Features: brandFeatures(lang, []BrandFeature{
+			{Icon: "bi-upc-scan", Text: "brand.auth.featureScan"},
+			{Icon: "bi-bell", Text: "brand.auth.featureNotify"},
+			{Icon: "bi-journal-richtext", Text: "brand.auth.featureRecipes"},
+			{Icon: "bi-graph-down-arrow", Text: "brand.auth.featureSavings"},
+		}),
+	}
+}
+
+func forgotPasswordBrand(lang string) brandContent {
+	return brandContent{
+		//nolint:gosec // trusted catalog content, not user input
+		Headline: template.HTML(i18n.T(lang, "brand.forgot.headline")),
+		Sub:      i18n.T(lang, "brand.forgot.sub"),
+		Features: brandFeatures(lang, []BrandFeature{
+			{Icon: "bi-shield-lock", Text: "brand.forgot.featureProtected"},
+			{Icon: "bi-envelope", Text: "brand.forgot.featureLink"},
+			{Icon: "bi-arrow-counterclockwise", Text: "brand.forgot.featureBack"},
+		}),
+	}
+}
+
+func resetPasswordBrand(lang string) brandContent {
+	return brandContent{
+		//nolint:gosec // trusted catalog content, not user input
+		Headline: template.HTML(i18n.T(lang, "brand.reset.headline")),
+		Sub:      i18n.T(lang, "brand.reset.sub"),
+		Features: brandFeatures(lang, []BrandFeature{
+			{Icon: "bi-shield-check", Text: "brand.reset.featureEncrypted"},
+			{Icon: "bi-key", Text: "brand.reset.featureLength"},
+			{Icon: "bi-check2-circle", Text: "brand.reset.featureDone"},
+		}),
+	}
+}

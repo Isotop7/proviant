@@ -62,9 +62,9 @@ function showBarcode(barcode) {
 }
 function showAlert(isSuccess, message) {
     if (isSuccess) {
-        proviant.showFeedback('success', 'Product Created', message || 'Product created successfully!');
+        proviant.showFeedback('success', proviant.t("js.products.productCreatedTitle"), message || proviant.t("js.products.productCreatedMessage"));
     } else {
-        proviant.showFeedback('error', 'Error', message || 'Failed to create product. Please try again.');
+        proviant.showFeedback('error', proviant.t("common.error"), message || proviant.t("js.products.createFailedMessage"));
     }
 }
 function clearProductInfo() {
@@ -93,7 +93,7 @@ function setBarcodeLoading(loading) {
 function showProductData(product) {
     if (el.productInfoImage) {
         el.productInfoImage.src = product.imageUrl;
-        el.productInfoImage.alt = product.productName || 'Product image';
+        el.productInfoImage.alt = product.productName || proviant.t("js.products.productImageAlt");
     }
     if (el.productInfoName) el.productInfoName.innerText = product.productName;
     if (product.categories != 'undefined' && product.categories != null) {
@@ -115,10 +115,10 @@ function toggleBtnScan(state) {
     if (el.btnScan) {
         if (state) {
             el.btnScan.dataset.action = 'scan';
-            el.btnScan.innerHTML = '<i class="bi bi-upc-scan px-2"></i>Scan';
+            el.btnScan.innerHTML = '<i class="bi bi-upc-scan px-2"></i>' + proviant.t("js.scan.scanButton");
         } else {
             el.btnScan.dataset.action = 'stop';
-            el.btnScan.innerHTML = '<i class="bi bi-stop-circle px-2"></i>Stop';
+            el.btnScan.innerHTML = '<i class="bi bi-stop-circle px-2"></i>' + proviant.t("js.scan.stopButton");
         }
     }
 }
@@ -290,7 +290,7 @@ function updateBatchTally() {
     const countEl = document.getElementById('batchTallyCount');
     const lastEl = document.getElementById('batchTallyLast');
     if (batchQueue.length > 0) {
-        if (countEl) countEl.textContent = `${batchQueue.length} item${batchQueue.length === 1 ? '' : 's'} queued`;
+        if (countEl) countEl.textContent = proviant.tn("js.scan.batchQueued", batchQueue.length);
         if (lastEl) lastEl.textContent = batchQueue[batchQueue.length - 1].productName || batchQueue[batchQueue.length - 1].barcode;
         el.batchTally.classList.remove('d-none');
     } else {
@@ -303,9 +303,9 @@ function setBatchToggleLabel() {
     const btn = document.getElementById('btnBatchToggle');
     if (!btn) return;
     if (batchMode) {
-        btn.innerHTML = '<i class="bi bi-x-circle" aria-hidden="true"></i>Exit batch mode';
+        btn.innerHTML = '<i class="bi bi-x-circle" aria-hidden="true"></i>' + proviant.t("js.scan.exitBatchMode");
     } else {
-        btn.innerHTML = '<i class="bi bi-stack" aria-hidden="true"></i>Batch scan';
+        btn.innerHTML = '<i class="bi bi-stack" aria-hidden="true"></i>' + proviant.t("js.scan.batchScanButton");
     }
 }
 
@@ -386,7 +386,7 @@ function startBatchCamera() {
     }).catch((error) => {
         batchStartPromise = null;
         if (!batchMode) return;
-        proviant.showFeedback('error', 'Camera Error', String(error));
+        proviant.showFeedback('error', proviant.t("js.scan.cameraError"), String(error));
         exitBatchMode();
     });
 }
@@ -443,7 +443,7 @@ function handleBatchDecode(barcode) {
 function openBatchConfirmPanel(barcode) {
     if (!el.batchConfirmPanel) return;
     batchPendingName = '';
-    if (el.batchProductName) el.batchProductName.textContent = 'Looking up…';
+    if (el.batchProductName) el.batchProductName.textContent = proviant.t("js.scan.lookingUp");
     if (el.batchProductBarcode) el.batchProductBarcode.textContent = barcode;
     if (el.batchAmount) el.batchAmount.value = 1;
     if (el.batchAmountDisplay) el.batchAmountDisplay.textContent = '1';
@@ -550,7 +550,7 @@ async function handleBatchDone() {
                     redirected = true;
                     globalThis.location = '/web/products';
                 };
-                proviant.showFeedback('success', 'Batch Saved', `${response.created} products created`, goToList);
+                proviant.showFeedback('success', proviant.t("js.scan.batchSaved"), proviant.tn("js.scan.batchCreatedCount", response.created), goToList);
                 setTimeout(goToList, 1600);
             } else {
                 // Created items must leave the queue; failed items move to the
@@ -560,13 +560,13 @@ async function handleBatchDone() {
                 batchQueue = batchQueue.filter((_, index) => !failedIndices.has(index)).concat(failedItems);
                 saveBatchQueue();
                 updateBatchTally();
-                proviant.showFeedback('warning', 'Partially Saved', `${response.created} created, ${response.failed} failed — failed items stay queued.`);
+                proviant.showFeedback('warning', proviant.t("js.scan.batchPartiallySaved"), proviant.t("js.scan.batchPartialSummary", response.created, response.failed));
             }
         } else {
-            proviant.showFeedback('error', 'Batch Failed', response.message || 'Could not save the batch. Your queue is kept.');
+            proviant.showFeedback('error', proviant.t("js.scan.batchFailed"), response.message || proviant.t("js.scan.batchSaveFailed"));
         }
     } catch (_) {
-        proviant.showFeedback('error', 'Batch Failed', 'Network error — your queue is kept.');
+        proviant.showFeedback('error', proviant.t("js.scan.batchFailed"), proviant.t("js.scan.batchNetworkError"));
     } finally {
         batchSubmitting = false;
         btn.disabled = false;
@@ -623,15 +623,15 @@ function checkBarcode(barcode) {
         break;
       case 400:
         setProductOptionsState(ProductState.NEW, []);
-        showAlert(false, 'Request contained invalid data');
+        showAlert(false, proviant.t("js.scan.invalidRequestData"));
         break;
       case 500:
         setProductOptionsState(ProductState.NEW, []);
-        showAlert(false, 'Backend server error');
+        showAlert(false, proviant.t("js.scan.backendServerError"));
         break;
       default:
         setProductOptionsState(ProductState.NEW, []);
-        showAlert(false, `Undefined error: ${response.message}`);
+        showAlert(false, proviant.t("js.products.undefinedError", response.message));
         break;
     }
   }).catch(error => {
@@ -665,7 +665,7 @@ function handleScanButton() {
     } else if (btnScan.dataset.action == 'stop') {
         clearScanUI();
     } else {
-        showAlert(false, `Undefined data-action '${btnScan.dataset.action}'`);
+        showAlert(false, proviant.t("js.scan.undefinedDataAction", btnScan.dataset.action));
     }
 };
 function handleBtnAddProduct() {
@@ -676,7 +676,7 @@ function handleBtnAddProduct() {
 
     const barcode = el.inputBarcode.value;
     if (barcode === '') {
-        showAlert(false, 'Barcode cannot be empty');
+        showAlert(false, proviant.t("js.scan.barcodeEmpty"));
         return;
     }
     const expireAt = el.inputExpireAt.valueAsDate.toISOString();
@@ -695,16 +695,16 @@ function handleBtnAddProduct() {
         btn.disabled = false;
         switch (response.code) {
             case 201:
-                showAlert(true, `Product with barcode '${barcode}' was created successfully`);
+                showAlert(true, proviant.t("js.products.productCreatedBarcode", barcode));
                 break;
             case 400:
-                showAlert(false, 'Request contained invalid data');
+                showAlert(false, proviant.t("js.scan.invalidRequestData"));
                 break;
             case 500:
-                showAlert(false, 'Backend server error');
+                showAlert(false, proviant.t("js.scan.backendServerError"));
                 break;
             default:
-                showAlert(false, `Undefined error: ${response.message}`);
+                showAlert(false, proviant.t("js.products.undefinedError", response.message));
                 break;
         }
     }).catch((error) => {
@@ -723,18 +723,18 @@ function handleBtnDeleteProductModal() {
     const productId = dropdown[dropdown.selectedIndex].value;
     const productName = getSelectedProductName();
     proviant.showConfirm(
-        'Mark as wasted',
-        `Mark "${productName}" as wasted? This cannot be undone.`,
+        proviant.t("js.products.markAsWasted"),
+        proviant.t("js.products.markWastedNamedConfirm", productName),
         function () {
             proviant.deleteProduct(productId, false).then((response) => {
                 if (response.code == 200) {
                     globalThis.location.reload();
                 } else {
-                    proviant.showFeedback('error', 'Wasted Failed', `Error marking product as wasted: ${response.message}`);
+                    proviant.showFeedback('error', proviant.t("js.products.wastedFailed"), proviant.t("js.products.wastedError", response.message));
                 }
             });
         },
-        'Wasted',
+        proviant.t("js.products.wastedButton"),
         'danger'
     );
 }
@@ -744,18 +744,18 @@ function handleBtnArchiveProductModal() {
     const productId = dropdown[dropdown.selectedIndex].value;
     const productName = getSelectedProductName();
     proviant.showConfirm(
-        'Mark as consumed',
-        `Mark "${productName}" as consumed?`,
+        proviant.t("js.products.markAsConsumed"),
+        proviant.t("js.products.markConsumedConfirm", productName),
         function () {
             proviant.deleteProduct(productId, true).then((response) => {
                 if (response.code == 200) {
                     globalThis.location.reload();
                 } else {
-                    proviant.showFeedback('error', 'Consume Failed', `Error marking product as consumed: ${response.message}`);
+                    proviant.showFeedback('error', proviant.t("js.products.consumeFailed"), proviant.t("js.products.consumeError", response.message));
                 }
             });
         },
-        'Consumed',
+        proviant.t("js.products.consumedButton"),
         'warning'
     );
 }

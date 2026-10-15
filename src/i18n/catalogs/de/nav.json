@@ -1,0 +1,14 @@
+{
+  "nav.dashboard": "Dashboard",
+  "nav.logout": "Abmelden",
+  "nav.mealPlan": "Essensplan",
+  "nav.notifications": "Benachrichtigungen",
+  "nav.products": "Produkte",
+  "nav.recipes": "Rezepte",
+  "nav.settings": "Einstellungen",
+  "nav.shopping": "Einkauf",
+  "nav.shoppingList": "Einkaufsliste",
+  "nav.theme": "Design",
+  "nav.viewSource": "Quellcode auf Codeberg ansehen",
+  "nav.wasteAnalytics": "Abfallanalyse"
+}

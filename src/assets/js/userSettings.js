@@ -4,7 +4,7 @@ function setButtonLoading(btn, loading) {
   if (loading) {
     btn.disabled = true;
     btn.dataset.originalHtml = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Saving…';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>' + proviant.t("common.saving");
   } else {
     btn.disabled = false;
     btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
@@ -12,7 +12,7 @@ function setButtonLoading(btn, loading) {
 }
 
 function ShowSuccessModal(message, btnFunction) {
-  proviant.showFeedback('success', 'Done', message, btnFunction);
+  proviant.showFeedback('success', proviant.t("js.settings.done"), message, btnFunction);
 }
 
 function validatePasswordRequirements(password) {
@@ -61,12 +61,13 @@ function UpdateSettings() {
   const btn = document.getElementById("btnUpdatePersonalDetails");
   setButtonLoading(btn, true);
 
-  proviant.updateUser(inputDisplayName ? inputDisplayName.value : "", inputMailAddress.value).then((response) => {
+  const inputLanguage = document.getElementById("inputLanguage");
+  proviant.updateUser(inputDisplayName ? inputDisplayName.value : "", inputMailAddress.value, inputLanguage ? inputLanguage.value : undefined).then((response) => {
     setButtonLoading(btn, false);
     switch (response.code) {
       case 200:
         ShowSuccessModal(
-          "User update complete. Please reload page to show changed values.",
+          proviant.t("js.settings.userUpdateComplete"),
           function (event) {
             event.preventDefault();
             location.reload();
@@ -74,10 +75,10 @@ function UpdateSettings() {
         );
         break;
       case 401:
-        proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.updateFailed", response.message));
         break;
       default:
-        proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.updateFailed", response.message));
         break;
     }
   });
@@ -127,7 +128,7 @@ function UpdatePassword() {
     switch (response.code) {
       case 200:
         ShowSuccessModal(
-          "Password update complete. Please log out to use changed password.",
+          proviant.t("js.settings.passwordUpdateComplete"),
           function (event) {
             event.preventDefault();
             proviant.logoutUser();
@@ -136,10 +137,10 @@ function UpdatePassword() {
         );
         break;
       case 401:
-        proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.updateFailed", response.message));
         break;
       default:
-        proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.updateFailed", response.message));
         break;
     }
   });
@@ -165,7 +166,7 @@ function saveMonthlyGoal() {
     const raw = document.getElementById("inputMonthlyGoalCount")?.value;
     const parsed = raw === undefined || raw === "" ? NaN : parseInt(raw, 10);
     if (Number.isNaN(parsed) || parsed < 0) {
-      proviant.showFeedback("error", "Invalid goal", "Count must be a non-negative integer.");
+      proviant.showFeedback("error", proviant.t("js.settings.invalidGoalTitle"), proviant.t("js.settings.goalCountError"));
       return;
     }
     count = parsed;
@@ -173,7 +174,7 @@ function saveMonthlyGoal() {
     const raw = document.getElementById("inputMonthlyGoalPercent")?.value;
     const parsed = raw === undefined || raw === "" ? NaN : parseFloat(raw);
     if (Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
-      proviant.showFeedback("error", "Invalid goal", "Percent must be between 0 and 100.");
+      proviant.showFeedback("error", proviant.t("js.settings.invalidGoalTitle"), proviant.t("js.settings.goalPercentError"));
       return;
     }
     percent = parsed;
@@ -181,23 +182,25 @@ function saveMonthlyGoal() {
 
   const btn = document.getElementById("btnSaveMonthlyGoal");
   setButtonLoading(btn, true);
+  const languageSelect = document.getElementById("inputHouseholdLanguage");
   proviant.updateHouseholdSettings({
     monthlyWasteGoalType: type,
     monthlyWasteGoalCount: count,
     monthlyWasteGoalPercent: percent,
+    language: languageSelect ? languageSelect.value : undefined,
   }).then((response) => {
     setButtonLoading(btn, false);
     if (response.code === 200) {
-      ShowSuccessModal("Monthly waste goal updated.", function (e) {
+      ShowSuccessModal(proviant.t("js.settings.monthlyGoalUpdated"), function (e) {
         e.preventDefault();
         location.reload();
       });
     } else {
-      proviant.showFeedback("error", "Update Failed", response.message || "Could not save goal.");
+      proviant.showFeedback("error", proviant.t("js.settings.updateFailedTitle"), response.message || proviant.t("js.settings.couldNotSaveGoal"));
     }
   }).catch((err) => {
     setButtonLoading(btn, false);
-    proviant.showFeedback("error", "Network error", err.message);
+    proviant.showFeedback("error", proviant.t("js.settings.networkErrorTitle"), err.message);
   });
 }
 
@@ -267,7 +270,7 @@ function handleGenerateTelegramToken() {
   proviant.generateTelegramLinkToken().then((response) => {
     setButtonLoading(btn, false);
     if (response.code !== 200) {
-      showTelegramLinkAlert("Failed to generate token. Please try again.", false);
+      showTelegramLinkAlert(proviant.t("js.settings.generateTokenFailed"), false);
       return;
     }
 
@@ -295,7 +298,7 @@ function handleGenerateTelegramToken() {
     }
   }).catch(() => {
     setButtonLoading(btn, false);
-    showTelegramLinkAlert("Network error. Please try again.", false);
+    showTelegramLinkAlert(proviant.t("js.settings.networkErrorRetry"), false);
   });
 }
 
@@ -361,7 +364,7 @@ function UpdateNotificationSettings() {
       switch (response.code) {
         case 200:
           ShowSuccessModal(
-            "Notification settings updated successfully.",
+            proviant.t("js.settings.notificationSettingsUpdated"),
             function (event) {
               event.preventDefault();
               location.reload();
@@ -369,19 +372,19 @@ function UpdateNotificationSettings() {
           );
           break;
         case 400:
-          proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
+          proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.updateFailed", response.message));
           break;
         case 401:
-          proviant.showFeedback('error', 'Unauthorized', response.message);
+          proviant.showFeedback('error', proviant.t("js.settings.unauthorized"), response.message);
           break;
         default:
-          proviant.showFeedback('error', 'Error', `Error updating notification settings: ${response.message}`);
+          proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.notificationSettingsUpdateFailed", response.message));
           break;
       }
     })
     .catch((error) => {
       setButtonLoading(btn, false);
-      proviant.showFeedback('error', 'Error', `Network error: ${error.message}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", error.message));
     });
 }
 
@@ -436,24 +439,24 @@ function UpdateReceiptScanSettings() {
     .then((response) => {
       setButtonLoading(btn, false);
       if (response.code === 200) {
-        ShowSuccessModal("Receipt scan settings updated successfully.", function (event) {
+        ShowSuccessModal(proviant.t("js.settings.receiptScanUpdated"), function (event) {
           event.preventDefault();
           location.reload();
         });
       } else {
-        proviant.showFeedback('error', 'Error', `Update failed: ${response.message}`);
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.updateFailed", response.message));
       }
     })
     .catch((error) => {
       setButtonLoading(btn, false);
-      proviant.showFeedback('error', 'Error', `Network error: ${error.message}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", error.message));
     });
 }
 
 function ResetReceiptScanSettings() {
   proviant.showConfirm(
-    'Reset Receipt Scan Settings',
-    'This will disable the override, clear your custom endpoint, model, timeout, and API key. The server defaults will be used. Continue?',
+    proviant.t("js.settings.resetReceiptScanTitle"),
+    proviant.t("js.settings.resetReceiptScanConfirm"),
     function () {
       const btn = document.getElementById("btnResetReceiptScanSettings");
       setButtonLoading(btn, true);
@@ -472,20 +475,20 @@ function ResetReceiptScanSettings() {
         .then((response) => {
           setButtonLoading(btn, false);
           if (response.code === 200) {
-            ShowSuccessModal("Receipt scan settings reset to server defaults.", function (event) {
+            ShowSuccessModal(proviant.t("js.settings.receiptScanReset"), function (event) {
               event.preventDefault();
               location.reload();
             });
           } else {
-            proviant.showFeedback('error', 'Error', `Reset failed: ${response.message}`);
+            proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.resetFailed", response.message));
           }
         })
         .catch((error) => {
           setButtonLoading(btn, false);
-          proviant.showFeedback('error', 'Error', `Network error: ${error.message}`);
+          proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", error.message));
         });
     },
-    'Reset',
+    proviant.t("js.settings.reset"),
     'danger'
   );
 }
@@ -502,21 +505,21 @@ function toggleReceiptScanOverrideFields() {
 /* Leave household */
 function handleLeaveHousehold() {
   proviant.showConfirm(
-    'Leave Household',
-    'Leave your current household? You will be assigned a new personal household.',
+    proviant.t("household.leaveHousehold"),
+    proviant.t("js.settings.leaveHouseholdConfirm"),
     function () {
       proviant.leaveHousehold().then((response) => {
         if (response.code === 200) {
-          ShowSuccessModal("You have left the household. Reloading page.", function (e) {
+          ShowSuccessModal(proviant.t("js.settings.leftHousehold"), function (e) {
             e.preventDefault();
             location.reload();
           });
         } else {
-          proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+          proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
         }
       });
     },
-    'Leave',
+    proviant.t("household.leave"),
     'danger'
   );
 }
@@ -532,12 +535,12 @@ function handleCreateHousehold() {
   if (nameInput) nameInput.classList.remove("is-invalid");
     proviant.createHousehold(name).then((response) => {
     if (response.code === 200) {
-      ShowSuccessModal("Household created. Reloading page.", function (e) {
+      ShowSuccessModal(proviant.t("js.settings.householdCreated"), function (e) {
         e.preventDefault();
         location.reload();
       });
     } else {
-      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
     }
   });
 }
@@ -555,11 +558,11 @@ function handleApplyHousehold() {
     if (response.code === 200) {
       location.reload();
     } else if (response.code === 409) {
-      proviant.showFeedback('warning', 'Already Applied', "You already have a pending application for this household.");
+      proviant.showFeedback('warning', proviant.t("js.settings.alreadyAppliedTitle"), proviant.t("js.settings.alreadyApplied"));
     } else if (response.code === 404) {
-      proviant.showFeedback('error', 'Not Found', "Household not found.");
+      proviant.showFeedback('error', proviant.t("js.settings.notFoundTitle"), proviant.t("js.settings.householdNotFound"));
     } else {
-      proviant.showFeedback('error', 'Apply Failed', `Error: ${response.message}`);
+      proviant.showFeedback('error', proviant.t("js.settings.applyFailedTitle"), proviant.t("js.settings.errorWithMessage", response.message));
     }
   });
 }
@@ -572,7 +575,7 @@ function handleApproveApplication(btn) {
        const row = document.getElementById(`application-${applicationID}`);
        if (row) row.remove();
      } else {
-       proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
      }
   });
 }
@@ -585,7 +588,7 @@ function handleRejectApplication(btn) {
        const row = document.getElementById(`application-${applicationID}`);
        if (row) row.remove();
      } else {
-       proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
      }
   });
 }
@@ -603,7 +606,7 @@ function handleUpdateHouseholdName() {
     if (response.code === 200) {
       location.reload();
     } else {
-      proviant.showFeedback('error', 'Rename Failed', `Error: ${response.message}`);
+      proviant.showFeedback('error', proviant.t("js.settings.renameFailedTitle"), proviant.t("js.settings.errorWithMessage", response.message));
     }
   });
 }
@@ -611,13 +614,13 @@ function handleUpdateHouseholdName() {
 /* Cancel own pending application */
 function handleCancelApplication(btn) {
   const applicationID = btn.dataset.id;
-  proviant.showConfirm('Cancel Application', 'Cancel this pending application to join the household?', function () {
+  proviant.showConfirm(proviant.t("js.settings.cancelApplicationTitle"), proviant.t("js.settings.cancelApplicationConfirm"), function () {
     proviant.cancelApplication(applicationID).then((response) => {
     if (response.code === 200) {
       const row = document.getElementById(`application-${applicationID}`);
       if (row) row.remove();
     } else {
-      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
     }
     });
   });
@@ -626,13 +629,13 @@ function handleCancelApplication(btn) {
 /* Remove household member */
 function handleRemoveMember(btn) {
   const memberID = btn.dataset.id;
-  proviant.showConfirm('Remove Member', 'Remove this member from the household? They will be assigned a new personal household.', function () {
+  proviant.showConfirm(proviant.t("js.settings.removeMemberTitle"), proviant.t("js.settings.removeMemberConfirm"), function () {
     proviant.removeMember(memberID).then((response) => {
       if (response.code === 200) {
         const row = document.getElementById(`member-${memberID}`);
         if (row) row.remove();
       } else {
-        proviant.showFeedback('error', 'Error', response.message || 'Could not remove member.');
+        proviant.showFeedback('error', proviant.t("common.error"), response.message || proviant.t("js.settings.couldNotRemoveMember"));
       }
     });
   });
@@ -651,16 +654,16 @@ function handleSendInvitation() {
   if (emailInput) emailInput.classList.remove("is-invalid");
   proviant.createInvitation(email).then((response) => {
     if (response.code === 201) {
-      ShowSuccessModal("Invitation sent. Reloading page.", function (e) {
+      ShowSuccessModal(proviant.t("js.settings.invitationSent"), function (e) {
         e.preventDefault();
         location.reload();
       });
     } else if (response.code === 409) {
-      proviant.showFeedback('warning', 'Already Invited', response.message, false);
+      proviant.showFeedback('warning', proviant.t("js.settings.alreadyInvitedTitle"), response.message, false);
     } else if (response.code === 400) {
-      proviant.showFeedback('error', 'Invalid Email', response.message, false);
+      proviant.showFeedback('error', proviant.t("js.settings.invalidEmailTitle"), response.message, false);
     } else {
-      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
     }
   });
 }
@@ -672,7 +675,7 @@ function renderAdminUserRow(user, currentUserID, currentUserIsAdmin, householdAd
   const isSelf = user.id === currentUserID;
   const isAdmin = user.id === householdAdminID;
 
-  const roleLabel = isAdmin ? "Admin" : (user.role === "viewer" ? "Viewer" : (user.role === "member" ? "Member" : user.role || "Member"));
+  const roleLabel = isAdmin ? proviant.t("household.admin") : (user.role === "viewer" ? proviant.t("household.viewer") : (user.role === "member" ? proviant.t("household.member") : user.role || proviant.t("household.member")));
   const roleBadgeClass = isAdmin ? "bg-primary" : (user.role === "viewer" ? "bg-warning" : "bg-secondary");
   const roleIcon = isAdmin ? "bi-shield-check" : (user.role === "viewer" ? "bi-eye" : "bi-person");
 
@@ -681,19 +684,19 @@ function renderAdminUserRow(user, currentUserID, currentUserIsAdmin, householdAd
       <span>
         <i class="bi bi-person me-2"></i>${user.username}
         <span class="text-secondary-custom ms-1">&lt;${user.mailAddress || ""}&gt;</span>
-        ${isSelf ? '<span class="badge bg-secondary ms-1">You</span>' : ""}
+        ${isSelf ? '<span class="badge bg-secondary ms-1">' + proviant.t("js.settings.you") + '</span>' : ""}
         <span class="badge ${roleBadgeClass} ms-1"><i class="bi ${roleIcon} me-1"></i>${roleLabel}</span>
       </span>
       <div class="d-flex align-items-center gap-2">
         ${!isSelf ? `
-          <button type="button" class="btn btn-outline-primary btn-edit-user" data-id="${user.id}" data-username="${user.username}" data-email="${user.mailAddress || ""}" data-role="${user.role || 'member'}" data-is-admin="${isAdmin}" data-is-self="${isSelf}" title="Edit user">
+          <button type="button" class="btn btn-outline-primary btn-edit-user" data-id="${user.id}" data-username="${user.username}" data-email="${user.mailAddress || ""}" data-role="${user.role || 'member'}" data-is-admin="${isAdmin}" data-is-self="${isSelf}" title="${proviant.t("js.settings.editUserTitle")}">
             <i class="bi bi-pencil"></i>
           </button>` : ""}
-          <button type="button" class="btn btn-outline-warning btn-reset-password" data-id="${user.id}" title="Reset password">
+          <button type="button" class="btn btn-outline-warning btn-reset-password" data-id="${user.id}" title="${proviant.t("js.settings.resetPasswordTooltip")}">
             <i class="bi bi-key"></i>
           </button>
           ${!isSelf ? `
-          <button type="button" class="btn btn-outline-danger btn-delete-user" data-id="${user.id}" title="Delete user">
+          <button type="button" class="btn btn-outline-danger btn-delete-user" data-id="${user.id}" title="${proviant.t("js.settings.deleteUserTitle")}">
             <i class="bi bi-trash"></i>
           </button>` : ""}
         </div>
@@ -714,21 +717,21 @@ function loadAdminUsers() {
     if (response.code === 200) {
       const users = response.message;
       if (!users || !Array.isArray(users) || users.length === 0) {
-        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">No users in household.</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">' + proviant.t("js.settings.noUsers") + '</li>';
         return;
       }
       const currentUserID = parseInt(list.dataset.currentUserId || "0", 10) || 0;
       const householdAdminID = parseInt(list.dataset.adminId || "0", 10) || 0;
       const rendered = users.map((u) => renderAdminUserRow(u, currentUserID, currentUserID === householdAdminID, householdAdminID)).join("");
       if (!rendered) {
-        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">No users in household.</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">' + proviant.t("js.settings.noUsers") + '</li>';
         return;
       }
       list.innerHTML = rendered;
     } else if (response.code === 403) {
-      list.innerHTML = '<li class="list-group-item text-danger py-3">Access denied.</li>';
+      list.innerHTML = '<li class="list-group-item text-danger py-3">' + proviant.t("js.settings.accessDenied") + '</li>';
     } else {
-      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Unknown error"}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.unknownError")));
     }
   });
 }
@@ -790,10 +793,10 @@ function handleSaveUserEdit() {
   const currentRole = document.getElementById("editUserRoleSelect").dataset.currentRole || newRole;
   if (isSelf && newRole !== 'admin' && newRole !== currentRole) {
     proviant.showConfirm(
-      'Change Your Role',
-      `You are about to change your own role from ${currentRole} to ${newRole}. You will lose admin privileges. Continue?`,
+      proviant.t("js.settings.changeRoleTitle"),
+      proviant.t("js.settings.changeRoleConfirm", currentRole, newRole),
       function () { doSaveUserEdit(userID, username, email, newRole); },
-      'Change Role',
+      proviant.t("js.settings.changeRoleButton"),
       'warning'
     );
   } else {
@@ -817,7 +820,7 @@ function doSaveUserEdit(userID, username, email, newRole) {
             }
             loadAdminUsers();
           } else {
-            proviant.showFeedback('error', 'Error', `User updated but role change failed: ${roleResponse.message}`);
+            proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.userUpdatedRoleFailed", roleResponse.message));
           }
         });
       } else {
@@ -830,7 +833,7 @@ function doSaveUserEdit(userID, username, email, newRole) {
       }
     } else {
       setButtonLoading(btn, false);
-      proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
     }
   });
 }
@@ -838,18 +841,18 @@ function doSaveUserEdit(userID, username, email, newRole) {
 function handleResetPassword(btn) {
   const userID = btn.dataset.id;
   proviant.showConfirm(
-    "Reset Password",
-    "Send a password reset email to this user?",
+    proviant.t("js.settings.resetPasswordTitle"),
+    proviant.t("js.settings.resetPasswordConfirm"),
     function () {
       proviant.resetHouseholdUserPassword(userID).then((response) => {
         if (response.code === 200) {
-          proviant.showFeedback("success", "Done", "Password reset email sent.");
+          proviant.showFeedback("success", proviant.t("js.settings.done"), proviant.t("js.settings.passwordResetSent"));
         } else {
-          proviant.showFeedback("error", "Error", response.message || "Could not reset password.");
+          proviant.showFeedback("error", proviant.t("common.error"), response.message || proviant.t("js.settings.couldNotResetPassword"));
         }
       });
     },
-    "Reset",
+    proviant.t("js.settings.reset"),
     "warning"
   );
 }
@@ -857,19 +860,19 @@ function handleResetPassword(btn) {
 function handleDeleteUser(btn) {
   const userID = btn.dataset.id;
   proviant.showConfirm(
-    "Delete User",
-    "Permanently delete this user? This cannot be undone.",
+    proviant.t("js.settings.deleteUserConfirmTitle"),
+    proviant.t("js.settings.deleteUserConfirm"),
     function () {
       proviant.deleteHouseholdUser(userID).then((response) => {
         if (response.code === 200) {
           const row = document.getElementById(`admin-user-${userID}`);
           if (row) row.remove();
         } else {
-          proviant.showFeedback('error', 'Error', `Error: ${response.message}`);
+          proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
         }
       });
     },
-    "Delete",
+    proviant.t("common.delete"),
     "danger"
   );
 }
@@ -877,15 +880,15 @@ function handleDeleteUser(btn) {
 /* ── PAT (Personal Access Token) helpers ──────────────────────── */
 
 function renderPATRow(pat) {
-  const expiresText = pat.expiresAt ? `Expires: ${new Date(pat.expiresAt).toLocaleDateString()}` : "No expiry";
-  const lastUsedText = pat.lastUsedAt ? `Last used: ${new Date(pat.lastUsedAt).toLocaleString()}` : "Never used";
+  const expiresText = pat.expiresAt ? proviant.t("household.expiresAt", new Date(pat.expiresAt).toLocaleDateString()) : proviant.t("js.settings.noExpiry");
+  const lastUsedText = pat.lastUsedAt ? proviant.t("js.settings.lastUsed", new Date(pat.lastUsedAt).toLocaleString()) : proviant.t("js.settings.neverUsed");
   return `
     <li class="list-group-item d-flex justify-content-between align-items-center" id="pat-${pat.id}">
       <span>
         <i class="bi bi-key me-2"></i>${pat.name}
         <small class="text-secondary-custom d-block">${lastUsedText} · ${expiresText}</small>
       </span>
-      <button type="button" class="btn btn-sm btn-outline-danger btn-delete-pat" data-id="${pat.id}" title="Delete token">
+      <button type="button" class="btn btn-sm btn-outline-danger btn-delete-pat" data-id="${pat.id}" title="${proviant.t("js.settings.deleteTokenTitle")}">
         <i class="bi bi-trash"></i>
       </button>
     </li>
@@ -904,12 +907,12 @@ function loadPATs() {
     if (response.code === 200) {
       const pats = response.message;
       if (!pats || !Array.isArray(pats) || pats.length === 0) {
-        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">No tokens created yet.</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">' + proviant.t("js.settings.noTokens") + '</li>';
         return;
       }
       list.innerHTML = pats.map((p) => renderPATRow(p)).join("");
     } else {
-      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Unknown error"}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.unknownError")));
     }
   });
 }
@@ -961,7 +964,7 @@ function handleSavePAT() {
       tokenDisplay.classList.remove("d-none");
       loadPATs();
     } else {
-      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to create token"}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.failedToCreateToken")));
     }
   });
 }
@@ -969,19 +972,19 @@ function handleSavePAT() {
 function handleDeletePAT(btn) {
   const patID = btn.dataset.id;
   proviant.showConfirm(
-    "Delete Token",
-    "Permanently delete this API token? This cannot be undone.",
+    proviant.t("js.settings.deleteTokenConfirmTitle"),
+    proviant.t("js.settings.deleteTokenConfirm"),
     function () {
       proviant.deletePAT(patID).then((response) => {
         if (response.code === 200) {
           const row = document.getElementById(`pat-${patID}`);
           if (row) row.remove();
         } else {
-          proviant.showFeedback('error', 'Error', `Error: ${response.message || "Could not delete token"}`);
+          proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.couldNotDeleteToken")));
         }
       });
     },
-    "Delete",
+    proviant.t("common.delete"),
     "danger"
   );
 }
@@ -995,7 +998,7 @@ function LoadWebhooks() {
       currentWebhooks = response.webhooks || [];
       RenderWebhookList();
     } else {
-      proviant.showFeedback('error', 'Error', `Failed to load webhooks: ${response.message}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.failedToLoadWebhooks", response.message));
     }
   });
 }
@@ -1005,7 +1008,7 @@ function RenderWebhookList() {
   if (!container) return;
 
   if (currentWebhooks.length === 0) {
-    container.innerHTML = '<div class="text-center text-secondary-custom py-4">No webhooks configured. Create one below.</div>';
+    container.innerHTML = '<div class="text-center text-secondary-custom py-4">' + proviant.t("js.settings.noWebhooks") + '</div>';
     return;
   }
 
@@ -1019,17 +1022,17 @@ function RenderWebhookList() {
           <div class="d-flex justify-content-between align-items-start mb-2">
             <div>
               <h6 class="mb-1">${escapeHtml(wh.url)}</h6>
-              <small class="text-secondary-custom">Events: ${escapeHtml(eventsList)}</small>
+              <small class="text-secondary-custom">${proviant.t("js.settings.webhookEvents", escapeHtml(eventsList))}</small>
             </div>
             <div class="form-check form-switch">
               <input class="form-check-input webhook-toggle-active" type="checkbox" ${toggleChecked} data-id="${wh.id}">
-              <label class="form-check-label">Active</label>
+              <label class="form-check-label">${proviant.t("js.settings.webhookActive")}</label>
             </div>
           </div>
           <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-outline-primary btn-view-deliveries" data-id="${wh.id}">View Deliveries</button>
-            <button type="button" class="btn btn-outline-secondary btn-copy-secret" data-id="${wh.id}">Copy Secret</button>
-            <button type="button" class="btn btn-outline-danger btn-delete-webhook" data-id="${wh.id}">Delete</button>
+            <button type="button" class="btn btn-outline-primary btn-view-deliveries" data-id="${wh.id}">${proviant.t("js.settings.viewDeliveries")}</button>
+            <button type="button" class="btn btn-outline-secondary btn-copy-secret" data-id="${wh.id}">${proviant.t("js.settings.copySecret")}</button>
+            <button type="button" class="btn btn-outline-danger btn-delete-webhook" data-id="${wh.id}">${proviant.t("common.delete")}</button>
           </div>
         </div>
       </div>
@@ -1081,7 +1084,7 @@ function ToggleWebhookActive(id, active) {
       wh.active = active;
       RenderWebhookList();
     } else {
-      proviant.showFeedback('error', 'Error', `Failed to update webhook: ${response.message}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.failedToUpdateWebhook", response.message));
       RenderWebhookList();
     }
   });
@@ -1092,16 +1095,16 @@ function ShowWebhookDeliveries(id) {
     if (response.code === 200) {
       ShowDeliveriesModal(response.deliveries || []);
     } else {
-      proviant.showFeedback('error', 'Error', `Failed to load deliveries: ${response.message}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.failedToLoadDeliveries", response.message));
     }
   });
 }
 
 function ShowDeliveriesModal(deliveries) {
-  let html = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Time</th><th>Attempt</th><th>Status</th><th>Response</th><th>Error</th></tr></thead><tbody>';
+  let html = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>' + proviant.t("js.settings.colTime") + '</th><th>' + proviant.t("js.settings.colAttempt") + '</th><th>' + proviant.t("js.settings.colStatus") + '</th><th>' + proviant.t("js.settings.colResponse") + '</th><th>' + proviant.t("common.error") + '</th></tr></thead><tbody>';
 
   if (deliveries.length === 0) {
-    html += '<tr><td colspan="5" class="text-center text-secondary-custom">No delivery attempts yet</td></tr>';
+    html += '<tr><td colspan="5" class="text-center text-secondary-custom">' + proviant.t("js.settings.noDeliveries") + '</td></tr>';
   } else {
     for (const d of deliveries) {
       const statusClass = d.statusCode >= 200 && d.statusCode < 300 ? 'text-success' : 'text-danger';
@@ -1131,20 +1134,20 @@ function CopyWebhookSecret(id) {
 
 function DeleteWebhook(id) {
   proviant.showConfirm(
-    'Delete Webhook',
-    'Are you sure you want to delete this webhook? This cannot be undone.',
+    proviant.t("js.settings.deleteWebhookTitle"),
+    proviant.t("js.settings.deleteWebhookConfirm"),
     function() {
       proviant.deleteWebhook(id).then((response) => {
         if (response.code === 200) {
-          ShowSuccessModal('Webhook deleted', function() {
+          ShowSuccessModal(proviant.t("js.settings.webhookDeleted"), function() {
             LoadWebhooks();
           });
         } else {
-          proviant.showFeedback('error', 'Error', `Failed to delete webhook: ${response.message}`);
+          proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.failedToDeleteWebhook", response.message));
         }
       });
     },
-    'Delete',
+    proviant.t("common.delete"),
     'danger'
   );
 }
@@ -1163,7 +1166,7 @@ function CreateWebhook() {
     return;
   }
   if (events.length === 0) {
-    proviant.showFeedback('error', 'Error', 'Please select at least one event');
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.selectEvent"));
     return;
   }
 
@@ -1178,11 +1181,11 @@ function CreateWebhook() {
       uncheckAllWebhookEvents();
       const toggleWebhook = document.getElementById('toggleWebhookCreate');
       if (toggleWebhook) { toggleWebhook.checked = false; toggleWebhookCreate(); }
-      ShowSuccessModal('Webhook created', function() {
+      ShowSuccessModal(proviant.t("js.settings.webhookCreated"), function() {
         LoadWebhooks();
       });
     } else {
-      proviant.showFeedback('error', 'Error', `Failed to create webhook: ${response.message}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.failedToCreateWebhook", response.message));
     }
   });
 }
@@ -1223,22 +1226,22 @@ const AUDIT_ACTION_ICONS = {
 };
 
 const AUDIT_ACTION_LABELS = {
-  login_success: "Login successful",
-  login_failure: "Login failed",
-  password_change: "Password changed",
-  password_change_failed: "Password change failed",
-  member_added: "Member joined",
-  member_removed: "Member removed",
-  member_left: "Member left",
-  admin_changed: "Admin changed",
-  account_deleted: "Account deleted",
+  login_success: "js.settings.auditActionLoginSuccess",
+  login_failure: "js.settings.auditActionLoginFailure",
+  password_change: "js.settings.auditActionPasswordChange",
+  password_change_failed: "js.settings.auditActionPasswordChangeFailed",
+  member_added: "js.settings.auditActionMemberAdded",
+  member_removed: "js.settings.auditActionMemberRemoved",
+  member_left: "js.settings.auditActionMemberLeft",
+  admin_changed: "js.settings.auditActionAdminChanged",
+  account_deleted: "js.settings.auditActionAccountDeleted",
 };
 
 function renderAuditLogRow(log) {
   const iconClass = AUDIT_ACTION_ICONS[log.action] || "bi bi-shield text-secondary";
-  const label = AUDIT_ACTION_LABELS[log.action] || log.action || "Unknown";
+  const label = AUDIT_ACTION_LABELS[log.action] ? proviant.t(AUDIT_ACTION_LABELS[log.action]) : (log.action || proviant.t("js.settings.unknown"));
   const time = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : "";
-  const userText = log.userId ? `#${log.userId}` : "System";
+  const userText = log.userId ? `#${log.userId}` : proviant.t("js.settings.system");
   const details = log.details ? escapeHtml(log.details) : "";
 
   return `
@@ -1251,7 +1254,7 @@ function renderAuditLogRow(log) {
             <small class="text-secondary-custom flex-shrink-0" style="font-size: var(--text-xs);">${time}</small>
           </div>
           <div class="d-flex gap-2 mt-1">
-            <small class="text-secondary-custom" style="font-size: var(--text-xs);">User ${userText}</small>
+            <small class="text-secondary-custom" style="font-size: var(--text-xs);">${proviant.t("js.settings.userLabel", userText)}</small>
             ${log.ipAddress ? `<small class="text-secondary-custom" style="font-size: var(--text-xs);">· ${escapeHtml(log.ipAddress)}</small>` : ""}
           </div>
           ${details ? `<small class="text-secondary-custom d-block mt-1" style="font-size: var(--text-xs);">${details}</small>` : ""}
@@ -1270,14 +1273,14 @@ function renderAuditLog(logs) {
   if (loading) loading.remove();
 
   if (!logs || logs.length === 0) {
-    list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-4">No activity logged today.</li>';
+    list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-4">' + proviant.t("js.settings.noActivity") + '</li>';
     if (meta) meta.textContent = "";
     return;
   }
 
   const rows = logs.map((log) => renderAuditLogRow(log)).join("");
   list.innerHTML = rows;
-  if (meta) meta.textContent = `${logs.length} event${logs.length !== 1 ? "s" : ""} · Auto-refreshes every 30s`;
+  if (meta) meta.textContent = proviant.tn("js.settings.auditMeta", logs.length);
 }
 
 function loadAuditLog(date) {
@@ -1288,7 +1291,7 @@ function loadAuditLog(date) {
   if (loading) {
     list.innerHTML = `<li class="list-group-item text-center text-secondary-custom py-4" id="auditLogLoading">
       <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-      <span>Loading…</span>
+      <span>${proviant.t("common.loading")}</span>
     </li>`;
   }
 
@@ -1296,13 +1299,13 @@ function loadAuditLog(date) {
     if (response.code === 200) {
       renderAuditLog(response.message);
     } else {
-      list.innerHTML = `<li class="list-group-item text-danger text-center py-4">Failed to load activity log.</li>`;
+      list.innerHTML = `<li class="list-group-item text-danger text-center py-4">${proviant.t("js.settings.failedToLoadAuditLog")}</li>`;
       if (document.getElementById("auditLogMeta")) {
-        document.getElementById("auditLogMeta").textContent = `Error: ${response.message || "Unknown"}`;
+        document.getElementById("auditLogMeta").textContent = proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.unknown"));
       }
     }
   }).catch(() => {
-    list.innerHTML = `<li class="list-group-item text-danger text-center py-4">Network error.</li>`;
+    list.innerHTML = `<li class="list-group-item text-danger text-center py-4">${proviant.t("js.settings.networkError")}</li>`;
   });
 }
 
@@ -1471,13 +1474,13 @@ document.addEventListener("click", function (event) {
   if (cancelInviteBtn) {
     event.preventDefault();
     const invitationID = cancelInviteBtn.dataset.id;
-    proviant.showConfirm('Cancel Invitation', 'Cancel this invitation? The recipient will no longer be able to use it.', function () {
+    proviant.showConfirm(proviant.t("js.settings.cancelInvitationTitle"), proviant.t("js.settings.cancelInvitationConfirm"), function () {
       proviant.cancelInvitation(invitationID).then((response) => {
         if (response.code === 200) {
           const row = document.getElementById(`invitation-${invitationID}`);
           if (row) row.remove();
         } else {
-          proviant.showFeedback('error', 'Error', response.message || 'Could not cancel invitation.');
+          proviant.showFeedback('error', proviant.t("common.error"), response.message || proviant.t("js.settings.couldNotCancelInvitation"));
         }
       });
     });
@@ -1542,7 +1545,7 @@ document.addEventListener("click", function (event) {
     const secret = document.getElementById('webhookSecretCopy').value;
     proviant.copyToClipboard(secret).then(function(success) {
       if (success) {
-        proviant.showFeedback('success', 'Copied', 'Secret copied to clipboard');
+        proviant.showFeedback('success', proviant.t("js.settings.copiedTitle"), proviant.t("js.settings.secretCopied"));
       }
     });
     return;
@@ -1579,12 +1582,12 @@ document.addEventListener("click", function (event) {
     event.preventDefault();
     const btn = target.closest(".btn-delete-sl");
     proviant.showConfirm(
-      "Delete Location",
-      `Delete "${btn.dataset.name}"? Products in this location will become unassigned.`,
+      proviant.t("js.settings.deleteLocationTitle"),
+      proviant.t("js.settings.deleteLocationConfirm", btn.dataset.name),
       function () {
         deleteStorageLocation(btn.dataset.id);
       },
-      "Delete",
+      proviant.t("common.delete"),
       "danger"
     );
     return;
@@ -1790,7 +1793,7 @@ function loadCalendarTokenStatus() {
           }
           if (expiryDate && expiresAt) {
             const expiryDateObj = new Date(expiresAt);
-            expiryDate.textContent = "Expires: " + expiryDateObj.toLocaleDateString();
+            expiryDate.textContent = proviant.t("household.expiresAt", expiryDateObj.toLocaleDateString());
           }
         }
       } else {
@@ -1819,17 +1822,17 @@ function handleCalendarCreate() {
       hasTokenEl.classList.remove("d-none");
       urlInput.value = url;
 
-      proviant.showFeedback('success', 'Calendar Token Created', 'Calendar token created. Subscribe using the URL above.');
+      proviant.showFeedback('success', proviant.t("js.settings.calendarTokenCreatedTitle"), proviant.t("js.settings.calendarTokenCreated"));
     } else {
-      proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to create calendar token"}`);
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.failedToCreateCalendarToken")));
     }
   });
 }
 
 function handleCalendarRegenerate() {
   proviant.showConfirm(
-    "Regenerate Token",
-    "This will invalidate your current calendar URL and create a new one. Update your calendar subscription with the new URL.",
+    proviant.t("js.settings.regenerateTokenTitle"),
+    proviant.t("js.settings.regenerateTokenConfirm"),
     function () {
       const btn = document.getElementById("btnCalendarRegenerate");
       if (btn) setButtonLoading(btn, true);
@@ -1851,17 +1854,17 @@ function handleCalendarRegenerate() {
             if (expiryBadge) expiryBadge.classList.add("d-none");
             if (expiryDate && expiresAt) {
               const expiryDateObj = new Date(expiresAt);
-              expiryDate.textContent = "Expires: " + expiryDateObj.toLocaleDateString();
+              expiryDate.textContent = proviant.t("household.expiresAt", expiryDateObj.toLocaleDateString());
             }
           }
 
-          proviant.showFeedback('success', 'Token Regenerated', 'Calendar token regenerated with new URL.');
+          proviant.showFeedback('success', proviant.t("js.settings.tokenRegeneratedTitle"), proviant.t("js.settings.calendarTokenRegenerated"));
         } else {
-          proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to regenerate calendar token"}`);
+          proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.failedToRegenerateCalendarToken")));
         }
       });
     },
-    "Regenerate",
+    proviant.t("js.settings.regenerate"),
     "warning"
   );
 }
@@ -1896,8 +1899,8 @@ function handleCalendarDownload() {
 
 function handleCalendarRemove() {
   proviant.showConfirm(
-    "Remove Calendar Sync",
-    "This will delete your calendar token and invalidate the subscription URL. Your calendar app will stop receiving updates.",
+    proviant.t("js.settings.removeCalendarSyncTitle"),
+    proviant.t("js.settings.removeCalendarSyncConfirm"),
     function () {
       proviant.deleteCalendarToken().then((response) => {
         if (response.code === 200) {
@@ -1909,13 +1912,13 @@ function handleCalendarRemove() {
           hasTokenEl.classList.add("d-none");
           urlInput.value = "";
 
-          proviant.showFeedback('success', 'Calendar Sync Removed', 'Calendar token removed.');
+          proviant.showFeedback('success', proviant.t("js.settings.calendarSyncRemovedTitle"), proviant.t("js.settings.calendarTokenRemoved"));
         } else {
-          proviant.showFeedback('error', 'Error', `Error: ${response.message || "Failed to remove calendar token"}`);
+          proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.failedToRemoveCalendarToken")));
         }
       });
     },
-    "Remove",
+    proviant.t("js.settings.remove"),
     "danger"
   );
 }
@@ -1935,13 +1938,13 @@ function openStorageLocationModal(data) {
     if (nameInput)  nameInput.value  = data.name      || "";
     if (iconInput)  iconInput.value  = data.icon      || "";
     if (sortInput)  sortInput.value  = data.sortOrder != null ? data.sortOrder : 0;
-    if (titleEl)    titleEl.textContent = "Edit Storage Location";
+    if (titleEl)    titleEl.textContent = proviant.t("js.settings.editStorageLocation");
   } else {
     if (idInput)    idInput.value    = "";
     if (nameInput)  nameInput.value  = "";
     if (iconInput)  iconInput.value  = "";
     if (sortInput)  sortInput.value  = "0";
-    if (titleEl)    titleEl.textContent = "Add Storage Location";
+    if (titleEl)    titleEl.textContent = proviant.t("js.settings.addStorageLocation");
   }
 
   const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -2003,27 +2006,27 @@ function saveStorageLocation() {
           <div class="btn-group btn-group-sm">
             <button type="button" class="btn btn-proviant-secondary btn-edit-sl"
                     data-id="${locId}" data-name="${locName}" data-icon="${locIcon}"
-                    data-sortorder="${locSort}" aria-label="Edit ${locName}">
+                    data-sortorder="${locSort}" aria-label="${proviant.t("household.editStorageLocationAria", locName)}">
               <i class="bi bi-pencil" aria-hidden="true"></i>
             </button>
             <button type="button" class="btn btn-proviant-danger btn-delete-sl"
-                    data-id="${locId}" data-name="${locName}" aria-label="Delete ${locName}">
+                    data-id="${locId}" data-name="${locName}" aria-label="${proviant.t("household.deleteStorageLocationAria", locName)}">
               <i class="bi bi-trash" aria-hidden="true"></i>
             </button>
           </div>`;
 
         if (!existing) list.appendChild(li);
 
-        proviant.showFeedback("success", isEdit ? "Location Updated" : "Location Added",
-          `"${locName}" ${isEdit ? "updated" : "added"} successfully.`);
+        proviant.showFeedback("success", isEdit ? proviant.t("js.settings.locationUpdated") : proviant.t("js.settings.locationAdded"),
+          isEdit ? proviant.t("js.settings.locationUpdatedMessage", locName) : proviant.t("js.settings.locationAddedMessage", locName));
       } else {
-        const msg = response.message || response.Message || "Unknown error";
-        proviant.showFeedback("error", "Error", `Failed to save location: ${msg}`);
+        const msg = response.message || response.Message || proviant.t("js.settings.unknownError");
+        proviant.showFeedback("error", proviant.t("common.error"), proviant.t("js.settings.failedToSaveLocation", msg));
       }
     })
     .catch((err) => {
       setButtonLoading(saveBtn, false);
-      proviant.showFeedback("error", "Error", `Request failed: ${err}`);
+      proviant.showFeedback("error", proviant.t("common.error"), proviant.t("js.settings.requestFailed", err));
     });
 }
 
@@ -2037,14 +2040,14 @@ function deleteStorageLocation(id) {
       if (code === 200) {
         const li = document.getElementById(`sl-${id}`);
         if (li) li.remove();
-        proviant.showFeedback("success", "Location Deleted", "Storage location removed.");
+        proviant.showFeedback("success", proviant.t("js.settings.locationDeleted"), proviant.t("js.settings.locationRemoved"));
       } else {
-        const msg = response.message || response.Message || "Unknown error";
-        proviant.showFeedback("error", "Error", `Failed to delete location: ${msg}`);
+        const msg = response.message || response.Message || proviant.t("js.settings.unknownError");
+        proviant.showFeedback("error", proviant.t("common.error"), proviant.t("js.settings.failedToDeleteLocation", msg));
       }
     })
     .catch((err) => {
-      proviant.showFeedback("error", "Error", `Request failed: ${err}`);
+      proviant.showFeedback("error", proviant.t("common.error"), proviant.t("js.settings.requestFailed", err));
     });
 }
 
@@ -2090,14 +2093,14 @@ async function handleWebPushToggle() {
         cachedWebPushVAPIDKey = keyResponse.publicKey;
       }
     } catch {
-      proviant.showFeedback('error', 'Error', 'Failed to initialize web push notifications.');
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.pushInitFailed"));
       return;
     }
   }
 
   const permission = Notification.permission;
   if (permission === 'denied') {
-    proviant.showFeedback('warning', 'Blocked', 'Push notifications are blocked. Please enable them in your browser settings.');
+    proviant.showFeedback('warning', proviant.t("js.settings.pushBlockedTitle"), proviant.t("js.settings.pushBlocked"));
     const toggle = document.getElementById("togglePushNotifications");
     if (toggle) toggle.checked = false;
     return;
@@ -2106,7 +2109,7 @@ async function handleWebPushToggle() {
   if (permission !== 'granted') {
     const result = await Notification.requestPermission();
     if (result !== 'granted') {
-      proviant.showFeedback('warning', 'Not Allowed', 'Push notification permission denied.');
+      proviant.showFeedback('warning', proviant.t("js.settings.pushNotAllowedTitle"), proviant.t("js.settings.pushPermissionDenied"));
       return;
     }
   }
@@ -2130,12 +2133,12 @@ async function handleWebPushToggle() {
     if (response.code === 200) {
       const pushSettings = document.getElementById("pushSettings");
       if (pushSettings) pushSettings.classList.remove("d-none");
-      proviant.showFeedback('success', 'Enabled', 'Push notifications enabled.');
+      proviant.showFeedback('success', proviant.t("js.settings.pushEnabledTitle"), proviant.t("js.settings.pushEnabled"));
     } else {
-      proviant.showFeedback('error', 'Error', 'Failed to save push subscription.');
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.pushSubscribeFailed"));
     }
   } catch (e) {
-    proviant.showFeedback('error', 'Error', `Push subscription failed: ${e.message}`);
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.pushSubscribeError", e.message));
   }
 }
 
@@ -2153,11 +2156,11 @@ async function handleWebPushUnsubscribe() {
       const pushSettings = document.getElementById("pushSettings");
       if (toggle) toggle.checked = false;
       if (pushSettings) pushSettings.classList.add("d-none");
-      proviant.showFeedback('success', 'Disabled', 'Push notifications disabled.');
+      proviant.showFeedback('success', proviant.t("js.settings.pushDisabledTitle"), proviant.t("js.settings.pushDisabled"));
     } else {
-      proviant.showFeedback('error', 'Error', 'Failed to disable push notifications.');
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.pushDisableFailed"));
     }
   } catch (e) {
-    proviant.showFeedback('error', 'Error', `Unsubscribe failed: ${e.message}`);
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.unsubscribeFailed", e.message));
   }
 }

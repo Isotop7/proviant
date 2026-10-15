@@ -69,19 +69,19 @@ document.addEventListener("DOMContentLoaded", function () {
     const confirm = confirmInput?.value || "";
 
     if (!password || password.length < 12) {
-      showError(errorBox, errorText, "Password must be at least 12 characters long.");
+      showError(errorBox, errorText, proviant.t("js.auth.passwordTooShort"));
       if (passwordInput) passwordInput.focus();
       return;
     }
 
     if (password !== confirm) {
-      showError(confirmErrorBox, confirmErrorText, "Passwords do not match.");
+      showError(confirmErrorBox, confirmErrorText, proviant.t("js.auth.passwordsMismatch"));
       if (confirmInput) confirmInput.focus();
       return;
     }
 
     if (submitBtn) submitBtn.disabled = true;
-    if (submitLabel) submitLabel.textContent = "Resetting...";
+    if (submitLabel) submitLabel.textContent = proviant.t("js.auth.resetting");
     if (submitIcon) submitIcon.className = "bi bi-hourglass-split";
 
     fetch("/auth/reset-password", {
@@ -100,17 +100,17 @@ document.addEventListener("DOMContentLoaded", function () {
           if (formInner) {
             formInner.innerHTML =
               '<div class="form-heading">' +
-              '<div class="form-heading-title">Password reset</div>' +
-              '<div class="form-heading-sub">You can now sign in with your new password.</div>' +
+              '<div class="form-heading-title">' + proviant.t("js.auth.passwordResetTitle") + '</div>' +
+              '<div class="form-heading-sub">' + proviant.t("js.auth.passwordResetHint") + '</div>' +
               "</div>" +
               '<div class="alert alert-success" role="alert">' +
               '<i class="bi bi-check-circle me-2"></i>' +
               (result.data && result.data.message
                 ? result.data.message
-                : "Your password has been reset successfully.") +
+                : proviant.t("js.auth.passwordResetSuccess")) +
               "</div>" +
               '<div class="text-center mt-3">' +
-              '<a href="' + routeAuth + '" class="btn btn-proviant-primary">Log In</a>' +
+              '<a href="' + routeAuth + '" class="btn btn-proviant-primary">' + proviant.t("auth.logIn") + '</a>' +
               "</div>";
           }
           return;
@@ -118,16 +118,16 @@ document.addEventListener("DOMContentLoaded", function () {
         const message =
           result.data && result.data.message
             ? result.data.message
-            : "Something went wrong. Please try again.";
+            : proviant.t("js.auth.genericError");
         showError(errorBox, errorText, message);
         if (submitBtn) submitBtn.disabled = false;
-        if (submitLabel) submitLabel.textContent = "Reset Password";
+        if (submitLabel) submitLabel.textContent = proviant.t("reset.submitLabel");
         if (submitIcon) submitIcon.className = "bi bi-check2";
       })
       .catch(function () {
-        showError(errorBox, errorText, "Network error. Please try again.");
+        showError(errorBox, errorText, proviant.t("js.auth.networkError"));
         if (submitBtn) submitBtn.disabled = false;
-        if (submitLabel) submitLabel.textContent = "Reset Password";
+        if (submitLabel) submitLabel.textContent = proviant.t("reset.submitLabel");
         if (submitIcon) submitIcon.className = "bi bi-check2";
       });
   });

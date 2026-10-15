@@ -479,6 +479,8 @@ definitions:
     type: object
   api.HouseholdSettingsResponse:
     properties:
+      language:
+        type: string
       monthlyWasteGoalCount:
         type: integer
       monthlyWasteGoalPercent:
@@ -986,6 +988,8 @@ definitions:
     type: object
   api.UpdateHouseholdSettingsRequest:
     properties:
+      language:
+        type: string
       monthlyWasteGoalCount:
         type: integer
       monthlyWasteGoalPercent:

@@ -1,0 +1,23 @@
+{
+  "receiptScan.apiKeyConfigured": "Custom API key configured.",
+  "receiptScan.apiKeyLabel": "API Key",
+  "receiptScan.apiKeyReplace": "Enter a new key to replace it.",
+  "receiptScan.clearApiKey": "Clear my custom API key",
+  "receiptScan.endpointHelp": "Leave empty to use the server endpoint and its configured API key.",
+  "receiptScan.endpointInvalid": "Enter a valid http:// or https:// URL.",
+  "receiptScan.endpointLabel": "Endpoint URL",
+  "receiptScan.keepCurrentPlaceholder": "Leave empty to keep current",
+  "receiptScan.modelHelp": "Leave empty to use the server default.",
+  "receiptScan.modelLabel": "Model",
+  "receiptScan.noApiKey": "No API key configured.",
+  "receiptScan.noCustomKeyCustom": "No custom key set — the server key is never sent to a custom endpoint.",
+  "receiptScan.noCustomKeyServer": "No custom key set — the server default key is used with the server default endpoint.",
+  "receiptScan.overrideServer": "Override Server Settings",
+  "receiptScan.overrideServerDesc": "Use your own vision model endpoint for receipt scanning instead of the server default.",
+  "receiptScan.overrideToggleLabel": "Override receipt scan settings",
+  "receiptScan.resetToDefaults": "Reset to Defaults",
+  "receiptScan.timeoutHelp": "Leave empty to use the server default. Range: 1–900.",
+  "receiptScan.timeoutInvalid": "Timeout must be between 1 and 900 seconds.",
+  "receiptScan.timeoutLabel": "Timeout (seconds)",
+  "receiptScan.title": "Receipt Scan — Vision Model"
+}

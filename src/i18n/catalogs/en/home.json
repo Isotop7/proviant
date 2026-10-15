@@ -1,0 +1,21 @@
+{
+  "home.categoriesChartAria": "Pie chart: product category breakdown",
+  "home.categoryBreakdown": "Category Breakdown",
+  "home.demoMode.desc": "This is a public demo instance. Data resets frequently.",
+  "home.demoMode.title": "Demo Mode",
+  "home.expiryTrend": "Expiry Trend (next 12 months)",
+  "home.expiryTrendChartAria": "Line chart: products expiring over the next 12 months",
+  "home.heroSub": "Add to your pantry in seconds",
+  "home.noHouseholdDesc": "You are not connected to any household. Switch to the user settings to connect to a household or create a new one.",
+  "home.noHouseholdTitle": "Oh no!",
+  "home.quickAction": "Quick action",
+  "home.recipesDesc": "Get recipe suggestions from your expiring products.",
+  "home.scanProduct": "Scan a product",
+  "home.setUpHousehold": "Set up Household",
+  "home.startScanning": "Start scanning",
+  "home.viewWasteAnalytics": "View waste analytics",
+  "home.wasteAnalyticsDesc": "See what you consume versus waste, with monetary and CO₂ impact.",
+  "home.wasteChartAria": "Donut chart: ratio of expired to fresh active products",
+  "home.wasteRate": "Waste Rate",
+  "home.whatCanIMake": "What can I make?"
+}

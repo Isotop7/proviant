@@ -11,6 +11,7 @@ import (
 	"codeberg.org/isotop7/proviant/api"
 	"codeberg.org/isotop7/proviant/controllers"
 	apperrors "codeberg.org/isotop7/proviant/errors"
+	"codeberg.org/isotop7/proviant/i18n"
 	"codeberg.org/isotop7/proviant/models/authentication"
 	"codeberg.org/isotop7/proviant/models/configuration"
 	"codeberg.org/isotop7/proviant/util"
@@ -131,7 +132,12 @@ func ForgotPassword(ctx *gin.Context) {
 
 	// Fire-and-forget the SMTP send with a bounded timeout and panic
 	// recovery so a stalled or buggy mail server cannot leak goroutines.
-	go func(email, name, rawToken, baseURL string, exp time.Time) {
+	householdLanguage := ""
+	if household, householdErr := repos.Users.GetHouseholdByID(user.HouseholdID); householdErr == nil {
+		householdLanguage = household.Language
+	}
+	lang := i18n.ResolveLanguage(user.Language, householdLanguage, "")
+	go func(email, name, rawToken, baseURL string, exp time.Time, lang string) {
 		defer func() {
 			if r := recover(); r != nil {
 				logger.Error().Msgf("Panic in password reset email goroutine: %v\n%s", r, debug.Stack())
@@ -141,7 +147,7 @@ func ForgotPassword(ctx *gin.Context) {
 		defer cancel()
 		done := make(chan error, 1)
 		go func() {
-			done <- nc.SendPasswordReset(email, name, rawToken, baseURL, exp)
+			done <- nc.SendPasswordReset(email, name, rawToken, baseURL, exp, lang)
 		}()
 		select {
 		case sendErr := <-done:
@@ -153,7 +159,7 @@ func ForgotPassword(ctx *gin.Context) {
 		case <-sendCtx.Done():
 			logger.Error().Msgf("Password reset email send to %s timed out after %s", email, passwordResetEmailTimeout)
 		}
-	}(user.MailAddress, user.EffectiveName(), token, proviantConfig.Server.BaseURL, expiresAt)
+	}(user.MailAddress, user.EffectiveName(), token, proviantConfig.Server.BaseURL, expiresAt, lang)
 
 	respondGenericOK()
 }

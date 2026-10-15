@@ -1,0 +1,21 @@
+{
+  "recipes.addIngredient": "Add ingredient",
+  "recipes.descriptionLabel": "Description",
+  "recipes.error.desc": "We couldn't fetch recipe suggestions at this time. Please try again later.",
+  "recipes.error.title": "Unable to load recipes",
+  "recipes.ingredients": "Ingredients",
+  "recipes.instructionsLabel": "Instructions",
+  "recipes.loading": "Loading...",
+  "recipes.loadingSaved": "Loading your recipes...",
+  "recipes.myRecipes": "My Recipes",
+  "recipes.nameLabel": "Name",
+  "recipes.newRecipe": "New recipe",
+  "recipes.refresh": "Refresh",
+  "recipes.saveRecipe": "Save recipe",
+  "recipes.servingsLabel": "Servings",
+  "recipes.sourceUrlLabel": "Source URL",
+  "recipes.subtitle": "Your saved recipes and suggestions based on products expiring soon",
+  "recipes.suggestions.loading": "Loading recipe suggestions...",
+  "recipes.suggestions.title": "Recipe Suggestions",
+  "recipes.tryAgain": "Try again"
+}
