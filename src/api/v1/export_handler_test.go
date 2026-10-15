@@ -153,6 +153,9 @@ func TestExportFullJSON(t *testing.T) {
 	if err := json.Unmarshal(env.W.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
+	if resp.Version != apiModel.BackupSchemaVersion {
+		t.Errorf("version = %d, want %d", resp.Version, apiModel.BackupSchemaVersion)
+	}
 	if resp.Household == nil || resp.Household.Name != env.Household.Name {
 		t.Errorf("household = %+v, want %q", resp.Household, env.Household.Name)
 	}

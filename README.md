@@ -54,7 +54,7 @@
 - ⏰ **Notifications** - expiration reminders, monthly waste reports and streak updates via email (SMTP), web push, [Ntfy](https://ntfy.sh/) or a [Telegram](https://telegram.org/) bot, with per-user preferences and an in-app notification centre.
 - 📆 **Calendar feed** - subscribe to household expiry dates from any calendar app via an iCal (`.ics`) feed.
 - 👥 **Combined Household** - multi-user households with invitations, roles and household-scoped data.
-- 📥 **Export & import** - download products and archive data as CSV or JSON, and import products from a CSV template.
+- 📥 **Export & import** - download products and archive data as CSV or JSON, import products from a CSV template, and restore a full household backup from JSON.
 - 🌙 **Theming** - light and dark mode.
 
 ## Quick Start
@@ -303,6 +303,23 @@ For a self-hosted provider, set `PROVIANT_RECIPE_API_PROVIDER`, `PROVIANT_RECIPE
 |---|---|---|
 | `PROVIANT_EXPIRY_CRITICAL_THRESHOLD_DAYS` | `3` | Days before expiry to mark as critical |
 | `PROVIANT_EXPIRY_SOON_THRESHOLD_DAYS` | `7` | Days before expiry to mark as expiring soon |
+
+#### Scheduled backups
+
+The scheduled backup job writes one full household JSON backup per household to a local directory. Backup files contain household data in cleartext; point the directory at storage you control and restrict who can read it.
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `PROVIANT_BACKUP_ENABLED` | `false` | Enable the scheduled household backup job |
+| `PROVIANT_BACKUP_INTERVALHOURS` | `24` | Hours between backup runs |
+| `PROVIANT_BACKUP_DIRECTORY` | `data/backups` | Directory the backup documents are written to |
+| `PROVIANT_BACKUP_RETENTION` | `7` | Backup files kept per household; `0` keeps every file |
+
+#### Restore uploads
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `PROVIANT_RESTORE_MAXUPLOADSIZEMB` | `50` | Maximum restore upload size in MB |
 
 Gin's debug mode is controlled by `PROVIANT_SERVER_DEBUG` (`GIN_MODE` is overridden at startup).
 

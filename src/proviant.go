@@ -160,6 +160,15 @@ func loadConfig(configDir string) *configuration.ProviantConfiguration {
 	viper.SetDefault("shopping_list_sync.bring_enabled", false)
 	viper.SetDefault("shopping_list_sync.todoist_enabled", false)
 
+	// Scheduled household backup defaults
+	viper.SetDefault("backup.enabled", false)
+	viper.SetDefault("backup.intervalHours", util.DefaultBackupIntervalHours)
+	viper.SetDefault("backup.directory", util.DefaultBackupDirectory)
+	viper.SetDefault("backup.retention", util.DefaultBackupRetention)
+
+	// Household backup restore defaults
+	viper.SetDefault("restore.maxUploadSizeMB", util.DefaultRestoreMaxUploadSizeMB)
+
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
 		panic(err.Error())
@@ -311,6 +320,13 @@ func main() {
 			proviantConfiguration.OCR.Receipt.Endpoint)
 	}
 
+	// Validate scheduled backup configuration
+	if err := proviantConfiguration.ValidateBackupConfiguration(); err != nil {
+		logger.Error().Msg(err.Error())
+		panic(err)
+	}
+	proviantConfiguration.ValidateRestoreConfiguration()
+
 	// Setup database connection handle
 	dbHandle, setupErr := setupDatabase(logger, &proviantConfiguration.Database)
 	if setupErr != nil {
@@ -406,6 +422,9 @@ func main() {
 
 	shoppingListSyncController := controllers.NewShoppingListSyncController(logger, &proviantConfiguration.ShoppingListSync, dbHandle)
 	shoppingListSyncController.Dispatch()
+
+	backupController := controllers.NewBackupController(logger, &proviantConfiguration.Backup, dbHandle)
+	backupController.Dispatch()
 
 	// Start background cleanup of expired revoked tokens
 	go startRevokedTokenCleanup(logger, dbHandle)

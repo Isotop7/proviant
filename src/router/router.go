@@ -259,6 +259,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.GET("/export/archive.csv", exportRateLimitMiddleware, v1.WrapHandler(v1.ExportArchiveCSV))
 	publicProductAPI.GET("/export/full.json", exportRateLimitMiddleware, v1.WrapHandler(v1.ExportFullJSON))
 	publicProductAPI.GET("/import/template.csv", v1.WrapHandler(v1.ImportTemplateCSV))
+	// Full JSON restore replaces the household inventory, so it is admin-gated
+	// even though it lives next to the member-level CSV import.
+	restoreAdminAPI := publicProductAPI.Group("")
+	restoreAdminAPI.Use(RequireHouseholdAdmin())
+	restoreAdminAPI.POST("/restore/full.json", importRateLimitMiddleware, v1.WrapHandler(v1.RestoreFullJSON))
 
 	// Protected user routes
 	protectedUserAPI := engine.Group("/api/v1/user")

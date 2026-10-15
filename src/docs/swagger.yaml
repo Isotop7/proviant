@@ -176,6 +176,8 @@ definitions:
         type: string
       accountEmail:
         type: string
+      clearAccessToken:
+        type: boolean
       enabled:
         type: boolean
       listId:
@@ -351,6 +353,8 @@ definitions:
         type: string
       openedAt:
         type: string
+      ownerUsername:
+        type: string
       priceOverride:
         type: number
       productName:
@@ -365,6 +369,41 @@ definitions:
         type: integer
       unit:
         type: string
+    type: object
+  api.FullExportHousehold:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      monthlyWasteGoalCount:
+        type: integer
+      monthlyWasteGoalPercent:
+        type: number
+      monthlyWasteGoalType:
+        type: string
+      name:
+        type: string
+    type: object
+  api.FullExportMember:
+    properties:
+      email:
+        type: string
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+  api.FullExportProducts:
+    properties:
+      active:
+        items:
+          $ref: '#/definitions/api.ExportProductResponse'
+        type: array
+      archived:
+        items:
+          $ref: '#/definitions/api.ExportProductResponse'
+        type: array
     type: object
   api.GenerateShoppingListRequest:
     properties:
@@ -821,6 +860,19 @@ definitions:
         type: string
       weeklyRate:
         type: number
+    type: object
+  api.RestoreResult:
+    properties:
+      locationsCreated:
+        type: integer
+      message:
+        type: string
+      productsArchived:
+        type: integer
+      productsImported:
+        type: integer
+      version:
+        type: integer
     type: object
   api.SavingsStatsResponse:
     properties:
@@ -1330,45 +1382,26 @@ definitions:
       url:
         type: string
     type: object
-  v1.FullExportHousehold:
-    properties:
-      created_at:
-        type: string
-      name:
-        type: string
-    type: object
-  v1.FullExportMember:
-    properties:
-      email:
-        type: string
-      username:
-        type: string
-    type: object
-  v1.FullExportProducts:
-    properties:
-      active:
-        items:
-          $ref: '#/definitions/api.ExportProductResponse'
-        type: array
-      archived:
-        items:
-          $ref: '#/definitions/api.ExportProductResponse'
-        type: array
-    type: object
   v1.FullExportResponse:
     properties:
-      exported_at:
+      exportedAt:
         type: string
       household:
-        $ref: '#/definitions/v1.FullExportHousehold'
+        $ref: '#/definitions/api.FullExportHousehold'
       members:
         items:
-          $ref: '#/definitions/v1.FullExportMember'
+          $ref: '#/definitions/api.FullExportMember'
         type: array
       products:
-        $ref: '#/definitions/v1.FullExportProducts'
+        $ref: '#/definitions/api.FullExportProducts'
       stats:
         $ref: '#/definitions/api.ProductStatsResponse'
+      storageLocations:
+        items:
+          $ref: '#/definitions/api.StorageLocationResponse'
+        type: array
+      version:
+        type: integer
     type: object
   v1.OpenProductRequest:
     properties:
@@ -3861,8 +3894,8 @@ paths:
       - export
   /api/v1/products/export/full.json:
     get:
-      description: Returns a comprehensive JSON export including household info, members,
-        products, and statistics
+      description: Returns a versioned household backup document including household
+        info, members, storage locations, products, and statistics
       produces:
       - application/json
       responses:
@@ -4021,6 +4054,39 @@ paths:
       summary: Return OpenFoodFacts product data
       tags:
       - product
+  /api/v1/products/restore/full.json:
+    post:
+      consumes:
+      - multipart/form-data
+      - application/json
+      description: Accepts a backup document produced by the full JSON export or the
+        scheduled backup job and replaces the household's products and storage locations
+        in one transaction. Accounts are not recreated; product ownership is mapped
+        onto members that still exist. The document's schema version is validated
+        first.
+      parameters:
+      - description: Backup JSON file
+        in: formData
+        name: file
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.RestoreResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Restore household data from a JSON backup
+      tags:
+      - import
   /api/v1/products/scan:
     post:
       consumes:

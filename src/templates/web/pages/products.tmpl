@@ -108,6 +108,10 @@
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#" id="mobile-import-csv"><i class="bi bi-upload me-2"></i>Import products (CSV)</a></li>
                         <li><a class="dropdown-item" href="#" id="mobile-import-template"><i class="bi bi-file-earmark-arrow-down me-2"></i>Download CSV template</a></li>
+                        {{ if .IsAdmin }}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-restore-json"><i class="bi bi-arrow-counterclockwise me-2"></i>Restore backup (JSON)</a></li>
+                        {{ end }}
                         {{ if .Products }}
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#" id="mobile-export-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Products CSV</a></li>
@@ -732,6 +736,8 @@
 
 <!-- Hidden file input backing the CSV import menu entries -->
 <input type="file" id="csvImportFile" accept=".csv,text/csv" class="d-none" aria-hidden="true" tabindex="-1">
+<!-- Hidden file input backing the JSON backup restore menu entries -->
+<input type="file" id="jsonRestoreFile" accept=".json,application/json" class="d-none" aria-hidden="true" tabindex="-1">
 
 <script src="/assets/js/html5-qrcode.min.js"></script>
 <script src="/assets/js/productsCreate.js"></script>

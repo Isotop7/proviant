@@ -36,6 +36,7 @@ type ExportProductResponse struct {
 	DaysAfterOpening     *int                     `json:"daysAfterOpening,omitempty"`
 	CreatedAt            time.Time                `json:"createdAt"`
 	ArchivedAt           *time.Time               `json:"archivedAt,omitempty"`
+	OwnerUsername        string                   `json:"ownerUsername,omitempty"`
 }
 
 // NewExportProductResponse projects a product onto the export shape. An archived
@@ -76,6 +77,18 @@ func NewExportProductResponse(product *dbModel.Product) ExportProductResponse {
 		resp.ArchivedAt = &archivedAt
 	}
 	return resp
+}
+
+// AssignExportProductOwners stamps the owning member's username onto projected
+// export rows. The product model only carries the owner id, which is not stable
+// across a restore into another instance, so the wire shape stores the name the
+// restore can match against the household's members.
+func AssignExportProductOwners(rows []ExportProductResponse, ownerNames map[uint]string) {
+	for i := range rows {
+		if name, ok := ownerNames[rows[i].ID]; ok {
+			rows[i].OwnerUsername = name
+		}
+	}
 }
 
 // NewExportProductResponses projects a slice of products onto the export shape.

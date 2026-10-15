@@ -98,8 +98,14 @@ proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confir
   if (titleEl) titleEl.textContent = title || "Are you sure?";
   if (msgEl) msgEl.textContent = message || "";
   if (btnEl) {
+    const confirmClasses = {
+      primary: "btn btn-proviant-primary",
+      secondary: "btn btn-proviant-secondary",
+      warning: "btn btn-proviant-warning",
+      danger: "btn btn-proviant-danger",
+    };
     btnEl.textContent = confirmLabel || "Confirm";
-    btnEl.className = "btn px-4 btn-" + (confirmType || "danger");
+    btnEl.className = confirmClasses[confirmType] || confirmClasses.danger;
     btnEl.onclick = function () { bootstrap.Modal.getInstance(modal).hide(); onConfirm(); };
   }
   bootstrap.Modal.getOrCreateInstance(modal).show();

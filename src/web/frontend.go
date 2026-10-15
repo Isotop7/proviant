@@ -538,6 +538,10 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	statusFilter := ctx.DefaultQuery("status", "all")
 
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
+	isAdmin := false
+	if currentUser, userErr := repos.Users.GetUserByID(userID); userErr == nil {
+		isAdmin = currentUser.Role == authentication.RoleAdmin
+	}
 
 	productQuery := &productQueryParams{
 		statusFilter:   statusFilter,
@@ -651,6 +655,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		"PrevPageURL":        prevPageURL,
 		"NextPageURL":        nextPageURL,
 		"CurrentUserID":      userID,
+		"IsAdmin":            isAdmin,
 		"ReceiptScanEnabled": receiptScanEnabled,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)

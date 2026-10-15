@@ -28,6 +28,11 @@
             <button class="btn btn-proviant-secondary btn-sm" id="btnImportProductsCSVEmpty">
                 <i class="bi bi-upload" aria-hidden="true"></i> Import from CSV
             </button>
+            {{ if .IsAdmin }}
+            <button class="btn btn-proviant-secondary btn-sm" id="btnRestoreBackupJSONEmpty">
+                <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Restore backup
+            </button>
+            {{ end }}
         </div>
         {{ end }}
     </div>

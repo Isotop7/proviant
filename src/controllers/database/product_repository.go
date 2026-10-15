@@ -852,6 +852,12 @@ func validateOpenedLifecycle(openedAt *time.Time, daysAfterOpening *int) error {
 	return nil
 }
 
+// ValidateOpenedLifecycle is the exported form of the create/update guard so
+// the backup restore path applies the same bounds instead of trusting the file.
+func ValidateOpenedLifecycle(openedAt *time.Time, daysAfterOpening *int) error {
+	return validateOpenedLifecycle(openedAt, daysAfterOpening)
+}
+
 func (r *ProductRepository) UpdateProductAmount(productID uint, userID uint, delta int) (bool, error) {
 	if productID == 0 {
 		return false, gorm.ErrNotImplemented
@@ -1731,6 +1737,31 @@ func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database
 	var products []database.Product
 	result := r.DB.Where("household_id = ? AND deleted_at IS NULL AND is_private = 0", householdID).Find(&products)
 	return products, result.Error
+}
+
+// GetHouseholdProductsForBackup returns every active household product
+// including private rows. A backup exists to reproduce the household, so the
+// privacy scope every user-facing query applies must not silently drop a
+// member's private stock from the file.
+func (r *ProductRepository) GetHouseholdProductsForBackup(householdID uint) ([]database.Product, error) {
+	var products []database.Product
+	err := r.DB.Preload("StorageLocation").
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
+		Find(&products).Error
+	return products, err
+}
+
+// GetHouseholdArchivedProductsForBackup is the archived counterpart of
+// GetHouseholdProductsForBackup: every soft-deleted household row, private
+// ones included.
+func (r *ProductRepository) GetHouseholdArchivedProductsForBackup(householdID uint) ([]database.Product, error) {
+	var products []database.Product
+	err := r.DB.Preload("StorageLocation").Unscoped().
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNotNull).
+		Find(&products).Error
+	return products, err
 }
 
 // GetMatchableProductsByHousehold returns the household's matchable products

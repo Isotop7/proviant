@@ -12,6 +12,10 @@
         <li><hr class="dropdown-divider"></li>
         <li><a class="dropdown-item" href="#" id="btnImportProductsCSV"><i class="bi bi-upload me-2"></i>Import products (CSV)</a></li>
         <li><a class="dropdown-item" href="#" id="btnDownloadImportTemplate"><i class="bi bi-file-earmark-arrow-down me-2"></i>Download CSV template</a></li>
+        {{ if .IsAdmin }}
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#" id="btnRestoreBackupJSON"><i class="bi bi-arrow-counterclockwise me-2"></i>Restore backup (JSON)</a></li>
+        {{ end }}
     </ul>
 </div>
 

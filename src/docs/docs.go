@@ -2965,7 +2965,7 @@ const docTemplate = `{
         },
         "/api/v1/products/export/full.json": {
             "get": {
-                "description": "Returns a comprehensive JSON export including household info, members, products, and statistics",
+                "description": "Returns a versioned household backup document including household info, members, storage locations, products, and statistics",
                 "produces": [
                     "application/json"
                 ],
@@ -3194,6 +3194,50 @@ const docTemplate = `{
                     },
                     "502": {
                         "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/restore/full.json": {
+            "post": {
+                "description": "Accepts a backup document produced by the full JSON export or the scheduled backup job and replaces the household's products and storage locations in one transaction. Accounts are not recreated; product ownership is mapped onto members that still exist. The document's schema version is validated first.",
+                "consumes": [
+                    "multipart/form-data",
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "import"
+                ],
+                "summary": "Restore household data from a JSON backup",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Backup JSON file",
+                        "name": "file",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.RestoreResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -6827,6 +6871,9 @@ const docTemplate = `{
                 "accountEmail": {
                     "type": "string"
                 },
+                "clearAccessToken": {
+                    "type": "boolean"
+                },
                 "enabled": {
                     "type": "boolean"
                 },
@@ -7088,6 +7135,9 @@ const docTemplate = `{
                 "openedAt": {
                     "type": "string"
                 },
+                "ownerUsername": {
+                    "type": "string"
+                },
                 "priceOverride": {
                     "type": "number"
                 },
@@ -7108,6 +7158,60 @@ const docTemplate = `{
                 },
                 "unit": {
                     "type": "string"
+                }
+            }
+        },
+        "api.FullExportHousehold": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "monthlyWasteGoalCount": {
+                    "type": "integer"
+                },
+                "monthlyWasteGoalPercent": {
+                    "type": "number"
+                },
+                "monthlyWasteGoalType": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.FullExportMember": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.FullExportProducts": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ExportProductResponse"
+                    }
+                },
+                "archived": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ExportProductResponse"
+                    }
                 }
             }
         },
@@ -7798,6 +7902,26 @@ const docTemplate = `{
                 },
                 "weeklyRate": {
                     "type": "number"
+                }
+            }
+        },
+        "api.RestoreResult": {
+            "type": "object",
+            "properties": {
+                "locationsCreated": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "productsArchived": {
+                    "type": "integer"
+                },
+                "productsImported": {
+                    "type": "integer"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -8572,65 +8696,35 @@ const docTemplate = `{
                 }
             }
         },
-        "v1.FullExportHousehold": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.FullExportMember": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.FullExportProducts": {
-            "type": "object",
-            "properties": {
-                "active": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/api.ExportProductResponse"
-                    }
-                },
-                "archived": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/api.ExportProductResponse"
-                    }
-                }
-            }
-        },
         "v1.FullExportResponse": {
             "type": "object",
             "properties": {
-                "exported_at": {
+                "exportedAt": {
                     "type": "string"
                 },
                 "household": {
-                    "$ref": "#/definitions/v1.FullExportHousehold"
+                    "$ref": "#/definitions/api.FullExportHousehold"
                 },
                 "members": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/v1.FullExportMember"
+                        "$ref": "#/definitions/api.FullExportMember"
                     }
                 },
                 "products": {
-                    "$ref": "#/definitions/v1.FullExportProducts"
+                    "$ref": "#/definitions/api.FullExportProducts"
                 },
                 "stats": {
                     "$ref": "#/definitions/api.ProductStatsResponse"
+                },
+                "storageLocations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.StorageLocationResponse"
+                    }
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },

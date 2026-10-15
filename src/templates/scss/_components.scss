@@ -3,7 +3,8 @@
 // Buttons — unified size regardless of btn-sm / btn-lg modifier
 .btn-proviant-primary,
 .btn-proviant-secondary,
-.btn-proviant-danger {
+.btn-proviant-danger,
+.btn-proviant-warning {
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 500;
@@ -103,6 +104,17 @@
   &:hover {
     color: white;
     background: var(--status-expired-hover);
+  }
+}
+
+.btn-proviant-warning {
+  color: var(--status-soon-fg);
+  background: var(--status-soon);
+  border: none;
+
+  &:hover {
+    color: var(--status-soon-fg);
+    background: var(--status-soon-hover);
   }
 }
 

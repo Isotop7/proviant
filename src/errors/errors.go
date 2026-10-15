@@ -520,6 +520,40 @@ var (
 	ErrExportCSVWriteWrapper = "CSV write error: %s"
 
 	/*
+	 * Household backup / restore related errors
+	 */
+	// ErrBackupMissingFile is thrown when the restore request carries neither a
+	// JSON body nor a file part
+	ErrBackupMissingFile = errors.New("no backup file uploaded")
+
+	// ErrBackupInvalidDocument is thrown when the uploaded file is not a valid
+	// household backup document
+	ErrBackupInvalidDocument = errors.New("file is not a valid household backup")
+
+	// ErrBackupUnsupportedVersion is thrown when the backup document carries a
+	// schema version this release cannot restore
+	ErrBackupUnsupportedVersion = errors.New("unsupported backup schema version")
+
+	// ErrBackupRestoreFailed is thrown when the transactional restore fails
+	ErrBackupRestoreFailed = errors.New("failed to restore household backup")
+
+	// ErrBackupInvalidDirectory is thrown when the scheduled backup target is
+	// configured but unusable
+	ErrBackupInvalidDirectory = errors.New("backup directory is invalid")
+
+	// ErrBackupInvalidSchedule is thrown when the scheduled backup interval is
+	// not positive or retention is negative
+	ErrBackupInvalidSchedule = errors.New("backup schedule is invalid")
+
+	// ErrBackupTooManyProducts is thrown when one restore carries more products
+	// than the backup schema allows
+	ErrBackupTooManyProducts = errors.New("backup contains too many products")
+
+	// ErrBackupTooManyLocations is thrown when one restore carries more storage
+	// locations than the backup schema allows
+	ErrBackupTooManyLocations = errors.New("backup contains too many storage locations")
+
+	/*
 	 * CSV import related errors
 	 */
 	// ErrImportMissingFile is thrown when the import request carries no file part

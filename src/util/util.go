@@ -194,12 +194,38 @@ const (
 	ShoppingListProviderTodoist            = "todoist"
 	ShoppingListProviderNoop               = "noop"
 	DefaultShoppingListSyncIntervalMinutes = 15
-	DefaultShoppingListSyncTimeoutSeconds  = 15
-	DefaultTodoistAPIBaseURL               = "https://api.todoist.com/rest/v2"
-	DefaultBringAPIBaseURL                 = "https://api.getbring.com/rest/v2"
-	SyncRefStatusSynced                    = "synced"
-	SyncRefStatusPending                   = "pending"
-	SyncRefStatusOrphaned                  = "orphaned"
+
+	// Scheduled household backup defaults. The target is a local directory
+	// because backup files carry household data in cleartext; the operator is
+	// responsible for where it points and who can read it.
+	DefaultBackupIntervalHours = 24
+	DefaultBackupDirectory     = "data/backups"
+	DefaultBackupRetention     = 7
+
+	// DefaultRestoreMaxUploadSizeMB bounds a restore upload. A full household
+	// backup is much larger than an ordinary request body, so it must not share
+	// server.maxUploadSizeMB (5 MB), which would reject a legitimate restore.
+	DefaultRestoreMaxUploadSizeMB = 50
+
+	// BackupFilePrefix is the filename prefix of scheduled backup documents.
+	// Retention pruning matches on it, so renaming it orphans old files.
+	BackupFilePrefix                      = "proviant-backup-"
+	DefaultShoppingListSyncTimeoutSeconds = 15
+	DefaultTodoistAPIBaseURL              = "https://api.todoist.com/rest/v2"
+	DefaultBringAPIBaseURL                = "https://api.getbring.com/rest/v2"
+	SyncRefStatusSynced                   = "synced"
+	SyncRefStatusPending                  = "pending"
+	SyncRefStatusOrphaned                 = "orphaned"
+
+	// BackupRestoreMaxProducts and BackupRestoreMaxStorageLocations bound one
+	// restore. The upload cap already bounds bytes, but tiny rows can still fan
+	// out into hundreds of thousands of inserts inside one transaction.
+	BackupRestoreMaxProducts         = 50000
+	BackupRestoreMaxStorageLocations = 5000
+
+	// DefaultBackupStopWaitSeconds bounds Stop(): filesystem writes cannot be
+	// canceled reliably, so shutdown waits briefly instead of hanging forever.
+	DefaultBackupStopWaitSeconds = 5
 )
 
 // CsvImportColumnAliases maps an accepted alternative column header to its

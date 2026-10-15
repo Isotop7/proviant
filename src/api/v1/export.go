@@ -8,14 +8,13 @@ import (
 	"time"
 
 	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
+	"codeberg.org/isotop7/proviant/controllers"
 	"codeberg.org/isotop7/proviant/errors"
 	apiModel "codeberg.org/isotop7/proviant/models/api"
 	dbModel "codeberg.org/isotop7/proviant/models/database"
 	"codeberg.org/isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 )
 
 const (
@@ -69,28 +68,10 @@ func productToExportRow(p *dbModel.Product) []string {
 	}
 }
 
-type FullExportResponse struct {
-	Household  *FullExportHousehold          `json:"household"`
-	Members    []FullExportMember            `json:"members"`
-	Products   FullExportProducts            `json:"products"`
-	Stats      apiModel.ProductStatsResponse `json:"stats"`
-	ExportedAt string                        `json:"exported_at"`
-}
-
-type FullExportHousehold struct {
-	Name      string `json:"name"`
-	CreatedAt string `json:"created_at"`
-}
-
-type FullExportMember struct {
-	Username    string `json:"username"`
-	MailAddress string `json:"email"`
-}
-
-type FullExportProducts struct {
-	Active   []apiModel.ExportProductResponse `json:"active"`
-	Archived []apiModel.ExportProductResponse `json:"archived"`
-}
+type FullExportResponse = apiModel.FullExportResponse
+type FullExportHousehold = apiModel.FullExportHousehold
+type FullExportMember = apiModel.FullExportMember
+type FullExportProducts = apiModel.FullExportProducts
 
 // ExportProductsCSV exports the user's active products as CSV.
 // @Summary      Export products as CSV
@@ -205,7 +186,7 @@ func ExportArchiveCSV(ctx *gin.Context, appCtx *AppContext) {
 
 // ExportFullJSON exports all household data as JSON.
 // @Summary      Export all household data as JSON
-// @Description  Returns a comprehensive JSON export including household info, members, products, and statistics
+// @Description  Returns a versioned household backup document including household info, members, storage locations, products, and statistics
 // @Tags         export
 // @Produce      application/json
 // @Success      200  {object}  FullExportResponse
@@ -213,144 +194,21 @@ func ExportArchiveCSV(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/export/full.json [get]
 func ExportFullJSON(ctx *gin.Context, appCtx *AppContext) {
-	user, err := appCtx.Repos.Products.GetUserByID(appCtx.UserID)
+	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil {
-		appCtx.Logger.Error().Msgf("GetUserByID: %s", err)
+		appCtx.Logger.Error().Msgf("GetUserHouseholdByID: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	household, err := appCtx.Repos.Products.GetHouseholdByID(user.HouseholdID)
+	response, err := controllers.BuildFullExport(appCtx.DB, appCtx.Logger, householdID, appCtx.UserID, false)
 	if err != nil {
-		appCtx.Logger.Error().Msgf("GetHouseholdByID: %s", err)
+		appCtx.Logger.Error().Msgf("BuildFullExport: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
-	}
-
-	members, err := appCtx.Repos.Products.GetUsersByHouseholdID(user.HouseholdID)
-	if err != nil {
-		appCtx.Logger.Error().Msgf("GetUsersByHouseholdID: %s", err)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-
-	activeProducts, err := appCtx.Repos.Products.GetUserActiveProductsFiltered(appCtx.UserID, nil, nil)
-	if err != nil {
-		appCtx.Logger.Error().Msgf(GetUserActiveProductsFiltered, err)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-
-	archivedProducts, err := appCtx.Repos.Products.GetUserArchivedProductsFiltered(appCtx.UserID, nil, nil)
-	if err != nil {
-		appCtx.Logger.Error().Msgf(fmtGetUserArchivedProductsFilter, err)
-		ctx.JSON(http.StatusInternalServerError, api.InternalError())
-		return
-	}
-
-	stats, ok := buildExportStats(ctx, appCtx.Repos, appCtx.UserID, user.HouseholdID, user.NotificationPreferences.NotificationThresholdDays, len(archivedProducts), appCtx.Logger)
-	if !ok {
-		return
-	}
-
-	exportedAt := time.Now().Format(time.RFC3339)
-
-	exportMembers := make([]FullExportMember, len(members))
-	for i := range members {
-		exportMembers[i] = FullExportMember{
-			Username:    members[i].Username,
-			MailAddress: members[i].MailAddress,
-		}
-	}
-
-	response := FullExportResponse{
-		Household: &FullExportHousehold{
-			Name:      household.Name,
-			CreatedAt: household.CreatedAt.Format(util.DefaultDateFormatParseStr),
-		},
-		Members: exportMembers,
-		Products: FullExportProducts{
-			Active:   apiModel.NewExportProductResponses(activeProducts),
-			Archived: apiModel.NewExportProductResponses(archivedProducts),
-		},
-		Stats:      stats,
-		ExportedAt: exportedAt,
 	}
 
 	ctx.Header(util.RequestHeaderContentType, "application/json")
 	ctx.Header(util.RequestHeaderContentDisposition, "attachment; filename=\"full_export.json\"")
 	ctx.JSON(http.StatusOK, response)
-}
-
-func buildExportStats(ctx *gin.Context, repos *database.RepositoryContainer, userID uint, householdID uint, notificationThresholdDays int, archivedProductsLen int, logger *zerolog.Logger) (apiModel.ProductStatsResponse, bool) {
-	totalActive, err := repos.Products.GetActiveProductsCount(userID)
-	if err != nil {
-		logger.Error().Msgf(errors.FmtErrGetActiveProductsCount, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingActiveCount})
-		return apiModel.ProductStatsResponse{}, false
-	}
-
-	wasteCount, err := repos.Products.GetExpiredProductsCount(userID)
-	if err != nil {
-		logger.Error().Msgf(errors.FmtErrGetExpiredProductsCount, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingWasteCount})
-		return apiModel.ProductStatsResponse{}, false
-	}
-
-	var wastePercent float64
-	if totalActive > 0 {
-		wastePercent = float64(wasteCount) / float64(totalActive) * 100
-	}
-
-	expiringSoonDays := 7
-	if notificationThresholdDays > 0 {
-		expiringSoonDays = notificationThresholdDays
-	}
-
-	expiringSoon, err := repos.Products.GetExpiringSoonProducts(userID, expiringSoonDays)
-	if err != nil {
-		logger.Error().Msgf(errors.FmtErrGetExpiringSoonProducts, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiringSoon})
-		return apiModel.ProductStatsResponse{}, false
-	}
-
-	categories, err := repos.Products.GetProductCategoryBreakdown(userID)
-	if err != nil {
-		logger.Error().Msgf(errors.FmtErrGetProductCategoryBreakdown, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingCategoryBreakdown})
-		return apiModel.ProductStatsResponse{}, false
-	}
-
-	expiryTrend, err := repos.Products.GetExpiryTrend(userID)
-	if err != nil {
-		logger.Error().Msgf(errors.FmtErrGetExpiryTrend, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiryTrend})
-		return apiModel.ProductStatsResponse{}, false
-	}
-
-	uniqueArchived, err := repos.Products.GetUniqueArchivedProductsCount(userID)
-	if err != nil {
-		logger.Error().Msgf(errors.FmtErrGetUniqueArchivedCount, err)
-		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingUniqueArchivedCount})
-		return apiModel.ProductStatsResponse{}, false
-	}
-
-	var lastInsertedProduct string
-	lastProduct, lastErr := repos.Products.GetLastInsertedProduct(householdID)
-	if lastErr == nil && lastProduct.ID != 0 {
-		lastInsertedProduct = lastProduct.ProductName
-	}
-
-	return apiModel.ProductStatsResponse{
-		WasteCount:          wasteCount,
-		WastePercent:        wastePercent,
-		TotalActive:         totalActive,
-		TotalArchived:       archivedProductsLen,
-		UniqueArchived:      uniqueArchived,
-		LastInsertedProduct: lastInsertedProduct,
-		ExpiringSoon:        expiringSoon,
-		ExpiringSoonDays:    expiringSoonDays,
-		Categories:          categories,
-		ExpiryTrend:         expiryTrend,
-	}, true
 }

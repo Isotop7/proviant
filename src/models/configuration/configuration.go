@@ -202,6 +202,23 @@ type ShoppingListSyncConfiguration struct {
 	TodoistEnabled  bool `mapstructure:"todoist_enabled"`
 }
 
+// BackupConfiguration controls the scheduled household backup job. The target
+// is a local directory: backup files carry household data in cleartext, so the
+// operator chooses where they land and who can read them.
+type BackupConfiguration struct {
+	Enabled       bool   `mapstructure:"enabled"`
+	IntervalHours int    `mapstructure:"intervalHours"`
+	Directory     string `mapstructure:"directory"`
+	Retention     int    `mapstructure:"retention"`
+}
+
+// RestoreConfiguration bounds a household backup restore upload. It is
+// separate from server.maxUploadSizeMB because a full household backup is
+// legitimately much larger than an ordinary request body.
+type RestoreConfiguration struct {
+	MaxUploadSizeMB int `mapstructure:"maxUploadSizeMB"`
+}
+
 // IsProviderEnabled reports whether the given provider is enabled at the instance level.
 func (c ShoppingListSyncConfiguration) IsProviderEnabled(provider string) bool {
 	if !c.Enabled {
@@ -231,6 +248,8 @@ type ProviantConfiguration struct {
 	RecipeAPI        RecipeAPIConfiguration        `mapstructure:"recipe_api"`
 	Expiry           ExpiryConfiguration           `mapstructure:"expiry"`
 	ShoppingListSync ShoppingListSyncConfiguration `mapstructure:"shopping_list_sync"`
+	Backup           BackupConfiguration           `mapstructure:"backup"`
+	Restore          RestoreConfiguration          `mapstructure:"restore"`
 	TemplateCache    map[string]*template.Template
 
 	// RecipeAPIDisabled is set at startup when the recipe feature cannot work
@@ -391,6 +410,34 @@ func (ec *ProviantConfiguration) ValidateServerConfiguration() error {
 		return errors.ErrRateLimitInvalidValue
 	}
 	return nil
+}
+
+// ValidateBackupConfiguration validates the scheduled backup target. A disabled
+// job is always valid: nothing is written, so there is no directory to reject.
+// An enabled one must name a directory and a positive interval; retention may
+// be 0 to keep every file.
+func (ec *ProviantConfiguration) ValidateBackupConfiguration() error {
+	if !ec.Backup.Enabled {
+		return nil
+	}
+	ec.Backup.Directory = strings.TrimSpace(ec.Backup.Directory)
+	if ec.Backup.Directory == "" {
+		return errors.ErrBackupInvalidDirectory
+	}
+	if ec.Backup.IntervalHours <= 0 || ec.Backup.Retention < 0 {
+		return errors.ErrBackupInvalidSchedule
+	}
+	return nil
+}
+
+// ValidateRestoreConfiguration normalizes the restore upload cap. A missing or
+// nonsensical value falls back to the restore default rather than disabling
+// restores: the endpoint must be able to read back every document the exporter
+// writes.
+func (ec *ProviantConfiguration) ValidateRestoreConfiguration() {
+	if ec.Restore.MaxUploadSizeMB <= 0 {
+		ec.Restore.MaxUploadSizeMB = util.DefaultRestoreMaxUploadSizeMB
+	}
 }
 
 // IsSelfHosted reports whether the configured provider is a self-hosted
