@@ -3,8 +3,8 @@ package v1
 import (
 	"net/http"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/errors"
 
 	"github.com/gin-gonic/gin"
 )

@@ -84,16 +84,16 @@ function editProduct() {
     proviant.editProduct(product).then((response) => {
         switch (response.code) {
             case 200:
-                proviant.showFeedback('success', 'Product Updated', `Product #${productID} was updated successfully.`);
+                proviant.showFeedback('success', proviant.t("js.products.productUpdated"), proviant.t("js.products.productUpdatedMsg", productID));
                 break;
             case 400:
-                proviant.showFeedback('error', 'Invalid Data', 'Request contained invalid data.');
+                proviant.showFeedback('error', proviant.t("js.products.invalidDataTitle"), proviant.t("js.products.invalidRequestData"));
                 break;
             case 500:
-                proviant.showFeedback('error', 'Server Error', `Backend server error: ${response.message}`);
+                proviant.showFeedback('error', proviant.t("js.products.serverErrorTitle"), proviant.t("js.products.backendServerErrorMsg", response.message));
                 break;
             default:
-                proviant.showFeedback('error', 'Error', `Undefined error: ${response.message}`);
+                proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.products.undefinedError", response.message));
                 break;
         }
     });
@@ -108,7 +108,7 @@ function deleteProduct() {
         if (response.code === 200) {
             window.location.href = '/web/products';
         } else {
-            proviant.showFeedback('error', 'Delete Failed', `Could not delete product: ${response.message}`);
+            proviant.showFeedback('error', proviant.t("js.products.deleteFailed"), proviant.t("js.products.deleteFailedMsg", response.message));
         }
     });
 }
@@ -122,7 +122,7 @@ function restoreProduct() {
         if (response.code === 200) {
             window.location.href = '/web/products';
         } else {
-            proviant.showFeedback('error', 'Restore Failed', `Could not restore product: ${response.message}`);
+            proviant.showFeedback('error', proviant.t("js.products.restoreProductFailed"), proviant.t("js.products.restoreProductFailedMsg", response.message));
         }
     });
 }
@@ -172,7 +172,7 @@ function consumeProduct() {
         if (response.code === 200) {
             window.location.href = '/web/products';
         } else {
-            proviant.showFeedback('error', 'Consume Failed', `Could not mark product as consumed: ${response.message}`);
+            proviant.showFeedback('error', proviant.t("js.products.consumeFailed"), proviant.t("js.products.couldNotMarkConsumed", response.message));
         }
     });
 }
@@ -274,11 +274,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 
-/* Add-to-shopping-list flow. The button may live on the product detail
-   page (productsView.tmpl) or the product edit page (productsEdit.tmpl);
-   both render a button with class .btn-add-to-shopping-list and a
-   data-product-id attribute. The modal markup (#restockSuggestionModal)
-   is provided by the host template. */
+/* Add-to-shopping-list flow. The button lives on the product edit page
+   (productsEdit.tmpl), which renders a button with class
+   .btn-add-to-shopping-list and a data-product-id attribute. The modal
+   markup (#restockSuggestionModal) is provided by the host template. */
 function handleAddToShoppingList(btn) {
     var productId = btn.dataset.productId;
     if (!productId) return;
@@ -302,9 +301,9 @@ function handleAddToShoppingList(btn) {
                 await proviant.addToShoppingList(productId, 1, '');
             }
         },
-        'Added to shopping list',
+        proviant.t("js.products.addedToShoppingList"),
         function (err) {
-            proviant.showFeedback('error', 'Failed to add', err.message || 'Could not add to shopping list');
+            proviant.showFeedback('error', proviant.t("js.products.failedToAdd"), err.message || proviant.t("js.products.addToShoppingListFailed"));
         }
     );
 }
@@ -329,7 +328,7 @@ function openRestockModal(suggestion) {
         if (qtyEl) qtyEl.value = suggestion.suggestedQty;
         if (unitEl) unitEl.value = suggestion.unit || '';
         if (productEl) {
-            productEl.textContent = suggestion.productName || suggestion.display || 'Suggested quantity';
+            productEl.textContent = suggestion.productName || suggestion.display || proviant.t("js.products.suggestedQuantity");
         }
         if (reasonEl) {
             // Single source of truth: the server pre-formats this in
@@ -366,10 +365,10 @@ function openRestockModal(suggestion) {
 
 function buildModalReason(suggestion) {
     if (suggestion.source === 'consumption_rate' && suggestion.perWeekDisplay) {
-        return 'Based on your usage (' + suggestion.perWeekDisplay + ').';
+        return proviant.t("js.products.basedOnUsage", suggestion.perWeekDisplay);
     }
     if (suggestion.source === 'min_stock') {
-        return 'Based on your minimum stock level.';
+        return proviant.t("js.products.basedOnMinStock");
     }
-    return 'Suggested quantity.';
+    return proviant.t("js.products.suggestedQuantityReason");
 }

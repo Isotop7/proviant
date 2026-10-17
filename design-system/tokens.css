@@ -145,3 +145,10 @@
     --motion-slow: 0ms;
   }
 }
+
+/* ── Dark theme ─────────────────────────────────────────────────────
+ * Opt-in via [data-theme="dark"] oder prefers-color-scheme: dark.
+ * Überschreibt tokens.css in tokens.dark.css. HTML con (base/root) muss
+ * tokens.dark.css nach tokens.css einbinden. Komponenten erben die
+ * Tokens automatisch.
+ * ─────────────────────────────────────────────────────────────────── */

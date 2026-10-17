@@ -56,16 +56,29 @@ describe("loadClassicScript error reporting", () => {
 describe("loadClassicScript isolation", () => {
   const fetchStub = async () => ({ status: 200, json: async () => ({}) });
 
-  it("gives each load a pristine copy of the module state", () => {
+  it("gives each load its own module instance", () => {
     const first = loadClassicScript("proviant.js", ["proviant"], { globals: { fetch: fetchStub } });
-    first.exports.proviant._enqueueAmountDelta(7, 2);
+    const second = loadClassicScript("proviant.js", ["proviant"], { globals: { fetch: fetchStub } });
+
+    expect(second.exports.proviant).not.toBe(first.exports.proviant);
+  });
+
+  // The source is wrapped in a function, so a load can only see realm state it
+  // inherited: localStorage and the document survive between loads, module scope
+  // does not. Asserting on the marker proves the prelude ran against the same
+  // realm the script under test then reads.
+  it("applies the prelude to the realm before the script runs", () => {
+    const first = loadClassicScript("proviant.js", ["proviant"], {
+      prelude: "localStorage.setItem('proviant_test_probe', 'first');",
+      globals: { fetch: fetchStub },
+    });
+    expect(first.realm.localStorage.getItem("proviant_test_probe")).toBe("first");
 
     const second = loadClassicScript("proviant.js", ["proviant"], {
       prelude: "localStorage.clear();",
       globals: { fetch: fetchStub },
     });
-
-    expect(second.exports.proviant._offlineQueue).toHaveLength(0);
+    expect(second.realm.localStorage.getItem("proviant_test_probe")).toBeNull();
   });
 
   it("does not accumulate script elements in the document head", () => {

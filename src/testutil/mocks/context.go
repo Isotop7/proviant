@@ -6,8 +6,8 @@ package mocks
 import (
 	"net/http/httptest"
 
-	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"

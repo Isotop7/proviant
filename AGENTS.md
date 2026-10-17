@@ -49,7 +49,7 @@ Rules that must not regress:
 ## Code Style Guidelines
 
 ### Imports
-- Group: stdlib → internal (`codeberg.org/…`) → external.
+- Group: stdlib → internal (`github.com/Isotop7/proviant/…`) → external.
 - Side-effect imports use `_` and a one-line why.
 
 ### Formatting
@@ -158,6 +158,17 @@ Four constraints, each verified empirically (not assumed):
 ## Dashboard / Portal
 
 Home (`/web/`) is fully client-side: `web/frontend.go → Root` passes only `HasHousehold` + `Household` — no server-side tile data. Tiles come from `GET /api/v1/products/stats` (JWT) → `apiModel.ProductStatsResponse` (`src/models/api/stats.go`): waste/active/archived counts, `lastInsertedProduct`, `expiringSoon` (next 7 days), `categories`, `expiryTrend` (next 12 months). `src/assets/js/homeStats.js` renders the tiles and three Chart.js charts (`home.tmpl`) on `DOMContentLoaded`; Chart.js is `src/assets/js/chart.umd.min.js` (via `task js`).
+
+## Internationalization (i18n)
+
+- Catalogs live in `src/i18n/catalogs/{en,de}/<namespace>.json` (flat key→string). Go: `i18n.T(lang, "ns.key", args...)` (placeholders: `%s`/`%d`/`%v` in order; `i18n.Tn` for plurals, key + `_one`/`_other`). Templates: `{{ t "ns.key" }}` / `{{ tn "ns.key" .N }}`; JS: `proviant.t("ns.key")` / `proviant.tn("ns.key", n)`. The server injects `window.proviantI18n` per page in `base.tmpl`.
+- `<html lang="{{ .Lang }}">` (dynamic) — **closes #346 as part of i18n; never fix separately.** Language chain: user pref (`User.Language`) → household pref (`Household.Language`) → `Accept-Language` → `en`. Unknown/empty means automatic.
+- Add the `Language` field handling to API PATCH requests via `*string` (nil = unchanged).
+- Every template's user-visible string becomes a catalog key. English catalog value must be byte-identical to the replaced string; `common.*`/`nav.*`/`a11y.*`/`status.*`/`error.*` shared keys are reused, not duplicated. Markup stays in code; catalog values are plain text.
+- Template output (`t`) is HTML-escaped — no HTML in catalog values; put `<br>` in the template.
+- Tests: new catalogs need `task i18n` (parity + referenced-key checks) green; JS tests get the en catalog injected by `tests/js/helpers/loadScript.js`. UI strings rendered server-side are testable with `lang=en` default.
+- Notification providers take a `lang` arg; resolve recipient language at dispatch via `i18n.ResolveLanguage`.
+- The `CACHE_NAME` in `sw.js`: bump only on CSS/font/icon changes, not JS/strings.
 
 ## Conventional Commits
 

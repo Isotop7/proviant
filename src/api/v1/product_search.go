@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/errors"
+	apiModel "github.com/Isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

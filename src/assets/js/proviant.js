@@ -1,9 +1,37 @@
 const proviant = {};
+// A top-level `const` in a classic script is a global lexical binding, not a
+// property of window, so offlineQueue.js — which wraps proviant.createProduct,
+// proviant.updateProductAmount and proviant.getProducts — would otherwise find
+// window.proviant undefined, wrap an empty object of its own and leave every one
+// of those features inert.
+window.proviant = proviant;
 
 // Read the csrf_token cookie set by the server's CSRF middleware.
 proviant._getCsrfToken = function () {
   const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : null;
+};
+
+// Translate a catalog key. The server injects window.proviantI18n per page
+// (see i18n.FuncMap); %s / %d / %v placeholders fill from the remaining args.
+proviant.t = function (key) {
+  const args = Array.prototype.slice.call(arguments, 1);
+  const catalog = window.proviantI18n || {};
+  let text = Object.prototype.hasOwnProperty.call(catalog, key) ? catalog[key] : key;
+  args.forEach(function (arg) {
+    text = text.replace(/%[sdv]/, String(arg));
+  });
+  return text;
+};
+
+// Translate a plural key: picks key_one for n === 1, key_other otherwise, with
+// n as the first %s / %d placeholder (mirrors i18n.Tn on the server).
+proviant.tn = function (key, n) {
+  const suffix = n === 1 ? "_one" : "_other";
+  const catalog = window.proviantI18n || {};
+  const suffixed = key + suffix;
+  const lookup = Object.prototype.hasOwnProperty.call(catalog, suffixed) ? suffixed : key;
+  return proviant.t.apply(null, [lookup, n].concat(Array.prototype.slice.call(arguments, 2)));
 };
 
 // Intercept all fetch calls to inject X-CSRF-Token on state-mutating requests.
@@ -95,11 +123,17 @@ proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confir
   const titleEl = document.getElementById("proviantConfirmTitle");
   const msgEl = document.getElementById("proviantConfirmMessage");
   const btnEl = document.getElementById("proviantConfirmBtn");
-  if (titleEl) titleEl.textContent = title || "Are you sure?";
+  if (titleEl) titleEl.textContent = title || proviant.t("js.feedback.confirmDefaultTitle");
   if (msgEl) msgEl.textContent = message || "";
   if (btnEl) {
-    btnEl.textContent = confirmLabel || "Confirm";
-    btnEl.className = "btn px-4 btn-" + (confirmType || "danger");
+    const confirmClasses = {
+      primary: "btn btn-proviant-primary",
+      secondary: "btn btn-proviant-secondary",
+      warning: "btn btn-proviant-warning",
+      danger: "btn btn-proviant-danger",
+    };
+    btnEl.textContent = confirmLabel || proviant.t("common.confirm");
+    btnEl.className = confirmClasses[confirmType] || confirmClasses.danger;
     btnEl.onclick = function () { bootstrap.Modal.getInstance(modal).hide(); onConfirm(); };
   }
   bootstrap.Modal.getOrCreateInstance(modal).show();
@@ -132,62 +166,53 @@ proviant.colorExpiry = function (date) {
 };
 
 /* ── Offline edit queue ──────────────────────────────────────────────────────── */
-proviant._offlineQueue = JSON.parse(localStorage.getItem('proviant_offline_queue') || '[]');
+// The queue itself lives in offlineQueue.js, which wraps updateProductAmount and
+// createProduct at load. Everything here is a plain network call, so this module
+// holds no offline state of its own.
 
-proviant._saveQueue = function () {
-  localStorage.setItem('proviant_offline_queue', JSON.stringify(proviant._offlineQueue));
-};
-
-proviant._enqueueAmountDelta = function (productID, delta) {
-  const existing = proviant._offlineQueue.find(op => op.productID === productID);
-  if (existing) {
-    existing.delta += delta;
-    if (existing.delta === 0) {
-      proviant._offlineQueue = proviant._offlineQueue.filter(op => op.productID !== productID);
-    }
-  } else {
-    proviant._offlineQueue.push({ productID, delta, ts: Date.now() });
-  }
-  proviant._saveQueue();
-  proviant._updateOfflineBadge();
-};
-
-proviant._updateOfflineBadge = function () {
-  const el = document.getElementById('offlineQueueCount');
-  if (!el) return;
-  const n = proviant._offlineQueue.length;
-  if (n > 0) { el.textContent = `(${n} pending)`; el.classList.remove('d-none'); }
-  else { el.classList.add('d-none'); }
-};
-
-proviant._flushQueue = async function () {
-  if (!navigator.onLine || proviant._offlineQueue.length === 0) return;
-  const queue = proviant._offlineQueue.slice();
-  proviant._offlineQueue = [];
-  proviant._saveQueue();
-  proviant._updateOfflineBadge();
-  for (const op of queue) {
-    try { await proviant._sendAmountDelta(op.productID, op.delta); }
-    catch (_) { proviant._enqueueAmountDelta(op.productID, op.delta); }
-  }
-};
-
-proviant._sendAmountDelta = async function (productID, delta) {
+proviant._sendAmountDelta = async function (productID, delta, clientMutationId) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/amount`;
-  const res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ delta }) });
-  const body = await res.json();
-  return { code: res.status, message: body.message, deleted: res.status === 200 && typeof body.message === "string" && body.message.includes("deleted") };
+  let res;
+  try {
+    res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ delta, clientMutationId }) });
+  } catch (cause) {
+    // Tagged so the outbox can tell "the request never left" from "the server
+    // answered with a body I cannot parse": only the first costs no retry
+    // attempt, or a 502-with-HTML would park nothing and retry forever.
+    const err = new Error(cause && cause.message ? cause.message : String(cause));
+    err.transport = true;
+    throw err;
+  }
+  let body;
+  try {
+    body = await res.json();
+  } catch (cause) {
+    // The server answered but the body is not JSON — a proxy error page,
+    // say. Carry the status so the outbox can tell a server-side failure
+    // (5xx: pace and retry) from a broken request (4xx: park it), while
+    // keeping the parse message: the verdict stays visible either way.
+    const err = new Error(cause && cause.message ? cause.message : String(cause));
+    err.status = res.status;
+    throw err;
+  }
+  return {
+    code: res.status,
+    message: body.message,
+    // The outbox paces itself on this; the status alone cannot say how long
+    // the server wants the client to stay away.
+    retryAfter: res.headers && res.headers.get ? res.headers.get("Retry-After") : null,
+    deleted: res.status === 200 && typeof body.message === "string" && body.message.includes("deleted"),
+  };
 };
 
-proviant.updateProductAmount = async function (productID, delta) {
-  if (!navigator.onLine) { proviant._enqueueAmountDelta(productID, delta); return { code: 200, message: 'queued', deleted: false, queued: true }; }
-  return proviant._sendAmountDelta(productID, delta);
+proviant.updateProductAmount = async function (productID, delta, clientMutationId) {
+  return proviant._sendAmountDelta(productID, delta, clientMutationId);
 };
 
 /* ── Product API ─────────────────────────────────────────────────────────────── */
-proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate = false) {
+proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate = false, clientSyncId) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null, isPrivate }) });
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null }) });
   const body = await res.json();
   return { code: res.status, message: body.message };
 };
@@ -260,7 +285,7 @@ proviant.addToShoppingList = async function (productId, quantity, unit) {
   });
   if (!res.ok) {
     const body = await res.json().catch(function () { return {}; });
-    throw new Error(body.message || "Could not add to shopping list");
+    throw new Error(body.message || proviant.t("js.feedback.addToShoppingListFailed"));
   }
   const body = await res.json();
   return { code: res.status, message: body };
@@ -303,7 +328,7 @@ proviant.runWithButtonBusyState = async function (btn, work, successMessage, onE
   setTimeout(() => { setBusy(false); }, 1500);
 
   if (successMessage) {
-    proviant.showFeedback('success', 'Added', successMessage);
+    proviant.showFeedback('success', proviant.t("js.feedback.added"), successMessage);
   }
 };
 
@@ -402,12 +427,12 @@ proviant.bulkAction = async function (type, ids, options = {}) {
   // partial run with 200 + failedIds, so status alone is not enough to detect
   // it. Status first: a 404 carries failedIds for every id, which must read as
   // a failure, not as a partial success.
-  const verb = { restore: "restored", archive: "marked as consumed", delete: "marked as wasted" }[type];
+  const verb = { restore: proviant.t("js.feedback.bulkVerbRestored"), archive: proviant.t("js.feedback.bulkVerbConsumed"), delete: proviant.t("js.feedback.bulkVerbWasted") }[type];
   const finish = (res) => {
     if (res.code !== 200) {
-      proviant.showFeedback("error", "Bulk action failed", res.message || `Request failed with status ${res.code}`, onDone);
+      proviant.showFeedback("error", proviant.t("js.feedback.bulkActionFailed"), res.message || proviant.t("js.feedback.requestFailedWithStatus", res.code), onDone);
     } else if (res.failedIds && res.failedIds.length) {
-      proviant.showFeedback("warning", `Not all products were ${verb}`, `${res.failedIds.length} of ${ids.length} products were not ${verb} (not found or no access).`, onDone);
+      proviant.showFeedback("warning", proviant.t("js.feedback.bulkPartialTitle", verb), proviant.t("js.feedback.bulkPartialMessage", res.failedIds.length, ids.length, verb), onDone);
     } else {
       onDone();
     }
@@ -420,15 +445,15 @@ proviant.bulkAction = async function (type, ids, options = {}) {
     try {
       finish(await fn(ids));
     } catch (err) {
-      proviant.showFeedback("error", "Bulk action failed", (err && err.message) || "Request failed", onDone);
+      proviant.showFeedback("error", proviant.t("js.feedback.bulkActionFailed"), (err && err.message) || proviant.t("js.feedback.requestFailed"), onDone);
     }
   };
   if (needsConfirm) {
     proviant.showConfirm(
-      confirmTitle || (type === 'delete' ? 'Mark as wasted' : type === 'archive' ? 'Mark as consumed' : 'Confirm'),
-      confirmMsg || `${ids.length} product${ids.length !== 1 ? 's' : ''}?${type === 'delete' ? ' This cannot be undone.' : ''}`,
+      confirmTitle || (type === 'delete' ? proviant.t("js.feedback.confirmMarkWasted") : type === 'archive' ? proviant.t("js.feedback.confirmMarkConsumed") : proviant.t("common.confirm")),
+      confirmMsg || proviant.tn("js.feedback.bulkConfirmCount", ids.length) + (type === 'delete' ? ' ' + proviant.t("js.feedback.bulkConfirmIrreversible") : ''),
       run,
-      type === 'delete' ? 'Wasted' : type === 'archive' ? 'Consumed' : 'Restore',
+      type === 'delete' ? proviant.t("js.feedback.bulkConfirmBtnWasted") : type === 'archive' ? proviant.t("js.feedback.bulkConfirmBtnConsumed") : proviant.t("js.feedback.bulkConfirmBtnRestore"),
       type === 'delete' ? 'danger' : type === 'archive' ? 'warning' : 'primary'
     );
   } else {
@@ -450,10 +475,14 @@ proviant.signupUser = async function (username, mailAddress, password, inviteTok
   return { code: res.status, body: body.message };
 };
 
-proviant.updateUser = async function (displayName, mailAddress) {
-  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ displayName, mailAddress }) });
-  const body = await res.json();
-  return { code: res.status, message: body.message };
+proviant.updateUser = async function (displayName, mailAddress, language) {
+  const body = { displayName, mailAddress };
+  if (language !== undefined) {
+    body.language = language;
+  }
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json();
+  return { code: res.status, message: data.message };
 };
 
 proviant.updateUserPassword = async function (username, password) {
@@ -827,4 +856,78 @@ proviant.getAuditLogs = async function (date) {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/audit-log${params}`, { method: "GET" });
   const body = await res.json();
   return { code: res.status, message: body };
+};
+/* ── Saved recipes API ───────────────────────────────────────────────────────── */
+proviant.getRecipes = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, recipes: Array.isArray(body) ? body : [], message: body.message };
+};
+
+proviant.getRecipe = async function (id) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes/${id}`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, recipe: body, message: body.message };
+};
+
+proviant.createRecipe = async function (recipe) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(recipe) });
+  const body = await res.json();
+  return { code: res.status, recipe: body, message: body.message };
+};
+
+proviant.updateRecipe = async function (id, recipe) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(recipe) });
+  const body = await res.json();
+  return { code: res.status, recipe: body, message: body.message };
+};
+
+proviant.deleteRecipe = async function (id) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes/${id}`, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.cookRecipe = async function (id, servings) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/recipes/${id}/cook`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ servings: servings || 0 }) });
+  const body = await res.json();
+  return { code: res.status, consumed: body.consumed, partial: body.partial, errors: body.errors || [], message: body.message };
+};
+
+/* ── Meal plan API ───────────────────────────────────────────────────────────── */
+proviant.getMealPlans = async function (from, to) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/mealplans?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, entries: Array.isArray(body) ? body : [], message: body.message };
+};
+
+proviant.createMealPlan = async function (entry) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/mealplans`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
+  const body = await res.json();
+  return { code: res.status, entry: body, message: body.message };
+};
+
+proviant.updateMealPlan = async function (id, entry) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/mealplans/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
+  const body = await res.json();
+  return { code: res.status, entry: body, message: body.message };
+};
+
+proviant.deleteMealPlan = async function (id) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/mealplans/${id}`, { method: "DELETE", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+proviant.generateShoppingListFromMealPlan = async function (from, to) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/mealplans/shopping-list`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from, to }) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
+/* ── Product lookup for recipe ingredients ───────────────────────────────────── */
+proviant.getProducts = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, products: Array.isArray(body) ? body : [], message: body.message };
 };

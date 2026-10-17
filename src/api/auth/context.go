@@ -3,12 +3,13 @@ package auth
 import (
 	"net/http"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers"
+	"github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/i18n"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -103,8 +104,13 @@ func trySendEmailVerification(ctx *gin.Context, repos *database.RepositoryContai
 		logger.Error().Msgf("Failed to create email verification record: %s", err.Error())
 		return
 	}
+	householdLanguage := ""
+	if household, householdErr := repos.Users.GetHouseholdByID(user.HouseholdID); householdErr == nil {
+		householdLanguage = household.Language
+	}
+	lang := i18n.ResolveLanguage(user.Language, householdLanguage, "")
 	go func() {
-		if sendErr := nc.SendEmailVerification(user.MailAddress, user.EffectiveName(), token, proviantConfig.Server.BaseURL, expiresAt); sendErr != nil {
+		if sendErr := nc.SendEmailVerification(user.MailAddress, user.EffectiveName(), token, proviantConfig.Server.BaseURL, expiresAt, lang); sendErr != nil {
 			logger.Error().Msgf("Failed to send email verification: %s", sendErr.Error())
 		} else {
 			logger.Info().Msgf("Email verification sent to %s", user.MailAddress)

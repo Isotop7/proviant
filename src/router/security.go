@@ -1,7 +1,7 @@
 package router
 
 import (
-	"codeberg.org/isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/models/configuration"
 	"github.com/gin-gonic/gin"
 	"github.com/unrolled/secure"
 )

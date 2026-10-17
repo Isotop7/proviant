@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/testutil"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/controllers"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/models/authentication"
+	dbModel "github.com/Isotop7/proviant/models/database"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -16,6 +16,7 @@ var testModels = []any{
 	&dbModel.Household{},
 	&authentication.User{},
 	&dbModel.Product{},
+	&dbModel.ProductMutationClaim{},
 	&dbModel.StorageLocation{},
 	&dbModel.Webhook{},
 	&dbModel.WebhookDeliveryLog{},
@@ -38,6 +39,12 @@ var testModels = []any{
 	&dbModel.WebPushConfig{},
 	&dbModel.MailDigestUnsubscribeToken{},
 	&dbModel.ShoppingListItem{},
+	&dbModel.HouseholdIntegration{},
+	&dbModel.ShoppingListItemSyncRef{},
+
+	&dbModel.Recipe{},
+	&dbModel.RecipeIngredient{},
+	&dbModel.MealPlanEntry{},
 }
 
 func SetupTestDB(t *testing.T) *gorm.DB {

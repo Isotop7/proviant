@@ -1,0 +1,20 @@
+{
+  "pageTitle.AcceptInvitation": "Einladung annehmen",
+  "pageTitle.Authentication": "Anmeldung",
+  "pageTitle.EditProduct": "Produkt bearbeiten",
+  "pageTitle.ForgotPassword": "Passwort vergessen",
+  "pageTitle.Home": "Startseite",
+  "pageTitle.MealPlan": "Essensplan",
+  "pageTitle.Onboarding": "Erste Schritte",
+  "pageTitle.Products": "Produkte",
+  "pageTitle.Recipes": "Rezepte",
+  "pageTitle.ResetPassword": "Passwort zurücksetzen",
+  "pageTitle.ScanProduct": "Produkt scannen",
+  "pageTitle.ScanReceipt": "Kassenbon scannen",
+  "pageTitle.ShoppingList": "Einkaufsliste",
+  "pageTitle.Unsubscribe": "Abmelden",
+  "pageTitle.User": "Benutzer",
+  "pageTitle.UserSettings": "Benutzereinstellungen",
+  "pageTitle.VerifyEmail": "E-Mail bestätigen",
+  "pageTitle.WasteAnalytics": "Abfallanalyse"
+}

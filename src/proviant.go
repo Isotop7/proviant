@@ -10,17 +10,17 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/controllers"
-	dbController "codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/logging"
-	"codeberg.org/isotop7/proviant/migrations"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/router"
-	"codeberg.org/isotop7/proviant/templates"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/controllers"
+	dbController "github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/logging"
+	"github.com/Isotop7/proviant/migrations"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/router"
+	"github.com/Isotop7/proviant/templates"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
@@ -154,6 +154,23 @@ func loadConfig(configDir string) *configuration.ProviantConfiguration {
 	// reality of multi-second responses.
 	viper.SetDefault("ocr.receipt.provider", util.ReceiptOCRProviderOpenAI)
 	viper.SetDefault("ocr.receipt.timeout", util.ReceiptScanDefaultTimeout)
+
+	viper.SetDefault("shopping_list_sync.enabled", false)
+	viper.SetDefault("shopping_list_sync.interval_minutes", util.DefaultShoppingListSyncIntervalMinutes)
+	viper.SetDefault("shopping_list_sync.bring_enabled", false)
+	viper.SetDefault("shopping_list_sync.todoist_enabled", false)
+
+	// Scheduled household backup defaults
+	viper.SetDefault("backup.enabled", false)
+	viper.SetDefault("backup.intervalHours", util.DefaultBackupIntervalHours)
+	viper.SetDefault("backup.directory", util.DefaultBackupDirectory)
+	viper.SetDefault("backup.retention", util.DefaultBackupRetention)
+
+	// Household backup restore defaults
+	viper.SetDefault("restore.maxUploadSizeMB", util.DefaultRestoreMaxUploadSizeMB)
+
+	// Queued offline sync defaults
+	viper.SetDefault("offlineSync.maxBatchBytes", util.ReceiptBulkMaxBodyBytes)
 
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
@@ -306,6 +323,14 @@ func main() {
 			proviantConfiguration.OCR.Receipt.Endpoint)
 	}
 
+	// Validate scheduled backup configuration
+	if err := proviantConfiguration.ValidateBackupConfiguration(); err != nil {
+		logger.Error().Msg(err.Error())
+		panic(err)
+	}
+	proviantConfiguration.ValidateRestoreConfiguration()
+	proviantConfiguration.ValidateOfflineSyncConfiguration()
+
 	// Setup database connection handle
 	dbHandle, setupErr := setupDatabase(logger, &proviantConfiguration.Database)
 	if setupErr != nil {
@@ -323,6 +348,7 @@ func main() {
 		&authentication.PersonalAccessToken{},
 		&authentication.CalendarToken{},
 		&dbModel.Product{},
+		&dbModel.ProductMutationClaim{},
 		&dbModel.HouseholdApplication{},
 		&dbModel.HouseholdInvitation{},
 		&dbModel.OnboardingState{},
@@ -341,6 +367,11 @@ func main() {
 		&dbModel.WebPushConfig{},
 		&dbModel.MailDigestUnsubscribeToken{},
 		&dbModel.ShoppingListItem{},
+		&dbModel.HouseholdIntegration{},
+		&dbModel.ShoppingListItemSyncRef{},
+		&dbModel.Recipe{},
+		&dbModel.RecipeIngredient{},
+		&dbModel.MealPlanEntry{},
 	)
 	if migrationError != nil {
 		panic(migrationError)
@@ -394,6 +425,12 @@ func main() {
 	// Initialize OCR controller
 	ocrController := controllers.NewOCRController(logger, &proviantConfiguration.OCR)
 
+	shoppingListSyncController := controllers.NewShoppingListSyncController(logger, &proviantConfiguration.ShoppingListSync, dbHandle)
+	shoppingListSyncController.Dispatch()
+
+	backupController := controllers.NewBackupController(logger, &proviantConfiguration.Backup, dbHandle)
+	backupController.Dispatch()
+
 	// Start background cleanup of expired revoked tokens
 	go startRevokedTokenCleanup(logger, dbHandle)
 
@@ -402,6 +439,9 @@ func main() {
 
 	// Start background cleanup of expired password-reset rows
 	go startPasswordResetCleanup(logger, dbHandle)
+
+	// Start background cleanup of expired product mutation claims
+	go startMutationClaimCleanup(logger, dbHandle)
 
 	// Backfill storage hints and images for existing cache entries
 	if proviantConfiguration.OpenFoodFacts.CacheEnabled {
@@ -439,6 +479,28 @@ func startPasswordResetCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
 	}
 }
 
+// startMutationClaimCleanup drops idempotency claims past the point where their
+// delta can still be replayed, which is what bounds product_mutation_claims: a
+// claim is written by every amount change, so nothing else ever collects them.
+// The claim model carries no DeletedAt, so this is a hard delete and the
+// unique index never spans a tombstoned row.
+func startMutationClaimCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		cutoff := time.Now().Add(-util.ProductMutationClaimTTL)
+		result := dbHandle.Where("created_at < ?", cutoff).Delete(&dbModel.ProductMutationClaim{})
+		if result.Error != nil {
+			logger.Warn().Msgf("Failed to cleanup expired product mutation claims: %s", result.Error.Error())
+			continue
+		}
+		if result.RowsAffected > 0 {
+			logger.Info().Msgf("Cleaned up %d expired product mutation claims", result.RowsAffected)
+		}
+	}
+}
+
 // cleanupExpiredRevokedTokens deletes revoked tokens that have expired
 func cleanupExpiredRevokedTokens(logger *zerolog.Logger, dbHandle *gorm.DB) {
 	result := dbHandle.Where("expires_at < ?", time.Now()).Delete(&authentication.RevokedToken{})
@@ -453,12 +515,12 @@ func cleanupExpiredRevokedTokens(logger *zerolog.Logger, dbHandle *gorm.DB) {
 
 // startRecipeCacheCleanup runs a goroutine that periodically cleans up expired recipe caches
 func startRecipeCacheCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
-	recipeRepository := dbController.NewRecipeRepository(dbHandle)
+	recipeCacheRepository := dbController.NewRecipeCacheRepository(dbHandle)
 	ticker := time.NewTicker(24 * time.Hour) // Clean up once per day
 	defer ticker.Stop()
 
 	for range ticker.C {
-		if err := recipeRepository.CleanupExpiredCaches(); err != nil {
+		if err := recipeCacheRepository.CleanupExpiredCaches(); err != nil {
 			logger.Warn().Msgf("Failed to cleanup expired recipe caches: %s", err.Error())
 		}
 	}

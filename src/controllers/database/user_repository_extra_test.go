@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/authentication"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"

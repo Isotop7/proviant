@@ -22,13 +22,13 @@ document.addEventListener("DOMContentLoaded", function () {
         '<div class="d-inline-flex align-items-center justify-content-center rounded-3" style="width:64px;height:64px;background-color:#198754;">' +
         '<i class="bi bi-check-circle fs-1 text-white"></i>' +
         "</div>" +
-        '<h3 class="mt-3 mb-1">Email Verified!</h3>' +
+        '<h3 class="mt-3 mb-1">' + proviant.t("js.auth.emailVerifiedTitle") + "</h3>" +
         "</div>" +
         '<div class="alert alert-success" role="alert">' +
-        '<i class="bi bi-check-circle me-2"></i>Your email address has been verified successfully.' +
+        '<i class="bi bi-check-circle me-2"></i>' + proviant.t("js.auth.emailVerifiedMessage") +
         "</div>" +
         '<div class="text-center mt-3">' +
-        '<a href="/web/auth" class="btn btn-primary">Log In</a>' +
+        '<a href="/web/auth" class="btn btn-primary">' + proviant.t("auth.logIn") + "</a>" +
         "</div>";
     })
     .catch(function () {
@@ -38,13 +38,13 @@ document.addEventListener("DOMContentLoaded", function () {
         '<div class="d-inline-flex align-items-center justify-content-center rounded-3" style="width:64px;height:64px;background-color:#dc3545;">' +
         '<i class="bi bi-x-circle fs-1 text-white"></i>' +
         "</div>" +
-        '<h3 class="mt-3 mb-1">Verification Failed</h3>' +
+        '<h3 class="mt-3 mb-1">' + proviant.t("js.auth.verificationFailedTitle") + "</h3>" +
         "</div>" +
         '<div class="alert alert-danger" role="alert">' +
-        '<i class="bi bi-exclamation-triangle me-2"></i>An error occurred while verifying your email.' +
+        '<i class="bi bi-exclamation-triangle me-2"></i>' + proviant.t("js.auth.verificationFailedMessage") +
         "</div>" +
         '<div class="text-center mt-3">' +
-        '<a href="/web" class="btn btn-outline-primary">Go to Dashboard</a>' +
+        '<a href="/web" class="btn btn-outline-primary">' + proviant.t("auth.goToDashboard") + "</a>" +
         "</div>";
     });
 });

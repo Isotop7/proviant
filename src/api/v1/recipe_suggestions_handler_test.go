@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/controllers"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/testutil"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+	"github.com/Isotop7/proviant/controllers"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/testutil"
+	repomocks "github.com/Isotop7/proviant/testutil/mocks"
 
 	"github.com/rs/zerolog"
 )
@@ -35,7 +35,7 @@ func setupRecipeController(env *handlerTestEnv, provider controllers.RecipeProvi
 	recipeCtrl := &controllers.RecipeController{
 		Logger:     &logger,
 		Config:     configuration.RecipeAPIConfiguration{Provider: "fake"},
-		RecipeRepo: repomocks.NewMockRepositoryContainer().Recipes,
+		RecipeRepo: repomocks.NewMockRepositoryContainer().RecipeCaches,
 		Provider:   provider,
 	}
 	env.Ctx.Set("recipeController", recipeCtrl)

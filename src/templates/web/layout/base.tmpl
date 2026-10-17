@@ -1,11 +1,11 @@
 {{define "base"}}
 <!doctype html>
-<html lang="en" class="h-100">
+<html lang="{{ .Lang }}" class="h-100">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ if .Title }}proviant - {{ .Title}}{{ else }}proviant{{ end }}</title>
+  <title>{{ if .TitleText }}proviant - {{ .TitleText}}{{ else }}proviant{{ end }}</title>
 
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json">
@@ -18,39 +18,41 @@
 
   <script src="/assets/js/theme.js"></script>
   <link rel="stylesheet" href="/assets/css/main.css">
+  <script nonce="{{ .CSPNonce }}">window.proviantI18n = {{ .I18nJSON }};window.proviantLang = "{{ .Lang }}";window.proviantOffline = { maxBatchBytes: {{ .OfflineSyncMaxBodyBytes }} };</script>
   <script src="/assets/js/proviant.js"></script>
+  <script src="/assets/js/offlineQueue.js"></script>
 </head>
 
 <body>
-  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <a href="#main-content" class="skip-link">{{ t "a11y.skipToContent" }}</a>
   {{template "nav" .}}
   <!-- Mobile top-right more menu -->
   <div class="mobile-top-more">
-    <button class="mobile-top-more-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More options">
+    <button class="mobile-top-more-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ t "a11y.moreOptions" }}">
       <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
     </button>
     <div class="dropdown-menu dropdown-menu-end mobile-top-more-dropdown">
       <button type="button" class="dropdown-item" id="btnThemeToggleMobile">
-        <i class="bi bi-circle-half me-2" id="themeToggleIconMobile" aria-hidden="true"></i>Toggle theme
+        <i class="bi bi-circle-half me-2" id="themeToggleIconMobile" aria-hidden="true"></i>{{ t "common.toggleTheme" }}
       </button>
       <div class="dropdown-divider"></div>
       <a href="/web/user/settings" class="dropdown-item">
-        <i class="bi bi-gear-wide-connected me-2" aria-hidden="true"></i>Settings
+        <i class="bi bi-gear-wide-connected me-2" aria-hidden="true"></i>{{ t "common.settings" }}
       </a>
       <a href="/web" id="btnLogout" class="dropdown-item dropdown-item-danger">
-        <i class="bi bi-escape me-2" aria-hidden="true"></i>Logout
+        <i class="bi bi-escape me-2" aria-hidden="true"></i>{{ t "common.logout" }}
       </a>
     </div>
   </div>
   <!-- Mobile bottom navigation -->
-  <nav class="bottom-nav" aria-label="Mobile navigation">
+  <nav class="bottom-nav" aria-label="{{ t "a11y.mobileNavigation" }}">
     <a href="/web" class="bottom-nav-item {{ if eq .Title "Home" }}active{{ end }}"
        {{ if eq .Title "Home" }}aria-current="page"{{ end }}>
-      <i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard</span>
+      <i class="bi bi-speedometer2" aria-hidden="true"></i><span>{{ t "nav.dashboard" }}</span>
     </a>
     <a href="/web/products" class="bottom-nav-item {{ if eq .Title "Products" }}active{{ end }}"
        {{ if eq .Title "Products" }}aria-current="page"{{ end }}>
-      <i class="bi bi-box-seam" aria-hidden="true"></i><span>Products</span>
+      <i class="bi bi-box-seam" aria-hidden="true"></i><span>{{ t "nav.products" }}</span>
     </a>
     <a href="/web/products/scan" class="bottom-nav-scan {{ if eq .Title "Scan Product" }}active{{ end }}"
        {{ if eq .Title "Scan Product" }}aria-current="page"{{ end }}>
@@ -58,25 +60,29 @@
     </a>
     <a href="/web/shopping-list" class="bottom-nav-item {{ if eq .Title "Shopping List" }}active{{ end }}"
        {{ if eq .Title "Shopping List" }}aria-current="page"{{ end }}>
-      <i class="bi bi-cart3" aria-hidden="true"></i><span>Shopping</span>
+      <i class="bi bi-cart3" aria-hidden="true"></i><span>{{ t "nav.shopping" }}</span>
     </a>
     <a href="/web/recipes" class="bottom-nav-item {{ if eq .Title "Recipes" }}active{{ end }}"
        {{ if eq .Title "Recipes" }}aria-current="page"{{ end }}>
-      <i class="bi bi-book" aria-hidden="true"></i><span>Recipes</span>
+      <i class="bi bi-book" aria-hidden="true"></i><span>{{ t "nav.recipes" }}</span>
     </a>
   </nav>
-  <!-- Offline banner — shown by JS when navigator.onLine === false -->
-  <div id="offlineBanner" class="offline-banner d-none" role="status" aria-live="polite">
-    <i class="bi bi-wifi-off me-2" aria-hidden="true"></i>
-    You're offline — showing cached data. Changes will sync when reconnected.
-    <span id="offlineQueueCount" class="ms-1 fw-semibold d-none"></span>
+  <!-- Offline banner — shown by JS while offline, and while changes are stuck unsynced -->
+  <div id="offlineBanner" class="offline-banner d-none">
+    <span role="status" aria-live="polite">
+      <i id="offlineBannerIcon" class="bi bi-wifi-off me-2" aria-hidden="true"></i>
+      <span id="offlineBannerText">{{ t "common.offlineBanner" }}</span>
+      <span id="offlineQueueCount" class="ms-1 fw-semibold d-none"></span>
+    </span>
+    <button type="button" id="offlineQueueRetry" class="btn btn-link btn-sm p-0 fw-semibold ms-2 offline-banner-action d-none">{{ t "common.retry" }}</button>
+    <button type="button" id="offlineQueueDiscard" class="btn btn-link btn-sm p-0 fw-semibold ms-2 offline-banner-action d-none">{{ t "common.discard" }}</button>
   </div>
   <!-- Update banner — shown by JS when new service worker activates -->
   <div id="swUpdateBanner" class="sw-update-banner d-none" role="status" aria-live="polite">
     <i class="bi bi-arrow-repeat me-2" aria-hidden="true"></i>
-    Update available —
-    <a href="/" class="btn btn-link btn-sm p-0 fw-semibold sw-update-reload">Reload</a>
-    to get the latest version.
+    {{ t "common.updateAvailable" }}
+    <a href="/" class="btn btn-link btn-sm p-0 fw-semibold sw-update-reload">{{ t "common.reload" }}</a>
+    {{ t "common.updateHint" }}
   </div>
 
   <main id="main-content">
@@ -87,7 +93,7 @@
   <!-- Shared confirm modal — destructive actions requiring user decision -->
   <div id="proviantConfirmModal" class="modal fade" tabindex="-1"
        aria-labelledby="proviantConfirmModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-dialog modal-dialog-centered modal-md">
       <div class="modal-content">
         <div class="modal-header">
           <div class="modal-icon modal-icon-danger" id="proviantConfirmIconBox" aria-hidden="true">
@@ -96,16 +102,16 @@
           <div class="modal-header-body">
             <h5 id="proviantConfirmTitle" class="modal-title mb-0"></h5>
           </div>
-          <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+          <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
             <i class="bi bi-x"></i>
           </button>
         </div>
         <div class="modal-body">
           <p id="proviantConfirmMessage" class="text-secondary-custom small mb-0"></p>
         </div>
-        <div class="modal-footer justify-content-end gap-2">
-          <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-proviant-danger" id="proviantConfirmBtn">Confirm</button>
+        <div class="modal-footer justify-content-end gap-2 flex-nowrap">
+          <button type="button" class="btn btn-proviant-secondary text-nowrap" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
+          <button type="button" class="btn btn-proviant-danger text-nowrap" id="proviantConfirmBtn">{{ t "common.confirm" }}</button>
         </div>
       </div>
     </div>
@@ -123,7 +129,7 @@
           <div class="modal-header-body">
             <h5 id="proviantFeedbackTitle" class="modal-title mb-0"></h5>
           </div>
-          <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+          <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
             <i class="bi bi-x"></i>
           </button>
         </div>
@@ -132,7 +138,7 @@
         </div>
         <div class="modal-footer justify-content-end">
           <button type="button" class="btn btn-proviant-primary"
-                  id="proviantFeedbackBtn" data-bs-dismiss="modal">OK</button>
+                  id="proviantFeedbackBtn" data-bs-dismiss="modal">{{ t "common.ok" }}</button>
         </div>
       </div>
     </div>

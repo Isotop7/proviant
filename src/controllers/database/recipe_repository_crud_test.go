@@ -2,192 +2,143 @@ package database
 
 import (
 	"testing"
-	"time"
 
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
+	"gorm.io/gorm"
 )
 
-func TestRecipeRepository_HasPopulatedCache(t *testing.T) {
+func TestRecipeRepository_CreateAndGetByID(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewRecipeRepository(db)
 
-	seed := func(t *testing.T, hash, response string, expiresAt time.Time) dbModel.RecipeCache {
-		t.Helper()
-		entry := dbModel.RecipeCache{
-			QueryHash:    hash,
-			Provider:     "themealdb",
-			ResponseJSON: []byte(response),
-			ExpiresAt:    expiresAt,
+	t.Run("returns recipe with ingredients ordered by sort order", func(t *testing.T) {
+		recipe := &dbModel.Recipe{
+			HouseholdID:  1,
+			Name:         "Pancakes",
+			Description:  "Fluffy pancakes",
+			Instructions: "Mix and fry.",
+			Servings:     4,
+			Ingredients: []dbModel.RecipeIngredient{
+				{Name: "Eggs", Amount: 2, Unit: "pcs", SortOrder: 1},
+				{Name: "Flour", Amount: 250, Unit: "g", SortOrder: 0},
+			},
 		}
-		if err := db.Create(&entry).Error; err != nil {
-			t.Fatalf("seed cache: %v", err)
+		if err := repo.Create(recipe); err != nil {
+			t.Fatalf("Create() error = %v", err)
 		}
-		return entry
-	}
 
-	t.Run("no entry is unpopulated", func(t *testing.T) {
-		populated, err := repo.HasPopulatedCache("missing-hash")
+		got, err := repo.GetByID(recipe.ID, 1)
 		if err != nil {
-			t.Fatalf("HasPopulatedCache() error = %v", err)
+			t.Fatalf("GetByID() error = %v", err)
 		}
-		if populated {
-			t.Error("HasPopulatedCache() = true, want false for missing entry")
+		if got.Name != "Pancakes" {
+			t.Errorf("Name = %q, want %q", got.Name, "Pancakes")
+		}
+		if len(got.Ingredients) != 2 {
+			t.Fatalf("ingredients = %d, want 2", len(got.Ingredients))
+		}
+		if got.Ingredients[0].Name != "Flour" || got.Ingredients[1].Name != "Eggs" {
+			t.Errorf("ingredient order = [%s, %s], want [Flour, Eggs]", got.Ingredients[0].Name, got.Ingredients[1].Name)
 		}
 	})
 
-	t.Run("entry with real suggestions is populated", func(t *testing.T) {
-		seed(t, "populated-hash", `[{"ingredients":["milk"],"totalIngredients":1,"matchedProductIds":[1]}]`, time.Now().Add(time.Hour))
-		populated, err := repo.HasPopulatedCache("populated-hash")
-		if err != nil {
-			t.Fatalf("HasPopulatedCache() error = %v", err)
-		}
-		if !populated {
-			t.Error("HasPopulatedCache() = false, want true")
-		}
-	})
-
-	t.Run("expired entry is unpopulated", func(t *testing.T) {
-		seed(t, "expired-hash", `[{"ingredients":["milk"],"totalIngredients":1,"matchedProductIds":[1]}]`, time.Now().Add(-time.Hour))
-		populated, err := repo.HasPopulatedCache("expired-hash")
-		if err != nil {
-			t.Fatalf("HasPopulatedCache() error = %v", err)
-		}
-		if populated {
-			t.Error("HasPopulatedCache() = true, want false for expired entry")
-		}
-	})
-
-	t.Run("stale payload without matched ids is unpopulated", func(t *testing.T) {
-		seed(t, "stale-hash", `[{"ingredients":["milk"],"totalIngredients":1}]`, time.Now().Add(time.Hour))
-		populated, err := repo.HasPopulatedCache("stale-hash")
-		if err != nil {
-			t.Fatalf("HasPopulatedCache() error = %v", err)
-		}
-		if populated {
-			t.Error("HasPopulatedCache() = true, want false for stale payload")
-		}
-	})
-
-	t.Run("empty ingredients against non-zero total is unpopulated", func(t *testing.T) {
-		seed(t, "empty-ingredients-hash", `[{"ingredients":[],"totalIngredients":2,"matchedProductIds":[1]}]`, time.Now().Add(time.Hour))
-		populated, err := repo.HasPopulatedCache("empty-ingredients-hash")
-		if err != nil {
-			t.Fatalf("HasPopulatedCache() error = %v", err)
-		}
-		if populated {
-			t.Error("HasPopulatedCache() = true, want false for empty ingredients")
-		}
-	})
-
-	t.Run("unparseable payload is unpopulated", func(t *testing.T) {
-		seed(t, "broken-hash", `not json`, time.Now().Add(time.Hour))
-		populated, err := repo.HasPopulatedCache("broken-hash")
-		if err != nil {
-			t.Fatalf("HasPopulatedCache() error = %v", err)
-		}
-		if populated {
-			t.Error("HasPopulatedCache() = true, want false for unparseable payload")
-		}
-	})
-
-	t.Run("empty suggestion list is unpopulated", func(t *testing.T) {
-		seed(t, "empty-list-hash", `[]`, time.Now().Add(time.Hour))
-		populated, err := repo.HasPopulatedCache("empty-list-hash")
-		if err != nil {
-			t.Fatalf("HasPopulatedCache() error = %v", err)
-		}
-		if populated {
-			t.Error("HasPopulatedCache() = true, want false for empty list")
+	t.Run("wrong household is not found", func(t *testing.T) {
+		recipe := testutil.CreateTestRecipe(db, 1)
+		if _, err := repo.GetByID(recipe.ID, 2); err != gorm.ErrRecordNotFound {
+			t.Errorf("GetByID() error = %v, want gorm.ErrRecordNotFound", err)
 		}
 	})
 }
 
-func TestRecipeRepository_CreateCacheUpsert(t *testing.T) {
+func TestRecipeRepository_ListByHousehold(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewRecipeRepository(db)
 
-	entry := dbModel.RecipeCache{
-		QueryHash:    "upsert-hash",
-		Provider:     "themealdb",
-		ResponseJSON: []byte(`[{"title":"Old"}]`),
-		ExpiresAt:    time.Now().Add(time.Hour),
-		HitCount:     7,
-	}
-	if err := repo.CreateCache(&entry); err != nil {
-		t.Fatalf("CreateCache() error = %v", err)
-	}
+	t.Run("lists only own household recipes by name", func(t *testing.T) {
+		testutil.CreateTestRecipe(db, 1)
+		other := testutil.CreateTestRecipe(db, 2)
+		other.Name = "Foreign"
+		if err := db.Save(other).Error; err != nil {
+			t.Fatalf("save other recipe: %v", err)
+		}
 
-	// A second CreateCache with the same hash overwrites the entry and
-	// resets the hit count.
-	replacement := dbModel.RecipeCache{
-		QueryHash:    "upsert-hash",
-		Provider:     "themealdb",
-		ResponseJSON: []byte(`[{"title":"New"}]`),
-		ExpiresAt:    time.Now().Add(2 * time.Hour),
-	}
-	if err := repo.CreateCache(&replacement); err != nil {
-		t.Fatalf("CreateCache() upsert error = %v", err)
-	}
-
-	var count int64
-	db.Model(&dbModel.RecipeCache{}).Where("query_hash = ?", "upsert-hash").Count(&count)
-	if count != 1 {
-		t.Fatalf("upsert left %d rows, want 1", count)
-	}
-
-	found, err := repo.GetCacheByQueryHash("upsert-hash")
-	if err != nil {
-		t.Fatalf("GetCacheByQueryHash() error = %v", err)
-	}
-	if string(found.ResponseJSON) != `[{"title":"New"}]` {
-		t.Errorf("ResponseJSON = %s, want overwritten payload", found.ResponseJSON)
-	}
-	if found.HitCount != 0 {
-		t.Errorf("HitCount = %d, want 0 after upsert reset", found.HitCount)
-	}
+		recipes, err := repo.ListByHousehold(1)
+		if err != nil {
+			t.Fatalf("ListByHousehold() error = %v", err)
+		}
+		if len(recipes) != 1 {
+			t.Fatalf("recipes = %d, want 1", len(recipes))
+		}
+		if recipes[0].HouseholdID != 1 {
+			t.Errorf("HouseholdID = %d, want 1", recipes[0].HouseholdID)
+		}
+	})
 }
 
-func TestRecipeRepository_CleanupExpiredCaches(t *testing.T) {
+func TestRecipeRepository_Update(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewRecipeRepository(db)
 
-	expired := dbModel.RecipeCache{
-		QueryHash:    "cleanup-expired",
-		Provider:     "themealdb",
-		ResponseJSON: []byte(`[]`),
-		ExpiresAt:    time.Now().Add(-time.Hour),
-	}
-	valid := dbModel.RecipeCache{
-		QueryHash:    "cleanup-valid",
-		Provider:     "themealdb",
-		ResponseJSON: []byte(`[]`),
-		ExpiresAt:    time.Now().Add(time.Hour),
-	}
-	if err := db.Create(&expired).Error; err != nil {
-		t.Fatalf("seed expired: %v", err)
-	}
-	if err := db.Create(&valid).Error; err != nil {
-		t.Fatalf("seed valid: %v", err)
-	}
+	t.Run("replaces ingredients atomically", func(t *testing.T) {
+		recipe := testutil.CreateTestRecipe(db, 1)
+		recipe.Name = "Updated"
+		recipe.Ingredients = []dbModel.RecipeIngredient{
+			{Name: "Sugar", Amount: 50, Unit: "g", SortOrder: 0},
+		}
+		if err := repo.Update(recipe); err != nil {
+			t.Fatalf("Update() error = %v", err)
+		}
 
-	if err := repo.CleanupExpiredCaches(); err != nil {
-		t.Fatalf("CleanupExpiredCaches() error = %v", err)
-	}
+		got, err := repo.GetByID(recipe.ID, 1)
+		if err != nil {
+			t.Fatalf("GetByID() error = %v", err)
+		}
+		if got.Name != "Updated" {
+			t.Errorf("Name = %q, want %q", got.Name, "Updated")
+		}
+		if len(got.Ingredients) != 1 || got.Ingredients[0].Name != "Sugar" {
+			t.Errorf("ingredients = %+v, want exactly [Sugar]", got.Ingredients)
+		}
 
-	// Hard delete: the row must be gone even with Unscoped off.
-	var count int64
-	db.Unscoped().Model(&dbModel.RecipeCache{}).Where("query_hash = ?", "cleanup-expired").Count(&count)
-	if count != 0 {
-		t.Error("expired cache entry survived CleanupExpiredCaches")
-	}
-	db.Unscoped().Model(&dbModel.RecipeCache{}).Where("query_hash = ?", "cleanup-valid").Count(&count)
-	if count != 1 {
-		t.Error("valid cache entry was deleted by CleanupExpiredCaches")
-	}
+		var replacedCount int64
+		if err := db.Unscoped().Model(&dbModel.RecipeIngredient{}).Where("recipe_id = ?", recipe.ID).Count(&replacedCount).Error; err != nil {
+			t.Fatalf("count ingredients: %v", err)
+		}
+		if replacedCount != 1 {
+			t.Errorf("ingredient rows = %d, want 1 (replaced rows must not accumulate)", replacedCount)
+		}
+	})
+}
 
-	// Cleanup on an empty table is a no-op.
-	if err := repo.CleanupExpiredCaches(); err != nil {
-		t.Errorf("CleanupExpiredCaches() on empty table error = %v", err)
-	}
+func TestRecipeRepository_Delete(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewRecipeRepository(db)
+
+	t.Run("deletes recipe and ingredients", func(t *testing.T) {
+		recipe := testutil.CreateTestRecipe(db, 1)
+		if err := repo.Delete(recipe.ID, 1); err != nil {
+			t.Fatalf("Delete() error = %v", err)
+		}
+		if _, err := repo.GetByID(recipe.ID, 1); err != gorm.ErrRecordNotFound {
+			t.Errorf("GetByID() error = %v, want gorm.ErrRecordNotFound", err)
+		}
+		var ingredientCount int64
+		if err := db.Model(&dbModel.RecipeIngredient{}).Where("recipe_id = ?", recipe.ID).Count(&ingredientCount).Error; err != nil {
+			t.Fatalf("count ingredients: %v", err)
+		}
+		if ingredientCount != 0 {
+			t.Errorf("ingredient rows = %d, want 0", ingredientCount)
+		}
+	})
+
+	t.Run("wrong household delete is a no-op", func(t *testing.T) {
+		recipe := testutil.CreateTestRecipe(db, 1)
+		if err := repo.Delete(recipe.ID, 2); err != nil {
+			t.Fatalf("Delete() error = %v", err)
+		}
+		if _, err := repo.GetByID(recipe.ID, 1); err != nil {
+			t.Errorf("GetByID() error = %v, want recipe to survive", err)
+		}
+	})
 }

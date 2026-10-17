@@ -8,7 +8,8 @@ type Household struct {
 	gorm.Model
 	Name        string `gorm:"not null"`
 	Description string
-	AdminID     uint `gorm:"not null"`
+	AdminID     uint   `gorm:"not null"`
+	Language    string `gorm:"default:''"`
 
 	MonthlyWasteGoalType    string   `gorm:"default:''"`   // "", "count", or "percent"
 	MonthlyWasteGoalCount   *int     `gorm:"default:null"` // nil = disabled

@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/Isotop7/proviant/util"
 )
 
 const fixtureConfigYAML = `server:
@@ -47,4 +49,39 @@ func TestLoadConfigEnvironmentOverride(t *testing.T) {
 				config.Server.Authentication.TokenPassword, "env-supplied-secret")
 		}
 	})
+}
+
+// The offline sync cap must survive a config that omits the
+// block: the outbox client splits its batches at the value
+// injected into the page, so an unset cap has to resolve to
+// the built-in default rather than to zero.
+func TestLoadConfigOfflineSyncDefault(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(fixtureConfigYAML), 0o600); err != nil {
+		t.Fatalf("failed to write fixture config: %v", err)
+	}
+
+	config := loadConfig(dir)
+	if config.OfflineSync.MaxBatchBytes != util.ReceiptBulkMaxBodyBytes {
+		t.Errorf("OfflineSync.MaxBatchBytes = %d, want %d (the viper default)",
+			config.OfflineSync.MaxBatchBytes, util.ReceiptBulkMaxBodyBytes)
+	}
+}
+
+// An operator-set cap reaches the struct verbatim — the value
+// the endpoint enforces and the page injects is this one, not
+// the default.
+func TestLoadConfigOfflineSyncExplicit(t *testing.T) {
+	const yaml = `offlineSync:
+  maxBatchBytes: 2048
+`
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(yaml), 0o600); err != nil {
+		t.Fatalf("failed to write fixture config: %v", err)
+	}
+
+	config := loadConfig(dir)
+	if config.OfflineSync.MaxBatchBytes != 2048 {
+		t.Errorf("OfflineSync.MaxBatchBytes = %d, want 2048", config.OfflineSync.MaxBatchBytes)
+	}
 }

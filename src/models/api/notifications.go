@@ -1,6 +1,6 @@
 package api
 
-import "codeberg.org/isotop7/proviant/models/authentication"
+import "github.com/Isotop7/proviant/models/authentication"
 
 // NotificationItem represents a single actionable notification entry.
 type NotificationItem struct {

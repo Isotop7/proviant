@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/models"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"

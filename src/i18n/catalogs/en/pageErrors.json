@@ -1,0 +1,14 @@
+{
+  "pageError.householdFallback": "Household #%d",
+  "pageError.internalError": "Internal server error.",
+  "pageError.inviteAlreadyUsed": "This invitation has already been used.",  "pageError.inviteCancelled": "This invitation has been cancelled by the sender.",
+  "pageError.inviteExpired": "This invitation has expired.",
+  "pageError.inviteNotFound": "This invitation does not exist or has been deleted.",
+  "pageError.inviteProcessError": "An error occurred while processing this invitation.",
+  "pageError.inviteTokenMissing": "No invitation token provided.",
+  "pageError.resetTokenMissing": "Please request a new reset link to continue.",
+  "pageError.unsubscribeInvalid": "Invalid or expired unsubscribe link.",
+  "pageError.unsubscribeTokenMissing": "No unsubscribe token provided.",
+  "pageError.unsubscribeUpdateFailed": "Failed to update preferences.",
+  "pageError.verifyTokenMissing": "No verification token provided."
+}

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
 
 	"github.com/rs/zerolog"
 )

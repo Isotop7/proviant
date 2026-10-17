@@ -82,7 +82,7 @@ function renderListTile(title, items, days) {
 
   let listHtml;
   if (items.length === 0) {
-    listHtml = `<li class="list-group-item text-secondary-custom small py-2">No products expiring in the next ${days} day${days !== 1 ? 's' : ''}</li>`;
+    listHtml = `<li class="list-group-item text-secondary-custom small py-2">${proviant.tn("js.home.noExpiringProducts", days)}</li>`;
   } else {
     listHtml = items.map((item) => {
       const date = new Date(item.expireAt + 'T00:00:00');
@@ -122,12 +122,12 @@ function renderCharts(s) {
   // Chart 1 — Waste donut (expired vs fresh)
   clearEmptyChart('chartWaste');
   if (!s.totalActive) {
-    showEmptyChart('chartWaste', 'No active products yet');
+    showEmptyChart('chartWaste', proviant.t("js.home.noActiveProducts"));
   } else {
     dashboardCharts.push(new Chart(document.getElementById('chartWaste'), {
       type: 'doughnut',
       data: {
-        labels: ['Expired', 'Fresh'],
+        labels: [proviant.t("status.expired"), proviant.t("status.fresh")],
         datasets: [{
           data: [s.wasteCount, s.totalActive - s.wasteCount],
           backgroundColor: [cssVar('--status-expired'), cssVar('--status-fresh')],
@@ -140,7 +140,7 @@ function renderCharts(s) {
   // Chart 2 — Category breakdown (pie)
   clearEmptyChart('chartCategories');
   if (!Object.keys(s.categories).length) {
-    showEmptyChart('chartCategories', 'No category data yet');
+    showEmptyChart('chartCategories', proviant.t("js.home.noCategoryData"));
   } else {
     dashboardCharts.push(new Chart(document.getElementById('chartCategories'), {
       type: 'pie',
@@ -165,14 +165,14 @@ function renderCharts(s) {
   // Chart 3 — Expiry trend (line)
   clearEmptyChart('chartExpiryTrend');
   if (!s.expiryTrend.length) {
-    showEmptyChart('chartExpiryTrend', 'No expiry trend data yet');
+    showEmptyChart('chartExpiryTrend', proviant.t("js.home.noExpiryTrendData"));
   } else {
     dashboardCharts.push(new Chart(document.getElementById('chartExpiryTrend'), {
       type: 'line',
       data: {
         labels: s.expiryTrend.map((m) => m.month),
         datasets: [{
-          label: 'Products expiring',
+          label: proviant.t("js.home.productsExpiring"),
           data: s.expiryTrend.map((m) => m.count),
           borderColor: cssVar('--accent'),
           pointBackgroundColor: cssVar('--accent'),
@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     if (response.code !== 200) {
       const status = document.getElementById('dashboard-status');
-      if (status) status.textContent = 'Dashboard failed to load. Please refresh.';
+      if (status) status.textContent = proviant.t("js.home.loadFailed");
       return;
     }
     const s = response.message;
@@ -211,20 +211,20 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (dashboard) {
       const tiles = [
         {
-          title: 'Active Products',
+          title: proviant.t("js.home.activeProducts"),
           hero: s.totalActive,
         },
         {
-          title: 'Expired (not consumed)',
+          title: proviant.t("js.home.expiredNotConsumed"),
           hero: `${s.wastePercent.toFixed(1)}%`,
           variant: s.wasteCount > 0 ? 'danger' : null,
         },
         {
-          title: 'Total Consumed',
+          title: proviant.t("js.home.totalConsumed"),
           hero: s.totalArchived,
         },
         {
-          title: 'Last Added Product',
+          title: proviant.t("js.home.lastAddedProduct"),
           hero: s.lastInsertedProduct || '—',
           heroClass: 'metric-value text-truncate',
         },
@@ -238,15 +238,15 @@ document.addEventListener('DOMContentLoaded', async function () {
       const streak = (streakResponse.code === 200 && streakResponse.message) ? streakResponse.message : null;
       const currentStreak = streak ? streak.currentStreak : 0;
       const longestStreak = streak ? streak.longestStreak : 0;
-      const streakHero = `${currentStreak} day${currentStreak !== 1 ? 's' : ''}`;
+      const streakHero = proviant.tn("js.home.streakDays", currentStreak);
       const streakHeroClass = currentStreak > 0 ? 'metric-value' : 'metric-value text-secondary-custom';
-      const streakCol = renderTile('<i class="bi bi-fire"></i> Waste-free streak', streakHero, null, streakHeroClass);
+      const streakCol = renderTile('<i class="bi bi-fire"></i> ' + proviant.t("js.home.wasteFreeStreak"), streakHero, null, streakHeroClass);
       const streakTile = streakCol.querySelector('.metric-tile');
       if (streakTile) {
         if (longestStreak > 0) {
           const sub = document.createElement('div');
           sub.style.cssText = 'font-size:var(--text-xs);color:var(--fg-3);margin-top:var(--space-1)';
-          sub.textContent = `Best: ${longestStreak} day${longestStreak !== 1 ? 's' : ''}`;
+          sub.textContent = proviant.tn("js.home.bestStreak", longestStreak);
           streakTile.appendChild(sub);
         }
         // Milestone progress: next milestone = 7, 30, 100, 365
@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           prog.style.cssText = 'margin-top:var(--space-2);font-size:var(--text-xs);color:var(--fg-3);';
           prog.innerHTML = `
             <div class="d-flex justify-content-between mb-1">
-              <span>Next milestone: ${nextMilestone}d</span>
+              <span>${proviant.t("js.home.nextMilestone", nextMilestone)}</span>
               <span>${intoMilestone}/${nextMilestone - prevMilestone}d</span>
             </div>
             <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${milestonePct}" style="height:6px;">
@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         } else {
           const prog = document.createElement('div');
           prog.style.cssText = 'margin-top:var(--space-2);font-size:var(--text-xs);color:var(--status-fresh);';
-          prog.innerHTML = `<i class="bi bi-trophy-fill me-1"></i>All milestones reached`;
+          prog.innerHTML = `<i class="bi bi-trophy-fill me-1"></i>${proviant.t("js.home.allMilestonesReached")}`;
           streakTile.appendChild(prog);
         }
       }
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           if (hs.monthlyWasteGoalType === 'count') {
             const goal = hs.monthlyWasteGoalCount || 0;
             pct = goal > 0 ? Math.min(100, Math.round((wasteThisMonth / goal) * 100)) : 0;
-            label = `${wasteThisMonth} / ${goal} wasted`;
+            label = proviant.t("js.home.wastedOfGoal", wasteThisMonth, goal);
           } else {
             const goal = hs.monthlyWasteGoalPercent || 0;
             pct = goal > 0 ? Math.min(100, Math.round((s.wastePercent / goal) * 100)) : 0;
@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           const barColor = exceeded ? 'var(--status-expired)' : (pct >= 75 ? 'var(--status-soon)' : 'var(--status-fresh)');
           goalCol.innerHTML = `
             <div class="metric-tile h-100">
-              <div class="metric-label"><i class="bi bi-bullseye me-1"></i>Monthly goal</div>
+              <div class="metric-label"><i class="bi bi-bullseye me-1"></i>${proviant.t("js.home.monthlyGoal")}</div>
               <div class="metric-value" title="${label}" style="color:${exceeded ? 'var(--status-expired)' : 'var(--fg)'}">${label}</div>
               <div class="progress mt-2" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" style="height:6px;">
                 <div class="progress-bar" style="width:${pct}%;background:${barColor};"></div>
@@ -326,37 +326,40 @@ document.addEventListener('DOMContentLoaded', async function () {
           amount_change: 'bi-pencil',
           import: 'bi-upload',
         };
-        const actionLabelMap = {
-          add: 'added',
-          consume: 'consumed',
-          waste: 'wasted',
-          restore: 'restored',
-          cook: 'cooked',
-          amount_change: 'adjusted',
-          import: 'imported',
+        const actionKeyMap = {
+          add: 'js.home.activityAdded',
+          consume: 'js.home.activityConsumed',
+          waste: 'js.home.activityWasted',
+          restore: 'js.home.activityRestored',
+          cook: 'js.home.activityCooked',
+          amount_change: 'js.home.activityAdjusted',
+          import: 'js.home.activityImported',
         };
 
         function relativeTime(timestamp) {
           const now = Date.now();
           const then = new Date(timestamp).getTime();
           const diff = Math.floor((now - then) / 1000);
-          if (diff < 60) return 'just now';
-          if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
-          if (diff < 86400) return `${Math.floor(diff / 3600)} hour${Math.floor(diff / 3600) !== 1 ? 's' : ''} ago`;
-          return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) !== 1 ? 's' : ''} ago`;
+          if (diff < 60) return proviant.t("js.home.justNow");
+          if (diff < 3600) return proviant.t("js.home.minutesAgo", Math.floor(diff / 60));
+          if (diff < 86400) return proviant.tn("js.home.hoursAgo", Math.floor(diff / 3600));
+          return proviant.tn("js.home.daysAgo", Math.floor(diff / 86400));
         }
 
         let listHtml;
         if (activities.length === 0) {
-          listHtml = `<li class="list-group-item text-secondary-custom small py-2">No recent activity in this household</li>`;
+          listHtml = `<li class="list-group-item text-secondary-custom small py-2">${proviant.t("js.home.noRecentActivity")}</li>`;
         } else {
           listHtml = activities.map((a) => {
             const icon = actionIconMap[a.action] || 'bi-circle';
-            const label = actionLabelMap[a.action] || a.action;
+            const productName = a.productName || proviant.t("js.home.aProduct");
+            const actionText = actionKeyMap[a.action]
+              ? proviant.t(actionKeyMap[a.action], productName)
+              : `${a.action} ${productName}`;
             return `<li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
               <span class="d-flex align-items-center gap-2 text-truncate me-2 small">
                 <i class="bi ${icon}" style="font-size:12px;color:var(--accent);flex-shrink:0;"></i>
-                <span class="text-truncate"><strong>${a.userName || 'Someone'}</strong> ${label} ${a.productName || 'a product'}</span>
+                <span class="text-truncate"><strong>${a.userName || proviant.t("js.home.someone")}</strong> ${actionText}</span>
               </span>
               <span class="text-nowrap text-secondary-custom small" style="flex-shrink:0;">${relativeTime(a.timestamp)}</span>
             </li>`;
@@ -369,7 +372,7 @@ document.addEventListener('DOMContentLoaded', async function () {
               <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
                 <i class="bi bi-activity" style="font-size:12px;color:var(--accent);"></i>
               </div>
-              <span class="flex-grow-1">Recent Activity</span>
+              <span class="flex-grow-1">${proviant.t("js.home.recentActivity")}</span>
             </div>
             <div class="tile-scroll-body">
               <ul class="list-group list-group-flush">${listHtml}</ul>
@@ -386,13 +389,13 @@ document.addEventListener('DOMContentLoaded', async function () {
       const savings = (savingsResponse.code === 200 && savingsResponse.message) ? savingsResponse.message : null;
       if (savings) {
         dashboard.appendChild(renderTile(
-          'Saved This Month',
+          proviant.t("js.home.savedThisMonth"),
           `€${(savings.savedEurThisMonth ?? 0).toFixed(2)}`,
           savings.savedEurThisMonth > 0 ? 'success' : null,
           null,
         ));
         dashboard.appendChild(renderTile(
-          'CO₂ Avoided This Month',
+          proviant.t("js.home.co2AvoidedThisMonth"),
           `${(savings.savedCo2KgThisMonth ?? 0).toFixed(2)} kg`,
           savings.savedCo2KgThisMonth > 0 ? 'success' : null,
           null,
@@ -403,13 +406,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     const dashboardList = document.getElementById('dashboard-list');
     if (dashboardList) {
       const days = s.expiringSoonDays ?? 7;
-      const listTile = renderListTile(`Expiring within next ${days} Day${days !== 1 ? 's' : ''}`, s.expiringSoon ?? [], days);
+      const listTile = renderListTile(proviant.tn("js.home.expiringWithin", days), s.expiringSoon ?? [], days);
       dashboardList.appendChild(listTile);
 
       const infoIcon = listTile.querySelector('.tile-threshold-info');
       if (infoIcon) {
         const tooltip = new bootstrap.Tooltip(infoIcon, {
-          title: `Shows products expiring within your notification threshold (${days} day${days !== 1 ? 's' : ''}). Change this in User Settings.`,
+          title: proviant.tn("js.home.thresholdTooltip", days),
           placement: 'left',
           trigger: 'manual',
         });
@@ -419,14 +422,14 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     const status = document.getElementById('dashboard-status');
-    if (status) status.textContent = 'Dashboard loaded';
+    if (status) status.textContent = proviant.t("js.home.loaded");
 
     lastStats = s;
     renderCharts(s);
   } catch {
     clearSkeletons();
     const status = document.getElementById('dashboard-status');
-    if (status) status.textContent = 'Dashboard failed to load. Please refresh.';
+    if (status) status.textContent = proviant.t("js.home.loadFailed");
   }
 });
 })();

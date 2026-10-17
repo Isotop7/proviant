@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	recipeRepo "codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	recipeRepo "github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
@@ -25,7 +25,7 @@ type RecipeController struct {
 	// RecipeRepo is the interface rather than the concrete type so the cache
 	// read/write decisions — which decide whether a degraded provider run is
 	// allowed to replace a good cached entry — can be tested without a database.
-	RecipeRepo recipeRepo.RecipeRepositoryInterface
+	RecipeRepo recipeRepo.RecipeCacheRepositoryInterface
 	Provider   RecipeProvider
 	disabled   bool
 }
@@ -120,7 +120,7 @@ func sanitizeRecipeURL(raw string) string {
 // authenticate, and the controller then serves no suggestions instead of
 // issuing outbound requests that are guaranteed to fail.
 func NewRecipeController(config configuration.RecipeAPIConfiguration, logger *zerolog.Logger, db *gorm.DB, disabled bool) *RecipeController {
-	repo := recipeRepo.NewRecipeRepository(db)
+	repo := recipeRepo.NewRecipeCacheRepository(db)
 	client := &http.Client{
 		Timeout: time.Second * time.Duration(config.Timeout),
 	}

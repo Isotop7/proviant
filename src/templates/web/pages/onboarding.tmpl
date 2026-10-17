@@ -5,25 +5,25 @@
         <!-- Header -->
         <div class="text-center mb-4">
             <img src="/assets/icons/hero.png" class="img-fluid mb-3 onboarding-hero" alt="proviant">
-            <h2 class="fw-bold">Welcome to Proviant, {{.Username}}!</h2>
-            <p class="text-secondary-custom">Let's get you set up in just a few steps.</p>
+            <h2 class="fw-bold">{{ t "onboarding.welcome" .Username }}</h2>
+            <p class="text-secondary-custom">{{ t "onboarding.subtitle" }}</p>
         </div>
 
         <!-- Progress Steps -->
         <div class="d-flex justify-content-center align-items-start mb-4">
             <div class="step-indicator" id="stepIndicator1">
                 <div class="step-circle">1</div>
-                <small>Profile</small>
+                <small>{{ t "onboarding.step.profile" }}</small>
             </div>
             <div class="step-connector"></div>
             <div class="step-indicator" id="stepIndicator2">
                 <div class="step-circle">2</div>
-                <small>Household</small>
+                <small>{{ t "onboarding.step.household" }}</small>
             </div>
             <div class="step-connector"></div>
             <div class="step-indicator" id="stepIndicator3">
                 <div class="step-circle">3</div>
-                <small>Notifications</small>
+                <small>{{ t "nav.notifications" }}</small>
             </div>
         </div>
 
@@ -31,17 +31,17 @@
         <div class="onboarding-step" id="step1">
             <div class="card">
                 <div class="card-body">
-                    <p class="text-secondary-custom small mb-2">Step 1 of 3</p>
-                    <h5 class="card-title"><i class="bi bi-person me-2"></i>Your Profile</h5>
-                    <p class="card-text text-secondary-custom">Choose a display name. You can change this later in settings.</p>
+                    <p class="text-secondary-custom small mb-2">{{ t "onboarding.step.progress" 1 3 }}</p>
+                    <h5 class="card-title"><i class="bi bi-person me-2"></i>{{ t "onboarding.profileTitle" }}</h5>
+                    <p class="card-text text-secondary-custom">{{ t "onboarding.profileDesc" }}</p>
                     <div class="mb-3">
-                        <input type="text" id="inputDisplayName" class="form-control" placeholder="Display name" maxlength="64" value="{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}">
+                        <input type="text" id="inputDisplayName" class="form-control" placeholder="{{ t "onboarding.displayNamePlaceholder" }}" maxlength="64" value="{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}">
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <button id="btnSaveProfile" class="btn btn-proviant-primary">
-                            <i class="bi bi-arrow-right me-1"></i>Continue
+                            <i class="bi bi-arrow-right me-1"></i>{{ t "onboarding.continue" }}
                         </button>
-                        <button id="btnSkipProfile" class="btn btn-ghost btn-sm">Skip for now</button>
+                        <button id="btnSkipProfile" class="btn btn-ghost btn-sm">{{ t "onboarding.skipForNow" }}</button>
                     </div>
                 </div>
             </div>
@@ -51,20 +51,20 @@
         <div class="onboarding-step d-none" id="step2">
             <div class="card">
                 <div class="card-body">
-                    <p class="text-secondary-custom small mb-2">Step 2 of 3</p>
-                    <h5 class="card-title"><i class="bi bi-people me-2"></i>Your Household</h5>
-                    <p class="card-text text-secondary-custom">Households let you share your pantry with family and roommates. Choose one of the options below.</p>
+                    <p class="text-secondary-custom small mb-2">{{ t "onboarding.step.progress" 2 3 }}</p>
+                    <h5 class="card-title"><i class="bi bi-people me-2"></i>{{ t "onboarding.householdTitle" }}</h5>
+                    <p class="card-text text-secondary-custom">{{ t "onboarding.householdDesc" }}</p>
 
                     <!-- Mode switcher -->
-                    <div class="btn-group w-100 mb-3" role="group" aria-label="Household options">
+                    <div class="btn-group w-100 mb-3" role="group" aria-label="{{ t "onboarding.householdOptions" }}">
                         <button type="button" id="btnHouseholdModeBrowse" class="btn btn-proviant-secondary btn-sm">
-                            <i class="bi bi-search me-1"></i>Browse
+                            <i class="bi bi-search me-1"></i>{{ t "onboarding.browse" }}
                         </button>
                         <button type="button" id="btnHouseholdModeCreate" class="btn btn-proviant-secondary btn-sm">
-                            <i class="bi bi-plus-lg me-1"></i>Create new
+                            <i class="bi bi-plus-lg me-1"></i>{{ t "onboarding.createNew" }}
                         </button>
                         <button type="button" id="btnHouseholdModeInvite" class="btn btn-proviant-secondary btn-sm">
-                            <i class="bi bi-envelope me-1"></i>Use invite code
+                            <i class="bi bi-envelope me-1"></i>{{ t "onboarding.useInviteCode" }}
                         </button>
                     </div>
 
@@ -72,7 +72,7 @@
                     <div id="householdModeBrowse" class="d-none">
                         <div id="householdListLoading" class="text-center text-secondary-custom d-none">
                             <div class="spinner-border spinner-border-sm" role="status"></div>
-                            <span class="ms-2">Loading households...</span>
+                            <span class="ms-2">{{ t "onboarding.loadingHouseholds" }}</span>
                         </div>
                         <div id="householdList" class="list-group mb-2 d-none"></div>
                     </div>
@@ -80,20 +80,20 @@
                     <!-- Create sub-mode -->
                     <div id="householdModeCreate" class="d-none">
                         <div class="mb-2">
-                            <input type="text" id="inputNewHouseholdName" class="form-control" placeholder="Household name" maxlength="64">
+                            <input type="text" id="inputNewHouseholdName" class="form-control" placeholder="{{ t "onboarding.householdNamePlaceholder" }}" maxlength="64">
                         </div>
                         <button id="btnCreateHousehold" class="btn btn-proviant-primary btn-sm">
-                            <i class="bi bi-plus-lg me-1"></i>Create Household
+                            <i class="bi bi-plus-lg me-1"></i>{{ t "onboarding.createHousehold" }}
                         </button>
                     </div>
 
                     <!-- Invite sub-mode -->
                     <div id="householdModeInvite" class="d-none">
                         <div class="mb-2">
-                            <input type="text" id="inputInviteToken" class="form-control" placeholder="Invite token">
+                            <input type="text" id="inputInviteToken" class="form-control" placeholder="{{ t "onboarding.inviteTokenPlaceholder" }}">
                         </div>
                         <button id="btnJoinByInvite" class="btn btn-proviant-primary btn-sm">
-                            <i class="bi bi-box-arrow-in-right me-1"></i>Join Household
+                            <i class="bi bi-box-arrow-in-right me-1"></i>{{ t "onboarding.joinHousehold" }}
                         </button>
                     </div>
                 </div>
@@ -104,13 +104,13 @@
         <div class="onboarding-step d-none" id="step3">
             <div class="card">
                 <div class="card-body">
-                    <p class="text-secondary-custom small mb-2">Step 3 of 3</p>
-                    <h5 class="card-title"><i class="bi bi-bell me-2"></i>Stay Notified</h5>
-                    <p class="card-text text-secondary-custom">Get notified when products in your household are about to expire. You can configure this later in settings.</p>
+                    <p class="text-secondary-custom small mb-2">{{ t "onboarding.step.progress" 3 3 }}</p>
+                    <h5 class="card-title"><i class="bi bi-bell me-2"></i>{{ t "onboarding.notificationsTitle" }}</h5>
+                    <p class="card-text text-secondary-custom">{{ t "onboarding.notificationsDesc" }}</p>
                     <button id="btnConfigureNotifications" class="btn btn-proviant-primary">
-                        <i class="bi bi-gear me-1"></i>Configure Notifications
+                        <i class="bi bi-gear me-1"></i>{{ t "onboarding.configureNotifications" }}
                     </button>
-                    <button id="btnSkipNotifications" class="btn btn-ghost btn-sm ms-2">Skip for now</button>
+                    <button id="btnSkipNotifications" class="btn btn-ghost btn-sm ms-2">{{ t "onboarding.skipForNow" }}</button>
                 </div>
             </div>
         </div>
@@ -122,10 +122,10 @@
                     <div class="icon-chip-lg">
                         <i class="bi bi-check-lg" aria-hidden="true"></i>
                     </div>
-                    <h5 class="card-title mt-3">You're All Set!</h5>
-                    <p class="card-text text-secondary-custom">Start adding products to your pantry and tracking expiration dates.</p>
+                    <h5 class="card-title mt-3">{{ t "onboarding.completeTitle" }}</h5>
+                    <p class="card-text text-secondary-custom">{{ t "onboarding.completeDesc" }}</p>
                     <button id="btnFinishOnboarding" class="btn btn-proviant-primary">
-                        <i class="bi bi-arrow-right me-1"></i>Go to Proviant
+                        <i class="bi bi-arrow-right me-1"></i>{{ t "onboarding.goToProviant" }}
                     </button>
                 </div>
             </div>
@@ -134,12 +134,12 @@
         <!-- Quick Start Guide -->
         <div class="card mt-4">
             <div class="card-body">
-                <h6 class="card-title"><i class="bi bi-lightbulb me-2"></i>Quick Start Guide</h6>
+                <h6 class="card-title"><i class="bi bi-lightbulb me-2"></i>{{ t "onboarding.quickStartTitle" }}</h6>
                 <ul class="mb-0 small text-secondary-custom">
-                    <li><strong>Add products</strong> — Scan barcodes or search the Open Food Facts database</li>
-                    <li><strong>Track expiration</strong> — Set expiry dates to avoid food waste</li>
-                    <li><strong>Share with household</strong> — Invite family members to manage the pantry together</li>
-                    <li><strong>Get notified</strong> — Receive alerts before products expire</li>
+                    <li><strong>{{ t "onboarding.quickStart.addProducts" }}</strong> — {{ t "onboarding.quickStart.addProductsDesc" }}</li>
+                    <li><strong>{{ t "onboarding.quickStart.trackExpiration" }}</strong> — {{ t "onboarding.quickStart.trackExpirationDesc" }}</li>
+                    <li><strong>{{ t "onboarding.quickStart.shareHousehold" }}</strong> — {{ t "onboarding.quickStart.shareHouseholdDesc" }}</li>
+                    <li><strong>{{ t "onboarding.quickStart.getNotified" }}</strong> — {{ t "onboarding.quickStart.getNotifiedDesc" }}</li>
                 </ul>
             </div>
         </div>
@@ -147,7 +147,7 @@
         <!-- Navigation -->
         <div class="d-flex justify-content-end mt-4">
             <button id="btnNextStep" class="btn btn-proviant-primary d-none">
-                Next <i class="bi bi-arrow-right ms-1"></i>
+                {{ t "common.next" }} <i class="bi bi-arrow-right ms-1"></i>
             </button>
         </div>
     </main>

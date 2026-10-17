@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	dbModel "github.com/Isotop7/proviant/models/database"
 
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/rs/zerolog"
@@ -133,21 +133,21 @@ func TestWebPushSendNotification(t *testing.T) {
 			NotificationRepo: &stubVAPIDKeyProvider{err: errors.New("no keys")},
 			Logger:           &logger,
 		}
-		if err := provider.SendNotification(product, "{}"); err == nil {
+		if err := provider.SendNotification(product, "{}", ""); err == nil {
 			t.Error("SendNotification() = nil, want VAPID key error")
 		}
 	})
 
 	t.Run("invalid recipient type", func(t *testing.T) {
 		provider := &WebPushNotificationProvider{VAPIDPublicKey: "pub", VAPIDPrivateKey: "priv", Logger: &logger}
-		if err := provider.SendNotification(product, 42); err == nil {
+		if err := provider.SendNotification(product, 42, ""); err == nil {
 			t.Error("SendNotification() = nil, want recipient type error")
 		}
 	})
 
 	t.Run("invalid subscription JSON", func(t *testing.T) {
 		provider := &WebPushNotificationProvider{VAPIDPublicKey: "pub", VAPIDPrivateKey: "priv", Logger: &logger}
-		if err := provider.SendNotification(product, "{not json"); err == nil {
+		if err := provider.SendNotification(product, "{not json", ""); err == nil {
 			t.Error("SendNotification() = nil, want subscription JSON error")
 		}
 	})
@@ -172,7 +172,7 @@ func TestWebPushSendNotification(t *testing.T) {
 			VAPIDPrivateKey: privateKey,
 			Logger:          &logger,
 		}
-		if err := provider.SendNotification(product, subscriptionJSON); err != nil {
+		if err := provider.SendNotification(product, subscriptionJSON, ""); err != nil {
 			t.Errorf("SendNotification() = %v, want nil", err)
 		}
 		if got := atomic.LoadInt32(&hits); got != 1 {
@@ -192,7 +192,7 @@ func TestWebPushSendNotification(t *testing.T) {
 			VAPIDPrivateKey: privateKey,
 			Logger:          &logger,
 		}
-		if err := provider.SendNotification(product, subscriptionJSON); err == nil {
+		if err := provider.SendNotification(product, subscriptionJSON, ""); err == nil {
 			t.Error("SendNotification() = nil, want status error")
 		}
 	})
@@ -204,14 +204,14 @@ func TestWebPushSendNotification(t *testing.T) {
 			VAPIDPrivateKey: privateKey,
 			Logger:          &logger,
 		}
-		if err := provider.SendNotification(product, subscriptionJSON); err == nil {
+		if err := provider.SendNotification(product, subscriptionJSON, ""); err == nil {
 			t.Error("SendNotification() = nil, want transport error")
 		}
 	})
 }
 
 func TestFormatWebPushExpiryDays(t *testing.T) {
-	if got := formatWebPushExpiryDays("in 3 days"); got != "in 3 days" {
+	if got := formatWebPushExpiryDays("in 3 days", ""); got != "in 3 days" {
 		t.Errorf("formatWebPushExpiryDays(string) = %q, want unchanged", got)
 	}
 	tests := []struct {
@@ -226,18 +226,18 @@ func TestFormatWebPushExpiryDays(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := formatWebPushExpiryDays(tt.input); got != tt.want {
+			if got := formatWebPushExpiryDays(tt.input, ""); got != tt.want {
 				t.Errorf("formatWebPushExpiryDays(%v) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}
 	// The product expiry is a time.Time and formats as a real day count.
 	product := &dbModel.Product{ExpireAt: time.Now().Add(72 * time.Hour)}
-	if got := formatWebPushExpiryDays(product.ExpireAt); got != "expires in 3 days" {
+	if got := formatWebPushExpiryDays(product.ExpireAt, ""); got != "expires in 3 days" {
 		t.Errorf("formatWebPushExpiryDays(product.ExpireAt) = %q, want %q", got, "expires in 3 days")
 	}
 	// Unsupported inputs keep the vague fallback.
-	if got := formatWebPushExpiryDays(42); got != "expires soon" {
+	if got := formatWebPushExpiryDays(42, ""); got != "expires soon" {
 		t.Errorf("formatWebPushExpiryDays(int) = %q, want %q", got, "expires soon")
 	}
 }

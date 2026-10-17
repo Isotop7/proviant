@@ -12,9 +12,9 @@ document.addEventListener("click", function(e) {
 const RECIPE_LOADING_HTML = `
     <div class="text-center p-5">
         <div class="spinner-border text-secondary-custom" role="status">
-            <span class="visually-hidden">Loading...</span>
+            <span class="visually-hidden">${proviant.t("js.recipes.loading")}</span>
         </div>
-        <p class="mt-2 text-secondary-custom">Loading recipe suggestions...</p>
+        <p class="mt-2 text-secondary-custom">${proviant.t("js.recipes.loadingSuggestions")}</p>
     </div>`;
 
 async function loadRecipeSuggestions(forceRefresh = false) {
@@ -45,8 +45,8 @@ async function loadRecipeSuggestions(forceRefresh = false) {
             container.innerHTML = `
                 <div class="text-center py-5">
                     <i class="bi bi-inbox fs-1 text-secondary-custom"></i>
-                    <p class="mt-3">No recipe suggestions found for your expiring products.</p>
-                    <p class="text-secondary-custom">Try adding products with expiry dates to get personalized suggestions!</p>
+                    <p class="mt-3">${proviant.t("js.recipes.emptyTitle")}</p>
+                    <p class="text-secondary-custom">${proviant.t("js.recipes.emptyDesc")}</p>
                 </div>
             `;
             return;
@@ -56,7 +56,7 @@ async function loadRecipeSuggestions(forceRefresh = false) {
 
     } catch (error) {
         if (hasCards) {
-            proviant.showFeedback("warning", "Suggestions not updated", error.message);
+            proviant.showFeedback("warning", proviant.t("js.recipes.suggestionsNotUpdatedTitle"), error.message);
             return;
         }
         errorMessage.textContent = error.message;
@@ -65,12 +65,17 @@ async function loadRecipeSuggestions(forceRefresh = false) {
     }
 }
 
+const renderedSuggestions = [];
+
 function renderRecipes(recipes) {
     const container = document.getElementById("recipe-suggestions-container");
 
+    renderedSuggestions.length = 0;
+    recipes.forEach(recipe => renderedSuggestions.push(recipe));
+
     const html = `
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-            ${recipes.map(recipe => {
+            ${recipes.map((recipe, index) => {
                 const ingredients = recipe.ingredients || [];
                 const cookIds = recipe.matchedProductIds || [];
                 return `
@@ -90,16 +95,16 @@ function renderRecipes(recipes) {
                                 <div class="progress" style="height: 6px;">
                                     <div class="progress-bar bg-success" role="progressbar" style="width: ${recipe.matchPercent}%" aria-valuenow="${Math.round(recipe.matchPercent)}" aria-valuemin="0" aria-valuemax="100"></div>
                                 </div>
-                                <small class="text-secondary-custom">${recipe.matchedProducts.length} of ${recipe.totalIngredients} ingredients matched</small>
+                                <small class="text-secondary-custom">${proviant.t("js.recipes.ingredientsMatched", recipe.matchedProducts.length, recipe.totalIngredients)}</small>
                             </div>
 
                             ${ingredients.length > 0 ? `
                             <div class="ingredient-list mt-2">
-                                <small class="text-secondary-custom mb-1 d-block">Ingredients:</small>
+                                <small class="text-secondary-custom mb-1 d-block">${proviant.t("js.recipes.ingredientsLabel")}</small>
                                 <div class="d-flex flex-wrap gap-1">
                                     ${ingredients.map(ing => `
                                         <span class="badge-status ${ing.matched ? 'badge-fresh' : 'badge-expired'}"
-                                              title="${ing.matched ? 'You have this' : 'Missing ingredient'}">
+                                              title="${ing.matched ? proviant.t("js.recipes.youHaveThis") : proviant.t("js.recipes.missingIngredient")}">
                                             ${ing.matched ? '<i class="bi bi-check2"></i> ' : '<i class="bi bi-x"></i> '}
                                             ${escapeHtml(ing.name)}
                                         </span>
@@ -112,13 +117,18 @@ function renderRecipes(recipes) {
                         </div>
                         <div class="card-footer bg-transparent border-top-0 pb-3">
                             <a href="${escapeHtml(recipe.sourceUrl)}" target="_blank" rel="noopener" class="btn btn-proviant-primary btn-sm${cookIds.length ? '' : ' stretched-link'}">
-                                View Recipe <i class="bi bi-box-arrow-up-right"></i>
+                                ${proviant.t("js.recipes.viewRecipe")} <i class="bi bi-box-arrow-up-right"></i>
                             </a>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ms-2 save-suggestion-btn"
+                                    data-suggestion-index="${index}"
+                                    aria-label="${proviant.t("js.recipes.saveSuggestionLabel", escapeHtml(recipe.title))}">
+                                <i class="bi bi-save"></i> ${proviant.t("js.recipes.saveRecipe")}
+                            </button>
                             ${cookIds.length ? `
                             <button type="button" class="btn btn-outline-secondary btn-sm ms-2 cook-recipe-btn"
                                     data-product-ids='${JSON.stringify(cookIds)}'
-                                    aria-label="Cook this recipe: mark the ${cookIds.length} matched product(s) as fully consumed">
-                                <i class="bi bi-fire"></i> Cook this
+                                    aria-label="${proviant.tn("js.recipes.cookThisLabel", cookIds.length)}">
+                                <i class="bi bi-fire"></i> ${proviant.t("js.recipes.cookThis")}
                             </button>
                             ` : ''}
                         </div>
@@ -132,6 +142,16 @@ function renderRecipes(recipes) {
 }
 
 document.addEventListener("click", function(e) {
+    const saveBtn = e.target.closest(".save-suggestion-btn");
+    if (saveBtn) {
+        e.preventDefault();
+        const suggestion = renderedSuggestions[parseInt(saveBtn.getAttribute("data-suggestion-index"), 10)];
+        if (suggestion) {
+            document.dispatchEvent(new CustomEvent("proviant:save-recipe-suggestion", { detail: suggestion }));
+        }
+        return;
+    }
+
     const btn = e.target.closest(".cook-recipe-btn");
     if (!btn) return;
     e.preventDefault();
@@ -146,10 +166,10 @@ document.addEventListener("click", function(e) {
     if (!Array.isArray(ids) || ids.length === 0) return;
 
     proviant.showConfirm(
-        "Cook this recipe?",
-        `This will mark ${ids.length} matched product${ids.length !== 1 ? "s" : ""} as fully consumed. This cannot be undone.`,
+        proviant.t("js.recipes.cookConfirmTitle"),
+        proviant.tn("js.recipes.cookConfirmBody", ids.length),
         function() { cookMatchedProducts(btn, ids); },
-        "Cook",
+        proviant.t("js.recipes.cook"),
         "warning"
     );
 });
@@ -157,34 +177,34 @@ document.addEventListener("click", function(e) {
 async function cookMatchedProducts(btn, ids) {
     const original = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Cooking...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ' + proviant.t("js.recipes.cooking");
     try {
         const items = ids.map(function(id) { return { productId: id, amount: 0 }; });
         const res = await proviant.cookProducts(items);
         if (res.code !== 200) {
             const failedItems = res.errors || [];
             const detail = failedItems.length > 0 ? `: ${failedItems.join("; ")}` : "";
-            proviant.showFeedback("error", "Cook failed", `The cook request failed (HTTP ${res.code})${detail}.`);
+            proviant.showFeedback("error", proviant.t("js.recipes.cookFailedTitle"), proviant.t("js.recipes.cookRequestFailed", res.code, detail));
             return;
         }
         const consumed = res.consumed || 0;
         const partial = res.partial || 0;
         const itemErrors = res.errors || [];
         if (itemErrors.length > 0) {
-            proviant.showFeedback("warning", "Partially cooked",
-                `${consumed} product(s) fully consumed, ${partial} partially, ${itemErrors.length} could not be consumed.`);
+            proviant.showFeedback("warning", proviant.t("js.recipes.partiallyCookedTitle"),
+                `${proviant.tn("js.recipes.cookConsumed", consumed)}, ${proviant.t("js.recipes.cookPartial", partial)}, ${proviant.tn("js.recipes.cookNotConsumed", itemErrors.length)}.`);
         } else if (partial > 0) {
-            proviant.showFeedback("success", "Products consumed",
-                `${consumed} product(s) fully consumed, ${partial} partially.`);
+            proviant.showFeedback("success", proviant.t("js.recipes.productsConsumedTitle"),
+                `${proviant.tn("js.recipes.cookConsumed", consumed)}, ${proviant.t("js.recipes.cookPartial", partial)}.`);
         } else {
-            proviant.showFeedback("success", "Products consumed",
-                `${consumed} product(s) marked as fully consumed.`);
+            proviant.showFeedback("success", proviant.t("js.recipes.productsConsumedTitle"),
+                proviant.tn("js.recipes.cookConsumedAll", consumed));
         }
         if (consumed + partial > 0) {
             loadRecipeSuggestions(true);
         }
     } catch (error) {
-        proviant.showFeedback("error", "Cook failed", error.message);
+        proviant.showFeedback("error", proviant.t("js.recipes.cookFailedTitle"), error.message);
     } finally {
         btn.disabled = false;
         btn.innerHTML = original;

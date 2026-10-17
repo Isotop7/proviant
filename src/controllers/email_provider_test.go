@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/models"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/rs/zerolog"
 	gomail "gopkg.in/mail.v2"
 )
@@ -57,7 +57,7 @@ func TestEmailProvider_SendNotification(t *testing.T) {
 	}
 
 	t.Run("invalid recipient type", func(t *testing.T) {
-		err := e.SendNotification(product, 123)
+		err := e.SendNotification(product, 123, "")
 		if err == nil {
 			t.Error("expected error for invalid recipient type")
 		}
@@ -73,7 +73,7 @@ func TestEmailProvider_SendNotification(t *testing.T) {
 		}
 		defer func() { emailSendFunc = origFunc }()
 
-		err := e.SendNotification(product, "test@example.com")
+		err := e.SendNotification(product, "test@example.com", "")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -104,7 +104,7 @@ func TestEmailProvider_SendMonthlyWasteReport(t *testing.T) {
 			return nil
 		}
 		defer func() { emailSendFunc = origFunc }()
-		err := e.SendMonthlyWasteReport("test@example.com", stats)
+		err := e.SendMonthlyWasteReport("test@example.com", stats, "")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -125,7 +125,7 @@ func TestEmailProvider_SendStreakMilestone(t *testing.T) {
 			return nil
 		}
 		defer func() { emailSendFunc = origFunc }()
-		err := e.SendStreakMilestone(7, "test@example.com")
+		err := e.SendStreakMilestone(7, "test@example.com", "")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -147,7 +147,7 @@ func TestEmailProvider_SendEmailVerificationEmail(t *testing.T) {
 			return nil
 		}
 		defer func() { emailSendFunc = origFunc }()
-		err := e.SendEmailVerificationEmail("test@example.com", "user1", "token123", "http://example.com", expiresAt)
+		err := e.SendEmailVerificationEmail("test@example.com", "user1", "token123", "http://example.com", expiresAt, "")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -173,7 +173,7 @@ func TestEmailProvider_SendInvitationEmail(t *testing.T) {
 			return nil
 		}
 		defer func() { emailSendFunc = origFunc }()
-		err := e.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com")
+		err := e.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com", "")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}

@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/authentication"
 )
 
 // TestNotificationPreferencesRoundTrip pins the bind contract that flipping the

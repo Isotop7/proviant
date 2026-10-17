@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"codeberg.org/isotop7/proviant/controllers/database"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/controllers/database"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"

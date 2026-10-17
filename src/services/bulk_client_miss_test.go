@@ -3,7 +3,7 @@ package services
 import (
 	"testing"
 
-	"codeberg.org/isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/errors"
 	"gorm.io/gorm"
 )
 

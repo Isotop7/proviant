@@ -3,12 +3,12 @@ package auth
 import (
 	"net/http"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
-	apperrors "codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers"
+	"github.com/Isotop7/proviant/controllers/database"
+	apperrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/configuration/static"
+	"github.com/Isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"

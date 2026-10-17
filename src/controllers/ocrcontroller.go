@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 	"golang.org/x/image/draw"

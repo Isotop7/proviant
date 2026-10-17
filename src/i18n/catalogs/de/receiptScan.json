@@ -1,0 +1,23 @@
+{
+  "receiptScan.apiKeyConfigured": "Benutzerdefinierter API-Schlüssel konfiguriert.",
+  "receiptScan.apiKeyLabel": "API-Schlüssel",
+  "receiptScan.apiKeyReplace": "Geben Sie einen neuen Schlüssel ein, um ihn zu ersetzen.",
+  "receiptScan.clearApiKey": "Meinen eigenen API-Schlüssel löschen",
+  "receiptScan.endpointHelp": "Leer lassen, um den Server-Endpunkt und dessen konfigurierten API-Schlüssel zu verwenden.",
+  "receiptScan.endpointInvalid": "Geben Sie eine gültige http://- oder https://-URL ein.",
+  "receiptScan.endpointLabel": "Endpunkt-URL",
+  "receiptScan.keepCurrentPlaceholder": "Leer lassen, um den aktuellen Schlüssel zu behalten",
+  "receiptScan.modelHelp": "Leer lassen, um den Server-Standard zu verwenden.",
+  "receiptScan.modelLabel": "Modell",
+  "receiptScan.noApiKey": "Kein API-Schlüssel konfiguriert.",
+  "receiptScan.noCustomKeyCustom": "Kein eigener Schlüssel gesetzt — der Serverschlüssel wird nie an einen eigenen Endpunkt gesendet.",
+  "receiptScan.noCustomKeyServer": "Kein eigener Schlüssel gesetzt — der Server-Standard-Schlüssel wird mit dem Standard-Endpunkt des Servers verwendet.",
+  "receiptScan.overrideServer": "Servereinstellungen überschreiben",
+  "receiptScan.overrideServerDesc": "Verwenden Sie für den Kassenbon-Scan Ihren eigenen Endpunkt für das Vision-Modell statt des Server-Standards.",
+  "receiptScan.overrideToggleLabel": "Einstellungen für den Kassenbon-Scan überschreiben",
+  "receiptScan.resetToDefaults": "Auf Standard zurücksetzen",
+  "receiptScan.timeoutHelp": "Leer lassen, um den Server-Standard zu verwenden. Bereich: 1–900.",
+  "receiptScan.timeoutInvalid": "Das Zeitlimit muss zwischen 1 und 900 Sekunden liegen.",
+  "receiptScan.timeoutLabel": "Zeitlimit (Sekunden)",
+  "receiptScan.title": "Kassenbon-Scan — Vision-Modell"
+}

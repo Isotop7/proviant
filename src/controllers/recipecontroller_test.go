@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	repomocks "github.com/Isotop7/proviant/testutil/mocks"
+	"github.com/Isotop7/proviant/util"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
@@ -778,7 +778,7 @@ func (s *stubRecipeProvider) FetchRecipes([]string) ([]Recipe, bool, error) {
 	return s.recipes, s.complete, nil
 }
 
-func newCachingRecipeController(provider RecipeProvider, populatedCache bool) (*RecipeController, *repomocks.MockRecipeRepository) {
+func newCachingRecipeController(provider RecipeProvider, populatedCache bool) (*RecipeController, *repomocks.MockRecipeCacheRepository) {
 	logger := zerolog.Nop()
 	config := configuration.RecipeAPIConfiguration{
 		URL:          "https://provider.test/api",
@@ -787,7 +787,7 @@ func newCachingRecipeController(provider RecipeProvider, populatedCache bool) (*
 		CacheTTL:     24,
 		Provider:     util.RecipeProviderThemealDB,
 	}
-	repo := &repomocks.MockRecipeRepository{PopulatedCache: populatedCache}
+	repo := &repomocks.MockRecipeCacheRepository{PopulatedCache: populatedCache}
 	return &RecipeController{
 		Logger:     &logger,
 		Config:     config,

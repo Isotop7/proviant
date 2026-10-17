@@ -224,6 +224,10 @@
     main.has-bottomtab { padding-bottom: calc(60px + var(--space-6)); }
   }
 </style>
+<link rel="stylesheet" href="../tokens.dark.css">
+<script>
+(function(){try{var k='proviant_theme',s=localStorage.getItem(k)||'system',e=s==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):s;document.documentElement.setAttribute('data-theme',e);document.documentElement.setAttribute('data-bs-theme',e);}catch(e){}})();
+</script>
 </head>
 <body>
 
@@ -518,5 +522,22 @@ function toggleNotifCenter() {
     <a href="06-settings.html" class="tab-item"><i class="bi bi-gear"></i>Settings</a>
   </div>
 </nav>
+<button id="themeToggleBtn" type="button" aria-label="Toggle theme" style="position:fixed;right:16px;bottom:16px;z-index:1000;width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--fg);box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:center;cursor:pointer">
+  <i class="bi bi-circle-half" style="font-size:18px"></i>
+</button>
+<script>
+(function(){
+  var STORAGE_KEY='proviant_theme';
+  var THEMES=['light','dark','system'];
+  function system(){return window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+  function stored(){try{return localStorage.getItem(STORAGE_KEY)||'system';}catch(_){return 'system';}}
+  function icon(t){return t==='dark'?'bi-moon-fill':t==='light'?'bi-sun-fill':'bi-circle-half';}
+  function apply(t){var e=t==='system'?system():t;document.documentElement.setAttribute('data-theme',e);document.documentElement.setAttribute('data-bs-theme',e);var b=document.getElementById('themeToggleBtn');if(b){b.querySelector('i').className='bi '+icon(t);}}
+  apply(stored());
+  document.addEventListener('DOMContentLoaded',function(){apply(stored());});
+  document.addEventListener('click',function(e){if(!e.target.closest('#themeToggleBtn'))return;var c=stored();var n=THEMES[(THEMES.indexOf(c)+1)%THEMES.length];try{localStorage.setItem(STORAGE_KEY,n);}catch(_){}apply(n);});
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){if(stored()==='system')apply('system');});
+})();
+</script>
 </body>
 </html>

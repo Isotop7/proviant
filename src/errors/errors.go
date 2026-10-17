@@ -52,6 +52,9 @@ var (
 	// ErrInvalidUserID is thrown when supplied user data is invalid
 	ErrInvalidUserID = errors.New("invalid user ID")
 
+	// ErrUnsupportedLanguage is thrown when a language has no message catalog
+	ErrUnsupportedLanguage = errors.New("unsupported language")
+
 	// ErrInvalidUserIDWrapper is used to interpolate a invalid user id
 	ErrInvalidUserIDWrapper            = "User with id '%d' not found"
 	ErrInvalidUserIDWrapperWithMessage = ErrInvalidUserIDWrapper + ": %s"
@@ -119,6 +122,21 @@ var (
 	// ErrBarcodeMissing is thrown if a product request carries no barcode.
 	ErrBarcodeMissing = errors.New("barcode missing")
 
+	// ErrClientSyncIDTooLong is thrown if a product request carries a clientSyncId
+	// longer than util.OfflineSyncIDMaxLength. The column is indexed, so an
+	// unbounded value would fail at insert time as a 500.
+	ErrClientSyncIDTooLong = errors.New("clientSyncId too long")
+
+	// ErrClientMutationIDTooLong is thrown if an amount update carries a
+	// clientMutationId longer than util.OfflineSyncIDMaxLength, for the same
+	// reason as ErrClientSyncIDTooLong.
+	ErrClientMutationIDTooLong = errors.New("clientMutationId too long")
+
+	// ErrClientSyncIDConflict is thrown if a product create carries a clientSyncId
+	// already held by another household member's private product: the unique index
+	// forbids a second row, and the existing row is not the caller's to read.
+	ErrClientSyncIDConflict = errors.New("clientSyncId is already used by another product")
+
 	// ErrNoValidSearchParameters is thrown if a product search yields no usable
 	// query parameters.
 	ErrNoValidSearchParameters = errors.New("no valid search parameters found")
@@ -130,6 +148,24 @@ var (
 	// ErrShoppingListItemNotFound is thrown if the requested shopping list item
 	// does not exist in the caller's household.
 	ErrShoppingListItemNotFound = errors.New("shopping list item not found")
+
+	// ErrIntegrationInvalidProvider is thrown if the requested shopping list sync provider is unknown.
+	ErrIntegrationInvalidProvider = errors.New("invalid shopping list sync provider")
+
+	// ErrIntegrationProviderDisabled is thrown if the requested shopping list sync provider is disabled in server configuration.
+	ErrIntegrationProviderDisabled = errors.New("shopping list sync provider is not enabled on this server")
+
+	// ErrIntegrationNotFound is thrown if the requested household integration does not exist.
+	ErrIntegrationNotFound = errors.New("household integration not found")
+
+	// ErrIntegrationMissingCredentials is thrown if an integration is missing its required authentication token.
+	ErrIntegrationMissingCredentials = errors.New("integration credentials are required")
+
+	// ErrIntegrationMissingListID is thrown if an integration requires a target list or project ID that was not provided.
+	ErrIntegrationMissingListID = errors.New("integration list ID is required")
+
+	// ErrIntegrationSyncFailed is thrown when an external shopping list provider fails during synchronization.
+	ErrIntegrationSyncFailed = errors.New("shopping list sync failed")
 
 	// ErrWasteInvalidPeriod is thrown if the waste analytics period is outside the
 	// accepted set.
@@ -468,6 +504,21 @@ var (
 	// ErrRecipeNoMatchesFound is thrown when no recipes match the given products
 	ErrRecipeNoMatchesFound = errors.New("no matching recipes found")
 
+	// ErrRecipeNameRequired is thrown when a saved recipe is created without a name
+	ErrRecipeNameRequired = errors.New("recipe name is required")
+
+	// ErrRecipeNotFound is thrown when the requested saved recipe does not exist in the caller's household
+	ErrRecipeNotFound = errors.New("recipe not found")
+
+	// ErrMealPlanEntryNotFound is thrown when the requested meal plan entry does not exist in the caller's household
+	ErrMealPlanEntryNotFound = errors.New("meal plan entry not found")
+
+	// ErrMealPlanInvalidDate is thrown when a meal plan date is not a YYYY-MM-DD date
+	ErrMealPlanInvalidDate = errors.New("invalid meal plan date")
+
+	// ErrMealPlanInvalidRange is thrown when the requested meal plan range ends before it starts
+	ErrMealPlanInvalidRange = errors.New("invalid meal plan date range")
+
 	// ErrUserHasNoHousehold is thrown when a user does not belong to a household
 	ErrUserHasNoHousehold = errors.New("user has no household")
 
@@ -485,6 +536,40 @@ var (
 	 */
 	// ErrExportCSVWriteWrapper is used to interpolate csv export error
 	ErrExportCSVWriteWrapper = "CSV write error: %s"
+
+	/*
+	 * Household backup / restore related errors
+	 */
+	// ErrBackupMissingFile is thrown when the restore request carries neither a
+	// JSON body nor a file part
+	ErrBackupMissingFile = errors.New("no backup file uploaded")
+
+	// ErrBackupInvalidDocument is thrown when the uploaded file is not a valid
+	// household backup document
+	ErrBackupInvalidDocument = errors.New("file is not a valid household backup")
+
+	// ErrBackupUnsupportedVersion is thrown when the backup document carries a
+	// schema version this release cannot restore
+	ErrBackupUnsupportedVersion = errors.New("unsupported backup schema version")
+
+	// ErrBackupRestoreFailed is thrown when the transactional restore fails
+	ErrBackupRestoreFailed = errors.New("failed to restore household backup")
+
+	// ErrBackupInvalidDirectory is thrown when the scheduled backup target is
+	// configured but unusable
+	ErrBackupInvalidDirectory = errors.New("backup directory is invalid")
+
+	// ErrBackupInvalidSchedule is thrown when the scheduled backup interval is
+	// not positive or retention is negative
+	ErrBackupInvalidSchedule = errors.New("backup schedule is invalid")
+
+	// ErrBackupTooManyProducts is thrown when one restore carries more products
+	// than the backup schema allows
+	ErrBackupTooManyProducts = errors.New("backup contains too many products")
+
+	// ErrBackupTooManyLocations is thrown when one restore carries more storage
+	// locations than the backup schema allows
+	ErrBackupTooManyLocations = errors.New("backup contains too many storage locations")
 
 	/*
 	 * CSV import related errors

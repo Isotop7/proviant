@@ -2,17 +2,17 @@
 
 <div class="page-header">
     <div>
-        <h1 class="page-header-title">Products</h1>
-        <p class="page-header-subtitle">{{ .ProductCount }} items in your household</p>
+        <h1 class="page-header-title">{{ t "nav.products" }}</h1>
+        <p class="page-header-subtitle">{{ tn "products.header.itemCount" .ProductCount }}</p>
     </div>
     <div class="d-flex gap-2">
         {{ if .ReceiptScanEnabled }}
         <a href="/web/products/scan-receipt" class="btn btn-proviant-secondary d-none d-md-flex align-items-center gap-2">
-            <i class="bi bi-receipt"></i> Scan receipt
+            <i class="bi bi-receipt"></i> {{ t "products.scanReceipt" }}
         </a>
         {{ end }}
         <button class="btn btn-proviant-primary d-none d-md-flex align-items-center gap-2" id="btnOpenAddProductModal">
-            <i class="bi bi-plus-lg"></i> Add product
+            <i class="bi bi-plus-lg"></i> {{ t "products.addProduct" }}
         </button>
     </div>
 </div>
@@ -25,10 +25,10 @@
         </div>
         <!-- View toggle buttons on desktop -->
         <div class="d-none d-md-flex gap-1 align-items-center flex-shrink-0">
-            <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}" aria-label="List view">
+            <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}" aria-label="{{ t "products.listView" }}">
                 <i class="bi bi-list-ul" aria-hidden="true"></i>
             </a>
-            <a href="?{{ queryWith .Params "view" "grid" }}" class="btn-view {{ if eq .View "grid" }}active{{ end }}" aria-label="Grid view">
+            <a href="?{{ queryWith .Params "view" "grid" }}" class="btn-view {{ if eq .View "grid" }}active{{ end }}" aria-label="{{ t "products.gridView" }}">
                 <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
             </a>
         </div>
@@ -40,10 +40,10 @@
         <div class="d-flex gap-1 align-items-center flex-shrink-0">
             <!-- View toggle: visible on mobile, hidden on desktop (already in Row 1 on desktop) -->
             <div class="d-flex d-md-none gap-1">
-                <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}" title="List view" aria-label="List view">
+                <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}" title="{{ t "products.listView" }}" aria-label="{{ t "products.listView" }}">
                     <i class="bi bi-list-ul" aria-hidden="true"></i>
                 </a>
-                <a href="?{{ queryWith .Params "view" "grid" }}" class="btn-view {{ if eq .View "grid" }}active{{ end }}" title="Grid view" aria-label="Grid view">
+                <a href="?{{ queryWith .Params "view" "grid" }}" class="btn-view {{ if eq .View "grid" }}active{{ end }}" title="{{ t "products.gridView" }}" aria-label="{{ t "products.gridView" }}">
                     <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
                 </a>
             </div>
@@ -53,7 +53,7 @@
                 <a href="?{{ queryWith $.Params "status" $s }}"
                    class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
                     {{ if and (ne $s "all") (ne $s "archived") }}<span class="filter-dot dot-{{ $s }}"></span>{{ end }}
-                    {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Consumed{{ else }}No date{{ end }}
+                    {{ if eq $s "all" }}{{ t "common.all" }}{{ else if eq $s "expired" }}{{ t "status.expired" }}{{ else if eq $s "critical" }}{{ t "status.critical" }}{{ else if eq $s "soon" }}{{ t "status.soon" }}{{ else if eq $s "fresh" }}{{ t "status.fresh" }}{{ else if eq $s "archived" }}{{ t "products.consumed" }}{{ else }}{{ t "status.noDate" }}{{ end }}
                 </a>
                 {{ end }}
 
@@ -67,7 +67,7 @@
                 {{ end }}
                 {{ if .StorageLocations }}
                 <a href="?{{ queryWith .Params "locationId" "" }}"
-                   class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">All</a>
+                   class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">{{ t "common.all" }}</a>
                 {{ end }}
             </div>
         </div>
@@ -78,42 +78,46 @@
                 <span id="bulkCount" class="bulk-count"></span>
                 {{ if eq $.StatusFilter "archived" }}
                 <button data-bulk-action="restore" class="btn-bulk">
-                    <i class="bi bi-arrow-counterclockwise"></i> Restore
+                    <i class="bi bi-arrow-counterclockwise"></i> {{ t "products.restore" }}
                 </button>
                 {{ else }}
                 <button data-bulk-action="archive" class="btn-bulk">
-                    <i class="bi bi-check-circle"></i> Consume
+                    <i class="bi bi-check-circle"></i> {{ t "products.consume" }}
                 </button>
                 <button data-bulk-action="cook" class="btn-bulk">
-                    <span class="btn-text"><i class="bi bi-fire"></i> Cook</span>
-                    <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Cooking...</span>
+                    <span class="btn-text"><i class="bi bi-fire"></i> {{ t "products.cook" }}</span>
+                    <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
                 </button>
                 {{ end }}
                 <button data-bulk-action="delete" class="btn-bulk danger">
-                    <i class="bi bi-trash3"></i> Waste
+                    <i class="bi bi-trash3"></i> {{ t "products.waste" }}
                 </button>
             </div>
 
             <!-- Mobile filter/export button -->
             <div class="d-block d-md-none">
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn-bulk dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More options">
+                    <button type="button" class="btn-bulk dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ t "a11y.moreOptions" }}">
                         <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" id="mobileExportMenu">
-                        <li><a class="dropdown-item" href="#" data-bs-toggle="offcanvas" data-bs-target="#mobileFiltersOffcanvas"><i class="bi bi-funnel me-2"></i>Filters</a></li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="offcanvas" data-bs-target="#mobileFiltersOffcanvas"><i class="bi bi-funnel me-2"></i>{{ t "products.filters" }}</a></li>
                         {{ if .ReceiptScanEnabled }}
-                        <li><a class="dropdown-item" href="/web/products/scan-receipt"><i class="bi bi-receipt me-2"></i>Scan receipt</a></li>
+                        <li><a class="dropdown-item" href="/web/products/scan-receipt"><i class="bi bi-receipt me-2"></i>{{ t "products.scanReceipt" }}</a></li>
                         {{ end }}
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-import-csv"><i class="bi bi-upload me-2"></i>Import products (CSV)</a></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-import-template"><i class="bi bi-file-earmark-arrow-down me-2"></i>Download CSV template</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-import-csv"><i class="bi bi-upload me-2"></i>{{ t "products.importCsv" }}</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-import-template"><i class="bi bi-file-earmark-arrow-down me-2"></i>{{ t "products.downloadCsvTemplate" }}</a></li>
+                        {{ if .IsAdmin }}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-restore-json"><i class="bi bi-arrow-counterclockwise me-2"></i>{{ t "products.restoreBackupJson" }}</a></li>
+                        {{ end }}
                         {{ if .Products }}
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-export-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Products CSV</a></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-export-json"><i class="bi bi-filetype-json me-2"></i>Products JSON</a></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-archive-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Consumption History (CSV)</a></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-export-full"><i class="bi bi-files me-2"></i>Full JSON</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-export-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>{{ t "products.exportProductsCsv" }}</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-export-json"><i class="bi bi-filetype-json me-2"></i>{{ t "products.exportProductsJson" }}</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-archive-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>{{ t "products.exportConsumptionHistoryCsv" }}</a></li>
+                        <li><a class="dropdown-item" href="#" id="mobile-export-full"><i class="bi bi-files me-2"></i>{{ t "products.exportFullJson" }}</a></li>
                         {{ end }}
                     </ul>
                 </div>
@@ -134,13 +138,13 @@
 <div id="productList">
     <div class="list-header">
         <div class="list-checkbox-col">
-            <input type="checkbox" id="selectAll" class="list-checkbox" aria-label="Select all products on this page">
+            <input type="checkbox" id="selectAll" class="list-checkbox" aria-label="{{ t "products.table.selectAll" }}">
         </div>
-        <div class="col-product">Product</div>
-        <div class="col-status">Status</div>
-        <div class="col-expiry">Expiry Date</div>
-        <div class="col-location">Location</div>
-        <div class="col-qty">Qty</div>
+        <div class="col-product">{{ t "products.product" }}</div>
+        <div class="col-status">{{ t "products.status" }}</div>
+        <div class="col-expiry">{{ t "products.expiryDate" }}</div>
+        <div class="col-location">{{ t "products.location" }}</div>
+        <div class="col-qty">{{ t "products.qty" }}</div>
         <div class="col-actions"></div>
     </div>
     <div id="skeletonRows" class="d-none">
@@ -279,7 +283,7 @@
     {{ range .Products }}
     <div class="list-row" data-id="{{ .Model.ID }}">
         <div class="list-checkbox-col">
-            <input type="checkbox" class="row-checkbox list-checkbox" value="{{ .Model.ID }}" aria-label="Select {{ .ProductName }}">
+            <input type="checkbox" class="row-checkbox list-checkbox" value="{{ .Model.ID }}" aria-label="{{ t "products.table.selectProduct" .ProductName }}">
         </div>
         <div class="col-product">
             <a href="/web/products/{{ .Model.ID }}/edit" class="list-thumb">
@@ -295,7 +299,7 @@
                 <a href="/web/products/{{ .Model.ID }}/edit" class="list-product-name">
                     {{ .ProductName }}
                     {{ if and .IsPrivate (eq .UserID $.CurrentUserID) }}
-                    <i class="bi bi-lock" title="Private product"></i>
+                    <i class="bi bi-lock" title="{{ t "products.privateProduct" }}"></i>
                     {{ end }}
                 </a>
                 <div class="list-product-meta">
@@ -311,7 +315,7 @@
             {{ if and (gt .MinStockAmount 0) (lt .Amount .MinStockAmount) }}
             <span class="badge-status badge-lowstock">
                 <i class="bi bi-exclamation-triangle-fill"></i>
-                Low stock
+                {{ t "products.lowStock" }}
             </span>
             {{ end }}
         </div>
@@ -332,14 +336,14 @@
             <span class="qty-static">{{ .Amount }}</span>
             {{ else }}
             <div class="qty-stepper">
-                <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}" aria-label="Decrease quantity of {{ .ProductName }}">−</button>
+                <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}" aria-label="{{ t "products.table.decreaseQuantity" .ProductName }}">−</button>
                 <span id="qty-{{ .Model.ID }}">{{ .Amount }}</span>
-                <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}" aria-label="Increase quantity of {{ .ProductName }}">+</button>
+                <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}" aria-label="{{ t "products.table.increaseQuantity" .ProductName }}">+</button>
             </div>
             {{ end }}
         </div>
         <div class="col-actions">
-            <button type="button" class="btn-add-to-shopping-list" data-product-id="{{ .Model.ID }}" title="Add to shopping list">
+            <button type="button" class="btn-add-to-shopping-list" data-product-id="{{ .Model.ID }}" title="{{ t "products.addToShoppingList" }}">
                 <i class="bi bi-cart-plus"></i>
             </button>
         </div>
@@ -354,21 +358,21 @@
 </div>
 {{ end }}
 {{ if gt .TotalPages 1 }}
-<nav class="products-pagination" aria-label="Product list pages">
+<nav class="products-pagination" aria-label="{{ t "products.pagination.label" }}">
     {{ if .PrevPageURL }}
     <a href="{{ .PrevPageURL }}" class="pagination-link" rel="prev">
-        <i class="bi bi-chevron-left" aria-hidden="true"></i><span>Previous</span>
+        <i class="bi bi-chevron-left" aria-hidden="true"></i><span>{{ t "common.previous" }}</span>
     </a>
     {{ else }}
-    <span class="pagination-link is-disabled"><i class="bi bi-chevron-left" aria-hidden="true"></i><span>Previous</span></span>
+    <span class="pagination-link is-disabled"><i class="bi bi-chevron-left" aria-hidden="true"></i><span>{{ t "common.previous" }}</span></span>
     {{ end }}
-    <span class="pagination-status" aria-live="polite">Page {{ .Page }} of {{ .TotalPages }}</span>
+    <span class="pagination-status" aria-live="polite">{{ t "products.pagination.pageStatus" .Page .TotalPages }}</span>
     {{ if .NextPageURL }}
     <a href="{{ .NextPageURL }}" class="pagination-link" rel="next">
-        <span>Next</span><i class="bi bi-chevron-right" aria-hidden="true"></i>
+        <span>{{ t "common.next" }}</span><i class="bi bi-chevron-right" aria-hidden="true"></i>
     </a>
     {{ else }}
-    <span class="pagination-link is-disabled"><span>Next</span><i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+    <span class="pagination-link is-disabled"><span>{{ t "common.next" }}</span><i class="bi bi-chevron-right" aria-hidden="true"></i></span>
     {{ end }}
 </nav>
 {{ end }}
@@ -379,25 +383,25 @@
 <!-- Mobile filter offcanvas (hidden by default) -->
 <div class="offcanvas offcanvas-bottom" id="mobileFiltersOffcanvas" tabindex="-1" aria-labelledby="mobileFiltersOffcanvasLabel">
   <div class="offcanvas-header">
-    <h5 class="offcanvas-title" id="mobileFiltersOffcanvasLabel">Filter products</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    <h5 class="offcanvas-title" id="mobileFiltersOffcanvasLabel">{{ t "products.filterProducts" }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{{ t "a11y.close" }}"></button>
   </div>
   <div class="offcanvas-body">
     <div class="mb-3">
-      <label class="form-label fw-semibold small">Status</label>
+      <label class="form-label fw-semibold small">{{ t "products.status" }}</label>
       <div class="d-flex flex-wrap gap-2">
         {{ range $s := stringSlice "all" "expired" "critical" "soon" "fresh" "nodate" "archived" }}
         <a href="?{{ queryWith $.Params "status" $s }}"
            class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
           {{ if and (ne $s "all") (ne $s "archived") }}<span class="filter-dot dot-{{ $s }}"></span>{{ end }}
-          {{ if eq $s "all" }}All{{ else if eq $s "expired" }}Expired{{ else if eq $s "critical" }}Critical{{ else if eq $s "soon" }}Expiring soon{{ else if eq $s "fresh" }}Fresh{{ else if eq $s "archived" }}Consumed{{ else }}No date{{ end }}
+          {{ if eq $s "all" }}{{ t "common.all" }}{{ else if eq $s "expired" }}{{ t "status.expired" }}{{ else if eq $s "critical" }}{{ t "status.critical" }}{{ else if eq $s "soon" }}{{ t "status.soon" }}{{ else if eq $s "fresh" }}{{ t "status.fresh" }}{{ else if eq $s "archived" }}{{ t "products.consumed" }}{{ else }}{{ t "status.noDate" }}{{ end }}
         </a>
         {{ end }}
       </div>
     </div>
     {{ if $.StorageLocations }}
     <div class="mb-3">
-      <label class="form-label fw-semibold small">Storage location</label>
+      <label class="form-label fw-semibold small">{{ t "products.storageLocation" }}</label>
       <div class="d-flex flex-wrap gap-2">
         {{ range $l := .StorageLocations }}
         <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
@@ -405,7 +409,7 @@
           {{ $l.Name }}
         </a>
         {{ end }}
-        <a href="?{{ queryWith .Params "locationId" "" }}" class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">All</a>
+        <a href="?{{ queryWith .Params "locationId" "" }}" class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">{{ t "common.all" }}</a>
       </div>
     </div>
     {{ end }}
@@ -419,19 +423,19 @@
     <div class="d-flex gap-2">
       {{ if eq $.StatusFilter "archived" }}
       <button data-bulk-action="restore" class="btn-bulk">
-        <i class="bi bi-arrow-counterclockwise"></i> Restore
+        <i class="bi bi-arrow-counterclockwise"></i> {{ t "products.restore" }}
       </button>
       {{ else }}
       <button data-bulk-action="archive" class="btn-bulk">
-        <i class="bi bi-check-circle"></i> Consume
+        <i class="bi bi-check-circle"></i> {{ t "products.consume" }}
       </button>
       <button data-bulk-action="cook" class="btn-bulk">
-        <span class="btn-text"><i class="bi bi-fire"></i> Cook</span>
-        <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Cooking...</span>
+        <span class="btn-text"><i class="bi bi-fire"></i> {{ t "products.cook" }}</span>
+        <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
       </button>
       {{ end }}
       <button data-bulk-action="delete" class="btn-bulk danger">
-        <i class="bi bi-trash3"></i> Waste
+        <i class="bi bi-trash3"></i> {{ t "products.waste" }}
       </button>
     </div>
   </div>
@@ -447,10 +451,10 @@
                     <i class="bi bi-upc-scan"></i>
                 </div>
                 <div class="modal-header-body">
-                    <h5 class="modal-title mb-0" id="addProductModalLabel">Add product</h5>
-                    <div id="addProductModalSubtitle" class="modal-subtitle">Scan barcode or enter manually</div>
+                    <h5 class="modal-title mb-0" id="addProductModalLabel">{{ t "products.addProduct" }}</h5>
+                    <div id="addProductModalSubtitle" class="modal-subtitle">{{ t "products.modalSubtitle" }}</div>
                 </div>
-                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
@@ -460,29 +464,29 @@
                 <!-- Mode tabs -->
                 <div class="tab-switcher">
                     <button id="tabManualInput" type="button" class="tab-switcher-btn active">
-                        <i class="bi bi-keyboard"></i> Manual Input
+                        <i class="bi bi-keyboard"></i> {{ t "products.manualInput" }}
                     </button>
                     <button id="tabCamera" type="button" class="tab-switcher-btn">
-                        <i class="bi bi-camera"></i> Camera
+                        <i class="bi bi-camera"></i> {{ t "products.camera" }}
                     </button>
                 </div>
 
                 <!-- Manual input section -->
                 <div id="manualInputSection">
-                    <div class="field-label">Barcode</div>
+                    <div class="field-label">{{ t "products.barcode" }}</div>
                     <div class="barcode-input-wrap" data-focus-target="barcode">
                         <i class="bi bi-upc-scan barcode-scan-icon"></i>
 <input id="barcode" type="text" inputmode="numeric" pattern="[0-9]{13}"
-			placeholder="Scan or type EAN barcode…"
-			autocomplete="off" spellcheck="false" aria-label="Barcode">
+			placeholder="{{ t "products.barcodePlaceholder" }}"
+			autocomplete="off" spellcheck="false" aria-label="{{ t "products.barcode" }}">
                         <span class="kbd-hint">↵</span>
                     </div>
     <div class="input-hint">
-        <i class="bi bi-keyboard"></i> USB/BT scanner or type and press Enter
+        <i class="bi bi-keyboard"></i> {{ t "products.barcodeHint" }}
     </div>
     <div id="barcodeLookupLoading" class="d-none mt-2">
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-        <span class="ms-1">Searching...</span>
+        <span class="ms-1">{{ t "products.searching" }}</span>
     </div>
 </div>
 
@@ -492,7 +496,7 @@
                          <div id="barcode-reader"></div>
                      </div>
                      <div class="input-hint">
-                         <i class="bi bi-camera"></i> Aim camera at EAN barcode
+                         <i class="bi bi-camera"></i> {{ t "products.aimCamera" }}
                      </div>
                  </div>
 
@@ -505,10 +509,10 @@
                                       <i class="bi bi-camera"></i>
                                   </div>
                                   <div class="modal-header-body">
-                                      <h5 class="modal-title mb-0" id="ocrCameraModalLabel">Scan Expiry Date</h5>
-                                      <div class="modal-subtitle">Position expiry date in frame</div>
+                                      <h5 class="modal-title mb-0" id="ocrCameraModalLabel">{{ t "products.scanExpiryDate" }}</h5>
+                                      <div class="modal-subtitle">{{ t "products.scanExpirySubtitle" }}</div>
                                   </div>
-                                  <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                                  <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
                                       <i class="bi bi-x"></i>
                                   </button>
                               </div>
@@ -516,12 +520,12 @@
                                   <div class="camera-preview-wrapper">
                                       <video id="ocrVideoPreview" autoplay playsinline class="camera-preview"></video>
                                   </div>
-                                  <p class="text-secondary-custom small mt-2">Hold steady and tap Capture</p>
+                                  <p class="text-secondary-custom small mt-2">{{ t "products.captureHint" }}</p>
                               </div>
                               <div class="modal-footer">
-                                  <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+                                  <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
                                   <button type="button" class="btn btn-proviant-primary" id="btnCaptureExpiry">
-                                      <i class="bi bi-camera"></i> Capture
+                                      <i class="bi bi-camera"></i> {{ t "products.capture" }}
                                   </button>
                               </div>
                           </div>
@@ -554,33 +558,33 @@
                         </div>
                     </div>
 
-                    <select class="form-select mb-3 d-none" id="instanceDropdown" aria-label="Select existing instance"></select>
+                    <select class="form-select mb-3 d-none" id="instanceDropdown" aria-label="{{ t "products.selectInstance" }}"></select>
 
                     <form id="formExpireAt" class="needs-validation" novalidate>
-                        <label class="form-label">Amount</label>
+                        <label class="form-label">{{ t "products.amount" }}</label>
                         <div class="d-flex align-items-center gap-2 mb-3">
-                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnAmountDec" aria-label="Decrease amount">−</button>
+                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnAmountDec" aria-label="{{ t "products.amountDecrease" }}">−</button>
                             <span id="amountDisplay" class="fs-5 px-2">1</span>
-                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnAmountInc" aria-label="Increase amount">+</button>
+                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnAmountInc" aria-label="{{ t "products.amountIncrease" }}">+</button>
                         </div>
                         <input type="hidden" id="amount" value="1">
                         <label for="expireAt" class="form-label">
-                            Expiry date <span class="text-danger" aria-hidden="true">*</span>
+                            {{ t "products.expiryDateField" }} <span class="text-danger" aria-hidden="true">*</span>
                         </label>
                         <div class="d-flex align-items-center gap-2">
                             <input type="date" class="form-control flex-grow-1" id="expireAt"
                                    value="{{ today }}" required aria-required="true">
-                            <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="Scan expiry date from photo" aria-label="Scan expiry date from photo">
+                            <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="{{ t "products.scanExpiryFromPhoto" }}" aria-label="{{ t "products.scanExpiryFromPhoto" }}">
                                 <i class="bi bi-camera" aria-hidden="true"></i>
                             </button>
                         </div>
                         <div class="invalid-feedback">
-                            <i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please select an expiry date
+                            <i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "products.expiryRequired" }}
                         </div>
                         {{ if .Locations }}
-                        <label for="modalStorageLocation" class="form-label mt-2">Storage Location</label>
-                        <select class="form-select" id="modalStorageLocation" aria-label="Storage location">
-                            <option value="">— None —</option>
+                        <label for="modalStorageLocation" class="form-label mt-2">{{ t "products.storageLocationTitle" }}</label>
+                        <select class="form-select" id="modalStorageLocation" aria-label="{{ t "products.storageLocation" }}">
+                            <option value="">{{ t "products.noneOption" }}</option>
                             {{ range .Locations }}
                             <option value="{{ .ID }}">{{ .Icon }} {{ .Name }}</option>
                             {{ end }}
@@ -589,27 +593,27 @@
                         {{ end }}
                     </form>
 
-                    <div class="btn-group w-100 mb-3" role="group" aria-label="Quick expiry shortcuts">
-                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd3">+3 days</button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd7">+7 days</button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd1m">+1 month</button>
+                    <div class="btn-group w-100 mb-3" role="group" aria-label="{{ t "products.quickExpiryShortcuts" }}">
+                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd3">{{ t "products.plus3Days" }}</button>
+                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd7">{{ t "products.plus7Days" }}</button>
+                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd1m">{{ t "products.plus1Month" }}</button>
                     </div>
 
                     <div class="d-flex gap-2 mb-2" id="foundBarcode">
                         <button id="btnShowProduct" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
-                            <i class="bi bi-eye me-1" aria-hidden="true"></i>View
+                            <i class="bi bi-eye me-1" aria-hidden="true"></i>{{ t "products.view" }}
                         </button>
                         <button id="btnShowProducts" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
-                            <i class="bi bi-collection me-1" aria-hidden="true"></i>All instances
+                            <i class="bi bi-collection me-1" aria-hidden="true"></i>{{ t "products.allInstances" }}
                         </button>
                     </div>
 
                     <div class="d-flex gap-2">
                         <button id="btnArchiveProductModal" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
-                            <i class="bi bi-check-circle me-1" aria-hidden="true"></i>Consumed
+                            <i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "products.consumed" }}
                         </button>
                         <button id="btnDeleteProductModal" type="button" class="btn btn-sm btn-proviant-danger flex-fill" disabled>
-                            <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                            <i class="bi bi-trash me-1" aria-hidden="true"></i>{{ t "common.delete" }}
                         </button>
                     </div>
                 </div>
@@ -623,26 +627,26 @@
                     </div>
                     <div class="flex-fill">
                         <div id="modalSuccessName" class="modal-success-name"></div>
-                        <div class="modal-success-sub">Successfully added to your pantry</div>
+                        <div class="modal-success-sub">{{ t "products.addedToPantry" }}</div>
                     </div>
                     <button type="button" class="btn btn-proviant-primary btn-sm" id="btnModalScanAnother">
-                        <i class="bi bi-plus-lg me-1"></i>Add another
+                        <i class="bi bi-plus-lg me-1"></i>{{ t "products.addAnother" }}
                     </button>
                 </div>
-                <button type="button" class="btn btn-proviant-secondary w-100" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-proviant-secondary w-100" data-bs-dismiss="modal">{{ t "common.close" }}</button>
             </div>
 
             <div class="modal-footer">
                 <div id="modalFooterScan">
-                    <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
                 </div>
                 <div id="modalFooterForm">
                     <button type="button" class="btn btn-proviant-secondary" id="btnModalBack">
-                        <i class="bi bi-arrow-left"></i> Back
+                        <i class="bi bi-arrow-left"></i> {{ t "common.back" }}
                     </button>
                     <button type="button" class="btn btn-proviant-primary" id="btnAddProduct">
-                        <span class="btn-text"><i class="bi bi-plus-lg me-1"></i>Add to pantry</span>
-                        <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Adding...</span>
+                        <span class="btn-text"><i class="bi bi-plus-lg me-1"></i>{{ t "products.addToPantry" }}</span>
+                        <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.adding" }}</span>
                     </button>
                 </div>
                 <div id="modalFooterSuccess"></div>
@@ -661,10 +665,10 @@
                     <i class="bi bi-camera"></i>
                 </div>
                 <div class="modal-header-body">
-                    <h5 class="modal-title mb-0" id="ocrResultModalLabel">Expiry Date Scan</h5>
-                    <div class="modal-subtitle">Check the detected date</div>
+                    <h5 class="modal-title mb-0" id="ocrResultModalLabel">{{ t "products.expiryDateScan" }}</h5>
+                    <div class="modal-subtitle">{{ t "products.checkDetectedDate" }}</div>
                 </div>
-                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
@@ -679,21 +683,21 @@
                 <div class="progress mb-2" style="height: 8px;">
                     <div id="ocrConfidenceBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
                 </div>
-                <small class="text-secondary-custom" id="ocrConfidenceLabel">Confidence: 0%</small>
+                <small class="text-secondary-custom" id="ocrConfidenceLabel">{{ t "products.confidenceLabel" }}</small>
 
                 <!-- Raw text fallback -->
                 <div id="ocrRawTextWrapper" class="mt-3 d-none">
-                    <label class="form-label">Raw OCR text</label>
+                    <label class="form-label">{{ t "products.rawOcrText" }}</label>
                     <textarea id="ocrRawText" class="form-control" rows="3" readonly></textarea>
-                    <div class="form-text">Date not detected confidently. Please check the text above and adjust the date manually.</div>
+                    <div class="form-text">{{ t "products.ocrFallbackHelp" }}</div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-proviant-secondary" id="btnRecaptureExpiry">
-                    <i class="bi bi-camera"></i> Retake
+                    <i class="bi bi-camera"></i> {{ t "products.retake" }}
                 </button>
                 <button type="button" class="btn btn-proviant-primary" id="btnConfirmExpiry">
-                    <i class="bi bi-check"></i> Confirm
+                    <i class="bi bi-check"></i> {{ t "common.confirm" }}
                 </button>
             </div>
         </div>
@@ -709,10 +713,10 @@
                     <i class="bi bi-fire"></i>
                 </div>
                 <div class="modal-header-body">
-                    <h5 class="modal-title mb-0" id="cookModalLabel">Cook products</h5>
-                    <div class="modal-subtitle">Set how much of each product to use</div>
+                    <h5 class="modal-title mb-0" id="cookModalLabel">{{ t "products.cookModalTitle" }}</h5>
+                    <div class="modal-subtitle">{{ t "products.cookModalSubtitle" }}</div>
                 </div>
-                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
@@ -720,10 +724,10 @@
                 <div id="cookModalItems"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
                 <button type="button" class="btn btn-proviant-primary" id="btnCookConfirm">
-                    <span class="btn-text"><i class="bi bi-fire me-1"></i>Cook</span>
-                    <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Cooking...</span>
+                    <span class="btn-text"><i class="bi bi-fire me-1"></i>{{ t "products.cook" }}</span>
+                    <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
                 </button>
             </div>
         </div>
@@ -732,6 +736,8 @@
 
 <!-- Hidden file input backing the CSV import menu entries -->
 <input type="file" id="csvImportFile" accept=".csv,text/csv" class="d-none" aria-hidden="true" tabindex="-1">
+<!-- Hidden file input backing the JSON backup restore menu entries -->
+<input type="file" id="jsonRestoreFile" accept=".json,application/json" class="d-none" aria-hidden="true" tabindex="-1">
 
 <script src="/assets/js/html5-qrcode.min.js"></script>
 <script src="/assets/js/productsCreate.js"></script>

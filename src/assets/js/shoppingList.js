@@ -91,7 +91,7 @@
     }).then(function(res) {
       if (!res.ok) {
         qtyEl.textContent = currentQty;
-        proviant.showFeedback('error', 'Update failed');
+        proviant.showFeedback('error', proviant.t("js.shoppingList.updateFailedTitle"));
       }
     }).catch(function() {
       qtyEl.textContent = currentQty;
@@ -111,17 +111,17 @@
           notesInput.classList.remove('notes-saved');
         }, 1200);
       } else if (!res.ok) {
-        proviant.showFeedback('error', 'Failed to save notes');
+        proviant.showFeedback('error', proviant.t("js.shoppingList.saveNotesFailedTitle"));
       }
     }).catch(function() {
-      proviant.showFeedback('error', 'Failed to save notes');
+      proviant.showFeedback('error', proviant.t("js.shoppingList.saveNotesFailedTitle"));
     });
   }
 
   function deleteItem(itemId) {
-    proviant.showConfirm('Delete item', 'Delete this item from your shopping list?', function() {
+    proviant.showConfirm(proviant.t("js.shoppingList.deleteConfirmTitle"), proviant.t("js.shoppingList.deleteConfirmBody"), function() {
       doDeleteItem(itemId);
-    }, 'Delete', 'danger');
+    }, proviant.t("common.delete"), 'danger');
   }
 
   function doDeleteItem(itemId) {
@@ -139,10 +139,10 @@
         if (notesEl) notesEl.remove();
         updateItemCount();
       } else {
-        proviant.showFeedback('error', 'Delete failed');
+        proviant.showFeedback('error', proviant.t("js.shoppingList.deleteFailedTitle"));
       }
     }).catch(function() {
-      proviant.showFeedback('error', 'Delete failed');
+      proviant.showFeedback('error', proviant.t("js.shoppingList.deleteFailedTitle"));
     });
   }
 
@@ -161,7 +161,7 @@
       }
       updateItemCount();
     }).catch(function() {
-      proviant.showFeedback('error', 'Toggle failed');
+      proviant.showFeedback('error', proviant.t("js.shoppingList.toggleFailedTitle"));
     });
   }
 
@@ -189,10 +189,10 @@
       if (qtyInput) qtyInput.value = '1';
       if (unitInput) unitInput.value = '';
       nameInput.focus();
-      proviant.showFeedback('success', 'Item added');
+      proviant.showFeedback('success', proviant.t("js.shoppingList.itemAddedTitle"));
       setTimeout(function() { location.reload(); }, 300);
     }).catch(function() {
-      proviant.showFeedback('error', 'Failed to add item');
+      proviant.showFeedback('error', proviant.t("js.shoppingList.addItemFailedTitle"));
     });
   }
 
@@ -200,21 +200,21 @@
     var btn = document.getElementById('btnImportAll');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Importing...';
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>' + proviant.t("js.shoppingList.importing");
     }
     fetch('/api/v1/shopping-list/import-auto', {
       method: 'POST'
     }).then(function(res) {
       return res.json();
     }).then(function(data) {
-      proviant.showFeedback('success', data.message || 'Items imported');
+      proviant.showFeedback('success', data.message || proviant.t("js.shoppingList.itemsImportedTitle"));
       setTimeout(function() { location.reload(); }, 500);
     }).catch(function() {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = 'Import all';
+        btn.innerHTML = proviant.t("js.shoppingList.importAll");
       }
-      proviant.showFeedback('error', 'Import failed');
+      proviant.showFeedback('error', proviant.t("js.shoppingList.importFailedTitle"));
     });
   }
 
@@ -225,7 +225,7 @@
     var total = rows.length;
     var subtitle = document.querySelector('.page-header-subtitle');
     if (subtitle) {
-      subtitle.textContent = total + ' item' + (total !== 1 ? 's' : '') + ' in your list';
+      subtitle.textContent = proviant.tn("js.shoppingList.itemCount", total);
     }
   }
 
@@ -251,7 +251,7 @@
     }
     if (!items.length) return;
 
-    var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Shopping List</title><style>';
+    var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + proviant.t("nav.shoppingList") + '</title><style>';
     html += 'body{font-family:system-ui,sans-serif;padding:1rem;color:#221e18}';
     html += 'h1{margin:0 0 0.5rem;font-size:1.5rem}';
     html += '.meta{margin-bottom:1rem;font-size:0.875rem;color:#666}';
@@ -262,8 +262,8 @@
     html += '.amount{font-size:1rem;color:#4a6fa0;margin-left:0.5rem}';
     html += '.notes{font-size:0.875rem;color:#888;margin-left:2.25rem;margin-top:0.25rem}';
     html += '</style></head><body>';
-    html += '<h1>Shopping List</h1>';
-    html += '<p class="meta">' + items.length + ' items</p>';
+    html += '<h1>' + proviant.t("nav.shoppingList") + '</h1>';
+    html += '<p class="meta">' + proviant.tn("js.shoppingList.printCount", items.length) + '</p>';
     items.forEach(function(item) {
       var name = item.name || item.Name || '';
       var qty = item.quantity || item.Quantity || '';

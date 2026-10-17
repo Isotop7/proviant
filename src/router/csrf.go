@@ -8,10 +8,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"codeberg.org/isotop7/proviant/api"
-	apperrors "codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	apperrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/util"
 )
 
 const (

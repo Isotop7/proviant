@@ -5,12 +5,12 @@ import (
 
 	stderrors "errors"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers"
-	db "codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers"
+	db "github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/errors"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	dbModel "github.com/Isotop7/proviant/models/database"
 
 	"github.com/gin-gonic/gin"
 )

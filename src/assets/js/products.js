@@ -17,6 +17,18 @@ const pe = {
 // DOMContentLoaded handler below. A frozen object makes those assignments
 // silent no-ops in sloppy mode and breaks bulk selection entirely.
 
+// A delta the offline outbox could not store is the user's change disappearing
+// with nothing to retry, so it has to reach them — a console line in a failed
+// enqueue is invisible on a phone. Every other failure keeps its existing
+// console-only handling: the delta either reached the server or is queued.
+function reportAmountChangeFailed(response) {
+    if (response.queued === false) {
+        proviant.showFeedback('error', response.message);
+        return;
+    }
+    console.error(response.message);
+}
+
 function handleCardClickEffect(cardId) {
     const card = document.getElementById(cardId);
     if (card) {
@@ -63,7 +75,7 @@ document.addEventListener("click", function (event) {
                     setTimeout(() => amountEl.classList.remove('amount-updated'), 800);
                 }
             } else {
-                console.error(response.message);
+                reportAmountChangeFailed(response);
             }
         });
         return;
@@ -90,7 +102,7 @@ document.addEventListener("click", function (event) {
                     }
                 }
             } else {
-                console.error(response.message);
+                reportAmountChangeFailed(response);
             }
         });
         return;
@@ -111,14 +123,14 @@ document.addEventListener("click", function (event) {
                 const previous = new Date(response.openedAt);
                 const formatted = isNaN(previous.getTime()) ? response.openedAt : previous.toLocaleString();
                 proviant.showConfirm(
-                    'Already opened',
-                    `This product was already marked as opened on ${formatted}. Reset the opened date to now?`,
+                    proviant.t("js.products.alreadyOpened"),
+                    proviant.t("js.products.resetOpenedConfirm", formatted),
                     () => sendOpen(true),
-                    'Reset',
+                    proviant.t("js.products.reset"),
                     'warning'
                 );
             } else {
-                proviant.showFeedback('error', 'Could not mark as opened', 'Please try again.');
+                proviant.showFeedback('error', proviant.t("js.products.markOpenedFailed"), proviant.t("js.products.pleaseTryAgain"));
             }
         });
         sendOpen(false);
@@ -162,12 +174,12 @@ document.addEventListener("click", function (event) {
                 });
                 if (!res.ok) {
                     const body = await res.json().catch(function () { return {}; });
-                    throw new Error(body.message || 'Could not add to shopping list');
+                    throw new Error(body.message || proviant.t("js.products.addToShoppingListFailed"));
                 }
             },
-            'Added to shopping list',
+            proviant.t("js.products.addedToShoppingList"),
             function (err) {
-                proviant.showFeedback('error', 'Failed to add to list', err.message);
+                proviant.showFeedback('error', proviant.t("js.products.failedToAddToList"), err.message);
             }
         );
         return;
@@ -241,7 +253,7 @@ document.addEventListener("click", function (event) {
             openCookModal(ids, bulkBtn);
             return;
         }
-        var opts = action === 'delete' ? { confirm: true, confirmTitle: 'Mark as wasted', confirmMsg: 'Mark ' + ids.length + ' product(s) as wasted? This cannot be undone.' } : {};
+        var opts = action === 'delete' ? { confirm: true, confirmTitle: proviant.t("js.products.markAsWasted"), confirmMsg: proviant.tn("js.products.markWastedBulkConfirm", ids.length) } : {};
         proviant.bulkAction(action, ids, opts);
         return;
     }
@@ -413,8 +425,8 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('modalFooter' + cap(s)).style.display = s === step ? 'flex'  : 'none';
         });
         if (footerEl) footerEl.style.display = step === 'success' ? 'none' : '';
-        if (step === 'scan')  subtitle.textContent = 'Scan barcode or enter manually';
-        if (step === 'form')  subtitle.textContent = 'Confirm details';
+        if (step === 'scan')  subtitle.textContent = proviant.t("js.products.modalSubtitleScan");
+        if (step === 'form')  subtitle.textContent = proviant.t("js.products.modalSubtitleConfirm");
     }
 
     function resetToScan() {
@@ -443,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const name       = nameEl ? nameEl.innerText.trim() : '';
         const resultName = document.getElementById('scanResultName');
         const resultCode = document.getElementById('scanResultCode');
-        if (resultName) resultName.textContent = name || 'Unknown product';
+        if (resultName) resultName.textContent = name || proviant.t("js.products.unknownProduct");
         if (resultCode) resultCode.textContent = barcode + ' · Open Food Facts';
     }
 
@@ -499,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const nameEl = document.getElementById('productInfoName');
                 const successNameEl = document.getElementById('modalSuccessName');
                 if (successNameEl) {
-                    successNameEl.textContent = (nameEl ? nameEl.innerText.trim() : '') + ' added';
+                    successNameEl.textContent = proviant.t("js.products.nameAdded", nameEl ? nameEl.innerText.trim() : '');
                 }
                 showModalStep('success');
                 return;
@@ -522,10 +534,10 @@ function updateBulkSelected() {
 
     if (checked.length > 0) {
         if (pe.bulkActions) pe.bulkActions.style.display = 'flex';
-        if (pe.bulkCount) pe.bulkCount.textContent = checked.length + ' selected';
+        if (pe.bulkCount) pe.bulkCount.textContent = proviant.t("js.products.selectedCount", checked.length);
         if (isMobile && pe.mobileBulkActions) {
             pe.mobileBulkActions.style.display = 'block';
-            if (pe.mobileBulkCount) pe.mobileBulkCount.textContent = checked.length + ' selected';
+            if (pe.mobileBulkCount) pe.mobileBulkCount.textContent = proviant.t("js.products.selectedCount", checked.length);
         }
     } else {
         if (pe.bulkActions) pe.bulkActions.style.display = 'none';
@@ -594,7 +606,7 @@ function fetchFreshProducts(ids) {
             return res.json().then(function (products) {
                 var map = new Map();
                 (Array.isArray(products) ? products : []).forEach(function (p) {
-                    if (p && p.ID) map.set(+p.ID, p);
+                    if (p && p.id) map.set(+p.id, p);
                 });
                 return map;
             });
@@ -629,7 +641,7 @@ async function openCookModalInner(ids, container) {
     if (!freshMap) {
         // Fetch failure must not degrade to stale DOM amounts — cooking
         // against unknown stock can silently archive products.
-        proviant.showFeedback('error', 'Cook unavailable', 'Could not load current stock, please try again');
+        proviant.showFeedback('error', proviant.t("js.products.cookUnavailable"), proviant.t("js.products.cookStockLoadFailed"));
         return;
     }
 
@@ -672,7 +684,7 @@ async function openCookModalInner(ids, container) {
         input.min = '1';
         input.max = String(amount);
         input.value = String(amount);
-        input.setAttribute('aria-label', 'Amount to cook for ' + name);
+        input.setAttribute('aria-label', proviant.t("js.products.cookAmountAria", name));
 
         row.appendChild(nameSpan);
         if (unit) row.appendChild(unitSpan);
@@ -684,17 +696,17 @@ async function openCookModalInner(ids, container) {
     if (skipped) {
         var note = document.createElement('div');
         note.className = 'text-secondary-custom small py-1';
-        note.textContent = skipped + ' selected product(s) skipped (no stock or not found)';
+        note.textContent = proviant.tn("js.products.cookSkippedNote", skipped);
         container.appendChild(note);
     }
 
     if (!added) {
-        proviant.showFeedback('warning', 'Nothing to cook', 'None of the selected products have stock left');
+        proviant.showFeedback('warning', proviant.t("js.products.nothingToCook"), proviant.t("js.products.noStockLeft"));
         return;
     }
     var modal = getCookModal();
     if (!modal) {
-        proviant.showFeedback('error', 'Cook unavailable', 'UI components failed to load, please reload the page');
+        proviant.showFeedback('error', proviant.t("js.products.cookUnavailable"), proviant.t("js.products.uiComponentsFailed"));
         return;
     }
     modal.show();
@@ -722,10 +734,10 @@ async function submitCook() {
     try {
         var res = await proviant.cookProducts(items);
         if (res.code !== 200) {
-            throw new Error(res.errors && res.errors.length ? res.errors.join('; ') : 'Request failed');
+            throw new Error(res.errors && res.errors.length ? res.errors.join('; ') : proviant.t("js.products.requestFailed"));
         }
-        var msg = res.consumed + ' product' + (res.consumed !== 1 ? 's' : '') + ' fully consumed';
-        if (res.partial) msg += ', ' + res.partial + ' partially';
+        var msg = proviant.tn("js.products.cookConsumed", res.consumed);
+        if (res.partial) msg += proviant.t("js.products.cookPartialSuffix", res.partial);
         var modal = getCookModal();
         if (modal) modal.hide();
         if (res.errors.length) {
@@ -734,16 +746,16 @@ async function submitCook() {
             // them before they can be read.
             // Single-line details: #proviantFeedbackMessage is a plain <p>,
             // so \n would collapse into one unreadable run-on line anyway.
-            msg += ' (' + res.errors.length + ' failed: ' + res.errors.join('; ') + ')';
-            proviant.showFeedback('warning', 'Cooked with errors', msg, clearBulkSelectionAndReload);
+            msg += proviant.t("js.products.cookErrorsSuffix", res.errors.length, res.errors.join('; '));
+            proviant.showFeedback('warning', proviant.t("js.products.cookedWithErrors"), msg, clearBulkSelectionAndReload);
             return;
         }
-        proviant.showFeedback('success', 'Cooked', msg);
+        proviant.showFeedback('success', proviant.t("js.products.cooked"), msg);
         setTimeout(clearBulkSelectionAndReload, 800);
     } catch (err) {
         btn.disabled = false;
         btn.classList.remove('loading');
-        proviant.showFeedback('error', 'Cook failed', err.message);
+        proviant.showFeedback('error', proviant.t("js.products.cookFailed"), err.message);
     }
 }
 
@@ -763,7 +775,7 @@ function changeQty(id, delta) {
                 }
             }
         } else {
-            console.error(response.message);
+            reportAmountChangeFailed(response);
         }
     });
 }

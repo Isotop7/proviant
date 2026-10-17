@@ -6,19 +6,19 @@ import (
 	"net/http"
 	"strings"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/api/auth"
-	"codeberg.org/isotop7/proviant/api/common"
-	"codeberg.org/isotop7/proviant/api/onboarding"
-	v1 "codeberg.org/isotop7/proviant/api/v1"
-	"codeberg.org/isotop7/proviant/assets"
-	"codeberg.org/isotop7/proviant/controllers"
-	dbcontroller "codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/templates"
-	"codeberg.org/isotop7/proviant/util"
-	"codeberg.org/isotop7/proviant/web"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/api/auth"
+	"github.com/Isotop7/proviant/api/common"
+	"github.com/Isotop7/proviant/api/onboarding"
+	v1 "github.com/Isotop7/proviant/api/v1"
+	"github.com/Isotop7/proviant/assets"
+	"github.com/Isotop7/proviant/controllers"
+	dbcontroller "github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/templates"
+	"github.com/Isotop7/proviant/util"
+	"github.com/Isotop7/proviant/web"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-contrib/cors"
@@ -247,6 +247,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// success allowed. Do not confuse with the CSV import path above. Rate
 	// limited: one call inserts up to util.ReceiptBulkMaxItems products.
 	publicProductMemberAPI.POST("/bulk", bulkRateLimitMiddleware, v1.WrapHandler(v1.BulkCreateProducts))
+	publicProductMemberAPI.POST("/sync-offline", offlineSyncRateLimitMiddleware, v1.WrapHandler(v1.SyncOfflineProducts))
 	publicProductAPI.POST("/scan", scanRateLimitMiddleware, v1.WrapHandler(v1.ScanProduct))
 	publicProductAPI.POST("/scan-date", v1.WrapHandler(v1.ScanExpiryDate))
 	publicProductAPI.GET("/byBarcode/:barcode", v1.WrapHandler(v1.GetProductsByBarcode))
@@ -259,6 +260,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.GET("/export/archive.csv", exportRateLimitMiddleware, v1.WrapHandler(v1.ExportArchiveCSV))
 	publicProductAPI.GET("/export/full.json", exportRateLimitMiddleware, v1.WrapHandler(v1.ExportFullJSON))
 	publicProductAPI.GET("/import/template.csv", v1.WrapHandler(v1.ImportTemplateCSV))
+	// Full JSON restore replaces the household inventory, so it is admin-gated
+	// even though it lives next to the member-level CSV import.
+	restoreAdminAPI := publicProductAPI.Group("")
+	restoreAdminAPI.Use(RequireHouseholdAdmin())
+	restoreAdminAPI.POST("/restore/full.json", importRateLimitMiddleware, v1.WrapHandler(v1.RestoreFullJSON))
 
 	// Protected user routes
 	protectedUserAPI := engine.Group("/api/v1/user")
@@ -303,10 +309,29 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	wasteAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	wasteAPI.GET("", v1.WrapHandler(v1.GetWasteAnalytics))
 
-	// Recipe suggestion routes
+	// Recipe suggestion and saved recipe routes
 	recipeAPI := engine.Group("/api/v1/recipes")
 	recipeAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
 	recipeAPI.GET("/suggestions", recipesRateLimitMiddleware, v1.WrapHandler(v1.GetRecipeSuggestions))
+	recipeAPI.GET("", v1.WrapHandler(v1.ListRecipes))
+	recipeAPI.GET("/:id", v1.WrapHandler(v1.GetRecipe))
+	recipeMemberAPI := recipeAPI.Group("")
+	recipeMemberAPI.Use(RequireHouseholdRole(authentication.RoleAdmin, authentication.RoleMember))
+	recipeMemberAPI.POST("", v1.WrapHandler(v1.CreateRecipe))
+	recipeMemberAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateRecipe))
+	recipeMemberAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteRecipe))
+	recipeMemberAPI.POST("/:id/cook", v1.WrapHandler(v1.CookRecipe))
+
+	// Meal plan routes
+	mealPlanAPI := engine.Group("/api/v1/mealplans")
+	mealPlanAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware())
+	mealPlanAPI.GET("", v1.WrapHandler(v1.ListMealPlanEntries))
+	mealPlanMemberAPI := mealPlanAPI.Group("")
+	mealPlanMemberAPI.Use(RequireHouseholdRole(authentication.RoleAdmin, authentication.RoleMember))
+	mealPlanMemberAPI.POST("", v1.WrapHandler(v1.CreateMealPlanEntry))
+	mealPlanMemberAPI.POST("/shopping-list", v1.WrapHandler(v1.GenerateMealPlanShoppingList))
+	mealPlanMemberAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateMealPlanEntry))
+	mealPlanMemberAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteMealPlanEntry))
 
 	// Notification routes
 	notificationAPI := engine.Group("/api/v1/notifications")
@@ -336,6 +361,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAdminAPI.POST("/invitations", v1.WrapHandler(v1.CreateInvitation))
 	householdAdminAPI.GET("/invitations", v1.WrapHandler(v1.GetInvitations))
 	householdAdminAPI.DELETE("/invitations/:id", v1.WrapHandler(v1.CancelInvitation))
+	householdAdminAPI.GET("/integrations", v1.WrapHandler(v1.ListHouseholdIntegrations))
+	householdAdminAPI.POST("/integrations/:provider", v1.WrapHandler(v1.CreateHouseholdIntegration))
+	householdAdminAPI.PATCH("/integrations/:provider", v1.WrapHandler(v1.UpdateHouseholdIntegration))
+	householdAdminAPI.DELETE("/integrations/:provider", v1.WrapHandler(v1.DeleteHouseholdIntegration))
+	householdAdminAPI.POST("/integrations/:provider/test", v1.WrapHandler(v1.TestHouseholdIntegration))
+	householdAdminAPI.POST("/integrations/:provider/sync", v1.WrapHandler(v1.SyncHouseholdIntegrationNow))
 
 	// Storage location routes
 	householdAPI.GET("/storage-locations", v1.WrapHandler(v1.ListStorageLocations))
@@ -444,11 +475,11 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Create frontend handler with template cache
 	webFrontendHandler := web.Frontend{TemplateCache: proviantConfiguration.TemplateCache}
 	webFrontend := engine.Group("/web")
-	webFrontend.GET("/auth", webFrontendHandler.Auth)
+	webFrontend.GET("/auth", LanguageMiddleware(), webFrontendHandler.Auth)
 
 	// Public web frontend routes
 	publicWebFrontend := engine.Group("/web")
-	publicWebFrontend.Use(jwtFrontendMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware())
+	publicWebFrontend.Use(jwtFrontendMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware(), LanguageMiddleware())
 	publicWebFrontend.GET("/", webFrontendHandler.Root)
 	publicWebFrontend.GET("/user", webFrontendHandler.User)
 	publicWebFrontend.GET("/user/settings", webFrontendHandler.UserSettings)
@@ -457,28 +488,28 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/products/scan-receipt", webFrontendHandler.ProductsScanReceipt)
 	publicWebFrontend.GET("/onboarding", webFrontendHandler.Onboarding)
 	publicWebFrontend.GET("/recipes", webFrontendHandler.Recipes)
+	publicWebFrontend.GET("/mealplan", webFrontendHandler.MealPlan)
 	publicWebFrontend.GET("/waste-analytics", webFrontendHandler.WasteAnalytics)
 	publicWebFrontend.GET("/shopping-list", webFrontendHandler.ShoppingList)
 
 	// Public invite acceptance page (no auth required)
-	engine.GET("/web/invite/accept", webFrontendHandler.AcceptInvite)
+	engine.GET("/web/invite/accept", LanguageMiddleware(), webFrontendHandler.AcceptInvite)
 
 	// Public email verification page (no auth required)
-	engine.GET("/web/verify-email", webFrontendHandler.VerifyEmail)
+	engine.GET("/web/verify-email", LanguageMiddleware(), webFrontendHandler.VerifyEmail)
 
 	// Public forgot-password page (no auth required)
-	engine.GET("/web/forgot-password", webFrontendHandler.ForgotPassword)
+	engine.GET("/web/forgot-password", LanguageMiddleware(), webFrontendHandler.ForgotPassword)
 
 	// Public password reset page (no auth required)
-	engine.GET("/web/reset-password", webFrontendHandler.ResetPassword)
+	engine.GET("/web/reset-password", LanguageMiddleware(), webFrontendHandler.ResetPassword)
 
 	// Public unsubscribe page (no auth required)
-	engine.GET("/web/unsubscribe", webFrontendHandler.Unsubscribe)
+	engine.GET("/web/unsubscribe", LanguageMiddleware(), webFrontendHandler.Unsubscribe)
 
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")
-	protectedWebFrontend.Use(jwtFrontendUserAwareMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware())
-	protectedWebFrontend.GET("/products/:id/view", webFrontendHandler.ProductsView)
+	protectedWebFrontend.Use(jwtFrontendUserAwareMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware(), LanguageMiddleware())
 	protectedWebFrontend.GET("/products/:id/edit", webFrontendHandler.ProductsEdit)
 
 	// Static redirects

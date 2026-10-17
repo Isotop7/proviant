@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ t "notify.common.langCode" }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proviant — Monthly Waste Report</title>
+    <title>{{ t "notify.monthly.title" }}</title>
     <!--[if mso]>
     <noscript>
         <xml>
@@ -36,7 +36,7 @@
                     <!-- Title -->
                     <tr>
                         <td style="padding:24px 32px 0 32px;text-align:center;">
-                            <h1 style="margin:0 0 4px 0;font-size:24px;font-weight:700;color:#1A3028;">Monthly Waste Report</h1>
+                            <h1 style="margin:0 0 4px 0;font-size:24px;font-weight:700;color:#1A3028;">{{ t "notify.monthly.heading" }}</h1>
                             <p style="margin:0 0 4px 0;font-size:16px;font-weight:600;color:#2D4F3C;">{{.HouseholdName}}</p>
                             <p style="margin:0;font-size:14px;color:#6A9580;">{{.MonthLabel}}</p>
                         </td>
@@ -53,10 +53,10 @@
                                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
                                             <tr>
                                                 <td style="font-size:14px;color:#6A9580;padding-bottom:4px;">
-                                                    <strong style="color:#2D4F3C;">Total waste this month</strong>
+                                                    <strong style="color:#2D4F3C;">{{ t "notify.monthly.totalWaste" }}</strong>
                                                 </td>
                                                 <td align="right" style="font-size:20px;font-weight:700;color:#1A3028;">
-                                                    {{.WastedCount}} items
+                                                    {{ t "notify.monthly.itemsCount" .WastedCount }}
                                                 </td>
                                             </tr>
                                         </table>
@@ -64,11 +64,11 @@
                                         <!-- Sub-breakdown -->
                                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
                                             <tr>
-                                                <td style="font-size:13px;color:#6A9580;padding:3px 0;">Removed from pantry</td>
+                                                <td style="font-size:13px;color:#6A9580;padding:3px 0;">{{ t "notify.monthly.removedFromPantry" }}</td>
                                                 <td align="right" style="font-size:13px;color:#1A3028;font-weight:600;">{{.DeletedCount}}</td>
                                             </tr>
                                             <tr>
-                                                <td style="font-size:13px;color:#6A9580;padding:3px 0;">Still in pantry, past best-before</td>
+                                                <td style="font-size:13px;color:#6A9580;padding:3px 0;">{{ t "notify.monthly.stillInPantry" }}</td>
                                                 <td align="right" style="font-size:13px;color:#1A3028;font-weight:600;">{{.ExpiredCount}}</td>
                                             </tr>
                                         </table>
@@ -83,13 +83,13 @@
                                         <!-- Waste rate -->
                                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                                             <tr>
-                                                <td style="font-size:14px;color:#6A9580;">Waste rate</td>
+                                                <td style="font-size:14px;color:#6A9580;">{{ t "notify.monthly.wasteRate" }}</td>
                                                 <td align="right" style="font-size:16px;font-weight:700;color:#1A3028;">
                                                     {{printf "%.1f" .WasteRatePct}}%
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td style="font-size:13px;color:#6A9580;padding-top:4px;">vs. last month</td>
+                                                <td style="font-size:13px;color:#6A9580;padding-top:4px;">{{ t "notify.monthly.vsLastMonth" }}</td>
                                                 <td align="right" style="font-size:13px;font-weight:600;color:{{.DeltaColor}};padding-top:4px;">
                                                     <span>{{printf "%+.1f" .Delta}}%</span>
                                                     <span style="font-size:10px;">{{.DeltaSymbol}}</span>
@@ -107,12 +107,12 @@
                     <tr>
                         <td style="padding:24px 32px 32px 32px;text-align:center;">
                             <p style="margin:0 0 20px 0;font-size:14px;line-height:1.6;color:#6A9580;">
-                                Review your pantry to reduce waste before products expire.
+                                {{ t "notify.monthly.reviewHint" }}
                             </p>
                             <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
                                 <tr>
                                     <td style="border-radius:8px;background-color:#3D7A5C;">
-                                        <a href="#" style="display:inline-block;padding:12px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">Open Pantry</a>
+                                        <a href="#" style="display:inline-block;padding:12px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">{{ t "notify.monthly.openPantry" }}</a>
                                     </td>
                                 </tr>
                             </table>
@@ -123,11 +123,11 @@
                     <tr>
                         <td style="padding:0 32px 32px 32px;border-top:1px solid #C8DDD0;">
                             <p style="margin:16px 0 0 0;font-size:13px;line-height:1.6;color:#6A9580;text-align:center;">
-                                You received this because you enabled monthly waste reports for <strong style="color:#2D4F3C;">{{.HouseholdName}}</strong>.<br>
-                                Manage your preferences in <strong style="color:#2D4F3C;">User Settings &rarr; Notification Settings</strong>.
+                                {{ t "notify.monthly.footerReasonPrefix" }} <strong style="color:#2D4F3C;">{{.HouseholdName}}</strong>{{ t "notify.monthly.footerReasonSuffix" }}<br>
+                                {{ t "notify.monthly.footerManagePrefix" }} <strong style="color:#2D4F3C;">{{ t "notify.monthly.footerManageTarget" }}</strong>{{ t "notify.monthly.footerManageSuffix" }}
                             </p>
                             <p style="margin:8px 0 0 0;font-size:13px;color:#6A9580;text-align:center;">
-                                Thank you for using <strong style="color:#2D4F3C;">Proviant</strong>!
+                                {{ t "notify.common.thanksBefore" }} <strong style="color:#2D4F3C;">Proviant</strong>!
                             </p>
                         </td>
                     </tr>

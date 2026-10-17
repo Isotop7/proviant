@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/models/authentication"
+	dbModel "github.com/Isotop7/proviant/models/database"
 )
 
 // TestLabelledProductResponse_LabelStartsWithProductName guards the contract
@@ -65,13 +65,13 @@ func TestProductResponse_OmitsGORMInternals(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	for _, key := range []string{"CreatedAt", "UpdatedAt", "DeletedAt", "label"} {
+	for _, key := range []string{"CreatedAt", "UpdatedAt", "DeletedAt", "label", "ID"} {
 		if _, exists := decoded[key]; exists {
 			t.Errorf("key %q present, want it omitted", key)
 		}
 	}
-	if decoded["ID"] != float64(7) {
-		t.Errorf("ID = %v, want 7", decoded["ID"])
+	if decoded["id"] != float64(7) {
+		t.Errorf("id = %v, want 7", decoded["id"])
 	}
 	if decoded["productName"] != "Oat Milk" {
 		t.Errorf("productName = %v, want Oat Milk", decoded["productName"])
@@ -224,13 +224,13 @@ func TestStorageLocationResponse_OmitsGORMInternals(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	for _, key := range []string{"CreatedAt", "UpdatedAt", "DeletedAt", "householdId", "Household"} {
+	for _, key := range []string{"CreatedAt", "UpdatedAt", "DeletedAt", "householdId", "Household", "ID"} {
 		if _, exists := decoded[key]; exists {
 			t.Errorf("key %q present, want it omitted", key)
 		}
 	}
-	if decoded["ID"] != float64(4) {
-		t.Errorf("ID = %v, want 4", decoded["ID"])
+	if decoded["id"] != float64(4) {
+		t.Errorf("id = %v, want 4", decoded["id"])
 	}
 }
 
@@ -257,5 +257,54 @@ func TestAuditLogResponse_OmitsGORMInternals(t *testing.T) {
 	}
 	if decoded["id"] != float64(9) {
 		t.Errorf("id = %v, want 9", decoded["id"])
+	}
+}
+
+// TestHouseholdIntegrationResponse_OmitsSecretsAndGORMInternals verifies that
+// integration secret tokens and GORM internals are never serialized in responses.
+func TestHouseholdIntegrationResponse_OmitsSecretsAndGORMInternals(t *testing.T) {
+	integration := dbModel.HouseholdIntegration{
+		HouseholdID:  2,
+		Provider:     "todoist",
+		Enabled:      true,
+		AccessToken:  "SECRET-ACCESS-TOKEN",
+		RefreshToken: "SECRET-REFRESH-TOKEN",
+		AccountEmail: "admin@example.com",
+		ListID:       "proj-1",
+		ListName:     "Groceries",
+	}
+	integration.ID = 12
+
+	data, err := json.Marshal(NewHouseholdIntegrationResponse(&integration))
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	for _, key := range []string{
+		"accessToken", "refreshToken", "AccessToken", "RefreshToken",
+		"CreatedAt", "UpdatedAt", "DeletedAt", "householdId", "HouseholdID", "ID",
+	} {
+		if _, exists := decoded[key]; exists {
+			t.Errorf("key %q present, want it omitted", key)
+		}
+	}
+	if decoded["accessTokenConfigured"] != true {
+		t.Errorf("accessTokenConfigured = %v, want true", decoded["accessTokenConfigured"])
+	}
+	if decoded["refreshTokenConfigured"] != true {
+		t.Errorf("refreshTokenConfigured = %v, want true", decoded["refreshTokenConfigured"])
+	}
+
+	rawData, err := json.Marshal(integration)
+	if err != nil {
+		t.Fatalf("marshal raw model: %v", err)
+	}
+	if strings.Contains(string(rawData), "SECRET-ACCESS-TOKEN") || strings.Contains(string(rawData), "SECRET-REFRESH-TOKEN") {
+		t.Errorf("raw model JSON leaked secret token: %s", rawData)
 	}
 }

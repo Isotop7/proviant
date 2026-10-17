@@ -129,3 +129,30 @@ recipe_api:
   #   - a url still pointing at the public TheMealDB host.
   # An http:// url is accepted but warns: the api_key and search keywords would
   # travel unencrypted, so prefer https:// unless the instance is LAN-only.
+
+shopping_list_sync:
+  enabled: false
+  interval_minutes: 15
+  bring_enabled: false
+  todoist_enabled: false
+
+# Scheduled household backup. Writes one full JSON backup per household to a
+# local directory. Backup files contain household data in cleartext; point the
+# directory at storage you control and restrict who can read it.
+backup:
+  enabled: false
+  intervalHours: 24
+  directory: "data/backups"
+  retention: 7
+
+# Restore upload limits. A full household backup is larger than an ordinary
+# request body, so restore gets its own cap.
+restore:
+  maxUploadSizeMB: 50
+
+# Queued offline sync. Bounds one POST /api/v1/products/sync-offline
+# request body; the outbox client reads this value from the page and
+# splits its backlog at it. Leave unset to keep the built-in default
+# (100 items x 4 KiB + headroom).
+# offlineSync:
+#   maxBatchBytes: 413696

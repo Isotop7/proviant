@@ -1,0 +1,18 @@
+{
+  "js.onboarding.couldNotCreate": "Could Not Create",
+  "js.onboarding.couldNotJoin": "Could Not Join",
+  "js.onboarding.couldNotSave": "Could Not Save",
+  "js.onboarding.displayNameRequired": "Please enter a display name.",
+  "js.onboarding.householdNameRequired": "Please enter a household name.",
+  "js.onboarding.inviteTokenRequired": "Please enter an invite token.",
+  "js.onboarding.loadHouseholdsFailed": "Failed to load households.",
+  "js.onboarding.loadHouseholdsNetworkError": "Network error: %s",
+  "js.onboarding.members": "%d members",
+  "js.onboarding.members_one": "%d member",
+  "js.onboarding.members_other": "%d members",
+  "js.onboarding.networkError": "Network Error",
+  "js.onboarding.noHouseholdsAvailable": "No households available to join.",
+  "js.onboarding.requestToJoin": "Request to Join",
+  "js.onboarding.required": "Required",
+  "js.onboarding.unknownError": "Unknown error"
+}

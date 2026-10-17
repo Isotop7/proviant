@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/database"
 
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"

@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	proviantErrors "codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/util"
+	proviantErrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 )

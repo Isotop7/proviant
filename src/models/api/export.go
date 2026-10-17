@@ -3,7 +3,7 @@ package api
 import (
 	"time"
 
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	dbModel "github.com/Isotop7/proviant/models/database"
 )
 
 // ExportProductResponse is the product shape in a JSON data export. Unlike
@@ -11,9 +11,9 @@ import (
 // same two as added_at and archived_at, so a backup that dropped them would lose
 // when a product was bought and when it was archived. UpdatedAt is the one GORM
 // field left out — the bookkeeping timestamp says nothing to whoever reads the
-// file. ID keeps its uppercase spelling for the same reason ProductResponse does.
+// file. ID is serialized as the lowercase wire field "id".
 type ExportProductResponse struct {
-	ID                   uint                     `json:"ID"`
+	ID                   uint                     `json:"id"`
 	Barcode              string                   `json:"barcode"`
 	ProductName          string                   `json:"productName"`
 	Categories           string                   `json:"categories"`
@@ -36,6 +36,7 @@ type ExportProductResponse struct {
 	DaysAfterOpening     *int                     `json:"daysAfterOpening,omitempty"`
 	CreatedAt            time.Time                `json:"createdAt"`
 	ArchivedAt           *time.Time               `json:"archivedAt,omitempty"`
+	OwnerUsername        string                   `json:"ownerUsername,omitempty"`
 }
 
 // NewExportProductResponse projects a product onto the export shape. An archived
@@ -76,6 +77,18 @@ func NewExportProductResponse(product *dbModel.Product) ExportProductResponse {
 		resp.ArchivedAt = &archivedAt
 	}
 	return resp
+}
+
+// AssignExportProductOwners stamps the owning member's username onto projected
+// export rows. The product model only carries the owner id, which is not stable
+// across a restore into another instance, so the wire shape stores the name the
+// restore can match against the household's members.
+func AssignExportProductOwners(rows []ExportProductResponse, ownerNames map[uint]string) {
+	for i := range rows {
+		if name, ok := ownerNames[rows[i].ID]; ok {
+			rows[i].OwnerUsername = name
+		}
+	}
 }
 
 // NewExportProductResponses projects a slice of products onto the export shape.

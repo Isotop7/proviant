@@ -49,6 +49,12 @@ tasks:
     cmds:
       - npm run test-js
 
+  i18n:
+    desc: Validate message catalogs (load, key parity, referenced keys)
+    dir: src
+    cmds:
+      - go test ./i18n/
+
   cover:
     desc: Get code coverage report
     dir: src

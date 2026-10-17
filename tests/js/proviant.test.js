@@ -94,59 +94,7 @@ describe("proviant.js CSRF interceptor", () => {
 });
 
 describe("proviant.js offline queue", () => {
-  it("merges repeated deltas for one product", () => {
-    const { proviant } = freshProviant();
-
-    proviant._enqueueAmountDelta(7, 2);
-    proviant._enqueueAmountDelta(7, 3);
-
-    expect(proviant._offlineQueue).toHaveLength(1);
-    expect(proviant._offlineQueue[0].delta).toBe(5);
-  });
-
-  it("drops an entry once the delta nets back to zero", () => {
-    const { proviant } = freshProviant();
-
-    proviant._enqueueAmountDelta(7, 2);
-    proviant._enqueueAmountDelta(8, 1);
-    proviant._enqueueAmountDelta(7, -2);
-
-    expect(proviant._offlineQueue.map((op) => op.productID)).toEqual([8]);
-  });
-
-  it("keeps separate entries per product", () => {
-    const { proviant } = freshProviant();
-
-    proviant._enqueueAmountDelta(7, 2);
-    proviant._enqueueAmountDelta(8, 1);
-
-    expect(proviant._offlineQueue.map((op) => [op.productID, op.delta])).toEqual([
-      [7, 2],
-      [8, 1],
-    ]);
-  });
-
-  it("persists the queue to localStorage", () => {
-    const { proviant, realm } = freshProviant();
-
-    proviant._enqueueAmountDelta(7, 2);
-
-    expect(JSON.parse(realm.localStorage.getItem("proviant_offline_queue"))).toEqual([
-      expect.objectContaining({ productID: 7, delta: 2 }),
-    ]);
-  });
-
-  it("queues instead of sending while offline", async () => {
-    const { proviant, calls } = freshProviant({ online: false });
-
-    const result = await proviant.updateProductAmount(9, 4);
-
-    expect(result.queued).toBe(true);
-    expect(calls).toHaveLength(0);
-    expect(proviant._offlineQueue.map((op) => op.productID)).toContain(9);
-  });
-
-  it("sends straight through while online", async () => {
+  it("sends an amount delta straight through", async () => {
     const { proviant, calls } = freshProviant({ online: true });
 
     const result = await proviant.updateProductAmount(9, 4);
@@ -154,73 +102,66 @@ describe("proviant.js offline queue", () => {
     expect(result.queued).toBeUndefined();
     expect(result.code).toBe(200);
     expect(calls).toHaveLength(1);
-    expect(proviant._offlineQueue).toHaveLength(0);
   });
 
-  it("restores a queue persisted by an earlier session", () => {
-    const { exports: captured } = loadClassicScript("proviant.js", ["proviant"], {
-      prelude:
-        "localStorage.clear();" +
-        "localStorage.setItem('proviant_offline_queue', JSON.stringify([{ productID: 4, delta: -1, ts: 1 }]));",
-      globals: { fetch: async () => ({ status: 200, json: async () => ({}) }) },
+  it("carries the client mutation id when the offline queue supplies one", async () => {
+    const { proviant, realm } = freshProviant({ online: true });
+    const sentBodies = [];
+    realm.fetch = async (url, options) => {
+      sentBodies.push(JSON.parse(options.body));
+      return { status: 200, json: async () => ({ message: "ok" }) };
+    };
+
+    await proviant._sendAmountDelta(9, -1, "mutation-7");
+
+    expect(sentBodies[0]).toEqual({ delta: -1, clientMutationId: "mutation-7" });
+  });
+
+  it("tags a rejected fetch so the outbox knows the request never left", async () => {
+    const { proviant, realm } = freshProviant({ online: true });
+    realm.fetch = async () => {
+      throw new TypeError("Failed to fetch");
+    };
+
+    const err = await proviant._sendAmountDelta(9, -1, "m-1").then(() => null, (e) => e);
+
+    expect(err.transport).toBe(true);
+    expect(err.message).toBe("Failed to fetch");
+  });
+
+  it("leaves an answered response with an unparseable body untagged", async () => {
+    // The server did answer, so the mutation deserves a real verdict: burning
+    // an attempt parks it visibly, while tagging it transport would retry a
+    // broken body forever without ever surfacing the failure. The status rides
+    // along so the outbox can pace a 5xx error page instead of burning an
+    // attempt per op against it.
+    const { proviant, realm } = freshProviant({ online: true });
+    realm.fetch = async () => ({
+      status: 502,
+      ok: false,
+      json: async () => {
+        throw new SyntaxError("Unexpected token < in JSON");
+      },
     });
 
-    expect(captured.proviant._offlineQueue).toEqual([{ productID: 4, delta: -1, ts: 1 }]);
-  });
-});
+    const err = await proviant._sendAmountDelta(9, -1, "m-1").then(() => null, (e) => e);
 
-describe("proviant.js offline badge", () => {
-  it("shows a pending count once items are queued", () => {
-    const { proviant, realm } = freshProviant();
-    const badge = realm.document.createElement("span");
-    badge.id = "offlineQueueCount";
-    badge.classList.add("d-none");
-    realm.document.body.appendChild(badge);
-
-    proviant._enqueueAmountDelta(7, 2);
-
-    expect(badge.textContent).toBe("(1 pending)");
-    expect(badge.classList.contains("d-none")).toBe(false);
+    expect(err.transport).toBeUndefined();
+    expect(err.message).toBe("Unexpected token < in JSON");
+    expect(err.status).toBe(502);
   });
 
-  it("hides itself again when the queue empties", () => {
-    const { proviant, realm } = freshProviant();
-    const badge = realm.document.createElement("span");
-    badge.id = "offlineQueueCount";
-    realm.document.body.appendChild(badge);
+  it("sends the client sync id on an ordinary create", async () => {
+    const { proviant, realm } = freshProviant({ online: true });
+    const sentBodies = [];
+    realm.fetch = async (url, options) => {
+      sentBodies.push(JSON.parse(options.body));
+      return { status: 201, json: async () => ({}) };
+    };
 
-    proviant._enqueueAmountDelta(7, 2);
-    expect(badge.classList.contains("d-none")).toBe(false);
+    await proviant.createProduct("4006381333931", "2030-01-01", 2, null, false, "sync-42");
 
-    proviant._enqueueAmountDelta(7, -2);
-    expect(badge.classList.contains("d-none")).toBe(true);
-  });
-
-  // _updateOfflineBadge only rewrites textContent while the queue is non-empty,
-  // so the count left behind by a hidden badge is stale — but it is never shown,
-  // and the next enqueue refreshes it.
-  it("refreshes the count when items are queued again", () => {
-    const { proviant, realm } = freshProviant();
-    const badge = realm.document.createElement("span");
-    badge.id = "offlineQueueCount";
-    realm.document.body.appendChild(badge);
-
-    proviant._enqueueAmountDelta(7, 2);
-    proviant._enqueueAmountDelta(7, -2);
-    proviant._enqueueAmountDelta(8, 1);
-    proviant._enqueueAmountDelta(9, 1);
-
-    expect(badge.textContent).toBe("(2 pending)");
-    expect(badge.classList.contains("d-none")).toBe(false);
-  });
-
-  it("does nothing when the badge is absent", () => {
-    const { proviant, realm } = freshProviant();
-    expect(realm.document.getElementById("offlineQueueCount")).toBeNull();
-
-    // The queue is still updated — only the badge update is skipped.
-    expect(() => proviant._enqueueAmountDelta(7, 2)).not.toThrow();
-    expect(proviant._offlineQueue.map((op) => op.productID)).toEqual([7]);
+    expect(sentBodies[0]).toMatchObject({ barcode: "4006381333931", clientSyncId: "sync-42" });
   });
 });
 

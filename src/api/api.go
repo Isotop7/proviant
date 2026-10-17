@@ -4,11 +4,11 @@
 // @description     proviant is a simple and intuitive application to track your bought products and their expiration date to prevent waste of food.
 
 // @contact.name   Isotop7
-// @contact.url    https://codeberg.org/isotop7/proviant
+// @contact.url    https://github.com/Isotop7/proviant
 // @contact.email  hendrik@hr94.de
 
 // @license.name  MIT
-// @license.url   https://codeberg.org/isotop7/proviant/-/blob/main/LICENSE
+// @license.url   https://github.com/Isotop7/proviant/blob/main/LICENSE
 
 // @host      localhost:5050
 // @BasePath  /
@@ -22,7 +22,7 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 
-	"codeberg.org/isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/errors"
 )
 
 var (

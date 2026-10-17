@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/models/configuration/static"
+	"github.com/Isotop7/proviant/util"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
@@ -43,15 +43,16 @@ func (cl *clientLimiter) idleFor(now time.Time) time.Duration {
 }
 
 var (
-	loginLimiters    = &sync.Map{}
-	signupLimiters   = &sync.Map{}
-	exportLimiters   = &sync.Map{}
-	passwordLimiters = &sync.Map{}
-	scanLimiters     = &sync.Map{}
-	recipesLimiters  = &sync.Map{}
-	importLimiters   = &sync.Map{}
-	bulkLimiters     = &sync.Map{}
-	receiptLimiters  = &sync.Map{}
+	loginLimiters       = &sync.Map{}
+	signupLimiters      = &sync.Map{}
+	exportLimiters      = &sync.Map{}
+	passwordLimiters    = &sync.Map{}
+	scanLimiters        = &sync.Map{}
+	recipesLimiters     = &sync.Map{}
+	importLimiters      = &sync.Map{}
+	bulkLimiters        = &sync.Map{}
+	receiptLimiters     = &sync.Map{}
+	offlineSyncLimiters = &sync.Map{}
 
 	loginRate    = rate.Limit(5.0 / 60.0)
 	signupRate   = rate.Limit(3.0 / 60.0)
@@ -62,6 +63,16 @@ var (
 	importRate   = rate.Limit(5.0 / 60.0)
 	bulkRate     = rate.Limit(5.0 / 60.0)
 	receiptRate  = rate.Limit(5.0 / 60.0)
+	// offlineSyncRate is deliberately the loosest budget here: the outbox drains
+	// from a background timer with no user watching, so it paces itself by
+	// honouring Retry-After rather than by being refused. A budget tight enough
+	// to reject it would strand a backlog the user cannot see.
+	//
+	// It covers the batched create drain only. Amount deltas go through
+	// PATCH /api/v1/products/:id/amount, which carries no limiter of its own —
+	// the client sends those one at a time, sequentially, and paces them on
+	// nothing.
+	offlineSyncRate = rate.Limit(30.0 / 60.0)
 
 	// importBurstCap bounds how many CSV imports one user can start at once.
 	// importRate is deliberately not config-driven: a config key that defaults
@@ -79,6 +90,13 @@ var (
 	// as importRate — a config key defaulting to zero would break startup
 	// validation for existing deployments.
 	bulkBurstCap = 1
+
+	// offlineSyncBurstCap admits two batched create requests back to back. One
+	// drain of a full backlog sends more than that — the client splits it at
+	// util.ReceiptBulkMaxItems — and the remainder is paced by offlineSyncRate
+	// through Retry-After rather than refused, which is what keeps a backlog the
+	// user cannot see from being stranded behind a burst of one.
+	offlineSyncBurstCap = 2
 
 	// receiptBurstCap mirrors bulkBurstCap for POST /api/v1/products/scan-receipt.
 	// Each call sends the photo to an external vision endpoint (multi-second,
@@ -367,6 +385,32 @@ func receiptRateLimitMiddleware(ctx *gin.Context) {
 	ctx.Next()
 }
 
+// offlineSyncRateLimitMiddleware rate-limits POST /api/v1/products/sync-offline
+// per user, on its own budget rather than sharing bulkRateLimitMiddleware's. The
+// receipt review UI and the offline outbox drain from different moments — one
+// is a click, the other a background timer — so a single bucket would let a
+// receipt review push the outbox into a refusal the user never triggers and
+// cannot see.
+func offlineSyncRateLimitMiddleware(ctx *gin.Context) {
+	key := ctx.ClientIP()
+	if raw, ok := ctx.Get(util.ContextKeyUserID); ok {
+		if userID, ok := raw.(uint); ok && userID > 0 {
+			key = strconv.FormatUint(uint64(userID), 10)
+		}
+	}
+
+	limiter := getLimiterBurst(offlineSyncLimiters, key, offlineSyncRate, offlineSyncBurstCap)
+	reservation := limiter.Reserve()
+	if delay := reservation.Delay(); delay > 0 {
+		reservation.Cancel()
+		ctx.Header(headerRetryAfter, strconv.Itoa(int(delay.Seconds())))
+		api.RespondError(ctx, http.StatusTooManyRequests, errors.New("too many offline sync requests, please try again later"))
+		ctx.Abort()
+		return
+	}
+	ctx.Next()
+}
+
 func cleanupLimiters() {
 	for {
 		time.Sleep(time.Minute)
@@ -374,6 +418,7 @@ func cleanupLimiters() {
 		for _, store := range []*sync.Map{
 			loginLimiters, signupLimiters, exportLimiters, passwordLimiters,
 			scanLimiters, recipesLimiters, importLimiters, bulkLimiters, receiptLimiters,
+			offlineSyncLimiters,
 		} {
 			cleanupLimiterStore(store, now)
 		}

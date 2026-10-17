@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"strings"
 
-	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/util"
 )
 
 type DatabaseMariaDBConfiguration struct {
@@ -194,18 +194,71 @@ type ExpiryConfiguration struct {
 	SoonThresholdDays     int `mapstructure:"soon_threshold_days"`     // days before expiry to mark as expiring soon (default: 7)
 }
 
+// ShoppingListSyncConfiguration contains instance-level settings for external shopping list synchronization.
+type ShoppingListSyncConfiguration struct {
+	Enabled         bool `mapstructure:"enabled"`
+	IntervalMinutes int  `mapstructure:"interval_minutes"`
+	BringEnabled    bool `mapstructure:"bring_enabled"`
+	TodoistEnabled  bool `mapstructure:"todoist_enabled"`
+}
+
+// BackupConfiguration controls the scheduled household backup job. The target
+// is a local directory: backup files carry household data in cleartext, so the
+// operator chooses where they land and who can read them.
+type BackupConfiguration struct {
+	Enabled       bool   `mapstructure:"enabled"`
+	IntervalHours int    `mapstructure:"intervalHours"`
+	Directory     string `mapstructure:"directory"`
+	Retention     int    `mapstructure:"retention"`
+}
+
+// RestoreConfiguration bounds a household backup restore upload. It is
+// separate from server.maxUploadSizeMB because a full household backup is
+// legitimately much larger than an ordinary request body.
+type RestoreConfiguration struct {
+	MaxUploadSizeMB int `mapstructure:"maxUploadSizeMB"`
+}
+
+// OfflineSyncConfiguration bounds one queued-sync request. The byte cap
+// is injected into every page, so the outbox client splits its batches
+// at the value the endpoint actually enforces and the two cannot drift.
+type OfflineSyncConfiguration struct {
+	MaxBatchBytes int `mapstructure:"maxBatchBytes"`
+}
+
+// IsProviderEnabled reports whether the given provider is enabled at the instance level.
+func (c ShoppingListSyncConfiguration) IsProviderEnabled(provider string) bool {
+	if !c.Enabled {
+		return false
+	}
+	switch provider {
+	case util.ShoppingListProviderBring:
+		return c.BringEnabled
+	case util.ShoppingListProviderTodoist:
+		return c.TodoistEnabled
+	case util.ShoppingListProviderNoop:
+		return true
+	default:
+		return false
+	}
+}
+
 // ProviantConfiguration is the configuration wrapper struct
 type ProviantConfiguration struct {
-	Database      DatabaseConfiguration
-	Server        ServerConfiguration
-	Calendar      CalendarConfiguration `mapstructure:"calendar"`
-	Logging       LoggingConfiguration
-	Notification  NotificationConfiguration
-	OpenFoodFacts OpenFoodFactsConfiguration
-	OCR           OCRConfiguration       `mapstructure:"ocr"`
-	RecipeAPI     RecipeAPIConfiguration `mapstructure:"recipe_api"`
-	Expiry        ExpiryConfiguration    `mapstructure:"expiry"`
-	TemplateCache map[string]*template.Template
+	Database         DatabaseConfiguration
+	Server           ServerConfiguration
+	Calendar         CalendarConfiguration `mapstructure:"calendar"`
+	Logging          LoggingConfiguration
+	Notification     NotificationConfiguration
+	OpenFoodFacts    OpenFoodFactsConfiguration
+	OCR              OCRConfiguration              `mapstructure:"ocr"`
+	RecipeAPI        RecipeAPIConfiguration        `mapstructure:"recipe_api"`
+	Expiry           ExpiryConfiguration           `mapstructure:"expiry"`
+	ShoppingListSync ShoppingListSyncConfiguration `mapstructure:"shopping_list_sync"`
+	Backup           BackupConfiguration           `mapstructure:"backup"`
+	Restore          RestoreConfiguration          `mapstructure:"restore"`
+	OfflineSync      OfflineSyncConfiguration      `mapstructure:"offlineSync"`
+	TemplateCache    map[string]*template.Template
 
 	// RecipeAPIDisabled is set at startup when the recipe feature cannot work
 	// at all — currently only a self-hosted provider without its API key. It
@@ -365,6 +418,44 @@ func (ec *ProviantConfiguration) ValidateServerConfiguration() error {
 		return errors.ErrRateLimitInvalidValue
 	}
 	return nil
+}
+
+// ValidateBackupConfiguration validates the scheduled backup target. A disabled
+// job is always valid: nothing is written, so there is no directory to reject.
+// An enabled one must name a directory and a positive interval; retention may
+// be 0 to keep every file.
+func (ec *ProviantConfiguration) ValidateBackupConfiguration() error {
+	if !ec.Backup.Enabled {
+		return nil
+	}
+	ec.Backup.Directory = strings.TrimSpace(ec.Backup.Directory)
+	if ec.Backup.Directory == "" {
+		return errors.ErrBackupInvalidDirectory
+	}
+	if ec.Backup.IntervalHours <= 0 || ec.Backup.Retention < 0 {
+		return errors.ErrBackupInvalidSchedule
+	}
+	return nil
+}
+
+// ValidateRestoreConfiguration normalizes the restore upload cap. A missing or
+// nonsensical value falls back to the restore default rather than disabling
+// restores: the endpoint must be able to read back every document the exporter
+// writes.
+func (ec *ProviantConfiguration) ValidateRestoreConfiguration() {
+	if ec.Restore.MaxUploadSizeMB <= 0 {
+		ec.Restore.MaxUploadSizeMB = util.DefaultRestoreMaxUploadSizeMB
+	}
+}
+
+// ValidateOfflineSyncConfiguration normalizes the queued-sync body cap.
+// A missing or nonsensical value falls back to the built-in default
+// rather than refusing every sync: the outbox client splits its batches
+// at this value, so it has to stay a positive number.
+func (ec *ProviantConfiguration) ValidateOfflineSyncConfiguration() {
+	if ec.OfflineSync.MaxBatchBytes <= 0 {
+		ec.OfflineSync.MaxBatchBytes = util.ReceiptBulkMaxBodyBytes
+	}
 }
 
 // IsSelfHosted reports whether the configured provider is a self-hosted

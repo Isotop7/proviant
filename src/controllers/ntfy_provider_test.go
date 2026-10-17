@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models"
-	"codeberg.org/isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/models"
+	"github.com/Isotop7/proviant/models/configuration"
 	"github.com/rs/zerolog"
 )
 
@@ -53,7 +53,7 @@ func TestNtfyProvider_SendStreakMilestone(t *testing.T) {
 			HTTPClient:    &http.Client{Timeout: 5 * time.Second},
 		}
 		recipient := &models.NotificationRecipientInfo{}
-		err := n.SendStreakMilestone(7, recipient)
+		err := n.SendStreakMilestone(7, recipient, "")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}

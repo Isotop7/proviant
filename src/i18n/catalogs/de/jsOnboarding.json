@@ -1,0 +1,18 @@
+{
+  "js.onboarding.couldNotCreate": "Erstellung fehlgeschlagen",
+  "js.onboarding.couldNotJoin": "Beitritt fehlgeschlagen",
+  "js.onboarding.couldNotSave": "Speichern fehlgeschlagen",
+  "js.onboarding.displayNameRequired": "Bitte geben Sie einen Anzeigenamen ein.",
+  "js.onboarding.householdNameRequired": "Bitte geben Sie einen Haushaltsnamen ein.",
+  "js.onboarding.inviteTokenRequired": "Bitte geben Sie einen Einladungscode ein.",
+  "js.onboarding.loadHouseholdsFailed": "Haushalte konnten nicht geladen werden.",
+  "js.onboarding.loadHouseholdsNetworkError": "Netzwerkfehler: %s",
+  "js.onboarding.members": "%d Mitglieder",
+  "js.onboarding.members_one": "%d Mitglied",
+  "js.onboarding.members_other": "%d Mitglieder",
+  "js.onboarding.networkError": "Netzwerkfehler",
+  "js.onboarding.noHouseholdsAvailable": "Keine Haushalte verfügbar, denen Sie beitreten können.",
+  "js.onboarding.requestToJoin": "Beitritt anfragen",
+  "js.onboarding.required": "Eingabe erforderlich",
+  "js.onboarding.unknownError": "Unbekannter Fehler"
+}

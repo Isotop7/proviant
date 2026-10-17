@@ -68,7 +68,7 @@
         if (!input) return;
         const displayName = input.value.trim();
         if (!displayName) {
-            proviant.showFeedback("error", "Required", "Please enter a display name.");
+            proviant.showFeedback("error", proviant.t("js.onboarding.required"), proviant.t("js.onboarding.displayNameRequired"));
             return;
         }
         try {
@@ -76,10 +76,10 @@
             if (response.code === 200) {
                 showStep(2);
             } else {
-                proviant.showFeedback("error", "Could Not Save", response.message || "Unknown error");
+                proviant.showFeedback("error", proviant.t("js.onboarding.couldNotSave"), response.message || proviant.t("js.onboarding.unknownError"));
             }
         } catch (err) {
-            proviant.showFeedback("error", "Network Error", err.message);
+            proviant.showFeedback("error", proviant.t("js.onboarding.networkError"), err.message);
         }
     }
 
@@ -112,13 +112,13 @@
                 householdListLoaded = true;
             } else {
                 if (listEl) {
-                    listEl.innerHTML = '<div class="alert alert-warning mb-0">Failed to load households.</div>';
+                    listEl.innerHTML = '<div class="alert alert-warning mb-0">' + proviant.t("js.onboarding.loadHouseholdsFailed") + '</div>';
                     listEl.classList.remove("d-none");
                 }
             }
         } catch (err) {
             if (listEl) {
-                listEl.innerHTML = '<div class="alert alert-danger mb-0">Network error: ' + err.message + '</div>';
+                listEl.innerHTML = '<div class="alert alert-danger mb-0">' + proviant.t("js.onboarding.loadHouseholdsNetworkError", err.message) + '</div>';
                 listEl.classList.remove("d-none");
             }
         } finally {
@@ -131,7 +131,7 @@
         if (!listEl) return;
 
         if (households.length === 0) {
-            listEl.innerHTML = '<div class="list-group-item text-secondary-custom">No households available to join.</div>';
+            listEl.innerHTML = '<div class="list-group-item text-secondary-custom">' + proviant.t("js.onboarding.noHouseholdsAvailable") + '</div>';
             listEl.classList.remove("d-none");
             return;
         }
@@ -141,12 +141,12 @@
             html += '<button class="list-group-item list-group-item-action household-join-btn" data-household-id="' + h.id + '">';
             html += '<div class="d-flex w-100 justify-content-between">';
             html += '<h6 class="mb-1">' + escapeHtml(h.name) + '</h6>';
-            html += '<small class="text-secondary-custom">' + h.memberCount + ' member' + (h.memberCount !== 1 ? 's' : '') + '</small>';
+            html += '<small class="text-secondary-custom">' + proviant.tn("js.onboarding.members", h.memberCount) + '</small>';
             html += '</div>';
             if (h.description) {
                 html += '<p class="mb-1 small text-secondary-custom">' + escapeHtml(h.description) + '</p>';
             }
-            html += '<small class="text-primary"><i class="bi bi-box-arrow-in-right me-1"></i>Request to Join</small>';
+            html += '<small class="text-primary"><i class="bi bi-box-arrow-in-right me-1"></i>' + proviant.t("js.onboarding.requestToJoin") + '</small>';
             html += '</button>';
         });
 
@@ -166,10 +166,10 @@
             if (response.code === 200) {
                 showStep(3);
             } else {
-                proviant.showFeedback("error", "Could Not Join", response.message || "Unknown error");
+                proviant.showFeedback("error", proviant.t("js.onboarding.couldNotJoin"), response.message || proviant.t("js.onboarding.unknownError"));
             }
         } catch (err) {
-            proviant.showFeedback("error", "Network Error", err.message);
+            proviant.showFeedback("error", proviant.t("js.onboarding.networkError"), err.message);
         }
     }
 
@@ -178,7 +178,7 @@
         if (!input) return;
         const name = input.value.trim();
         if (!name) {
-            proviant.showFeedback("error", "Required", "Please enter a household name.");
+            proviant.showFeedback("error", proviant.t("js.onboarding.required"), proviant.t("js.onboarding.householdNameRequired"));
             return;
         }
         try {
@@ -186,10 +186,10 @@
             if (response.code === 200) {
                 showStep(3);
             } else {
-                proviant.showFeedback("error", "Could Not Create", response.message || "Unknown error");
+                proviant.showFeedback("error", proviant.t("js.onboarding.couldNotCreate"), response.message || proviant.t("js.onboarding.unknownError"));
             }
         } catch (err) {
-            proviant.showFeedback("error", "Network Error", err.message);
+            proviant.showFeedback("error", proviant.t("js.onboarding.networkError"), err.message);
         }
     }
 
@@ -198,7 +198,7 @@
         if (!input) return;
         const token = input.value.trim();
         if (!token) {
-            proviant.showFeedback("error", "Required", "Please enter an invite token.");
+            proviant.showFeedback("error", proviant.t("js.onboarding.required"), proviant.t("js.onboarding.inviteTokenRequired"));
             return;
         }
         try {
@@ -206,10 +206,10 @@
             if (response.code === 200) {
                 showStep(3);
             } else {
-                proviant.showFeedback("error", "Could Not Join", response.message || "Unknown error");
+                proviant.showFeedback("error", proviant.t("js.onboarding.couldNotJoin"), response.message || proviant.t("js.onboarding.unknownError"));
             }
         } catch (err) {
-            proviant.showFeedback("error", "Network Error", err.message);
+            proviant.showFeedback("error", proviant.t("js.onboarding.networkError"), err.message);
         }
     }
 

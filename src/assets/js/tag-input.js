@@ -13,7 +13,7 @@
 
     const input = document.createElement('input');
     input.className   = 'pv-tag-input';
-    input.placeholder = 'Add…';
+    input.placeholder = proviant.t("js.tagInput.addPlaceholder");
     wrap.appendChild(input);
 
     input.addEventListener('keydown', (e) => {

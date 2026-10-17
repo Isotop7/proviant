@@ -3,16 +3,19 @@ package v1
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/errors"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers"
+	"github.com/Isotop7/proviant/errors"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -108,15 +111,25 @@ func GetProduct(ctx *gin.Context, appCtx *AppContext) {
 	}
 }
 
+// syncIDVisibleTo reports whether the product a clientSyncId resolved to may be
+// answered to userID. GetProductBySyncID scopes by household only, and private
+// products are owner-only, so a known sync id must not turn into a read of
+// another member's row.
+func syncIDVisibleTo(existing *dbModel.Product, userID uint) bool {
+	return !existing.IsPrivate || existing.UserID == userID
+}
+
 // CreateProduct creates a new product of a user
 // @Summary      	Creates a new product
-// @Description  	Creates a new product of a user
+// @Description  	Creates a new product of a user. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read.
 // @Tags         	product
 // @Accept			json
 // @Produce      	json
 // @Param			product	body	database.Product	true	"Product"
 // @Success      	201  {object}  apiModel.ProductResponse
+// @Success      	200  {object}  apiModel.ProductResponse
 // @Failure      	400  {object}  api.APIResponse
+// @Failure      	409  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products [post]
 func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
@@ -127,6 +140,43 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 	var product dbModel.Product
 	if !bindJSON(ctx, logger, &product) {
 		return
+	}
+
+	var clientSyncID string
+	if product.ClientSyncID != nil {
+		clientSyncID = strings.TrimSpace(*product.ClientSyncID)
+	}
+	if len(clientSyncID) > util.OfflineSyncIDMaxLength {
+		logger.Warn().Msgf("Body carries an over-long clientSyncId (%d bytes)", len(clientSyncID))
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrClientSyncIDTooLong)
+		return
+	}
+	if clientSyncID == "" {
+		product.ClientSyncID = nil
+	} else {
+		// Stored trimmed, so a replayed padded id resolves to the same row
+		// instead of missing the lookup and colliding on the unique index.
+		product.ClientSyncID = &clientSyncID
+	}
+
+	if clientSyncID != "" {
+		existing, syncErr := repos.Products.GetProductBySyncID(userID, clientSyncID)
+		switch {
+		case syncErr == nil && syncIDVisibleTo(&existing, userID):
+			ctx.JSON(http.StatusOK, apiModel.NewProductResponse(&existing))
+			return
+		case syncErr == nil:
+			// The id is taken by a row this caller may not see, and the unique
+			// index on (household, sync id) forbids a second one: refuse rather
+			// than fall through to an insert that would fail.
+			logger.Warn().Msg("clientSyncId collides with another member's private product")
+			api.RespondError(ctx, http.StatusConflict, errors.ErrClientSyncIDConflict)
+			return
+		case !stderrors.Is(syncErr, gorm.ErrRecordNotFound):
+			logger.Error().Msgf("Error looking up product by client sync id: %s", syncErr)
+			ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
+			return
+		}
 	}
 
 	if product.Barcode == "" {
@@ -147,6 +197,7 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 		apiProduct.ScannedAt = time.Now()
 		apiProduct.ExpireAt = product.ExpireAt
 		apiProduct.Amount = product.Amount
+		apiProduct.ClientSyncID = product.ClientSyncID
 		product = apiProduct
 	}
 
@@ -158,6 +209,26 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 			logger.Warn().Msgf("Rejected product create: %s", createResult)
 			ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(createResult.Error()))
 			return
+		}
+		// A concurrent retry of the same clientSyncId loses the race to the
+		// unique index instead of reaching the lookup above — report the row
+		// that won rather than a 500 for a create that did happen. The lookup
+		// also runs on create errors that are not that race: telling a unique
+		// violation from a dead connection needs driver-specific error
+		// parsing, and one extra failing query on the 500 path is the price.
+		// ErrInvalidOpenedLifecycle has already returned, and the validation
+		// above it rejects before any insert.
+		if clientSyncID != "" {
+			existing, lookupErr := repos.Products.GetProductBySyncID(userID, clientSyncID)
+			if lookupErr == nil && !syncIDVisibleTo(&existing, userID) {
+				logger.Warn().Msg("clientSyncId collides with another member's private product")
+				api.RespondError(ctx, http.StatusConflict, errors.ErrClientSyncIDConflict)
+				return
+			}
+			if lookupErr == nil {
+				ctx.JSON(http.StatusOK, apiModel.NewProductResponse(&existing))
+				return
+			}
 		}
 		logger.Error().Msgf("Error creating product: %s", createResult)
 		ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
@@ -282,6 +353,17 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 	if !bindJSON(ctx, appCtx.Logger, &amountDTO) {
 		return
 	}
+	if amountDTO.ClientMutationID != nil {
+		trimmed := strings.TrimSpace(*amountDTO.ClientMutationID)
+		if len(trimmed) > util.OfflineSyncIDMaxLength {
+			appCtx.Logger.Warn().Msg("Body carries an over-long clientMutationId")
+			api.RespondError(ctx, http.StatusBadRequest, errors.ErrClientMutationIDTooLong)
+			return
+		}
+		// Trimmed here so the token stored and the token replayed compare
+		// equal; an all-whitespace id becomes nil and never dedupes.
+		amountDTO.ClientMutationID = &trimmed
+	}
 
 	product, err := appCtx.Repos.Products.GetProductByID(productID, appCtx.UserID)
 	if err != nil {
@@ -298,38 +380,42 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	deleted, updateErr := appCtx.Repos.Products.UpdateProductAmount(productID, appCtx.UserID, amountDTO.Delta)
+	deleted, applied, updateErr := appCtx.Repos.Products.UpdateProductAmount(productID, appCtx.UserID, amountDTO.Delta, amountDTO.ClientMutationID)
 
 	switch updateErr {
 	case nil:
-		householdID, _ := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
-		userName := ""
-		if user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID); err == nil {
-			userName = user.DisplayName
+		// A replayed mutation id changed nothing, so it owes no activity entry,
+		// no webhook and no deletion of its own.
+		if applied {
+			householdID, _ := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
+			userName := ""
+			if user, err := appCtx.Repos.Users.GetUserByID(appCtx.UserID); err == nil {
+				userName = user.DisplayName
+			}
+			go func() {
+				quantity := amountDTO.Delta
+				if quantity < 0 {
+					quantity = -quantity
+				}
+				logEntry := &dbModel.ActivityLog{
+					HouseholdID: householdID,
+					UserID:      &appCtx.UserID,
+					UserName:    userName,
+					Action:      dbModel.ActivityActionAmountChange,
+					ProductID:   productID,
+					ProductName: product.ProductName,
+					Quantity:    quantity,
+					Timestamp:   time.Now(),
+				}
+				if appCtx.Repos.ActivityLogs == nil {
+					return
+				}
+				ctxBg, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				_ = appCtx.Repos.ActivityLogs.Create(ctxBg, logEntry)
+			}()
 		}
-		go func() {
-			quantity := amountDTO.Delta
-			if quantity < 0 {
-				quantity = -quantity
-			}
-			logEntry := &dbModel.ActivityLog{
-				HouseholdID: householdID,
-				UserID:      &appCtx.UserID,
-				UserName:    userName,
-				Action:      dbModel.ActivityActionAmountChange,
-				ProductID:   productID,
-				ProductName: product.ProductName,
-				Quantity:    quantity,
-				Timestamp:   time.Now(),
-			}
-			if appCtx.Repos.ActivityLogs == nil {
-				return
-			}
-			ctxBg, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			_ = appCtx.Repos.ActivityLogs.Create(ctxBg, logEntry)
-		}()
-		if deleted {
+		if applied && deleted {
 			go func() {
 				if ws := controllers.GetWebhookService(); ws != nil {
 					ws.FireEvent("product.wasted", map[string]any{
@@ -338,9 +424,9 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 				}
 			}()
 			ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d deleted (amount reached 0)", productID)})
-		} else {
-			ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d amount updated", productID)})
+			return
 		}
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d amount updated", productID)})
 		return
 	case gorm.ErrRecordNotFound, errors.ErrMismatcherUserID:
 		// One body for unknown and foreign ids alike: distinct messages

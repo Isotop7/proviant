@@ -1,0 +1,15 @@
+{
+  "pageError.householdFallback": "Haushalt #%d",
+  "pageError.internalError": "Interner Serverfehler.",
+  "pageError.inviteAlreadyUsed": "Diese Einladung wurde bereits verwendet.",
+  "pageError.inviteCancelled": "Diese Einladung wurde vom Absender storniert.",
+  "pageError.inviteExpired": "Diese Einladung ist abgelaufen.",
+  "pageError.inviteNotFound": "Diese Einladung existiert nicht oder wurde gelöscht.",
+  "pageError.inviteProcessError": "Bei der Verarbeitung dieser Einladung ist ein Fehler aufgetreten.",
+  "pageError.inviteTokenMissing": "Kein Einladungstoken bereitgestellt.",
+  "pageError.resetTokenMissing": "Bitte fordern Sie einen neuen Zurücksetzungslink an, um fortzufahren.",
+  "pageError.unsubscribeInvalid": "Ungültiger oder abgelaufener Abmeldelink.",
+  "pageError.unsubscribeTokenMissing": "Kein Abmeldetoken bereitgestellt.",
+  "pageError.unsubscribeUpdateFailed": "Die Einstellungen konnten nicht gespeichert werden.",
+  "pageError.verifyTokenMissing": "Kein Bestätigungstoken bereitgestellt."
+}

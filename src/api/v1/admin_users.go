@@ -4,14 +4,15 @@ import (
 	"net/http"
 	"time"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/audit"
-	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/errors"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/audit"
+	"github.com/Isotop7/proviant/controllers"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/i18n"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -199,7 +200,12 @@ func AdminResetUserPassword(ctx *gin.Context, appCtx *AppContext) {
 		if proviantConfig != nil {
 			baseURL = proviantConfig.Server.BaseURL
 		}
-		if sendErr := notificationController.SendEmailVerification(targetUser.MailAddress, targetUser.Username, token.String(), baseURL, expiresAt); sendErr != nil {
+		householdLanguage := ""
+		if household, householdErr := appCtx.Repos.Users.GetHouseholdByID(householdID); householdErr == nil {
+			householdLanguage = household.Language
+		}
+		lang := i18n.ResolveLanguage(targetUser.Language, householdLanguage, "")
+		if sendErr := notificationController.SendEmailVerification(targetUser.MailAddress, targetUser.Username, token.String(), baseURL, expiresAt, lang); sendErr != nil {
 			appCtx.Logger.Error().Msgf("Error sending reset email: %s", sendErr)
 			ctx.JSON(http.StatusInternalServerError, api.InternalError())
 			return

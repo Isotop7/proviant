@@ -14,14 +14,14 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers"
+	"github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/errors"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -331,7 +331,7 @@ func parseImportRow(
 		if reason != "" {
 			return product, reason
 		}
-		product.ProductName = resolved
+		product.ProductName = resolved.productName
 	}
 
 	return product, ""
@@ -553,14 +553,26 @@ func (r *locationResolver) resolve(name string) (*uint, string) {
 	return nil, trimmed
 }
 
+// offProductFields are the product fields a barcode-only draft can inherit from
+// Open Food Facts. They are resolved and cached as one unit so every caller pays
+// the single live lookup a barcode costs, not one per field.
+type offProductFields struct {
+	productName string
+	categories  string
+}
+
 // importNameResolver supplies the product name of a row that carries only a
 // barcode. It resolves the whole file from the Open Food Facts cache with one
 // query and then spends at most util.CsvImportOpenFoodFactsLookups live requests,
 // bounded by util.CsvImportOpenFoodFactsBudget, so a CSV of barcode-only rows
 // cannot turn one request into thousands of sequential outbound calls.
+//
+// The offline sync endpoint resolves against it too: without the cache and the
+// budget, a 100-item backlog of nameless drafts would spend up to
+// util.ReceiptBulkMaxItems sequential Open Food Facts requests on one request.
 type importNameResolver struct {
 	getter   controllers.DatasetGetter
-	cache    map[string]string
+	cache    map[string]offProductFields
 	lookups  int
 	budget   time.Duration
 	deadline time.Time
@@ -576,7 +588,7 @@ func newImportNameResolver(
 ) *importNameResolver {
 	resolver := &importNameResolver{
 		getter: getter,
-		cache:  make(map[string]string, len(barcodes)),
+		cache:  make(map[string]offProductFields, len(barcodes)),
 		budget: util.CsvImportOpenFoodFactsBudget,
 		logger: logger,
 	}
@@ -603,45 +615,51 @@ func newImportNameResolver(
 	}
 	for i := range cached {
 		if name := strings.TrimSpace(cached[i].ProductName); name != "" {
-			resolver.cache[cached[i].Barcode] = name
+			resolver.cache[cached[i].Barcode] = offProductFields{
+				productName: name,
+				categories:  strings.TrimSpace(cached[i].Categories),
+			}
 		}
 	}
 	return resolver
 }
 
-// resolve returns the name for a barcode, or the reason the row must be
+// resolve returns the fields a barcode resolves to, or the reason the row must be
 // rejected: fmtImportOffMiss when Open Food Facts has no entry, fmtImportOffBudget
 // once this import has spent its lookup allowance. A barcode that resolves to
 // nothing is remembered too, so a file repeating one unknown code cannot make
 // the same outbound request once per row.
-func (r *importNameResolver) resolve(barcode string) (string, string) {
-	if name, cached := r.cache[barcode]; cached {
-		if name == "" {
-			return "", fmtImportOffMiss
+func (r *importNameResolver) resolve(barcode string) (offProductFields, string) {
+	if fields, cached := r.cache[barcode]; cached {
+		if fields.productName == "" {
+			return offProductFields{}, fmtImportOffMiss
 		}
-		return name, ""
+		return fields, ""
 	}
 	if r.getter == nil {
-		r.cache[barcode] = ""
-		return "", fmtImportOffMiss
+		r.cache[barcode] = offProductFields{}
+		return offProductFields{}, fmtImportOffMiss
 	}
 	if r.lookups >= util.CsvImportOpenFoodFactsLookups || (r.budget > 0 && time.Now().After(r.deadline)) {
-		return "", fmtImportOffBudget
+		return offProductFields{}, fmtImportOffBudget
 	}
 	r.lookups++
 
 	dataset, offErr := r.getter.GetDataset(barcode)
 	if offErr != nil {
 		r.logger.Debug().Msgf("Import Open Food Facts lookup for barcode '%s': %s", barcode, offErr)
-		r.cache[barcode] = ""
-		return "", fmtImportOffMiss
+		r.cache[barcode] = offProductFields{}
+		return offProductFields{}, fmtImportOffMiss
 	}
-	name := strings.TrimSpace(dataset.ProductName)
-	r.cache[barcode] = name
-	if name == "" {
-		return "", fmtImportOffMiss
+	fields := offProductFields{
+		productName: strings.TrimSpace(dataset.ProductName),
+		categories:  strings.TrimSpace(dataset.Categories),
 	}
-	return name, ""
+	r.cache[barcode] = fields
+	if fields.productName == "" {
+		return offProductFields{}, fmtImportOffMiss
+	}
+	return fields, ""
 }
 
 // importOffDatasetGetter returns the Open Food Facts controller wired into the

@@ -7,14 +7,15 @@ import (
 	"fmt"
 	"net/http"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/audit"
-	apperrors "codeberg.org/isotop7/proviant/errors"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/audit"
+	apperrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/i18n"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -34,12 +35,17 @@ import (
 // @Router        	/api/v1/user [patch]
 func UpdateUser(ctx *gin.Context, appCtx *AppContext) {
 	var req struct {
-		DisplayName string `json:"displayName" binding:"max=100"`
-		MailAddress string `json:"mailAddress" binding:"required,email"`
+		DisplayName string  `json:"displayName" binding:"max=100"`
+		MailAddress string  `json:"mailAddress" binding:"required,email"`
+		Language    *string `json:"language"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		appCtx.Logger.Error().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
 		api.RespondError(ctx, http.StatusBadRequest, err)
+		return
+	}
+	if req.Language != nil && *req.Language != "" && !i18n.Supported(*req.Language) {
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrUnsupportedLanguage)
 		return
 	}
 
@@ -52,6 +58,9 @@ func UpdateUser(ctx *gin.Context, appCtx *AppContext) {
 
 	user.DisplayName = req.DisplayName
 	user.MailAddress = req.MailAddress
+	if req.Language != nil {
+		user.Language = *req.Language
+	}
 
 	updateErr := appCtx.Repos.Users.UpdateUser(user.ID, &user)
 	if updateErr != nil {

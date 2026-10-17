@@ -3,8 +3,8 @@ package database
 import (
 	"testing"
 
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/testutil"
 )
 
 func TestInvitationRepository(t *testing.T) {

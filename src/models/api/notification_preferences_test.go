@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/authentication"
 )
 
 // TestNotificationPreferencesStruct_OmitsSecretFields pins the json:"-" defense

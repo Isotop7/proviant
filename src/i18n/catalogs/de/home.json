@@ -1,0 +1,21 @@
+{
+  "home.categoriesChartAria": "Kreisdiagramm: Aufschlüsselung der Produktkategorien",
+  "home.categoryBreakdown": "Kategorieübersicht",
+  "home.demoMode.desc": "Dies ist eine öffentliche Demo-Instanz. Daten werden regelmäßig zurückgesetzt.",
+  "home.demoMode.title": "Demo-Modus",
+  "home.expiryTrend": "Ablauftrend (nächste 12 Monate)",
+  "home.expiryTrendChartAria": "Liniendiagramm: in den nächsten 12 Monaten ablaufende Produkte",
+  "home.heroSub": "In Sekunden zu Ihrem Vorrat hinzufügen",
+  "home.noHouseholdDesc": "Sie sind mit keinem Haushalt verbunden. Wechseln Sie zu den Benutzereinstellungen, um sich einem Haushalt anzuschließen oder einen neuen zu erstellen.",
+  "home.noHouseholdTitle": "Oh nein!",
+  "home.quickAction": "Schnellaktion",
+  "home.recipesDesc": "Erhalten Sie Rezeptvorschläge aus Ihren ablaufenden Produkten.",
+  "home.scanProduct": "Produkt scannen",
+  "home.setUpHousehold": "Haushalt einrichten",
+  "home.startScanning": "Scannen starten",
+  "home.viewWasteAnalytics": "Abfallanalyse ansehen",
+  "home.wasteAnalyticsDesc": "Sehen Sie, was Sie verbrauchen und was Sie wegwerfen – mit finanziellen und CO₂-Auswirkungen.",
+  "home.wasteChartAria": "Ringdiagramm: Verhältnis abgelaufener zu frischen aktiven Produkten",
+  "home.wasteRate": "Abfallquote",
+  "home.whatCanIMake": "Was kann ich kochen?"
+}

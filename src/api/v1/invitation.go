@@ -1,18 +1,19 @@
 package v1
 
 import (
-	apperrors "codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/database"
+	apperrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/i18n"
+	"github.com/Isotop7/proviant/models/database"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -65,10 +66,13 @@ func CreateInvitation(ctx *gin.Context, appCtx *AppContext) {
 		if notificationController != nil {
 			inviterName := user.EffectiveName()
 			householdName := fmt.Sprintf("Household #%d", user.HouseholdID)
+			householdLanguage := ""
 			if household, householdErr := appCtx.Repos.Users.GetHouseholdByID(user.HouseholdID); householdErr == nil {
 				householdName = household.Name
+				householdLanguage = household.Language
 			}
-			if emailErr := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL, tx); emailErr != nil {
+			lang := i18n.ResolveLanguage("", householdLanguage, "")
+			if emailErr := notificationController.SendInvitationEmail(&invitation, inviterName, householdName, proviantConfig.Server.BaseURL, tx, lang); emailErr != nil {
 				return emailErr
 			}
 		}

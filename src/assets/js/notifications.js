@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   const response = await proviant.getNotifications();
 
   if (response.code !== 200) {
-    itemsEl.innerHTML = '<p class="text-secondary-custom small px-3 py-2 mb-0">Could not load notifications.</p>';
+    itemsEl.innerHTML = `<p class="text-secondary-custom small px-3 py-2 mb-0">${proviant.t("js.app.notificationsLoadFailed")}</p>`;
     return;
   }
 
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   };
 
   if (data.total === 0) {
-    itemsEl.innerHTML = '<p class="text-secondary-custom small px-3 py-2 mb-0">All clear — nothing pending.</p>';
+    itemsEl.innerHTML = `<p class="text-secondary-custom small px-3 py-2 mb-0">${proviant.t("js.app.notificationsEmpty")}</p>`;
     return;
   }
 

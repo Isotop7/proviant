@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ t "notify.common.langCode" }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proviant — Expiry Digest</title>
+    <title>{{ t "notify.digest.title" }}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F5FAF5;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5FAF5;">
@@ -27,7 +27,7 @@
                     <!-- Title -->
                     <tr>
                         <td style="padding:24px 32px 0 32px;text-align:center;">
-                            <h1 style="margin:0 0 4px 0;font-size:24px;font-weight:700;color:#1A3028;">Expiry Digest</h1>
+                            <h1 style="margin:0 0 4px 0;font-size:24px;font-weight:700;color:#1A3028;">{{ t "notify.digest.heading" }}</h1>
                             <p style="margin:0 0 4px 0;font-size:16px;font-weight:600;color:#2D4F3C;">{{.HouseholdName}}</p>
                             <p style="margin:0;font-size:14px;color:#6A9580;">{{.GeneratedDate}}</p>
                         </td>
@@ -38,7 +38,7 @@
                     <tr>
                         <td style="padding:24px 32px 0 32px;">
                             <h2 style="margin:0 0 12px 0;font-size:16px;font-weight:700;color:#DC2626;">
-                                &#9888; Expires Today ({{len .ProductsToday}})
+                                {{ t "notify.digest.expiresToday" (len .ProductsToday) }}
                             </h2>
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FEF2F2;border-radius:8px;border:1px solid #FECACA;">
                                 {{range .ProductsToday}}
@@ -59,7 +59,7 @@
                     <tr>
                         <td style="padding:24px 32px 0 32px;">
                             <h2 style="margin:0 0 12px 0;font-size:16px;font-weight:700;color:#D97706;">
-                                &#128197; This Week ({{len .ProductsThisWeek}})
+                                {{ t "notify.digest.thisWeek" (len .ProductsThisWeek) }}
                             </h2>
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFBEB;border-radius:8px;border:1px solid #FDE68A;">
                                 {{range .ProductsThisWeek}}
@@ -80,7 +80,7 @@
                     <tr>
                         <td style="padding:24px 32px 0 32px;">
                             <h2 style="margin:0 0 12px 0;font-size:16px;font-weight:700;color:#2563EB;">
-                                &#128197; Next Week ({{len .ProductsNextWeek}})
+                                {{ t "notify.digest.nextWeek" (len .ProductsNextWeek) }}
                             </h2>
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE;">
                                 {{range .ProductsNextWeek}}
@@ -100,10 +100,10 @@
                     <tr>
                         <td style="padding:32px 32px 32px 32px;border-top:1px solid #C8DDD0;">
                             <p style="margin:0 0 12px 0;font-size:14px;line-height:1.6;color:#6A9580;text-align:center;">
-                                You received this because you enabled expiry digests for <strong style="color:#2D4F3C;">{{.HouseholdName}}</strong>.
+                                {{ t "notify.digest.footerReasonPrefix" }} <strong style="color:#2D4F3C;">{{.HouseholdName}}</strong>{{ t "notify.digest.footerReasonSuffix" }}
                             </p>
                             <p style="margin:0;font-size:13px;color:#6A9580;text-align:center;">
-                                <a href="{{.UnsubscribeURL}}" style="color:#6A9580;">Unsubscribe from expiry digests</a>
+                                <a href="{{.UnsubscribeURL}}" style="color:#6A9580;">{{ t "notify.digest.unsubscribe" }}</a>
                             </p>
                         </td>
                     </tr>

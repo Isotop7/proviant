@@ -2,19 +2,21 @@ package database
 
 import (
 	"crypto/sha256"
+	stderrors "errors"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/errors"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/errors"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // maxDaysAfterOpening is the upper bound enforced on the DaysAfterOpening
@@ -102,9 +104,10 @@ type ProductRepositoryInterface interface {
 	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
 	SearchProductProjections(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID, locationID uint) ([]database.Product, error)
 	CreateProduct(userID uint, product *database.Product) error
+	GetProductBySyncID(userID uint, clientSyncID string) (database.Product, error)
 	CreateProductsBulk(userID uint, rows []ImportedProduct) ([]string, error)
 	UpdateProduct(productID uint, userID uint, product *database.ProductDTOPatch) error
-	UpdateProductAmount(productID uint, userID uint, delta int) (bool, error)
+	UpdateProductAmount(productID uint, userID uint, delta int, mutationID *string) (bool, bool, error)
 	DeleteProduct(productID uint, userID uint, archiveOnly bool) error
 	RestoreProduct(productID, userID uint) error
 	BulkRestoreProducts(productIDs []uint, userID uint) []BulkOperationError
@@ -685,6 +688,28 @@ func (r *ProductRepository) CreateProduct(userID uint, product *database.Product
 	return createErr.Error
 }
 
+func (r *ProductRepository) GetProductBySyncID(userID uint, clientSyncID string) (database.Product, error) {
+	if clientSyncID == "" {
+		return database.Product{}, gorm.ErrRecordNotFound
+	}
+	var product database.Product
+	// The household is resolved in a subquery rather than a second round trip:
+	// the offline sync calls this once per queued item, and a separate user
+	// fetch doubled the queries on the endpoint's hottest new path.
+	// Unscoped: idx_products_household_clientsyncid spans soft-deleted rows, so
+	// an archived product with this sync id has to resolve here — a miss would
+	// send the caller into an insert that violates the index.
+	//
+	// The Preload is not optional: the callers answer a replay with
+	// NewProductResponse, which projects product.StorageLocation into the body.
+	if err := r.DB.Unscoped().Preload("StorageLocation").
+		Where("household_id = (SELECT household_id FROM users WHERE id = ? AND deleted_at IS NULL) AND client_sync_id = ?", userID, clientSyncID).
+		First(&product).Error; err != nil {
+		return database.Product{}, err
+	}
+	return product, nil
+}
+
 // CreateProductsBulk writes a batch of imported products for one user in a
 // single transaction. The household is resolved once and stamped on every row.
 // Any storage location named by NewLocationName that the household does not have
@@ -852,43 +877,124 @@ func validateOpenedLifecycle(openedAt *time.Time, daysAfterOpening *int) error {
 	return nil
 }
 
-func (r *ProductRepository) UpdateProductAmount(productID uint, userID uint, delta int) (bool, error) {
+// ValidateOpenedLifecycle is the exported form of the create/update guard so
+// the backup restore path applies the same bounds instead of trusting the file.
+func ValidateOpenedLifecycle(openedAt *time.Time, daysAfterOpening *int) error {
+	return validateOpenedLifecycle(openedAt, daysAfterOpening)
+}
+
+// errMutationAlreadyClaimed unwinds the transaction that lost the race for a
+// clientMutationId, so the caller can report a replay instead of an error.
+var errMutationAlreadyClaimed = stderrors.New("client mutation id already applied")
+
+// errMutationClaimRefused reports a conflict on the claim insert that no claim
+// row explains — MySQL's INSERT IGNORE swallows a malformed value the same way
+// it swallows a duplicate, and treating that as a replay would drop a real delta.
+var errMutationClaimRefused = stderrors.New("client mutation id was not claimable and no claim exists")
+
+// UpdateProductAmount applies delta to the product and reports it as
+// (deleted, applied, err). applied is false when the mutation id was already
+// applied, so callers can skip side effects a replay must not repeat twice.
+// Claims outlive this call and expire through the claim sweep in proviant.go,
+// which is the only thing that bounds the table: pruning per product here would
+// never run for a product whose last mutation was its only claim.
+func (r *ProductRepository) UpdateProductAmount(productID uint, userID uint, delta int, mutationID *string) (bool, bool, error) {
 	if productID == 0 {
-		return false, gorm.ErrNotImplemented
+		return false, false, gorm.ErrNotImplemented
 	}
 
+	// One column: the amount moves through the statement below, so the row is
+	// read here only to answer "is this the caller's product".
 	var dbProduct database.Product
-	getError := r.DB.Unscoped().First(&dbProduct, productID)
+	getError := r.DB.Unscoped().Select("household_id").First(&dbProduct, productID)
 	if getError.Error != nil {
-		return false, getError.Error
+		return false, false, getError.Error
 	}
 
 	var user authentication.User
 	userErr := r.DB.First(&user, userID)
 	if userErr.Error != nil {
-		return false, userErr.Error
+		return false, false, userErr.Error
 	}
 
 	if dbProduct.HouseholdID != user.HouseholdID {
-		return false, errors.ErrMismatcherUserID
+		return false, false, errors.ErrMismatcherUserID
 	}
 
-	newAmount := dbProduct.Amount + delta
-	if newAmount < 0 {
-		newAmount = 0
-	}
-	dbProduct.Amount = newAmount
-
-	if dbProduct.Amount <= 0 {
-		deleteResult := r.DB.Unscoped().Delete(&database.Product{}, dbProduct.ID)
-		return true, deleteResult.Error
+	if mutationID != nil && strings.TrimSpace(*mutationID) == "" {
+		mutationID = nil
 	}
 
-	saveResult := r.DB.Save(&dbProduct)
-	if saveResult.Error != nil {
-		return false, saveResult.Error
+	// The claim and the amount share one transaction: a failure between
+	// the two statements would leave the delta claimed and unapplied, and
+	// every retry of it would be deduped into silence.
+	// A conflict is only believed once the claim row behind it exists:
+	// MariaDB renders this as INSERT IGNORE, which reports a value it
+	// refused to store as zero rows exactly like a duplicate.
+	moveErr := r.DB.Transaction(func(tx *gorm.DB) error {
+		if mutationID != nil {
+			claim := database.ProductMutationClaim{ProductID: productID, MutationID: *mutationID}
+			claimResult := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&claim)
+			if claimResult.Error != nil {
+				return claimResult.Error
+			}
+			if claimResult.RowsAffected == 0 {
+				var claimed database.ProductMutationClaim
+				if err := tx.First(&claimed, "product_id = ? AND mutation_id = ?", productID, *mutationID).Error; err != nil {
+					return errMutationClaimRefused
+				}
+				return errMutationAlreadyClaimed
+			}
+		}
+		return tx.Unscoped().Model(&database.Product{}).Where("id = ?", productID).
+			Updates(map[string]any{
+				"amount": gorm.Expr("CASE WHEN amount + ? < 0 THEN 0 ELSE amount + ? END", delta, delta),
+			}).Error
+	})
+	if stderrors.Is(moveErr, errMutationAlreadyClaimed) {
+		return false, false, nil
 	}
-	return false, nil
+	if moveErr != nil {
+		return false, false, moveErr
+	}
+
+	var current database.Product
+	if readErr := r.DB.Unscoped().First(&current, productID).Error; readErr != nil {
+		if stderrors.Is(readErr, gorm.ErrRecordNotFound) {
+			return true, true, nil
+		}
+		return false, false, readErr
+	}
+	if current.Amount > 0 {
+		return false, true, nil
+	}
+
+	// The guard belongs in the DELETE as well as in the read above: an
+	// increment landing between that read and this statement would otherwise be
+	// lost along with the row, leaving it archived with a positive amount. Only a
+	// row still at zero is eligible, so a concurrent increment cancels the delete
+	// instead of being discarded.
+	deleteResult := r.DB.Unscoped().
+		Where("id = ? AND amount <= 0", productID).
+		Delete(&database.Product{})
+	if deleteResult.Error != nil {
+		return true, true, deleteResult.Error
+	}
+	if deleteResult.RowsAffected > 0 {
+		return true, true, nil
+	}
+	// The guard refused the row, which means one of two things. A concurrent
+	// increment raised the amount and the product survives. Or a concurrent call
+	// already hard-deleted the row, in which case this delta was part of the same
+	// zeroing and the product really is gone — reading back tells them apart.
+	var survivor database.Product
+	if readErr := r.DB.Unscoped().First(&survivor, productID).Error; readErr != nil {
+		if stderrors.Is(readErr, gorm.ErrRecordNotFound) {
+			return true, true, nil
+		}
+		return false, true, readErr
+	}
+	return false, true, nil
 }
 
 func (r *ProductRepository) DeleteProduct(productID uint, userID uint, archiveOnly bool) error {
@@ -1733,6 +1839,31 @@ func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database
 	return products, result.Error
 }
 
+// GetHouseholdProductsForBackup returns every active household product
+// including private rows. A backup exists to reproduce the household, so the
+// privacy scope every user-facing query applies must not silently drop a
+// member's private stock from the file.
+func (r *ProductRepository) GetHouseholdProductsForBackup(householdID uint) ([]database.Product, error) {
+	var products []database.Product
+	err := r.DB.Preload("StorageLocation").
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
+		Find(&products).Error
+	return products, err
+}
+
+// GetHouseholdArchivedProductsForBackup is the archived counterpart of
+// GetHouseholdProductsForBackup: every soft-deleted household row, private
+// ones included.
+func (r *ProductRepository) GetHouseholdArchivedProductsForBackup(householdID uint) ([]database.Product, error) {
+	var products []database.Product
+	err := r.DB.Preload("StorageLocation").Unscoped().
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNotNull).
+		Find(&products).Error
+	return products, err
+}
+
 // GetMatchableProductsByHousehold returns the household's matchable products
 // with only the three columns the recipe matcher reads: ID, ProductName and
 // Categories. GetProductsByHousehold loads every Product column for the whole
@@ -1943,10 +2074,15 @@ func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
 // if the concurrent reduction still leaves more than the requested amount,
 // it falls back to a partial reduce, otherwise it soft-deletes with
 // RemovalReasonConsumed and returns the current amount. fullyConsumed
-// reports whether the product was archived. Both transactional writes carry
-// an updated_at optimistic-lock precondition, so any concurrent row change
-// (amount, opened_at, removal_reason) fails the guarded write. When a
-// guarded precondition fails (the row changed between read and write inside
+// reports whether the product was archived. The guarded writes compare data
+// values only (amount, removal_reason, deleted_at) — never updated_at: a
+// timestamp that was not round-tripped through the GORM driver (NULL on
+// legacy rows, or text written by raw SQL) never matches the bound form and
+// fails every guarded write with ErrProductConcurrentModification. The
+// removal_reason precondition is the double-apply guard: once one request
+// claims the row (consumed or wasted), a second full consume cannot archive
+// it again and duplicate the savings/activity entries. When a guarded
+// precondition fails (the row changed between read and write inside
 // the transaction)
 // the transaction is retried once with a fresh read; only a second failure
 // surfaces ErrProductConcurrentModification instead of silently applying.
@@ -1959,6 +2095,7 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, amo
 			Where("id = ?", product.ID).
 			Where("household_id = ?", product.HouseholdID).
 			Where(util.WhereDeletedIsNull).
+			Where(util.WhereRemovalReasonUnclaimed).
 			Where("amount > ?", amount).
 			Update("amount", gorm.Expr("amount - ?", amount))
 		if result.Error != nil {
@@ -1991,8 +2128,8 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, amo
 					Where("id = ?", current.ID).
 					Where("household_id = ?", current.HouseholdID).
 					Where(util.WhereDeletedIsNull).
+					Where(util.WhereRemovalReasonUnclaimed).
 					Where("amount > ?", amount).
-					Where("updated_at = ?", current.UpdatedAt).
 					Update("amount", gorm.Expr("amount - ?", amount))
 				if result.Error != nil {
 					return result.Error
@@ -2005,16 +2142,15 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, amo
 			}
 			consumed = current.Amount
 			fullyConsumed = true
-			// Guarded flag-and-archive: the amount and updated_at preconditions
-			// make the write fail if the row changed in any way since the read
-			// (amount, opened_at, removal_reason), so a concurrent full consume
-			// cannot be applied twice (double savings/activity entries).
+			// The unclaimed-row precondition is the double-apply guard: only
+			// one request may claim the row, so concurrent full consumes
+			// cannot duplicate the savings/activity entries.
 			result := tx.Model(&database.Product{}).
 				Where("id = ?", current.ID).
 				Where("household_id = ?", current.HouseholdID).
 				Where(util.WhereDeletedIsNull).
+				Where(util.WhereRemovalReasonUnclaimed).
 				Where("amount = ?", current.Amount).
-				Where("updated_at = ?", current.UpdatedAt).
 				Update("removal_reason", database.RemovalReasonConsumed)
 			if result.Error != nil {
 				return result.Error
@@ -2040,15 +2176,15 @@ func (r *ProductRepository) WasteProduct(productID, userID uint) error {
 		return err
 	}
 	// Single transaction: the removal-reason update and the soft-delete must
-	// succeed together, or neither lands. The update is guarded by updated_at,
-	// so a concurrent row change between the caller's read and the write fails
-	// instead of silently overwriting it.
+	// succeed together, or neither lands. The unclaimed-row precondition fails
+	// the write when a concurrent request already claimed the row, instead of
+	// silently overwriting its removal reason.
 	return r.DB.Transaction(func(tx *gorm.DB) error {
 		result := tx.Model(&database.Product{}).
 			Where("id = ?", product.ID).
 			Where("household_id = ?", product.HouseholdID).
 			Where(util.WhereDeletedIsNull).
-			Where("updated_at = ?", product.UpdatedAt).
+			Where(util.WhereRemovalReasonUnclaimed).
 			Update("removal_reason", database.RemovalReasonWasted)
 		if result.Error != nil {
 			return result.Error

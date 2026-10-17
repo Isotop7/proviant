@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	"codeberg.org/isotop7/proviant/api"
-	apperrors "codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	apperrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"

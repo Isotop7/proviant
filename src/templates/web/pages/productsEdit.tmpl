@@ -7,7 +7,7 @@
       <i class="bi bi-arrow-left"></i>
     </a>
     <div class="flex-grow-1">
-      <div class="mobile-topbar-title">Edit product</div>
+      <div class="mobile-topbar-title">{{ t "products.editProduct" }}</div>
       <div class="mobile-topbar-sub">#{{ .Product.ID }} · {{ .Product.ProductName }}</div>
     </div>
     <span class="badge-status badge-status-sm badge-{{ expiryStatusClass .Product.ExpireAt }}">
@@ -28,30 +28,30 @@
       <div class="font-mono mobile-product-barcode">{{ .Product.Barcode }}</div>
     </div>
     <button type="button" id="btnMobilePhotoFocus" class="btn btn-sm btn-proviant-secondary">
-      <i class="bi bi-image"></i> Photo
+      <i class="bi bi-image"></i> {{ t "products.photo" }}
     </button>
   </div>
 
   <!-- ── Desktop: breadcrumb + page header (hidden on mobile) ── -->
   <div class="pv-breadcrumb-row d-none d-md-flex">
-    <a href="/web/products"><i class="bi bi-box-seam"></i> Products</a>
+    <a href="/web/products"><i class="bi bi-box-seam"></i> {{ t "nav.products" }}</a>
     <i class="bi bi-chevron-right"></i>
-    <span>Edit product</span>
+    <span>{{ t "products.editProduct" }}</span>
   </div>
   <div class="pv-page-header d-none d-md-flex">
     <div>
       <div class="pv-page-title-row">
-        <h1 class="pv-page-title">Edit product</h1>
+        <h1 class="pv-page-title">{{ t "products.editProduct" }}</h1>
         <span class="id-chip">#<span id="labelProductID">{{ .Product.ID }}</span></span>
       </div>
-      <div class="pv-page-sub">Changes are saved after clicking Update product</div>
+      <div class="pv-page-sub">{{ t "products.changesSavedHint" }}</div>
     </div>
     <div class="d-flex align-items-center gap-2">
       <span class="badge-status badge-{{ expiryStatusClass .Product.ExpireAt }}">
         <i class="bi bi-{{ expiryStatusIcon .Product.ExpireAt }}"></i>
         {{ expiryStatusLabel .Product.ExpireAt }}
       </span>
-      <button type="button" class="btn btn-proviant-secondary btn-sm btn-add-to-shopping-list" data-product-id="{{ .Product.ID }}" title="Add to shopping list">
+      <button type="button" class="btn btn-proviant-secondary btn-sm btn-add-to-shopping-list" data-product-id="{{ .Product.ID }}" title="{{ t "products.addToShoppingList" }}">
         <i class="bi bi-cart-plus"></i>
       </button>
     </div>
@@ -66,15 +66,15 @@
         <div class="card mb-3">
           <div class="card-header d-flex align-items-center gap-2">
             <div class="icon-chip"><i class="bi bi-tag"></i></div>
-            <span class="fw-semibold">Identity</span>
+            <span class="fw-semibold">{{ t "products.identity" }}</span>
           </div>
           <div class="card-body">
             <div class="mb-3">
-              <label class="form-label">Product name <span class="text-danger">*</span></label>
+              <label class="form-label">{{ t "products.productName" }} <span class="text-danger">*</span></label>
               <input type="text" class="form-control" id="inputProductName" value="{{ .Product.ProductName }}" required>
             </div>
             <div class="mb-3">
-              <label class="form-label">Barcode</label>
+              <label class="form-label">{{ t "products.barcode" }}</label>
               <div class="position-relative">
                 <i class="bi bi-upc-scan position-absolute text-fg-3 input-icon-left"></i>
                 <input type="text" class="form-control font-mono input-with-icon" value="{{ .Product.Barcode }}" readonly>
@@ -82,16 +82,16 @@
             </div>
             <div class="mb-3">
               <label class="form-label">
-                <i class="bi bi-lock"></i> Private product
+                <i class="bi bi-lock"></i> {{ t "products.privateProduct" }}
               </label>
               <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="inputIsPrivate"
                   {{ if .Product.IsPrivate }}checked{{ end }}>
                 <label class="form-check-label" for="inputIsPrivate">
-                  Only visible to you
+                  {{ t "products.onlyVisibleToYou" }}
                 </label>
               </div>
-              <div class="form-text">Private products are hidden from other household members.</div>
+              <div class="form-text">{{ t "products.privateHelp" }}</div>
             </div>
           </div>
         </div>
@@ -100,16 +100,16 @@
         <div class="card mb-3">
           <div class="card-header d-flex align-items-center gap-2">
             <div class="icon-chip"><i class="bi bi-grid"></i></div>
-            <span class="fw-semibold">Categories</span>
+            <span class="fw-semibold">{{ t "products.categories" }}</span>
           </div>
           <div class="card-body">
             <div class="mb-3">
-              <label class="form-label">Product categories</label>
+              <label class="form-label">{{ t "products.productCategories" }}</label>
               <input type="hidden" id="categoriesHidden" value="{{ .Product.Categories }}">
               <div class="pv-tag-wrap" data-target="categoriesHidden" data-color="accent" data-readonly="true"></div>
             </div>
             <div class="mb-3">
-              <label class="form-label">Countries sold in</label>
+              <label class="form-label">{{ t "products.countriesSoldIn" }}</label>
               <input type="hidden" id="countriesHidden" value="{{ .Product.Countries }}">
               <div class="pv-tag-wrap" data-target="countriesHidden" data-color="neutral" data-readonly="true"></div>
             </div>
@@ -120,27 +120,27 @@
         <div class="card mb-3">
           <div class="card-header d-flex align-items-center gap-2">
             <div class="icon-chip"><i class="bi bi-calendar-event"></i></div>
-            <span class="fw-semibold">Expiry &amp; inventory</span>
+            <span class="fw-semibold">{{ t "products.expiryInventory" }}</span>
           </div>
           <div class="card-body">
             <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label">Expiry date <span class="text-danger">*</span></label>
+                <label class="form-label">{{ t "products.expiryDateField" }} <span class="text-danger">*</span></label>
                 <div class="d-flex align-items-center gap-2">
                   <input type="date" class="form-control font-mono flex-grow-1" id="inputExpireAt"
                     value="{{ .Product.ExpireAt | inputDate }}" required>
                   {{ if .Product.ExpireAt.IsZero }}
-                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTodayExpiry" title="Set to today" aria-label="Set expiry date to today">
+                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTodayExpiry" title="{{ t "products.setToday" }}" aria-label="{{ t "products.setExpiryToToday" }}">
                     <i class="bi bi-calendar-check" aria-hidden="true"></i>
                   </button>
                   {{ end }}
-                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="Scan expiry date" aria-label="Scan expiry date from photo">
+                  <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="{{ t "products.scanExpiryDateBtn" }}" aria-label="{{ t "products.scanExpiryFromPhoto" }}">
                     <i class="bi bi-camera" aria-hidden="true"></i>
                   </button>
                 </div>
               </div>
               <div class="col-md-6">
-                <label class="form-label">Amount</label>
+                <label class="form-label">{{ t "products.amount" }}</label>
                 <div class="qty-stepper">
                   <button type="button" data-amount-step="-1">-</button>
                   <input type="number" id="inputAmount" value="{{ .Product.Amount }}" min="0">
@@ -149,9 +149,9 @@
               </div>
             </div>
             <div class="mb-3 mt-3">
-              <label class="form-label">Storage location</label>
+              <label class="form-label">{{ t "products.storageLocation" }}</label>
               <select class="form-select" id="selectStorageLocation">
-                <option value="">— None —</option>
+                <option value="">{{ t "products.noneOption" }}</option>
                 {{ range .Locations }}
                 <option value="{{ .ID }}" {{ if and $.Product.StorageLocationID (eq (derefUint $.Product.StorageLocationID) .ID) }}selected{{ end }}>
                   {{ .Icon }} {{ .Name }}
@@ -160,44 +160,44 @@
               </select>
             </div>
             <div class="mb-3">
-              <label class="form-label">Notification lead time</label>
+              <label class="form-label">{{ t "products.notificationLeadTime" }}</label>
               <input type="number" class="form-control" id="inputNotificationLeadDays"
                 value="{{ if .Product.NotificationLeadDays }}{{ .Product.NotificationLeadDays }}{{ end }}"
-                min="0" placeholder="Default: {{ .GlobalNotificationThresholdDays }}">
-              <div class="form-text">Days before expiry to notify. Leave blank to use household default ({{ .GlobalNotificationThresholdDays }} days).</div>
+                min="0" placeholder="{{ t "products.defaultDaysPlaceholder" .GlobalNotificationThresholdDays }}">
+              <div class="form-text">{{ t "products.notificationLeadHelp" .GlobalNotificationThresholdDays }}</div>
             </div>
             <div class="mb-3">
-              <label class="form-label">Min. stock amount</label>
+              <label class="form-label">{{ t "products.minStockAmount" }}</label>
               <input type="number" class="form-control" id="inputMinStockAmount"
                 value="{{ .Product.MinStockAmount }}" min="0">
-              <div class="form-text">Auto-add to shopping list when amount drops below this threshold.</div>
+              <div class="form-text">{{ t "products.minStockHelp" }}</div>
             </div>
             <div class="mb-3">
-              <label class="form-label">Purchase price (EUR, optional)</label>
+              <label class="form-label">{{ t "products.purchasePrice" }}</label>
               <input type="number" class="form-control" id="inputPriceOverride"
                 value="{{ if .Product.PriceOverride }}{{ .Product.PriceOverride }}{{ end }}"
-                min="0" step="0.01" placeholder="e.g. 1.99">
-              <div class="form-text">Used to compute waste savings. Leave blank to use category average.</div>
+                min="0" step="0.01" placeholder="{{ t "products.priceExample" }}">
+              <div class="form-text">{{ t "products.priceHelp" }}</div>
             </div>
             <div class="mb-3">
-              <label class="form-label">Shelf life after opening</label>
+              <label class="form-label">{{ t "products.shelfLifeAfterOpening" }}</label>
               <div class="row g-3">
                 <div class="col-md-6">
                   <input type="date" class="form-control font-mono" id="inputOpenedAt"
                     value="{{ if .Product.OpenedAt }}{{ .Product.OpenedAt | inputDate }}{{ end }}" max="{{ today }}">
-                  <div class="form-text">When the product was opened. Used to compute a secondary expiry.</div>
+                  <div class="form-text">{{ t "products.openedAtHelp" }}</div>
                 </div>
                 <div class="col-md-6">
                   <input type="number" class="form-control" id="inputDaysAfterOpening"
                     value="{{ if .Product.DaysAfterOpening }}{{ .Product.DaysAfterOpening }}{{ end }}"
-                    min="0" max="365" placeholder="e.g. 14">
-                  <div class="form-text">Days the product is good after opening (e.g. 5 for cream cheese, 42 for jam).</div>
+                    min="0" max="365" placeholder="{{ t "products.daysExample" }}">
+                  <div class="form-text">{{ t "products.daysAfterOpeningHelp" }}</div>
                 </div>
               </div>
               {{ if .Product.OpenedAt }}
               <div class="mt-2">
-                <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnClearOpenedAt" aria-label="Clear opened date">
-                  <i class="bi bi-x-circle"></i> Clear opened date
+                <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnClearOpenedAt" aria-label="{{ t "products.clearOpenedDate" }}">
+                  <i class="bi bi-x-circle"></i> {{ t "products.clearOpenedDate" }}
                 </button>
               </div>
               {{ end }}
@@ -208,23 +208,23 @@
         <!-- Desktop form actions (hidden on mobile) -->
         <div class="d-none d-md-flex gap-2 mb-3">
           <button class="btn btn-proviant-primary" type="submit">
-            <i class="bi bi-check2"></i> Update product
+            <i class="bi bi-check2"></i> {{ t "products.updateProduct" }}
           </button>
-          <a href="/web/products" class="btn btn-proviant-secondary">Cancel</a>
+          <a href="/web/products" class="btn btn-proviant-secondary">{{ t "common.cancel" }}</a>
           <div class="flex-grow-1"></div>
           {{ if $.IsArchived }}
           <button class="btn btn-proviant-secondary" type="button" id="btnRestoreProduct">
-            <i class="bi bi-arrow-counterclockwise"></i> Restore
+            <i class="bi bi-arrow-counterclockwise"></i> {{ t "products.restore" }}
           </button>
           {{ end }}
           {{ if not $.IsArchived }}
           <button class="btn btn-proviant-secondary" type="button" id="btnConsumeProduct">
-            <i class="bi bi-check-circle"></i> Consumed
+            <i class="bi bi-check-circle"></i> {{ t "products.consumed" }}
           </button>
           {{ end }}
           <button class="btn btn-proviant-danger" type="button"
             data-bs-toggle="modal" data-bs-target="#deleteModal">
-            <i class="bi bi-trash3"></i> Wasted
+            <i class="bi bi-trash3"></i> {{ t "products.wasted" }}
           </button>
         </div>
 
@@ -241,11 +241,11 @@
             {{ end }}
             <div id="imgProductFallback" class="pv-product-image-fallback">
               <i class="bi bi-image"></i>
-              <span>No image</span>
+              <span>{{ t "products.noImage" }}</span>
             </div>
             <div class="pv-product-image-overlay">
               <button type="button" id="btnDesktopChangeImage">
-                <i class="bi bi-image"></i> Change image
+                <i class="bi bi-image"></i> {{ t "products.changeImage" }}
               </button>
             </div>
           </div>
@@ -263,13 +263,13 @@
         <div class="card mb-3">
           <div class="card-header d-flex align-items-center gap-2">
             <div class="icon-chip"><i class="bi bi-image"></i></div>
-            <span class="fw-semibold">Image URL</span>
+            <span class="fw-semibold">{{ t "products.imageUrl" }}</span>
           </div>
           <div class="card-body py-3">
             <div class="mb-0">
               <input type="url" id="inputImageURL" class="form-control font-mono text-sm"
                 value="{{ .Product.ImageURL }}" placeholder="https://…">
-              <div class="form-text">Paste a URL or leave blank to remove the image</div>
+              <div class="form-text">{{ t "products.imageUrlHelp" }}</div>
             </div>
           </div>
         </div>
@@ -278,21 +278,21 @@
         <div class="card mb-3">
           <div class="card-header d-flex align-items-center gap-2">
             <div class="icon-chip"><i class="bi bi-info-circle"></i></div>
-            <span class="fw-semibold">Product info</span>
+            <span class="fw-semibold">{{ t "products.productInfo" }}</span>
           </div>
           <div class="card-body product-info-body">
             <div class="product-info-row">
-              <span class="text-fg-3">Status</span>
+              <span class="text-fg-3">{{ t "products.status" }}</span>
               <span class="badge-status badge-{{ expiryStatusClass .Product.ExpireAt }}">
                 {{ expiryStatusLabel .Product.ExpireAt }}
               </span>
             </div>
             <div class="product-info-row product-info-row-sep">
-              <span class="text-fg-3">Amount</span>
+              <span class="text-fg-3">{{ t "products.amount" }}</span>
               <span class="font-mono fw-semibold">{{ .Product.Amount }}</span>
             </div>
             <div class="product-info-row product-info-row-sep">
-              <span class="text-fg-3">Expiry Date</span>
+              <span class="text-fg-3">{{ t "products.expiryDate" }}</span>
               <span class="font-mono fw-semibold">{{ .Product.ExpireAt | humanDate }}</span>
             </div>
           </div>
@@ -306,17 +306,17 @@
   <!-- ── Mobile: sticky footer (hidden on desktop) ── -->
   <div class="d-flex gap-2 d-md-none mobile-sticky-footer">
     <button type="submit" form="editProductForm" class="btn btn-proviant-primary flex-grow-1">
-      <i class="bi bi-check2"></i> Update product
+      <i class="bi bi-check2"></i> {{ t "products.updateProduct" }}
     </button>
-    <a href="/web/products" class="btn btn-proviant-secondary">Cancel</a>
+    <a href="/web/products" class="btn btn-proviant-secondary">{{ t "common.cancel" }}</a>
     {{ if $.IsArchived }}
     <button type="button" class="btn btn-proviant-secondary" id="btnRestoreProductMobile">
-      <i class="bi bi-arrow-counterclockwise"></i> Restore
+      <i class="bi bi-arrow-counterclockwise"></i> {{ t "products.restore" }}
     </button>
     {{ end }}
     {{ if not $.IsArchived }}
     <button type="button" class="btn btn-proviant-secondary" id="btnConsumeProductMobile">
-      <i class="bi bi-check-circle"></i> Consumed
+      <i class="bi bi-check-circle"></i> {{ t "products.consumed" }}
     </button>
     {{ end }}
     <button type="button" class="btn btn-proviant-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
@@ -335,19 +335,19 @@
           <i class="bi bi-trash3-fill"></i>
         </div>
         <div class="modal-header-body">
-          <h5 class="modal-title mb-0">Mark {{ .Product.ProductName }} as wasted?</h5>
+          <h5 class="modal-title mb-0">{{ t "products.markAsWasted" .Product.ProductName }}</h5>
         </div>
-        <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+        <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
           <i class="bi bi-x"></i>
         </button>
       </div>
       <div class="modal-body">
-        <p class="text-secondary-custom small mb-0">This product will be permanently marked as wasted. Consider marking as consumed instead if you want to keep the record.</p>
+        <p class="text-secondary-custom small mb-0">{{ t "products.wastedConfirmBody" }}</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
         <button id="btnConfirmDelete" class="btn btn-proviant-danger" type="button">
-          <i class="bi bi-trash3"></i> Wasted
+          <i class="bi bi-trash3"></i> {{ t "products.wasted" }}
         </button>
       </div>
     </div>
@@ -363,10 +363,10 @@
           <i class="bi bi-camera"></i>
         </div>
         <div class="modal-header-body">
-          <h5 class="modal-title mb-0" id="ocrCameraModalLabel">Scan Expiry Date</h5>
-          <div class="modal-subtitle">Position expiry date in frame</div>
+          <h5 class="modal-title mb-0" id="ocrCameraModalLabel">{{ t "products.scanExpiryDate" }}</h5>
+          <div class="modal-subtitle">{{ t "products.scanExpirySubtitle" }}</div>
         </div>
-        <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+        <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
           <i class="bi bi-x"></i>
         </button>
       </div>
@@ -374,12 +374,12 @@
         <div class="camera-preview-wrapper">
           <video id="ocrVideoPreview" autoplay playsinline class="camera-preview"></video>
         </div>
-        <p class="text-secondary-custom small mt-2">Hold steady and tap Capture</p>
+        <p class="text-secondary-custom small mt-2">{{ t "products.captureHint" }}</p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
         <button type="button" class="btn btn-proviant-primary" id="btnCaptureExpiry">
-          <i class="bi bi-camera"></i> Capture
+          <i class="bi bi-camera"></i> {{ t "products.capture" }}
         </button>
       </div>
     </div>
@@ -395,10 +395,10 @@
           <i class="bi bi-camera"></i>
         </div>
         <div class="modal-header-body">
-          <h5 class="modal-title mb-0" id="ocrResultModalLabel">Expiry Date Scan</h5>
-          <div class="modal-subtitle">Check the detected date</div>
+          <h5 class="modal-title mb-0" id="ocrResultModalLabel">{{ t "products.expiryDateScan" }}</h5>
+          <div class="modal-subtitle">{{ t "products.checkDetectedDate" }}</div>
         </div>
-        <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="Close">
+        <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
           <i class="bi bi-x"></i>
         </button>
       </div>
@@ -408,19 +408,19 @@
         <div class="progress progress-sm mb-2">
           <div id="ocrConfidenceBar" class="progress-bar" role="progressbar" style="width:0%"></div>
         </div>
-        <small class="text-secondary-custom" id="ocrConfidenceLabel">Confidence: 0%</small>
+        <small class="text-secondary-custom" id="ocrConfidenceLabel">{{ t "products.confidenceLabel" }}</small>
         <div id="ocrRawTextWrapper" class="mt-3 d-none">
-          <label class="form-label">Raw OCR text</label>
+          <label class="form-label">{{ t "products.rawOcrText" }}</label>
           <textarea id="ocrRawText" class="form-control" rows="3" readonly></textarea>
-          <div class="form-text">Date not detected confidently. Please check the text above and adjust the date manually.</div>
+          <div class="form-text">{{ t "products.ocrFallbackHelp" }}</div>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-proviant-secondary" id="btnRecaptureExpiry">
-          <i class="bi bi-camera"></i> Retake
+          <i class="bi bi-camera"></i> {{ t "products.retake" }}
         </button>
         <button type="button" class="btn btn-proviant-primary" id="btnConfirmExpiry">
-          <i class="bi bi-check"></i> Confirm
+          <i class="bi bi-check"></i> {{ t "common.confirm" }}
         </button>
       </div>
     </div>

@@ -1,0 +1,14 @@
+{
+  "nav.dashboard": "Dashboard",
+  "nav.logout": "Logout",
+  "nav.mealPlan": "Meal Plan",
+  "nav.notifications": "Notifications",
+  "nav.products": "Products",
+  "nav.recipes": "Recipes",
+  "nav.settings": "Settings",
+  "nav.shopping": "Shopping",
+  "nav.shoppingList": "Shopping List",
+  "nav.theme": "Theme",
+  "nav.viewSource": "View source on GitHub",
+  "nav.wasteAnalytics": "Waste Analytics"
+}

@@ -1,0 +1,22 @@
+{
+  "receipt.category.label": "Category",
+  "receipt.category.placeholder": "e.g. dairy",
+  "receipt.defaults.title": "Defaults for all items",
+  "receipt.empty.addManually": "Add product manually",
+  "receipt.empty.text": "No products were recognized on this photo. Try a sharper picture, or add the products manually.",
+  "receipt.empty.tryAgain": "Try again",
+  "receipt.import.addPrefix": "Add",
+  "receipt.import.items": "products",
+  "receipt.import.items_one": "product",
+  "receipt.import.items_other": "products",
+  "receipt.import.progress": "Adding products…",
+  "receipt.noneOption": "— none —",
+  "receipt.photo.help": "Full receipt in focus, all items visible",
+  "receipt.photo.label": "Receipt photo",
+  "receipt.rescan": "Rescan",
+  "receipt.scan.button": "Scan receipt",
+  "receipt.scan.progress": "Analyzing receipt… this can take up to a minute.",
+  "receipt.scan.progressLabel": "Scanning receipt",
+  "receipt.subtitle": "Photograph a receipt to add several products at once",
+  "receipt.title": "Scan a receipt"
+}

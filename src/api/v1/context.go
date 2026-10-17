@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"strconv"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/controllers/database"
-	apperrors "codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	"codeberg.org/isotop7/proviant/services"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers"
+	"github.com/Isotop7/proviant/controllers/database"
+	apperrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration/static"
+	"github.com/Isotop7/proviant/services"
+	"github.com/Isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -22,12 +22,13 @@ import (
 )
 
 type AppContext struct {
-	Logger      *zerolog.Logger
-	DB          *gorm.DB
-	Repos       *database.RepositoryContainer
-	UserID      uint
-	Products    *services.ProductService
-	Consumption *services.ConsumptionService
+	Logger           *zerolog.Logger
+	DB               *gorm.DB
+	Repos            *database.RepositoryContainer
+	UserID           uint
+	Products         *services.ProductService
+	Consumption      *services.ConsumptionService
+	ShoppingListSync *services.ShoppingListSyncService
 }
 
 func mustGetAppContext(ctx *gin.Context, logger *zerolog.Logger) *AppContext {
@@ -44,12 +45,13 @@ func mustGetAppContext(ctx *gin.Context, logger *zerolog.Logger) *AppContext {
 		return nil
 	}
 	return &AppContext{
-		Logger:      logger,
-		DB:          db,
-		Repos:       repos,
-		UserID:      userID,
-		Products:    services.NewProductService(repos, logger),
-		Consumption: services.NewConsumptionService(repos, logger),
+		Logger:           logger,
+		DB:               db,
+		Repos:            repos,
+		UserID:           userID,
+		Products:         services.NewProductService(repos, logger),
+		Consumption:      services.NewConsumptionService(repos, logger),
+		ShoppingListSync: services.NewShoppingListSyncService(repos, logger, extractShoppingListSyncConfig(ctx)),
 	}
 }
 
@@ -104,10 +106,11 @@ func SetupTestAppContext(ctx *gin.Context, userID uint) *AppContext {
 	db, _ := dbVal.(*gorm.DB)
 
 	appCtx := &AppContext{
-		Logger: logger,
-		DB:     db,
-		Repos:  repos,
-		UserID: userID,
+		Logger:           logger,
+		DB:               db,
+		Repos:            repos,
+		UserID:           userID,
+		ShoppingListSync: services.NewShoppingListSyncService(repos, logger, extractShoppingListSyncConfig(ctx)),
 	}
 	ctx.Set("appContext", appCtx)
 	return appCtx

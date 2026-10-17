@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/templates"
-	"codeberg.org/isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/templates"
+	"github.com/Isotop7/proviant/testutil"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"

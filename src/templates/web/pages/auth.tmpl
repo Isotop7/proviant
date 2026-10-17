@@ -18,22 +18,22 @@
       {{ if .InviteToken }}
       <div class="invite-banner" role="alert">
         <i class="bi bi-envelope-check" aria-hidden="true"></i>
-        <span>You were invited to join a household. Sign up using the <strong>exact email address</strong> you were invited with to automatically join.</span>
+        <span>{{ t "auth.inviteBannerPrefix" }}<strong>{{ t "auth.inviteBannerEmail" }}</strong>{{ t "auth.inviteBannerSuffix" }}</span>
       </div>
       {{ end }}
 
       <!-- Tab switcher -->
       <div class="auth-tabs" role="tablist">
         <button class="auth-tab active" id="tab-signin" data-mode="signin"
-          role="tab" aria-selected="true" aria-controls="authForm">Sign in</button>
+          role="tab" aria-selected="true" aria-controls="authForm">{{ t "auth.signIn" }}</button>
         <button class="auth-tab" id="tab-signup" data-mode="signup"
-          role="tab" aria-selected="false" aria-controls="authForm">Create account</button>
+          role="tab" aria-selected="false" aria-controls="authForm">{{ t "auth.createAccount" }}</button>
       </div>
 
       <!-- Heading -->
       <div class="form-heading">
-        <div class="form-heading-title" id="auth-heading-title">Welcome back</div>
-        <div class="form-heading-sub" id="auth-heading-sub">Sign in to your Proviant account</div>
+        <div class="form-heading-title" id="auth-heading-title">{{ t "auth.welcomeBack" }}</div>
+        <div class="form-heading-sub" id="auth-heading-sub">{{ t "auth.signInSubtitle" }}</div>
       </div>
 
       <!-- Auth form -->
@@ -45,10 +45,10 @@
 
         <!-- Display name — signup only -->
         <div class="field" id="field-name" style="display:none;">
-          <label class="field-label" for="auth-name">Display name</label>
+          <label class="field-label" for="auth-name">{{ t "auth.nameLabel" }}</label>
           <div class="field-input-wrap">
             <input class="field-input" type="text" id="auth-name"
-              placeholder="Your name" autocomplete="name"
+              placeholder="{{ t "auth.namePlaceholder" }}" autocomplete="name"
               aria-describedby="auth-name-error">
             <i class="bi bi-person field-icon" aria-hidden="true"></i>
           </div>
@@ -60,10 +60,10 @@
 
         <!-- Username — signin only -->
         <div class="field" id="field-username">
-          <label class="field-label" for="auth-username">Username</label>
+          <label class="field-label" for="auth-username">{{ t "auth.usernameLabel" }}</label>
           <div class="field-input-wrap">
             <input class="field-input" type="text" id="auth-username"
-              placeholder="Your username" autocomplete="username"
+              placeholder="{{ t "auth.usernamePlaceholder" }}" autocomplete="username"
               aria-describedby="auth-username-error">
             <i class="bi bi-person field-icon" aria-hidden="true"></i>
           </div>
@@ -75,10 +75,10 @@
 
         <!-- Email — signup only -->
         <div class="field" id="field-email" style="display:none;">
-          <label class="field-label" for="auth-email">Email</label>
+          <label class="field-label" for="auth-email">{{ t "auth.emailLabel" }}</label>
           <div class="field-input-wrap">
             <input class="field-input" type="email" id="auth-email"
-              placeholder="you@example.com" autocomplete="email"
+              placeholder="{{ t "auth.emailPlaceholder" }}" autocomplete="email"
               aria-describedby="auth-email-error">
             <i class="bi bi-envelope field-icon" aria-hidden="true"></i>
           </div>
@@ -90,7 +90,7 @@
 
         <!-- Password -->
         <div class="field" id="field-password">
-          <label class="field-label" for="auth-password">Password</label>
+          <label class="field-label" for="auth-password">{{ t "auth.passwordLabel" }}</label>
           <div class="field-input-wrap">
             <input class="field-input" type="password" id="auth-password"
               placeholder="••••••••" autocomplete="current-password"
@@ -102,7 +102,7 @@
               style="padding-right:40px">
             <i class="bi bi-lock field-icon" aria-hidden="true"></i>
             <button type="button" class="pwd-toggle" id="pwd-toggle-btn"
-              aria-label="Toggle password visibility" aria-pressed="false">
+              aria-label="{{ t "auth.togglePasswordVisibility" }}" aria-pressed="false">
               <i class="bi bi-eye" id="pwd-eye-icon" aria-hidden="true"></i>
             </button>
           </div>
@@ -123,24 +123,24 @@
             style="display:none;" aria-live="polite">
             <li id="req-length">
               <i class="bi bi-circle" aria-hidden="true"></i>
-              At least {{ .PasswordMinLength }} characters
+              {{ t "auth.reqLength" .PasswordMinLength }}
             </li>
             {{ if .PasswordRequireUppercase }}
             <li id="req-upper">
               <i class="bi bi-circle" aria-hidden="true"></i>
-              At least one uppercase letter
+              {{ t "auth.reqUppercase" }}
             </li>
             {{ end }}
             {{ if .PasswordRequireDigit }}
             <li id="req-digit">
               <i class="bi bi-circle" aria-hidden="true"></i>
-              At least one number
+              {{ t "auth.reqDigit" }}
             </li>
             {{ end }}
             {{ if .PasswordRequireSpecial }}
             <li id="req-special">
               <i class="bi bi-circle" aria-hidden="true"></i>
-              At least one special character
+              {{ t "auth.reqSpecial" }}
             </li>
             {{ end }}
           </ul>
@@ -153,20 +153,18 @@
 
         <!-- Forgot password — signin only -->
         <div class="forgot-link" id="auth-forgot-link">
-          <a href="{{ .RouteForgotPassword }}">Forgot password?</a>
+          <a href="{{ .RouteForgotPassword }}">{{ t "auth.forgotPasswordLink" }}</a>
         </div>
 
         <!-- Submit -->
         <button type="submit" class="btn-submit" id="btn-auth-submit">
           <i class="bi bi-box-arrow-in-right" id="btn-auth-icon" aria-hidden="true"></i>
-          <span id="btn-auth-label">Sign in</span>
+          <span id="btn-auth-label">{{ t "auth.signIn" }}</span>
         </button>
 
         <!-- Terms note — signup only -->
         <p class="terms-note" id="auth-terms-note" style="display:none;">
-          By creating an account you agree to our
-          <a href="/terms">Terms of Service</a> and
-          <a href="/privacy">Privacy Policy</a>.
+          {{ t "auth.termsPrefix" }}<a href="/terms">{{ t "auth.termsOfService" }}</a>{{ t "auth.termsAnd" }}<a href="/privacy">{{ t "auth.privacyPolicy" }}</a>.
         </p>
       </form>
 
@@ -181,18 +179,18 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="emailVerificationModalLabel">
-          <i class="bi bi-envelope-check me-2" aria-hidden="true"></i>Verify Your Email
+          <i class="bi bi-envelope-check me-2" aria-hidden="true"></i>{{ t "auth.verifyEmailModalTitle" }}
         </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}"></button>
       </div>
       <div class="modal-body text-center">
         <i class="bi bi-envelope-open text-info fs-1 mb-3 d-block" aria-hidden="true"></i>
-        <p class="mb-1">A verification email was sent to:</p>
+        <p class="mb-1">{{ t "auth.verificationSentTo" }}</p>
         <p class="fw-semibold mb-3" id="emailVerificationAddress"></p>
-        <p class="text-secondary-custom small mb-0">Click the link in the email to verify your address, then log in.</p>
+        <p class="text-secondary-custom small mb-0">{{ t "auth.verifyEmailHelp" }}</p>
       </div>
       <div class="modal-footer justify-content-center">
-        <button type="button" class="btn btn-proviant-primary" data-bs-dismiss="modal">Got it</button>
+        <button type="button" class="btn btn-proviant-primary" data-bs-dismiss="modal">{{ t "auth.gotIt" }}</button>
       </div>
     </div>
   </div>

@@ -91,6 +91,13 @@ definitions:
         type: string
       status:
         type: string
+      terminal:
+        description: |-
+          Terminal marks a failed item whose reason is a property of the draft
+          itself, so resubmitting it unchanged fails identically. A caller that
+          retries asynchronously should surface such an item to the user instead of
+          spending its retry budget on it.
+        type: boolean
     type: object
   api.BulkProductDraft:
     properties:
@@ -153,6 +160,12 @@ definitions:
     required:
     - items
     type: object
+  api.CookRecipeRequest:
+    properties:
+      servings:
+        minimum: 0
+        type: integer
+    type: object
   api.CookResponse:
     properties:
       consumed:
@@ -163,6 +176,62 @@ definitions:
         type: array
       partial:
         type: integer
+    type: object
+  api.CreateHouseholdIntegrationRequest:
+    properties:
+      accessToken:
+        type: string
+      accountEmail:
+        type: string
+      clearAccessToken:
+        type: boolean
+      enabled:
+        type: boolean
+      listId:
+        type: string
+      listName:
+        type: string
+      refreshToken:
+        type: string
+    type: object
+  api.CreateMealPlanEntryRequest:
+    properties:
+      date:
+        type: string
+      notes:
+        type: string
+      recipeId:
+        type: integer
+      servings:
+        minimum: 0
+        type: integer
+    required:
+    - date
+    - recipeId
+    type: object
+  api.CreateRecipeRequest:
+    properties:
+      description:
+        type: string
+      imageUrl:
+        type: string
+      ingredients:
+        items:
+          $ref: '#/definitions/api.RecipeIngredientInput'
+        maxItems: 100
+        type: array
+      instructions:
+        type: string
+      name:
+        maxLength: 255
+        type: string
+      servings:
+        minimum: 0
+        type: integer
+      sourceUrl:
+        type: string
+    required:
+    - name
     type: object
   api.CreateShoppingListItemRequest:
     properties:
@@ -259,8 +328,6 @@ definitions:
     type: object
   api.ExportProductResponse:
     properties:
-      ID:
-        type: integer
       amount:
         type: integer
       archivedAt:
@@ -279,6 +346,8 @@ definitions:
         type: integer
       expireAt:
         type: string
+      id:
+        type: integer
       imageUrl:
         type: string
       isPrivate:
@@ -290,6 +359,8 @@ definitions:
       notifiedAt:
         type: string
       openedAt:
+        type: string
+      ownerUsername:
         type: string
       priceOverride:
         type: number
@@ -306,27 +377,95 @@ definitions:
       unit:
         type: string
     type: object
+  api.FullExportHousehold:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      monthlyWasteGoalCount:
+        type: integer
+      monthlyWasteGoalPercent:
+        type: number
+      monthlyWasteGoalType:
+        type: string
+      name:
+        type: string
+    type: object
+  api.FullExportMember:
+    properties:
+      email:
+        type: string
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+  api.FullExportProducts:
+    properties:
+      active:
+        items:
+          $ref: '#/definitions/api.ExportProductResponse'
+        type: array
+      archived:
+        items:
+          $ref: '#/definitions/api.ExportProductResponse'
+        type: array
+    type: object
+  api.GenerateShoppingListRequest:
+    properties:
+      from:
+        type: string
+      to:
+        type: string
+    required:
+    - from
+    - to
+    type: object
   api.HouseholdApplicationResponse:
     properties:
-      ID:
-        type: integer
       applicantId:
         type: integer
       createdAt:
         type: string
       householdId:
         type: integer
+      id:
+        type: integer
       status:
         type: string
     type: object
+  api.HouseholdIntegrationResponse:
+    properties:
+      accessTokenConfigured:
+        type: boolean
+      accountEmail:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: integer
+      lastError:
+        type: string
+      lastSyncAt:
+        type: string
+      listId:
+        type: string
+      listName:
+        type: string
+      provider:
+        type: string
+      refreshTokenConfigured:
+        type: boolean
+    type: object
   api.HouseholdInvitationResponse:
     properties:
-      ID:
-        type: integer
       email:
         type: string
       expiresAt:
         type: string
+      id:
+        type: integer
       sendAttempts:
         type: integer
       sentAt:
@@ -347,6 +486,8 @@ definitions:
     type: object
   api.HouseholdSettingsResponse:
     properties:
+      language:
+        type: string
       monthlyWasteGoalCount:
         type: integer
       monthlyWasteGoalPercent:
@@ -408,6 +549,23 @@ definitions:
       name:
         type: string
     type: object
+  api.MealPlanEntryResponse:
+    properties:
+      createdBy:
+        type: integer
+      date:
+        type: string
+      id:
+        type: integer
+      notes:
+        type: string
+      recipeId:
+        type: integer
+      recipeName:
+        type: string
+      servings:
+        type: integer
+    type: object
   api.NotificationItem:
     properties:
       createdAt:
@@ -455,6 +613,63 @@ definitions:
       total:
         type: integer
     type: object
+  api.OfflineSyncDraft:
+    properties:
+      amount:
+        type: integer
+      barcode:
+        type: string
+      categories:
+        type: string
+      clientSyncId:
+        type: string
+      expireAt:
+        type: string
+      isPrivate:
+        type: boolean
+      priceOverride:
+        type: number
+      productName:
+        type: string
+      storageLocationId:
+        type: integer
+      unit:
+        type: string
+    type: object
+  api.OfflineSyncRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/api.OfflineSyncDraft'
+        type: array
+    type: object
+  api.OfflineSyncResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/api.OfflineSyncResult'
+        type: array
+    type: object
+  api.OfflineSyncResult:
+    properties:
+      clientSyncId:
+        type: string
+      index:
+        type: integer
+      productId:
+        type: integer
+      reason:
+        type: string
+      status:
+        type: string
+      terminal:
+        description: |-
+          Terminal marks a failed item no resubmission can fix — a blank or
+          over-long client sync id, or one held by a private product. The outbox
+          parks such an item for the user instead of replaying it into the same
+          failure until the retry budget runs out.
+        type: boolean
+    type: object
   api.OnboardingStateResponse:
     properties:
       householdStepDone:
@@ -485,6 +700,8 @@ definitions:
     type: object
   api.ProductAmountDTO:
     properties:
+      clientMutationId:
+        type: string
       delta:
         minimum: -1000
         type: integer
@@ -493,8 +710,6 @@ definitions:
     type: object
   api.ProductResponse:
     properties:
-      ID:
-        type: integer
       amount:
         type: integer
       barcode:
@@ -509,6 +724,8 @@ definitions:
         type: integer
       expireAt:
         type: string
+      id:
+        type: integer
       imageUrl:
         type: string
       isPrivate:
@@ -599,6 +816,62 @@ definitions:
           $ref: '#/definitions/api.ReceiptItem'
         type: array
     type: object
+  api.RecipeIngredientInput:
+    properties:
+      amount:
+        minimum: 0
+        type: integer
+      name:
+        maxLength: 255
+        type: string
+      productId:
+        type: integer
+      sortOrder:
+        type: integer
+      unit:
+        maxLength: 20
+        type: string
+    required:
+    - name
+    type: object
+  api.RecipeIngredientResponse:
+    properties:
+      amount:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      productId:
+        type: integer
+      sortOrder:
+        type: integer
+      unit:
+        type: string
+    type: object
+  api.RecipeResponse:
+    properties:
+      createdBy:
+        type: integer
+      description:
+        type: string
+      id:
+        type: integer
+      imageUrl:
+        type: string
+      ingredients:
+        items:
+          $ref: '#/definitions/api.RecipeIngredientResponse'
+        type: array
+      instructions:
+        type: string
+      name:
+        type: string
+      servings:
+        type: integer
+      sourceUrl:
+        type: string
+    type: object
   api.RecipeSuggestionResponse:
     properties:
       id:
@@ -656,6 +929,19 @@ definitions:
       weeklyRate:
         type: number
     type: object
+  api.RestoreResult:
+    properties:
+      locationsCreated:
+        type: integer
+      message:
+        type: string
+      productsArchived:
+        type: integer
+      productsImported:
+        type: integer
+      version:
+        type: integer
+    type: object
   api.SavingsStatsResponse:
     properties:
       co2Source:
@@ -679,13 +965,13 @@ definitions:
     type: object
   api.ShoppingListItemResponse:
     properties:
-      ID:
-        type: integer
       category:
         type: string
       checked:
         type: boolean
       createdBy:
+        type: integer
+      id:
         type: integer
       name:
         type: string
@@ -716,10 +1002,10 @@ definitions:
     type: object
   api.StorageLocationResponse:
     properties:
-      ID:
-        type: integer
       icon:
         type: string
+      id:
+        type: integer
       name:
         type: string
       sortOrder:
@@ -747,14 +1033,47 @@ definitions:
       scopes:
         type: string
     type: object
+  api.UpdateHouseholdIntegrationRequest:
+    properties:
+      accessToken:
+        type: string
+      accountEmail:
+        type: string
+      clearAccessToken:
+        type: boolean
+      clearRefreshToken:
+        type: boolean
+      enabled:
+        type: boolean
+      listId:
+        type: string
+      listName:
+        type: string
+      refreshToken:
+        type: string
+    type: object
   api.UpdateHouseholdSettingsRequest:
     properties:
+      language:
+        type: string
       monthlyWasteGoalCount:
         type: integer
       monthlyWasteGoalPercent:
         type: number
       monthlyWasteGoalType:
         type: string
+    type: object
+  api.UpdateMealPlanEntryRequest:
+    properties:
+      date:
+        type: string
+      notes:
+        type: string
+      recipeId:
+        type: integer
+      servings:
+        minimum: 1
+        type: integer
     type: object
   api.UpdateNotificationPreferencesRequest:
     properties:
@@ -780,6 +1099,28 @@ definitions:
         type: boolean
       webPushEnabled:
         type: boolean
+    type: object
+  api.UpdateRecipeRequest:
+    properties:
+      description:
+        type: string
+      imageUrl:
+        type: string
+      ingredients:
+        items:
+          $ref: '#/definitions/api.RecipeIngredientInput'
+        maxItems: 100
+        type: array
+      instructions:
+        type: string
+      name:
+        maxLength: 255
+        type: string
+      servings:
+        minimum: 1
+        type: integer
+      sourceUrl:
+        type: string
     type: object
   api.UpdateShoppingListItemRequest:
     properties:
@@ -978,6 +1319,8 @@ definitions:
         type: string
       categories:
         type: string
+      clientSyncId:
+        type: string
       co2KgPerKg:
         type: number
       countries:
@@ -1111,45 +1454,26 @@ definitions:
       url:
         type: string
     type: object
-  v1.FullExportHousehold:
-    properties:
-      created_at:
-        type: string
-      name:
-        type: string
-    type: object
-  v1.FullExportMember:
-    properties:
-      email:
-        type: string
-      username:
-        type: string
-    type: object
-  v1.FullExportProducts:
-    properties:
-      active:
-        items:
-          $ref: '#/definitions/api.ExportProductResponse'
-        type: array
-      archived:
-        items:
-          $ref: '#/definitions/api.ExportProductResponse'
-        type: array
-    type: object
   v1.FullExportResponse:
     properties:
-      exported_at:
+      exportedAt:
         type: string
       household:
-        $ref: '#/definitions/v1.FullExportHousehold'
+        $ref: '#/definitions/api.FullExportHousehold'
       members:
         items:
-          $ref: '#/definitions/v1.FullExportMember'
+          $ref: '#/definitions/api.FullExportMember'
         type: array
       products:
-        $ref: '#/definitions/v1.FullExportProducts'
+        $ref: '#/definitions/api.FullExportProducts'
       stats:
         $ref: '#/definitions/api.ProductStatsResponse'
+      storageLocations:
+        items:
+          $ref: '#/definitions/api.StorageLocationResponse'
+        type: array
+      version:
+        type: integer
     type: object
   v1.OpenProductRequest:
     properties:
@@ -1286,12 +1610,12 @@ info:
   contact:
     email: hendrik@hr94.de
     name: Isotop7
-    url: https://codeberg.org/isotop7/proviant
+    url: https://github.com/Isotop7/proviant
   description: proviant is a simple and intuitive application to track your bought
     products and their expiration date to prevent waste of food.
   license:
     name: MIT
-    url: https://codeberg.org/isotop7/proviant/-/blob/main/LICENSE
+    url: https://github.com/Isotop7/proviant/blob/main/LICENSE
   title: proviant
   version: 0.2.0
 paths:
@@ -1818,6 +2142,237 @@ paths:
       summary: Reject a household application
       tags:
       - household
+  /api/v1/household/integrations:
+    get:
+      description: Returns all configured shopping list sync integrations for the
+        caller's household (admin only). Secret tokens are never returned.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.HouseholdIntegrationResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Lists household shopping list integrations
+      tags:
+      - household
+  /api/v1/household/integrations/{provider}:
+    delete:
+      description: Deletes the specified shopping list sync integration and its item
+        mappings for the caller's household (admin only).
+      parameters:
+      - description: Provider identifier (bring or todoist)
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Deletes a household shopping list integration
+      tags:
+      - household
+    patch:
+      consumes:
+      - application/json
+      description: Updates settings or credentials for a shopping list sync integration
+        (admin only). Empty token fields keep stored credentials unless clear flags
+        are set.
+      parameters:
+      - description: Provider identifier (bring or todoist)
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Integration fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateHouseholdIntegrationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HouseholdIntegrationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Updates a household shopping list integration
+      tags:
+      - household
+    post:
+      consumes:
+      - application/json
+      description: Configures a shopping list sync integration for the caller's household
+        (admin only). Secret tokens are write-only and never returned.
+      parameters:
+      - description: Provider identifier (bring or todoist)
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Integration configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateHouseholdIntegrationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.HouseholdIntegrationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Creates a household shopping list integration
+      tags:
+      - household
+  /api/v1/household/integrations/{provider}/sync:
+    post:
+      description: Pushes current household shopping list items to the external provider
+        and pulls checked states back (admin only).
+      parameters:
+      - description: Provider identifier (bring or todoist)
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HouseholdIntegrationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Synchronizes a household shopping list integration now
+      tags:
+      - household
+  /api/v1/household/integrations/{provider}/test:
+    post:
+      description: Verifies credentials and connectivity for the specified household
+        shopping list integration (admin only).
+      parameters:
+      - description: Provider identifier (bring or todoist)
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Tests a household shopping list integration
+      tags:
+      - household
   /api/v1/household/invitations:
     get:
       description: Returns all invitations for the calling user's household
@@ -2207,6 +2762,182 @@ paths:
       summary: Update a storage location
       tags:
       - household
+  /api/v1/mealplans:
+    get:
+      description: Returns all meal plan entries of the caller's household within
+        the given date range
+      parameters:
+      - description: Range start (YYYY-MM-DD)
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: Range end (YYYY-MM-DD)
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.MealPlanEntryResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Lists planned meals
+      tags:
+      - mealplans
+    post:
+      consumes:
+      - application/json
+      description: Schedules a saved recipe on the given date; servings of 0 use the
+        recipe's own serving count
+      parameters:
+      - description: Planned meal
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateMealPlanEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.MealPlanEntryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Creates a planned meal
+      tags:
+      - mealplans
+  /api/v1/mealplans/{id}:
+    delete:
+      description: Deletes the meal plan entry with the given ID
+      parameters:
+      - description: Meal plan entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Deletes a planned meal
+      tags:
+      - mealplans
+    patch:
+      consumes:
+      - application/json
+      description: Updates date, recipe, servings and notes of a meal plan entry
+      parameters:
+      - description: Meal plan entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateMealPlanEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.MealPlanEntryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Updates a planned meal
+      tags:
+      - mealplans
+  /api/v1/mealplans/shopping-list:
+    post:
+      consumes:
+      - application/json
+      description: Aggregates the ingredients of all meals planned within the date
+        range and creates shopping list entries for the missing amounts (stock on
+        hand subtracted when units match)
+      parameters:
+      - description: Date range (YYYY-MM-DD)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.GenerateShoppingListRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Generates shopping list from meal plan
+      tags:
+      - mealplans
   /api/v1/notifications:
     get:
       description: Returns pending invitations and household join requests for the
@@ -2527,7 +3258,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a new product of a user
+      description: 'Creates a new product of a user. When the body carries a clientSyncId
+        that already exists in the household, the existing product is returned with
+        200 instead of creating a duplicate. A clientSyncId held by another member''s
+        private product is answered with 409: the id is taken, but the row is not
+        the caller''s to read.'
       parameters:
       - description: Product
         in: body
@@ -2538,12 +3273,20 @@ paths:
       produces:
       - application/json
       responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ProductResponse'
         "201":
           description: Created
           schema:
             $ref: '#/definitions/api.ProductResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: Conflict
           schema:
             $ref: '#/definitions/api.APIResponse'
         "500":
@@ -3235,8 +3978,8 @@ paths:
       - export
   /api/v1/products/export/full.json:
     get:
-      description: Returns a comprehensive JSON export including household info, members,
-        products, and statistics
+      description: Returns a versioned household backup document including household
+        info, members, storage locations, products, and statistics
       produces:
       - application/json
       responses:
@@ -3395,6 +4138,39 @@ paths:
       summary: Return OpenFoodFacts product data
       tags:
       - product
+  /api/v1/products/restore/full.json:
+    post:
+      consumes:
+      - multipart/form-data
+      - application/json
+      description: Accepts a backup document produced by the full JSON export or the
+        scheduled backup job and replaces the household's products and storage locations
+        in one transaction. Accounts are not recreated; product ownership is mapped
+        onto members that still exist. The document's schema version is validated
+        first.
+      parameters:
+      - description: Backup JSON file
+        in: formData
+        name: file
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.RestoreResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Restore household data from a JSON backup
+      tags:
+      - import
   /api/v1/products/scan:
     post:
       consumes:
@@ -3580,6 +4356,237 @@ paths:
       summary: Return product summary
       tags:
       - product
+  /api/v1/products/sync-offline:
+    post:
+      consumes:
+      - application/json
+      description: Creates queued drafts. Replayed clientSyncId values return the
+        existing product.
+      parameters:
+      - description: Queued drafts
+        in: body
+        name: items
+        required: true
+        schema:
+          $ref: '#/definitions/api.OfflineSyncRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.OfflineSyncResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Sync offline product entries
+      tags:
+      - product
+  /api/v1/recipes:
+    get:
+      description: Returns all saved recipes of the caller's household
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.RecipeResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Lists saved recipes
+      tags:
+      - recipes
+    post:
+      consumes:
+      - application/json
+      description: Creates a saved recipe with its ingredients; a nil productId marks
+        a free-text ingredient
+      parameters:
+      - description: Recipe with ingredients
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateRecipeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.RecipeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Creates a saved recipe
+      tags:
+      - recipes
+  /api/v1/recipes/{id}:
+    delete:
+      description: Deletes the saved recipe with the given ID including its ingredients
+      parameters:
+      - description: Recipe ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Deletes a saved recipe
+      tags:
+      - recipes
+    get:
+      description: Returns the saved recipe with the given ID including its ingredients
+      parameters:
+      - description: Recipe ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.RecipeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Gets a saved recipe
+      tags:
+      - recipes
+    patch:
+      consumes:
+      - application/json
+      description: Updates the given fields of a saved recipe; supplying ingredients
+        replaces them atomically
+      parameters:
+      - description: Recipe ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UpdateRecipeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.RecipeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Updates a saved recipe
+      tags:
+      - recipes
+  /api/v1/recipes/{id}/cook:
+    post:
+      consumes:
+      - application/json
+      description: Consumes the recipe's linked products by their scaled amounts.
+        Unlinked ingredients and unit mismatches are reported as errors and skipped;
+        an amount reaching the current stock fully consumes (archives) the product.
+      parameters:
+      - description: Recipe ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Servings to cook (0 = recipe servings)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CookRecipeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CookResponse'
+        "400":
+          description: Returned when no item was processed (invalid body or all ingredients
+            failed)
+          schema:
+            $ref: '#/definitions/api.CookResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Returned when no item was processed and a server-side error
+            occurred
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Cook a saved recipe
+      tags:
+      - recipes
   /api/v1/recipes/suggestions:
     get:
       description: Returns up to 6 recipe suggestions matching products expiring within
@@ -4752,6 +5759,28 @@ paths:
       summary: Accept invitation page
       tags:
       - web
+  /web/mealplan:
+    get:
+      description: Renders the weekly meal plan with planned meals and shopping list
+        generation
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Meal Plan page
+      tags:
+      - web
   /web/onboarding:
     get:
       description: Renders the onboarding wizard for new users
@@ -4819,33 +5848,6 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Product edit page
-      tags:
-      - web
-  /web/products/{id}/view:
-    get:
-      description: Renders the product details page
-      parameters:
-      - description: Product ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - text/html
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.APIResponse'
-      summary: Product view page
       tags:
       - web
   /web/products/scan:

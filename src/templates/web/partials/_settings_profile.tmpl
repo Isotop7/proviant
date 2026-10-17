@@ -5,35 +5,45 @@
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-person"></i>
             </div>
-            <h2 class="h5 mb-0 fw-semibold">Personal Details</h2>
+            <h2 class="h5 mb-0 fw-semibold">{{ t "settings.personalDetails" }}</h2>
         </div>
         <button type="button" class="btn btn-proviant-primary btn-sm" id="btnUpdatePersonalDetails">
-            Update
+            {{ t "settings.update" }}
         </button>
     </div>
     <div class="card-body px-4 py-4">
         <form id="userSettings" novalidate>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label for="inputDisplayName" class="form-label fw-medium">Display Name</label>
+                    <label for="inputDisplayName" class="form-label fw-medium">{{ t "settings.displayNameLabel" }}</label>
                     <input type="text" class="form-control" id="inputDisplayName"
                            value="{{ .User.DisplayName }}" autocomplete="nickname"
-                           placeholder="Leave blank to use your mail address">
-                    <div class="form-text">Shown instead of your mail address throughout the app.</div>
+                           placeholder="{{ t "settings.displayNamePlaceholder" }}">
+                    <div class="form-text">{{ t "settings.displayNameHelp" }}</div>
                 </div>
                 <div class="col-md-6">
                     <label for="inputMailAddress" class="form-label fw-medium">
-                        Email Address <span class="text-danger" aria-hidden="true">*</span>
+                        {{ t "settings.mailAddressLabel" }} <span class="text-danger" aria-hidden="true">*</span>
                     </label>
                     <input type="email" class="form-control" id="inputMailAddress"
                            value="{{ .User.MailAddress }}" aria-required="true" autocomplete="email">
-                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please enter an email address.</div>
+                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "settings.mailAddressInvalid" }}</div>
                 </div>
                 <div class="col-md-6">
-                    <label for="inputUsername" class="form-label fw-medium">Username</label>
+                    <label for="inputUsername" class="form-label fw-medium">{{ t "settings.usernameLabel" }}</label>
                     <input type="text" class="form-control" id="inputUsername"
                            value="{{ .User.Username }}" readonly autocomplete="username">
-                    <div class="form-text text-secondary-custom">Login credential — cannot be changed here.</div>
+                    <div class="form-text text-secondary-custom">{{ t "settings.usernameHelp" }}</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="inputLanguage" class="form-label fw-medium">{{ t "settings.languageLabel" }}</label>
+                    <select class="form-select" id="inputLanguage">
+                        <option value="" {{ if eq .User.Language "" }}selected{{ end }}>{{ t "settings.languageAuto" }}</option>
+                        {{ range .AvailableLanguages }}
+                        <option value="{{ .Code }}" {{ if eq $.User.Language .Code }}selected{{ end }}>{{ .Name }}</option>
+                        {{ end }}
+                    </select>
+                    <div class="form-text">{{ t "settings.languageHelp" }}</div>
                 </div>
             </div>
         </form>
@@ -46,10 +56,10 @@
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-lock"></i>
             </div>
-            <h2 class="h5 mb-0 fw-semibold">Password</h2>
+            <h2 class="h5 mb-0 fw-semibold">{{ t "settings.passwordTitle" }}</h2>
         </div>
         <button class="btn btn-proviant-primary btn-sm" type="button" id="btnUpdatePassword">
-            Update
+            {{ t "settings.update" }}
         </button>
     </div>
     <div class="card-body px-4 py-4">
@@ -57,7 +67,7 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="inputPassword" class="form-label fw-medium">
-                        New Password <span class="text-danger" aria-hidden="true">*</span>
+                        {{ t "settings.newPasswordLabel" }} <span class="text-danger" aria-hidden="true">*</span>
                     </label>
                     <input id="inputPassword" type="password" class="form-control"
                            aria-required="true" autocomplete="new-password"
@@ -65,27 +75,27 @@
                            data-require-uppercase="{{ .PasswordRequireUppercase }}"
                            data-require-digit="{{ .PasswordRequireDigit }}"
                            data-require-special="{{ .PasswordRequireSpecial }}">
-                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Please enter a new password.</div>
+                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "settings.newPasswordInvalid" }}</div>
                     <ul class="list-unstyled small mt-1">
-                        <li id="req-length"><i class="bi bi-circle me-1"></i>At least {{ .PasswordMinLength }} characters</li>
+                        <li id="req-length"><i class="bi bi-circle me-1"></i>{{ t "settings.passwordReqLength" .PasswordMinLength }}</li>
                         {{ if .PasswordRequireUppercase }}
-                        <li id="req-upper"><i class="bi bi-circle me-1"></i>At least one uppercase letter</li>
+                        <li id="req-upper"><i class="bi bi-circle me-1"></i>{{ t "settings.passwordReqUppercase" }}</li>
                         {{ end }}
                         {{ if .PasswordRequireDigit }}
-                        <li id="req-digit"><i class="bi bi-circle me-1"></i>At least one number</li>
+                        <li id="req-digit"><i class="bi bi-circle me-1"></i>{{ t "settings.passwordReqDigit" }}</li>
                         {{ end }}
                         {{ if .PasswordRequireSpecial }}
-                        <li id="req-special"><i class="bi bi-circle me-1"></i>At least one special character</li>
+                        <li id="req-special"><i class="bi bi-circle me-1"></i>{{ t "settings.passwordReqSpecial" }}</li>
                         {{ end }}
                     </ul>
                 </div>
                 <div class="col-md-6">
                     <label for="inputPasswordVerification" class="form-label fw-medium">
-                        Confirm Password <span class="text-danger" aria-hidden="true">*</span>
+                        {{ t "settings.confirmPasswordLabel" }} <span class="text-danger" aria-hidden="true">*</span>
                     </label>
                     <input id="inputPasswordVerification" type="password" class="form-control"
                            aria-required="true" autocomplete="new-password">
-                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>Passwords must match.</div>
+                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "settings.passwordMismatch" }}</div>
                 </div>
             </div>
         </form>

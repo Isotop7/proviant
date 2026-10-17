@@ -2,16 +2,18 @@
 
 <div class="page-header">
     <div>
-        <h1 class="page-header-title">User Settings</h1>
+        <h1 class="page-header-title">{{ t "settings.userSettings" }}</h1>
         <p class="page-header-subtitle"><span class="id-chip">#{{ .User.ID }}</span></p>
     </div>
 </div>
 
 {{ template "_settings_profile" . }}
 {{ template "_settings_notifications" . }}
+{{ template "_settings_integrations" . }}
 {{ template "_settings_receipt_scan" . }}
 {{ template "_settings_security" . }}
 {{ template "_settings_household" . }}
 
 <script src="/assets/js/userSettings.js"></script>
+<script src="/assets/js/shoppingListSyncSettings.js"></script>
 {{ end }}

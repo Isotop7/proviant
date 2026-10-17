@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         } catch (err) {
             console.error('Camera access error:', err);
-            proviant.showFeedback('error', 'Camera Error', 'Could not access camera. Ensure you are on HTTPS or localhost and have granted camera permissions.');
+            proviant.showFeedback('error', proviant.t("js.scan.cameraError"), proviant.t("js.scan.cameraAccessDenied"));
             // Close modal after error
             setTimeout(() => {
                 const modal = bootstrap.Modal.getInstance(ocrCameraModal);
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 sendOcrRequest(blob);
             } catch (err) {
                 console.error('Capture error:', err);
-                proviant.showFeedback('error', 'Capture Failed', 'Could not capture image from camera.');
+                proviant.showFeedback('error', proviant.t("js.scan.captureFailed"), proviant.t("js.scan.captureFailedMsg"));
             }
         });
     }
@@ -125,10 +125,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (response.ok) {
                 showOcrResult(result);
             } else {
-                proviant.showFeedback('error', 'OCR Error', result.message || 'Failed to scan expiry date');
+                proviant.showFeedback('error', proviant.t("js.scan.ocrError"), result.message || proviant.t("js.scan.ocrScanFailed"));
             }
         } catch {
-            proviant.showFeedback('error', 'Network Error', 'Could not connect to OCR service');
+            proviant.showFeedback('error', proviant.t("js.scan.networkError"), proviant.t("js.scan.ocrServiceUnreachable"));
         }
     }
 
@@ -136,10 +136,10 @@ document.addEventListener('DOMContentLoaded', function () {
         // Display detected date
         if (result.detectedDate) {
             ocrDetectedDate.innerHTML = `
-                <div class="fw-semibold">Detected: <input type="date" id="ocrDateInput" value="${result.detectedDate}" class="form-control form-control-sm d-inline-block" style="width: auto; min-width: 150px;"></div>
+                <div class="fw-semibold">${proviant.t("js.scan.detectedLabel")} <input type="date" id="ocrDateInput" value="${result.detectedDate}" class="form-control form-control-sm d-inline-block" style="width: auto; min-width: 150px;"></div>
             `;
         } else {
-            ocrDetectedDate.innerHTML = `<div class="text-warning">No date detected</div>`;
+            ocrDetectedDate.innerHTML = `<div class="text-warning">${proviant.t("js.scan.noDateDetected")}</div>`;
         }
 
         // Confidence bar
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
         ocrConfidenceBar.classList.toggle('bg-success', result.confidence >= 0.7);
         ocrConfidenceBar.classList.toggle('bg-warning', result.confidence >= 0.4 && result.confidence < 0.7);
         ocrConfidenceBar.classList.toggle('bg-danger', result.confidence < 0.4);
-        document.getElementById('ocrConfidenceLabel').textContent = 'Confidence: ' + confidencePct + '%';
+        document.getElementById('ocrConfidenceLabel').textContent = proviant.t("js.scan.confidenceLabel", confidencePct) + '%';
 
         // Raw text for manual correction
         if (result.confidence < 0.7 && result.rawText) {

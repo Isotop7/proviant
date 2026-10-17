@@ -9,13 +9,13 @@ import (
 	"net/url"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/errors"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/services"
-	"codeberg.org/isotop7/proviant/testutil"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/errors"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/services"
+	"github.com/Isotop7/proviant/testutil"
+	repomocks "github.com/Isotop7/proviant/testutil/mocks"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -272,6 +272,52 @@ func TestCreateProduct(t *testing.T) {
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Status = %v, want %v; body: %s", w.Code, http.StatusBadRequest, w.Body.String())
+		}
+	})
+
+	// The lookup after a failed create exists for the create that lost a race to
+	// the unique index. A validation failure happens before any insert, so it
+	// can never be that race: answering it must cost only the pre-check the
+	// handler already ran, not a second lookup on the way to the 400.
+	t.Run("opened lifecycle validation failure skips the sync id lookup", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Products.CreateErr = errors.ErrInvalidOpenedLifecycle
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		mockOpenFoodFactsAPIController := &MockOpenFoodFactsAPIController{
+			MockGetDataset: func(barcode string) (dbModel.Product, error) {
+				return dbModel.Product{}, errors.ErrProductSearchInvalidQuery
+			},
+		}
+		ctx.Set("offacntrl", mockOpenFoodFactsAPIController)
+
+		syncID := "invalid-draft"
+		productData := dbModel.Product{
+			ProductName:      "Bad Shelf Life",
+			Barcode:          "0000000000000",
+			DaysAfterOpening: intPtr(9999),
+			ClientSyncID:     &syncID,
+		}
+		body, _ := json.Marshal(productData)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		CreateProduct(ctx, appCtx)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Status = %v, want %v; body: %s", w.Code, http.StatusBadRequest, w.Body.String())
+		}
+		if m.Products.SyncIDLookups != 1 {
+			t.Errorf("GetProductBySyncID called %d times, want 1 — only the pre-check, not a second one after the validation failure", m.Products.SyncIDLookups)
 		}
 	})
 }

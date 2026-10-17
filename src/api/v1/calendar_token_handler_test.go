@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/testutil"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/testutil"
+	repomocks "github.com/Isotop7/proviant/testutil/mocks"
+	"github.com/Isotop7/proviant/util"
 )
 
 func TestGenerateCalendarToken(t *testing.T) {

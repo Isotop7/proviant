@@ -3,16 +3,15 @@ package controllers
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"net/http"
 	"net/url"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/templates"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/i18n"
+	"github.com/Isotop7/proviant/models"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 )
@@ -31,7 +30,7 @@ func (n *NtfyNotificationProvider) IsConfigured() bool {
 	return n.Configuration.URL != "" || n.Configuration.Topic != ""
 }
 
-func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo any) error {
+func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo any, lang string) error {
 	recipient, ok := recipientInfo.(*models.NotificationRecipientInfo)
 	if !ok || recipient == nil {
 		return fmt.Errorf("invalid recipient type for ntfy provider")
@@ -58,7 +57,7 @@ func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, re
 	endpoint := fmt.Sprintf("%s://%s/%s", parsedURL.Scheme, parsedURL.Host, ntfyTopic)
 
 	// Generate message from template
-	templ, templErr := template.ParseFS(templates.TemplateFiles, "notification/expired.txt")
+	templ, templErr := parseNotificationTemplate("notification/expired.txt", lang)
 	if templErr != nil {
 		return templErr
 	}
@@ -88,7 +87,7 @@ func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, re
 
 	// Set headers
 	req.Header.Set(util.RequestHeaderContentType, "text/plain")
-	req.Header.Set("Title", fmt.Sprintf("proviant - Product '%s' expired", product.ProductName))
+	req.Header.Set("Title", i18n.T(lang, "notify.ntfy.title.productExpired", product.ProductName))
 	req.Header.Set("Priority", "high")
 	req.Header.Set("Tags", "warning")
 
@@ -117,7 +116,7 @@ func (n *NtfyNotificationProvider) SendNotification(product *dbModel.Product, re
 }
 
 // SendStreakMilestone sends a streak milestone push notification via ntfy.
-func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient *models.NotificationRecipientInfo) error {
+func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient *models.NotificationRecipientInfo, lang string) error {
 	ntfyURL := n.Configuration.URL
 	ntfyTopic := n.Configuration.Topic
 	if recipient.NtfyURL != "" {
@@ -133,13 +132,13 @@ func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient 
 	}
 	endpoint := fmt.Sprintf("%s://%s/%s", parsedURL.Scheme, parsedURL.Host, ntfyTopic)
 
-	body := fmt.Sprintf("%d-day waste-free streak — your household has gone %d consecutive days without wasting food.", milestone, milestone)
+	body := i18n.T(lang, "notify.ntfy.streakMilestoneBody", milestone, milestone)
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBufferString(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set(util.RequestHeaderContentType, "text/plain")
-	req.Header.Set("Title", fmt.Sprintf("proviant - %d-day waste-free streak", milestone))
+	req.Header.Set("Title", i18n.T(lang, "notify.ntfy.title.streakMilestone", milestone))
 	req.Header.Set("Tags", "tada")
 	if recipient.NtfyToken != "" {
 		req.Header.Set("Authorization", "Bearer "+recipient.NtfyToken)
@@ -161,7 +160,7 @@ func (n *NtfyNotificationProvider) SendStreakMilestone(milestone int, recipient 
 }
 
 // SendStreakReset sends a streak-reset push notification via ntfy.
-func (n *NtfyNotificationProvider) SendStreakReset(previousStreak int, recipient *models.NotificationRecipientInfo) error {
+func (n *NtfyNotificationProvider) SendStreakReset(previousStreak int, recipient *models.NotificationRecipientInfo, lang string) error {
 	ntfyURL := n.Configuration.URL
 	ntfyTopic := n.Configuration.Topic
 	if recipient.NtfyURL != "" {
@@ -177,13 +176,13 @@ func (n *NtfyNotificationProvider) SendStreakReset(previousStreak int, recipient
 	}
 	endpoint := fmt.Sprintf("%s://%s/%s", parsedURL.Scheme, parsedURL.Host, ntfyTopic)
 
-	body := fmt.Sprintf("Your %d-day waste-free streak has been reset. Time to start a new one!", previousStreak)
+	body := i18n.T(lang, "notify.ntfy.streakResetBody", previousStreak)
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBufferString(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set(util.RequestHeaderContentType, "text/plain")
-	req.Header.Set("Title", "proviant - waste-free streak reset")
+	req.Header.Set("Title", i18n.T(lang, "notify.ntfy.title.streakReset"))
 	req.Header.Set("Tags", "warning")
 	if recipient.NtfyToken != "" {
 		req.Header.Set("Authorization", "Bearer "+recipient.NtfyToken)

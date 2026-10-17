@@ -57,17 +57,17 @@
         canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
         canvas.toBlob(function (blob) {
           if (blob) resolve(blob);
-          else reject(new Error("Could not process image"));
+          else reject(new Error(proviant.t("js.receipt.imageProcessFailed")));
         }, "image/jpeg", 0.85);
       };
       img.onerror = function () {
-        reject(new Error("Could not read image"));
+        reject(new Error(proviant.t("js.receipt.imageReadFailed")));
       };
       reader.onload = function () {
         img.src = String(reader.result);
       };
       reader.onerror = function () {
-        reject(new Error("Could not read image"));
+        reject(new Error(proviant.t("js.receipt.imageReadFailed")));
       };
       reader.readAsDataURL(file);
     });
@@ -77,14 +77,14 @@
     const btn = document.getElementById("btnScanReceipt");
     const progress = document.getElementById("receiptScanProgress");
     if (!receiptFile) {
-      proviant.showFeedback("warning", "No photo", "Please choose or take a receipt photo first.");
+      proviant.showFeedback("warning", proviant.t("js.receipt.noPhoto"), proviant.t("js.receipt.noPhotoMsg"));
       return;
     }
     btn.disabled = true;
     const fileInput = document.getElementById("receiptImage");
     if (fileInput) fileInput.disabled = true;
     progress.classList.remove("d-none");
-    announce("Scanning receipt…");
+    announce(proviant.t("js.receipt.scanning"));
     try {
       const blob = await downscaleImage(receiptFile);
       const formData = new FormData();
@@ -102,23 +102,23 @@
       }
       const body = await res.json().catch(function () { return {}; });
       if (!res.ok) {
-        let message = body.message || "Could not analyze the receipt. Try again later.";
+        let message = body.message || proviant.t("js.receipt.analyzeFailed");
         // Rate limiter answers 429 with Retry-After seconds; a generic
         // "try again later" would send the user straight into the next 429.
         if (res.status === 429) {
           const retryAfter = parseInt(res.headers.get("Retry-After"), 10);
           message = Number.isFinite(retryAfter) && retryAfter > 0
-            ? "Too many scans. Please wait " + retryAfter + " second(s), then try again."
-            : "Too many scans. Please wait a minute, then try again.";
+            ? proviant.tn("js.receipt.tooManyScansWait", retryAfter)
+            : proviant.t("js.receipt.tooManyScansMinute");
         }
-        proviant.showFeedback("error", "Scan failed", message);
-        announce("Scan failed. " + message);
+        proviant.showFeedback("error", proviant.t("js.receipt.scanFailed"), message);
+        announce(proviant.t("js.receipt.scanFailedAnnounce", message));
         return;
       }
       const items = Array.isArray(body.items) ? body.items : [];
       if (items.length === 0) {
         showStep("empty");
-        announce("No products were recognized on this photo.");
+        announce(proviant.t("js.receipt.noProductsRecognized"));
         // showStep hides the upload step while #btnScanReceipt still holds
         // focus — without this, keyboard focus silently drops to <body>.
         const retryBtn = document.getElementById("btnRetryEmpty");
@@ -127,16 +127,16 @@
       }
       renderReview(items);
       showStep("review");
-      announce(items.length + " product(s) found. Review the list and confirm.");
+      announce(proviant.tn("js.receipt.productsFound", items.length));
       const firstNameInput = document.querySelector("#receiptItems .card .receipt-item-name");
       if (firstNameInput) firstNameInput.focus();
     } catch (err) {
-      let message = err.message || "Could not connect to the server.";
+      let message = err.message || proviant.t("js.receipt.serverUnreachable");
       if (err.name === "AbortError") {
-        message = "The scan took too long and was cancelled. Try again.";
+        message = proviant.t("js.receipt.scanTimeout");
       }
-      proviant.showFeedback("error", "Scan failed", message);
-      announce("Scan failed. " + message);
+      proviant.showFeedback("error", proviant.t("js.receipt.scanFailed"), message);
+      announce(proviant.t("js.receipt.scanFailedAnnounce", message));
     } finally {
       btn.disabled = false;
       if (fileInput) fileInput.disabled = false;
@@ -160,19 +160,19 @@
     card.innerHTML =
       '<div class="card-body py-2">' +
       '<div class="d-flex align-items-start gap-2">' +
-      '<input type="text" class="form-control form-control-sm receipt-item-name" value="" aria-label="Product name" placeholder="Product name">' +
-      '<button type="button" class="btn btn-sm btn-proviant-secondary flex-shrink-0" data-receipt-remove aria-label="Remove item">' +
+      '<input type="text" class="form-control form-control-sm receipt-item-name" value="" aria-label="' + proviant.t("js.receipt.productNameLabel") + '" placeholder="' + proviant.t("js.receipt.productNameLabel") + '">' +
+      '<button type="button" class="btn btn-sm btn-proviant-secondary flex-shrink-0" data-receipt-remove aria-label="' + proviant.t("js.receipt.removeItemLabel") + '">' +
       '<i class="bi bi-x-lg" aria-hidden="true"></i></button>' +
       "</div>" +
       '<div class="d-flex gap-2 mt-2">' +
-      '<input type="number" class="form-control form-control-sm receipt-item-amount" min="1" max="999" aria-label="Amount">' +
-      '<input type="text" class="form-control form-control-sm receipt-item-unit" value="" aria-label="Unit" placeholder="Unit">' +
-      '<input type="number" class="form-control form-control-sm receipt-item-price" min="0" max="100000" step="0.01" aria-label="Price" placeholder="Price">' +
+      '<input type="number" class="form-control form-control-sm receipt-item-amount" min="1" max="999" aria-label="' + proviant.t("js.receipt.amountLabel") + '">' +
+      '<input type="text" class="form-control form-control-sm receipt-item-unit" value="" aria-label="' + proviant.t("js.receipt.unitLabel") + '" placeholder="' + proviant.t("js.receipt.unitLabel") + '">' +
+      '<input type="number" class="form-control form-control-sm receipt-item-price" min="0" max="100000" step="0.01" aria-label="' + proviant.t("js.receipt.priceLabel") + '" placeholder="' + proviant.t("js.receipt.priceLabel") + '">' +
       "</div>" +
       '<div class="row g-2 mt-1">' +
-      '<div class="col-4"><input type="date" class="form-control form-control-sm receipt-item-expire" aria-label="Expiry date override"></div>' +
-      '<div class="col-4"><input type="text" class="form-control form-control-sm receipt-item-category" aria-label="Category override" placeholder="Category"></div>' +
-      '<div class="col-4"><select class="form-select form-select-sm receipt-item-location" aria-label="Storage location override"></select></div>' +
+      '<div class="col-4"><input type="date" class="form-control form-control-sm receipt-item-expire" aria-label="' + proviant.t("js.receipt.expiryOverrideLabel") + '"></div>' +
+      '<div class="col-4"><input type="text" class="form-control form-control-sm receipt-item-category" aria-label="' + proviant.t("js.receipt.categoryOverrideLabel") + '" placeholder="' + proviant.t("js.receipt.categoryLabel") + '"></div>' +
+      '<div class="col-4"><select class="form-select form-select-sm receipt-item-location" aria-label="' + proviant.t("js.receipt.locationOverrideLabel") + '"></select></div>' +
       "</div>" +
       "</div>";
     fillLocationOptions(card.querySelector(".receipt-item-location"));
@@ -194,7 +194,7 @@
       opt.textContent = text;
       select.appendChild(opt);
     }
-    addOption("", "— default —");
+    addOption("", proviant.t("js.receipt.defaultLocation"));
     if (!batchSelect) return;
     Array.prototype.forEach.call(batchSelect.options, function (opt) {
       if (opt.value === "") return;
@@ -257,19 +257,19 @@
     const progress = document.getElementById("receiptImportProgress");
     const collected = collectItems();
     if (collected.items.length === 0) {
-      proviant.showFeedback("warning", "Nothing to add", collected.invalid > 0
-        ? "Some items have no product name. Fill in a name or remove them."
-        : "Add at least one product.");
+      proviant.showFeedback("warning", proviant.t("js.receipt.nothingToAdd"), collected.invalid > 0
+        ? proviant.t("js.receipt.missingProductNames")
+        : proviant.t("js.receipt.addAtLeastOne"));
       return;
     }
     // Items without a product name are skipped; the count is folded into the
     // final import-result feedback instead of a separate pre-flight modal,
     // which fast imports would immediately replace.
     const skipped = collected.invalid;
-    const skippedNote = skipped > 0 ? " " + skipped + " item(s) without a product name were skipped." : "";
+    const skippedNote = skipped > 0 ? " " + proviant.tn("js.receipt.skippedNote", skipped) : "";
     const maxItems = window.RECEIPT_SCAN_MAX_ITEMS || 100;
     if (collected.items.length > maxItems) {
-      proviant.showFeedback("warning", "Too many items", "Only the first " + maxItems + " item(s) will be added.");
+      proviant.showFeedback("warning", proviant.t("js.receipt.tooManyItems"), proviant.tn("js.receipt.onlyFirstItems", maxItems));
       collected.items = collected.items.slice(0, maxItems);
     }
     btn.disabled = true;
@@ -277,7 +277,7 @@
     if (rescanBtn) rescanBtn.disabled = true;
     setReviewDisabled(true);
     progress.classList.remove("d-none");
-    announce("Adding " + collected.items.length + " product(s)…");
+    announce(proviant.tn("js.receipt.addingProducts", collected.items.length));
     // Success and partial paths hand control to a redirect callback, so the
     // controls must stay disabled there — re-enabling would let the import be
     // triggered twice before navigation happens.
@@ -300,8 +300,8 @@
       }
       const body = await res.json().catch(function () { return {}; });
       if (!res.ok) {
-        proviant.showFeedback("error", "Import failed", body.message || "Could not add the products.");
-        announce("Import failed. " + (body.message || "Could not add the products."));
+        proviant.showFeedback("error", proviant.t("js.products.importFailed"), body.message || proviant.t("js.receipt.addProductsFailed"));
+        announce(proviant.t("js.receipt.importFailedAnnounce", body.message || proviant.t("js.receipt.addProductsFailed")));
         return;
       }
       const results = Array.isArray(body.results) ? body.results : [];
@@ -309,26 +309,26 @@
       const failed = results.length - created;
       if (failed === 0) {
         importSettled = true;
-        announce(created + " product(s) added from the receipt." + skippedNote);
-        proviant.showFeedback("success", "Products added", created + " product(s) added from the receipt." + skippedNote, function () {
+        announce(proviant.tn("js.receipt.addedFromReceipt", created) + skippedNote);
+        proviant.showFeedback("success", proviant.t("js.receipt.productsAdded"), proviant.tn("js.receipt.addedFromReceipt", created) + skippedNote, function () {
           window.location.href = "/web/products";
         });
       } else {
         importSettled = true;
-        announce(created + " product(s) added, " + failed + " failed." + skippedNote + " Check the products list.");
-        proviant.showFeedback("warning", "Partially added", created + " product(s) added, " + failed + " failed." + skippedNote + " Check the products list.", function () {
+        announce(proviant.tn("js.receipt.addedPartial", created, failed) + skippedNote + proviant.t("js.receipt.checkProductsList"));
+        proviant.showFeedback("warning", proviant.t("js.receipt.partiallyAdded"), proviant.tn("js.receipt.addedPartial", created, failed) + skippedNote + proviant.t("js.receipt.checkProductsList"), function () {
           window.location.href = "/web/products";
         });
       }
     } catch (err) {
-      let message = err.message || "Could not connect to the server.";
+      let message = err.message || proviant.t("js.receipt.serverUnreachable");
       if (err.name === "AbortError") {
         // The server may still have inserted some products before the client
         // gave up — retrying blindly can create duplicates.
-        message = "Adding the products took too long and was cancelled. The import may have partially completed — check the products list before retrying.";
+        message = proviant.t("js.receipt.importTimeout");
       }
-      proviant.showFeedback("error", "Import failed", message);
-      announce("Import failed. " + message);
+      proviant.showFeedback("error", proviant.t("js.products.importFailed"), message);
+      announce(proviant.t("js.receipt.importFailedAnnounce", message));
     } finally {
       if (!importSettled) {
         btn.disabled = false;
@@ -379,7 +379,7 @@
         const remaining = Array.prototype.slice.call(document.querySelectorAll("#receiptItems .card"));
         if (remaining.length === 0) {
           showStep("empty");
-          announce("All items removed.");
+          announce(proviant.t("js.receipt.allItemsRemoved"));
           if (focusLost) {
             const retryBtn = document.getElementById("btnRetryEmpty");
             if (retryBtn) retryBtn.focus();
@@ -405,10 +405,10 @@
       const itemCount = document.querySelectorAll("#receiptItems .card").length;
       if (itemCount > 0) {
         proviant.showConfirm(
-          "Discard scanned products",
-          "Discard the " + itemCount + " scanned product(s)?",
+          proviant.t("js.receipt.discardTitle"),
+          proviant.tn("js.receipt.discardConfirm", itemCount),
           function() { resetToUpload(); },
-          "Discard",
+          proviant.t("js.receipt.discardConfirmButton"),
           "danger"
         );
         return;

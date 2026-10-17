@@ -1,10 +1,10 @@
-proviant - Product Expiration Notification
+{{ t "notify.expired.txtTitle" }}
 
-Product: {{.ProductName}}
-Barcode: {{.Barcode}}
-ID: {{.ID}}
-Expiration Date: {{.EffectiveExpiry.Format "2006-01-02"}}
+{{ t "notify.expired.productLabel" }} {{.ProductName}}
+{{ t "notify.expired.barcodeLabel" }} {{.Barcode}}
+{{ t "notify.expired.idLabel" }} {{.ID}}
+{{ t "notify.expired.expiryDateLabel" }} {{.EffectiveExpiry.Format "2006-01-02"}}
 
-Please take the necessary actions to ensure the safety and quality of your products.
+{{ t "notify.expired.actionHint" }}
 
-Thank you for using proviant!
+{{ t "notify.expired.txtThanks" }}

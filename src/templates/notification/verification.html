@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ t "notify.common.langCode" }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proviant — Verify Your Email</title>
+    <title>{{ t "notify.verification.title" }}</title>
     <!--[if mso]>
     <noscript>
         <xml>
@@ -35,19 +35,19 @@
                     <!-- Body -->
                     <tr>
                         <td style="padding:24px 32px 32px 32px;">
-                            <h1 style="margin:0 0 8px 0;font-size:24px;font-weight:700;color:#1A3028;text-align:center;">Verify your email address</h1>
+                            <h1 style="margin:0 0 8px 0;font-size:24px;font-weight:700;color:#1A3028;text-align:center;">{{ t "notify.verification.heading" }}</h1>
                             <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:#6A9580;text-align:center;">
-                                Hi <strong style="color:#2D4F3C;">{{.Username}}</strong>, click the button below to verify your email address and activate your Proviant account.
+                                {{ t "notify.common.greeting" }} <strong style="color:#2D4F3C;">{{.Username}}</strong>{{ t "notify.verification.intro" }}
                             </p>
                             <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#6A9580;text-align:center;">
-                                This link expires on <strong style="color:#2D4F3C;">{{.ExpiresAt}}</strong>.
+                                {{ t "notify.verification.expiryPrefix" }} <strong style="color:#2D4F3C;">{{.ExpiresAt}}</strong>{{ t "notify.verification.expirySuffix" }}
                             </p>
 
                             <!-- CTA Button -->
                             <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
                                 <tr>
                                     <td style="border-radius:8px;background-color:#3D7A5C;">
-                                        <a href="{{.MagicLink}}" target="_blank" style="display:inline-block;padding:14px 32px;font-size:16px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">Verify Email Address</a>
+                                        <a href="{{.MagicLink}}" target="_blank" style="display:inline-block;padding:14px 32px;font-size:16px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">{{ t "notify.verification.cta" }}</a>
                                     </td>
                                 </tr>
                             </table>
@@ -57,7 +57,7 @@
                                 <tr>
                                     <td style="padding:16px;">
                                         <p style="margin:0;font-size:14px;line-height:1.6;color:#6A9580;">
-                                            <strong style="color:#2D4F3C;">Can't click the button?</strong> Copy and paste this link into your browser:<br>
+                                            <strong style="color:#2D4F3C;">{{ t "notify.common.cantClick" }}</strong> {{ t "notify.common.copyHint" }}<br>
                                             <span style="color:#3D7A5C;word-break:break-all;">{{.MagicLink}}</span>
                                         </p>
                                     </td>
@@ -70,10 +70,10 @@
                     <tr>
                         <td style="padding:0 32px 32px 32px;border-top:1px solid #C8DDD0;">
                             <p style="margin:16px 0 0 0;font-size:14px;line-height:1.6;color:#6A9580;text-align:center;">
-                                If you didn't create a Proviant account, you can safely ignore this email.
+                                {{ t "notify.verification.notAccount" }}
                             </p>
                             <p style="margin:8px 0 0 0;font-size:14px;line-height:1.6;color:#6A9580;text-align:center;">
-                                Thank you for using <strong style="color:#2D4F3C;">Proviant</strong>!
+                                {{ t "notify.common.thanksBefore" }} <strong style="color:#2D4F3C;">Proviant</strong>!
                             </p>
                         </td>
                     </tr>

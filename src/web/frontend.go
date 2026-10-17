@@ -3,7 +3,6 @@ package web
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -12,16 +11,18 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/api"
-	v1 "codeberg.org/isotop7/proviant/api/v1"
-	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/templates"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	v1 "github.com/Isotop7/proviant/api/v1"
+	"github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/i18n"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/models/configuration/static"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/templates"
+	"github.com/Isotop7/proviant/util"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -119,6 +120,7 @@ func (frontend *Frontend) Auth(ctx *gin.Context) {
 		}
 	}
 
+	brand := authBrand(pageLanguage(ctx))
 	pageData := map[string]any{
 		"InviteToken":              ctx.Query("invite_token"),
 		"Title":                    "Authentication",
@@ -127,9 +129,9 @@ func (frontend *Frontend) Auth(ctx *gin.Context) {
 		"PasswordRequireDigit":     requireDigit,
 		"PasswordRequireSpecial":   requireSpecial,
 		"RouteForgotPassword":      util.RouteForgotPassword,
-		"BrandHeadline":            authBrandHeadline,
-		"BrandSub":                 authBrandSub,
-		"BrandFeatures":            authBrandFeatures,
+		"BrandHeadline":            brand.Headline,
+		"BrandSub":                 brand.Sub,
+		"BrandFeatures":            brand.Features,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "auth.tmpl", pageData)
 }
@@ -209,6 +211,9 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"Timeout":          receiptScanDefaultTimeout,
 		"APIKeyConfigured": false,
 	}
+	shoppingListSyncEnabled := false
+	bringSyncEnabled := false
+	todoistSyncEnabled := false
 
 	if cfgVal, ok := ctx.Get(util.ContextKeyProviantConfig); ok {
 		if cfg, ok := cfgVal.(*configuration.ProviantConfiguration); ok {
@@ -224,6 +229,9 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 				"Timeout":          receiptScanDefaultTimeout,
 				"APIKeyConfigured": cfg.OCR.Receipt.APIKey != "",
 			}
+			shoppingListSyncEnabled = cfg.ShoppingListSync.Enabled
+			bringSyncEnabled = cfg.ShoppingListSync.IsProviderEnabled(util.ShoppingListProviderBring)
+			todoistSyncEnabled = cfg.ShoppingListSync.IsProviderEnabled(util.ShoppingListProviderTodoist)
 		}
 	}
 
@@ -245,11 +253,31 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"PasswordRequireSpecial":    requireSpecial,
 		"ReceiptScanFeatureEnabled": receiptScanFeatureEnabled,
 		"ReceiptScanDefaults":       receiptScanDefaults,
+		"ShoppingListSyncEnabled":   shoppingListSyncEnabled,
+		"BringSyncEnabled":          bringSyncEnabled,
+		"TodoistSyncEnabled":        todoistSyncEnabled,
+		"AvailableLanguages":        i18n.LanguageOptions(),
 	}
 
 	if isAdmin {
 		invitations, _ := repos.Invitations.GetInvitationsForHousehold(user.HouseholdID, userID)
 		pageData["Invitations"] = invitations
+
+		var bringIntegration, todoistIntegration apiModel.HouseholdIntegrationResponse
+		if repos.HouseholdIntegrations != nil {
+			integrations, _ := repos.HouseholdIntegrations.ListByHousehold(user.HouseholdID)
+			for i := range integrations {
+				resp := apiModel.NewHouseholdIntegrationResponse(&integrations[i])
+				switch resp.Provider {
+				case util.ShoppingListProviderBring:
+					bringIntegration = resp
+				case util.ShoppingListProviderTodoist:
+					todoistIntegration = resp
+				}
+			}
+		}
+		pageData["BringIntegration"] = bringIntegration
+		pageData["TodoistIntegration"] = todoistIntegration
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "userSettings.tmpl", pageData)
 }
@@ -512,6 +540,10 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	statusFilter := ctx.DefaultQuery("status", "all")
 
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
+	isAdmin := false
+	if currentUser, userErr := repos.Users.GetUserByID(userID); userErr == nil {
+		isAdmin = currentUser.Role == authentication.RoleAdmin
+	}
 
 	productQuery := &productQueryParams{
 		statusFilter:   statusFilter,
@@ -625,6 +657,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		"PrevPageURL":        prevPageURL,
 		"NextPageURL":        nextPageURL,
 		"CurrentUserID":      userID,
+		"IsAdmin":            isAdmin,
 		"ReceiptScanEnabled": receiptScanEnabled,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
@@ -707,63 +740,6 @@ func (frontend *Frontend) ProductsScanReceipt(ctx *gin.Context) {
 		"ScanTimeoutSeconds": scanTimeoutSeconds,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsScanReceipt.tmpl", pageData)
-}
-
-// ProductsView renders the product view page
-// @Summary      Product view page
-// @Description  Renders the product details page
-// @Tags         web
-// @Produce      html
-// @Param        id   path      int  true  "Product ID"
-// @Success      200  {string}  html
-// @Failure      400  {object}  api.APIResponse
-// @Failure      500  {object}  api.APIResponse
-// @Router       /web/products/{id}/view [get]
-func (frontend *Frontend) ProductsView(ctx *gin.Context) {
-	// Get zerolog instance from context
-	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
-
-	// Get and parse parameter id
-	idParam := ctx.Param("id")
-	var productIDRaw uint64
-	var err error
-	if productIDRaw, err = strconv.ParseUint(idParam, 10, 64); err != nil {
-		logger.Warn().Msgf(errors.FormatInvalidRequestId, idParam)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Get database instance from context
-	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
-	if !ok {
-		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
-		return
-	}
-
-	// Extract JWT claims from context
-	claims := jwt.ExtractClaims(ctx)
-	userID := uint(claims[static.TokenIdentityKey].(float64))
-	if userID <= 0 {
-		logger.Error().Msg(api.ResponseErrUserIDFromToken.Message)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusUnauthorized, errors.ErrUserIDFromToken.Error())
-		return
-	}
-
-	product, productErr := repos.Products.GetArchivedProductByID(uint(productIDRaw), userID) //nolint:gosec
-	if productErr != nil {
-		logger.Error().Msgf("Error getting product: %s", productErr)
-		templates.RenderError(ctx, frontend.TemplateCache, http.StatusNotFound, errors.ErrUserNoProductsFound.Error())
-		return
-	}
-
-	pageData := map[string]any{
-		"InviteToken": ctx.Query("invite_token"),
-		"Title":       "Products",
-		"Product":     product,
-		"IsArchived":  product.DeletedAt.Valid,
-	}
-	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsView.tmpl", pageData)
 }
 
 // ProductsEdit renders the product edit page
@@ -853,7 +829,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	if token == "" {
 		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "base", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
-			"Error": "No invitation token provided.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteTokenMissing"),
 		})
 		return
 	}
@@ -863,7 +839,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
-			"Error": "Internal server error.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.internalError"),
 		})
 		return
 	}
@@ -873,14 +849,14 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		if invErr == errors.ErrInvitationNotFound {
 			templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "base", AcceptInviteFileName, map[string]any{
 				"Title": AcceptInvitationTitle,
-				"Error": "This invitation does not exist or has been deleted.",
+				"Error": i18n.T(pageLanguage(ctx), "pageError.inviteNotFound"),
 			})
 			return
 		}
 		logger.Error().Msg(invErr.Error())
 		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
-			"Error": "An error occurred while processing this invitation.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteProcessError"),
 		})
 		return
 	}
@@ -889,11 +865,11 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		var msg string
 		switch invitation.Status {
 		case dbModel.InvitationStatusCancelled:
-			msg = "This invitation has been cancelled by the sender."
+			msg = i18n.T(pageLanguage(ctx), "pageError.inviteCancelled")
 		case dbModel.InvitationStatusExpired:
-			msg = "This invitation has expired."
+			msg = i18n.T(pageLanguage(ctx), "pageError.inviteExpired")
 		default:
-			msg = "This invitation has already been used."
+			msg = i18n.T(pageLanguage(ctx), "pageError.inviteAlreadyUsed")
 		}
 		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
@@ -906,13 +882,13 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		_ = repos.Invitations.MarkInvitationExpired(invitation.ID)
 		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
-			"Error": "This invitation has expired.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteExpired"),
 		})
 		return
 	}
 
 	household, householdErr := repos.Households.GetHouseholdByID(invitation.HouseholdID)
-	householdName := fmt.Sprintf("Household #%d", invitation.HouseholdID)
+	householdName := i18n.T(pageLanguage(ctx), "pageError.householdFallback", invitation.HouseholdID)
 	if householdErr == nil {
 		householdName = household.Name
 	}
@@ -959,7 +935,7 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context) {
 	if token == "" {
 		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "baseAuth", "verifyEmail.tmpl", map[string]any{
 			"Title": "Verify Email",
-			"Error": "No verification token provided.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.verifyTokenMissing"),
 		})
 		return
 	}
@@ -1027,6 +1003,35 @@ func (frontend *Frontend) Recipes(ctx *gin.Context) {
 	}
 
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "recipes.tmpl", pageData)
+}
+
+// MealPlan renders the weekly meal plan page
+// @Summary      Meal Plan page
+// @Description  Renders the weekly meal plan with planned meals and shopping list generation
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Failure      400  {object}  api.APIResponse
+// @Failure      500  {object}  api.APIResponse
+// @Router       /web/mealplan [get]
+func (frontend *Frontend) MealPlan(ctx *gin.Context) {
+	_, repos, userID, ok := frontend.mustGetPageContext(ctx)
+	if !ok {
+		return
+	}
+
+	householdID, err := repos.Users.GetUserHouseholdByID(userID)
+	if err != nil || householdID == 0 {
+		householdID = 0
+	}
+
+	pageData := map[string]any{
+		"Title":        "Meal Plan",
+		"HasHousehold": householdID > 0,
+		"HouseholdID":  householdID,
+	}
+
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "mealPlan.tmpl", pageData)
 }
 
 // WasteAnalytics renders the waste analytics dashboard
@@ -1154,7 +1159,7 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 	if token == "" {
 		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "baseAuth", "unsubscribe.tmpl", map[string]any{
 			"Title": "Unsubscribe",
-			"Error": "No unsubscribe token provided.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.unsubscribeTokenMissing"),
 		})
 		return
 	}
@@ -1165,7 +1170,7 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
 		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "baseAuth", "unsubscribe.tmpl", map[string]any{
 			"Title": "Unsubscribe",
-			"Error": "Internal server error.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.internalError"),
 		})
 		return
 	}
@@ -1174,7 +1179,7 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 	if userErr != nil {
 		templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "baseAuth", "unsubscribe.tmpl", map[string]any{
 			"Title": "Unsubscribe",
-			"Error": "Invalid or expired unsubscribe link.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.unsubscribeInvalid"),
 		})
 		return
 	}
@@ -1190,7 +1195,7 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 		logger.Error().Msgf("Unsubscribe: failed to update user: %s", updateErr)
 		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "baseAuth", "unsubscribe.tmpl", map[string]any{
 			"Title": "Unsubscribe",
-			"Error": "Failed to update preferences.",
+			"Error": i18n.T(pageLanguage(ctx), "pageError.unsubscribeUpdateFailed"),
 		})
 		return
 	}
@@ -1210,13 +1215,14 @@ func (frontend *Frontend) Unsubscribe(ctx *gin.Context) {
 // @Success      200  {string}  html
 // @Router       /web/forgot-password [get]
 func (frontend *Frontend) ForgotPassword(ctx *gin.Context) {
+	brand := forgotPasswordBrand(pageLanguage(ctx))
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "forgotPassword.tmpl", map[string]any{
 		"Title":               "Forgot Password",
 		"RouteForgotPassword": util.RouteForgotPassword,
 		"RouteAuth":           util.RouteAuth,
-		"BrandHeadline":       forgotPasswordBrandHeadline,
-		"BrandSub":            forgotPasswordBrandSub,
-		"BrandFeatures":       forgotPasswordBrandFeatures,
+		"BrandHeadline":       brand.Headline,
+		"BrandSub":            brand.Sub,
+		"BrandFeatures":       brand.Features,
 	})
 }
 
@@ -1231,17 +1237,18 @@ func (frontend *Frontend) ForgotPassword(ctx *gin.Context) {
 func (frontend *Frontend) ResetPassword(ctx *gin.Context) {
 	token := ctx.Query("token")
 
+	brand := resetPasswordBrand(pageLanguage(ctx))
 	data := map[string]any{
 		"Title":               "Reset Password",
 		"RouteAuth":           util.RouteAuth,
 		"RouteForgotPassword": util.RouteForgotPassword,
-		"BrandHeadline":       resetPasswordBrandHeadline,
-		"BrandSub":            resetPasswordBrandSub,
-		"BrandFeatures":       resetPasswordBrandFeatures,
+		"BrandHeadline":       brand.Headline,
+		"BrandSub":            brand.Sub,
+		"BrandFeatures":       brand.Features,
 	}
 
 	if token == "" {
-		data["Error"] = "Please request a new reset link to continue."
+		data["Error"] = i18n.T(pageLanguage(ctx), "pageError.resetTokenMissing")
 	} else {
 		data["Token"] = token
 	}
@@ -1256,27 +1263,71 @@ type BrandFeature struct {
 	Text string
 }
 
-var (
-	authBrandHeadline = template.HTML("Less waste.<br>More meals.")
-	authBrandSub      = "Track what's in your pantry, get notified before things expire, and discover recipes with what you already have."
-	authBrandFeatures = []BrandFeature{
-		{Icon: "bi-upc-scan", Text: "Scan barcodes to add products instantly"},
-		{Icon: "bi-bell", Text: "Get notified before items expire"},
-		{Icon: "bi-journal-richtext", Text: "Recipe suggestions from your pantry"},
-		{Icon: "bi-graph-down-arrow", Text: "Track savings and reduce food waste"},
+// brandContent is the translated brand panel of the split-panel auth pages.
+type brandContent struct {
+	Headline template.HTML
+	Sub      string
+	Features []BrandFeature
+}
+
+// pageLanguage resolves the UI language for handler-side strings.
+func pageLanguage(ctx *gin.Context) string {
+	if raw, ok := ctx.Get(util.ContextKeyLanguage); ok {
+		if lang, ok := raw.(string); ok && lang != "" {
+			return lang
+		}
 	}
-	forgotPasswordBrandHeadline = "Forgot your password?"
-	forgotPasswordBrandSub      = "Enter your email and we'll send you a link to choose a new password."
-	forgotPasswordBrandFeatures = []BrandFeature{
-		{Icon: "bi-shield-lock", Text: "Your account stays protected"},
-		{Icon: "bi-envelope", Text: "A secure reset link in your inbox"},
-		{Icon: "bi-arrow-counterclockwise", Text: "Back to your pantry in minutes"},
+	acceptLanguage := ""
+	if ctx.Request != nil {
+		acceptLanguage = ctx.GetHeader("Accept-Language")
 	}
-	resetPasswordBrandHeadline = "Choose a new password"
-	resetPasswordBrandSub      = "Pick something strong. We'll get you back to your pantry in no time."
-	resetPasswordBrandFeatures = []BrandFeature{
-		{Icon: "bi-shield-check", Text: "Encrypted in transit and at rest"},
-		{Icon: "bi-key", Text: "12+ characters keeps it strong"},
-		{Icon: "bi-check2-circle", Text: "Then you're back in"},
+	return i18n.ResolveLanguage("", "", acceptLanguage)
+}
+
+func brandFeatures(lang string, features []BrandFeature) []BrandFeature {
+	translated := make([]BrandFeature, 0, len(features))
+	for _, feature := range features {
+		translated = append(translated, BrandFeature{Icon: feature.Icon, Text: i18n.T(lang, feature.Text)})
 	}
-)
+	return translated
+}
+
+func authBrand(lang string) brandContent {
+	return brandContent{
+		//nolint:gosec // trusted catalog content, not user input
+		Headline: template.HTML(i18n.T(lang, "brand.auth.headlineTop") + "<br>" + i18n.T(lang, "brand.auth.headlineBottom")),
+		Sub:      i18n.T(lang, "brand.auth.sub"),
+		Features: brandFeatures(lang, []BrandFeature{
+			{Icon: "bi-upc-scan", Text: "brand.auth.featureScan"},
+			{Icon: "bi-bell", Text: "brand.auth.featureNotify"},
+			{Icon: "bi-journal-richtext", Text: "brand.auth.featureRecipes"},
+			{Icon: "bi-graph-down-arrow", Text: "brand.auth.featureSavings"},
+		}),
+	}
+}
+
+func forgotPasswordBrand(lang string) brandContent {
+	return brandContent{
+		//nolint:gosec // trusted catalog content, not user input
+		Headline: template.HTML(i18n.T(lang, "brand.forgot.headline")),
+		Sub:      i18n.T(lang, "brand.forgot.sub"),
+		Features: brandFeatures(lang, []BrandFeature{
+			{Icon: "bi-shield-lock", Text: "brand.forgot.featureProtected"},
+			{Icon: "bi-envelope", Text: "brand.forgot.featureLink"},
+			{Icon: "bi-arrow-counterclockwise", Text: "brand.forgot.featureBack"},
+		}),
+	}
+}
+
+func resetPasswordBrand(lang string) brandContent {
+	return brandContent{
+		//nolint:gosec // trusted catalog content, not user input
+		Headline: template.HTML(i18n.T(lang, "brand.reset.headline")),
+		Sub:      i18n.T(lang, "brand.reset.sub"),
+		Features: brandFeatures(lang, []BrandFeature{
+			{Icon: "bi-shield-check", Text: "brand.reset.featureEncrypted"},
+			{Icon: "bi-key", Text: "brand.reset.featureLength"},
+			{Icon: "bi-check2-circle", Text: "brand.reset.featureDone"},
+		}),
+	}
+}

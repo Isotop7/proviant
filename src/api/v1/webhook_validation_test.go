@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	proviantErrors "codeberg.org/isotop7/proviant/errors"
+	proviantErrors "github.com/Isotop7/proviant/errors"
 )
 
 func TestIsPrivateOrReservedIP(t *testing.T) {

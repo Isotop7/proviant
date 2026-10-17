@@ -1,4 +1,4 @@
-module codeberg.org/isotop7/proviant
+module github.com/Isotop7/proviant
 
 go 1.26.0
 

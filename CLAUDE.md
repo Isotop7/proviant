@@ -55,7 +55,7 @@ claims := jwt.ExtractClaims(ctx)
 
 ## Code Conventions
 
-**Import order:** stdlib → internal (`codeberg.org/isotop7/proviant/...`) → external packages
+**Import order:** stdlib → internal (`github.com/Isotop7/proviant/...`) → external packages
 
 **Error handling:** Use predefined errors from `src/errors/errors.go`; never `panic` in normal flow.
 

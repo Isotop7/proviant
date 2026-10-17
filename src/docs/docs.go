@@ -11,12 +11,12 @@ const docTemplate = `{
         "title": "{{.Title}}",
         "contact": {
             "name": "Isotop7",
-            "url": "https://codeberg.org/isotop7/proviant",
+            "url": "https://github.com/Isotop7/proviant",
             "email": "hendrik@hr94.de"
         },
         "license": {
             "name": "MIT",
-            "url": "https://codeberg.org/isotop7/proviant/-/blob/main/LICENSE"
+            "url": "https://github.com/Isotop7/proviant/blob/main/LICENSE"
         },
         "version": "{{.Version}}"
     },
@@ -749,6 +749,356 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/household/integrations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all configured shopping list sync integrations for the caller's household (admin only). Secret tokens are never returned.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Lists household shopping list integrations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.HouseholdIntegrationResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/integrations/{provider}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Configures a shopping list sync integration for the caller's household (admin only). Secret tokens are write-only and never returned.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Creates a household shopping list integration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider identifier (bring or todoist)",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Integration configuration",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.CreateHouseholdIntegrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.HouseholdIntegrationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes the specified shopping list sync integration and its item mappings for the caller's household (admin only).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Deletes a household shopping list integration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider identifier (bring or todoist)",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates settings or credentials for a shopping list sync integration (admin only). Empty token fields keep stored credentials unless clear flags are set.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Updates a household shopping list integration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider identifier (bring or todoist)",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Integration fields to update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.UpdateHouseholdIntegrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.HouseholdIntegrationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/integrations/{provider}/sync": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Pushes current household shopping list items to the external provider and pulls checked states back (admin only).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Synchronizes a household shopping list integration now",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider identifier (bring or todoist)",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.HouseholdIntegrationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/integrations/{provider}/test": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Verifies credentials and connectivity for the specified household shopping list integration (admin only).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Tests a household shopping list integration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider identifier (bring or todoist)",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/household/invitations": {
             "get": {
                 "description": "Returns all invitations for the calling user's household",
@@ -1394,6 +1744,276 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/mealplans": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all meal plan entries of the caller's household within the given date range",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mealplans"
+                ],
+                "summary": "Lists planned meals",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Range start (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Range end (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.MealPlanEntryResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Schedules a saved recipe on the given date; servings of 0 use the recipe's own serving count",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mealplans"
+                ],
+                "summary": "Creates a planned meal",
+                "parameters": [
+                    {
+                        "description": "Planned meal",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.CreateMealPlanEntryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.MealPlanEntryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/mealplans/shopping-list": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Aggregates the ingredients of all meals planned within the date range and creates shopping list entries for the missing amounts (stock on hand subtracted when units match)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mealplans"
+                ],
+                "summary": "Generates shopping list from meal plan",
+                "parameters": [
+                    {
+                        "description": "Date range (YYYY-MM-DD)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.GenerateShoppingListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/mealplans/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes the meal plan entry with the given ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mealplans"
+                ],
+                "summary": "Deletes a planned meal",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Meal plan entry ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates date, recipe, servings and notes of a meal plan entry",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mealplans"
+                ],
+                "summary": "Updates a planned meal",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Meal plan entry ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.UpdateMealPlanEntryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.MealPlanEntryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/notifications": {
             "get": {
                 "description": "Returns pending invitations and household join requests for the current user",
@@ -1879,7 +2499,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Creates a new product of a user",
+                "description": "Creates a new product of a user. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1902,6 +2522,12 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductResponse"
+                        }
+                    },
                     "201": {
                         "description": "Created",
                         "schema": {
@@ -1910,6 +2536,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -2345,7 +2977,7 @@ const docTemplate = `{
         },
         "/api/v1/products/export/full.json": {
             "get": {
-                "description": "Returns a comprehensive JSON export including household info, members, products, and statistics",
+                "description": "Returns a versioned household backup document including household info, members, storage locations, products, and statistics",
                 "produces": [
                     "application/json"
                 ],
@@ -2574,6 +3206,50 @@ const docTemplate = `{
                     },
                     "502": {
                         "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/restore/full.json": {
+            "post": {
+                "description": "Accepts a backup document produced by the full JSON export or the scheduled backup job and replaces the household's products and storage locations in one transaction. Accounts are not recreated; product ownership is mapped onto members that still exist. The document's schema version is validated first.",
+                "consumes": [
+                    "multipart/form-data",
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "import"
+                ],
+                "summary": "Restore household data from a JSON backup",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Backup JSON file",
+                        "name": "file",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.RestoreResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -2834,6 +3510,52 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.ProductSummaryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/sync-offline": {
+            "post": {
+                "description": "Creates queued drafts. Replayed clientSyncId values return the existing product.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Sync offline product entries",
+                "parameters": [
+                    {
+                        "description": "Queued drafts",
+                        "name": "items",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.OfflineSyncRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.OfflineSyncResponse"
                         }
                     },
                     "400": {
@@ -3423,6 +4145,89 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/recipes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all saved recipes of the caller's household",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recipes"
+                ],
+                "summary": "Lists saved recipes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.RecipeResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a saved recipe with its ingredients; a nil productId marks a free-text ingredient",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recipes"
+                ],
+                "summary": "Creates a saved recipe",
+                "parameters": [
+                    {
+                        "description": "Recipe with ingredients",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.CreateRecipeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.RecipeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/recipes/suggestions": {
             "get": {
                 "description": "Returns up to 6 recipe suggestions matching products expiring within 7 days. Results are ranked by expiry proximity first, then match percentage. Set refresh=1 to bypass the suggestion cache.",
@@ -3465,6 +4270,228 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/recipes/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the saved recipe with the given ID including its ingredients",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recipes"
+                ],
+                "summary": "Gets a saved recipe",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recipe ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.RecipeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes the saved recipe with the given ID including its ingredients",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recipes"
+                ],
+                "summary": "Deletes a saved recipe",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recipe ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates the given fields of a saved recipe; supplying ingredients replaces them atomically",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recipes"
+                ],
+                "summary": "Updates a saved recipe",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recipe ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.UpdateRecipeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.RecipeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/recipes/{id}/cook": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Consumes the recipe's linked products by their scaled amounts. Unlinked ingredients and unit mismatches are reported as errors and skipped; an amount reaching the current stock fully consumes (archives) the product.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recipes"
+                ],
+                "summary": "Cook a saved recipe",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recipe ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Servings to cook (0 = recipe servings)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.CookRecipeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CookResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Returned when no item was processed (invalid body or all ingredients failed)",
+                        "schema": {
+                            "$ref": "#/definitions/api.CookResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Returned when no item was processed and a server-side error occurred",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -5185,6 +6212,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/web/mealplan": {
+            "get": {
+                "description": "Renders the weekly meal plan with planned meals and shopping list generation",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Meal Plan page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/web/onboarding": {
             "get": {
                 "description": "Renders the onboarding wizard for new users",
@@ -5305,47 +6364,6 @@ const docTemplate = `{
                     "web"
                 ],
                 "summary": "Product edit page",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Product ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/web/products/{id}/view": {
-            "get": {
-                "description": "Renders the product details page",
-                "produces": [
-                    "text/html"
-                ],
-                "tags": [
-                    "web"
-                ],
-                "summary": "Product view page",
                 "parameters": [
                     {
                         "type": "integer",
@@ -5781,6 +6799,10 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                },
+                "terminal": {
+                    "description": "Terminal marks a failed item whose reason is a property of the draft\nitself, so resubmitting it unchanged fails identically. A caller that\nretries asynchronously should surface such an item to the user instead of\nspending its retry budget on it.",
+                    "type": "boolean"
                 }
             }
         },
@@ -5876,6 +6898,15 @@ const docTemplate = `{
                 }
             }
         },
+        "api.CookRecipeRequest": {
+            "type": "object",
+            "properties": {
+                "servings": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
         "api.CookResponse": {
             "type": "object",
             "properties": {
@@ -5890,6 +6921,89 @@ const docTemplate = `{
                 },
                 "partial": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.CreateHouseholdIntegrationRequest": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string"
+                },
+                "accountEmail": {
+                    "type": "string"
+                },
+                "clearAccessToken": {
+                    "type": "boolean"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "listId": {
+                    "type": "string"
+                },
+                "listName": {
+                    "type": "string"
+                },
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.CreateMealPlanEntryRequest": {
+            "type": "object",
+            "required": [
+                "date",
+                "recipeId"
+            ],
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "recipeId": {
+                    "type": "integer"
+                },
+                "servings": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
+        "api.CreateRecipeRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "ingredients": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                        "$ref": "#/definitions/api.RecipeIngredientInput"
+                    }
+                },
+                "instructions": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "servings": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "sourceUrl": {
+                    "type": "string"
                 }
             }
         },
@@ -6035,9 +7149,6 @@ const docTemplate = `{
         "api.ExportProductResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "amount": {
                     "type": "integer"
                 },
@@ -6065,6 +7176,9 @@ const docTemplate = `{
                 "expireAt": {
                     "type": "string"
                 },
+                "id": {
+                    "type": "integer"
+                },
                 "imageUrl": {
                     "type": "string"
                 },
@@ -6081,6 +7195,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "openedAt": {
+                    "type": "string"
+                },
+                "ownerUsername": {
                     "type": "string"
                 },
                 "priceOverride": {
@@ -6106,12 +7223,78 @@ const docTemplate = `{
                 }
             }
         },
+        "api.FullExportHousehold": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "monthlyWasteGoalCount": {
+                    "type": "integer"
+                },
+                "monthlyWasteGoalPercent": {
+                    "type": "number"
+                },
+                "monthlyWasteGoalType": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.FullExportMember": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.FullExportProducts": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ExportProductResponse"
+                    }
+                },
+                "archived": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ExportProductResponse"
+                    }
+                }
+            }
+        },
+        "api.GenerateShoppingListRequest": {
+            "type": "object",
+            "required": [
+                "from",
+                "to"
+            ],
+            "properties": {
+                "from": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
         "api.HouseholdApplicationResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "applicantId": {
                     "type": "integer"
                 },
@@ -6121,22 +7304,60 @@ const docTemplate = `{
                 "householdId": {
                     "type": "integer"
                 },
+                "id": {
+                    "type": "integer"
+                },
                 "status": {
                     "type": "string"
+                }
+            }
+        },
+        "api.HouseholdIntegrationResponse": {
+            "type": "object",
+            "properties": {
+                "accessTokenConfigured": {
+                    "type": "boolean"
+                },
+                "accountEmail": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lastError": {
+                    "type": "string"
+                },
+                "lastSyncAt": {
+                    "type": "string"
+                },
+                "listId": {
+                    "type": "string"
+                },
+                "listName": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "refreshTokenConfigured": {
+                    "type": "boolean"
                 }
             }
         },
         "api.HouseholdInvitationResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "email": {
                     "type": "string"
                 },
                 "expiresAt": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "sendAttempts": {
                     "type": "integer"
@@ -6169,6 +7390,9 @@ const docTemplate = `{
         "api.HouseholdSettingsResponse": {
             "type": "object",
             "properties": {
+                "language": {
+                    "type": "string"
+                },
                 "monthlyWasteGoalCount": {
                     "type": "integer"
                 },
@@ -6263,6 +7487,32 @@ const docTemplate = `{
                 }
             }
         },
+        "api.MealPlanEntryResponse": {
+            "type": "object",
+            "properties": {
+                "createdBy": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "recipeId": {
+                    "type": "integer"
+                },
+                "recipeName": {
+                    "type": "string"
+                },
+                "servings": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.NotificationItem": {
             "type": "object",
             "properties": {
@@ -6335,6 +7585,87 @@ const docTemplate = `{
                 }
             }
         },
+        "api.OfflineSyncDraft": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "barcode": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "clientSyncId": {
+                    "type": "string"
+                },
+                "expireAt": {
+                    "type": "string"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "priceOverride": {
+                    "type": "number"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.OfflineSyncRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.OfflineSyncDraft"
+                    }
+                }
+            }
+        },
+        "api.OfflineSyncResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.OfflineSyncResult"
+                    }
+                }
+            }
+        },
+        "api.OfflineSyncResult": {
+            "type": "object",
+            "properties": {
+                "clientSyncId": {
+                    "type": "string"
+                },
+                "index": {
+                    "type": "integer"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "terminal": {
+                    "description": "Terminal marks a failed item no resubmission can fix — a blank or\nover-long client sync id, or one held by a private product. The outbox\nparks such an item for the user instead of replaying it into the same\nfailure until the retry budget runs out.",
+                    "type": "boolean"
+                }
+            }
+        },
         "api.OnboardingStateResponse": {
             "type": "object",
             "properties": {
@@ -6384,6 +7715,9 @@ const docTemplate = `{
                 "delta"
             ],
             "properties": {
+                "clientMutationId": {
+                    "type": "string"
+                },
                 "delta": {
                     "type": "integer",
                     "minimum": -1000
@@ -6393,9 +7727,6 @@ const docTemplate = `{
         "api.ProductResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "amount": {
                     "type": "integer"
                 },
@@ -6416,6 +7747,9 @@ const docTemplate = `{
                 },
                 "expireAt": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "imageUrl": {
                     "type": "string"
@@ -6551,6 +7885,90 @@ const docTemplate = `{
                 }
             }
         },
+        "api.RecipeIngredientInput": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "sortOrder": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "api.RecipeIngredientResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "sortOrder": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.RecipeResponse": {
+            "type": "object",
+            "properties": {
+                "createdBy": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "ingredients": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.RecipeIngredientResponse"
+                    }
+                },
+                "instructions": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "servings": {
+                    "type": "integer"
+                },
+                "sourceUrl": {
+                    "type": "string"
+                }
+            }
+        },
         "api.RecipeSuggestionResponse": {
             "type": "object",
             "properties": {
@@ -6636,6 +8054,26 @@ const docTemplate = `{
                 }
             }
         },
+        "api.RestoreResult": {
+            "type": "object",
+            "properties": {
+                "locationsCreated": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "productsArchived": {
+                    "type": "integer"
+                },
+                "productsImported": {
+                    "type": "integer"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.SavingsStatsResponse": {
             "type": "object",
             "properties": {
@@ -6671,9 +8109,6 @@ const docTemplate = `{
         "api.ShoppingListItemResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "category": {
                     "type": "string"
                 },
@@ -6681,6 +8116,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "createdBy": {
+                    "type": "integer"
+                },
+                "id": {
                     "type": "integer"
                 },
                 "name": {
@@ -6727,11 +8165,11 @@ const docTemplate = `{
         "api.StorageLocationResponse": {
             "type": "object",
             "properties": {
-                "ID": {
-                    "type": "integer"
-                },
                 "icon": {
                     "type": "string"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
@@ -6775,9 +8213,41 @@ const docTemplate = `{
                 }
             }
         },
+        "api.UpdateHouseholdIntegrationRequest": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string"
+                },
+                "accountEmail": {
+                    "type": "string"
+                },
+                "clearAccessToken": {
+                    "type": "boolean"
+                },
+                "clearRefreshToken": {
+                    "type": "boolean"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "listId": {
+                    "type": "string"
+                },
+                "listName": {
+                    "type": "string"
+                },
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
         "api.UpdateHouseholdSettingsRequest": {
             "type": "object",
             "properties": {
+                "language": {
+                    "type": "string"
+                },
                 "monthlyWasteGoalCount": {
                     "type": "integer"
                 },
@@ -6786,6 +8256,24 @@ const docTemplate = `{
                 },
                 "monthlyWasteGoalType": {
                     "type": "string"
+                }
+            }
+        },
+        "api.UpdateMealPlanEntryRequest": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "recipeId": {
+                    "type": "integer"
+                },
+                "servings": {
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },
@@ -6824,6 +8312,38 @@ const docTemplate = `{
                 },
                 "webPushEnabled": {
                     "type": "boolean"
+                }
+            }
+        },
+        "api.UpdateRecipeRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "ingredients": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                        "$ref": "#/definitions/api.RecipeIngredientInput"
+                    }
+                },
+                "instructions": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "servings": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "sourceUrl": {
+                    "type": "string"
                 }
             }
         },
@@ -7125,6 +8645,9 @@ const docTemplate = `{
                 "categories": {
                     "type": "string"
                 },
+                "clientSyncId": {
+                    "type": "string"
+                },
                 "co2KgPerKg": {
                     "type": "number"
                 },
@@ -7328,65 +8851,35 @@ const docTemplate = `{
                 }
             }
         },
-        "v1.FullExportHousehold": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.FullExportMember": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.FullExportProducts": {
-            "type": "object",
-            "properties": {
-                "active": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/api.ExportProductResponse"
-                    }
-                },
-                "archived": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/api.ExportProductResponse"
-                    }
-                }
-            }
-        },
         "v1.FullExportResponse": {
             "type": "object",
             "properties": {
-                "exported_at": {
+                "exportedAt": {
                     "type": "string"
                 },
                 "household": {
-                    "$ref": "#/definitions/v1.FullExportHousehold"
+                    "$ref": "#/definitions/api.FullExportHousehold"
                 },
                 "members": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/v1.FullExportMember"
+                        "$ref": "#/definitions/api.FullExportMember"
                     }
                 },
                 "products": {
-                    "$ref": "#/definitions/v1.FullExportProducts"
+                    "$ref": "#/definitions/api.FullExportProducts"
                 },
                 "stats": {
                     "$ref": "#/definitions/api.ProductStatsResponse"
+                },
+                "storageLocations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.StorageLocationResponse"
+                    }
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },

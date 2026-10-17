@@ -1,17 +1,21 @@
 {{ define "productOptionBar" }}
 
-<div class="btn-group" role="group" aria-label="Product export options bar">
+<div class="btn-group" role="group" aria-label="{{ t "partial.productOptionBar.ariaLabel" }}">
     <button type="button" class="btn-bulk dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="bi bi-download"></i> Export
+        <i class="bi bi-download"></i> {{ t "partial.productOptionBar.export" }}
     </button>
     <ul class="dropdown-menu dropdown-menu-end export-menu">
-        <li><a class="dropdown-item" href="#" id="export-products-csv">Products (CSV)</a></li>
-        <li><a class="dropdown-item" href="#" id="export-products-json">Products (JSON)</a></li>
-        <li><a class="dropdown-item" href="#" id="export-archive-csv">Consumption History (CSV)</a></li>
-        <li><a class="dropdown-item" href="#" id="export-full-json">Full Export (JSON)</a></li>
+        <li><a class="dropdown-item" href="#" id="export-products-csv">{{ t "partial.productOptionBar.exportProductsCsv" }}</a></li>
+        <li><a class="dropdown-item" href="#" id="export-products-json">{{ t "partial.productOptionBar.exportProductsJson" }}</a></li>
+        <li><a class="dropdown-item" href="#" id="export-archive-csv">{{ t "partial.productOptionBar.exportArchiveCsv" }}</a></li>
+        <li><a class="dropdown-item" href="#" id="export-full-json">{{ t "partial.productOptionBar.exportFullJson" }}</a></li>
         <li><hr class="dropdown-divider"></li>
-        <li><a class="dropdown-item" href="#" id="btnImportProductsCSV"><i class="bi bi-upload me-2"></i>Import products (CSV)</a></li>
-        <li><a class="dropdown-item" href="#" id="btnDownloadImportTemplate"><i class="bi bi-file-earmark-arrow-down me-2"></i>Download CSV template</a></li>
+        <li><a class="dropdown-item" href="#" id="btnImportProductsCSV"><i class="bi bi-upload me-2"></i>{{ t "partial.productOptionBar.importProducts" }}</a></li>
+        <li><a class="dropdown-item" href="#" id="btnDownloadImportTemplate"><i class="bi bi-file-earmark-arrow-down me-2"></i>{{ t "partial.productOptionBar.downloadTemplate" }}</a></li>
+        {{ if .IsAdmin }}
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#" id="btnRestoreBackupJSON"><i class="bi bi-arrow-counterclockwise me-2"></i>{{ t "partial.productOptionBar.restoreBackup" }}</a></li>
+        {{ end }}
     </ul>
 </div>
 

@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/models/authentication"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
 
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"

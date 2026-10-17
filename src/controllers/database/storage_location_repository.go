@@ -1,10 +1,10 @@
 package database
 
 import (
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"gorm.io/gorm"
 )
@@ -32,8 +32,14 @@ func (r *StorageLocationRepository) GetByHousehold(userID uint) ([]database.Stor
 	if err := r.DB.First(&user, userID).Error; err != nil {
 		return nil, err
 	}
+	return r.GetByHouseholdID(user.HouseholdID)
+}
+
+// GetByHouseholdID lists a household's storage locations without going through
+// a user, so the backup path can read them for every household in one pass.
+func (r *StorageLocationRepository) GetByHouseholdID(householdID uint) ([]database.StorageLocation, error) {
 	var locs []database.StorageLocation
-	err := r.DB.Where(util.QueryHouseholdId, user.HouseholdID).
+	err := r.DB.Where(util.QueryHouseholdId, householdID).
 		Order("sort_order ASC, name ASC").
 		Find(&locs).Error
 	return locs, err

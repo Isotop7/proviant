@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
+	repomocks "github.com/Isotop7/proviant/testutil/mocks"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

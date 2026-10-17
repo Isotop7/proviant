@@ -31,13 +31,16 @@ type HouseholdSettingsResponse struct {
 	MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType"`
 	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
 	MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
+	Language                string   `json:"language"`
 }
 
-// UpdateHouseholdSettingsRequest is the request body for PATCH /api/v1/household/settings
+// UpdateHouseholdSettingsRequest is the request body for PATCH /api/v1/household/settings.
+// Language is nil when omitted (unchanged), "" resets to automatic detection.
 type UpdateHouseholdSettingsRequest struct {
 	MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType"`
 	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
 	MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
+	Language                *string  `json:"language"`
 }
 
 // ProductStatsResponse is the response body for GET /api/v1/products/stats

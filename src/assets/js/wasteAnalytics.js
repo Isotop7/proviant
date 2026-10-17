@@ -80,11 +80,11 @@ function renderTiles(s) {
   if (!root) return;
   root.innerHTML = '';
 
-  root.appendChild(renderTile('Consumed', String(s.consumedCount ?? 0), 'success', null));
-  root.appendChild(renderTile('Wasted', String(s.wastedCount ?? 0), s.wastedCount > 0 ? 'danger' : null, null));
-  root.appendChild(renderTile('Waste %', `${(s.wastedPercent ?? 0).toFixed(1)}%`, s.wastedPercent > 25 ? 'danger' : (s.wastedPercent > 10 ? 'warning' : null), null));
-  root.appendChild(renderTile('Wasted €', fmtEur(s.wastedEur), s.wastedEur > 0 ? 'danger' : null, null));
-  root.appendChild(renderTile('Wasted CO₂', fmtKg(s.wastedCo2Kg), s.wastedCo2Kg > 0 ? 'warning' : null, null));
+  root.appendChild(renderTile(proviant.t("waste.consumed"), String(s.consumedCount ?? 0), 'success', null));
+  root.appendChild(renderTile(proviant.t("waste.wasted"), String(s.wastedCount ?? 0), s.wastedCount > 0 ? 'danger' : null, null));
+  root.appendChild(renderTile(proviant.t("waste.wastePercent"), `${(s.wastedPercent ?? 0).toFixed(1)}%`, s.wastedPercent > 25 ? 'danger' : (s.wastedPercent > 10 ? 'warning' : null), null));
+  root.appendChild(renderTile(proviant.t("waste.wastedEur"), fmtEur(s.wastedEur), s.wastedEur > 0 ? 'danger' : null, null));
+  root.appendChild(renderTile(proviant.t("js.waste.wastedCo2"), fmtKg(s.wastedCo2Kg), s.wastedCo2Kg > 0 ? 'warning' : null, null));
 }
 
 function renderMonthlyChart(s) {
@@ -100,7 +100,7 @@ function renderMonthlyChart(s) {
   const wasted = (s.monthly || []).map((m) => m.wastedCount || 0);
 
   if (consumed.every((v) => v === 0) && wasted.every((v) => v === 0)) {
-    showEmptyChart('chartMonthly', 'No consume/waste events in this window yet');
+    showEmptyChart('chartMonthly', proviant.t("js.waste.emptyMonthly"));
     return;
   }
 
@@ -109,8 +109,8 @@ function renderMonthlyChart(s) {
     data: {
       labels,
       datasets: [
-        { label: 'Consumed', data: consumed, backgroundColor: cssVar('--status-fresh') },
-        { label: 'Wasted',   data: wasted,   backgroundColor: cssVar('--status-expired') },
+        { label: proviant.t("waste.consumed"), data: consumed, backgroundColor: cssVar('--status-fresh') },
+        { label: proviant.t("waste.wasted"),   data: wasted,   backgroundColor: cssVar('--status-expired') },
       ],
     },
     options: {
@@ -132,7 +132,7 @@ function renderTrendChart(s) {
   const data = (s.trend || []).map((m) => m.count || 0);
 
   if (data.every((v) => v === 0)) {
-    showEmptyChart('chartTrend', 'No wasted items in the last 6 months');
+    showEmptyChart('chartTrend', proviant.t("js.waste.emptyTrend"));
     return;
   }
 
@@ -141,7 +141,7 @@ function renderTrendChart(s) {
     data: {
       labels,
       datasets: [{
-        label: 'Wasted',
+        label: proviant.t("waste.wasted"),
         data,
         borderColor: cssVar('--status-expired'),
         pointBackgroundColor: cssVar('--status-expired'),
@@ -164,7 +164,7 @@ function renderTable(s) {
   const rows = s.monthly || [];
   if (rows.length === 0) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="6" class="text-center text-secondary-custom py-3">No data yet</td>`;
+    tr.innerHTML = `<td colspan="6" class="text-center text-secondary-custom py-3">${proviant.t("js.waste.noData")}</td>`;
     tbody.appendChild(tr);
     return;
   }
@@ -191,7 +191,7 @@ function renderCategories(s) {
   if (cats.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'text-center text-secondary-custom py-3';
-    empty.textContent = 'No wasted categories yet';
+    empty.textContent = proviant.t("js.waste.noCategories");
     list.appendChild(empty);
     return;
   }
@@ -245,7 +245,7 @@ function renderCategoryProducts(products) {
     <li class="waste-category-product-list-item d-flex justify-content-between align-items-center">
       <span class="d-flex align-items-center gap-2">
         <i class="bi bi-box" style="color:var(--accent);"></i>
-        <span>${p.productName || 'Unknown'}</span>
+        <span>${p.productName || proviant.t("js.waste.unknown")}</span>
       </span>
       <span class="d-flex align-items-center gap-3 small">
         <span class="badge-status badge-nodate">${p.count || 0}</span>
@@ -278,12 +278,12 @@ let currentPeriod = '6months';
 async function load(period) {
   if (period) currentPeriod = period;
   const tiles = document.getElementById('wasteTiles');
-  if (tiles) tiles.innerHTML = '<div class="col-12 text-center text-secondary-custom py-3"><div class="spinner-border spinner-border-sm" role="status"></div> Loading…</div>';
+  if (tiles) tiles.innerHTML = `<div class="col-12 text-center text-secondary-custom py-3"><div class="spinner-border spinner-border-sm" role="status"></div> ${proviant.t("common.loading")}</div>`;
 
   const resp = await proviant.getWasteAnalytics(currentPeriod, currentSort);
   if (resp.code !== 200 || !resp.message) {
     if (tiles) tiles.innerHTML = '';
-    proviant.showFeedback('error', 'Failed to load', 'Could not load waste analytics. Please try again.');
+    proviant.showFeedback('error', proviant.t("js.waste.loadFailedTitle"), proviant.t("js.waste.loadFailedMessage"));
     return;
   }
   const s = resp.message;
@@ -298,7 +298,7 @@ async function load(period) {
   renderTable(s);
   renderCategories(s);
   const status = document.getElementById('waste-status');
-  if (status) status.textContent = 'Waste analytics loaded';
+  if (status) status.textContent = proviant.t("js.waste.statusLoaded");
 }
 
 document.addEventListener('proviant:themechange', () => {

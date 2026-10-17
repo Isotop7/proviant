@@ -20,14 +20,16 @@ const (
 	ContextKeyCSPNonce               = "cspNonce"
 	ContextKeyCSRFToken              = "csrfToken"
 	ContextKeyHouseholdID            = "householdID"
+	ContextKeyLanguage               = "language"
 
 	// Database query wrappers
-	QueryId               = "id = ?"
-	QueryHouseholdId      = "household_id = ?"
-	QueryUserId           = "user_id = ?"
-	QueryWebhookId        = "webhook_id = ?"
-	WhereDeletedIsNotNull = "deleted_at IS NOT NULL"
-	WhereDeletedIsNull    = "deleted_at IS NULL"
+	QueryId                     = "id = ?"
+	QueryHouseholdId            = "household_id = ?"
+	QueryUserId                 = "user_id = ?"
+	QueryWebhookId              = "webhook_id = ?"
+	WhereDeletedIsNotNull       = "deleted_at IS NOT NULL"
+	WhereDeletedIsNull          = "deleted_at IS NULL"
+	WhereRemovalReasonUnclaimed = "(removal_reason IS NULL OR removal_reason = '')"
 
 	// Mail digest
 	LabelMailDigest       = "mailDigest"
@@ -188,6 +190,62 @@ const (
 	ReceiptItemMaxUnitLength       = 20
 	ReceiptItemMaxAmount           = 999
 	ReceiptItemMaxPrice            = 100000.0
+
+	// OfflineSyncIDMaxLength bounds both the client sync id that makes a queued
+	// create idempotent and the client mutation id that makes a queued amount
+	// delta idempotent. Both are indexed columns, and GORM maps an indexed Go
+	// string to varchar(191) on MySQL/MariaDB, so an unbounded value overflows
+	// the column at insert time and surfaces as a 500 instead of a 400. Clients
+	// emit a UUID, which is 36 characters.
+	OfflineSyncIDMaxLength = 191
+
+	// OfflineSyncIDEchoLength bounds the client sync id echoed back inside a
+	// failed sync result. The failure reason only has to identify the item for
+	// a human reading the report, so the full up-to-191-byte id is not needed.
+	OfflineSyncIDEchoLength = 64
+
+	// ProductMutationClaimTTL bounds how long an applied clientMutationId is
+	// remembered. It has to outlive the window in which the outbox can still
+	// replay that delta: a parked change stays retryable until the user clears
+	// it, so days rather than the five-attempt ceiling of a live drain.
+	ProductMutationClaimTTL = 30 * 24 * time.Hour
+
+	ShoppingListProviderBring              = "bring"
+	ShoppingListProviderTodoist            = "todoist"
+	ShoppingListProviderNoop               = "noop"
+	DefaultShoppingListSyncIntervalMinutes = 15
+
+	// Scheduled household backup defaults. The target is a local directory
+	// because backup files carry household data in cleartext; the operator is
+	// responsible for where it points and who can read it.
+	DefaultBackupIntervalHours = 24
+	DefaultBackupDirectory     = "data/backups"
+	DefaultBackupRetention     = 7
+
+	// DefaultRestoreMaxUploadSizeMB bounds a restore upload. A full household
+	// backup is much larger than an ordinary request body, so it must not share
+	// server.maxUploadSizeMB (5 MB), which would reject a legitimate restore.
+	DefaultRestoreMaxUploadSizeMB = 50
+
+	// BackupFilePrefix is the filename prefix of scheduled backup documents.
+	// Retention pruning matches on it, so renaming it orphans old files.
+	BackupFilePrefix                      = "proviant-backup-"
+	DefaultShoppingListSyncTimeoutSeconds = 15
+	DefaultTodoistAPIBaseURL              = "https://api.todoist.com/rest/v2"
+	DefaultBringAPIBaseURL                = "https://api.getbring.com/rest/v2"
+	SyncRefStatusSynced                   = "synced"
+	SyncRefStatusPending                  = "pending"
+	SyncRefStatusOrphaned                 = "orphaned"
+
+	// BackupRestoreMaxProducts and BackupRestoreMaxStorageLocations bound one
+	// restore. The upload cap already bounds bytes, but tiny rows can still fan
+	// out into hundreds of thousands of inserts inside one transaction.
+	BackupRestoreMaxProducts         = 50000
+	BackupRestoreMaxStorageLocations = 5000
+
+	// DefaultBackupStopWaitSeconds bounds Stop(): filesystem writes cannot be
+	// canceled reliably, so shutdown waits briefly instead of hanging forever.
+	DefaultBackupStopWaitSeconds = 5
 )
 
 // CsvImportColumnAliases maps an accepted alternative column header to its

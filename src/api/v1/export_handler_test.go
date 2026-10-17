@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
-	"codeberg.org/isotop7/proviant/util"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -152,6 +152,9 @@ func TestExportFullJSON(t *testing.T) {
 	var resp FullExportResponse
 	if err := json.Unmarshal(env.W.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode: %v", err)
+	}
+	if resp.Version != apiModel.BackupSchemaVersion {
+		t.Errorf("version = %d, want %d", resp.Version, apiModel.BackupSchemaVersion)
 	}
 	if resp.Household == nil || resp.Household.Name != env.Household.Name {
 		t.Errorf("household = %+v, want %q", resp.Household, env.Household.Name)

@@ -4,9 +4,9 @@ import (
 	"html/template"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/controllers/database"
-	proviantErrors "codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/controllers/database"
+	proviantErrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/util"
 )
 
 func TestDatabaseMariaDBConfigurationStruct(t *testing.T) {
@@ -1363,4 +1363,59 @@ func TestReceiptOCRConfigurationUsesInsecureTransport(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestShoppingListSyncConfigurationIsProviderEnabled verifies instance-level provider gating.
+func TestShoppingListSyncConfigurationIsProviderEnabled(t *testing.T) {
+	t.Run("master switch disabled rejects all providers", func(t *testing.T) {
+		cfg := ShoppingListSyncConfiguration{
+			Enabled:        false,
+			BringEnabled:   true,
+			TodoistEnabled: true,
+		}
+		if cfg.IsProviderEnabled(util.ShoppingListProviderBring) {
+			t.Error("expected bring to be disabled when master switch is off")
+		}
+		if cfg.IsProviderEnabled(util.ShoppingListProviderTodoist) {
+			t.Error("expected todoist to be disabled when master switch is off")
+		}
+	})
+
+	t.Run("individual provider toggles gate each provider", func(t *testing.T) {
+		cfg := ShoppingListSyncConfiguration{
+			Enabled:        true,
+			BringEnabled:   false,
+			TodoistEnabled: true,
+		}
+		if cfg.IsProviderEnabled(util.ShoppingListProviderBring) {
+			t.Error("expected bring to be disabled")
+		}
+		if !cfg.IsProviderEnabled(util.ShoppingListProviderTodoist) {
+			t.Error("expected todoist to be enabled")
+		}
+		if !cfg.IsProviderEnabled(util.ShoppingListProviderNoop) {
+			t.Error("expected noop to be enabled when master switch is on")
+		}
+		if cfg.IsProviderEnabled("unknown") {
+			t.Error("expected unknown provider to be disabled")
+		}
+	})
+}
+
+func TestValidateOfflineSyncConfiguration(t *testing.T) {
+	t.Run("a missing cap falls back to the built-in default", func(t *testing.T) {
+		config := &ProviantConfiguration{}
+		config.ValidateOfflineSyncConfiguration()
+		if config.OfflineSync.MaxBatchBytes != util.ReceiptBulkMaxBodyBytes {
+			t.Errorf("MaxBatchBytes = %d, want %d", config.OfflineSync.MaxBatchBytes, util.ReceiptBulkMaxBodyBytes)
+		}
+	})
+
+	t.Run("a configured cap is kept", func(t *testing.T) {
+		config := &ProviantConfiguration{OfflineSync: OfflineSyncConfiguration{MaxBatchBytes: 1024}}
+		config.ValidateOfflineSyncConfiguration()
+		if config.OfflineSync.MaxBatchBytes != 1024 {
+			t.Errorf("MaxBatchBytes = %d, want 1024", config.OfflineSync.MaxBatchBytes)
+		}
+	})
 }

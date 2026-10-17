@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/templates"
-	"codeberg.org/isotop7/proviant/testutil"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/models/configuration/static"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/templates"
+	"github.com/Isotop7/proviant/testutil"
+	repomocks "github.com/Isotop7/proviant/testutil/mocks"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -308,28 +308,6 @@ func TestProductsScanReceiptHandler(t *testing.T) {
 		cfg.OCR.Receipt.Model = "vision-model"
 		w := env.run(9999, "/web/products/scan-receipt", cfg, env.frontend.ProductsScanReceipt)
 		requireStatus(t, w, http.StatusInternalServerError)
-	})
-}
-
-func TestProductsViewHandler(t *testing.T) {
-	env := newHandlerEnv(t)
-
-	t.Run("invalid id renders error page", func(t *testing.T) {
-		w := env.runWithParams(1, nil, gin.Params{{Key: "id", Value: "abc"}}, env.frontend.ProductsView)
-		requireStatus(t, w, http.StatusBadRequest)
-	})
-
-	t.Run("missing product renders error page", func(t *testing.T) {
-		w := env.runWithParams(1, nil, gin.Params{{Key: "id", Value: "123"}}, env.frontend.ProductsView)
-		requireStatus(t, w, http.StatusNotFound)
-	})
-
-	t.Run("renders product page", func(t *testing.T) {
-		household, user := seedHouseholdUser(t, env.db)
-		product := testutil.CreateTestProduct(env.db, household.ID, user.ID)
-		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsView)
-		requireStatus(t, w, http.StatusOK)
-		requireContains(t, w, "Test Product")
 	})
 }
 

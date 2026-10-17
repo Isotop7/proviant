@@ -4,8 +4,8 @@ import (
 	"net/mail"
 	"time"
 
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/database"
 
 	"gorm.io/gorm"
 )
@@ -64,6 +64,7 @@ type User struct {
 	HouseholdID             uint       `gorm:"index"`
 	Household               database.Household
 	Role                    string                  `gorm:"default:'member'" json:"role"`
+	Language                string                  `gorm:"default:''" json:"language"`
 	NotificationPreferences NotificationPreferences `gorm:"embedded"`
 	ReceiptScanPreferences  ReceiptScanPreferences  `gorm:"embedded;embeddedPrefix:receipt_scan_" json:"-"`
 	FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`
