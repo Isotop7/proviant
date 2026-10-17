@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/authentication"
 	"gorm.io/gorm"
 )
 

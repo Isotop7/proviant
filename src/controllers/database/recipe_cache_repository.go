@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/models/database"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

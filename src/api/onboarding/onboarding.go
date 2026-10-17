@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"strings"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers/database"
-	apperrors "codeberg.org/isotop7/proviant/errors"
-	modelsAPI "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers/database"
+	apperrors "github.com/Isotop7/proviant/errors"
+	modelsAPI "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/util"
 
-	"codeberg.org/isotop7/proviant/models/configuration/static"
+	"github.com/Isotop7/proviant/models/configuration/static"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"

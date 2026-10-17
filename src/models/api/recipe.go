@@ -1,7 +1,7 @@
 package api
 
 import (
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	dbModel "github.com/Isotop7/proviant/models/database"
 )
 
 // IngredientMatch represents a single ingredient with its matched status

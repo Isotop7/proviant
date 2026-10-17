@@ -191,6 +191,25 @@ const (
 	ReceiptItemMaxAmount           = 999
 	ReceiptItemMaxPrice            = 100000.0
 
+	// OfflineSyncIDMaxLength bounds both the client sync id that makes a queued
+	// create idempotent and the client mutation id that makes a queued amount
+	// delta idempotent. Both are indexed columns, and GORM maps an indexed Go
+	// string to varchar(191) on MySQL/MariaDB, so an unbounded value overflows
+	// the column at insert time and surfaces as a 500 instead of a 400. Clients
+	// emit a UUID, which is 36 characters.
+	OfflineSyncIDMaxLength = 191
+
+	// OfflineSyncIDEchoLength bounds the client sync id echoed back inside a
+	// failed sync result. The failure reason only has to identify the item for
+	// a human reading the report, so the full up-to-191-byte id is not needed.
+	OfflineSyncIDEchoLength = 64
+
+	// ProductMutationClaimTTL bounds how long an applied clientMutationId is
+	// remembered. It has to outlive the window in which the outbox can still
+	// replay that delta: a parked change stays retryable until the user clears
+	// it, so days rather than the five-attempt ceiling of a live drain.
+	ProductMutationClaimTTL = 30 * 24 * time.Hour
+
 	ShoppingListProviderBring              = "bring"
 	ShoppingListProviderTodoist            = "todoist"
 	ShoppingListProviderNoop               = "noop"

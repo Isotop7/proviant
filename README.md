@@ -60,7 +60,7 @@
 ## Quick Start
 
 ```bash
-curl -o docker-compose.yml https://codeberg.org/isotop7/proviant/raw/branch/main/docker-compose.sqlite.yaml
+curl -o docker-compose.yml https://raw.githubusercontent.com/Isotop7/proviant/main/docker-compose.sqlite.yaml
 echo "PROVIANT_JWT_SECRET=$(openssl rand -hex 32)" > .env
 docker compose up -d
 ```
@@ -98,7 +98,7 @@ Then open http://localhost:5114
 
 #### Executable
 
-1. Clone the repository: `git clone https://codeberg.org/isotop7/proviant.git`
+1. Clone the repository: `git clone https://github.com/Isotop7/proviant.git`
 2. Setup node_modules and assets (needs [Taskfile](https://taskfile.dev/)): `task init`
 3. Navigate to the project directory: `cd proviant/src`
 4. Build the application: `go build -o proviant`
@@ -616,7 +616,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Author
 
-- Codeberg: [@Isotop7](https://codeberg.org/isotop7)
+- GitHub: [@Isotop7](https://github.com/Isotop7)
 - LinkedIn: [Hendrik Röder](https://www.linkedin.com/in/hendrik-r%C3%B6der-9b8483198/)
 
 ---

@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/controllers"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/controllers"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/util"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/rs/zerolog"

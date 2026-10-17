@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/controllers/database"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/services"
-	"codeberg.org/isotop7/proviant/testutil"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+	"github.com/Isotop7/proviant/controllers/database"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/services"
+	"github.com/Isotop7/proviant/testutil"
+	repomocks "github.com/Isotop7/proviant/testutil/mocks"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"

@@ -7,12 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/api"
-	proviantErrors "codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/testutil"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	proviantErrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/testutil"
+	repomocks "github.com/Isotop7/proviant/testutil/mocks"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"

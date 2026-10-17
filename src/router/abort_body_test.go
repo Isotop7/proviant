@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/api"
-	apperrors "codeberg.org/isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/api"
+	apperrors "github.com/Isotop7/proviant/errors"
 
 	"github.com/gin-gonic/gin"
 )

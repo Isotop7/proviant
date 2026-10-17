@@ -3,12 +3,12 @@ package mocks
 import (
 	"time"
 
-	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/authentication"
+	dbModel "github.com/Isotop7/proviant/models/database"
 
 	"gorm.io/gorm"
 )
@@ -27,6 +27,19 @@ type MockProductRepository struct {
 	IntResult     int
 	MapResult     map[string]int
 	Err           error
+
+	// SyncIDProduct is what GetProductBySyncID resolves to; nil means the sync
+	// id is unknown, which is the case every create path hits first.
+	SyncIDProduct *dbModel.Product
+	// SyncIDLookups counts GetProductBySyncID calls, so a test can assert a
+	// path spent the lookup only when a lost race could explain it.
+	SyncIDLookups int
+	// CreateErr overrides Err for CreateProduct only, so a test can make the
+	// sync id lookup miss while the insert fails.
+	CreateErr error
+	// MutationDeltas records the clientMutationID of every UpdateProductAmount
+	// call, so a test can assert the handler forwarded the idempotency token.
+	MutationDeltas []*string
 
 	// ExpiryCounts overrides the pair GetActiveExpiryCounts returns; nil
 	// derives them from Products via the same rule the real repository uses,
@@ -82,7 +95,23 @@ func (m *MockProductRepository) SearchProductProjections(queryParam database.Sea
 	return m.Products, m.Err
 }
 func (m *MockProductRepository) CreateProduct(userID uint, product *dbModel.Product) error {
+	if m.CreateErr != nil {
+		return m.CreateErr
+	}
 	return m.Err
+}
+func (m *MockProductRepository) GetProductBySyncID(userID uint, clientSyncID string) (dbModel.Product, error) {
+	m.SyncIDLookups++
+	if m.Err != nil {
+		return dbModel.Product{}, m.Err
+	}
+	// A miss is the overwhelmingly common case, so it is the default. Returning
+	// a zero-valued product with a nil error would make every handler test that
+	// carries a clientSyncId report an idempotent replay of product 0.
+	if m.SyncIDProduct == nil {
+		return dbModel.Product{}, gorm.ErrRecordNotFound
+	}
+	return *m.SyncIDProduct, nil
 }
 func (m *MockProductRepository) CreateProductsBulk(userID uint, rows []database.ImportedProduct) ([]string, error) {
 	if m.Err != nil {
@@ -93,8 +122,9 @@ func (m *MockProductRepository) CreateProductsBulk(userID uint, rows []database.
 func (m *MockProductRepository) UpdateProduct(productID uint, userID uint, product *dbModel.ProductDTOPatch) error {
 	return m.Err
 }
-func (m *MockProductRepository) UpdateProductAmount(productID uint, userID uint, delta int) (bool, error) {
-	return m.BoolResult, m.Err
+func (m *MockProductRepository) UpdateProductAmount(productID uint, userID uint, delta int, mutationID *string) (bool, bool, error) {
+	m.MutationDeltas = append(m.MutationDeltas, mutationID)
+	return m.BoolResult, true, m.Err
 }
 func (m *MockProductRepository) DeleteProduct(productID uint, userID uint, archiveOnly bool) error {
 	return m.Err

@@ -153,3 +153,10 @@ backup:
 # request body, so restore gets its own cap.
 restore:
   maxUploadSizeMB: 50
+
+# Queued offline sync. Bounds one POST /api/v1/products/sync-offline
+# request body; the outbox client reads this value from the page and
+# splits its backlog at it. Leave unset to keep the built-in default
+# (100 items x 4 KiB + headroom).
+# offlineSync:
+#   maxBatchBytes: 413696

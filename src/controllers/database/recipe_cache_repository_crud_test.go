@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
 )
 
 func TestRecipeCacheRepository_HasPopulatedCache(t *testing.T) {

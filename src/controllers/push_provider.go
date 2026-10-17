@@ -6,8 +6,8 @@ import (
 	"math"
 	"time"
 
-	"codeberg.org/isotop7/proviant/i18n"
-	"codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/i18n"
+	"github.com/Isotop7/proviant/models/database"
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/rs/zerolog"
 )

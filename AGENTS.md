@@ -49,7 +49,7 @@ Rules that must not regress:
 ## Code Style Guidelines
 
 ### Imports
-- Group: stdlib → internal (`codeberg.org/…`) → external.
+- Group: stdlib → internal (`github.com/Isotop7/proviant/…`) → external.
 - Side-effect imports use `_` and a one-line why.
 
 ### Formatting

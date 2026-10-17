@@ -91,6 +91,13 @@ definitions:
         type: string
       status:
         type: string
+      terminal:
+        description: |-
+          Terminal marks a failed item whose reason is a property of the draft
+          itself, so resubmitting it unchanged fails identically. A caller that
+          retries asynchronously should surface such an item to the user instead of
+          spending its retry budget on it.
+        type: boolean
     type: object
   api.BulkProductDraft:
     properties:
@@ -606,6 +613,63 @@ definitions:
       total:
         type: integer
     type: object
+  api.OfflineSyncDraft:
+    properties:
+      amount:
+        type: integer
+      barcode:
+        type: string
+      categories:
+        type: string
+      clientSyncId:
+        type: string
+      expireAt:
+        type: string
+      isPrivate:
+        type: boolean
+      priceOverride:
+        type: number
+      productName:
+        type: string
+      storageLocationId:
+        type: integer
+      unit:
+        type: string
+    type: object
+  api.OfflineSyncRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/api.OfflineSyncDraft'
+        type: array
+    type: object
+  api.OfflineSyncResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/api.OfflineSyncResult'
+        type: array
+    type: object
+  api.OfflineSyncResult:
+    properties:
+      clientSyncId:
+        type: string
+      index:
+        type: integer
+      productId:
+        type: integer
+      reason:
+        type: string
+      status:
+        type: string
+      terminal:
+        description: |-
+          Terminal marks a failed item no resubmission can fix — a blank or
+          over-long client sync id, or one held by a private product. The outbox
+          parks such an item for the user instead of replaying it into the same
+          failure until the retry budget runs out.
+        type: boolean
+    type: object
   api.OnboardingStateResponse:
     properties:
       householdStepDone:
@@ -636,6 +700,8 @@ definitions:
     type: object
   api.ProductAmountDTO:
     properties:
+      clientMutationId:
+        type: string
       delta:
         minimum: -1000
         type: integer
@@ -1253,6 +1319,8 @@ definitions:
         type: string
       categories:
         type: string
+      clientSyncId:
+        type: string
       co2KgPerKg:
         type: number
       countries:
@@ -1542,12 +1610,12 @@ info:
   contact:
     email: hendrik@hr94.de
     name: Isotop7
-    url: https://codeberg.org/isotop7/proviant
+    url: https://github.com/Isotop7/proviant
   description: proviant is a simple and intuitive application to track your bought
     products and their expiration date to prevent waste of food.
   license:
     name: MIT
-    url: https://codeberg.org/isotop7/proviant/-/blob/main/LICENSE
+    url: https://github.com/Isotop7/proviant/blob/main/LICENSE
   title: proviant
   version: 0.2.0
 paths:
@@ -3190,7 +3258,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a new product of a user
+      description: 'Creates a new product of a user. When the body carries a clientSyncId
+        that already exists in the household, the existing product is returned with
+        200 instead of creating a duplicate. A clientSyncId held by another member''s
+        private product is answered with 409: the id is taken, but the row is not
+        the caller''s to read.'
       parameters:
       - description: Product
         in: body
@@ -3201,12 +3273,20 @@ paths:
       produces:
       - application/json
       responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ProductResponse'
         "201":
           description: Created
           schema:
             $ref: '#/definitions/api.ProductResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: Conflict
           schema:
             $ref: '#/definitions/api.APIResponse'
         "500":
@@ -4274,6 +4354,37 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Return product summary
+      tags:
+      - product
+  /api/v1/products/sync-offline:
+    post:
+      consumes:
+      - application/json
+      description: Creates queued drafts. Replayed clientSyncId values return the
+        existing product.
+      parameters:
+      - description: Queued drafts
+        in: body
+        name: items
+        required: true
+        schema:
+          $ref: '#/definitions/api.OfflineSyncRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.OfflineSyncResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Sync offline product entries
       tags:
       - product
   /api/v1/recipes:

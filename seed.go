@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/models/authentication"
+	dbModel "github.com/Isotop7/proviant/models/database"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"

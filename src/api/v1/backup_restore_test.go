@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
-	"codeberg.org/isotop7/proviant/util"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/util"
 )
 
 // TestRestoreFullJSONRoundTrip restores an exported document and verifies the

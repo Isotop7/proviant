@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/controllers/database"
-	apperrors "codeberg.org/isotop7/proviant/errors"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/controllers/database"
+	apperrors "github.com/Isotop7/proviant/errors"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/util"
 )
 
 // TestHouseholdIntegrationRepository verifies CRUD and upsert operations on household integrations.

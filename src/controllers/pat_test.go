@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	proviantErrors "codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/testutil"
+	proviantErrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/testutil"
 )
 
 func TestGeneratePAT(t *testing.T) {

@@ -10,12 +10,12 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/controllers"
-	"codeberg.org/isotop7/proviant/errors"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers"
+	"github.com/Isotop7/proviant/errors"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -117,7 +117,7 @@ func BulkCreateProducts(ctx *gin.Context, appCtx *AppContext) {
 	results := make([]apiModel.BulkItemResult, 0, len(req.Items))
 	createdProducts := make([]*dbModel.Product, 0, len(req.Items))
 	for i := range req.Items {
-		product, result := bulkCreateItem(appCtx, i, &req.Items[i], validLocationIDs)
+		product, result := bulkCreateItem(appCtx, i, &req.Items[i], validLocationIDs, "")
 		if result.Status == apiModel.BulkItemStatusCreated {
 			logger.Info().Msgf("Bulk create: item %d created product %d", i, *result.ProductID)
 			createdProducts = append(createdProducts, product)
@@ -204,16 +204,23 @@ type bulkActor struct {
 	userName       string
 }
 
+// terminalBulkItem is a failure that is a property of the submitted draft, so
+// the same draft fails the same way on every resubmission. A "database error"
+// is the counter-example and deliberately not built through this.
+func terminalBulkItem(index int, reason string) apiModel.BulkItemResult {
+	return apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: reason, Terminal: true}
+}
+
 // bulkCreateItem validates one draft and creates it. Validation failures and
 // DB errors are item-level outcomes, never request-level ones. The created
 // product is returned for the caller's side-effect worker; nil on failure.
-func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDraft, validLocationIDs map[uint]bool) (*dbModel.Product, apiModel.BulkItemResult) {
+func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDraft, validLocationIDs map[uint]bool, clientSyncID string) (*dbModel.Product, apiModel.BulkItemResult) {
 	// Overlong names are clamped, not rejected: the receipt scan path clamps
 	// names the same way and the other string fields are truncated, so a
 	// direct API client gets the same permissive-but-bounded treatment.
 	productName := truncateDraftField(strings.TrimSpace(draft.ProductName), util.ReceiptItemMaxNameLength)
 	if productName == "" {
-		return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: "product name is missing"}
+		return nil, terminalBulkItem(index, "product name is missing")
 	}
 	amount := draft.Amount
 	if amount < 1 {
@@ -230,7 +237,7 @@ func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDr
 			// Truncate before echoing: draft.ExpireAt is unvalidated client
 			// input and %q-escaping a ~100KB string would blow it up to
 			// ~600KB in the response body and Warn log.
-			return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: fmt.Sprintf("invalid expiry date %q", truncateDraftField(draft.ExpireAt, 64))}
+			return nil, terminalBulkItem(index, fmt.Sprintf("invalid expiry date %q", truncateDraftField(draft.ExpireAt, 64)))
 		}
 		expireAt = parsed
 	}
@@ -239,10 +246,16 @@ func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDr
 	// unbounded or negative price into the DB, where it would poison the
 	// savings calculations that sum PriceOverride * Amount.
 	if draft.PriceOverride != nil && (*draft.PriceOverride < 0 || *draft.PriceOverride > util.ReceiptItemMaxPrice) {
-		return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: fmt.Sprintf("invalid price %.2f (0 to %.0f allowed)", *draft.PriceOverride, util.ReceiptItemMaxPrice)}
+		return nil, terminalBulkItem(index, fmt.Sprintf("invalid price %.2f (0 to %.0f allowed)", *draft.PriceOverride, util.ReceiptItemMaxPrice))
 	}
 
+	syncIDPtr := (*string)(nil)
+	if strings.TrimSpace(clientSyncID) != "" {
+		v := strings.TrimSpace(clientSyncID)
+		syncIDPtr = &v
+	}
 	product := dbModel.Product{
+		ClientSyncID:  syncIDPtr,
 		ProductName:   productName,
 		Barcode:       truncateDraftField(strings.TrimSpace(draft.Barcode), util.CsvImportMaxBarcodeLength),
 		Amount:        amount,
@@ -254,14 +267,14 @@ func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDr
 	}
 	if draft.StorageLocationID != nil {
 		if !validLocationIDs[*draft.StorageLocationID] {
-			return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: "unknown storage location"}
+			return nil, terminalBulkItem(index, "unknown storage location")
 		}
 		product.StorageLocationID = draft.StorageLocationID
 	}
 
 	if err := appCtx.Repos.Products.CreateProduct(appCtx.UserID, &product); err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: "user not found"}
+			return nil, terminalBulkItem(index, "user not found")
 		}
 		appCtx.Logger.Error().Msgf("Bulk create: item %d create failed: %s", index, err)
 		return nil, apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: "database error"}

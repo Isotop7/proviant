@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/testutil"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

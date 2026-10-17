@@ -2,14 +2,15 @@ package database
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/authentication"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/util"
 
 	"gorm.io/gorm"
 )
@@ -238,27 +239,27 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 	}
 
 	t.Run("zero id is not implemented", func(t *testing.T) {
-		if _, err := repo.UpdateProductAmount(0, user.ID, 1); err != gorm.ErrNotImplemented {
+		if _, _, err := repo.UpdateProductAmount(0, user.ID, 1, nil); err != gorm.ErrNotImplemented {
 			t.Errorf("UpdateProductAmount(0) error = %v, want %v", err, gorm.ErrNotImplemented)
 		}
 	})
 
 	t.Run("unknown product errors", func(t *testing.T) {
-		if _, err := repo.UpdateProductAmount(9999, user.ID, 1); err == nil {
+		if _, _, err := repo.UpdateProductAmount(9999, user.ID, 1, nil); err == nil {
 			t.Error("UpdateProductAmount(9999) error = nil, want error")
 		}
 	})
 
 	t.Run("cross-household is rejected", func(t *testing.T) {
 		foreign := testutil.CreateTestProduct(db, otherHousehold.ID)
-		if _, err := repo.UpdateProductAmount(foreign.ID, user.ID, 1); err != errors.ErrMismatcherUserID {
+		if _, _, err := repo.UpdateProductAmount(foreign.ID, user.ID, 1, nil); err != errors.ErrMismatcherUserID {
 			t.Errorf("UpdateProductAmount() error = %v, want %v", err, errors.ErrMismatcherUserID)
 		}
 	})
 
 	t.Run("positive delta increases amount", func(t *testing.T) {
 		product := setup(t, 2)
-		deleted, err := repo.UpdateProductAmount(product.ID, user.ID, 3)
+		deleted, _, err := repo.UpdateProductAmount(product.ID, user.ID, 3, nil)
 		if err != nil {
 			t.Fatalf("UpdateProductAmount() error = %v", err)
 		}
@@ -276,7 +277,7 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 
 	t.Run("negative delta clamps at zero and hard-deletes", func(t *testing.T) {
 		product := setup(t, 2)
-		deleted, err := repo.UpdateProductAmount(product.ID, user.ID, -5)
+		deleted, _, err := repo.UpdateProductAmount(product.ID, user.ID, -5, nil)
 		if err != nil {
 			t.Fatalf("UpdateProductAmount() error = %v", err)
 		}
@@ -287,6 +288,309 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 		db.Unscoped().Model(&dbModel.Product{}).Where("id = ?", product.ID).Count(&count)
 		if count != 0 {
 			t.Error("zero-stock product was not hard-deleted")
+		}
+	})
+
+	// Both goroutines zero the row and both find it at zero, so exactly one
+	// DELETE lands. The loser's RowsAffected is 0, and the read-back it
+	// triggers is what keeps the loser reporting deleted=true — the product
+	// really is gone, and this delta helped zero it.
+	t.Run("concurrent decrements delete once and both report it", func(t *testing.T) {
+		product := setup(t, 2)
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		deletedCount := 0
+		start := make(chan struct{})
+		for i := 0; i < 2; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-start
+				deleted, _, err := repo.UpdateProductAmount(product.ID, user.ID, -2, nil)
+				if err != nil {
+					t.Errorf("UpdateProductAmount() error = %v", err)
+					return
+				}
+				if deleted {
+					mu.Lock()
+					deletedCount++
+					mu.Unlock()
+				}
+			}()
+		}
+		close(start)
+		wg.Wait()
+
+		if deletedCount != 2 {
+			t.Errorf("deleted reported %d times, want 2 — the losing DELETE must still report the row gone", deletedCount)
+		}
+		var count int64
+		db.Unscoped().Model(&dbModel.Product{}).Where("id = ?", product.ID).Count(&count)
+		if count != 0 {
+			t.Error("the zeroed product survived the delete")
+		}
+	})
+
+	t.Run("a replayed mutation id is a no-op", func(t *testing.T) {
+		product := setup(t, 2)
+		mutationID := "mutation-1"
+
+		if _, applied, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &mutationID); err != nil {
+			t.Fatalf("first UpdateProductAmount() error = %v", err)
+		} else if !applied {
+			t.Error("first UpdateProductAmount() applied = false, want true")
+		}
+		deleted, applied, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &mutationID)
+		if err != nil {
+			t.Fatalf("replayed UpdateProductAmount() error = %v", err)
+		}
+		if deleted {
+			t.Error("replayed UpdateProductAmount() deleted = true, want false")
+		}
+		if applied {
+			t.Error("replayed UpdateProductAmount() applied = true, want false — a replay the caller cannot tell apart repeats its side effects")
+		}
+
+		var updated dbModel.Product
+		if err := db.First(&updated, product.ID).Error; err != nil {
+			t.Fatalf("reload product: %v", err)
+		}
+		if updated.Amount != 5 {
+			t.Errorf("Amount = %d, want 5 — the replay applied a second time", updated.Amount)
+		}
+	})
+
+	t.Run("a different mutation id applies again", func(t *testing.T) {
+		product := setup(t, 2)
+		first := "mutation-1"
+		second := "mutation-2"
+
+		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &first); err != nil {
+			t.Fatalf("first UpdateProductAmount() error = %v", err)
+		}
+		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &second); err != nil {
+			t.Fatalf("second UpdateProductAmount() error = %v", err)
+		}
+
+		var updated dbModel.Product
+		if err := db.First(&updated, product.ID).Error; err != nil {
+			t.Fatalf("reload product: %v", err)
+		}
+		if updated.Amount != 8 {
+			t.Errorf("Amount = %d, want 8", updated.Amount)
+		}
+	})
+
+	// The bug this pins: one stored token per product only refuses a replay
+	// of the most recent mutation, so M1 → M2 → replay M1 applied M1 a
+	// second time. Two drains of one outbox interleave exactly that way
+	// whenever one of them loses a request.
+	t.Run("a replay of an older mutation id applies nothing", func(t *testing.T) {
+		product := setup(t, 2)
+		first := "mutation-1"
+		second := "mutation-2"
+
+		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &first); err != nil {
+			t.Fatalf("first UpdateProductAmount() error = %v", err)
+		}
+		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &second); err != nil {
+			t.Fatalf("second UpdateProductAmount() error = %v", err)
+		}
+
+		deleted, applied, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &first)
+		if err != nil {
+			t.Fatalf("replayed UpdateProductAmount() error = %v", err)
+		}
+		if deleted || applied {
+			t.Errorf("UpdateProductAmount() = (%v, %v), want (false, false)", deleted, applied)
+		}
+
+		var updated dbModel.Product
+		if err := db.First(&updated, product.ID).Error; err != nil {
+			t.Fatalf("reload product: %v", err)
+		}
+		if updated.Amount != 8 {
+			t.Errorf("Amount = %d, want 8 — the superseded replay applied a second time", updated.Amount)
+		}
+	})
+
+	// A unique index on mutation_id alone would make the second call look
+	// like a replay of the first and silently drop a real delta.
+	t.Run("the same mutation id on two products is two claims", func(t *testing.T) {
+		first := setup(t, 2)
+		second := setup(t, 2)
+		shared := "mutation-shared"
+
+		if _, applied, err := repo.UpdateProductAmount(first.ID, user.ID, 3, &shared); err != nil || !applied {
+			t.Fatalf("UpdateProductAmount() = (%v, %v), want applied", applied, err)
+		}
+		if _, applied, err := repo.UpdateProductAmount(second.ID, user.ID, 3, &shared); err != nil || !applied {
+			t.Fatalf("UpdateProductAmount() on the second product = (%v, %v), want applied", applied, err)
+		}
+	})
+
+	t.Run("an empty mutation id is not an idempotency token", func(t *testing.T) {
+		product := setup(t, 2)
+		empty := ""
+
+		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 1, &empty); err != nil {
+			t.Fatalf("first UpdateProductAmount() error = %v", err)
+		}
+		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 1, &empty); err != nil {
+			t.Fatalf("second UpdateProductAmount() error = %v", err)
+		}
+
+		var updated dbModel.Product
+		if err := db.First(&updated, product.ID).Error; err != nil {
+			t.Fatalf("reload product: %v", err)
+		}
+		if updated.Amount != 4 {
+			t.Errorf("Amount = %d, want 4 — a stored empty token would have made the second call a replay", updated.Amount)
+		}
+		var claims int64
+		db.Model(&dbModel.ProductMutationClaim{}).Where("product_id = ?", product.ID).Count(&claims)
+		if claims != 0 {
+			t.Errorf("claims = %d, want 0 — an empty token must not be claimable, or a blank id dedupes every later delta", claims)
+		}
+	})
+
+	// Both goroutines can read LastOfflineMutationID before either writes:
+	// only the guard inside the UPDATE itself makes that interleaving safe.
+	t.Run("a replay racing the original applies once", func(t *testing.T) {
+		product := setup(t, 0)
+		mutationID := "mutation-race"
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		appliedCount := 0
+		for i := 0; i < 2; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-start
+				_, applied, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &mutationID)
+				if err != nil {
+					t.Errorf("UpdateProductAmount() error = %v", err)
+				}
+				if applied {
+					mu.Lock()
+					appliedCount++
+					mu.Unlock()
+				}
+			}()
+		}
+		close(start)
+		wg.Wait()
+
+		if appliedCount != 1 {
+			t.Errorf("applied count = %d, want 1 — the loser must report the replay", appliedCount)
+		}
+
+		var updated dbModel.Product
+		if err := db.First(&updated, product.ID).Error; err != nil {
+			t.Fatalf("reload product: %v", err)
+		}
+		if updated.Amount != 3 {
+			t.Errorf("Amount = %d, want 3 — the racing replay applied a second time", updated.Amount)
+		}
+	})
+
+	// The amount moves in a single statement precisely so this holds: a
+	// read-then-Save loses whichever write reads the stale amount.
+	t.Run("concurrent deltas on one product all land", func(t *testing.T) {
+		product := setup(t, 0)
+		var wg sync.WaitGroup
+		for i := 0; i < 8; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 1, nil); err != nil {
+					t.Errorf("UpdateProductAmount() error = %v", err)
+				}
+			}()
+		}
+		wg.Wait()
+
+		var updated dbModel.Product
+		if err := db.First(&updated, product.ID).Error; err != nil {
+			t.Fatalf("reload product: %v", err)
+		}
+		if updated.Amount != 8 {
+			t.Errorf("Amount = %d, want 8", updated.Amount)
+		}
+	})
+}
+
+// TestProductRepository_GetProductBySyncID pins the scoping the offline sync
+// relies on: a client sync id identifies a product within one household, so two
+// households may hold the same id and a foreign household's id never resolves.
+func TestProductRepository_GetProductBySyncID(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewProductRepository(db)
+
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+	otherHousehold := testutil.CreateTestHousehold(db, 0)
+	otherUser := testutil.CreateTestUser(db, otherHousehold.ID)
+
+	syncID := "shared-sync-id"
+	product := testutil.CreateTestProduct(db, household.ID, user.ID)
+	product.ClientSyncID = &syncID
+	if err := db.Save(product).Error; err != nil {
+		t.Fatalf("save product: %v", err)
+	}
+
+	t.Run("an empty id never resolves", func(t *testing.T) {
+		if _, err := repo.GetProductBySyncID(user.ID, ""); err != gorm.ErrRecordNotFound {
+			t.Errorf("GetProductBySyncID(\"\") error = %v, want %v", err, gorm.ErrRecordNotFound)
+		}
+	})
+
+	t.Run("an unknown id is not found", func(t *testing.T) {
+		if _, err := repo.GetProductBySyncID(user.ID, "nope"); err != gorm.ErrRecordNotFound {
+			t.Errorf("GetProductBySyncID() error = %v, want %v", err, gorm.ErrRecordNotFound)
+		}
+	})
+
+	t.Run("the owning household resolves it", func(t *testing.T) {
+		found, err := repo.GetProductBySyncID(user.ID, syncID)
+		if err != nil {
+			t.Fatalf("GetProductBySyncID() error = %v", err)
+		}
+		if found.ID != product.ID {
+			t.Errorf("GetProductBySyncID() ID = %d, want %d", found.ID, product.ID)
+		}
+	})
+
+	t.Run("another household with the same id is not found", func(t *testing.T) {
+		if _, err := repo.GetProductBySyncID(otherUser.ID, syncID); err != gorm.ErrRecordNotFound {
+			t.Errorf("GetProductBySyncID() error = %v, want %v", err, gorm.ErrRecordNotFound)
+		}
+	})
+
+	// A unique index on client_sync_id alone made this insert fail, so a
+	// client that derived its sync id from anything but a random UUID hit a
+	// cross-tenant constraint violation.
+	t.Run("two households may hold the same sync id", func(t *testing.T) {
+		foreign := testutil.CreateTestProduct(db, otherHousehold.ID, otherUser.ID)
+		foreign.ClientSyncID = &syncID
+		if err := db.Save(foreign).Error; err != nil {
+			t.Errorf("second household could not reuse the sync id: %v", err)
+		}
+	})
+
+	// The unique index spans soft-deleted rows: a miss here would send a
+	// replay into an insert that violates it instead of reporting the row.
+	t.Run("an archived product still resolves", func(t *testing.T) {
+		if err := db.Delete(product).Error; err != nil {
+			t.Fatalf("archive product: %v", err)
+		}
+		found, err := repo.GetProductBySyncID(user.ID, syncID)
+		if err != nil {
+			t.Fatalf("GetProductBySyncID() error = %v", err)
+		}
+		if found.ID != product.ID {
+			t.Errorf("GetProductBySyncID() ID = %d, want %d", found.ID, product.ID)
 		}
 	})
 }
@@ -526,6 +830,7 @@ func TestProductRepository_CreateProductsBulkEdges(t *testing.T) {
 		}
 	})
 
+	// The rejection is whole: no products and no locations were written.
 	t.Run("too many distinct new locations is rejected whole", func(t *testing.T) {
 		rows := make([]ImportedProduct, 0, util.CsvImportMaxNewLocations+1)
 		for i := 0; i < util.CsvImportMaxNewLocations+1; i++ {
@@ -539,7 +844,6 @@ func TestProductRepository_CreateProductsBulkEdges(t *testing.T) {
 			t.Errorf("CreateProductsBulk() error = %v, want %v", err, errors.ErrImportTooManyLocations)
 		}
 
-		// The rejection is whole: no products and no locations were written.
 		var productCount, locationCount int64
 		db.Model(&dbModel.Product{}).Where(util.QueryHouseholdId, household.ID).Count(&productCount)
 		db.Model(&dbModel.StorageLocation{}).Where(util.QueryHouseholdId, household.ID).Count(&locationCount)

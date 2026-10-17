@@ -1,11 +1,12 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v134';
+const CACHE_NAME = 'proviant-v136';
 
 const PRECACHE_URLS = [
   '/manifest.json',
   '/assets/css/main.css',
   '/assets/js/proviant.js',
+  '/assets/js/offlineQueue.js',
   '/assets/js/theme.js',
   '/assets/js/bootstrap.bundle.min.js',
   '/assets/js/chart.umd.min.js',

@@ -3,9 +3,9 @@ package database
 import (
 	"testing"
 
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
 )
 
 func TestResolveSortClause(t *testing.T) {

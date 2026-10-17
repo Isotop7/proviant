@@ -17,6 +17,18 @@ const pe = {
 // DOMContentLoaded handler below. A frozen object makes those assignments
 // silent no-ops in sloppy mode and breaks bulk selection entirely.
 
+// A delta the offline outbox could not store is the user's change disappearing
+// with nothing to retry, so it has to reach them — a console line in a failed
+// enqueue is invisible on a phone. Every other failure keeps its existing
+// console-only handling: the delta either reached the server or is queued.
+function reportAmountChangeFailed(response) {
+    if (response.queued === false) {
+        proviant.showFeedback('error', response.message);
+        return;
+    }
+    console.error(response.message);
+}
+
 function handleCardClickEffect(cardId) {
     const card = document.getElementById(cardId);
     if (card) {
@@ -63,7 +75,7 @@ document.addEventListener("click", function (event) {
                     setTimeout(() => amountEl.classList.remove('amount-updated'), 800);
                 }
             } else {
-                console.error(response.message);
+                reportAmountChangeFailed(response);
             }
         });
         return;
@@ -90,7 +102,7 @@ document.addEventListener("click", function (event) {
                     }
                 }
             } else {
-                console.error(response.message);
+                reportAmountChangeFailed(response);
             }
         });
         return;
@@ -763,7 +775,7 @@ function changeQty(id, delta) {
                 }
             }
         } else {
-            console.error(response.message);
+            reportAmountChangeFailed(response);
         }
     });
 }

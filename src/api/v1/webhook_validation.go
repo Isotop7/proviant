@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/errors"
 )
 
 func validateWebhookURL(rawURL string) error {

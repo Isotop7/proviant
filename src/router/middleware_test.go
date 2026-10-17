@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/models/configuration/static"
+	"github.com/Isotop7/proviant/util"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

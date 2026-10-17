@@ -66,6 +66,8 @@
   "products.notificationLeadHelp": "Tage vor Ablauf, zu denen benachrichtigt wird. Leer lassen, um den Haushaltsstandard zu verwenden (%d Tage).",
   "products.notificationLeadTime": "Benachrichtigungsvorlauf",
   "products.ocrFallbackHelp": "Das Datum konnte nicht zuverlässig erkannt werden. Bitte prüfen Sie den obigen Text und passen Sie das Datum manuell an.",
+  "products.offlineFallbackName": "Offline-Produkt %s",
+  "products.offlineFallbackNameNoBarcode": "Offline-Produkt",
   "products.onlyVisibleToYou": "Nur für Sie sichtbar",
   "products.openedAtHelp": "Wann das Produkt geöffnet wurde. Wird zur Berechnung eines weiteren Ablaufdatums verwendet.",
   "products.pagination.label": "Seiten der Produktliste",

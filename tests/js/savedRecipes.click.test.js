@@ -23,6 +23,14 @@ const PAGE_MARKUP = `
 <div id="savedRecipesContainer"></div>
 `;
 
+// An entry without an id would build an option that parseInt to NaN at save and
+// silently drop the link the user just picked.
+const PRODUCTS = [
+  { id: 3, productName: "Milk" },
+  { id: null, productName: "Unresolved product" },
+  { id: 7, productName: "Bread" },
+];
+
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("savedRecipes.js click delegation", () => {
@@ -32,7 +40,7 @@ describe("savedRecipes.js click delegation", () => {
       prelude: `document.body.innerHTML = ${JSON.stringify(PAGE_MARKUP)};`,
       globals: {
         proviant: {
-          getProducts: vi.fn().mockResolvedValue({ code: 200, products: [] }),
+          getProducts: vi.fn().mockResolvedValue({ code: 200, products: PRODUCTS }),
           getRecipes: vi.fn().mockResolvedValue({ code: 200, recipes: [] }),
           getRecipe: vi.fn(),
           createRecipe: vi.fn(),
@@ -58,6 +66,8 @@ describe("savedRecipes.js click delegation", () => {
     const editor = doc.getElementById("recipeEditor");
     expect(editor.classList.contains("d-none")).toBe(false);
     expect(doc.querySelectorAll("[data-ingredient-row]").length).toBe(1);
+    const productValues = [...doc.querySelectorAll("[data-ingredient-product] option")].map((option) => option.value);
+    expect(productValues).toEqual(["", "3", "7"]);
 
     doc.getElementById("btnAddIngredient").dispatchEvent(new realm.MouseEvent("click", { bubbles: true }));
     expect(doc.querySelectorAll("[data-ingredient-row]").length).toBe(2);

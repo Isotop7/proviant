@@ -17,10 +17,11 @@ import (
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 
-	"codeberg.org/isotop7/proviant/i18n"
-	"codeberg.org/isotop7/proviant/models/configuration/static"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/i18n"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/models/configuration/static"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 )
 
 //go:embed all:web "notification"
@@ -423,6 +424,16 @@ func injectI18nData(ctx *gin.Context, data map[string]any) string {
 	lang := requestLanguage(ctx, data)
 	data["Lang"] = lang
 	data["I18nJSON"] = template.JS(i18n.JSON(lang))
+	// The outbox client splits its batches at the configured
+	// sync body cap, so the value the endpoint enforces
+	// reaches it with every page.
+	maxSyncBodyBytes := util.ReceiptBulkMaxBodyBytes
+	if cfgVal, ok := ctx.Get(util.ContextKeyProviantConfig); ok {
+		if proviantConfig, isConfig := cfgVal.(*configuration.ProviantConfiguration); isConfig && proviantConfig != nil && proviantConfig.OfflineSync.MaxBatchBytes > 0 {
+			maxSyncBodyBytes = proviantConfig.OfflineSync.MaxBatchBytes
+		}
+	}
+	data["OfflineSyncMaxBodyBytes"] = maxSyncBodyBytes
 	if title, ok := data["Title"].(string); ok && title != "" {
 		key := "pageTitle." + strings.ReplaceAll(title, " ", "")
 		if i18n.Has(lang, key) {

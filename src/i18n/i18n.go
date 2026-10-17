@@ -26,8 +26,8 @@ const (
 )
 
 var (
-	loadOnce sync.Once
-	catalogs map[string]map[string]string
+	loadOnce  sync.Once
+	catalogs  map[string]map[string]string
 	languages []string
 	loadErr   error
 )
@@ -214,8 +214,8 @@ func JSON(lang string) string {
 // FuncMap returns template functions "t", "tn" and "lang" bound to lang.
 func FuncMap(lang string) template.FuncMap {
 	return template.FuncMap{
-		"t":    func(key string, args ...any) string { return T(lang, key, args...) },
-		"tn":   func(key string, n int, args ...any) string { return Tn(lang, key, n, args...) },
+		"t":     func(key string, args ...any) string { return T(lang, key, args...) },
+		"tn":    func(key string, n int, args ...any) string { return Tn(lang, key, n, args...) },
 		"tlang": func() string { return lang },
 	}
 }

@@ -11,12 +11,12 @@ const docTemplate = `{
         "title": "{{.Title}}",
         "contact": {
             "name": "Isotop7",
-            "url": "https://codeberg.org/isotop7/proviant",
+            "url": "https://github.com/Isotop7/proviant",
             "email": "hendrik@hr94.de"
         },
         "license": {
             "name": "MIT",
-            "url": "https://codeberg.org/isotop7/proviant/-/blob/main/LICENSE"
+            "url": "https://github.com/Isotop7/proviant/blob/main/LICENSE"
         },
         "version": "{{.Version}}"
     },
@@ -2499,7 +2499,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Creates a new product of a user",
+                "description": "Creates a new product of a user. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2522,6 +2522,12 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductResponse"
+                        }
+                    },
                     "201": {
                         "description": "Created",
                         "schema": {
@@ -2530,6 +2536,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -3498,6 +3510,52 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.ProductSummaryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/sync-offline": {
+            "post": {
+                "description": "Creates queued drafts. Replayed clientSyncId values return the existing product.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Sync offline product entries",
+                "parameters": [
+                    {
+                        "description": "Queued drafts",
+                        "name": "items",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.OfflineSyncRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.OfflineSyncResponse"
                         }
                     },
                     "400": {
@@ -6741,6 +6799,10 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                },
+                "terminal": {
+                    "description": "Terminal marks a failed item whose reason is a property of the draft\nitself, so resubmitting it unchanged fails identically. A caller that\nretries asynchronously should surface such an item to the user instead of\nspending its retry budget on it.",
+                    "type": "boolean"
                 }
             }
         },
@@ -7523,6 +7585,87 @@ const docTemplate = `{
                 }
             }
         },
+        "api.OfflineSyncDraft": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "barcode": {
+                    "type": "string"
+                },
+                "categories": {
+                    "type": "string"
+                },
+                "clientSyncId": {
+                    "type": "string"
+                },
+                "expireAt": {
+                    "type": "string"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "priceOverride": {
+                    "type": "number"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.OfflineSyncRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.OfflineSyncDraft"
+                    }
+                }
+            }
+        },
+        "api.OfflineSyncResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.OfflineSyncResult"
+                    }
+                }
+            }
+        },
+        "api.OfflineSyncResult": {
+            "type": "object",
+            "properties": {
+                "clientSyncId": {
+                    "type": "string"
+                },
+                "index": {
+                    "type": "integer"
+                },
+                "productId": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "terminal": {
+                    "description": "Terminal marks a failed item no resubmission can fix — a blank or\nover-long client sync id, or one held by a private product. The outbox\nparks such an item for the user instead of replaying it into the same\nfailure until the retry budget runs out.",
+                    "type": "boolean"
+                }
+            }
+        },
         "api.OnboardingStateResponse": {
             "type": "object",
             "properties": {
@@ -7572,6 +7715,9 @@ const docTemplate = `{
                 "delta"
             ],
             "properties": {
+                "clientMutationId": {
+                    "type": "string"
+                },
                 "delta": {
                     "type": "integer",
                     "minimum": -1000
@@ -8497,6 +8643,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "categories": {
+                    "type": "string"
+                },
+                "clientSyncId": {
                     "type": "string"
                 },
                 "co2KgPerKg": {

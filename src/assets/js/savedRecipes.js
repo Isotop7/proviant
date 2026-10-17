@@ -103,7 +103,9 @@ async function loadProductOptions() {
     if (productOptions !== null) return productOptions;
     try {
         const res = await proviant.getProducts();
-        productOptions = res.code === 200 && Array.isArray(res.products) ? res.products : [];
+        // An entry without an id would build an option that parseInt to NaN at save
+        // and silently drop the link the user just picked.
+        productOptions = res.code === 200 && Array.isArray(res.products) ? res.products.filter((product) => product && product.id) : [];
     } catch (_error) {
         productOptions = [];
     }

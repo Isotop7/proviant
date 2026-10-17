@@ -3,8 +3,8 @@ package database
 import (
 	"time"
 
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"gorm.io/gorm"
 )

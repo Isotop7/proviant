@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/api"
-	dbRepo "codeberg.org/isotop7/proviant/controllers/database"
-	apperrors "codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/api"
+	dbRepo "github.com/Isotop7/proviant/controllers/database"
+	apperrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"

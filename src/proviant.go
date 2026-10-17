@@ -10,17 +10,17 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/controllers"
-	dbController "codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/logging"
-	"codeberg.org/isotop7/proviant/migrations"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/router"
-	"codeberg.org/isotop7/proviant/templates"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/controllers"
+	dbController "github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/logging"
+	"github.com/Isotop7/proviant/migrations"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/router"
+	"github.com/Isotop7/proviant/templates"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
@@ -168,6 +168,9 @@ func loadConfig(configDir string) *configuration.ProviantConfiguration {
 
 	// Household backup restore defaults
 	viper.SetDefault("restore.maxUploadSizeMB", util.DefaultRestoreMaxUploadSizeMB)
+
+	// Queued offline sync defaults
+	viper.SetDefault("offlineSync.maxBatchBytes", util.ReceiptBulkMaxBodyBytes)
 
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
@@ -326,6 +329,7 @@ func main() {
 		panic(err)
 	}
 	proviantConfiguration.ValidateRestoreConfiguration()
+	proviantConfiguration.ValidateOfflineSyncConfiguration()
 
 	// Setup database connection handle
 	dbHandle, setupErr := setupDatabase(logger, &proviantConfiguration.Database)
@@ -344,6 +348,7 @@ func main() {
 		&authentication.PersonalAccessToken{},
 		&authentication.CalendarToken{},
 		&dbModel.Product{},
+		&dbModel.ProductMutationClaim{},
 		&dbModel.HouseholdApplication{},
 		&dbModel.HouseholdInvitation{},
 		&dbModel.OnboardingState{},
@@ -435,6 +440,9 @@ func main() {
 	// Start background cleanup of expired password-reset rows
 	go startPasswordResetCleanup(logger, dbHandle)
 
+	// Start background cleanup of expired product mutation claims
+	go startMutationClaimCleanup(logger, dbHandle)
+
 	// Backfill storage hints and images for existing cache entries
 	if proviantConfiguration.OpenFoodFacts.CacheEnabled {
 		go backfillOpenFoodFactsCache(logger, dbHandle, offacntrl)
@@ -467,6 +475,28 @@ func startPasswordResetCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
 		}
 		if result.RowsAffected > 0 {
 			logger.Info().Msgf("Cleaned up %d expired password resets", result.RowsAffected)
+		}
+	}
+}
+
+// startMutationClaimCleanup drops idempotency claims past the point where their
+// delta can still be replayed, which is what bounds product_mutation_claims: a
+// claim is written by every amount change, so nothing else ever collects them.
+// The claim model carries no DeletedAt, so this is a hard delete and the
+// unique index never spans a tombstoned row.
+func startMutationClaimCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		cutoff := time.Now().Add(-util.ProductMutationClaimTTL)
+		result := dbHandle.Where("created_at < ?", cutoff).Delete(&dbModel.ProductMutationClaim{})
+		if result.Error != nil {
+			logger.Warn().Msgf("Failed to cleanup expired product mutation claims: %s", result.Error.Error())
+			continue
+		}
+		if result.RowsAffected > 0 {
+			logger.Info().Msgf("Cleaned up %d expired product mutation claims", result.RowsAffected)
 		}
 	}
 }

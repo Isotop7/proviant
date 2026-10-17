@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	dbModel "github.com/Isotop7/proviant/models/database"
 )
 
 func TestTelegramProvider_GetProviderType(t *testing.T) {

@@ -14,12 +14,12 @@ import (
 	"testing"
 	"time"
 
-	dbController "codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/models"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+	dbController "github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/models"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	repomocks "github.com/Isotop7/proviant/testutil/mocks"
 	gomail "gopkg.in/mail.v2"
 
 	"github.com/rs/zerolog"

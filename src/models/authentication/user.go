@@ -4,8 +4,8 @@ import (
 	"net/mail"
 	"time"
 
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/database"
 
 	"gorm.io/gorm"
 )

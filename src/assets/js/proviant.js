@@ -1,4 +1,10 @@
 const proviant = {};
+// A top-level `const` in a classic script is a global lexical binding, not a
+// property of window, so offlineQueue.js — which wraps proviant.createProduct,
+// proviant.updateProductAmount and proviant.getProducts — would otherwise find
+// window.proviant undefined, wrap an empty object of its own and leave every one
+// of those features inert.
+window.proviant = proviant;
 
 // Read the csrf_token cookie set by the server's CSRF middleware.
 proviant._getCsrfToken = function () {
@@ -160,62 +166,53 @@ proviant.colorExpiry = function (date) {
 };
 
 /* ── Offline edit queue ──────────────────────────────────────────────────────── */
-proviant._offlineQueue = JSON.parse(localStorage.getItem('proviant_offline_queue') || '[]');
+// The queue itself lives in offlineQueue.js, which wraps updateProductAmount and
+// createProduct at load. Everything here is a plain network call, so this module
+// holds no offline state of its own.
 
-proviant._saveQueue = function () {
-  localStorage.setItem('proviant_offline_queue', JSON.stringify(proviant._offlineQueue));
-};
-
-proviant._enqueueAmountDelta = function (productID, delta) {
-  const existing = proviant._offlineQueue.find(op => op.productID === productID);
-  if (existing) {
-    existing.delta += delta;
-    if (existing.delta === 0) {
-      proviant._offlineQueue = proviant._offlineQueue.filter(op => op.productID !== productID);
-    }
-  } else {
-    proviant._offlineQueue.push({ productID, delta, ts: Date.now() });
-  }
-  proviant._saveQueue();
-  proviant._updateOfflineBadge();
-};
-
-proviant._updateOfflineBadge = function () {
-  const el = document.getElementById('offlineQueueCount');
-  if (!el) return;
-  const n = proviant._offlineQueue.length;
-  if (n > 0) { el.textContent = proviant.tn("js.app.offlineQueuePending", n); el.classList.remove('d-none'); }
-  else { el.classList.add('d-none'); }
-};
-
-proviant._flushQueue = async function () {
-  if (!navigator.onLine || proviant._offlineQueue.length === 0) return;
-  const queue = proviant._offlineQueue.slice();
-  proviant._offlineQueue = [];
-  proviant._saveQueue();
-  proviant._updateOfflineBadge();
-  for (const op of queue) {
-    try { await proviant._sendAmountDelta(op.productID, op.delta); }
-    catch (_) { proviant._enqueueAmountDelta(op.productID, op.delta); }
-  }
-};
-
-proviant._sendAmountDelta = async function (productID, delta) {
+proviant._sendAmountDelta = async function (productID, delta, clientMutationId) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/amount`;
-  const res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ delta }) });
-  const body = await res.json();
-  return { code: res.status, message: body.message, deleted: res.status === 200 && typeof body.message === "string" && body.message.includes("deleted") };
+  let res;
+  try {
+    res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ delta, clientMutationId }) });
+  } catch (cause) {
+    // Tagged so the outbox can tell "the request never left" from "the server
+    // answered with a body I cannot parse": only the first costs no retry
+    // attempt, or a 502-with-HTML would park nothing and retry forever.
+    const err = new Error(cause && cause.message ? cause.message : String(cause));
+    err.transport = true;
+    throw err;
+  }
+  let body;
+  try {
+    body = await res.json();
+  } catch (cause) {
+    // The server answered but the body is not JSON — a proxy error page,
+    // say. Carry the status so the outbox can tell a server-side failure
+    // (5xx: pace and retry) from a broken request (4xx: park it), while
+    // keeping the parse message: the verdict stays visible either way.
+    const err = new Error(cause && cause.message ? cause.message : String(cause));
+    err.status = res.status;
+    throw err;
+  }
+  return {
+    code: res.status,
+    message: body.message,
+    // The outbox paces itself on this; the status alone cannot say how long
+    // the server wants the client to stay away.
+    retryAfter: res.headers && res.headers.get ? res.headers.get("Retry-After") : null,
+    deleted: res.status === 200 && typeof body.message === "string" && body.message.includes("deleted"),
+  };
 };
 
-proviant.updateProductAmount = async function (productID, delta) {
-  if (!navigator.onLine) { proviant._enqueueAmountDelta(productID, delta); return { code: 200, message: 'queued', deleted: false, queued: true }; }
-  return proviant._sendAmountDelta(productID, delta);
+proviant.updateProductAmount = async function (productID, delta, clientMutationId) {
+  return proviant._sendAmountDelta(productID, delta, clientMutationId);
 };
 
 /* ── Product API ─────────────────────────────────────────────────────────────── */
-proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate = false) {
+proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate = false, clientSyncId) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null, isPrivate }) });
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null }) });
   const body = await res.json();
   return { code: res.status, message: body.message };
 };

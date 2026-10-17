@@ -71,6 +71,11 @@
   text-align: center;
   background: var(--status-soon-subtle);
   border-bottom: 1px solid var(--status-soon-border);
+
+  .offline-banner-action {
+    color: inherit;
+    text-decoration: underline;
+  }
 }
 
 // SW update banner

@@ -66,6 +66,8 @@
   "products.notificationLeadHelp": "Days before expiry to notify. Leave blank to use household default (%d days).",
   "products.notificationLeadTime": "Notification lead time",
   "products.ocrFallbackHelp": "Date not detected confidently. Please check the text above and adjust the date manually.",
+  "products.offlineFallbackName": "Offline product %s",
+  "products.offlineFallbackNameNoBarcode": "Offline product",
   "products.onlyVisibleToYou": "Only visible to you",
   "products.openedAtHelp": "When the product was opened. Used to compute a secondary expiry.",
   "products.pagination.label": "Product list pages",

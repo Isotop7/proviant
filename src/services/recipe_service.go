@@ -6,8 +6,8 @@ import (
 	"math"
 	"strings"
 
-	"codeberg.org/isotop7/proviant/controllers/database"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/controllers/database"
+	apiModel "github.com/Isotop7/proviant/models/api"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )

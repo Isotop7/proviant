@@ -18,8 +18,9 @@
 
   <script src="/assets/js/theme.js"></script>
   <link rel="stylesheet" href="/assets/css/main.css">
-  <script nonce="{{ .CSPNonce }}">window.proviantI18n = {{ .I18nJSON }};window.proviantLang = "{{ .Lang }}";</script>
+  <script nonce="{{ .CSPNonce }}">window.proviantI18n = {{ .I18nJSON }};window.proviantLang = "{{ .Lang }}";window.proviantOffline = { maxBatchBytes: {{ .OfflineSyncMaxBodyBytes }} };</script>
   <script src="/assets/js/proviant.js"></script>
+  <script src="/assets/js/offlineQueue.js"></script>
 </head>
 
 <body>
@@ -66,11 +67,15 @@
       <i class="bi bi-book" aria-hidden="true"></i><span>{{ t "nav.recipes" }}</span>
     </a>
   </nav>
-  <!-- Offline banner — shown by JS when navigator.onLine === false -->
-  <div id="offlineBanner" class="offline-banner d-none" role="status" aria-live="polite">
-    <i class="bi bi-wifi-off me-2" aria-hidden="true"></i>
-    {{ t "common.offlineBanner" }}
-    <span id="offlineQueueCount" class="ms-1 fw-semibold d-none"></span>
+  <!-- Offline banner — shown by JS while offline, and while changes are stuck unsynced -->
+  <div id="offlineBanner" class="offline-banner d-none">
+    <span role="status" aria-live="polite">
+      <i id="offlineBannerIcon" class="bi bi-wifi-off me-2" aria-hidden="true"></i>
+      <span id="offlineBannerText">{{ t "common.offlineBanner" }}</span>
+      <span id="offlineQueueCount" class="ms-1 fw-semibold d-none"></span>
+    </span>
+    <button type="button" id="offlineQueueRetry" class="btn btn-link btn-sm p-0 fw-semibold ms-2 offline-banner-action d-none">{{ t "common.retry" }}</button>
+    <button type="button" id="offlineQueueDiscard" class="btn btn-link btn-sm p-0 fw-semibold ms-2 offline-banner-action d-none">{{ t "common.discard" }}</button>
   </div>
   <!-- Update banner — shown by JS when new service worker activates -->
   <div id="swUpdateBanner" class="sw-update-banner d-none" role="status" aria-live="polite">

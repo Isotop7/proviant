@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	dbModel "github.com/Isotop7/proviant/models/database"
 )
 
 // NotificationProvider interface defines methods for sending notifications

@@ -122,6 +122,21 @@ var (
 	// ErrBarcodeMissing is thrown if a product request carries no barcode.
 	ErrBarcodeMissing = errors.New("barcode missing")
 
+	// ErrClientSyncIDTooLong is thrown if a product request carries a clientSyncId
+	// longer than util.OfflineSyncIDMaxLength. The column is indexed, so an
+	// unbounded value would fail at insert time as a 500.
+	ErrClientSyncIDTooLong = errors.New("clientSyncId too long")
+
+	// ErrClientMutationIDTooLong is thrown if an amount update carries a
+	// clientMutationId longer than util.OfflineSyncIDMaxLength, for the same
+	// reason as ErrClientSyncIDTooLong.
+	ErrClientMutationIDTooLong = errors.New("clientMutationId too long")
+
+	// ErrClientSyncIDConflict is thrown if a product create carries a clientSyncId
+	// already held by another household member's private product: the unique index
+	// forbids a second row, and the existing row is not the caller's to read.
+	ErrClientSyncIDConflict = errors.New("clientSyncId is already used by another product")
+
 	// ErrNoValidSearchParameters is thrown if a product search yields no usable
 	// query parameters.
 	ErrNoValidSearchParameters = errors.New("no valid search parameters found")

@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/models/authentication"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
 
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
@@ -181,7 +181,7 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 		if err := repo.UpdateProduct(product.ID, user.ID, &dbModel.ProductDTOPatch{ProductName: "Patched"}); err == nil {
 			t.Error("UpdateProduct() error = nil")
 		}
-		if _, err := repo.UpdateProductAmount(product.ID, user.ID, 1); err == nil {
+		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 1, nil); err == nil {
 			t.Error("UpdateProductAmount() error = nil")
 		}
 		if err := repo.RestoreProduct(product.ID, user.ID); err == nil {

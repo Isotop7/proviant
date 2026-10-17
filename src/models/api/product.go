@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/models/authentication"
+	dbModel "github.com/Isotop7/proviant/models/database"
 )
 
 // HouseholdUserResponse is the admin-facing view of a household member.

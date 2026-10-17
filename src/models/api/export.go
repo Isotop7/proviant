@@ -3,7 +3,7 @@ package api
 import (
 	"time"
 
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	dbModel "github.com/Isotop7/proviant/models/database"
 )
 
 // ExportProductResponse is the product shape in a JSON data export. Unlike

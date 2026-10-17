@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/models/configuration"
 	"github.com/rs/zerolog"
 )
 

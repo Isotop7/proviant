@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models"
-	"codeberg.org/isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/models"
+	"github.com/Isotop7/proviant/models/configuration"
 	"github.com/rs/zerolog"
 )
 

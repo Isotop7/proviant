@@ -6,8 +6,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/testutil"
 )
 
 func TestUserRepository_GetUserByUsername_Found(t *testing.T) {

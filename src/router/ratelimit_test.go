@@ -7,11 +7,75 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
+
+// The offline outbox drains from a background timer with no user watching, so
+// its budget has to admit a backlog of batched creates on its own: sharing
+// bulkLimiters would additionally mean a receipt review could refuse the outbox
+// and vice versa, which neither user action can explain. This covers the create
+// drain only — the amount route carries no limiter.
+func TestOfflineSyncRateLimitMiddleware_AdmitsBackToBackCreateBatches(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	offlineSyncLimiters = &sync.Map{}
+
+	engine := gin.New()
+	engine.POST("/sync-offline", offlineSyncRateLimitMiddleware, func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	request := func() *httptest.ResponseRecorder {
+		recorder := httptest.NewRecorder()
+		engine.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/sync-offline", nil))
+		return recorder
+	}
+
+	for i := 0; i < offlineSyncBurstCap; i++ {
+		if code := request().Code; code != http.StatusOK {
+			t.Fatalf("drain request %d got HTTP %d, want 200", i+1, code)
+		}
+	}
+
+	refused := request()
+	if refused.Code != http.StatusTooManyRequests {
+		t.Fatalf("request past the burst got HTTP %d, want 429", refused.Code)
+	}
+	if refused.Header().Get(headerRetryAfter) == "" {
+		t.Error("a refused offline sync must carry Retry-After — the client paces itself on it")
+	}
+}
+
+// The two budgets must not draw on each other: a receipt review and an outbox
+// drain happen at unrelated moments, so one must not be able to refuse the other.
+func TestOfflineSyncRateLimitMiddleware_DoesNotShareTheBulkBudget(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	bulkLimiters = &sync.Map{}
+	offlineSyncLimiters = &sync.Map{}
+
+	engine := gin.New()
+	engine.POST("/bulk", bulkRateLimitMiddleware, func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{}) })
+	engine.POST("/sync-offline", offlineSyncRateLimitMiddleware, func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{}) })
+
+	call := func(path string) int {
+		recorder := httptest.NewRecorder()
+		engine.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, path, nil))
+		return recorder.Code
+	}
+
+	if code := call("/bulk"); code != http.StatusOK {
+		t.Fatalf("first bulk create got HTTP %d, want 200", code)
+	}
+	if code := call("/bulk"); code != http.StatusTooManyRequests {
+		t.Fatalf("second bulk create got HTTP %d, want 429 — the burst should be spent", code)
+	}
+
+	if code := call("/sync-offline"); code != http.StatusOK {
+		t.Errorf("offline sync got HTTP %d after the bulk budget was spent, want 200", code)
+	}
+}
 
 // The recipes limiter must not hand out a full minute of tokens at once: one
 // suggestions request fans out into up to 10 provider searches plus 20 detail
@@ -38,7 +102,6 @@ func TestRecipesRateLimitMiddleware_CoversThePagesOwnRequestPattern(t *testing.T
 		return recorder.Code
 	}
 
-	// Page load, then the post-cook reload of the first and second recipe.
 	for _, step := range []string{"page load", "post-cook reload after the first recipe", "post-cook reload after the second recipe"} {
 		if code := request(); code != http.StatusOK {
 			t.Fatalf("%s got HTTP %d, want 200 — the burst self-limits the page's own flow", step, code)
@@ -75,8 +138,6 @@ func TestRecipesRateLimitMiddleware_BurstBoundsFanOutWithoutSelfLimiting(t *test
 	if recipesBurst < 3 {
 		t.Errorf("recipesBurst = %d, want at least 3 so page load plus post-cook reloads are not self-limited", recipesBurst)
 	}
-	// At the default 6 recipes_per_minute the minute's worth of tokens would be
-	// 7; the burst must stay clearly below that.
 	if fullMinute := int(recipesRate*60) + 1; recipesBurst >= fullMinute {
 		t.Errorf("recipesBurst = %d, want below the full minute of tokens (%d) so the limiter still bounds the fan-out",
 			recipesBurst, fullMinute)
@@ -117,12 +178,11 @@ func TestRecipesRateLimitMiddleware_AbortsOnRejection(t *testing.T) {
 
 // The import limiter must stop a second upload from starting while the first is
 // still in flight: importBurstCap is 1, so the repeat has to abort before the
-// handler runs.
+// handler runs. The rate is pinned to once per hour so the assertion is about
+// importBurstCap alone, not about how fast the limiter would refill.
 func TestImportRateLimitMiddleware_AbortsOnRejection(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	importLimiters = &sync.Map{}
-	// Pin a rate that never refills during the test so the assertion is about
-	// importBurstCap alone, not about how fast the limiter would refill.
 	originalRate := importRate
 	importRate = rate.Every(time.Hour)
 	t.Cleanup(func() { importRate = originalRate })

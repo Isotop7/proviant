@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/testutil"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/testutil"
+	repomocks "github.com/Isotop7/proviant/testutil/mocks"
 
 	"github.com/gin-gonic/gin"
 )

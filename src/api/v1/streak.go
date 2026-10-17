@@ -4,8 +4,8 @@ package v1
 import (
 	"net/http"
 
-	"codeberg.org/isotop7/proviant/api"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/api"
+	apiModel "github.com/Isotop7/proviant/models/api"
 
 	"github.com/gin-gonic/gin"
 )

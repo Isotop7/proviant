@@ -694,8 +694,12 @@ function handleBtnAddProduct() {
         btn.classList.remove('loading');
         btn.disabled = false;
         switch (response.code) {
+            case 200:
             case 201:
                 showAlert(true, proviant.t("js.products.productCreatedBarcode", barcode));
+                break;
+            case 202:
+                showAlert(true, proviant.t("js.products.productQueuedOffline"));
                 break;
             case 400:
                 showAlert(false, proviant.t("js.scan.invalidRequestData"));

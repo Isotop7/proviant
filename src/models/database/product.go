@@ -32,13 +32,14 @@ type Product struct {
 	ScannedAt            time.Time        `json:"scannedAt"`
 	NotifiedAt           time.Time        `json:"notifiedAt"`
 	DeletedAt            gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
-	HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;index:idx_products_household_name_deleted,priority:2;not null" json:"-"`
+	HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;index:idx_products_household_name_deleted,priority:2;index:idx_products_household_clientsyncid,priority:1;not null" json:"-"`
 	Household            Household        `json:"-"`
 	UserID               uint             `gorm:"index, not null" json:"-"`
 	IsPrivate            bool             `gorm:"default:false" json:"isPrivate"`
 	Amount               int              `json:"amount"`
 	Unit                 string           `json:"unit"`
 	StorageLocationID    *uint            `gorm:"index"                        json:"storageLocationId"`
+	ClientSyncID         *string          `gorm:"index:idx_products_household_clientsyncid,unique,priority:2" json:"clientSyncId,omitempty"`
 	StorageLocation      *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
 	PriceOverride        *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
 	CO2KgPerKg           *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`

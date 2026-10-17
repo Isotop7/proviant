@@ -1,15 +1,19 @@
 package templates
 
 import (
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"codeberg.org/isotop7/proviant/i18n"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/i18n"
+	"github.com/Isotop7/proviant/models/configuration"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 )
 
 func TestHumanDateFormatting(t *testing.T) {
@@ -173,30 +177,30 @@ func TestExpiryColor(t *testing.T) {
 
 func TestExpiryUrgencyText(t *testing.T) {
 	now := time.Now()
-	if got := expiryUrgencyText(i18n.LanguageEN,time.Time{}); got != "" {
+	if got := expiryUrgencyText(i18n.LanguageEN, time.Time{}); got != "" {
 		t.Errorf("urgency(zero) = %q, want empty", got)
 	}
 
 	// Expired 3 full days ago (plus a margin so integer day math is stable).
 	expired := now.Add(-76 * time.Hour)
-	if got := expiryUrgencyText(i18n.LanguageEN,expired); got != "Expired 3 day(s) ago" {
+	if got := expiryUrgencyText(i18n.LanguageEN, expired); got != "Expired 3 day(s) ago" {
 		t.Errorf("urgency(expired 76h) = %q, want %q", got, "Expired 3 day(s) ago")
 	}
 
 	// Expires tomorrow: less than 24h away, at least a few hours.
 	tomorrow := now.Add(20 * time.Hour)
-	if got := expiryUrgencyText(i18n.LanguageEN,tomorrow); got != "Expires tomorrow" {
+	if got := expiryUrgencyText(i18n.LanguageEN, tomorrow); got != "Expires tomorrow" {
 		t.Errorf("urgency(in 20h) = %q, want %q", got, "Expires tomorrow")
 	}
 
 	// Within a week.
 	fewDays := now.Add(3 * 24 * time.Hour)
-	if got := expiryUrgencyText(i18n.LanguageEN,fewDays); got != "Expires in 3 days" {
+	if got := expiryUrgencyText(i18n.LanguageEN, fewDays); got != "Expires in 3 days" {
 		t.Errorf("urgency(in 3d) = %q, want %q", got, "Expires in 3 days")
 	}
 
 	// Far away: no urgency text.
-	if got := expiryUrgencyText(i18n.LanguageEN,now.Add(60 * 24 * time.Hour)); got != "" {
+	if got := expiryUrgencyText(i18n.LanguageEN, now.Add(60*24*time.Hour)); got != "" {
 		t.Errorf("urgency(in 60d) = %q, want empty", got)
 	}
 }
@@ -322,5 +326,37 @@ func TestNewTemplateCache(t *testing.T) {
 		if _, ok := cache[templateCacheKey(i18n.LanguageEN, want)]; !ok {
 			t.Errorf("cache missing %q; have %d templates", want, len(cache))
 		}
+	}
+}
+
+// The outbox client splits its batches at the configured sync
+// body cap, so the value the endpoint enforces has to reach the
+// page data — a missing key would render as <no value> in the
+// inline script and the client would fall back to the constant.
+func TestInjectI18nDataOfflineSyncCap(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{
+		OfflineSync: configuration.OfflineSyncConfiguration{MaxBatchBytes: 12345},
+	})
+	data := map[string]any{}
+	injectI18nData(ctx, data)
+	if data["OfflineSyncMaxBodyBytes"] != 12345 {
+		t.Errorf("OfflineSyncMaxBodyBytes = %v, want 12345", data["OfflineSyncMaxBodyBytes"])
+	}
+}
+
+// A page rendered without a config in the context — an error
+// page, a test double — still gets a numeric cap, and it is the
+// built-in one the endpoint falls back to.
+func TestInjectI18nDataOfflineSyncCapDefaultsWithoutConfig(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	data := map[string]any{}
+	injectI18nData(ctx, data)
+	if data["OfflineSyncMaxBodyBytes"] != util.ReceiptBulkMaxBodyBytes {
+		t.Errorf("OfflineSyncMaxBodyBytes = %v, want %d", data["OfflineSyncMaxBodyBytes"], util.ReceiptBulkMaxBodyBytes)
 	}
 }

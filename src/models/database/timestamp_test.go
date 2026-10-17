@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/util"
 )
 
 func assertDateUnmarshalResult(t *testing.T, err error, wantErr bool, got, want Date) {

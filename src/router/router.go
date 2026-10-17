@@ -6,19 +6,19 @@ import (
 	"net/http"
 	"strings"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/api/auth"
-	"codeberg.org/isotop7/proviant/api/common"
-	"codeberg.org/isotop7/proviant/api/onboarding"
-	v1 "codeberg.org/isotop7/proviant/api/v1"
-	"codeberg.org/isotop7/proviant/assets"
-	"codeberg.org/isotop7/proviant/controllers"
-	dbcontroller "codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/templates"
-	"codeberg.org/isotop7/proviant/util"
-	"codeberg.org/isotop7/proviant/web"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/api/auth"
+	"github.com/Isotop7/proviant/api/common"
+	"github.com/Isotop7/proviant/api/onboarding"
+	v1 "github.com/Isotop7/proviant/api/v1"
+	"github.com/Isotop7/proviant/assets"
+	"github.com/Isotop7/proviant/controllers"
+	dbcontroller "github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/templates"
+	"github.com/Isotop7/proviant/util"
+	"github.com/Isotop7/proviant/web"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-contrib/cors"
@@ -247,6 +247,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// success allowed. Do not confuse with the CSV import path above. Rate
 	// limited: one call inserts up to util.ReceiptBulkMaxItems products.
 	publicProductMemberAPI.POST("/bulk", bulkRateLimitMiddleware, v1.WrapHandler(v1.BulkCreateProducts))
+	publicProductMemberAPI.POST("/sync-offline", offlineSyncRateLimitMiddleware, v1.WrapHandler(v1.SyncOfflineProducts))
 	publicProductAPI.POST("/scan", scanRateLimitMiddleware, v1.WrapHandler(v1.ScanProduct))
 	publicProductAPI.POST("/scan-date", v1.WrapHandler(v1.ScanExpiryDate))
 	publicProductAPI.GET("/byBarcode/:barcode", v1.WrapHandler(v1.GetProductsByBarcode))

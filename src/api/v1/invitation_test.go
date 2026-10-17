@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
-	proviantErrors "codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/testutil"
-	repomocks "codeberg.org/isotop7/proviant/testutil/mocks"
+	proviantErrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/testutil"
+	repomocks "github.com/Isotop7/proviant/testutil/mocks"
 
 	"github.com/gin-gonic/gin"
 )

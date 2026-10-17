@@ -1,7 +1,7 @@
 package database
 
 import (
-	"codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/models/database"
 	"gorm.io/gorm"
 )
 

@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strings"
 
-	"codeberg.org/isotop7/proviant/api"
-	apperrors "codeberg.org/isotop7/proviant/errors"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/services"
+	"github.com/Isotop7/proviant/api"
+	apperrors "github.com/Isotop7/proviant/errors"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/services"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )

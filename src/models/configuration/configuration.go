@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"strings"
 
-	"codeberg.org/isotop7/proviant/controllers/database"
-	"codeberg.org/isotop7/proviant/errors"
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/controllers/database"
+	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/util"
 )
 
 type DatabaseMariaDBConfiguration struct {
@@ -219,6 +219,13 @@ type RestoreConfiguration struct {
 	MaxUploadSizeMB int `mapstructure:"maxUploadSizeMB"`
 }
 
+// OfflineSyncConfiguration bounds one queued-sync request. The byte cap
+// is injected into every page, so the outbox client splits its batches
+// at the value the endpoint actually enforces and the two cannot drift.
+type OfflineSyncConfiguration struct {
+	MaxBatchBytes int `mapstructure:"maxBatchBytes"`
+}
+
 // IsProviderEnabled reports whether the given provider is enabled at the instance level.
 func (c ShoppingListSyncConfiguration) IsProviderEnabled(provider string) bool {
 	if !c.Enabled {
@@ -250,6 +257,7 @@ type ProviantConfiguration struct {
 	ShoppingListSync ShoppingListSyncConfiguration `mapstructure:"shopping_list_sync"`
 	Backup           BackupConfiguration           `mapstructure:"backup"`
 	Restore          RestoreConfiguration          `mapstructure:"restore"`
+	OfflineSync      OfflineSyncConfiguration      `mapstructure:"offlineSync"`
 	TemplateCache    map[string]*template.Template
 
 	// RecipeAPIDisabled is set at startup when the recipe feature cannot work
@@ -437,6 +445,16 @@ func (ec *ProviantConfiguration) ValidateBackupConfiguration() error {
 func (ec *ProviantConfiguration) ValidateRestoreConfiguration() {
 	if ec.Restore.MaxUploadSizeMB <= 0 {
 		ec.Restore.MaxUploadSizeMB = util.DefaultRestoreMaxUploadSizeMB
+	}
+}
+
+// ValidateOfflineSyncConfiguration normalizes the queued-sync body cap.
+// A missing or nonsensical value falls back to the built-in default
+// rather than refusing every sync: the outbox client splits its batches
+// at this value, so it has to stay a positive number.
+func (ec *ProviantConfiguration) ValidateOfflineSyncConfiguration() {
+	if ec.OfflineSync.MaxBatchBytes <= 0 {
+		ec.OfflineSync.MaxBatchBytes = util.ReceiptBulkMaxBodyBytes
 	}
 }
 

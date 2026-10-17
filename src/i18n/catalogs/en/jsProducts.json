@@ -56,6 +56,7 @@
   "js.products.productCreatedMessage": "Product created successfully!",
   "js.products.productCreatedTitle": "Product Created",
   "js.products.productImageAlt": "Product image",
+  "js.products.productQueuedOffline": "Saved — it will sync automatically.",
   "js.products.productUpdated": "Product Updated",
   "js.products.productUpdatedMsg": "Product #%s was updated successfully.",
   "js.products.requestFailed": "Request failed",

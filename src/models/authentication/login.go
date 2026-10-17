@@ -1,6 +1,6 @@
 package authentication
 
-import "codeberg.org/isotop7/proviant/errors"
+import "github.com/Isotop7/proviant/errors"
 
 var defaultPasswordConfig = PasswordConfig{
 	MinLength:        12,

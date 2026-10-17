@@ -45,6 +45,11 @@ type BulkItemResult struct {
 	Status    string `json:"status"`
 	Reason    string `json:"reason,omitempty"`
 	ProductID *uint  `json:"productId,omitempty"`
+	// Terminal marks a failed item whose reason is a property of the draft
+	// itself, so resubmitting it unchanged fails identically. A caller that
+	// retries asynchronously should surface such an item to the user instead of
+	// spending its retry budget on it.
+	Terminal bool `json:"terminal,omitempty"`
 }
 
 // BulkCreateResponse reports the outcome of every submitted item

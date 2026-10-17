@@ -3,7 +3,7 @@ package api
 import (
 	"time"
 
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	dbModel "github.com/Isotop7/proviant/models/database"
 )
 
 // HouseholdIntegrationResponse is the DTO returned for a household's shopping list provider integration.
@@ -50,13 +50,13 @@ func NewHouseholdIntegrationResponses(integrations []dbModel.HouseholdIntegratio
 
 // CreateHouseholdIntegrationRequest is the request body for POST /api/v1/household/integrations/{provider}.
 type CreateHouseholdIntegrationRequest struct {
-	Enabled           bool   `json:"enabled"`
-	AccessToken       string `json:"accessToken"`
-	ClearAccessToken  bool   `json:"clearAccessToken"`
-	RefreshToken      string `json:"refreshToken"`
-	AccountEmail      string `json:"accountEmail"`
-	ListID            string `json:"listId"`
-	ListName          string `json:"listName"`
+	Enabled          bool   `json:"enabled"`
+	AccessToken      string `json:"accessToken"`
+	ClearAccessToken bool   `json:"clearAccessToken"`
+	RefreshToken     string `json:"refreshToken"`
+	AccountEmail     string `json:"accountEmail"`
+	ListID           string `json:"listId"`
+	ListName         string `json:"listName"`
 }
 
 // UpdateHouseholdIntegrationRequest is the request body for PATCH /api/v1/household/integrations/{provider}.

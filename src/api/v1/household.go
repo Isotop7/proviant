@@ -1,18 +1,18 @@
 package v1
 
 import (
-	"codeberg.org/isotop7/proviant/audit"
-	apperrors "codeberg.org/isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/audit"
+	apperrors "github.com/Isotop7/proviant/errors"
 	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
-	"codeberg.org/isotop7/proviant/api"
-	"codeberg.org/isotop7/proviant/i18n"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	"codeberg.org/isotop7/proviant/models/authentication"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/i18n"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/models/authentication"
+	dbModel "github.com/Isotop7/proviant/models/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"

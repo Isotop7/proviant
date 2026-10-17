@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/util"
+	"github.com/Isotop7/proviant/util"
 )
 
 // Date is a simple wrapper for time.Time

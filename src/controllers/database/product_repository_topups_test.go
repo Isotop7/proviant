@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	provErrors "codeberg.org/isotop7/proviant/errors"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
+	provErrors "github.com/Isotop7/proviant/errors"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
 )
 
 // TestProductRepository_TopUps covers the remaining product repository
@@ -104,7 +104,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 			t.Fatalf("failed to save product: %v", err)
 		}
 
-		empty, err := repo.UpdateProductAmount(soon.ID, user.ID, -3)
+		empty, _, err := repo.UpdateProductAmount(soon.ID, user.ID, -3, nil)
 		if err != nil {
 			t.Fatalf("UpdateProductAmount() error = %v", err)
 		}
@@ -119,7 +119,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 			t.Errorf("amount = %d, want 2", updated.Amount)
 		}
 
-		empty, err = repo.UpdateProductAmount(soon.ID, user.ID, 2)
+		empty, _, err = repo.UpdateProductAmount(soon.ID, user.ID, 2, nil)
 		if err != nil {
 			t.Fatalf("UpdateProductAmount() error = %v", err)
 		}
@@ -129,7 +129,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 	})
 
 	t.Run("UpdateProductAmount with invalid id errors", func(t *testing.T) {
-		if _, err := repo.UpdateProductAmount(0, user.ID, 1); err == nil {
+		if _, _, err := repo.UpdateProductAmount(0, user.ID, 1, nil); err == nil {
 			t.Error("UpdateProductAmount(0) error = nil, want error")
 		}
 	})
@@ -205,6 +205,45 @@ func TestProductRepository_TopUps(t *testing.T) {
 			t.Errorf("top = %d, want 1", len(top))
 		}
 	})
+}
+
+// UpdateProductAmount reads the product for its household and nothing else, so
+// the guard refusing a foreign row is the only thing standing between a member
+// of one household and another's stock.
+func TestProductRepository_UpdateProductAmountHouseholdGuard(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewProductRepository(db)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+	product := testutil.CreateTestProduct(db, household.ID, user.ID)
+	product.Amount = 5
+	if err := db.Save(product).Error; err != nil {
+		t.Fatalf("save product: %v", err)
+	}
+
+	outsider := testutil.CreateTestUser(db, 0)
+	if _, _, err := repo.UpdateProductAmount(product.ID, outsider.ID, 1, nil); err != provErrors.ErrMismatcherUserID {
+		t.Errorf("error = %v, want %v", err, provErrors.ErrMismatcherUserID)
+	}
+
+	var unchanged dbModel.Product
+	if err := db.First(&unchanged, product.ID).Error; err != nil {
+		t.Fatalf("reload product: %v", err)
+	}
+	if unchanged.Amount != 5 {
+		t.Errorf("amount = %d, want 5 — a refused update must not move the amount", unchanged.Amount)
+	}
+
+	if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 1, nil); err != nil {
+		t.Fatalf("owner's update error = %v, want none", err)
+	}
+	var updated dbModel.Product
+	if err := db.First(&updated, product.ID).Error; err != nil {
+		t.Fatalf("reload product: %v", err)
+	}
+	if updated.Amount != 6 {
+		t.Errorf("amount = %d, want 6 — the owner's own delta must still apply", updated.Amount)
+	}
 }
 
 func TestProductRepository_OpenFoodFactsCache(t *testing.T) {

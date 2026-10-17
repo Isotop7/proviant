@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/isotop7/proviant/models/configuration"
-	"codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/models/external"
+	"github.com/Isotop7/proviant/models/configuration"
+	"github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/models/external"
 	"github.com/rs/zerolog"
 )
 
@@ -38,8 +38,11 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()
 
-	// Channel to receive the response or timeout signal
-	queryChannel := make(chan bool)
+	// Buffered, so a response arriving after the timeout below has already
+	// returned still completes its send instead of parking the goroutine on a
+	// channel nobody reads. Each offline sync batch calls this once per unnamed
+	// draft, so an unbuffered channel leaked goroutines in bulk.
+	queryChannel := make(chan bool, 1)
 	// Dataset to store query response
 	var dataset external.OpenFoodFactsAPIDataset
 	filteredDataset := external.OpenFoodFactsAPIDatasetDefinition

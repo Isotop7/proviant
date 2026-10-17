@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/isotop7/proviant/api"
-	apiModel "codeberg.org/isotop7/proviant/models/api"
-	dbModel "codeberg.org/isotop7/proviant/models/database"
-	"codeberg.org/isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/api"
+	apiModel "github.com/Isotop7/proviant/models/api"
+	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/testutil"
 
 	"github.com/gin-gonic/gin"
 )
@@ -204,6 +204,65 @@ func TestUpdateProductAmount(t *testing.T) {
 
 		if env.W.Code != http.StatusBadRequest {
 			t.Errorf("status = %d, want 400", env.W.Code)
+		}
+	})
+
+	t.Run("an empty clientMutationId never dedupes", func(t *testing.T) {
+		env := setupHandlerTest(t)
+		product := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
+		product.Amount = 5
+		env.DB.Save(product)
+		env.Ctx.Params = []gin.Param{{Key: "id", Value: itoa(product.ID)}}
+		empty := ""
+
+		for call := 1; call <= 2; call++ {
+			testutil.CreateTestRequest(env.Ctx, apiModel.ProductAmountDTO{Delta: 1, ClientMutationID: &empty})
+			UpdateProductAmount(env.Ctx, env.AppCtx)
+			if env.W.Code != http.StatusOK {
+				t.Fatalf("call %d status = %d, want 200; body = %s", call, env.W.Code, env.W.Body.String())
+			}
+		}
+
+		var stored dbModel.Product
+		if err := env.DB.First(&stored, product.ID).Error; err != nil {
+			t.Fatalf("load product: %v", err)
+		}
+		if stored.Amount != 7 {
+			t.Errorf("amount = %d, want 7 — an empty token stored as-is would have made the second call a replay", stored.Amount)
+		}
+	})
+
+	t.Run("a padded clientMutationId is stored trimmed", func(t *testing.T) {
+		env := setupHandlerTest(t)
+		product := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
+		product.Amount = 5
+		env.DB.Save(product)
+		env.Ctx.Params = []gin.Param{{Key: "id", Value: itoa(product.ID)}}
+		padded := "  mutation-1  "
+		bare := "mutation-1"
+
+		testutil.CreateTestRequest(env.Ctx, apiModel.ProductAmountDTO{Delta: 1, ClientMutationID: &padded})
+		UpdateProductAmount(env.Ctx, env.AppCtx)
+		if env.W.Code != http.StatusOK {
+			t.Fatalf("padded call status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
+		}
+
+		testutil.CreateTestRequest(env.Ctx, apiModel.ProductAmountDTO{Delta: 1, ClientMutationID: &bare})
+		UpdateProductAmount(env.Ctx, env.AppCtx)
+		if env.W.Code != http.StatusOK {
+			t.Fatalf("bare call status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
+		}
+
+		var stored dbModel.Product
+		if err := env.DB.First(&stored, product.ID).Error; err != nil {
+			t.Fatalf("load product: %v", err)
+		}
+		if stored.Amount != 6 {
+			t.Errorf("amount = %d, want 6 — the padded and bare tokens are one replay token once trimmed", stored.Amount)
+		}
+		var claim dbModel.ProductMutationClaim
+		if err := env.DB.First(&claim, "product_id = ? AND mutation_id = ?", product.ID, bare).Error; err != nil {
+			t.Errorf("claim for %q not found: %v", bare, err)
 		}
 	})
 }

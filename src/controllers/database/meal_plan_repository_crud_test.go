@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/testutil"
 	"gorm.io/gorm"
 )
 
