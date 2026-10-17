@@ -1,6 +1,7 @@
 package database
 
 import (
+	stderrors "errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -295,11 +296,20 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 	// DELETE lands. The loser's RowsAffected is 0, and the read-back it
 	// triggers is what keeps the loser reporting deleted=true — the product
 	// really is gone, and this delta helped zero it.
+	//
+	// A goroutine can also be scheduled only after the winner finished
+	// everything, hard DELETE included. Its first read then finds no row,
+	// and the call answers with the same ErrRecordNotFound an unknown id
+	// gets: the two are indistinguishable from the database alone, and the
+	// handler answers both alike with a 404 that the outbox drops, since a
+	// delta for a deleted product can never apply. Both answers report the
+	// row gone; neither leaves it behind.
 	t.Run("concurrent decrements delete once and both report it", func(t *testing.T) {
 		product := setup(t, 2)
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		deletedCount := 0
+		vanishedCount := 0
 		start := make(chan struct{})
 		for i := 0; i < 2; i++ {
 			wg.Add(1)
@@ -307,22 +317,32 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 				defer wg.Done()
 				<-start
 				deleted, _, err := repo.UpdateProductAmount(product.ID, user.ID, -2, nil)
+				if stderrors.Is(err, gorm.ErrRecordNotFound) {
+					mu.Lock()
+					vanishedCount++
+					mu.Unlock()
+					return
+				}
 				if err != nil {
 					t.Errorf("UpdateProductAmount() error = %v", err)
 					return
 				}
-				if deleted {
-					mu.Lock()
-					deletedCount++
-					mu.Unlock()
+				if !deleted {
+					t.Error("UpdateProductAmount() deleted = false, want true — the zeroing delta must report the row gone")
 				}
+				mu.Lock()
+				deletedCount++
+				mu.Unlock()
 			}()
 		}
 		close(start)
 		wg.Wait()
 
-		if deletedCount != 2 {
-			t.Errorf("deleted reported %d times, want 2 — the losing DELETE must still report the row gone", deletedCount)
+		if deletedCount+vanishedCount != 2 {
+			t.Errorf("outcomes = %d deleted + %d vanished, want 2 total", deletedCount, vanishedCount)
+		}
+		if deletedCount == 0 {
+			t.Error("no goroutine reported the delete — the zeroing delta must land at least once")
 		}
 		var count int64
 		db.Unscoped().Model(&dbModel.Product{}).Where("id = ?", product.ID).Count(&count)
