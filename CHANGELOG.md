@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.23.0] - 2026-10-17
+
+### Added
+- (1abe9031): Feat(design-system): add forgot/reset password, product detail, scan
+receipt, waste analytics screens
+- (30ad859d): **design-system:** Add dark theme tokens and toggle
+- (80eb00cf): Feat: add meal planning and saved recipes
+Closes: #400
+- (9896d453): **assets:** Monthly meal plan grid with drag-and-drop
+- (c971d373): Feat(integrations): add shopping list sync
+Closes: #402
+- (08061c50): Feat: add JSON restore and scheduled backups
+Closes: #403
+- (71cc953d): Feat(i18n): add English/German catalogs and language preferences
+Closes: #404
+- (7e3ca186): Feat: add offline product sync
+closes: #405
+
+
+### CI/CD
+- (0484ad53): Scope push trigger to main/develop
+
+
+### Changed
+- (91939a17): Refactor(api)!: normalize response field ID to id
+Closes: #407
+
+
+### Fixed
+- (a68ff3b0): **assets:** Bypass HTTP cache in service worker precache
+
+
+### Miscellaneous
+- (040c9cf2): Update CHANGELOG.md for v0.22.0
+- (1cab2426): Replace seed csv with 130 real OFF products
+- (dbd2f919): Relocate ui-capture skill and refresh screenshots
+
+
+### Removed
+- (aac2019e): **web:** Drop product view page
+
+
+### Testing
+- (5fdc62ff): **controllers:** Accept vanished outcome in concurrent delete
+
+
 ## [0.22.0] - 2026-10-13
 
 ### Added
