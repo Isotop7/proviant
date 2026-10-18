@@ -11,9 +11,9 @@
 ![Changelog](https://img.shields.io/badge/Changelog-CHANGELOG.md-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant2&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant2)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant2&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant2)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant2&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant2)
 
 ⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is **proviant**
 
