@@ -291,6 +291,9 @@ Bootstrap-`.list-group` mit Custom-Geometrie (56 px Min-Höhe, 40 px Leading-Ava
 
 Eigene Layout-Komponente (Bootstrap hat keine passende App-Shell). Sidebar nutzt `.nav.flex-column` (Bootstrap-Nav) mit `.nav-link`-Items und Salwei-Politur. Bottom-Nav nutzt `.nav` mit Grid-Layout (4 Spalten) und `env(safe-area-inset-bottom)`.
 
+Verbindliche Menü-Struktur (sieben Sidebar-Items,
+Footer-Utilities, Bottom-Nav-Slots) steht in `design-system/nav.md`.
+
 - Sidebar 240 px fix auf ≥ 1024 px, Bottom-Nav < 1024 px.
 - BG `--surface-warm`, Trennlinie rechts `1 px --border`.
 - Section-Label: `--text-eyebrow`, Padding `--space-3` `--space-4`.
@@ -298,8 +301,9 @@ Eigene Layout-Komponente (Bootstrap hat keine passende App-Shell). Sidebar nutzt
 - Aktiv: BG `--accent-soft`, FG `--accent`, Font-Gewicht 600.
 - Inaktiv: FG `--fg-2`, Gewicht 400.
 - Icon links 20 × 20, VendSans-Icon-Font oder Bootstrap-Icons.
-- Topbar: 56 px, BG `--surface`, Border unten 1 px `--border`, Title links (`--text-h2` 600), Aktionen rechts.
-- **Mobile-Bottom-Nav** (sichtbar < 1024 px, ersetzt Sidebar): BG `--surface-warm`, Border oben 1 px `--border`, 4 Grid-Spalten, 56 px hoch + `env(safe-area-inset-bottom)` für iOS-Home-Indikator. Item: Icon 20 px + Label 11 px, aktiv in `--accent` auf `--accent-soft`.
+- Topbar: 56 px, BG `--surface`, Border unten 1 px `--border`, Title links (`--text-h2` 600), Aktionen rechts (Notifications, Theme, Logout).
+- **Theme-Umschalter: genau einer pro Seite.** In der Shell im Sidebar-Footer (Desktop) bzw. im Mobile-More; in den Spec-Screens im Topnav-Utility-Cluster (`.nav-actions`). Ein zusätzlicher Floating-Button unten rechts ist verboten. Auth-Screens haben keinen Umschalter — dort greift nur `data-theme` / `prefers-color-scheme`.
+- **Mobile-Bottom-Nav** (sichtbar < 1024 px, ersetzt Sidebar): BG `--surface-warm`, Border oben 1 px `--border`, 5 Grid-Spalten (Dashboard · Products · Scan · Shopping · Recipes), 56 px hoch + `env(safe-area-inset-bottom)` für iOS-Home-Indikator. Item: Icon 20 px + Label 11 px, aktiv in `--accent` auf `--accent-soft`. Meal Plan, Waste Analytics und Settings liegen im Mobile-More-Menü.
 
 ### Modals
 
@@ -422,13 +426,19 @@ Auth ist die prominenteste Fläche. Hier darf das System spürbar werden:
 
 ## 10. Versionshinweis
 
-Stand 2026-06. Token-Werte spiegeln `main.scss` und `baseAuth.tmpl` aus
+Stand 2026-10. Token-Werte spiegeln `main.scss` und `baseAuth.tmpl` aus
 `/home/hendrik/dev/proviant/src/templates/web` zum Zeitpunkt der
 Erstellung. Folgeänderungen am proviant-Code, die diese Werte
 aktualisieren, müssen zuerst `tokens.css` und `tokens.json` anpassen,
 bevor die Komponenten geändert werden.
 
-## 10. Dark Theme (neu)
+Menü-Struktur: Die Screens in `screens/` spiegeln die sieben Sidebar-Items,
+die Footer-Utilities und die fünf Bottom-Nav-Slots aus `nav.md`. Die Screens
+sind eigenständige Spec-Sheets mit eigenem (älterem) Inline-Token-Block und
+zeigen das Menü als horizontale Topnav. Eine Migration der
+Screens auf `tokens.css` bleibt offen.
+
+## 11. Dark Theme (neu)
 
 Dark Mode ist opt-in: Entweder `<html data-theme="dark">` oder
 Automatik über `prefers-color-scheme: dark`. Überschreibt ausschließlich
@@ -440,5 +450,8 @@ identischem Hue, aber erhöhter Lightness.
   `font-display: swap` beibehalten.
 - Komponenten erben Dark-Mode automatisch über CSS-Variablen — keine
   separate Dark-Komponente nötig.
+- **Ein** Theme-Umschalter pro Seite (§ 5, App-Layout) — kein zweiter
+  Trigger, insbesondere kein Floating-Button am unteren Rand. Auth-Screens
+  bleiben ohne Umschalter.
 - Akzent darf im Dark Mode **leicht heller** sein (`oklch(60% .12 155deg`)
   um Kontrast auf dunklem Grund zu wahren, aber gleiches Hue (155°).

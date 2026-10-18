@@ -16,6 +16,15 @@
   font-display: swap;
   src: url('https://cdn.jsdelivr.net/npm/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-italic.woff2') format('woff2-variations');
 }
+/* DM Mono carries aligned numerals and dates (DESIGN.md §3). Without this the
+   --font-mono stack silently falls back to ui-monospace. Only 400 exists in-repo. */
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../src/assets/fonts/dm-mono-latin-400-normal.woff2') format('woff2');
+}
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -40,6 +49,7 @@
     --accent-active:    oklch(36% .14 155deg);
     --accent-subtle:    oklch(90% .06 155deg);
     --accent-muted:     oklch(94% .03 155deg);
+    --accent-border:    oklch(78% .08 162deg);
     --fg:               oklch(16% .022 145deg);
     --fg-2:             oklch(42% .018 145deg);
     --fg-3:             oklch(60% .012 145deg);
@@ -63,7 +73,7 @@
     --color-danger:     oklch(55% .20 25deg);
     --color-info:       oklch(55% .14 240deg);
     --font-ui:           'Vend Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    --font-mono:         'DM Mono', ui-monospace, monospace, ui-monospace, monospace;
+    --font-mono:         'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     --text-xs:          0.6875rem;
     --text-sm:          0.8125rem;
     --text-base:        0.875rem;
@@ -84,10 +94,10 @@
     --radius-md:        0.625rem;
     --radius-lg:        1rem;
     --radius-sm:        0.375rem;
-    --shadow-xs:        0 1px 2px oklch(0% 0 0deg / .05);
-    --shadow-sm:        0 1px 3px oklch(0% 0 0deg / .08), 0 1px 2px oklch(0% 0 0deg / .04);
-    --shadow-md:        0 4px 12px oklch(0% 0 0deg / .10), 0 2px 4px oklch(0% 0 0deg / .06);
-    --shadow-lg:        0 12px 32px oklch(0% 0 0deg / .12), 0 4px 8px oklch(0% 0 0deg / .06);
+    --elev-flat:        none;
+    --elev-raised:      0 1px 2px oklch(30% .03 75deg / .06), 0 4px 12px oklch(30% .03 75deg / .08);
+    --elev-overlay:     0 8px 24px oklch(30% .03 75deg / .12), 0 2px 6px oklch(30% .03 75deg / .10);
+    --focus-ring:       0 0 0 3px var(--accent-subtle);
     --space-1:  0.25rem;
     --space-2:  0.5rem;
     --space-3:  0.75rem;
@@ -104,7 +114,6 @@
     --duration-base:    150ms;
     --duration-slow:    300ms;
     --duration-slower:  450ms;
-    --ease-bounce:      cubic-bezier(.34, 1.56, .64, 1);
     --ease-in:          cubic-bezier(.4, 0, 1, 1);
     --ease-out:         cubic-bezier(0, 0, .2, 1);
     --ease-in-out:      cubic-bezier(.4, 0, .2, 1);
@@ -117,15 +126,15 @@
   a { color: var(--accent); text-decoration: none; }
   a:hover { color: var(--accent-hover); }
 
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-family: var(--font-ui); font-weight: 600; border: none; cursor: pointer; border-radius: var(--radius-md); transition: all var(--duration-base); white-space: nowrap; text-decoration: none; }
-.btn-primary { background: var(--accent); color: #fff !important; padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); width: 100%; box-shadow: var(--shadow-sm); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-family: var(--font-ui); font-weight: 600; border: none; cursor: pointer; border-radius: var(--radius-pill); text-transform: uppercase; letter-spacing: 0.04em; transition: all var(--duration-base); white-space: nowrap; text-decoration: none; }
+.btn-primary { background: var(--accent); color: #fff !important; padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); width: 100%; }
   .btn-primary:hover { background: var(--accent-hover); color: #fff !important; }
   .btn-primary:active { background: var(--accent-active); color: #fff !important; }
   .btn-secondary { background: var(--bg-2); color: var(--fg); padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); width: 100%; border: 1.5px solid var(--border-strong); }
   .btn-secondary:hover { background: var(--bg-subtle); }
 
   main { width: 100%; max-width: 420px; }
-  .card { background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-md); overflow: hidden; }
+  .card { background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); overflow: hidden; }
   .card-body { padding: var(--space-12) var(--space-8); text-align: center; }
 
   .icon-success { width: 56px; height: 56px; background: oklch(0.90 .06 155 / 0.12); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-5); }
@@ -141,6 +150,11 @@
   .mb-4 { margin-bottom: var(--space-5); }
 </style>
 <link rel="stylesheet" href="../tokens.dark.css">
+<style>
+/* Icon status panels are hardcoded light tints; tokens.dark.css covers .card only. */
+[data-theme="dark"] .icon-success { background: oklch(28% .06 155deg); }
+[data-theme="dark"] .icon-error { background: oklch(30% .06 25deg); }
+</style>
 <script>
 (function(){try{var k='proviant_theme',s=localStorage.getItem(k)||'system',e=s==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):s;document.documentElement.setAttribute('data-theme',e);document.documentElement.setAttribute('data-bs-theme',e);}catch(e){}})();
 </script>
@@ -160,9 +174,6 @@
 </main>
 
 
-<button id="themeToggleBtn" type="button" aria-label="Toggle theme" style="position:fixed;right:16px;bottom:16px;z-index:1000;width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--fg);box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:center;cursor:pointer">
-  <i class="bi bi-circle-half" style="font-size:18px"></i>
-</button>
 <script>
 (function(){
   var STORAGE_KEY='proviant_theme';
@@ -170,10 +181,10 @@
   function system(){return window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
   function stored(){try{return localStorage.getItem(STORAGE_KEY)||'system';}catch(_){return 'system';}}
   function icon(t){return t==='dark'?'bi-moon-fill':t==='light'?'bi-sun-fill':'bi-circle-half';}
-  function apply(t){var e=t==='system'?system():t;document.documentElement.setAttribute('data-theme',e);document.documentElement.setAttribute('data-bs-theme',e);var b=document.getElementById('themeToggleBtn');if(b){b.querySelector('i').className='bi '+icon(t);}}
+  function apply(t){var e=t==='system'?system():t;document.documentElement.setAttribute('data-theme',e);document.documentElement.setAttribute('data-bs-theme',e);document.querySelectorAll('.js-theme-toggle i').forEach(function(el){el.className='bi '+icon(t);});}
   apply(stored());
   document.addEventListener('DOMContentLoaded',function(){apply(stored());});
-  document.addEventListener('click',function(e){if(!e.target.closest('#themeToggleBtn'))return;var c=stored();var n=THEMES[(THEMES.indexOf(c)+1)%THEMES.length];try{localStorage.setItem(STORAGE_KEY,n);}catch(_){}apply(n);});
+  document.addEventListener('click',function(e){if(!e.target.closest('.js-theme-toggle'))return;var c=stored();var n=THEMES[(THEMES.indexOf(c)+1)%THEMES.length];try{localStorage.setItem(STORAGE_KEY,n);}catch(_){}apply(n);});
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){if(stored()==='system')apply('system');});
 })();
 </script>
