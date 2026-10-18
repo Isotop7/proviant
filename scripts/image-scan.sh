@@ -45,7 +45,7 @@
 
 set -euo pipefail
 
-if [ "$#" -ne 1 ]; then
+if [[ "$#" -ne 1 ]]; then
   echo "Usage: $0 <image-ref-or-tarball>" >&2
   exit 2
 fi
@@ -74,7 +74,7 @@ SEVERITY_FLAGS=(--scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit
 # Echoes the number of gated findings. Exit status 0 = report is usable,
 # 1 = missing or not a completed scan.
 count_findings() {
-  [ -f "$REPORT_NAME" ] || return 1
+  [[ -f "$REPORT_NAME" ]] || return 1
   if command -v jq >/dev/null 2>&1; then
     # A completed scan always writes a Results array. trivy leaves "{}" or a
     # truncated document behind when it aborts early (DB download, image
@@ -108,12 +108,12 @@ classify() {
   # nothing. That is an aborted scan (DB download, registry auth, OOM), not a
   # clean image — reporting it as "no vulnerabilities found" turns a scanner
   # outage into a green security gate on main and on every release.
-  if [ "$rc" -ne 0 ] && [ "$findings" -eq 0 ]; then
+  if [[ "$rc" -ne 0 ]] && [[ "$findings" -eq 0 ]]; then
     echo "trivy exited $rc but $REPORT_NAME lists no findings." >&2
     echo "The scan did not complete — treating this as an infrastructure error, not a clean result." >&2
     exit 1
   fi
-  if [ "$findings" -gt 0 ]; then
+  if [[ "$findings" -gt 0 ]]; then
     echo "Fixable HIGH/CRITICAL vulnerability found ($findings). See $REPORT_NAME for details." >&2
     exit 1
   fi
@@ -123,7 +123,7 @@ classify() {
 
 scan_local() {
   local rc=0
-  if [ -f "$TARGET" ]; then
+  if [[ -f "$TARGET" ]]; then
     trivy image --input "$TARGET" \
       --cache-dir "$TRIVY_CACHE_DIR" \
       "${SEVERITY_FLAGS[@]}" \
@@ -139,7 +139,7 @@ scan_local() {
 
 scan_in_container() {
   local rc=0
-  if [ ! -f "$TARGET" ]; then
+  if [[ ! -f "$TARGET" ]]; then
     echo "Container-based scanning requires an image tarball (docker/podman save archive), got: $TARGET" >&2
     exit 2
   fi
@@ -163,7 +163,7 @@ scan_in_container() {
   # Copy the report out before classifying. On a vulnerability finding trivy
   # exits 1 and the report is exactly what the maintainer needs — the previous
   # `|| rm -rf "$OUT_DIR"` deleted it in precisely that case.
-  if [ -f "$OUT_DIR/$REPORT_NAME" ]; then
+  if [[ -f "$OUT_DIR/$REPORT_NAME" ]]; then
     cp "$OUT_DIR/$REPORT_NAME" "$REPORT_NAME"
   fi
   rm -rf "$OUT_DIR"
@@ -178,7 +178,7 @@ if command -v trivy >/dev/null 2>&1; then
   # without changing what is scanned.
   trivy_version="$(trivy --version 2>&1 | head -n1 || true)"
   echo "Using local trivy: $trivy_version"
-  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     {
       echo "### Container image scan"
       echo "- scanner: \`$trivy_version\` (local binary — **not** digest-pinned)"
@@ -187,10 +187,10 @@ if command -v trivy >/dev/null 2>&1; then
   fi
   scan_local
 else
-  if [ -z "${CONTAINER_RUNTIME:-}" ]; then
+  if [[ -z "${CONTAINER_RUNTIME:-}" ]]; then
     CONTAINER_RUNTIME="$(command -v podman || command -v docker || true)"
   fi
-  if [ -n "$CONTAINER_RUNTIME" ]; then
+  if [[ -n "$CONTAINER_RUNTIME" ]]; then
     echo "Using pinned trivy image: $TRIVY_IMAGE"
     scan_in_container
   else

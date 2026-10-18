@@ -278,7 +278,7 @@ proviant.addToShoppingList = async function (productId, quantity, unit) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      productId: parseInt(productId, 10),
+      productId: Number.parseInt(productId, 10),
       quantity: quantity || 1,
       unit: unit || "",
     }),

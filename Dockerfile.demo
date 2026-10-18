@@ -5,7 +5,7 @@ RUN apk add --no-cache --update g++ gcc go npm
 COPY ./src/go.mod ./src/go.sum ./
 RUN go mod download
 COPY ./ ./
-RUN npm ci && \
+RUN npm ci --ignore-scripts && \
     npm run css && \
     cp node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/ && \
 	cp node_modules/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-*.woff2 ./src/assets/fonts/ && \
@@ -44,7 +44,8 @@ RUN addgroup -S proviant && \
     chown -R proviant:proviant /app
 COPY --chown=proviant:proviant ./src/config.yaml.sqlite.tmpl /app/config.yaml
 COPY --chown=proviant:proviant ./demo_entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chown root:root /entrypoint.sh && \
+    chmod +x /entrypoint.sh
 ENV GIN_MODE=release
 ENV PROVIANT_DEMO_MODE=true
 ENV TZ=UTC

@@ -81,7 +81,7 @@
   function updateItemQuantity(itemId, delta) {
     var qtyEl = document.getElementById('qty-' + itemId);
     if (!qtyEl) return;
-    var currentQty = parseInt(qtyEl.textContent, 10) || 0;
+    var currentQty = Number.parseInt(qtyEl.textContent, 10) || 0;
     var newQty = Math.max(1, currentQty + delta);
     qtyEl.textContent = newQty;
     fetch('/api/v1/shopping-list/' + itemId, {
@@ -175,7 +175,7 @@
     }
     var payload = {
       name: nameInput.value.trim(),
-      quantity: parseInt(qtyInput ? qtyInput.value : '1', 10) || 1,
+      quantity: Number.parseInt(qtyInput ? qtyInput.value : '1', 10) || 1,
       unit: unitInput ? unitInput.value.trim() : ''
     };
     fetch('/api/v1/shopping-list', {

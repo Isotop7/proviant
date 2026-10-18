@@ -265,7 +265,7 @@
 
         if (target.closest("#btnSaveProfile")) {
             event.preventDefault();
-            saveProfile();
+            void saveProfile();
             return;
         }
 
@@ -280,7 +280,7 @@
             event.preventDefault();
             switchHouseholdMode("browse");
             if (!householdListLoaded) {
-                loadHouseholds();
+                void loadHouseholds();
             }
             return;
         }
@@ -300,22 +300,22 @@
         if (target.closest(".household-join-btn")) {
             event.preventDefault();
             var btn = target.closest(".household-join-btn");
-            var householdId = parseInt(btn.getAttribute("data-household-id"), 10);
+            var householdId = Number.parseInt(btn.getAttribute("data-household-id"), 10);
             if (householdId) {
-                applyForHousehold(householdId);
+                void applyForHousehold(householdId);
             }
             return;
         }
 
         if (target.closest("#btnCreateHousehold")) {
             event.preventDefault();
-            createHousehold();
+            void createHousehold();
             return;
         }
 
         if (target.closest("#btnJoinByInvite")) {
             event.preventDefault();
-            joinByInvite();
+            void joinByInvite();
             return;
         }
 
@@ -333,7 +333,7 @@
 
         if (target.closest("#btnFinishOnboarding")) {
             event.preventDefault();
-            completeOnboarding();
+            void completeOnboarding();
             return;
         }
 
@@ -349,6 +349,6 @@
     // --- Initialize ---
 
     document.addEventListener("DOMContentLoaded", function () {
-        restoreState();
+        void restoreState();
     });
 })();

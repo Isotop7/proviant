@@ -1,9 +1,9 @@
 document.addEventListener("DOMContentLoaded", function () {
-    loadSavedRecipes();
+    void loadSavedRecipes();
 });
 
 document.addEventListener("proviant:save-recipe-suggestion", function (e) {
-    openEditorFromSuggestion(e.detail);
+    void openEditorFromSuggestion(e.detail);
 });
 
 document.addEventListener("click", function (e) {
@@ -12,7 +12,7 @@ document.addEventListener("click", function (e) {
 
     if (target.closest("#btnNewRecipe") || target.closest("#btnNewRecipeMobile") || target.closest("#btnNewRecipeEmpty")) {
         e.preventDefault();
-        openRecipeEditor(null);
+        void openRecipeEditor(null);
         return;
     }
     if (target.closest("#btnCancelRecipe")) {
@@ -22,7 +22,7 @@ document.addEventListener("click", function (e) {
     }
     if (target.closest("#btnSaveRecipe")) {
         e.preventDefault();
-        saveRecipe();
+        void saveRecipe();
         return;
     }
     if (target.closest("#btnAddIngredient")) {
@@ -40,19 +40,19 @@ document.addEventListener("click", function (e) {
     const editButton = target.closest("[data-recipe-edit]");
     if (editButton) {
         e.preventDefault();
-        editRecipe(parseInt(editButton.getAttribute("data-recipe-edit"), 10));
+        void editRecipe(Number.parseInt(editButton.getAttribute("data-recipe-edit"), 10));
         return;
     }
     const deleteButton = target.closest("[data-recipe-delete]");
     if (deleteButton) {
         e.preventDefault();
-        confirmDeleteRecipe(parseInt(deleteButton.getAttribute("data-recipe-delete"), 10), deleteButton.getAttribute("data-recipe-name") || proviant.t("js.savedRecipes.thisRecipe"));
+        confirmDeleteRecipe(Number.parseInt(deleteButton.getAttribute("data-recipe-delete"), 10), deleteButton.getAttribute("data-recipe-name") || proviant.t("js.savedRecipes.thisRecipe"));
         return;
     }
     const cookButton = target.closest("[data-recipe-cook]");
     if (cookButton) {
         e.preventDefault();
-        confirmCookRecipe(parseInt(cookButton.getAttribute("data-recipe-cook"), 10), cookButton.getAttribute("data-recipe-name") || proviant.t("js.savedRecipes.thisRecipe"));
+        confirmCookRecipe(Number.parseInt(cookButton.getAttribute("data-recipe-cook"), 10), cookButton.getAttribute("data-recipe-name") || proviant.t("js.savedRecipes.thisRecipe"));
     }
 });
 
@@ -70,16 +70,17 @@ const SUGGESTION_UNITS = ["g", "kg", "mg", "l", "ml", "el", "tl", "tbsp", "tsp",
 
 function parseSuggestionIngredient(raw) {
     const text = (raw || "").trim();
-    const match = text.match(/^(\d+(?:[.,]\d+)?)\s*([A-Za-zäöüß]+)?\s+(.+)$/);
-    if (!match) {
+    const amountMatch = text.match(/^(\d+(?:[.,]\d+)?)\s+/);
+    if (!amountMatch) {
         return { name: text, amount: 0, unit: "", productId: null };
     }
-    const amount = Math.round(parseFloat(match[1].replace(",", "."))) || 0;
-    const unit = (match[2] || "").toLowerCase();
-    if (unit && SUGGESTION_UNITS.indexOf(unit) !== -1) {
-        return { name: match[3].trim().replace(/^of\s+/i, ""), amount: amount, unit: unit, productId: null };
+    const rest = text.slice(amountMatch[0].length);
+    const unitMatch = rest.match(/^([A-Za-zäöüß]+)\s+/);
+    const amount = Math.round(Number.parseFloat(amountMatch[1].replace(",", "."))) || 0;
+    if (unitMatch && SUGGESTION_UNITS.indexOf(unitMatch[1].toLowerCase()) !== -1) {
+        return { name: rest.slice(unitMatch[0].length).trim().replace(/^of\s+/i, ""), amount: amount, unit: unitMatch[1].toLowerCase(), productId: null };
     }
-    return { name: ((match[2] || "") + " " + match[3]).trim(), amount: amount, unit: "", productId: null };
+    return { name: rest.trim(), amount: amount, unit: "", productId: null };
 }
 
 async function openEditorFromSuggestion(suggestion) {
@@ -192,9 +193,9 @@ function collectRecipePayload() {
     const editor = document.getElementById("recipeEditor");
     const ingredients = Array.from(document.querySelectorAll("#ingredientRows [data-ingredient-row]")).map(function (row, index) {
         const productRaw = row.querySelector("[data-ingredient-product]").value;
-        const amount = parseInt(row.querySelector("[data-ingredient-amount]").value, 10);
+        const amount = Number.parseInt(row.querySelector("[data-ingredient-amount]").value, 10);
         return {
-            productId: productRaw ? parseInt(productRaw, 10) : null,
+            productId: productRaw ? Number.parseInt(productRaw, 10) : null,
             name: row.querySelector("[data-ingredient-name]").value.trim(),
             amount: Number.isFinite(amount) && amount > 0 ? amount : 0,
             unit: row.querySelector("[data-ingredient-unit]").value.trim(),
@@ -207,7 +208,7 @@ function collectRecipePayload() {
         name: document.getElementById("recipeName").value.trim(),
         description: document.getElementById("recipeDescription").value.trim(),
         instructions: document.getElementById("recipeInstructions").value.trim(),
-        servings: parseInt(document.getElementById("recipeServings").value, 10) || 1,
+        servings: Number.parseInt(document.getElementById("recipeServings").value, 10) || 1,
         sourceUrl: document.getElementById("recipeSourceUrl").value.trim(),
         imageUrl: editor ? (editor.dataset.imageUrl || "") : "",
         ingredients: ingredients,
@@ -230,7 +231,7 @@ async function saveRecipe() {
         }
         proviant.showFeedback("success", proviant.t("js.savedRecipes.savedTitle"), proviant.t("js.savedRecipes.savedBody", payload.name));
         closeRecipeEditor();
-        loadSavedRecipes();
+        void loadSavedRecipes();
     } catch (error) {
         proviant.showFeedback("error", proviant.t("js.savedRecipes.notSavedTitle"), error.message);
     }
@@ -240,7 +241,7 @@ function confirmDeleteRecipe(recipeID, recipeName) {
     proviant.showConfirm(
         proviant.t("js.savedRecipes.deleteConfirmTitle"),
         proviant.t("js.savedRecipes.deleteConfirmBody", recipeName),
-        function () { deleteRecipe(recipeID); },
+        function () { void deleteRecipe(recipeID); },
         proviant.t("common.delete"),
         "danger"
     );
@@ -255,7 +256,7 @@ async function deleteRecipe(recipeID) {
         }
         proviant.showFeedback("success", proviant.t("js.savedRecipes.deletedTitle"), proviant.t("js.savedRecipes.deletedBody"));
         if (editingRecipeID === recipeID) closeRecipeEditor();
-        loadSavedRecipes();
+        void loadSavedRecipes();
     } catch (error) {
         proviant.showFeedback("error", proviant.t("js.savedRecipes.notDeletedTitle"), error.message);
     }
@@ -265,7 +266,7 @@ function confirmCookRecipe(recipeID, recipeName) {
     proviant.showConfirm(
         proviant.t("js.savedRecipes.cookConfirmTitle"),
         proviant.t("js.savedRecipes.cookConfirmBody", recipeName),
-        function () { cookRecipe(recipeID); },
+        function () { void cookRecipe(recipeID); },
         proviant.t("js.savedRecipes.cook"),
         "warning"
     );

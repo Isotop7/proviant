@@ -4,7 +4,7 @@ document.addEventListener("click", function (event) {
 
     if (target.closest("#btnLogout")) {
         event.preventDefault();
-        proviant.logoutUser().then(() => {
+        void proviant.logoutUser().then(() => {
             window.location.href = '/web';
         });
         return;
@@ -13,6 +13,8 @@ document.addEventListener("click", function (event) {
 
 document.addEventListener('DOMContentLoaded', function () {
     var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    // Bootstrap tooltips have no selector-based auto-init; per-element
+    // instantiation is the documented API and the side effect is the point.
     tooltipEls.forEach(function (el) { new bootstrap.Tooltip(el); });
 
     // Show offline banner immediately if page loaded from cache while offline

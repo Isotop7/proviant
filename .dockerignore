@@ -1,4 +1,5 @@
 config.yaml*
+.git/
 .gitignore
 .gitlab-ci.yml
 LICENSE
@@ -25,5 +26,13 @@ CLAUDE.md
 cliff.toml
 eslint.config.mjs
 sonar*
+.sonarcloud.properties
 Taskfile.yml
 seed-products.csv
+node_modules/
+src/data/
+src/coverage.out
+src/cov.out
+src/proviant
+src/proviant_*
+src/proviant.log

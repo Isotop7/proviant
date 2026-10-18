@@ -12,7 +12,7 @@
 # Env vars:
 #   SONAR_TOKEN     (required) authentication token
 #   SONAR_URL        base SonarQube URL (default: https://sonarcloud.io)
-#   PROJECT_KEY      project key (auto-detected from sonar-project.properties)
+#   PROJECT_KEY      project key (default: Isotop7_proviant2)
 
 set -euo pipefail
 
@@ -43,7 +43,7 @@ Options:
 Env vars:
   SONAR_TOKEN    (required) SonarQube authentication token
   SONAR_URL      Server URL (default: https://sonarcloud.io)
-  PROJECT_KEY    Project key (auto-detected from sonar-project.properties)
+  PROJECT_KEY    Project key (default: Isotop7_proviant2)
 EOF
 	exit 0
 }
@@ -60,25 +60,32 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-if [ -z "${SONAR_TOKEN:-}" ]; then
+if [[ -z "${SONAR_TOKEN:-}" ]]; then
 	echo "ERROR: SONAR_TOKEN env var is not set."
 	exit 1
 fi
 
-if [ -z "${PROJECT_KEY:-}" ]; then
-	if [ -f "sonar-project.properties" ]; then
-		PROJECT_KEY=$(grep -E '^sonar\.projectKey=' sonar-project.properties | cut -d= -f2)
-	fi
-	if [ -z "${PROJECT_KEY:-}" ]; then
-		echo "ERROR: PROJECT_KEY not set and not found in sonar-project.properties"
+PROJECT_KEY="${PROJECT_KEY:-Isotop7_proviant2}"
+
+# A rejected token (401) answers with an empty body, which every JSON read below would
+# silently turn into "no findings" — an auth failure must never look like a clean report.
+sonar_get() {
+	local response
+	if ! response=$(curl -sS -u "${SONAR_TOKEN}:" "$1") || [[ -z "$response" ]]; then
+		echo "ERROR: empty response from ${1%%\?*}" >&2
 		exit 1
 	fi
-fi
+	if echo "$response" | jq -e '.errors' >/dev/null 2>&1; then
+		echo "ERROR: $(echo "$response" | jq -r '.errors[].msg')" >&2
+		exit 1
+	fi
+	printf '%s' "$response"
+}
 
 echo "Instance: ${SONAR_URL}"
 echo "Project:  ${PROJECT_KEY}"
 
-if [ "$MODE" = "duplications" ]; then
+if [[ "$MODE" = "duplications" ]]; then
 	DUPLICATION_METRICS="duplicated_lines_density,duplicated_lines,duplicated_blocks"
 	TREE_BASE="${SONAR_URL}/api/measures/component_tree?component=${PROJECT_KEY}&metricKeys=${DUPLICATION_METRICS}&qualifiers=FIL&strategy=leaves&ps=500"
 
@@ -87,13 +94,7 @@ if [ "$MODE" = "duplications" ]; then
 
 	while true; do
 		echo -n "  Fetching page ${page} ..."
-		resp=$(curl -sS -u "${SONAR_TOKEN}:" "${TREE_BASE}&p=${page}")
-
-		if echo "$resp" | jq -e '.errors' > /dev/null 2>&1; then
-			echo ""
-			echo "ERROR: $(echo "$resp" | jq -r '.errors[].msg')"
-			exit 1
-		fi
+		resp=$(sonar_get "${TREE_BASE}&p=${page}")
 
 		fetched=$(echo "$resp" | jq '.components | length')
 		total_pages=$(echo "$resp" | jq '.paging | ceil(.total / .pageSize)' 2>/dev/null || echo "$page")
@@ -109,7 +110,7 @@ if [ "$MODE" = "duplications" ]; then
 
 		all_files=$(echo "$all_files $batch" | jq -s '.[0] + .[1]')
 
-		if [ "$fetched" -lt 500 ]; then
+		if [[ "$fetched" -lt 500 ]]; then
 			break
 		fi
 		page=$((page + 1))
@@ -124,10 +125,10 @@ fi
 
 BASE_URL="${API_BASE}?componentKeys=${PROJECT_KEY}&statuses=${STATUSES}${EXTRA_PARAMS}"
 
-total=$(curl -sS -u "${SONAR_TOKEN}:" "${BASE_URL}&ps=1" | jq -r '.total // 0')
+total=$(sonar_get "${BASE_URL}&ps=1" | jq -r '.total // 0')
 echo "Total issues: ${total}"
 
-if [ "$total" -eq 0 ]; then
+if [[ "$total" -eq 0 ]]; then
 	echo "[]" > "$OUTPUT_FILE"
 	echo "No issues found. Empty output written to ${OUTPUT_FILE}"
 	exit 0
@@ -141,19 +142,19 @@ first=true
 while true; do
 	echo -n "  Fetching page ${page} ... "
 
-	resp=$(curl -sS -u "${SONAR_TOKEN}:" "${BASE_URL}&ps=${pagesize}&p=${page}")
+	resp=$(sonar_get "${BASE_URL}&ps=${pagesize}&p=${page}")
 
 	fetched=$(echo "$resp" | jq '.issues | length')
 	echo "${fetched} issues"
 
-	if [ "$fetched" -eq 0 ]; then
+	if [[ "$fetched" -eq 0 ]]; then
 		break
 	fi
 
 	# Strip outer [] from .issues array so comma-separated values remain
 	issues_flat=$(echo "$resp" | jq -c '.issues' | sed 's/^\[//; s/\]$//')
 
-	if [ "$first" = true ]; then
+	if [[ "$first" = true ]]; then
 		first=false
 	else
 		echo -n "," >> "$OUTPUT_FILE"
@@ -161,7 +162,7 @@ while true; do
 
 	echo -n "$issues_flat" >> "$OUTPUT_FILE"
 
-	if [ "$fetched" -lt "$pagesize" ]; then
+	if [[ "$fetched" -lt "$pagesize" ]]; then
 		break
 	fi
 	page=$((page + 1))

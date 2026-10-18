@@ -270,7 +270,7 @@
   }
 
   function parseRetryAfter(value) {
-    var seconds = parseInt(value, 10);
+    var seconds = Number.parseInt(value, 10);
     if (!isFinite(seconds) || seconds <= 0) seconds = 1;
     return Math.min(seconds, MAX_RETRY_AFTER_SECONDS);
   }

@@ -5,7 +5,7 @@ RUN apk add --no-cache --update g++ gcc go npm
 COPY ./src/go.mod ./src/go.sum ./
 RUN go mod download
 COPY ./ ./
-RUN npm ci && \
+RUN npm ci --ignore-scripts && \
     npm run css && \
     cp node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/ && \
 	cp node_modules/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-*.woff2 ./src/assets/fonts/ && \
@@ -38,6 +38,7 @@ ENV TZ=UTC
 EXPOSE 5114
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  # Loopback/container-internal probe only — never crosses a network boundary.
   CMD probe_host="${PROVIANT_SERVER_HOST:-127.0.0.1}"; \
     case "$probe_host" in ""|"::"|"0.0.0.0") probe_host=127.0.0.1 ;; *:*) probe_host="[$probe_host]" ;; esac; \
     wget --quiet -O /dev/null "http://$probe_host:${PROVIANT_SERVER_PORT:-5114}/health" || exit 1

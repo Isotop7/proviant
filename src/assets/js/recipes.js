@@ -1,11 +1,11 @@
 document.addEventListener("DOMContentLoaded", function() {
-    loadRecipeSuggestions();
+    void loadRecipeSuggestions();
 });
 
 document.addEventListener("click", function(e) {
     if (e.target.closest("#refreshRecipesBtn") || e.target.closest("#recipesRetryBtn")) {
         e.preventDefault();
-        loadRecipeSuggestions(true);
+        void loadRecipeSuggestions(true);
     }
 });
 
@@ -145,7 +145,7 @@ document.addEventListener("click", function(e) {
     const saveBtn = e.target.closest(".save-suggestion-btn");
     if (saveBtn) {
         e.preventDefault();
-        const suggestion = renderedSuggestions[parseInt(saveBtn.getAttribute("data-suggestion-index"), 10)];
+        const suggestion = renderedSuggestions[Number.parseInt(saveBtn.getAttribute("data-suggestion-index"), 10)];
         if (suggestion) {
             document.dispatchEvent(new CustomEvent("proviant:save-recipe-suggestion", { detail: suggestion }));
         }
@@ -168,7 +168,7 @@ document.addEventListener("click", function(e) {
     proviant.showConfirm(
         proviant.t("js.recipes.cookConfirmTitle"),
         proviant.tn("js.recipes.cookConfirmBody", ids.length),
-        function() { cookMatchedProducts(btn, ids); },
+        function() { void cookMatchedProducts(btn, ids); },
         proviant.t("js.recipes.cook"),
         "warning"
     );
@@ -201,7 +201,7 @@ async function cookMatchedProducts(btn, ids) {
                 proviant.tn("js.recipes.cookConsumedAll", consumed));
         }
         if (consumed + partial > 0) {
-            loadRecipeSuggestions(true);
+            void loadRecipeSuggestions(true);
         }
     } catch (error) {
         proviant.showFeedback("error", proviant.t("js.recipes.cookFailedTitle"), error.message);

@@ -39,8 +39,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Edit Product — Proviant</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js" integrity="sha384-XcdcwHqIPULERb2yDEM4R0XaQKU3YnDsrTmjACBZyfdVVqjh6xQ4/DCMd7XLcA6Y" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" integrity="sha384-CK2SzKma4jA5H/MXDUU7i1TqZlCFaD4T01vtyDFvPlD97JQyS+IsSh1nI2EFbpyk" crossorigin="anonymous">
 <style>
   :root {
     --accent:           oklch(42% .14 155deg);
@@ -299,8 +299,8 @@
     <!-- Photo -->
     <div class="form-section" style="margin-bottom:var(--space-5)">
       <div class="form-section-body">
-        <label class="field-label">Product photo</label>
-        <div class="photo-placeholder" onclick="document.getElementById('photoInput').click()">
+        <label class="field-label" for="photoInput">Product photo</label>
+        <div class="photo-placeholder" role="button" tabindex="0" aria-label="Add product photo" onclick="document.getElementById('photoInput').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
           <i class="bi bi-camera"></i>
           <span>Tap to add photo</span>
         </div>
@@ -316,16 +316,16 @@
       </div>
       <div class="form-section-body">
         <div class="field">
-          <label class="field-label">Product name</label>
-          <input class="input" type="text" value="Atlantic Salmon" placeholder="e.g. Greek Yogurt">
+          <label class="field-label" for="productName">Product name</label>
+          <input class="input" type="text" id="productName" value="Atlantic Salmon" placeholder="e.g. Greek Yogurt">
         </div>
         <div class="field">
-          <label class="field-label">Barcode</label>
-          <input class="input" type="text" value="5901234123457" readonly>
+          <label class="field-label" for="productBarcode">Barcode</label>
+          <input class="input" type="text" id="productBarcode" value="5901234123457" readonly>
         </div>
         <div class="field">
-          <label class="field-label">Category</label>
-          <select class="select input">
+          <label class="field-label" for="productCategory">Category</label>
+          <select class="select input" id="productCategory">
             <option>Meat &amp; Fish</option>
             <option>Dairy &amp; Eggs</option>
             <option>Produce</option>
@@ -346,8 +346,8 @@
       <div class="form-section-body">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4)">
           <div class="field">
-            <label class="field-label">Storage location</label>
-            <select class="select input">
+            <label class="field-label" for="storageLocation">Storage location</label>
+            <select class="select input" id="storageLocation">
               <option selected>Fridge</option>
               <option>Freezer</option>
               <option>Pantry</option>
@@ -355,20 +355,20 @@
             </select>
           </div>
           <div class="field">
-            <label class="field-label">Quantity</label>
-            <input class="input" type="text" value="1 pack · 200g">
+            <label class="field-label" for="productQuantity">Quantity</label>
+            <input class="input" type="text" id="productQuantity" value="1 pack · 200g">
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-top:var(--space-4)">
           <div class="field">
-            <label class="field-label">Expiry date</label>
-            <input class="input" type="date" value="2025-05-14">
+            <label class="field-label" for="expiryDate">Expiry date</label>
+            <input class="input" type="date" id="expiryDate" value="2025-05-14">
           </div>
           <div class="field">
-            <label class="field-label">Opened</label>
+            <label class="field-label" for="openedToggle">Opened</label>
             <div style="display:flex;align-items:center;height:44px">
-              <label class="toggle">
-                <input type="checkbox">
+              <label class="toggle" aria-hidden="true">
+                <input type="checkbox" id="openedToggle">
                 <span class="toggle-track"></span>
               </label>
               <span style="font-size:var(--text-sm);color:var(--fg-2);margin-left:var(--space-3)">Mark as opened</span>
@@ -386,9 +386,9 @@
       </div>
       <div class="form-section-body tight">
         <div class="toggle-row">
-          <label>Alert before expiry</label>
-          <label class="toggle">
-            <input type="checkbox" checked>
+          <label for="alertBeforeExpiry">Alert before expiry</label>
+          <label class="toggle" aria-hidden="true">
+            <input type="checkbox" checked id="alertBeforeExpiry">
             <span class="toggle-track"></span>
           </label>
         </div>
@@ -403,7 +403,8 @@
       </div>
       <div class="form-section-body">
         <div class="field" style="margin-bottom:0">
-          <textarea class="input" placeholder="Add notes about this product…">Wild-caught Atlantic Salmon, purchased from local market.</textarea>
+          <label for="productNotes" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap">Notes</label>
+          <textarea class="input" id="productNotes" placeholder="Add notes about this product…">Wild-caught Atlantic Salmon, purchased from local market.</textarea>
         </div>
       </div>
     </div>

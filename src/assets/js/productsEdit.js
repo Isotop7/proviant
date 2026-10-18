@@ -58,7 +58,7 @@ function editProduct() {
     const inputOpenedAt = document.getElementById('inputOpenedAt');
     const openedAtValue = inputOpenedAt && inputOpenedAt.value ? inputOpenedAt.value : null;
     const openedAtDate = openedAtValue ? new Date(openedAtValue + 'T00:00:00') : null;
-    const openedAt = openedAtDate && !isNaN(openedAtDate.getTime()) ? openedAtDate.toISOString() : null;
+    const openedAt = openedAtDate && !Number.isNaN(openedAtDate.getTime()) ? openedAtDate.toISOString() : null;
 
     const inputDaysAfterOpening = document.getElementById('inputDaysAfterOpening');
     const daysAfterOpening = inputDaysAfterOpening && inputDaysAfterOpening.value !== ''
@@ -96,6 +96,8 @@ function editProduct() {
                 proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.products.undefinedError", response.message));
                 break;
         }
+    }).catch((error) => {
+        proviant.showFeedback('error', proviant.t("common.error"), error?.message || String(error));
     });
 }
 
@@ -110,6 +112,8 @@ function deleteProduct() {
         } else {
             proviant.showFeedback('error', proviant.t("js.products.deleteFailed"), proviant.t("js.products.deleteFailedMsg", response.message));
         }
+    }).catch((error) => {
+        proviant.showFeedback('error', proviant.t("common.error"), error?.message || String(error));
     });
 }
 
@@ -124,6 +128,8 @@ function restoreProduct() {
         } else {
             proviant.showFeedback('error', proviant.t("js.products.restoreProductFailed"), proviant.t("js.products.restoreProductFailedMsg", response.message));
         }
+    }).catch((error) => {
+        proviant.showFeedback('error', proviant.t("common.error"), error?.message || String(error));
     });
 }
 
@@ -174,6 +180,8 @@ function consumeProduct() {
         } else {
             proviant.showFeedback('error', proviant.t("js.products.consumeFailed"), proviant.t("js.products.couldNotMarkConsumed", response.message));
         }
+    }).catch((error) => {
+        proviant.showFeedback('error', proviant.t("common.error"), error?.message || String(error));
     });
 }
 
@@ -216,8 +224,8 @@ document.addEventListener("click", function (event) {
     if (stepBtn) {
         var amountInput = document.getElementById('inputAmount');
         if (amountInput) {
-            var step = parseInt(stepBtn.dataset.amountStep, 10);
-            amountInput.value = Math.max(0, parseInt(amountInput.value, 10) + step);
+            var step = Number.parseInt(stepBtn.dataset.amountStep, 10);
+            amountInput.value = Math.max(0, Number.parseInt(amountInput.value, 10) + step);
         }
     }
 
@@ -282,7 +290,7 @@ function handleAddToShoppingList(btn) {
     var productId = btn.dataset.productId;
     if (!productId) return;
 
-    proviant.runWithButtonBusyState(
+    void proviant.runWithButtonBusyState(
         btn,
         async function () {
             var response = await proviant.getRestockSuggestion(productId);
@@ -351,7 +359,7 @@ function openRestockModal(suggestion) {
             var newBtn = confirmBtn.cloneNode(true);
             confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
             newBtn.addEventListener('click', function () {
-                var qty = qtyEl ? Math.max(1, parseInt(qtyEl.value, 10) || 1) : 1;
+                var qty = qtyEl ? Math.max(1, Number.parseInt(qtyEl.value, 10) || 1) : 1;
                 var unit = unitEl ? unitEl.value.trim() : '';
                 var modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();

@@ -15,7 +15,7 @@ function renderTile(title, hero, variant, heroClass) {
   const variantColorMap  = { danger: 'var(--status-expired)', warning: 'var(--status-soon)', success: 'var(--status-fresh)' };
   const variantShadowMap = { danger: 'oklch(0.55 0.20 25)', warning: 'oklch(0.72 0.16 80)', success: 'oklch(0.50 0.12 162)' };
 
-  if (variant && variantColorMap[variant] && !heroClass && parseFloat(hero) > 0) {
+  if (variant && variantColorMap[variant] && !heroClass && Number.parseFloat(hero) > 0) {
     const fill   = variantColorMap[variant];
     const shadow = variantShadowMap[variant];
     col.innerHTML = `
@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const periodBtn = event.target.closest('#periodSelector button');
     if (periodBtn) {
       const period = periodBtn.dataset.period;
-      if (period) load(period);
+      if (period) void load(period);
       return;
     }
     const sortBtn = event.target.closest('#sortToggle button');
@@ -321,10 +321,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const sort = sortBtn.dataset.sort;
       if (sort && sort !== currentSort) {
         currentSort = sort;
-        load();
+        void load();
       }
     }
   });
-  load('6months');
+  void load('6months');
 });
 })();

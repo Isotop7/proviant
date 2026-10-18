@@ -70,14 +70,14 @@ document.addEventListener("click", function (event) {
             if (response.code === 200) {
                 const amountEl = document.getElementById(`amount-${productID}`);
                 if (amountEl) {
-                    amountEl.textContent = parseInt(amountEl.textContent, 10) + 1;
+                    amountEl.textContent = Number.parseInt(amountEl.textContent, 10) + 1;
                     amountEl.classList.add('amount-updated');
                     setTimeout(() => amountEl.classList.remove('amount-updated'), 800);
                 }
             } else {
                 reportAmountChangeFailed(response);
             }
-        });
+        }).catch((err) => proviant.showFeedback('error', proviant.t("common.error"), err.message));
         return;
     }
 
@@ -95,7 +95,7 @@ document.addEventListener("click", function (event) {
                 } else {
                     const amountEl = document.getElementById(`amount-${productID}`);
                     if (amountEl) {
-                        const newVal = Math.max(0, parseInt(amountEl.textContent, 10) - 1);
+                        const newVal = Math.max(0, Number.parseInt(amountEl.textContent, 10) - 1);
                         amountEl.textContent = newVal;
                         amountEl.classList.add('amount-updated');
                         setTimeout(() => amountEl.classList.remove('amount-updated'), 800);
@@ -104,7 +104,7 @@ document.addEventListener("click", function (event) {
             } else {
                 reportAmountChangeFailed(response);
             }
-        });
+        }).catch((err) => proviant.showFeedback('error', proviant.t("common.error"), err.message));
         return;
     }
 
@@ -121,7 +121,7 @@ document.addEventListener("click", function (event) {
                 clearBulkSelectionAndReload();
             } else if (response.conflict && response.openedAt) {
                 const previous = new Date(response.openedAt);
-                const formatted = isNaN(previous.getTime()) ? response.openedAt : previous.toLocaleString();
+                const formatted = Number.isNaN(previous.getTime()) ? response.openedAt : previous.toLocaleString();
                 proviant.showConfirm(
                     proviant.t("js.products.alreadyOpened"),
                     proviant.t("js.products.resetOpenedConfirm", formatted),
@@ -132,8 +132,8 @@ document.addEventListener("click", function (event) {
             } else {
                 proviant.showFeedback('error', proviant.t("js.products.markOpenedFailed"), proviant.t("js.products.pleaseTryAgain"));
             }
-        });
-        sendOpen(false);
+        }).catch((err) => proviant.showFeedback('error', proviant.t("js.products.markOpenedFailed"), err.message));
+        void sendOpen(false);
         return;
     }
 
@@ -146,7 +146,7 @@ document.addEventListener("click", function (event) {
         if (checkbox) {
             checkbox.checked = !checkbox.checked;
             card.classList.toggle('border-info');
-            handleSelected();
+            void handleSelected();
             handleCardClickEffect(cardId);
         }
         return;
@@ -164,13 +164,13 @@ document.addEventListener("click", function (event) {
     if (addToListBtn) {
         event.preventDefault();
         var productId = addToListBtn.dataset.productId;
-        proviant.runWithButtonBusyState(
+        void proviant.runWithButtonBusyState(
             addToListBtn,
             async function () {
                 const res = await fetch('/api/v1/shopping-list', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ productId: parseInt(productId, 10) })
+                    body: JSON.stringify({ productId: Number.parseInt(productId, 10) })
                 });
                 if (!res.ok) {
                     const body = await res.json().catch(function () { return {}; });
@@ -250,18 +250,18 @@ document.addEventListener("click", function (event) {
         if (!ids.length) return;
         var action = bulkBtn.dataset.bulkAction;
         if (action === 'cook') {
-            openCookModal(ids, bulkBtn);
+            void openCookModal(ids, bulkBtn);
             return;
         }
         var opts = action === 'delete' ? { confirm: true, confirmTitle: proviant.t("js.products.markAsWasted"), confirmMsg: proviant.tn("js.products.markWastedBulkConfirm", ids.length) } : {};
-        proviant.bulkAction(action, ids, opts);
+        void proviant.bulkAction(action, ids, opts);
         return;
     }
 
     // Cook modal confirm button
     if (target.closest('#btnCookConfirm')) {
         event.preventDefault();
-        submitCook();
+        void submitCook();
         return;
     }
 
@@ -269,7 +269,7 @@ document.addEventListener("click", function (event) {
     var qtyBtn = target.closest('[data-qty-action]');
     if (qtyBtn) {
         event.preventDefault();
-        var id = parseInt(qtyBtn.dataset.productId, 10);
+        var id = Number.parseInt(qtyBtn.dataset.productId, 10);
         var delta = qtyBtn.dataset.qtyAction === 'inc' ? 1 : -1;
         changeQty(id, delta);
         return;
@@ -571,8 +571,8 @@ function getCookModal() {
         el.addEventListener('change', function (event) {
             var input = event.target.closest('.cook-item-row input');
             if (!input) return;
-            var max = parseInt(input.closest('.cook-item-row').dataset.maxAmount, 10) || 1;
-            var amount = parseInt(input.value, 10) || 1;
+            var max = Number.parseInt(input.closest('.cook-item-row').dataset.maxAmount, 10) || 1;
+            var amount = Number.parseInt(input.value, 10) || 1;
             if (amount < 1) amount = 1;
             if (amount > max) amount = max;
             input.value = String(amount);
@@ -657,7 +657,7 @@ async function openCookModalInner(ids, container) {
             skipped++;
             return;
         }
-        var amount = parseInt(fp.amount, 10) || 0;
+        var amount = Number.parseInt(fp.amount, 10) || 0;
         var unit = fp.unit || '';
         var name = fp.productName || ('#' + id);
         if (amount < 1) {
@@ -719,11 +719,11 @@ async function submitCook() {
     var items = [];
     document.querySelectorAll('#cookModalItems .cook-item-row').forEach(function (row) {
         var input = row.querySelector('input');
-        var max = parseInt(row.dataset.maxAmount, 10) || 1;
-        var amount = input ? parseInt(input.value, 10) : NaN;
+        var max = Number.parseInt(row.dataset.maxAmount, 10) || 1;
+        var amount = input ? Number.parseInt(input.value, 10) : Number.NaN;
         // An invalid or out-of-range value must never fall through to 0 —
         // the backend clamps 0 to a full consume and would archive the product.
-        if (isNaN(amount) || amount > max) amount = max;
+        if (Number.isNaN(amount) || amount > max) amount = max;
         if (amount < 1) amount = 1;
         items.push({ productId: +row.dataset.productId, amount: amount });
     });
@@ -769,7 +769,7 @@ function changeQty(id, delta) {
             } else {
                 const span = document.getElementById('qty-' + id);
                 if (span) {
-                    span.textContent = Math.max(0, parseInt(span.textContent, 10) + delta);
+                    span.textContent = Math.max(0, Number.parseInt(span.textContent, 10) + delta);
                     span.classList.add('amount-updated');
                     setTimeout(() => span.classList.remove('amount-updated'), 800);
                 }
@@ -777,7 +777,7 @@ function changeQty(id, delta) {
         } else {
             reportAmountChangeFailed(response);
         }
-    });
+    }).catch((err) => proviant.showFeedback('error', proviant.t("common.error"), err.message));
 }
 
 // Skeleton loading functions for filter/search operations

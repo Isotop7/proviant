@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (wheelBuffer >= threshold) {
                     wheelBuffer = 0;
                     navCooldownUntil = Date.now() + 1000;
-                    loadNextWindow();
+                    void loadNextWindow();
                 }
                 return;
             }
@@ -44,15 +44,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (wheelBuffer <= -threshold) {
                     wheelBuffer = 0;
                     navCooldownUntil = Date.now() + 1000;
-                    loadPreviousWindow();
+                    void loadPreviousWindow();
                 }
                 return;
             }
             wheelBuffer = 0;
         }, { passive: true });
     }
-    loadMealPlanRecipes();
-    loadMealPlanEntries();
+    void loadMealPlanRecipes();
+    void loadMealPlanEntries();
 });
 
 document.addEventListener("click", function (e) {
@@ -61,18 +61,18 @@ document.addEventListener("click", function (e) {
 
     if (target.closest("#btnAddMeal")) {
         e.preventDefault();
-        createMealPlanEntry();
+        void createMealPlanEntry();
         return;
     }
     if (target.closest("#btnGenerateShoppingList") || target.closest("#btnGenerateShoppingListMobile")) {
         e.preventDefault();
-        generateShoppingList();
+        void generateShoppingList();
         return;
     }
     const servingsButton = target.closest("[data-meal-servings-action]");
     if (servingsButton) {
         e.preventDefault();
-        changeMealServings(servingsButton);
+        void changeMealServings(servingsButton);
         return;
     }
     const cookButton = target.closest("[data-meal-cook]");
@@ -89,17 +89,17 @@ document.addEventListener("click", function (e) {
     }
     if (target.closest("#btnPrevMonth")) {
         e.preventDefault();
-        loadPreviousWindow();
+        void loadPreviousWindow();
         return;
     }
     if (target.closest("#btnNextMonth")) {
         e.preventDefault();
-        loadNextWindow();
+        void loadNextWindow();
         return;
     }
     if (target.closest("#btnTodayMonth")) {
         e.preventDefault();
-        resetToCurrentWindow();
+        void resetToCurrentWindow();
         return;
     }
 });
@@ -152,17 +152,17 @@ document.addEventListener("drop", function (e) {
     const mealID = e.dataTransfer ? e.dataTransfer.getData("text/plain") : "";
     const targetDate = day.getAttribute("data-date");
     if (!mealID || !targetDate) return;
-    const entry = document.getElementById("meal-" + parseInt(mealID, 10));
+    const entry = document.getElementById("meal-" + Number.parseInt(mealID, 10));
     const currentDay = entry && entry.closest ? entry.closest(".mp-day") : null;
     if (currentDay && currentDay.getAttribute("data-date") === targetDate) return;
-    movePlannedMeal(parseInt(mealID, 10), targetDate);
+    void movePlannedMeal(Number.parseInt(mealID, 10), targetDate);
 });
 
 document.addEventListener("change", function (e) {
     const target = e.target;
     if (!target || !target.closest) return;
     if (target.matches("[data-meal-move]")) {
-        movePlannedMeal(target.getAttribute("data-meal-move"), target.value);
+        void movePlannedMeal(target.getAttribute("data-meal-move"), target.value);
     }
 });
 
@@ -358,27 +358,27 @@ async function createMealPlanEntry() {
     try {
         const res = await proviant.createMealPlan({
             date: dateSelect.value,
-            recipeId: parseInt(recipeSelect.value, 10),
-            servings: parseInt(servingsInput.value, 10) || 1,
+            recipeId: Number.parseInt(recipeSelect.value, 10),
+            servings: Number.parseInt(servingsInput.value, 10) || 1,
             notes: "",
         });
         if (res.code !== 201) {
             proviant.showFeedback("error", proviant.t("js.mealPlan.notPlannedTitle"), res.message || proviant.t("js.mealPlan.requestFailed", res.code));
             return;
         }
-        loadMealPlanEntries();
+        void loadMealPlanEntries();
     } catch (error) {
         proviant.showFeedback("error", proviant.t("js.mealPlan.notPlannedTitle"), error.message);
     }
 }
 
 async function changeMealServings(button) {
-    const mealID = parseInt(button.getAttribute("data-meal-id"), 10);
+    const mealID = Number.parseInt(button.getAttribute("data-meal-id"), 10);
     const entry = document.getElementById("meal-" + mealID);
     // The entry element carries the last known servings and is bumped
     // optimistically, so rapid ± clicks stack instead of racing each other
     // with a stale pre-render value.
-    const current = entry ? (parseInt(entry.getAttribute("data-meal-servings"), 10) || 1) : 1;
+    const current = entry ? (Number.parseInt(entry.getAttribute("data-meal-servings"), 10) || 1) : 1;
     const next = button.getAttribute("data-meal-servings-action") === "inc" ? current + 1 : Math.max(1, current - 1);
     if (next === current) return;
     const label = document.getElementById("meal-servings-" + mealID);
@@ -395,7 +395,7 @@ async function changeMealServings(button) {
             proviant.showFeedback("error", proviant.t("js.mealPlan.servingsNotChangedTitle"), res.message || proviant.t("js.mealPlan.requestFailed", res.code));
             return;
         }
-        loadMealPlanEntries();
+        void loadMealPlanEntries();
     } catch (error) {
         revert();
         proviant.showFeedback("error", proviant.t("js.mealPlan.servingsNotChangedTitle"), error.message);
@@ -447,12 +447,12 @@ async function resetToCurrentWindow() {
 
 async function movePlannedMeal(mealID, date) {
     try {
-        const res = await proviant.updateMealPlan(parseInt(mealID, 10), { date: date });
+        const res = await proviant.updateMealPlan(Number.parseInt(mealID, 10), { date: date });
         if (res.code !== 200) {
             proviant.showFeedback("error", proviant.t("js.mealPlan.notMovedTitle"), res.message || proviant.t("js.mealPlan.requestFailed", res.code));
             return;
         }
-        loadMealPlanEntries();
+        void loadMealPlanEntries();
     } catch (error) {
         proviant.showFeedback("error", proviant.t("js.mealPlan.notMovedTitle"), error.message);
     }
@@ -462,7 +462,7 @@ function confirmDeletePlannedMeal(mealID, recipeName) {
     proviant.showConfirm(
         proviant.t("js.mealPlan.removeConfirmTitle"),
         proviant.t("js.mealPlan.removeConfirmBody", recipeName),
-        function () { deletePlannedMeal(mealID); },
+        function () { void deletePlannedMeal(mealID); },
         proviant.t("js.mealPlan.removeConfirmAction"),
         "danger"
     );
@@ -470,12 +470,12 @@ function confirmDeletePlannedMeal(mealID, recipeName) {
 
 async function deletePlannedMeal(mealID) {
     try {
-        const res = await proviant.deleteMealPlan(parseInt(mealID, 10));
+        const res = await proviant.deleteMealPlan(Number.parseInt(mealID, 10));
         if (res.code !== 200) {
             proviant.showFeedback("error", proviant.t("js.mealPlan.notRemovedTitle"), res.message || proviant.t("js.mealPlan.requestFailed", res.code));
             return;
         }
-        loadMealPlanEntries();
+        void loadMealPlanEntries();
     } catch (error) {
         proviant.showFeedback("error", proviant.t("js.mealPlan.notRemovedTitle"), error.message);
     }
@@ -485,7 +485,7 @@ function confirmCookPlannedMeal(mealID, recipeName) {
     proviant.showConfirm(
         proviant.t("js.mealPlan.cookConfirmTitle"),
         proviant.t("js.mealPlan.cookConfirmBody", recipeName),
-        function () { cookPlannedMeal(mealID); },
+        function () { void cookPlannedMeal(mealID); },
         proviant.t("js.mealPlan.cook"),
         "warning"
     );
@@ -496,7 +496,7 @@ async function cookPlannedMeal(mealID) {
         const range = planRange();
         const listRes = await proviant.getMealPlans(range.from, range.to);
         const entry = (listRes.entries || []).find(function (candidate) {
-            return candidate.id === parseInt(mealID, 10);
+            return candidate.id === Number.parseInt(mealID, 10);
         });
         if (!entry) {
             proviant.showFeedback("error", proviant.t("js.mealPlan.cookFailedTitle"), proviant.t("js.mealPlan.cookMissingEntry"));

@@ -1,6 +1,6 @@
 // ── Password policy (read from data attributes set by Go template) ────────────
 const pwdInput = document.getElementById('auth-password');
-const PWD_MIN_LENGTH        = parseInt(pwdInput?.dataset.minLength || '12', 10);
+const PWD_MIN_LENGTH        = Number.parseInt(pwdInput?.dataset.minLength || '12', 10);
 const PWD_REQUIRE_UPPERCASE = pwdInput?.dataset.requireUppercase === 'true';
 const PWD_REQUIRE_DIGIT     = pwdInput?.dataset.requireDigit     === 'true';
 const PWD_REQUIRE_SPECIAL   = pwdInput?.dataset.requireSpecial   === 'true';
@@ -250,7 +250,7 @@ function Signup() {
     if (!email) {
         showFieldError('auth-email', proviant.t('js.auth.emailRequired'));
         valid = false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         showFieldError('auth-email', proviant.t('js.auth.emailInvalid'));
         valid = false;
     }
@@ -343,7 +343,7 @@ document.getElementById('authForm')?.addEventListener('submit', (event) => {
 document.addEventListener('click', (event) => {
     if (event.target.closest('#btnLogout')) {
         event.preventDefault();
-        proviant.logoutUser().then(() => {
+        void proviant.logoutUser().then(() => {
             window.location.href = '/web';
         });
     }

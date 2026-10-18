@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Open camera capture modal and start video
     if (btnScanExpiry) {
         btnScanExpiry.addEventListener('click', function () {
-            openOcrCamera();
+            void openOcrCamera();
         });
     }
 
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function onCameraModalShown() {
-        startCamera();
+        void startCamera();
     }
 
     function onCameraModalHidden() {
@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (modalInstance) modalInstance.hide();
 
                 // Send to OCR
-                sendOcrRequest(blob);
+                void sendOcrRequest(blob);
             } catch (err) {
                 console.error('Capture error:', err);
                 proviant.showFeedback('error', proviant.t("js.scan.captureFailed"), proviant.t("js.scan.captureFailedMsg"));
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btnRecapture) {
         btnRecapture.addEventListener('click', function () {
             ocrResultModal.hide();
-            openOcrCamera();
+            void openOcrCamera();
         });
     }
 });

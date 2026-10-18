@@ -106,7 +106,7 @@
         // Rate limiter answers 429 with Retry-After seconds; a generic
         // "try again later" would send the user straight into the next 429.
         if (res.status === 429) {
-          const retryAfter = parseInt(res.headers.get("Retry-After"), 10);
+          const retryAfter = Number.parseInt(res.headers.get("Retry-After"), 10);
           message = Number.isFinite(retryAfter) && retryAfter > 0
             ? proviant.tn("js.receipt.tooManyScansWait", retryAfter)
             : proviant.t("js.receipt.tooManyScansMinute");
@@ -226,9 +226,9 @@
       // Mirror the server clamps (util.ReceiptItemMaxNameLength / ReceiptItemMaxAmount)
       // so the value the user confirms is the value that gets stored.
       const name = truncateUtf8Bytes(rawName, 200);
-      const amount = Math.min(999, Math.max(1, parseInt(card.querySelector(".receipt-item-amount").value, 10) || 1));
+      const amount = Math.min(999, Math.max(1, Number.parseInt(card.querySelector(".receipt-item-amount").value, 10) || 1));
       const unit = truncateUtf8Bytes(card.querySelector(".receipt-item-unit").value.trim(), 20);
-      const priceRaw = parseFloat(card.querySelector(".receipt-item-price").value);
+      const priceRaw = Number.parseFloat(card.querySelector(".receipt-item-price").value);
       const expire = card.querySelector(".receipt-item-expire").value || batchExpire;
       const category = truncateUtf8Bytes(card.querySelector(".receipt-item-category").value.trim() || batchCategory, 100);
       const location = card.querySelector(".receipt-item-location").value || batchLocation;
@@ -238,10 +238,10 @@
         unit: unit,
         expireAt: expire,
         categories: category,
-        storageLocationId: location ? parseInt(location, 10) : null,
+        storageLocationId: location ? Number.parseInt(location, 10) : null,
         isPrivate: false,
       };
-      if (!isNaN(priceRaw) && priceRaw > 0) draft.priceOverride = Math.min(priceRaw, 100000);
+      if (!Number.isNaN(priceRaw) && priceRaw > 0) draft.priceOverride = Math.min(priceRaw, 100000);
       items.push(draft);
     });
     return { items: items, invalid: invalid };
@@ -362,7 +362,7 @@
     const scanBtn = event.target.closest("#btnScanReceipt");
     if (scanBtn) {
       event.preventDefault();
-      scanReceipt();
+      void scanReceipt();
       return;
     }
     const removeBtn = event.target.closest("[data-receipt-remove]");
@@ -395,7 +395,7 @@
     }
     if (event.target.closest("#btnImportReceipt")) {
       event.preventDefault();
-      importItems();
+      void importItems();
       return;
     }
     if (event.target.closest("#btnRetryEmpty") || event.target.closest("#btnRescanReceipt")) {

@@ -51,7 +51,7 @@ function renderTile(title, hero, variant, heroClass) {
   const variantShadowMap = { danger: 'oklch(0.55 0.20 25)', warning: 'oklch(0.72 0.16 80)', success: 'oklch(0.50 0.12 162)' };
 
   // Accent-fill tile for non-zero urgent/warning values
-  if (variant && variantColorMap[variant] && !heroClass && parseFloat(hero) > 0) {
+  if (variant && variantColorMap[variant] && !heroClass && Number.parseFloat(hero) > 0) {
     const fill   = variantColorMap[variant];
     const shadow = variantShadowMap[variant];
     col.innerHTML = `

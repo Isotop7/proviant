@@ -31,8 +31,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Proviant</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js" integrity="sha384-XcdcwHqIPULERb2yDEM4R0XaQKU3YnDsrTmjACBZyfdVVqjh6xQ4/DCMd7XLcA6Y" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" integrity="sha384-CK2SzKma4jA5H/MXDUU7i1TqZlCFaD4T01vtyDFvPlD97JQyS+IsSh1nI2EFbpyk" crossorigin="anonymous">
 <style>
   :root {
     /* ── Brand ── */
@@ -440,7 +440,7 @@
         <span class="badge badge-critical"><span class="badge-dot"></span>5 items</span>
       </div>
       <div class="bento-list">
-        <div class="bl-item" onclick="location.href='07-edit-product.html'">
+        <div class="bl-item" role="button" tabindex="0" onclick="location.href='07-edit-product.html'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
           <div class="bl-stripe" style="background:var(--status-expired)"></div>
           <div class="li-icon"><i class="bi bi-cup-straw"></i></div>
           <div class="li-text"><div class="bl-name">Greek Yogurt</div><div class="bl-meta">Fridge · 250g</div></div>
@@ -448,7 +448,7 @@
           <div style="text-align:right"><div style="font-size:var(--text-xs);color:var(--fg-3)">Expires</div><div style="font-size:var(--text-sm);font-weight:700;color:var(--status-expired)">May 13</div></div>
           <span class="badge badge-expired" style="margin-left:var(--space-3)"><span class="badge-dot"></span>Expired</span>
         </div>
-        <div class="bl-item" onclick="location.href='07-edit-product.html'">
+        <div class="bl-item" role="button" tabindex="0" onclick="location.href='07-edit-product.html'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
           <div class="bl-stripe" style="background:var(--status-critical)"></div>
           <div class="li-icon"><i class="bi bi-egg-fried"></i></div>
           <div class="li-text"><div class="bl-name">Atlantic Salmon</div><div class="bl-meta">Fridge · 350g</div></div>
@@ -456,7 +456,7 @@
           <div style="text-align:right"><div style="font-size:var(--text-xs);color:var(--fg-3)">Expires</div><div style="font-size:var(--text-sm);font-weight:700;color:var(--status-critical)">Today</div></div>
           <span class="badge badge-critical" style="margin-left:var(--space-3)"><span class="badge-dot"></span>Today</span>
         </div>
-        <div class="bl-item" onclick="location.href='07-edit-product.html'">
+        <div class="bl-item" role="button" tabindex="0" onclick="location.href='07-edit-product.html'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
           <div class="bl-stripe" style="background:var(--status-critical)"></div>
           <div class="li-icon"><i class="bi bi-flower2"></i></div>
           <div class="li-text"><div class="bl-name">Baby Spinach</div><div class="bl-meta">Fridge · 150g</div></div>
@@ -464,7 +464,7 @@
           <div style="text-align:right"><div style="font-size:var(--text-xs);color:var(--fg-3)">Expires</div><div style="font-size:var(--text-sm);font-weight:700;color:var(--status-critical)">May 16</div></div>
           <span class="badge badge-critical" style="margin-left:var(--space-3)"><span class="badge-dot"></span>2 days</span>
         </div>
-        <div class="bl-item" onclick="location.href='07-edit-product.html'">
+        <div class="bl-item" role="button" tabindex="0" onclick="location.href='07-edit-product.html'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
           <div class="bl-stripe" style="background:var(--status-soon)"></div>
           <div class="li-icon"><i class="bi bi-egg"></i></div>
           <div class="li-text"><div class="bl-name">Sharp Cheddar</div><div class="bl-meta">Fridge · 200g</div></div>
@@ -472,7 +472,7 @@
           <div style="text-align:right"><div style="font-size:var(--text-xs);color:var(--fg-3)">Expires</div><div style="font-size:var(--text-sm);font-weight:700;color:var(--status-soon)">May 19</div></div>
           <span class="badge badge-soon" style="margin-left:var(--space-3)"><span class="badge-dot"></span>5 days</span>
         </div>
-        <div class="bl-item" onclick="location.href='07-edit-product.html'">
+        <div class="bl-item" role="button" tabindex="0" onclick="location.href='07-edit-product.html'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
           <div class="bl-stripe" style="background:var(--status-soon)"></div>
           <div class="li-icon"><i class="bi bi-basket"></i></div>
           <div class="li-text"><div class="bl-name">Sourdough Bread</div><div class="bl-meta">Counter · 1 loaf</div></div>
@@ -631,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!reduceMotion) {
     document.querySelectorAll('.bento-hero-stat .bsh-value[data-count]').forEach(function(el) {
-      var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+      var target = Number.parseInt(el.getAttribute('data-count'), 10) || 0;
       var duration = 900;
       var start = performance.now();
       function step(now) {
