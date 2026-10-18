@@ -1429,7 +1429,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the monthly waste goal settings of the caller's household",
+                "description": "Returns the monthly waste goal, language and display unit system of the caller's household",
                 "produces": [
                     "application/json"
                 ],
@@ -1464,7 +1464,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates the monthly waste goal of the caller's household (admin only)",
+                "description": "Updates the monthly waste goal, language and display unit system of the caller's household (admin only)",
                 "consumes": [
                     "application/json"
                 ],
@@ -7243,6 +7243,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "unitSystem": {
+                    "type": "string"
                 }
             }
         },
@@ -7400,6 +7403,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "monthlyWasteGoalType": {
+                    "type": "string"
+                },
+                "unitSystem": {
                     "type": "string"
                 }
             }
@@ -8255,6 +8261,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "monthlyWasteGoalType": {
+                    "type": "string"
+                },
+                "unitSystem": {
                     "type": "string"
                 }
             }

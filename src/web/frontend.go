@@ -616,6 +616,13 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	if renderProductsFetchError(ctx, frontend, logger, hydrateErr) {
 		return
 	}
+	// The card partial is invoked with the product as its root, so it cannot
+	// reach the page's unit system; pre-format the amount here for it.
+	unitSystemValue, _ := ctx.Get(util.ContextKeyUnitSystem)
+	unitSystem := util.UnitSystemFromContextValue(unitSystemValue)
+	for i := range products {
+		products[i].DisplayAmount = util.FormatUnit(products[i].Amount, products[i].Unit, unitSystem)
+	}
 
 	params := url.Values{}
 	for k, v := range ctx.Request.URL.Query() {

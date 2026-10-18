@@ -142,6 +142,8 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
+	product.Amount, product.Unit = util.ToBase(product.Amount, product.Unit)
+
 	var clientSyncID string
 	if product.ClientSyncID != nil {
 		clientSyncID = strings.TrimSpace(*product.ClientSyncID)
@@ -197,6 +199,7 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 		apiProduct.ScannedAt = time.Now()
 		apiProduct.ExpireAt = product.ExpireAt
 		apiProduct.Amount = product.Amount
+		apiProduct.Unit = product.Unit
 		apiProduct.ClientSyncID = product.ClientSyncID
 		product = apiProduct
 	}
@@ -299,6 +302,8 @@ func UpdateProduct(ctx *gin.Context, appCtx *AppContext) {
 	if !bindJSON(ctx, appCtx.Logger, &product) {
 		return
 	}
+
+	product.Amount, product.Unit = util.ToBase(product.Amount, product.Unit)
 
 	updateErr := appCtx.Repos.Products.UpdateProduct(productID, appCtx.UserID, &product)
 

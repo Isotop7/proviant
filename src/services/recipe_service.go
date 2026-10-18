@@ -8,6 +8,7 @@ import (
 
 	"github.com/Isotop7/proviant/controllers/database"
 	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/util"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
@@ -95,13 +96,18 @@ func (s *RecipeService) CookRecipe(recipeID uint, servings int, userID uint) (co
 			}
 			continue
 		}
+		scaledAmount := scaleIngredientAmount(ingredient.Amount, servings, recipe.Servings)
 		if ingredient.Unit != "" && product.Unit != "" && !strings.EqualFold(ingredient.Unit, product.Unit) {
-			errs = append(errs, fmt.Sprintf("%s: unit %s does not match product unit %s", ingredient.Name, ingredient.Unit, product.Unit))
-			continue
+			converted, ok := util.Convert(scaledAmount, ingredient.Unit, product.Unit)
+			if !ok {
+				errs = append(errs, fmt.Sprintf("%s: unit %s cannot be converted to product unit %s", ingredient.Name, ingredient.Unit, product.Unit))
+				continue
+			}
+			scaledAmount = converted
 		}
 		items = append(items, apiModel.CookItemAPIModel{
 			ProductID: *ingredient.ProductID,
-			Amount:    scaleIngredientAmount(ingredient.Amount, servings, recipe.Servings),
+			Amount:    scaledAmount,
 		})
 	}
 

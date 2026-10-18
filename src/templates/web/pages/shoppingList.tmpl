@@ -72,7 +72,7 @@
         <div class="sl-qty-col">
             <div class="qty-stepper">
                 <button type="button" data-qty-action="dec" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.decreaseQuantity" $item.Name }}">−</button>
-                <span id="qty-{{ $item.ID }}">{{ $item.Quantity }}</span>
+                <span id="qty-{{ $item.ID }}" class="unit-amount" data-amount="{{ $item.Quantity }}" data-unit="{{ $item.Unit }}">{{ unitDisplay $item.Quantity $item.Unit $.UnitSystem }}</span>
                 <button type="button" data-qty-action="inc" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.increaseQuantity" $item.Name }}">+</button>
             </div>
         </div>

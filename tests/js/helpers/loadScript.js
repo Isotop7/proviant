@@ -37,6 +37,32 @@ const CARRIER = "__proviantSetup";
 const REALM = "__proviantRealm";
 const CAPTURE = "__proviantCaptured";
 
+// Mirrors the window.proviantUnits / window.proviantUnitTable /
+// window.proviantUnitSystem injection in base.tmpl (util.UnitOptions,
+// util.UnitConversionJSON and util.ResolveUnitSystem). Scripts read the unit
+// list and factors from there, so the tests must supply them too.
+const UNIT_TABLE = [
+  { symbol: "g", kind: "mass", factor: 1 },
+  { symbol: "kg", kind: "mass", factor: 1000 },
+  { symbol: "oz", kind: "mass", factor: 28.349523125 },
+  { symbol: "lb", kind: "mass", factor: 453.59237 },
+  { symbol: "ml", kind: "volume", factor: 1 },
+  { symbol: "l", kind: "volume", factor: 1000 },
+  { symbol: "tsp", kind: "volume", factor: 5 },
+  { symbol: "tbsp", kind: "volume", factor: 15 },
+  { symbol: "cup", kind: "volume", factor: 240 },
+  { symbol: "fl oz", kind: "volume", factor: 29.5735295625 },
+  { symbol: "pcs", kind: "count", factor: 1 },
+  { symbol: "pkg", kind: "count", factor: 1 },
+  { symbol: "can", kind: "count", factor: 1 },
+  { symbol: "box", kind: "count", factor: 1 },
+  { symbol: "jar", kind: "count", factor: 1 },
+  { symbol: "bottle", kind: "count", factor: 1 },
+  { symbol: "bunch", kind: "count", factor: 1 },
+  { symbol: "slice", kind: "count", factor: 1 },
+];
+const UNIT_SYMBOLS = UNIT_TABLE.map((unit) => unit.symbol);
+
 /**
  * Load a shipped frontend script and capture the identifiers it declares.
  *
@@ -79,7 +105,14 @@ const CAPTURE = "__proviantCaptured";
 export function loadClassicScript(fileName, exportNames, options = {}) {
   const { prelude = "", globals = {} } = options;
   const catalog = loadMessageCatalog();
-  const environment = { proviantI18n: catalog, proviantLang: "en", ...globals };
+  const environment = {
+    proviantI18n: catalog,
+    proviantLang: "en",
+    proviantUnitSystem: "metric",
+    proviantUnits: UNIT_SYMBOLS,
+    proviantUnitTable: UNIT_TABLE,
+    ...globals,
+  };
   if (environment.proviant && typeof environment.proviant === "object") {
     environment.proviant = { ...createTranslator(catalog), ...environment.proviant };
   }

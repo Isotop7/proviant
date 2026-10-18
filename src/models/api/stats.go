@@ -32,15 +32,18 @@ type HouseholdSettingsResponse struct {
 	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
 	MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
 	Language                string   `json:"language"`
+	UnitSystem              string   `json:"unitSystem"`
 }
 
 // UpdateHouseholdSettingsRequest is the request body for PATCH /api/v1/household/settings.
 // Language is nil when omitted (unchanged), "" resets to automatic detection.
+// UnitSystem follows the same nil-means-unchanged contract; "" resets to metric.
 type UpdateHouseholdSettingsRequest struct {
 	MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType"`
 	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
 	MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
 	Language                *string  `json:"language"`
+	UnitSystem              *string  `json:"unitSystem"`
 }
 
 // ProductStatsResponse is the response body for GET /api/v1/products/stats

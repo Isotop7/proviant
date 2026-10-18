@@ -148,6 +148,19 @@
                 </div>
               </div>
             </div>
+            <div class="mb-3">
+              <label class="form-label" for="inputUnit">{{ t "products.unit" }}</label>
+              <select class="form-select" id="inputUnit">
+                <option value="">{{ t "products.noUnitOption" }}</option>
+                {{ range .UnitOptions }}
+                <option value="{{ .Value }}" {{ if eq $.Product.Unit .Value }}selected{{ end }}>{{ .Label }}</option>
+                {{ end }}
+                {{ if and $.Product.Unit (not (unitIsKnown $.Product.Unit)) }}
+                <option value="{{ $.Product.Unit }}" selected>{{ $.Product.Unit }}</option>
+                {{ end }}
+              </select>
+              <div class="form-text">{{ t "products.unitHelp" }}</div>
+            </div>
             <div class="mb-3 mt-3">
               <label class="form-label">{{ t "products.storageLocation" }}</label>
               <select class="form-select" id="selectStorageLocation">
@@ -289,7 +302,7 @@
             </div>
             <div class="product-info-row product-info-row-sep">
               <span class="text-fg-3">{{ t "products.amount" }}</span>
-              <span class="font-mono fw-semibold">{{ .Product.Amount }}</span>
+              <span class="font-mono fw-semibold">{{ unitDisplay .Product.Amount .Product.Unit $.UnitSystem }}</span>
             </div>
             <div class="product-info-row product-info-row-sep">
               <span class="text-fg-3">{{ t "products.expiryDate" }}</span>

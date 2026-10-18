@@ -113,6 +113,24 @@ async function loadProductOptions() {
     return productOptions;
 }
 
+// unitSelectOptions builds the ingredient unit picker from the server-injected
+// unit list (window.proviantUnits), so a free-text unit can no longer be typed
+// and the saved value always matches the server's conversion table. A unit that
+// came in from parsed suggestion text but is not in the list (e.g. "cups") is
+// kept as its own option rather than silently dropped.
+function unitSelectOptions(selected) {
+    const units = Array.isArray(window.proviantUnits) ? window.proviantUnits : [];
+    const value = selected ? String(selected) : "";
+    const options = units.map(function (unit) {
+        const isSelected = unit === value ? " selected" : "";
+        return `<option value="${escapeRecipeHtml(unit)}"${isSelected}>${escapeRecipeHtml(unit)}</option>`;
+    });
+    if (value && units.indexOf(value) === -1) {
+        options.unshift(`<option value="${escapeRecipeHtml(value)}" selected>${escapeRecipeHtml(value)}</option>`);
+    }
+    return `<option value="">${proviant.t("js.savedRecipes.unit")}</option>` + options.join("");
+}
+
 function ingredientRowHtml(ingredient, products) {
     const options = products.map(function (product) {
         const selected = ingredient && ingredient.productId === product.id ? " selected" : "";
@@ -133,7 +151,9 @@ function ingredientRowHtml(ingredient, products) {
                 <input type="number" class="form-control form-control-sm" data-ingredient-amount min="0" placeholder="${proviant.t("js.savedRecipes.amount")}" aria-label="${proviant.t("js.savedRecipes.amount")}" value="${ingredient ? ingredient.amount : ""}">
             </div>
             <div class="col-3 col-md-2">
-                <input type="text" class="form-control form-control-sm" data-ingredient-unit maxlength="20" placeholder="${proviant.t("js.savedRecipes.unit")}" aria-label="${proviant.t("js.savedRecipes.unit")}" value="${escapeRecipeHtml(ingredient ? ingredient.unit : "")}">
+                <select class="form-select form-select-sm" data-ingredient-unit aria-label="${proviant.t("js.savedRecipes.unit")}">
+                    ${unitSelectOptions(ingredient ? ingredient.unit : "")}
+                </select>
             </div>
             <div class="col-12 col-md-1 d-flex align-items-center">
                 <button type="button" class="btn-icon text-danger" data-ingredient-remove aria-label="${proviant.t("js.savedRecipes.removeIngredient")}">

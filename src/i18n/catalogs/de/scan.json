@@ -35,6 +35,7 @@
   "scan.manual.eanLabel": "EAN-Barcode",
   "scan.manual.lookup": "Nachschlagen",
   "scan.manual.title": "Barcode eingeben",
+  "scan.noUnitOption": "Keine Einheit (Stück)",
   "scan.page.subtitle": "Scannen Sie einen beliebigen EAN-Barcode, um zu beginnen",
   "scan.page.title": "Produkt hinzufügen",
   "scan.product.consumed": "Verbraucht",
@@ -42,5 +43,6 @@
   "scan.product.view": "Ansehen",
   "scan.product.viewAll": "Alle Exemplare",
   "scan.storageLocation": "Lagerort",
+  "scan.unit": "Einheit",
   "scan.viewfinder": "Kameraansicht"
 }

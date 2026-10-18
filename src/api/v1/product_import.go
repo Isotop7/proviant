@@ -314,6 +314,8 @@ func parseImportRow(
 		product.Amount = quantity
 	}
 
+	product.Amount, product.Unit = util.ToBase(product.Amount, product.Unit)
+
 	if row.expiry != "" {
 		expireAt, dateErr := time.Parse(util.DefaultDateFormatParseStr, row.expiry)
 		if dateErr != nil {

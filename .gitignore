@@ -54,6 +54,12 @@ src/data
 !.kilo/skills
 skills-lock.json
 
+# Opencode
+.opencode/*
+
+# Knowledge graph
+graphify-out/
+
 # Issue sync
 issues/
 

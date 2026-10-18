@@ -1423,7 +1423,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the monthly waste goal settings of the caller's household",
+                "description": "Returns the monthly waste goal, language and display unit system of the caller's household",
                 "produces": [
                     "application/json"
                 ],
@@ -1458,7 +1458,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates the monthly waste goal of the caller's household (admin only)",
+                "description": "Updates the monthly waste goal, language and display unit system of the caller's household (admin only)",
                 "consumes": [
                     "application/json"
                 ],
@@ -7237,6 +7237,9 @@
                 },
                 "name": {
                     "type": "string"
+                },
+                "unitSystem": {
+                    "type": "string"
                 }
             }
         },
@@ -7394,6 +7397,9 @@
                     "type": "number"
                 },
                 "monthlyWasteGoalType": {
+                    "type": "string"
+                },
+                "unitSystem": {
                     "type": "string"
                 }
             }
@@ -8249,6 +8255,9 @@
                     "type": "number"
                 },
                 "monthlyWasteGoalType": {
+                    "type": "string"
+                },
+                "unitSystem": {
                     "type": "string"
                 }
             }

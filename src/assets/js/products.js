@@ -66,11 +66,13 @@ document.addEventListener("click", function (event) {
         event.stopPropagation();
         const btn = target.closest(".btn-amount-inc");
         const productID = btn.dataset.productId;
-        proviant.updateProductAmount(productID, 1).then((response) => {
+        const amountEl = document.getElementById(`amount-${productID}`);
+        const step = amountEl ? proviant.amountStep(amountEl.dataset.amount, amountEl.dataset.unit, proviant.unitSystem()) : 1;
+        proviant.updateProductAmount(productID, step).then((response) => {
             if (response.code === 200) {
-                const amountEl = document.getElementById(`amount-${productID}`);
                 if (amountEl) {
-                    amountEl.textContent = Number.parseInt(amountEl.textContent, 10) + 1;
+                    amountEl.dataset.amount = String(Number.parseInt(amountEl.dataset.amount || amountEl.textContent, 10) + step);
+                    proviant.renderAmountLabel(amountEl);
                     amountEl.classList.add('amount-updated');
                     setTimeout(() => amountEl.classList.remove('amount-updated'), 800);
                 }
@@ -87,16 +89,18 @@ document.addEventListener("click", function (event) {
         event.stopPropagation();
         const btn = target.closest(".btn-amount-dec");
         const productID = btn.dataset.productId;
-        proviant.updateProductAmount(productID, -1).then((response) => {
+        const amountEl = document.getElementById(`amount-${productID}`);
+        const step = amountEl ? proviant.amountStep(amountEl.dataset.amount, amountEl.dataset.unit, proviant.unitSystem()) : 1;
+        proviant.updateProductAmount(productID, -step).then((response) => {
             if (response.code === 200) {
                 if (response.deleted) {
                     const card = document.getElementById(`card-${productID}`);
                     if (card) card.closest(".col").remove();
                 } else {
-                    const amountEl = document.getElementById(`amount-${productID}`);
                     if (amountEl) {
-                        const newVal = Math.max(0, Number.parseInt(amountEl.textContent, 10) - 1);
-                        amountEl.textContent = newVal;
+                        const newVal = Math.max(0, Number.parseInt(amountEl.dataset.amount || amountEl.textContent, 10) - step);
+                        amountEl.dataset.amount = String(newVal);
+                        proviant.renderAmountLabel(amountEl);
                         amountEl.classList.add('amount-updated');
                         setTimeout(() => amountEl.classList.remove('amount-updated'), 800);
                     }
@@ -761,15 +765,17 @@ async function submitCook() {
 
 // ── List view: qty stepper ──────────────────────────────────────
 function changeQty(id, delta) {
-    proviant.updateProductAmount(id, delta).then((response) => {
+    const span = document.getElementById('qty-' + id);
+    const step = span ? proviant.amountStep(span.dataset.amount, span.dataset.unit, proviant.unitSystem()) : 1;
+    proviant.updateProductAmount(id, delta * step).then((response) => {
         if (response.code === 200) {
             if (response.deleted) {
                 const row = document.querySelector(`.list-row[data-id="${id}"]`);
                 if (row) row.remove();
             } else {
-                const span = document.getElementById('qty-' + id);
                 if (span) {
-                    span.textContent = Math.max(0, Number.parseInt(span.textContent, 10) + delta);
+                    span.dataset.amount = String(Math.max(0, Number.parseInt(span.dataset.amount || span.textContent, 10) + delta * step));
+                    proviant.renderAmountLabel(span);
                     span.classList.add('amount-updated');
                     setTimeout(() => span.classList.remove('amount-updated'), 800);
                 }

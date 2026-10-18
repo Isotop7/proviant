@@ -110,6 +110,7 @@ func BuildFullExport(
 			MonthlyWasteGoalType:    household.MonthlyWasteGoalType,
 			MonthlyWasteGoalCount:   household.MonthlyWasteGoalCount,
 			MonthlyWasteGoalPercent: household.MonthlyWasteGoalPercent,
+			UnitSystem:              household.UnitSystem,
 		},
 		Members:          exportMembers,
 		StorageLocations: apiModel.NewStorageLocationResponses(locations),
@@ -339,12 +340,19 @@ func RestoreHouseholdBackup(
 		result.LocationsCreated = createdLocations
 
 		if backup.Household != nil {
+			// A backup file is external input: an unsupported unit system is
+			// stored as empty (metric) instead of poisoning the household.
+			unitSystem := backup.Household.UnitSystem
+			if !util.ValidUnitSystem(unitSystem) {
+				unitSystem = ""
+			}
 			updates := map[string]any{
 				"name":                       backup.Household.Name,
 				"description":                backup.Household.Description,
 				"monthly_waste_goal_type":    backup.Household.MonthlyWasteGoalType,
 				"monthly_waste_goal_count":   backup.Household.MonthlyWasteGoalCount,
 				"monthly_waste_goal_percent": backup.Household.MonthlyWasteGoalPercent,
+				"unit_system":                unitSystem,
 			}
 			if err := tx.Model(&dbModel.Household{}).Where(util.QueryId, householdID).Updates(updates).Error; err != nil {
 				return err
@@ -402,6 +410,7 @@ func restoreProductFromRow(
 	if err := validateBackupBarcode(row.Barcode); err != nil {
 		return dbModel.Product{}, err
 	}
+	amount, unit := util.ToBase(row.Amount, row.Unit)
 	product := dbModel.Product{
 		Barcode:              row.Barcode,
 		ProductName:          row.ProductName,
@@ -412,8 +421,8 @@ func restoreProductFromRow(
 		ScannedAt:            row.ScannedAt,
 		NotifiedAt:           row.NotifiedAt,
 		IsPrivate:            row.IsPrivate,
-		Amount:               row.Amount,
-		Unit:                 row.Unit,
+		Amount:               amount,
+		Unit:                 unit,
 		PriceOverride:        row.PriceOverride,
 		CO2KgPerKg:           row.CO2KgPerKg,
 		RemovalReason:        row.RemovalReason,

@@ -18,6 +18,7 @@ const el = Object.freeze({
     barcodeReaderWrapper: document.getElementById('barcode-reader-wrapper'),
     amount: document.getElementById('amount'),
     amountDisplay: document.getElementById('amountDisplay'),
+    unit: document.getElementById('unit'),
     modalStorageLocation: document.getElementById('modalStorageLocation'),
     btnAmountDec: document.getElementById('btnAmountDec'),
     btnAmountInc: document.getElementById('btnAmountInc'),
@@ -684,13 +685,15 @@ function handleBtnAddProduct() {
     const amount = amountEl ? Number.parseInt(amountEl.value, 10) || 1 : 1;
     const locationEl = el.modalStorageLocation;
     const storageLocationId = locationEl && locationEl.value ? Number.parseInt(locationEl.value, 10) : null;
+    const unitEl = el.unit;
+    const unit = unitEl ? unitEl.value : '';
 
     const btn = el.btnAddProduct;
     if (!btn) return;
     btn.classList.add('loading');
     btn.disabled = true;
 
-    proviant.createProduct(barcode, expireAt, amount, storageLocationId).then((response) => {
+    proviant.createProduct(barcode, expireAt, amount, storageLocationId, false, null, unit).then((response) => {
         btn.classList.remove('loading');
         btn.disabled = false;
         switch (response.code) {

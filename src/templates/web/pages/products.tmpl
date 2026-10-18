@@ -333,11 +333,11 @@
         </div>
         <div class="col-qty">
             {{ if eq $.StatusFilter "archived" }}
-            <span class="qty-static">{{ .Amount }}</span>
+            <span class="qty-static">{{ unitDisplay .Amount .Unit $.UnitSystem }}</span>
             {{ else }}
             <div class="qty-stepper">
                 <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}" aria-label="{{ t "products.table.decreaseQuantity" .ProductName }}">−</button>
-                <span id="qty-{{ .Model.ID }}">{{ .Amount }}</span>
+                <span id="qty-{{ .Model.ID }}" class="unit-amount" data-amount="{{ .Amount }}" data-unit="{{ .Unit }}">{{ unitDisplay .Amount .Unit $.UnitSystem }}</span>
                 <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}" aria-label="{{ t "products.table.increaseQuantity" .ProductName }}">+</button>
             </div>
             {{ end }}
@@ -568,6 +568,13 @@
                             <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnAmountInc" aria-label="{{ t "products.amountIncrease" }}">+</button>
                         </div>
                         <input type="hidden" id="amount" value="1">
+                        <label for="unit" class="form-label">{{ t "products.unit" }}</label>
+                        <select class="form-select mb-3" id="unit" aria-label="{{ t "products.unit" }}">
+                            <option value="">{{ t "products.noUnitOption" }}</option>
+                            {{ range .UnitOptions }}
+                            <option value="{{ .Value }}">{{ .Label }}</option>
+                            {{ end }}
+                        </select>
                         <label for="expireAt" class="form-label">
                             {{ t "products.expiryDateField" }} <span class="text-danger" aria-hidden="true">*</span>
                         </label>

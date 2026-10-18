@@ -18,6 +18,7 @@ type FullExportHousehold struct {
 	MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType,omitempty"`
 	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount,omitempty"`
 	MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent,omitempty"`
+	UnitSystem              string   `json:"unitSystem,omitempty"`
 }
 
 // FullExportMember is one household member as far as a backup can carry it.

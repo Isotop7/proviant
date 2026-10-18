@@ -702,18 +702,18 @@
 
   if (typeof proviant.createProduct === 'function') {
     var originalCreateProduct = proviant.createProduct;
-    proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate) {
+    proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate, clientSyncIdArg, unit) {
       // The sync id goes out on the online path too. Without it the server-side
       // idempotency check cannot fire, so a response lost after the server
       // committed — which is exactly what the catch below detects — would enqueue
       // a second create for a product that already exists.
       var clientSyncId = generateId();
-      var draft = { barcode: barcode, expireAt: expireAt, amount: amount || 1, storageLocationId: storageLocationId || null, isPrivate: !!isPrivate, clientSyncId: clientSyncId };
+      var draft = { barcode: barcode, expireAt: expireAt, amount: amount || 1, unit: unit || '', storageLocationId: storageLocationId || null, isPrivate: !!isPrivate, clientSyncId: clientSyncId };
       if (!navigator.onLine) {
         return enqueueOrReport({ id: clientSyncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: clientSyncId });
       }
       try {
-        return await originalCreateProduct(barcode, expireAt, amount, storageLocationId, isPrivate, clientSyncId);
+        return await originalCreateProduct(barcode, expireAt, amount, storageLocationId, isPrivate, clientSyncId, unit);
       } catch (_) {
         return enqueueOrReport({ id: clientSyncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: clientSyncId });
       }

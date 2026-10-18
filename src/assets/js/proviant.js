@@ -34,6 +34,147 @@ proviant.tn = function (key, n) {
   return proviant.t.apply(null, [lookup, n].concat(Array.prototype.slice.call(arguments, 2)));
 };
 
+// Display-only unit formatting. Amounts are stored in base units (g / ml /
+// count) and rendered in the household's measurement system. The conversion
+// table is injected by the server from util/units.go, so that table stays the
+// single source of the factors; storage and validation stay server-side too.
+const UNIT_CONVERSIONS = {};
+(window.proviantUnitTable || []).forEach(function (unit) {
+  UNIT_CONVERSIONS[unit.symbol] = { symbol: unit.symbol, kind: unit.kind, factor: unit.factor };
+});
+
+proviant.unitSystem = function () {
+  return window.proviantUnitSystem === "imperial" ? "imperial" : "metric";
+};
+
+function formatUnitQuantity(value) {
+  const rounded = Math.round(value * 10) / 10;
+  if (rounded === Math.trunc(rounded)) {
+    return String(Math.trunc(rounded));
+  }
+  return rounded.toFixed(1);
+}
+
+// Mirrors util.normalizeUnitSymbol: trim, lowercase, collapse inner
+// whitespace, strip a trailing period, so "Fl. Oz." resolves like
+// "fl oz".
+function normalizeUnitSymbol(raw) {
+  return String(raw || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/\.$/, "");
+}
+
+function unitConversion(raw) {
+  return UNIT_CONVERSIONS[normalizeUnitSymbol(raw)] || null;
+}
+
+// displayUnit picks the unit a person would write for a base amount, mirroring
+// util/units.go FromBase, and returns the rescaled value alongside it.
+proviant.displayUnit = function (amount, unit, system) {
+  const raw = String(unit || "").trim();
+  const value = Number(amount) || 0;
+  if (!raw) {
+    return { value: value, symbol: "" };
+  }
+  const conversion = unitConversion(raw);
+  if (!conversion) {
+    return { value: value, symbol: raw };
+  }
+  const resolved = system === "imperial" ? "imperial" : "metric";
+  if (conversion.kind === "mass") {
+    if (resolved === "imperial") {
+      if (Math.abs(value) >= UNIT_CONVERSIONS.lb.factor) {
+        return { value: value / UNIT_CONVERSIONS.lb.factor, symbol: "lb" };
+      }
+      return { value: value / UNIT_CONVERSIONS.oz.factor, symbol: "oz" };
+    }
+    if (Math.abs(value) >= 1000) {
+      return { value: value / 1000, symbol: "kg" };
+    }
+    return { value: value, symbol: "g" };
+  }
+  if (conversion.kind === "volume") {
+    if (resolved === "imperial") {
+      if (Math.abs(value) >= UNIT_CONVERSIONS.cup.factor) {
+        return { value: value / UNIT_CONVERSIONS.cup.factor, symbol: "cup" };
+      }
+      if (Math.abs(value) >= UNIT_CONVERSIONS.tbsp.factor) {
+        return { value: value / UNIT_CONVERSIONS.tbsp.factor, symbol: "tbsp" };
+      }
+      if (Math.abs(value) >= UNIT_CONVERSIONS.tsp.factor) {
+        return { value: value / UNIT_CONVERSIONS.tsp.factor, symbol: "tsp" };
+      }
+      return { value: value / UNIT_CONVERSIONS["fl oz"].factor, symbol: "fl oz" };
+    }
+    if (Math.abs(value) >= 1000) {
+      return { value: value / 1000, symbol: "l" };
+    }
+    return { value: value, symbol: "ml" };
+  }
+  return { value: value, symbol: conversion.symbol };
+};
+
+proviant.formatUnit = function (amount, unit, system) {
+  const displayed = proviant.displayUnit(amount, unit, system);
+  return displayed.symbol
+    ? formatUnitQuantity(displayed.value) + " " + displayed.symbol
+    : formatUnitQuantity(displayed.value);
+};
+
+// amountStep is the number of base units one +/− click moves, so the shown
+// value actually changes: stepping a "2 kg" label by 1 g would leave it reading
+// 2 kg. It is one displayed unit (1000 for kg, 454 for lb), or 1 for a count or
+// unit-less amount.
+proviant.amountStep = function (amount, unit, system) {
+  const conversion = UNIT_CONVERSIONS[proviant.displayUnit(amount, unit, system).symbol];
+  if (!conversion || conversion.factor < 1) {
+    return 1;
+  }
+  return Math.round(conversion.factor);
+};
+
+// convertUnit rescales an amount between two units of one kind when the result
+// is a whole number of the target unit; null when no conversion is defined or
+// the value would have to be rounded, so a caller never saves a silently
+// altered quantity (500 g rescaled to kg would otherwise save as 1 kg).
+proviant.convertUnit = function (amount, fromRaw, toRaw) {
+  const from = unitConversion(fromRaw);
+  const to = unitConversion(toRaw);
+  if (!from || !to || from.kind !== to.kind) {
+    return null;
+  }
+  const value = Number(amount) || 0;
+  if (from.kind === "count") {
+    return from.symbol === to.symbol ? value : null;
+  }
+  if (from.factor === to.factor) {
+    return value;
+  }
+  const converted = value * from.factor / to.factor;
+  if (!Number.isInteger(converted)) {
+    return null;
+  }
+  return converted;
+};
+
+// Render the amount label of a product/shopping card, reading the base amount
+// and unit from data attributes so a stepper update keeps the display unit in
+// sync with the household preference. Elements without a data-amount are left
+// alone: their textContent is a formatted label ("1.5 kg"), not a base amount,
+// so parsing it would corrupt the display on a stale cached page.
+proviant.renderAmountLabel = function (element) {
+  if (!element || element.dataset.amount === undefined) return;
+  const baseAmount = Number.parseInt(element.dataset.amount, 10) || 0;
+  element.textContent = proviant.formatUnit(baseAmount, element.dataset.unit || "", proviant.unitSystem());
+};
+
+// Re-render every amount label that carries a data-amount once the DOM is
+// ready, so a JS-rendered product/shopping card matches the household's
+// measurement system on first paint without a server round-trip.
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".unit-amount").forEach(function (element) {
+    proviant.renderAmountLabel(element);
+  });
+});
+
 // Intercept all fetch calls to inject X-CSRF-Token on state-mutating requests.
 (function () {
   const _originalFetch = window.fetch;
@@ -210,9 +351,9 @@ proviant.updateProductAmount = async function (productID, delta, clientMutationI
 };
 
 /* ── Product API ─────────────────────────────────────────────────────────────── */
-proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate = false, clientSyncId) {
+proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate = false, clientSyncId, unit = "") {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null }) });
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, unit: unit || "", storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null }) });
   const body = await res.json();
   return { code: res.status, message: body.message };
 };

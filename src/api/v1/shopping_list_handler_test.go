@@ -66,7 +66,7 @@ func TestGetAutoShoppingList(t *testing.T) {
 }
 
 func TestCreateShoppingListItem(t *testing.T) {
-	t.Run("creates item with name", func(t *testing.T) {
+	t.Run("creates item with name and normalises the unit to base", func(t *testing.T) {
 		env := setupHandlerTest(t)
 		testutil.CreateTestRequest(env.Ctx, map[string]any{
 			"name":     "Milk",
@@ -85,8 +85,8 @@ func TestCreateShoppingListItem(t *testing.T) {
 		if err := json.Unmarshal(env.W.Body.Bytes(), &item); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
-		if item.Name != "Milk" || item.Quantity != 2 || item.CreatedBy != env.User.ID {
-			t.Errorf("item = %+v, want Milk/2 created by %d", item, env.User.ID)
+		if item.Name != "Milk" || item.Quantity != 2000 || item.Unit != "ml" || item.CreatedBy != env.User.ID {
+			t.Errorf("item = %+v, want Milk/2000 ml created by %d", item, env.User.ID)
 		}
 	})
 
@@ -191,6 +191,69 @@ func TestUpdateShoppingListItem(t *testing.T) {
 		}
 		if updated.Name != "Oat Milk" || !updated.Checked || updated.Quantity != 3 {
 			t.Errorf("item = %+v, want Oat Milk/checked/3", updated)
+		}
+	})
+
+	t.Run("normalises a unit write to base", func(t *testing.T) {
+		env := setupHandlerTest(t)
+		item := dbModel.ShoppingListItem{HouseholdID: env.Household.ID, Name: "Flour", Quantity: 500, Unit: "g", CreatedBy: env.User.ID}
+		env.DB.Create(&item)
+		env.Ctx.Params = []gin.Param{{Key: "id", Value: itoa(item.ID)}}
+		testutil.CreateTestRequest(env.Ctx, map[string]any{"quantity": 2, "unit": "kg"})
+
+		UpdateShoppingListItem(env.Ctx, env.AppCtx)
+
+		if env.W.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
+		}
+		var updated dbModel.ShoppingListItem
+		if err := env.DB.First(&updated, item.ID).Error; err != nil {
+			t.Fatalf("load item: %v", err)
+		}
+		if updated.Quantity != 2000 || updated.Unit != "g" {
+			t.Errorf("quantity/unit = %d %q, want 2000 g", updated.Quantity, updated.Unit)
+		}
+	})
+
+	t.Run("unit-only write preserves the amount", func(t *testing.T) {
+		env := setupHandlerTest(t)
+		item := dbModel.ShoppingListItem{HouseholdID: env.Household.ID, Name: "Flour", Quantity: 2000, Unit: "g", CreatedBy: env.User.ID}
+		env.DB.Create(&item)
+		env.Ctx.Params = []gin.Param{{Key: "id", Value: itoa(item.ID)}}
+		testutil.CreateTestRequest(env.Ctx, map[string]any{"unit": "kg"})
+
+		UpdateShoppingListItem(env.Ctx, env.AppCtx)
+
+		if env.W.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
+		}
+		var updated dbModel.ShoppingListItem
+		if err := env.DB.First(&updated, item.ID).Error; err != nil {
+			t.Fatalf("load item: %v", err)
+		}
+		if updated.Quantity != 2000 || updated.Unit != "g" {
+			t.Errorf("quantity/unit = %d %q, want 2000 g (amount preserved, storage stays base)", updated.Quantity, updated.Unit)
+		}
+	})
+
+	t.Run("unit-only write to another kind leaves the pair untouched", func(t *testing.T) {
+		env := setupHandlerTest(t)
+		item := dbModel.ShoppingListItem{HouseholdID: env.Household.ID, Name: "Eggs", Quantity: 3, Unit: "pcs", CreatedBy: env.User.ID}
+		env.DB.Create(&item)
+		env.Ctx.Params = []gin.Param{{Key: "id", Value: itoa(item.ID)}}
+		testutil.CreateTestRequest(env.Ctx, map[string]any{"unit": "kg"})
+
+		UpdateShoppingListItem(env.Ctx, env.AppCtx)
+
+		if env.W.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
+		}
+		var updated dbModel.ShoppingListItem
+		if err := env.DB.First(&updated, item.ID).Error; err != nil {
+			t.Fatalf("load item: %v", err)
+		}
+		if updated.Quantity != 3 || updated.Unit != "pcs" {
+			t.Errorf("quantity/unit = %d %q, want 3 pcs (count must not absorb a mass unit)", updated.Quantity, updated.Unit)
 		}
 	})
 

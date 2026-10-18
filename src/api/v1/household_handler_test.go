@@ -13,6 +13,7 @@ import (
 	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/testutil"
 	repomocks "github.com/Isotop7/proviant/testutil/mocks"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -219,6 +220,37 @@ func TestUpdateHouseholdSettingsHandler(t *testing.T) {
 
 		if env.W.Code != http.StatusForbidden {
 			t.Errorf("status = %d, want 403", env.W.Code)
+		}
+	})
+
+	t.Run("valid unit system persists", func(t *testing.T) {
+		env := setupHandlerTest(t)
+		unitSystem := util.UnitSystemImperial
+		testutil.CreateTestRequest(env.Ctx, apiModel.UpdateHouseholdSettingsRequest{UnitSystem: &unitSystem})
+
+		UpdateHouseholdSettings(env.Ctx, env.AppCtx)
+
+		if env.W.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
+		}
+		var stored dbModel.Household
+		if err := env.DB.First(&stored, env.Household.ID).Error; err != nil {
+			t.Fatalf("load household: %v", err)
+		}
+		if stored.UnitSystem != util.UnitSystemImperial {
+			t.Errorf("stored unit system = %q, want %q", stored.UnitSystem, util.UnitSystemImperial)
+		}
+	})
+
+	t.Run("invalid unit system returns 400", func(t *testing.T) {
+		env := setupHandlerTest(t)
+		unitSystem := "us"
+		testutil.CreateTestRequest(env.Ctx, apiModel.UpdateHouseholdSettingsRequest{UnitSystem: &unitSystem})
+
+		UpdateHouseholdSettings(env.Ctx, env.AppCtx)
+
+		if env.W.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want 400", env.W.Code)
 		}
 	})
 }

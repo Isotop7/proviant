@@ -92,7 +92,7 @@ func SyncOfflineProducts(ctx *gin.Context, appCtx *AppContext) {
 	// it is resolved once for the whole batch — and it is resolved in the language
 	// active at sync time, not at render time, so a user who switches language
 	// afterwards keeps the name they queued under.
-	userLanguage, householdLanguage, _ := appCtx.Repos.Users.GetUserLanguagePreferencesByID(appCtx.UserID)
+	userLanguage, householdLanguage, _, _ := appCtx.Repos.Users.GetUserDisplayPreferencesByID(appCtx.UserID)
 	lang := i18n.ResolveLanguage(userLanguage, householdLanguage, ctx.GetHeader("Accept-Language"))
 
 	names := newImportNameResolver(appCtx.Repos, unnamedBarcodes(req.Items), importOffDatasetGetter(ctx), offCacheEnabled(ctx, logger), logger)

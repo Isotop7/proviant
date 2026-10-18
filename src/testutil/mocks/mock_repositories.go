@@ -331,8 +331,8 @@ func (m *MockUserRepository) GetUserByID(userID uint) (authentication.User, erro
 func (m *MockUserRepository) GetUserHouseholdByID(userID uint) (uint, error) {
 	return m.HouseholdID, m.Err
 }
-func (m *MockUserRepository) GetUserLanguagePreferencesByID(userID uint) (string, string, error) {
-	return m.User.Language, "", m.Err
+func (m *MockUserRepository) GetUserDisplayPreferencesByID(userID uint) (string, string, string, error) {
+	return m.User.Language, "", "", m.Err
 }
 func (m *MockUserRepository) GetUserHouseholdRole(userID uint) (string, error) {
 	return m.User.Role, m.Err
@@ -472,7 +472,7 @@ func (m *MockHouseholdRepository) CancelApplication(applicationID, applicantUser
 func (m *MockHouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint, name string) error {
 	return m.Err
 }
-func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64, language *string) error {
+func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64, language, unitSystem *string) error {
 	return m.Err
 }
 func (m *MockHouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error {

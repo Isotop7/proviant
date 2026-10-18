@@ -38,6 +38,7 @@ type Product struct {
 	IsPrivate            bool             `gorm:"default:false" json:"isPrivate"`
 	Amount               int              `json:"amount"`
 	Unit                 string           `json:"unit"`
+	DisplayAmount        string           `gorm:"-"                            json:"-"`
 	StorageLocationID    *uint            `gorm:"index"                        json:"storageLocationId"`
 	ClientSyncID         *string          `gorm:"index:idx_products_household_clientsyncid,unique,priority:2" json:"clientSyncId,omitempty"`
 	StorageLocation      *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`

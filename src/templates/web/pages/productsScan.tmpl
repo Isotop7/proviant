@@ -157,6 +157,14 @@
                 </div>
                 <input type="hidden" id="amount" value="1">
 
+                <label for="unit" class="form-label fw-medium small">{{ t "scan.unit" }}</label>
+                <select class="form-select mb-3" id="unit" aria-label="{{ t "scan.unit" }}">
+                    <option value="">{{ t "scan.noUnitOption" }}</option>
+                    {{ range .UnitOptions }}
+                    <option value="{{ .Value }}">{{ .Label }}</option>
+                    {{ end }}
+                </select>
+
                 <label for="expireAt" class="form-label fw-medium small">
                     {{ t "scan.expiryDate" }} <span class="text-danger" aria-hidden="true">*</span>
                 </label>

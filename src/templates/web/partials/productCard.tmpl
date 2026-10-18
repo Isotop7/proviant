@@ -83,7 +83,7 @@
                 </span>
                 <span class="d-flex align-items-center gap-1">
                     <button class="btn btn-sm btn-proviant-secondary btn-amount-dec" data-product-id="{{ .Model.ID }}" aria-label="{{ t "partial.productCard.decreaseAmount" }}">-</button>
-                    <span id="amount-{{ .Model.ID }}" class="mx-1">{{ .Amount }}</span>
+                    <span id="amount-{{ .Model.ID }}" class="mx-1 unit-amount" data-amount="{{ .Amount }}" data-unit="{{ .Unit }}">{{ .DisplayAmount }}</span>
                     <button class="btn btn-sm btn-proviant-secondary btn-amount-inc" data-product-id="{{ .Model.ID }}" aria-label="{{ t "partial.productCard.increaseAmount" }}">+</button>
                 </span>
             </li>

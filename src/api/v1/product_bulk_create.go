@@ -229,6 +229,10 @@ func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDr
 	if amount > util.ReceiptItemMaxAmount {
 		amount = util.ReceiptItemMaxAmount
 	}
+	// Convert before truncating: a truncated alias ("millilitres" cut short)
+	// no longer resolves, and the amount would stay unconverted.
+	amount, unit := util.ToBase(amount, strings.TrimSpace(draft.Unit))
+	unit = truncateDraftField(unit, util.ReceiptItemMaxUnitLength)
 
 	expireAt := time.Time{}
 	if strings.TrimSpace(draft.ExpireAt) != "" {
@@ -259,7 +263,7 @@ func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDr
 		ProductName:   productName,
 		Barcode:       truncateDraftField(strings.TrimSpace(draft.Barcode), util.CsvImportMaxBarcodeLength),
 		Amount:        amount,
-		Unit:          truncateDraftField(strings.TrimSpace(draft.Unit), util.ReceiptItemMaxUnitLength),
+		Unit:          unit,
 		Categories:    truncateDraftField(strings.TrimSpace(draft.Categories), util.ReceiptItemMaxCategoriesLength),
 		ExpireAt:      expireAt,
 		PriceOverride: draft.PriceOverride,

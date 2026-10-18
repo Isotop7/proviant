@@ -284,4 +284,75 @@ describe("proviant.js pure helpers", () => {
       expect(proviant.colorExpiry("2030-01-01")).toBe("bg-primary");
     });
   });
+
+  // Display-only mirror of util/units.go FromBase; the amounts are stored in
+  // base units (g / ml / count) and rendered in the household system.
+  describe("formatUnit", () => {
+    it("renders mass in the metric system", () => {
+      expect(proviant.formatUnit(500, "g", "metric")).toBe("500 g");
+      expect(proviant.formatUnit(1500, "g", "metric")).toBe("1.5 kg");
+    });
+
+    it("renders a unit-less amount as its bare quantity", () => {
+      expect(proviant.formatUnit(3, "", "metric")).toBe("3");
+    });
+
+    it("leaves a count unit untouched", () => {
+      expect(proviant.formatUnit(3, "pkg", "metric")).toBe("3 pkg");
+    });
+
+    it("renders mass in the imperial system", () => {
+      expect(proviant.formatUnit(454, "g", "imperial")).toBe("1 lb");
+      expect(proviant.formatUnit(100, "g", "imperial")).toBe("3.5 oz");
+    });
+
+    it("renders volume in the imperial system", () => {
+      expect(proviant.formatUnit(480, "ml", "imperial")).toBe("2 cup");
+      expect(proviant.formatUnit(30, "ml", "imperial")).toBe("2 tbsp");
+    });
+
+    it("passes an unknown unit through", () => {
+      expect(proviant.formatUnit(4, "handful", "metric")).toBe("4 handful");
+    });
+  });
+
+  // The stepper must move by one *displayed* unit, otherwise a "2 kg" label
+  // stays at 2 kg when the server adds a single gram.
+  describe("amountStep", () => {
+    it("uses the displayed unit as the step", () => {
+      expect(proviant.amountStep(2000, "g", "metric")).toBe(1000);
+      expect(proviant.amountStep(500, "g", "metric")).toBe(1);
+      expect(proviant.amountStep(2000, "ml", "metric")).toBe(1000);
+      expect(proviant.amountStep(454, "g", "imperial")).toBe(454);
+      expect(proviant.amountStep(30, "ml", "imperial")).toBe(15);
+    });
+
+    it("steps a count or unit-less amount by one", () => {
+      expect(proviant.amountStep(3, "pkg", "metric")).toBe(1);
+      expect(proviant.amountStep(3, "", "metric")).toBe(1);
+    });
+  });
+
+  // Rescaling the edit-form amount when the picker changes keeps 2000 g from
+  // being saved as 2000 kg, and a conversion that would round returns null so
+  // the caller can refuse the switch instead of altering the quantity.
+  describe("convertUnit", () => {
+    it("rescales between units of one kind", () => {
+      expect(proviant.convertUnit(2000, "g", "kg")).toBe(2);
+      expect(proviant.convertUnit(2, "kg", "g")).toBe(2000);
+      expect(proviant.convertUnit(1, "l", "ml")).toBe(1000);
+      expect(proviant.convertUnit(30, "ml", "tbsp")).toBe(2);
+    });
+
+    it("returns null when the conversion would round", () => {
+      expect(proviant.convertUnit(500, "g", "kg")).toBeNull();
+      expect(proviant.convertUnit(454, "g", "lb")).toBeNull();
+    });
+
+    it("returns null when no conversion is defined", () => {
+      expect(proviant.convertUnit(2000, "g", "")).toBeNull();
+      expect(proviant.convertUnit(2000, "g", "ml")).toBeNull();
+      expect(proviant.convertUnit(1, "pcs", "pkg")).toBeNull();
+    });
+  });
 });

@@ -74,6 +74,99 @@ func SetDefaultProductAmounts(logger *zerolog.Logger, db *gorm.DB) error {
 	return db.Exec("UPDATE products SET amount = 1 WHERE amount IS NULL OR amount = 0").Error
 }
 
+// unitBearing is the projection the unit normalisation scans: only the three
+// columns the conversion needs are read, so a table with wide rows is not fully
+// materialised per batch.
+type unitBearing struct {
+	ID     uint
+	Amount int
+	Unit   string
+}
+
+// NormalizeStoredUnits rewrites every product, recipe-ingredient and shopping
+// list amount stored in a non-base unit to the canonical base unit of its kind
+// (mass -> g, volume -> ml), so amounts across a household aggregate without a
+// unit lookup and every label renders correctly. Count and unrecognised units
+// pass through untouched. The conversion is idempotent — a base unit converts
+// to itself — so a second run is a no-op, and soft-deleted rows are included so
+// a restore cannot resurrect a pre-normalisation amount. Only rows whose stored
+// unit is not already a storage unit are scanned: after the first run that is
+// just the rare unrecognised unit, so a recurring startup does not walk the
+// whole table and later edits to the conversion table cannot retroactively
+// rewrite stored amounts.
+func NormalizeStoredUnits(logger *zerolog.Logger, db *gorm.DB) error {
+	products, err := normalizeUnitTable(db, "products", "amount")
+	if err != nil {
+		return fmt.Errorf("normalizing product units: %w", err)
+	}
+	ingredients, err := normalizeUnitTable(db, "recipe_ingredients", "amount")
+	if err != nil {
+		return fmt.Errorf("normalizing recipe ingredient units: %w", err)
+	}
+	shoppingItems, err := normalizeUnitTable(db, "shopping_list_items", "quantity")
+	if err != nil {
+		return fmt.Errorf("normalizing shopping list units: %w", err)
+	}
+	logger.Info().
+		Int("products", products).
+		Int("recipe_ingredients", ingredients).
+		Int("shopping_list_items", shoppingItems).
+		Msg("Normalized stored amounts to base units")
+	return nil
+}
+
+func normalizeUnitTable(db *gorm.DB, table, amountColumn string) (int, error) {
+	updated := 0
+	rows := make([]unitBearing, 0)
+	// A row carrying an empty or storage-unit symbol is already normalised: the
+	// symbol fixes the kind and the amount is on the base scale (or a count, which
+	// never scales), so conversion is the identity. Everything else — a non-base
+	// unit, a misspelled alias, an unrecognised string — may need a rewrite, so
+	// the predicate never skips a row that does. The comparison must be
+	// case-sensitive: MySQL and MariaDB compare with the column's collation,
+	// which is case-insensitive by default, so a plain NOT IN would treat a
+	// legacy "KG" row as already normalised and leave its amount a thousand-fold
+	// off when rendered as a base-unit value.
+	err := db.Table(table).
+		Select("id, "+amountColumn+" AS amount, unit").
+		Where(unitScanPredicate(db.Dialector.Name()), util.StorageUnitSymbols()).
+		FindInBatches(&rows, 500, func(tx *gorm.DB, _ int) error {
+			// The rewrites are collected and applied after the batch scan
+			// finishes: updating the scanned table while its rows are still
+			// open errors on MySQL ("command out of sync") and can deadlock
+			// on PostgreSQL.
+			rewrites := make(map[uint][2]any, len(rows))
+			for i := range rows {
+				baseAmount, baseUnit := util.ToBase(rows[i].Amount, rows[i].Unit)
+				if baseAmount == rows[i].Amount && baseUnit == rows[i].Unit {
+					continue
+				}
+				rewrites[rows[i].ID] = [2]any{baseAmount, baseUnit}
+			}
+			for id, pair := range rewrites {
+				if err := tx.Table(table).
+					Where(util.QueryId, id).
+					Updates(map[string]any{amountColumn: pair[0], "unit": pair[1]}).Error; err != nil {
+					return err
+				}
+				updated++
+			}
+			return nil
+		}).Error
+	return updated, err
+}
+
+// unitScanPredicate builds the batch-scan filter for one dialect. The skip
+// must compare bytes, not collations: only SQLite and PostgreSQL compare
+// case-sensitively by default, so on MySQL and MariaDB the storage-unit list
+// has to be matched against a binary cast of the column.
+func unitScanPredicate(dialectorName string) string {
+	if dialectorName == "mysql" {
+		return "unit <> '' AND CAST(unit AS BINARY) NOT IN ?"
+	}
+	return "unit <> '' AND unit NOT IN ?"
+}
+
 // DropLegacyStorageLocationColumn removes the old free-text storage_location column from products.
 // GORM AutoMigrate never drops columns, so this must be done explicitly.
 // SQLite does not support IF EXISTS on DROP COLUMN, so we attempt the drop and swallow

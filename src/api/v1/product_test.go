@@ -320,6 +320,46 @@ func TestCreateProduct(t *testing.T) {
 			t.Errorf("GetProductBySyncID called %d times, want 1 — only the pre-check, not a second one after the validation failure", m.Products.SyncIDLookups)
 		}
 	})
+
+	// Mass amounts are stored in the canonical base unit, so a "kg" entry
+	// lands as grams and stock math needs no unit lookup at read time.
+	t.Run("normalizes mass amount to grams", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Set("offacntrl", &MockOpenFoodFactsAPIController{
+			MockGetDataset: func(barcode string) (dbModel.Product, error) {
+				return dbModel.Product{}, errors.ErrProductSearchInvalidQuery
+			},
+		})
+
+		productData := dbModel.Product{ProductName: "Flour", Barcode: "0000000000000", Amount: 2, Unit: "kg"}
+		body, _ := json.Marshal(productData)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		CreateProduct(ctx, appCtx)
+
+		if w.Code != http.StatusCreated {
+			t.Fatalf("Status = %v, want %v; body: %s", w.Code, http.StatusCreated, w.Body.String())
+		}
+		var response apiModel.ProductResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to unmarshal response: %v", err)
+		}
+		if response.Amount != 2000 || response.Unit != "g" {
+			t.Errorf("amount/unit = %d %q, want 2000 g", response.Amount, response.Unit)
+		}
+	})
 }
 
 func intPtr(v int) *int { return &v }
@@ -352,6 +392,42 @@ func TestUpdateProduct(t *testing.T) {
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
+		}
+	})
+
+	// A volume stored in litres is rewritten to millilitres, matching the
+	// canonical base unit the migration and create path use.
+	t.Run("normalizes volume amount to millilitres", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+
+		updateData := dbModel.ProductDTOPatch{ProductName: "Milk", Amount: 2, Unit: "l"}
+		body, _ := json.Marshal(updateData)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		UpdateProduct(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Status = %v, want %v; body: %s", w.Code, http.StatusOK, w.Body.String())
+		}
+		var response dbModel.ProductDTOPatch
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to unmarshal response: %v", err)
+		}
+		if response.Amount != 2000 || response.Unit != "ml" {
+			t.Errorf("amount/unit = %d %q, want 2000 ml", response.Amount, response.Unit)
 		}
 	})
 

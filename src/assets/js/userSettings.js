@@ -189,11 +189,13 @@ function saveMonthlyGoal() {
   const btn = document.getElementById("btnSaveMonthlyGoal");
   setButtonLoading(btn, true);
   const languageSelect = document.getElementById("inputHouseholdLanguage");
+  const unitSystemSelect = document.getElementById("inputHouseholdUnitSystem");
   proviant.updateHouseholdSettings({
     monthlyWasteGoalType: type,
     monthlyWasteGoalCount: count,
     monthlyWasteGoalPercent: percent,
     language: languageSelect ? languageSelect.value : undefined,
+    unitSystem: unitSystemSelect ? unitSystemSelect.value : undefined,
   }).then((response) => {
     setButtonLoading(btn, false);
     if (response.code === 200) {

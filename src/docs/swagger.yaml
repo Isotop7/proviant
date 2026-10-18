@@ -391,6 +391,8 @@ definitions:
         type: string
       name:
         type: string
+      unitSystem:
+        type: string
     type: object
   api.FullExportMember:
     properties:
@@ -493,6 +495,8 @@ definitions:
       monthlyWasteGoalPercent:
         type: number
       monthlyWasteGoalType:
+        type: string
+      unitSystem:
         type: string
     type: object
   api.HouseholdUserResponse:
@@ -1061,6 +1065,8 @@ definitions:
       monthlyWasteGoalPercent:
         type: number
       monthlyWasteGoalType:
+        type: string
+      unitSystem:
         type: string
     type: object
   api.UpdateMealPlanEntryRequest:
@@ -2587,7 +2593,8 @@ paths:
       - household
   /api/v1/household/settings:
     get:
-      description: Returns the monthly waste goal settings of the caller's household
+      description: Returns the monthly waste goal, language and display unit system
+        of the caller's household
       produces:
       - application/json
       responses:
@@ -2611,8 +2618,8 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Updates the monthly waste goal of the caller's household (admin
-        only)
+      description: Updates the monthly waste goal, language and display unit system
+        of the caller's household (admin only)
       parameters:
       - description: Settings
         in: body

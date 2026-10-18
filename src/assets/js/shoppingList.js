@@ -81,20 +81,24 @@
   function updateItemQuantity(itemId, delta) {
     var qtyEl = document.getElementById('qty-' + itemId);
     if (!qtyEl) return;
-    var currentQty = Number.parseInt(qtyEl.textContent, 10) || 0;
-    var newQty = Math.max(1, currentQty + delta);
-    qtyEl.textContent = newQty;
+    var currentQty = Number.parseInt(qtyEl.dataset.amount || qtyEl.textContent, 10) || 0;
+    var step = proviant.amountStep(currentQty, qtyEl.dataset.unit, proviant.unitSystem());
+    var newQty = Math.max(1, currentQty + delta * step);
+    qtyEl.dataset.amount = String(newQty);
+    proviant.renderAmountLabel(qtyEl);
     fetch('/api/v1/shopping-list/' + itemId, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ quantity: newQty })
     }).then(function(res) {
       if (!res.ok) {
-        qtyEl.textContent = currentQty;
+        qtyEl.dataset.amount = String(currentQty);
+        proviant.renderAmountLabel(qtyEl);
         proviant.showFeedback('error', proviant.t("js.shoppingList.updateFailedTitle"));
       }
     }).catch(function() {
-      qtyEl.textContent = currentQty;
+      qtyEl.dataset.amount = String(currentQty);
+      proviant.renderAmountLabel(qtyEl);
     });
   }
 

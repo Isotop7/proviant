@@ -10,6 +10,7 @@ import (
 	apiModel "github.com/Isotop7/proviant/models/api"
 	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/services"
+	"github.com/Isotop7/proviant/util"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -17,11 +18,12 @@ import (
 func recipeIngredientInputsToModels(inputs []apiModel.RecipeIngredientInput) []dbModel.RecipeIngredient {
 	ingredients := make([]dbModel.RecipeIngredient, len(inputs))
 	for i := range inputs {
+		amount, unit := util.ToBase(inputs[i].Amount, inputs[i].Unit)
 		ingredients[i] = dbModel.RecipeIngredient{
 			ProductID: inputs[i].ProductID,
 			Name:      strings.TrimSpace(inputs[i].Name),
-			Amount:    inputs[i].Amount,
-			Unit:      inputs[i].Unit,
+			Amount:    amount,
+			Unit:      unit,
 			SortOrder: inputs[i].SortOrder,
 		}
 	}

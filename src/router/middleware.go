@@ -118,22 +118,26 @@ func UserContextLoggerMiddleware() gin.HandlerFunc {
 	}
 }
 
-// LanguageMiddleware resolves the UI language for web page renders: user
-// preference, household preference, Accept-Language header, default. It must
-// run after UserContextLoggerMiddleware so ContextKeyUserID is populated.
+// LanguageMiddleware resolves the UI language and the household display unit
+// system for web page renders: user preference, household preference,
+// Accept-Language header, default. It must run after
+// UserContextLoggerMiddleware so ContextKeyUserID is populated.
 func LanguageMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		userLanguage, householdLanguage := "", ""
+		unitSystem := ""
 		if raw, ok := ctx.Get(util.ContextKeyUserID); ok {
 			if userID, ok := raw.(uint); ok && userID > 0 {
 				if repos, reposOk := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer); reposOk {
-					if userLang, householdLang, err := repos.Users.GetUserLanguagePreferencesByID(userID); err == nil {
+					if userLang, householdLang, unitSystemPref, err := repos.Users.GetUserDisplayPreferencesByID(userID); err == nil {
 						userLanguage, householdLanguage = userLang, householdLang
+						unitSystem = unitSystemPref
 					}
 				}
 			}
 		}
 		ctx.Set(util.ContextKeyLanguage, i18n.ResolveLanguage(userLanguage, householdLanguage, ctx.GetHeader("Accept-Language")))
+		ctx.Set(util.ContextKeyUnitSystem, util.ResolveUnitSystem(unitSystem))
 		ctx.Next()
 	}
 }

@@ -1,9 +1,9 @@
 package v1
 
 import (
+	"errors"
 	"github.com/Isotop7/proviant/audit"
 	apperrors "github.com/Isotop7/proviant/errors"
-	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,6 +13,7 @@ import (
 	apiModel "github.com/Isotop7/proviant/models/api"
 	"github.com/Isotop7/proviant/models/authentication"
 	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -242,7 +243,7 @@ func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext) {
 
 // GetHouseholdSettings returns the caller's household settings.
 // @Summary      Gets household settings
-// @Description  Returns the monthly waste goal settings of the caller's household
+// @Description  Returns the monthly waste goal, language and display unit system of the caller's household
 // @Tags         household
 // @Produce      json
 // @Success      200 {object} apiModel.HouseholdSettingsResponse
@@ -267,12 +268,14 @@ func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 		MonthlyWasteGoalCount:   household.MonthlyWasteGoalCount,
 		MonthlyWasteGoalPercent: household.MonthlyWasteGoalPercent,
 		Language:                household.Language,
+		UnitSystem:              household.UnitSystem,
 	})
 }
 
-// UpdateHouseholdSettings updates monthly waste goal for the caller's household (admin only).
+// UpdateHouseholdSettings updates the monthly waste goal, language and display
+// unit system of the caller's household (admin only).
 // @Summary      Updates household settings
-// @Description  Updates the monthly waste goal of the caller's household (admin only)
+// @Description  Updates the monthly waste goal, language and display unit system of the caller's household (admin only)
 // @Tags         household
 // @Accept       json
 // @Produce      json
@@ -311,6 +314,10 @@ func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrUnsupportedLanguage)
 		return
 	}
+	if req.UnitSystem != nil && !util.ValidUnitSystem(*req.UnitSystem) {
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUnitSystem)
+		return
+	}
 	user, userErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
 	if userErr != nil {
 		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserData)
@@ -319,7 +326,7 @@ func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 	updateErr := appCtx.Repos.Households.UpdateHouseholdSettings(
 		user.HouseholdID, appCtx.UserID,
 		req.MonthlyWasteGoalType, req.MonthlyWasteGoalCount, req.MonthlyWasteGoalPercent,
-		req.Language,
+		req.Language, req.UnitSystem,
 	)
 	switch updateErr {
 	case nil:
@@ -334,6 +341,7 @@ func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 			MonthlyWasteGoalCount:   updated.MonthlyWasteGoalCount,
 			MonthlyWasteGoalPercent: updated.MonthlyWasteGoalPercent,
 			Language:                updated.Language,
+			UnitSystem:              updated.UnitSystem,
 		})
 	case apperrors.ErrHouseholdNotFound:
 		api.RespondError(ctx, http.StatusNotFound, updateErr)

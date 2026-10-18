@@ -24,7 +24,7 @@ type HouseholdRepositoryInterface interface {
 	GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error)
 	CancelApplication(applicationID, applicantUserID uint) error
 	UpdateHouseholdName(householdID, adminUserID uint, name string) error
-	UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64, language *string) error
+	UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64, language, unitSystem *string) error
 	RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
 	SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error
 	GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
@@ -276,7 +276,7 @@ func (r *HouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint,
 	return r.DB.Model(&household).Update("name", name).Error
 }
 
-func (r *HouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64, language *string) error {
+func (r *HouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64, language, unitSystem *string) error {
 	var household database.Household
 	if err := r.DB.First(&household, householdID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -294,6 +294,9 @@ func (r *HouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID u
 	}
 	if language != nil {
 		updates["language"] = *language
+	}
+	if unitSystem != nil {
+		updates["unit_system"] = *unitSystem
 	}
 	return r.DB.Model(&household).Updates(updates).Error
 }

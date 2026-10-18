@@ -164,8 +164,8 @@ func TestImportProducts(t *testing.T) {
 		if len(products) != 3 {
 			t.Fatalf("stored products = %d, want 3", len(products))
 		}
-		if products[0].Amount != 2 || products[0].Unit != "l" || products[0].Categories != "Dairy" {
-			t.Errorf("first product = %+v, want amount 2 / unit l / category Dairy", products[0])
+		if products[0].Amount != 2000 || products[0].Unit != "ml" || products[0].Categories != "Dairy" {
+			t.Errorf("first product = %+v, want amount 2000 / unit ml / category Dairy", products[0])
 		}
 		if products[0].ExpireAt.IsZero() {
 			t.Error("expiry_date was not stored")

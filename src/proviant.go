@@ -388,6 +388,11 @@ func main() {
 		panic(amountMigrationError)
 	}
 
+	// Normalize stored product, recipe and shopping list amounts to base units
+	if unitMigrationError := migrations.NormalizeStoredUnits(logger, dbHandle); unitMigrationError != nil {
+		panic(unitMigrationError)
+	}
+
 	// Seed ProductCategoryPrice reference data for savings calculator
 	if seedErr := migrations.SeedProductCategoryPrices(logger, dbHandle); seedErr != nil {
 		panic(seedErr)

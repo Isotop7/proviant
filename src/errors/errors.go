@@ -55,6 +55,9 @@ var (
 	// ErrUnsupportedLanguage is thrown when a language has no message catalog
 	ErrUnsupportedLanguage = errors.New("unsupported language")
 
+	// ErrInvalidUnitSystem is thrown when a household unit system is not '', 'metric' or 'imperial'
+	ErrInvalidUnitSystem = errors.New("unitSystem must be '', 'metric' or 'imperial'")
+
 	// ErrInvalidUserIDWrapper is used to interpolate a invalid user id
 	ErrInvalidUserIDWrapper            = "User with id '%d' not found"
 	ErrInvalidUserIDWrapperWithMessage = ErrInvalidUserIDWrapper + ": %s"

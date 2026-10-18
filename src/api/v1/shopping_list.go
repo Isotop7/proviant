@@ -8,6 +8,7 @@ import (
 	"github.com/Isotop7/proviant/errors"
 	apiModel "github.com/Isotop7/proviant/models/api"
 	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -52,6 +53,9 @@ func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	if req.Quantity <= 0 {
 		req.Quantity = 1
 	}
+	// A shopping list row is rendered with util.FormatUnit, which assumes the
+	// base unit, so normalise the pair on the way in.
+	req.Quantity, req.Unit = util.ToBase(req.Quantity, req.Unit)
 
 	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil {
@@ -167,11 +171,22 @@ func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	if req.Category != nil {
 		item.Category = *req.Category
 	}
-	if req.Quantity != nil {
-		item.Quantity = *req.Quantity
-	}
-	if req.Unit != nil {
-		item.Unit = *req.Unit
+	// Keep the stored pair in base units whenever either half of it is written,
+	// so util.FormatUnit's base-unit assumption holds on the next render. An
+	// incoming quantity is expressed in the unit it is stored with: the new one
+	// when both halves arrive, the current one when only the quantity does. A
+	// unit-only write must preserve the amount, so it converts instead of
+	// reinterpreting it; a pair that cannot be converted (unknown unit, other
+	// kind) is left untouched rather than silently relabelled.
+	switch {
+	case req.Quantity != nil && req.Unit != nil:
+		item.Quantity, item.Unit = util.ToBase(*req.Quantity, *req.Unit)
+	case req.Quantity != nil:
+		item.Quantity, item.Unit = util.ToBase(*req.Quantity, item.Unit)
+	case req.Unit != nil:
+		if converted, ok := util.Convert(item.Quantity, item.Unit, *req.Unit); ok {
+			item.Quantity, item.Unit = util.ToBase(converted, *req.Unit)
+		}
 	}
 	if req.Checked != nil {
 		item.Checked = *req.Checked

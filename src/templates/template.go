@@ -309,6 +309,14 @@ func effectiveExpireAt(p *dbModel.Product) time.Time {
 	return p.EffectiveExpireAt()
 }
 
+// unitIsKnown reports whether a raw unit string resolves to a conversion-table
+// entry, so a template select can keep an unrecognised legacy unit selectable
+// instead of silently dropping it on save.
+func unitIsKnown(raw string) bool {
+	_, ok := util.ParseUnit(raw)
+	return ok
+}
+
 func flagReplace(source string) template.HTML {
 	var output strings.Builder
 	for elements := range strings.SplitSeq(source, ",") {
@@ -341,6 +349,8 @@ func templateFunctions(lang string) template.FuncMap {
 		"flagReplace":          flagReplace,
 		"derefUint":            derefUint,
 		"effectiveExpireAt":    effectiveExpireAt,
+		"unitDisplay":          util.FormatUnit,
+		"unitIsKnown":          unitIsKnown,
 	}
 	for name, fn := range i18n.FuncMap(lang) {
 		functions[name] = fn
@@ -434,6 +444,11 @@ func injectI18nData(ctx *gin.Context, data map[string]any) string {
 		}
 	}
 	data["OfflineSyncMaxBodyBytes"] = maxSyncBodyBytes
+	unitSystemValue, _ := ctx.Get(util.ContextKeyUnitSystem)
+	data["UnitSystem"] = util.UnitSystemFromContextValue(unitSystemValue)
+	data["UnitOptions"] = util.UnitOptions()
+	data["UnitOptionsJSON"] = template.JS(util.UnitOptionsJSON())
+	data["UnitConversionJSON"] = template.JS(util.UnitConversionJSON())
 	if title, ok := data["Title"].(string); ok && title != "" {
 		key := "pageTitle." + strings.ReplaceAll(title, " ", "")
 		if i18n.Has(lang, key) {

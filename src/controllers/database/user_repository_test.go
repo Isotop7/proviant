@@ -281,3 +281,42 @@ func TestUserRepository_UpdateUser_DoesNotClobberReceiptScanSettings(t *testing.
 		}
 	}
 }
+
+// TestUserRepository_GetUserDisplayPreferencesByID covers the single-query
+// language and unit system resolution the page middleware relies on, including
+// the empty fallback for a user without a household.
+func TestUserRepository_GetUserDisplayPreferencesByID(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewUserRepository(db)
+
+	t.Run("returns user and household preferences", func(t *testing.T) {
+		household := testutil.CreateTestHousehold(db, 0)
+		if err := db.Model(household).Updates(map[string]any{"language": "de", "unit_system": "imperial"}).Error; err != nil {
+			t.Fatalf("update household: %v", err)
+		}
+		user := testutil.CreateTestUser(db, household.ID)
+		if err := db.Model(user).Update("language", "en").Error; err != nil {
+			t.Fatalf("update user: %v", err)
+		}
+
+		userLanguage, householdLanguage, unitSystem, err := repo.GetUserDisplayPreferencesByID(user.ID)
+		if err != nil {
+			t.Fatalf("GetUserDisplayPreferencesByID() error = %v", err)
+		}
+		if userLanguage != "en" || householdLanguage != "de" || unitSystem != "imperial" {
+			t.Errorf("got (%q, %q, %q), want (en, de, imperial)", userLanguage, householdLanguage, unitSystem)
+		}
+	})
+
+	t.Run("user without household gets empty preferences", func(t *testing.T) {
+		user := testutil.CreateTestUser(db, 0)
+
+		userLanguage, householdLanguage, unitSystem, err := repo.GetUserDisplayPreferencesByID(user.ID)
+		if err != nil {
+			t.Fatalf("GetUserDisplayPreferencesByID() error = %v", err)
+		}
+		if userLanguage != "" || householdLanguage != "" || unitSystem != "" {
+			t.Errorf("got (%q, %q, %q), want empty strings", userLanguage, householdLanguage, unitSystem)
+		}
+	})
+}

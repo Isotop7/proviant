@@ -17,7 +17,7 @@ type UserRepositoryInterface interface {
 	GetUserByUsername(username string) (authentication.User, error)
 	GetUserByID(userID uint) (authentication.User, error)
 	GetUserHouseholdByID(userID uint) (uint, error)
-	GetUserLanguagePreferencesByID(userID uint) (string, string, error)
+	GetUserDisplayPreferencesByID(userID uint) (string, string, string, error)
 	GetUserHouseholdRole(userID uint) (string, error)
 	UpdateUserHouseholdRole(userID, householdID uint, role string) error
 	UserExistsByUsername(user *authentication.User) bool
@@ -99,19 +99,22 @@ func (r *UserRepository) GetUserHouseholdByID(userID uint) (uint, error) {
 	return user.HouseholdID, selectErr.Error
 }
 
-// GetUserLanguagePreferencesByID returns the user language preference and the
-// language preference of the user's household (empty string = automatic).
-func (r *UserRepository) GetUserLanguagePreferencesByID(userID uint) (string, string, error) {
+// GetUserDisplayPreferencesByID returns the user's language preference, the
+// language preference of the user's household (empty string = automatic) and
+// the household's display unit system (empty string = metric) in one query, so
+// the per-request middleware and the offline sync need a single round trip.
+func (r *UserRepository) GetUserDisplayPreferencesByID(userID uint) (string, string, string, error) {
 	var result struct {
 		UserLanguage      string
 		HouseholdLanguage string
+		UnitSystem        string
 	}
 	row := r.DB.Model(&authentication.User{}).
-		Select("users.language AS user_language, households.language AS household_language").
+		Select("users.language AS user_language, households.language AS household_language, households.unit_system AS unit_system").
 		Joins("LEFT JOIN households ON households.id = users.household_id AND households.deleted_at IS NULL").
 		Where("users.id = ?", userID).
 		Scan(&result)
-	return result.UserLanguage, result.HouseholdLanguage, row.Error
+	return result.UserLanguage, result.HouseholdLanguage, result.UnitSystem, row.Error
 }
 
 func (r *UserRepository) GetUserHouseholdRole(userID uint) (string, error) {

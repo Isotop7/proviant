@@ -64,6 +64,9 @@ function editProduct() {
     const daysAfterOpening = inputDaysAfterOpening && inputDaysAfterOpening.value !== ''
         ? Number.parseInt(inputDaysAfterOpening.value, 10) : null;
 
+    const inputUnit = document.getElementById('inputUnit');
+    const unit = inputUnit && inputUnit.value ? inputUnit.value : '';
+
     const product = {
         "ID": productID,
         "productName": els.inputProductName.value.trim(),
@@ -72,6 +75,7 @@ function editProduct() {
         "imageUrl": els.inputImageURL.value.trim(),
         "expireAt": expireDate ? expireDate.toISOString() : null,
         "amount": els.inputAmount ? Number.parseInt(els.inputAmount.value) || 0 : 0,
+        "unit": unit,
         "storageLocationId": storageLocationId,
         "notificationLeadDays": notificationLeadDays,
         "minStockAmount": minStockAmount,
@@ -236,8 +240,35 @@ document.addEventListener("click", function (event) {
     }
 });
 
+/* Rescale the amount field when the storage unit changes, so switching g -> kg
+   keeps the same quantity instead of reinterpreting the number (2000 g would
+   otherwise be saved as 2000 kg). The previous unit is tracked on the select.
+   A switch the amount cannot follow exactly — no defined conversion, or one
+   that would round (500 g rescaled to kg saves as 1 kg = 1000 g) — snaps the
+   select back to the previous unit instead of silently corrupting the value. */
+document.addEventListener("change", function (event) {
+    var unitEl = event.target.closest ? event.target.closest("#inputUnit") : null;
+    if (!unitEl) return;
+    var amountInput = document.getElementById("inputAmount");
+    var previous = unitEl.dataset.previousUnit || "";
+    var converted = amountInput && amountInput.value !== ""
+        ? proviant.convertUnit(amountInput.value, previous, unitEl.value)
+        : 0;
+    if (converted === null) {
+        unitEl.value = previous;
+        return;
+    }
+    if (amountInput && amountInput.value !== "") {
+        amountInput.value = String(converted);
+    }
+    unitEl.dataset.previousUnit = unitEl.value;
+});
+
 /* Blur validation for required fields */
 document.addEventListener("DOMContentLoaded", function () {
+    var inputUnit = document.getElementById("inputUnit");
+    if (inputUnit) inputUnit.dataset.previousUnit = inputUnit.value;
+
     var inputProductName = document.getElementById("inputProductName");
     if (inputProductName) {
         inputProductName.addEventListener("blur", function () {
@@ -316,6 +347,28 @@ function handleAddToShoppingList(btn) {
     );
 }
 
+// The restock picker is a fixed <select>, so a unit that is not one of its
+// listed options (a legacy free-text unit carried over by the product) would
+// select nothing and be posted back as "". Append it as its own option,
+// replacing the one appended for a previous suggestion so it does not
+// accumulate across openings.
+function selectModalUnit(unitEl, unit) {
+    var value = unit || '';
+    var stale = unitEl.querySelector('option[data-restock-extra]');
+    if (stale) stale.remove();
+    var present = Array.prototype.some.call(unitEl.options, function (option) {
+        return option.value === value;
+    });
+    if (value && !present) {
+        var option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        option.setAttribute('data-restock-extra', '');
+        unitEl.appendChild(option);
+    }
+    unitEl.value = value;
+}
+
 // Returns a Promise that resolves with {qty, unit} on confirm, or with
 // proviant.CANCEL when the user dismisses the modal (Cancel, X, backdrop,
 // Escape). runWithButtonBusyState treats CANCEL as a no-op.
@@ -334,7 +387,7 @@ function openRestockModal(suggestion) {
         var confirmBtn = document.getElementById('restockConfirmBtn');
 
         if (qtyEl) qtyEl.value = suggestion.suggestedQty;
-        if (unitEl) unitEl.value = suggestion.unit || '';
+        if (unitEl) selectModalUnit(unitEl, suggestion.unit);
         if (productEl) {
             productEl.textContent = suggestion.productName || suggestion.display || proviant.t("js.products.suggestedQuantity");
         }

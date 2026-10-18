@@ -99,6 +99,28 @@ func TestRecipeService_CookRecipe(t *testing.T) {
 		}
 	})
 
+	t.Run("converts convertible ingredient units before consuming", func(t *testing.T) {
+		db, svc, householdID, userID := setup(t)
+		product := testutil.CreateTestProduct(db, householdID, userID)
+		db.Model(product).Updates(map[string]any{"amount": 3000, "unit": "g"})
+		recipe := seedRecipe(t, db, householdID, userID, 2, dbModel.RecipeIngredient{
+			ProductID: &product.ID, Name: product.ProductName, Amount: 1, Unit: "kg",
+		})
+
+		consumed, partial, errs, internalErr := svc.CookRecipe(recipe.ID, 2, userID)
+
+		if internalErr != nil {
+			t.Fatalf("internalErr = %v, want nil", internalErr)
+		}
+		if consumed != 0 || partial != 1 || len(errs) != 0 {
+			t.Errorf("consumed/partial/errs = %d/%d/%v, want 0/1/[]", consumed, partial, errs)
+		}
+		reloaded := reloadProduct(t, db, product.ID)
+		if reloaded.Amount != 2000 {
+			t.Errorf("product amount = %d, want 2000 (3000 - 1kg)", reloaded.Amount)
+		}
+	})
+
 	t.Run("zero servings cooks the recipe serving count", func(t *testing.T) {
 		db, svc, householdID, userID := setup(t)
 		product := testutil.CreateTestProduct(db, householdID, userID)

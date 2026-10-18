@@ -90,6 +90,50 @@ func TestRestoreHouseholdBackupRejectsUnsupportedVersion(t *testing.T) {
 	}
 }
 
+// TestRestoreProductFromRowNormalizesUnits covers a backup written before
+// amounts were stored in base units: the restore path must convert, because the
+// startup migration does not run again for rows inserted mid-session.
+func TestRestoreProductFromRowNormalizesUnits(t *testing.T) {
+	row := apiModel.ExportProductResponse{ProductName: "Flour", Barcode: "1234567890123", Amount: 2, Unit: "kg"}
+
+	product, err := restoreProductFromRow(&row, false, 1, map[string]uint{}, 1, map[string]uint{})
+	if err != nil {
+		t.Fatalf("restoreProductFromRow: %v", err)
+	}
+	if product.Amount != 2000 || product.Unit != "g" {
+		t.Errorf("amount/unit = %d %q, want 2000 g", product.Amount, product.Unit)
+	}
+}
+
+// TestRestoreHouseholdBackupStoresOnlyValidUnitSystem covers a backup carrying
+// an unsupported unit system: the value is external input and must not reach
+// the household row verbatim.
+func TestRestoreHouseholdBackupStoresOnlyValidUnitSystem(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	user := testutil.CreateTestUser(db, 0)
+	household := testutil.CreateTestHousehold(db, user.ID)
+	user.HouseholdID = household.ID
+	if err := db.Save(user).Error; err != nil {
+		t.Fatalf("save user: %v", err)
+	}
+
+	backup := apiModel.FullExportResponse{
+		Version:   apiModel.BackupSchemaVersion,
+		Household: &apiModel.FullExportHousehold{Name: household.Name, UnitSystem: "bogus"},
+	}
+	if _, err := RestoreHouseholdBackup(db, household.ID, user.ID, &backup); err != nil {
+		t.Fatalf("RestoreHouseholdBackup: %v", err)
+	}
+
+	var stored dbModel.Household
+	if err := db.First(&stored, household.ID).Error; err != nil {
+		t.Fatalf("load household: %v", err)
+	}
+	if stored.UnitSystem != "" {
+		t.Errorf("unit system = %q, want empty (metric fallback)", stored.UnitSystem)
+	}
+}
+
 // TestBackupControllerRunOnceWritesVersionedDocuments covers the scheduled job's
 // storage contract: one JSON document per household, carrying the same schema
 // version as the export endpoint.

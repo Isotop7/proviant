@@ -22,7 +22,12 @@
                     </div>
                     <div class="col-6">
                         <label for="restockUnit" class="form-label small mb-1">{{ t "partial.restockSuggestionModal.unit" }}</label>
-                        <input type="text" id="restockUnit" class="form-control" placeholder="{{ t "partial.restockSuggestionModal.unitPlaceholder" }}">
+                        <select id="restockUnit" class="form-select">
+                            <option value="">{{ t "partial.restockSuggestionModal.unitPlaceholder" }}</option>
+                            {{ range $.UnitOptions }}
+                            <option value="{{ .Value }}">{{ .Label }}</option>
+                            {{ end }}
+                        </select>
                     </div>
                 </div>
             </div>

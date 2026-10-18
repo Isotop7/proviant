@@ -330,6 +330,19 @@ func TestProductsEditHandler(t *testing.T) {
 		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsEdit)
 		requireStatus(t, w, http.StatusOK)
 	})
+
+	// A legacy free-text unit is not one of the picker options, so it must be
+	// appended as its own selected option or saving the form would wipe it.
+	t.Run("keeps an unknown legacy unit selectable", func(t *testing.T) {
+		household, user := seedHouseholdUser(t, env.db)
+		product := testutil.CreateTestProduct(env.db, household.ID, user.ID)
+		if err := env.db.Model(product).Update("unit", "handful").Error; err != nil {
+			t.Fatalf("set unit: %v", err)
+		}
+		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsEdit)
+		requireStatus(t, w, http.StatusOK)
+		requireContains(t, w, `<option value="handful" selected>handful</option>`)
+	})
 }
 
 func TestAcceptInviteHandler(t *testing.T) {

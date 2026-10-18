@@ -7,6 +7,7 @@ import (
 
 	"github.com/Isotop7/proviant/controllers/database"
 	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 	"github.com/rs/zerolog"
 )
 
@@ -34,11 +35,15 @@ type ingredientNeed struct {
 	amount    int
 }
 
-func ingredientAggregationKey(ingredient *dbModel.RecipeIngredient) ingredientKey {
+// ingredientAggregationKey keys a need by product (or name) and the base unit
+// the amount was normalised to. Two spellings of one unit ("kg", "kilogram")
+// reach the same key, so their amounts still aggregate; a unit-less legacy row
+// keeps its own need because "2 eggs" cannot be added to "500 g of flour".
+func ingredientAggregationKey(ingredient *dbModel.RecipeIngredient, baseUnit string) ingredientKey {
 	if ingredient.ProductID != nil {
-		return ingredientKey{productID: *ingredient.ProductID, unit: strings.ToLower(ingredient.Unit)}
+		return ingredientKey{productID: *ingredient.ProductID, unit: baseUnit}
 	}
-	return ingredientKey{name: strings.ToLower(ingredient.Name), unit: strings.ToLower(ingredient.Unit)}
+	return ingredientKey{name: strings.ToLower(ingredient.Name), unit: baseUnit}
 }
 
 func addAmounts(total, addition int) int {
@@ -81,14 +86,17 @@ func (s *MealPlanService) GenerateShoppingList(from, to time.Time, userID uint) 
 		}
 		for j := range recipe.Ingredients {
 			ingredient := &recipe.Ingredients[j]
-			key := ingredientAggregationKey(ingredient)
+			baseAmount, baseUnit := util.ToBase(
+				scaleIngredientAmount(ingredient.Amount, entry.Servings, recipe.Servings),
+				ingredient.Unit)
+			key := ingredientAggregationKey(ingredient, baseUnit)
 			need, known := needs[key]
 			if !known {
-				need = &ingredientNeed{key: key, productID: ingredient.ProductID, name: ingredient.Name, unit: ingredient.Unit}
+				need = &ingredientNeed{key: key, productID: ingredient.ProductID, name: ingredient.Name, unit: baseUnit}
 				needs[key] = need
 				order = append(order, key)
 			}
-			need.amount = addAmounts(need.amount, scaleIngredientAmount(ingredient.Amount, entry.Servings, recipe.Servings))
+			need.amount = addAmounts(need.amount, baseAmount)
 		}
 	}
 
@@ -123,9 +131,14 @@ func (s *MealPlanService) GenerateShoppingList(from, to time.Time, userID uint) 
 			} else {
 				need.name = product.ProductName
 				category = product.Categories
+				// Stock is converted into the need's base unit instead of the
+				// need being rebased onto the product's unit: a shopping list
+				// row must stay in a storage unit for util.FormatUnit's
+				// base-unit assumption to hold.
 				if strings.EqualFold(product.Unit, need.unit) {
 					need.amount -= product.Amount
-					need.unit = product.Unit
+				} else if converted, ok := util.Convert(product.Amount, product.Unit, need.unit); ok {
+					need.amount -= converted
 				}
 				if need.amount <= 0 {
 					continue
