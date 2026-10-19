@@ -6,6 +6,7 @@ import (
 	stdlog "log"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -70,6 +71,53 @@ func setupDatabase(logger *zerolog.Logger, databaseConfiguration *configuration.
 	}
 
 	return dbHandle, nil
+}
+
+// setupOffDumpDatabase opens the dedicated handle for the OpenFoodFacts bulk
+// dump: a separate SQLite file, or a separate MariaDB schema. It never creates a
+// schema; when the schema is missing it fails with a pointer to the init script,
+// matching how the main database is provisioned outside the app.
+func setupOffDumpDatabase(logger *zerolog.Logger, databaseConfiguration *configuration.DatabaseConfiguration, offConfig *configuration.OpenFoodFactsConfiguration) (*gorm.DB, error) {
+	gormConfig := gorm.Config{}
+	gormConfig.Logger = logging.ZerologAdapter{LoggingSink: logger}
+
+	switch databaseConfiguration.SelectedEngine {
+	case dbController.SQLite:
+		dumpFile := util.OffDumpSQLiteFilename(offConfig.DumpDatabase)
+		if err := os.MkdirAll(filepath.Dir(dumpFile), 0o750); err != nil {
+			return nil, fmt.Errorf("%w: %s", errors.ErrOpenFoodFactsDumpDatabaseUnavailable, err)
+		}
+		// The dump is re-downloadable, so durability is traded for import speed.
+		dsn := dumpFile + "?_busy_timeout=5000&_txlock=immediate&_journal_mode=WAL&_synchronous=OFF"
+		dbHandle, err := gorm.Open(sqlite.Open(dsn), &gormConfig)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", errors.ErrOpenFoodFactsDumpDatabaseUnavailable, err)
+		}
+		return dbHandle, nil
+	case dbController.MariaDB:
+		databaseURI := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			databaseConfiguration.MariaDB.User,
+			databaseConfiguration.MariaDB.Password,
+			databaseConfiguration.MariaDB.Host,
+			databaseConfiguration.MariaDB.Port,
+			offConfig.DumpDatabase)
+		dbHandle, err := gorm.Open(mysql.Open(databaseURI), &gormConfig)
+		if err != nil {
+			return nil, fmt.Errorf("%w: schema %q. Create it with scripts/mariadb-init.sql: %s",
+				errors.ErrOpenFoodFactsDumpSchemaUnavailable, offConfig.DumpDatabase, err)
+		}
+		var schemaName string
+		if err := dbHandle.Raw("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?", offConfig.DumpDatabase).Scan(&schemaName).Error; err != nil {
+			return nil, fmt.Errorf("%w: %s", errors.ErrOpenFoodFactsDumpDatabaseUnavailable, err)
+		}
+		if schemaName == "" {
+			return nil, fmt.Errorf("%w: %q. Create it with scripts/mariadb-init.sql",
+				errors.ErrOpenFoodFactsDumpSchemaUnavailable, offConfig.DumpDatabase)
+		}
+		return dbHandle, nil
+	default:
+		return nil, errors.ErrDatabaseInvalidEngine
+	}
 }
 
 // setupNotificationController initializes the notification controller and starts the notification handler goroutine.
@@ -172,6 +220,15 @@ func loadConfig(configDir string) *configuration.ProviantConfiguration {
 	// Queued offline sync defaults
 	viper.SetDefault("offlineSync.maxBatchBytes", util.ReceiptBulkMaxBodyBytes)
 
+	// OpenFoodFacts bulk dump import defaults. The feature is opt-in: the full
+	// dump is a multi-gigabyte download, so it never starts on its own.
+	viper.SetDefault("openfoodfacts.dumpImportEnabled", false)
+	viper.SetDefault("openfoodfacts.dumpImportExpiryDays", util.DefaultOpenFoodFactsDumpExpiryDays)
+	viper.SetDefault("openfoodfacts.dumpUrl", util.OpenFoodFactsDumpURL)
+	viper.SetDefault("openfoodfacts.dumpDeltaWindowDays", util.DefaultOpenFoodFactsDeltaWindowDays)
+	viper.SetDefault("openfoodfacts.dumpStagingPath", util.OffDumpStagingDir)
+	viper.SetDefault("openfoodfacts.dumpDatabase", util.OffDumpDefaultDatabase)
+
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
 		panic(err.Error())
@@ -187,6 +244,10 @@ func loadConfig(configDir string) *configuration.ProviantConfiguration {
 
 // setupLogging initializes the logging and returns a zerolog.Logger instance.
 func setupLogging(config *configuration.ProviantConfiguration) *zerolog.Logger {
+	logLevel := zerolog.InfoLevel
+	if config.Server.Debug {
+		logLevel = zerolog.DebugLevel
+	}
 	if config.Logging.Enabled {
 		// Create multi writer for file and terminal logger
 		logFile, logFileOpenErr := os.OpenFile(
@@ -200,13 +261,13 @@ func setupLogging(config *configuration.ProviantConfiguration) *zerolog.Logger {
 		}
 		// Add logfile to logging writers
 		multi := zerolog.MultiLevelWriter(logFile, zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime})
-		logFileLogger := zerolog.New(multi).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
+		logFileLogger := zerolog.New(multi).Level(logLevel).With().Timestamp().Caller().Logger()
 		return &logFileLogger
 	} else {
 		// Create terminal logger
 		terminalLogger := zerolog.New(
 			zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime},
-		).Level(zerolog.DebugLevel).With().Timestamp().Caller().Logger()
+		).Level(logLevel).With().Timestamp().Caller().Logger()
 		return &terminalLogger
 	}
 }
@@ -214,7 +275,7 @@ func setupLogging(config *configuration.ProviantConfiguration) *zerolog.Logger {
 // validateAPIs validates the API configurations.
 func validateAPIs(config *configuration.ProviantConfiguration, logger *zerolog.Logger) {
 	if err := config.ValidateOpenFoodFactsConfiguration(); err != nil {
-		panic("URL for OpenFoodFactsAPI not set")
+		panic("Invalid OpenFoodFacts configuration: " + err.Error())
 	}
 	rawProvider := config.RecipeAPI.Provider
 	if err := config.ValidateRecipeAPIConfiguration(); err != nil {
@@ -406,6 +467,24 @@ func main() {
 	offacntrl := &controllers.OpenFoodFactsAPIController{
 		Configuration: proviantConfiguration.OpenFoodFacts,
 		Logger:        logger,
+	}
+
+	// OpenFoodFacts bulk dump import (opt-in). Opens a dedicated store and
+	// fails fast if it is misconfigured rather than running without offline data.
+	if proviantConfiguration.OpenFoodFacts.DumpImportEnabled {
+		offDumpDB, offDumpErr := setupOffDumpDatabase(logger, &proviantConfiguration.Database, &proviantConfiguration.OpenFoodFacts)
+		if offDumpErr != nil {
+			logger.Error().Msg(offDumpErr.Error())
+			panic(offDumpErr)
+		}
+		offDumpRepo := dbController.NewOffDumpRepository(offDumpDB)
+		if offDumpMigrateErr := offDumpRepo.Migrate(); offDumpMigrateErr != nil {
+			logger.Error().Msg(offDumpMigrateErr.Error())
+			panic(offDumpMigrateErr)
+		}
+		offDumpController := controllers.NewOffDumpController(logger, &proviantConfiguration.OpenFoodFacts, offDumpRepo)
+		offacntrl.OfflineLookup = offDumpController
+		offDumpController.Dispatch()
 	}
 
 	// Validate notification configuration

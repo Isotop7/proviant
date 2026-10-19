@@ -9,6 +9,7 @@ services:
       - MARIADB_PASSWORD=supersecretpassword
     volumes:
       - proviantdb:/var/lib/mysql
+      - ./scripts/mariadb-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
 
   smtp:
     image: rnwood/smtp4dev:latest

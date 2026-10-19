@@ -152,6 +152,21 @@ type OpenFoodFactsConfiguration struct {
 	CacheEnabled      bool
 	ImageCacheEnabled bool
 	ImageCachePath    string
+
+	// Bulk dump import. It imports the OFF JSONL export into a separate store so
+	// a scan resolves offline without a live API call, distinct from the
+	// per-barcode open_food_facts_caches table. Off by default: the full dump is
+	// a multi-gigabyte download.
+	DumpImportEnabled    bool   `mapstructure:"dumpImportEnabled"`
+	DumpImportExpiryDays int    `mapstructure:"dumpImportExpiryDays"`
+	DumpURL              string `mapstructure:"dumpUrl"`
+	DumpDeltaWindowDays  int    `mapstructure:"dumpDeltaWindowDays"`
+	DumpDatabase         string `mapstructure:"dumpDatabase"`
+
+	// DumpStagingPath is the directory the full dump is staged in before
+	// import. Empty falls back to util.OffDumpStagingDir. Staging makes an
+	// interrupted download or import resumable.
+	DumpStagingPath string `mapstructure:"dumpStagingPath"`
 }
 
 // OCRConfiguration contains settings for OCR expiry date detection
@@ -280,6 +295,21 @@ func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error {
 	}
 	if ec.OpenFoodFacts.ImageCacheEnabled && ec.OpenFoodFacts.ImageCachePath == "" {
 		return errors.ErrOpenFoodFactsAPIInvalidImageCachePath
+	}
+	if !ec.OpenFoodFacts.DumpImportEnabled {
+		return nil
+	}
+	if ec.OpenFoodFacts.DumpURL == "" {
+		return errors.ErrOpenFoodFactsDumpEmptyURL
+	}
+	if ec.OpenFoodFacts.DumpImportExpiryDays <= 0 {
+		return errors.ErrOpenFoodFactsDumpInvalidExpiryDays
+	}
+	if ec.OpenFoodFacts.DumpDeltaWindowDays < 0 {
+		return errors.ErrOpenFoodFactsDumpInvalidDeltaWindowDays
+	}
+	if ec.Database.SelectedEngine == database.MariaDB && ec.OpenFoodFacts.DumpDatabase == "" {
+		return errors.ErrOpenFoodFactsDumpEmptyDatabase
 	}
 	return nil
 }

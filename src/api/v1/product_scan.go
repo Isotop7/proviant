@@ -144,11 +144,12 @@ func ScanProduct(ctx *gin.Context, appCtx *AppContext) {
 	api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrNoBarcodeFoundInImage)
 }
 
-// GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode,
-// using the database cache when cacheEnabled is true in the OpenFoodFacts configuration.
+// GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode.
+// It consults the locally imported bulk dump first, then the database cache when
+// cacheEnabled is true, and finally proxies the live OpenFoodFacts API.
 //
 // @Summary      Return OpenFoodFacts product data
-// @Description  Proxies OpenFoodFacts API with optional database caching
+// @Description  Resolves a barcode from the imported dump, the database cache, or the proxy
 // @Tags         product
 // @Produce      json
 // @Param        barcode  path  string  true  "Barcode"
@@ -173,6 +174,21 @@ func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 
 	productRepo := database.NewProductRepository(appCtx.DB)
 
+	if product, found := offacntrl.LookupOffline(barcode); found {
+		appCtx.Logger.Info().Msgf("Offline dump hit for barcode '%s'", barcode)
+		entry := dbModel.OpenFoodFactsCache{
+			Barcode:     product.Barcode,
+			ProductName: product.ProductName,
+			Categories:  product.Categories,
+			Countries:   product.Countries,
+			ImageURL:    product.ImageURL,
+			CO2KgPerKg:  product.CO2KgPerKg,
+			StorageHint: product.StorageHint,
+		}
+		ctx.JSON(http.StatusOK, apiModel.NewOpenFoodFactsCacheResponse(&entry))
+		return
+	}
+
 	if offacntrl.Configuration.CacheEnabled {
 		cached, cacheErr := productRepo.GetOpenFoodFactsCacheByBarcode(barcode)
 		if cacheErr == nil {
@@ -185,7 +201,7 @@ func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 		}
 	}
 
-	product, apiErr := offacntrl.GetDataset(barcode)
+	product, apiErr := offacntrl.GetLiveDataset(barcode)
 	if apiErr != nil {
 		appCtx.Logger.Error().Msgf("OpenFoodFacts API error for barcode '%s': %s", barcode, apiErr)
 		api.RespondError(ctx, http.StatusBadGateway, errors.New("error fetching product data from OpenFoodFacts"))

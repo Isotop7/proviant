@@ -1,7 +1,10 @@
 // util contains helper functions and generic vars
 package util
 
-import "time"
+import (
+	"path/filepath"
+	"time"
+)
 
 const (
 	DefaultDateFormatParseStr       = "2006-01-02"
@@ -247,6 +250,74 @@ const (
 	// DefaultBackupStopWaitSeconds bounds Stop(): filesystem writes cannot be
 	// canceled reliably, so shutdown waits briefly instead of hanging forever.
 	DefaultBackupStopWaitSeconds = 5
+
+	// OpenFoodFacts bulk dump import (issue #412). The dump is OFF's full
+	// nightly JSONL export; deltas are the daily change files OFF publishes for
+	// a rolling window. This is distinct from open_food_facts_caches, which
+	// caches individual live API responses.
+	OpenFoodFactsDumpURL       = "https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz"
+	OpenFoodFactsDeltaIndexURL = "https://static.openfoodfacts.org/data/delta/index.txt"
+	OpenFoodFactsDeltaBaseURL  = "https://static.openfoodfacts.org/data/delta/"
+
+	// OffDumpDBFilename is the SQLite dump file used when dumpDatabase is empty.
+	// It lives beside the main database and is deliberately excluded from
+	// household backups, which only carry household data.
+	OffDumpDBFilename = "data/off_dump.db"
+
+	// OffDumpDefaultDatabase names the dump store when dumpDatabase is unset: the
+	// MariaDB schema, or data/<name>.db on SQLite. It is separate from the main
+	// schema so its lifecycle (bulk import, truncate) never touches household
+	// data. The app never creates the schema.
+	OffDumpDefaultDatabase = "off_dump"
+
+	// OffDumpStagingDir is where the full dump is staged before import, so an
+	// interrupted import resumes from disk instead of re-downloading. It holds
+	// the multi-gigabyte .part/.ready file and must sit on a volume with room
+	// for both the staging file and the growing dump store.
+	OffDumpStagingDir = "data"
+
+	// OffDumpStagingSuffix is appended to the dump store's name for the staged
+	// download; the in-progress download gets a .part suffix and the completed
+	// one a .ready suffix.
+	OffDumpStagingSuffix = ".jsonl.gz"
+
+	// OffDumpStagingPartSuffix marks an in-progress staging download, resumable
+	// from its current size.
+	OffDumpStagingPartSuffix = ".part"
+
+	// OffDumpStagingReadySuffix marks a fully staged download awaiting import.
+	OffDumpStagingReadySuffix = ".ready"
+
+	// OpenFoodFactsDumpBatchSize is the number of parsed products buffered
+	// before one upsert transaction. Large enough to amortize the transaction,
+	// small enough to bound memory against multi-megabyte dump lines.
+	OpenFoodFactsDumpBatchSize = 1000
+
+	// OpenFoodFactsDumpCheckIntervalHours is how often the worker wakes to
+	// decide whether the dump is expired or new deltas exist.
+	OpenFoodFactsDumpCheckIntervalHours = 6
+
+	// OpenFoodFactsDumpStopWaitSeconds bounds shutdown while a download or
+	// import is in flight.
+	OpenFoodFactsDumpStopWaitSeconds = 10
+
+	// DefaultOpenFoodFactsDumpExpiryDays is the full re-download cadence.
+	DefaultOpenFoodFactsDumpExpiryDays = 7
+
+	// DefaultOpenFoodFactsDeltaWindowDays bounds how many days of delta files
+	// are considered. OFF publishes the previous ~14 days.
+	DefaultOpenFoodFactsDeltaWindowDays = 14
+
+	// OffDump state keys.
+	OffDumpStateLastFullImport = "last_full_import"
+	OffDumpStateLastDeltaEnd   = "last_delta_end_unix"
+
+	// OffDump state keys describing the in-flight full import, so a restart can
+	// resume the download and the import instead of starting over.
+	OffDumpStateFullImportURL          = "full_import_url"
+	OffDumpStateFullImportETag         = "full_import_etag"
+	OffDumpStateFullImportLastModified = "full_import_last_modified"
+	OffDumpStateFullImportRecords      = "full_import_records"
 )
 
 // CsvImportColumnAliases maps an accepted alternative column header to its
@@ -271,4 +342,27 @@ var CsvImportColumnAliases = map[string]string{
 	CsvColumnExpiryDate:      CsvColumnExpiryDate,
 	CsvColumnBarcode:         CsvColumnBarcode,
 	CsvColumnAddedAt:         CsvColumnAddedAt,
+}
+
+// OffDumpSQLiteFilename resolves the SQLite dump store for a configured
+// dumpDatabase. A bare name lives beside the main database as data/<name>.db;
+// a value that names a path is used verbatim, matching database.sqlite.filepath.
+// An empty name falls back to OffDumpDBFilename.
+func OffDumpSQLiteFilename(databaseName string) string {
+	if databaseName == "" {
+		return OffDumpDBFilename
+	}
+	if filepath.Base(databaseName) != databaseName {
+		return databaseName
+	}
+	return filepath.Join(filepath.Dir(OffDumpDBFilename), databaseName+".db")
+}
+
+// OffDumpStagingFilename is the staged download's base name, derived from the
+// dump store's name so each store resumes its own .part/.ready files.
+func OffDumpStagingFilename(databaseName string) string {
+	if databaseName == "" {
+		return OffDumpDefaultDatabase + OffDumpStagingSuffix
+	}
+	return filepath.Base(databaseName) + OffDumpStagingSuffix
 }

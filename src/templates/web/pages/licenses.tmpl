@@ -1,0 +1,41 @@
+{{ define "content" }}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">{{ t "nav.licenses" }}</h1>
+        <p class="page-header-subtitle">{{ t "licenses.subtitle" }}</p>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                <div class="icon-chip" aria-hidden="true"><i class="bi bi-database-check"></i></div>
+                {{ t "licenses.openFoodFacts.title" }}
+            </div>
+            <div class="card-body">
+                <p class="mb-2">{{ t "licenses.openFoodFacts.attribution" }}</p>
+                <p class="text-secondary-custom small mb-3">{{ t "licenses.openFoodFacts.description" }}</p>
+                <ul class="mb-0">
+                    <li><a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">{{ t "licenses.openFoodFacts.link" }}</a></li>
+                    <li><a href="https://opendatacommons.org/licenses/odbl/1.0/" target="_blank" rel="noopener">{{ t "licenses.openFoodFacts.licenseLink" }}</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                <div class="icon-chip" aria-hidden="true"><i class="bi bi-code-slash"></i></div>
+                {{ t "licenses.proviant.title" }}
+            </div>
+            <div class="card-body">
+                <p class="mb-3">{{ t "licenses.proviant.description" }}</p>
+                <a href="https://github.com/Isotop7/proviant/blob/main/LICENSE" target="_blank" rel="noopener">{{ t "licenses.proviant.licenseLink" }}</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ end }}

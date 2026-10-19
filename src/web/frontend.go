@@ -153,6 +153,20 @@ func (frontend *Frontend) User(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "user.tmpl", pageData)
 }
 
+// Licenses renders the data attribution and open-source license page
+// @Summary      Licenses page
+// @Description  Renders third-party data attribution and license information
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Router       /web/licenses [get]
+func (frontend *Frontend) Licenses(ctx *gin.Context) {
+	pageData := map[string]any{
+		"Title": "Licenses",
+	}
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "licenses.tmpl", pageData)
+}
+
 // UserSettings renders the user settings page
 // @Summary      User settings page
 // @Description  Renders the user settings page with household management

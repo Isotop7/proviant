@@ -78,7 +78,12 @@
 			<i class="bi bi-escape" aria-hidden="true"></i> {{ t "nav.logout" }}
 		</a>
 	</div>
-	<div class="nav-footer-meta">
+	<div class="nav-footer-meta d-flex flex-column gap-2">
+		<a href="/web/licenses" class="nav-source-link {{ if eq .Title "Licenses" }}active{{ end }}"
+			{{ if eq .Title "Licenses" }}aria-current="page"{{ end }}
+			data-bs-toggle="tooltip" data-bs-placement="right" title="{{ t "nav.licenses" }}">
+			<i class="bi bi-info-circle" aria-hidden="true"></i> {{ t "nav.licenses" }}
+		</a>
 		<a href="https://github.com/Isotop7/proviant" target="_blank" rel="noopener"
 			class="nav-source-link"
 			title="{{ t "nav.viewSource" }}">

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -239,4 +240,83 @@ func TestStringConstants(t *testing.T) {
 			t.Errorf("CsvImportTemplateFilename = %q, want .csv suffix", CsvImportTemplateFilename)
 		}
 	})
+}
+
+func TestOffDumpSQLiteFilename(t *testing.T) {
+	tests := []struct {
+		name         string
+		databaseName string
+		want         string
+	}{
+		{
+			name:         "empty falls back to the default dump file",
+			databaseName: "",
+			want:         OffDumpDBFilename,
+		},
+		{
+			name:         "default name keeps the documented path",
+			databaseName: OffDumpDefaultDatabase,
+			want:         OffDumpDBFilename,
+		},
+		{
+			name:         "bare name lives beside the main database",
+			databaseName: "proviant_off_dump",
+			want:         filepath.Join(filepath.Dir(OffDumpDBFilename), "proviant_off_dump.db"),
+		},
+		{
+			name:         "absolute path is used verbatim",
+			databaseName: "/var/opt/off_dump",
+			want:         "/var/opt/off_dump",
+		},
+		{
+			name:         "relative path is used verbatim",
+			databaseName: "var/opt/off_dump",
+			want:         "var/opt/off_dump",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := OffDumpSQLiteFilename(test.databaseName); got != test.want {
+				t.Errorf("OffDumpSQLiteFilename(%q) = %q, want %q", test.databaseName, got, test.want)
+			}
+		})
+	}
+}
+
+func TestOffDumpStagingFilename(t *testing.T) {
+	tests := []struct {
+		name         string
+		databaseName string
+		want         string
+	}{
+		{
+			name:         "empty falls back to the default name",
+			databaseName: "",
+			want:         OffDumpDefaultDatabase + OffDumpStagingSuffix,
+		},
+		{
+			name:         "default name keeps the documented file",
+			databaseName: OffDumpDefaultDatabase,
+			want:         "off_dump" + OffDumpStagingSuffix,
+		},
+		{
+			name:         "bare name is carried over",
+			databaseName: "proviant_off_dump",
+			want:         "proviant_off_dump" + OffDumpStagingSuffix,
+		},
+		{
+			name:         "a path contributes only its base name",
+			databaseName: "/var/opt/off_dump",
+			want:         "off_dump" + OffDumpStagingSuffix,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := OffDumpStagingFilename(test.databaseName); got != test.want {
+				t.Errorf("OffDumpStagingFilename(%q) = %q, want %q", test.databaseName, got, test.want)
+			}
+		})
+	}
 }

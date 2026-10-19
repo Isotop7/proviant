@@ -320,9 +320,18 @@ import "github.com/Isotop7/proviant/controllers"
 - [type OCRControllerImpl](<#OCRControllerImpl>)
   - [func NewOCRController\(logger \*zerolog.Logger, config \*configuration.OCRConfiguration\) \*OCRControllerImpl](<#NewOCRController>)
   - [func \(c \*OCRControllerImpl\) ScanExpiryDate\(image \[\]byte\) \(\*api.ExpiryScanResponse, error\)](<#OCRControllerImpl.ScanExpiryDate>)
+- [type OffDumpController](<#OffDumpController>)
+  - [func NewOffDumpController\(logger \*zerolog.Logger, config \*configuration.OpenFoodFactsConfiguration, repository \*dbController.OffDumpRepository\) \*OffDumpController](<#NewOffDumpController>)
+  - [func \(c \*OffDumpController\) Dispatch\(\)](<#OffDumpController.Dispatch>)
+  - [func \(c \*OffDumpController\) LookupProduct\(barcode string\) \(database.Product, bool\)](<#OffDumpController.LookupProduct>)
+  - [func \(c \*OffDumpController\) RunOnce\(ctx context.Context\) error](<#OffDumpController.RunOnce>)
+  - [func \(c \*OffDumpController\) Stop\(\)](<#OffDumpController.Stop>)
+- [type OfflineProductLookup](<#OfflineProductLookup>)
 - [type OpenFoodFactsAPIController](<#OpenFoodFactsAPIController>)
-  - [func \(offacntrl OpenFoodFactsAPIController\) DownloadImage\(imageURL, barcode string\) \(string, error\)](<#OpenFoodFactsAPIController.DownloadImage>)
-  - [func \(offacntrl OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
+  - [func \(offacntrl \*OpenFoodFactsAPIController\) DownloadImage\(imageURL, barcode string\) \(string, error\)](<#OpenFoodFactsAPIController.DownloadImage>)
+  - [func \(offacntrl \*OpenFoodFactsAPIController\) GetDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetDataset>)
+  - [func \(offacntrl \*OpenFoodFactsAPIController\) GetLiveDataset\(barcode string\) \(database.Product, error\)](<#OpenFoodFactsAPIController.GetLiveDataset>)
+  - [func \(offacntrl \*OpenFoodFactsAPIController\) LookupOffline\(barcode string\) \(database.Product, bool\)](<#OpenFoodFactsAPIController.LookupOffline>)
 - [type ProductSource](<#ProductSource>)
 - [type ReceiptScanController](<#ReceiptScanController>)
 - [type ReceiptScanControllerImpl](<#ReceiptScanControllerImpl>)
@@ -1158,8 +1167,85 @@ func (c *OCRControllerImpl) ScanExpiryDate(image []byte) (*api.ExpiryScanRespons
 
 ScanExpiryDate processes an image and returns detected expiry date
 
+<a name="OffDumpController"></a>
+## type [OffDumpController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/offdumpcontroller.go#L45-L64>)
+
+OffDumpController imports the OpenFoodFacts bulk dump \(and its daily deltas\) into a dedicated store so a barcode resolves offline without a live API call. It backs OfflineProductLookup and runs on a schedule like the other controllers' Dispatch goroutines.
+
+```go
+type OffDumpController struct {
+    Logger        *zerolog.Logger
+    Configuration *configuration.OpenFoodFactsConfiguration
+    Repository    *dbController.OffDumpRepository
+
+    // HTTPClient, DeltaIndexURL and DeltaBaseURL are overridable for tests and
+    // self-hosted mirrors. DeltaIndexURL and DeltaBaseURL default to the public
+    // OFF endpoints in NewOffDumpController.
+    HTTPClient    *http.Client
+    DeltaIndexURL string
+    DeltaBaseURL  string
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewOffDumpController"></a>
+### func [NewOffDumpController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/offdumpcontroller.go#L68-L72>)
+
+```go
+func NewOffDumpController(logger *zerolog.Logger, config *configuration.OpenFoodFactsConfiguration, repository *dbController.OffDumpRepository) *OffDumpController
+```
+
+NewOffDumpController constructs an OffDumpController backed by an opened dump repository.
+
+<a name="OffDumpController.Dispatch"></a>
+### func \(\*OffDumpController\) [Dispatch](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/offdumpcontroller.go#L87>)
+
+```go
+func (c *OffDumpController) Dispatch()
+```
+
+Dispatch starts the import goroutine when the feature is enabled: an initial run, then a periodic check for expiry or new deltas.
+
+<a name="OffDumpController.LookupProduct"></a>
+### func \(\*OffDumpController\) [LookupProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/offdumpcontroller.go#L178>)
+
+```go
+func (c *OffDumpController) LookupProduct(barcode string) (database.Product, bool)
+```
+
+LookupProduct resolves a barcode from the imported dump. It reports false on a miss so the caller falls back to the live API, and swallows read errors so a broken dump never fails a scan.
+
+<a name="OffDumpController.RunOnce"></a>
+### func \(\*OffDumpController\) [RunOnce](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/offdumpcontroller.go#L161>)
+
+```go
+func (c *OffDumpController) RunOnce(ctx context.Context) error
+```
+
+RunOnce performs a single import pass: a full dump when it is due, otherwise the deltas published since the last import. A no\-op when disabled.
+
+<a name="OffDumpController.Stop"></a>
+### func \(\*OffDumpController\) [Stop](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/offdumpcontroller.go#L119>)
+
+```go
+func (c *OffDumpController) Stop()
+```
+
+Stop ends the dispatch goroutine and waits briefly for an in\-flight import.
+
+<a name="OfflineProductLookup"></a>
+## type [OfflineProductLookup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/openfoodfactsapicontroller.go#L30-L32>)
+
+OfflineProductLookup resolves a barcode from locally imported OpenFoodFacts bulk data without a live API call. A false result means the barcode is not in the local store, so the caller proceeds to the live API.
+
+```go
+type OfflineProductLookup interface {
+    LookupProduct(barcode string) (database.Product, bool)
+}
+```
+
 <a name="OpenFoodFactsAPIController"></a>
-## type [OpenFoodFactsAPIController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/openfoodfactsapicontroller.go#L29-L32>)
+## type [OpenFoodFactsAPIController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/openfoodfactsapicontroller.go#L36-L40>)
 
 OpenFoodFactsAPIController is the object struct for interacting with the API of OpenFoodFacts It uses the given configuration for accessing the API
 
@@ -1167,26 +1253,45 @@ OpenFoodFactsAPIController is the object struct for interacting with the API of 
 type OpenFoodFactsAPIController struct {
     Logger        *zerolog.Logger
     Configuration configuration.OpenFoodFactsConfiguration
+    OfflineLookup OfflineProductLookup
 }
 ```
 
 <a name="OpenFoodFactsAPIController.DownloadImage"></a>
-### func \(OpenFoodFactsAPIController\) [DownloadImage](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/openfoodfactsapicontroller.go#L122>)
+### func \(\*OpenFoodFactsAPIController\) [DownloadImage](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/openfoodfactsapicontroller.go#L150>)
 
 ```go
-func (offacntrl OpenFoodFactsAPIController) DownloadImage(imageURL, barcode string) (string, error)
+func (offacntrl *OpenFoodFactsAPIController) DownloadImage(imageURL, barcode string) (string, error)
 ```
 
 DownloadImage fetches an image from imageURL and saves it to \{cachePath\}/\{barcode\}.jpg. Returns the local serve path /product\-images/\{barcode\}.jpg on success.
 
 <a name="OpenFoodFactsAPIController.GetDataset"></a>
-### func \(OpenFoodFactsAPIController\) [GetDataset](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/openfoodfactsapicontroller.go#L35>)
+### func \(\*OpenFoodFactsAPIController\) [GetDataset](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/openfoodfactsapicontroller.go#L54>)
 
 ```go
-func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database.Product, error)
+func (offacntrl *OpenFoodFactsAPIController) GetDataset(barcode string) (database.Product, error)
 ```
 
-GetDataset gets data from OpenFoodFacts by its API. The search parameter is the barcode of the product
+GetDataset gets data from OpenFoodFacts by its API, consulting the imported bulk dump first so a locally known barcode costs no API call. The search parameter is the barcode of the product.
+
+<a name="OpenFoodFactsAPIController.GetLiveDataset"></a>
+### func \(\*OpenFoodFactsAPIController\) [GetLiveDataset](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/openfoodfactsapicontroller.go#L63>)
+
+```go
+func (offacntrl *OpenFoodFactsAPIController) GetLiveDataset(barcode string) (database.Product, error)
+```
+
+GetLiveDataset queries the live OpenFoodFacts API. The search parameter is the barcode of the product.
+
+<a name="OpenFoodFactsAPIController.LookupOffline"></a>
+### func \(\*OpenFoodFactsAPIController\) [LookupOffline](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/openfoodfactsapicontroller.go#L44>)
+
+```go
+func (offacntrl *OpenFoodFactsAPIController) LookupOffline(barcode string) (database.Product, bool)
+```
+
+LookupOffline resolves a barcode from the imported bulk dump when it is configured, reporting whether a local entry was found.
 
 <a name="ProductSource"></a>
 ## type [ProductSource](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/recipecontroller.go#L147-L156>)
@@ -2011,6 +2116,27 @@ var (
     // ErrOpenFoodFactsAPIInvalidImageCachePath is thrown if image caching is enabled but no path is specified
     ErrOpenFoodFactsAPIInvalidImageCachePath = errors.New("image cache enabled but no image cache path specified")
 
+    // ErrOpenFoodFactsDumpEmptyURL is thrown if the bulk dump import is enabled but no dump URL was specified
+    ErrOpenFoodFactsDumpEmptyURL = errors.New("dump import enabled but no dump URL specified")
+
+    // ErrOpenFoodFactsDumpInvalidExpiryDays is thrown if the dump expiry is not a positive number of days
+    ErrOpenFoodFactsDumpInvalidExpiryDays = errors.New("invalid OpenFoodFacts dump import expiry days")
+
+    // ErrOpenFoodFactsDumpInvalidDeltaWindowDays is thrown if the delta window is negative
+    ErrOpenFoodFactsDumpInvalidDeltaWindowDays = errors.New("invalid OpenFoodFacts dump delta window days")
+
+    // ErrOpenFoodFactsDumpEmptyDatabase is thrown if dump import is enabled on MariaDB but no schema name was specified
+    ErrOpenFoodFactsDumpEmptyDatabase = errors.New("dump import enabled but no dump database (schema) specified for MariaDB")
+
+    // ErrOpenFoodFactsDumpSchemaUnavailable is thrown when the configured MariaDB dump schema does not exist
+    ErrOpenFoodFactsDumpSchemaUnavailable = errors.New("configured OpenFoodFacts dump database (schema) does not exist")
+
+    // ErrOpenFoodFactsDumpDatabaseUnavailable is thrown when the dump store cannot be opened or reached
+    ErrOpenFoodFactsDumpDatabaseUnavailable = errors.New("OpenFoodFacts dump database is not reachable")
+
+    // ErrOpenFoodFactsDumpStagingUnavailable is thrown when the full dump staging file cannot be created or opened
+    ErrOpenFoodFactsDumpStagingUnavailable = errors.New("OpenFoodFacts dump staging file is not writable")
+
     /*
      * Notification related errors
      */
@@ -2402,7 +2528,7 @@ var (
 ```
 
 <a name="ReceiptEndpointError"></a>
-## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L625-L627>)
+## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L646-L648>)
 
 ReceiptEndpointError marks an OCR scan failure as originating from the upstream vision endpoint rather than from Proviant itself. The API layer maps it to 502 Bad Gateway instead of 500 via errors.As.
 
@@ -2413,7 +2539,7 @@ type ReceiptEndpointError struct {
 ```
 
 <a name="ReceiptEndpointError.Error"></a>
-### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L629>)
+### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L650>)
 
 ```go
 func (e *ReceiptEndpointError) Error() string
@@ -2422,7 +2548,7 @@ func (e *ReceiptEndpointError) Error() string
 
 
 <a name="ReceiptEndpointError.Unwrap"></a>
-### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L631>)
+### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L652>)
 
 ```go
 func (e *ReceiptEndpointError) Unwrap() error
@@ -3747,6 +3873,8 @@ util contains helper functions and generic vars
 - [func Convert\(amount int, fromRaw, toRaw string\) \(int, bool\)](<#Convert>)
 - [func FormatUnit\(amount int, raw string, system string\) string](<#FormatUnit>)
 - [func FromBase\(amount int, raw string, system string\) \(float64, string\)](<#FromBase>)
+- [func OffDumpSQLiteFilename\(databaseName string\) string](<#OffDumpSQLiteFilename>)
+- [func OffDumpStagingFilename\(databaseName string\) string](<#OffDumpStagingFilename>)
 - [func ResolveUnitSystem\(system string\) string](<#ResolveUnitSystem>)
 - [func StorageUnitSymbols\(\) \[\]string](<#StorageUnitSymbols>)
 - [func ToBase\(amount int, raw string\) \(int, string\)](<#ToBase>)
@@ -4031,6 +4159,74 @@ const (
     // DefaultBackupStopWaitSeconds bounds Stop(): filesystem writes cannot be
     // canceled reliably, so shutdown waits briefly instead of hanging forever.
     DefaultBackupStopWaitSeconds = 5
+
+    // OpenFoodFacts bulk dump import (issue #412). The dump is OFF's full
+    // nightly JSONL export; deltas are the daily change files OFF publishes for
+    // a rolling window. This is distinct from open_food_facts_caches, which
+    // caches individual live API responses.
+    OpenFoodFactsDumpURL       = "https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz"
+    OpenFoodFactsDeltaIndexURL = "https://static.openfoodfacts.org/data/delta/index.txt"
+    OpenFoodFactsDeltaBaseURL  = "https://static.openfoodfacts.org/data/delta/"
+
+    // OffDumpDBFilename is the SQLite dump file used when dumpDatabase is empty.
+    // It lives beside the main database and is deliberately excluded from
+    // household backups, which only carry household data.
+    OffDumpDBFilename = "data/off_dump.db"
+
+    // OffDumpDefaultDatabase names the dump store when dumpDatabase is unset: the
+    // MariaDB schema, or data/<name>.db on SQLite. It is separate from the main
+    // schema so its lifecycle (bulk import, truncate) never touches household
+    // data. The app never creates the schema.
+    OffDumpDefaultDatabase = "off_dump"
+
+    // OffDumpStagingDir is where the full dump is staged before import, so an
+    // interrupted import resumes from disk instead of re-downloading. It holds
+    // the multi-gigabyte .part/.ready file and must sit on a volume with room
+    // for both the staging file and the growing dump store.
+    OffDumpStagingDir = "data"
+
+    // OffDumpStagingSuffix is appended to the dump store's name for the staged
+    // download; the in-progress download gets a .part suffix and the completed
+    // one a .ready suffix.
+    OffDumpStagingSuffix = ".jsonl.gz"
+
+    // OffDumpStagingPartSuffix marks an in-progress staging download, resumable
+    // from its current size.
+    OffDumpStagingPartSuffix = ".part"
+
+    // OffDumpStagingReadySuffix marks a fully staged download awaiting import.
+    OffDumpStagingReadySuffix = ".ready"
+
+    // OpenFoodFactsDumpBatchSize is the number of parsed products buffered
+    // before one upsert transaction. Large enough to amortize the transaction,
+    // small enough to bound memory against multi-megabyte dump lines.
+    OpenFoodFactsDumpBatchSize = 1000
+
+    // OpenFoodFactsDumpCheckIntervalHours is how often the worker wakes to
+    // decide whether the dump is expired or new deltas exist.
+    OpenFoodFactsDumpCheckIntervalHours = 6
+
+    // OpenFoodFactsDumpStopWaitSeconds bounds shutdown while a download or
+    // import is in flight.
+    OpenFoodFactsDumpStopWaitSeconds = 10
+
+    // DefaultOpenFoodFactsDumpExpiryDays is the full re-download cadence.
+    DefaultOpenFoodFactsDumpExpiryDays = 7
+
+    // DefaultOpenFoodFactsDeltaWindowDays bounds how many days of delta files
+    // are considered. OFF publishes the previous ~14 days.
+    DefaultOpenFoodFactsDeltaWindowDays = 14
+
+    // OffDump state keys.
+    OffDumpStateLastFullImport = "last_full_import"
+    OffDumpStateLastDeltaEnd   = "last_delta_end_unix"
+
+    // OffDump state keys describing the in-flight full import, so a restart can
+    // resume the download and the import instead of starting over.
+    OffDumpStateFullImportURL          = "full_import_url"
+    OffDumpStateFullImportETag         = "full_import_etag"
+    OffDumpStateFullImportLastModified = "full_import_last_modified"
+    OffDumpStateFullImportRecords      = "full_import_records"
 )
 ```
 
@@ -4084,6 +4280,24 @@ func FromBase(amount int, raw string, system string) (float64, string)
 ```
 
 FromBase renders a canonical base amount in the requested measurement system, picking the unit a person would write. Count units and unknown units are returned as\-is. An empty system means metric.
+
+<a name="OffDumpSQLiteFilename"></a>
+## func [OffDumpSQLiteFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L351>)
+
+```go
+func OffDumpSQLiteFilename(databaseName string) string
+```
+
+OffDumpSQLiteFilename resolves the SQLite dump store for a configured dumpDatabase. A bare name lives beside the main database as data/\<name\>.db; a value that names a path is used verbatim, matching database.sqlite.filepath. An empty name falls back to OffDumpDBFilename.
+
+<a name="OffDumpStagingFilename"></a>
+## func [OffDumpStagingFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L363>)
+
+```go
+func OffDumpStagingFilename(databaseName string) string
+```
+
+OffDumpStagingFilename is the staged download's base name, derived from the dump store's name so each store resumes its own .part/.ready files.
 
 <a name="ResolveUnitSystem"></a>
 ## func [ResolveUnitSystem](<https://github.com/Isotop7/proviant/blob/develop/src/util/units.go#L290>)
@@ -4214,6 +4428,7 @@ import "github.com/Isotop7/proviant/web"
   - [func \(frontend \*Frontend\) AcceptInvite\(ctx \*gin.Context\)](<#Frontend.AcceptInvite>)
   - [func \(frontend \*Frontend\) Auth\(ctx \*gin.Context\)](<#Frontend.Auth>)
   - [func \(frontend \*Frontend\) ForgotPassword\(ctx \*gin.Context\)](<#Frontend.ForgotPassword>)
+  - [func \(frontend \*Frontend\) Licenses\(ctx \*gin.Context\)](<#Frontend.Licenses>)
   - [func \(frontend \*Frontend\) MealPlan\(ctx \*gin.Context\)](<#Frontend.MealPlan>)
   - [func \(frontend \*Frontend\) Onboarding\(ctx \*gin.Context\)](<#Frontend.Onboarding>)
   - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
@@ -4243,7 +4458,7 @@ const (
 ```
 
 <a name="BrandFeature"></a>
-## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1268-L1271>)
+## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1282-L1285>)
 
 BrandFeature is a single icon\+text row in the brand panel of the split\-panel auth pages. Consumed by the partials/loginBrand.tmpl template.
 
@@ -4266,7 +4481,7 @@ type Frontend struct {
 ```
 
 <a name="Frontend.AcceptInvite"></a>
-### func \(\*Frontend\) [AcceptInvite](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L832>)
+### func \(\*Frontend\) [AcceptInvite](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L846>)
 
 ```go
 func (frontend *Frontend) AcceptInvite(ctx *gin.Context)
@@ -4284,7 +4499,7 @@ func (frontend *Frontend) Auth(ctx *gin.Context)
 Auth renders the authentication page @Summary Auth page @Description Renders the authentication page for login/signup @Tags web @Produce html @Success 200 \{string\} html @Router /web/auth \[get\]
 
 <a name="Frontend.ForgotPassword"></a>
-### func \(\*Frontend\) [ForgotPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1224>)
+### func \(\*Frontend\) [ForgotPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1238>)
 
 ```go
 func (frontend *Frontend) ForgotPassword(ctx *gin.Context)
@@ -4292,8 +4507,17 @@ func (frontend *Frontend) ForgotPassword(ctx *gin.Context)
 
 ForgotPassword renders the forgot\-password page \(form to request a reset link\). @Summary Forgot password page @Description Renders the page that lets users request a password reset link via email. @Tags web @Produce html @Success 200 \{string\} html @Router /web/forgot\-password \[get\]
 
+<a name="Frontend.Licenses"></a>
+### func \(\*Frontend\) [Licenses](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L163>)
+
+```go
+func (frontend *Frontend) Licenses(ctx *gin.Context)
+```
+
+Licenses renders the data attribution and open\-source license page @Summary Licenses page @Description Renders third\-party data attribution and license information @Tags web @Produce html @Success 200 \{string\} html @Router /web/licenses \[get\]
+
 <a name="Frontend.MealPlan"></a>
-### func \(\*Frontend\) [MealPlan](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1024>)
+### func \(\*Frontend\) [MealPlan](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1038>)
 
 ```go
 func (frontend *Frontend) MealPlan(ctx *gin.Context)
@@ -4302,7 +4526,7 @@ func (frontend *Frontend) MealPlan(ctx *gin.Context)
 MealPlan renders the weekly meal plan page @Summary Meal Plan page @Description Renders the weekly meal plan with planned meals and shopping list generation @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/mealplan \[get\]
 
 <a name="Frontend.Onboarding"></a>
-### func \(\*Frontend\) [Onboarding](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L966>)
+### func \(\*Frontend\) [Onboarding](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L980>)
 
 ```go
 func (frontend *Frontend) Onboarding(ctx *gin.Context)
@@ -4311,7 +4535,7 @@ func (frontend *Frontend) Onboarding(ctx *gin.Context)
 Onboarding renders the post\-signup onboarding wizard @Summary Onboarding page @Description Renders the onboarding wizard for new users @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/onboarding \[get\]
 
 <a name="Frontend.Products"></a>
-### func \(\*Frontend\) [Products](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L516>)
+### func \(\*Frontend\) [Products](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L530>)
 
 ```go
 func (frontend *Frontend) Products(ctx *gin.Context)
@@ -4320,7 +4544,7 @@ func (frontend *Frontend) Products(ctx *gin.Context)
 Products renders the products list page @Summary Products page @Description Renders the products list page with optional search @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products \[get\]
 
 <a name="Frontend.ProductsEdit"></a>
-### func \(\*Frontend\) [ProductsEdit](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L762>)
+### func \(\*Frontend\) [ProductsEdit](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L776>)
 
 ```go
 func (frontend *Frontend) ProductsEdit(ctx *gin.Context)
@@ -4329,7 +4553,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context)
 ProductsEdit renders the product edit page @Summary Product edit page @Description Renders the page for editing a product @Tags web @Produce html @Param id path int true "Product ID" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products/\{id\}/edit \[get\]
 
 <a name="Frontend.ProductsScan"></a>
-### func \(\*Frontend\) [ProductsScan](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L680>)
+### func \(\*Frontend\) [ProductsScan](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L694>)
 
 ```go
 func (frontend *Frontend) ProductsScan(ctx *gin.Context)
@@ -4338,7 +4562,7 @@ func (frontend *Frontend) ProductsScan(ctx *gin.Context)
 ProductsScan renders the barcode scanning page @Summary Product scan page @Description Renders the product barcode scanning page @Tags web @Produce html @Success 200 \{string\} html @Router /web/products/scan \[get\]
 
 <a name="Frontend.ProductsScanReceipt"></a>
-### func \(\*Frontend\) [ProductsScanReceipt](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L698>)
+### func \(\*Frontend\) [ProductsScanReceipt](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L712>)
 
 ```go
 func (frontend *Frontend) ProductsScanReceipt(ctx *gin.Context)
@@ -4347,7 +4571,7 @@ func (frontend *Frontend) ProductsScanReceipt(ctx *gin.Context)
 ProductsScanReceipt renders the receipt photo scan page \(issue \#61\). Storage locations are prefetched server\-side so the review form can offer the household's locations without an extra API round\-trip. @Summary Receipt scan page @Description Renders the receipt photo scanning page @Tags web @Produce html @Success 200 \{string\} html @Failure 500 \{object\} api.APIResponse @Router /web/products/scan\-receipt \[get\]
 
 <a name="Frontend.Recipes"></a>
-### func \(\*Frontend\) [Recipes](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L995>)
+### func \(\*Frontend\) [Recipes](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1009>)
 
 ```go
 func (frontend *Frontend) Recipes(ctx *gin.Context)
@@ -4356,7 +4580,7 @@ func (frontend *Frontend) Recipes(ctx *gin.Context)
 Recipes renders the recipe suggestions page @Summary Recipes page @Description Shows recipe suggestions for expiring products @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/recipes \[get\]
 
 <a name="Frontend.ResetPassword"></a>
-### func \(\*Frontend\) [ResetPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1244>)
+### func \(\*Frontend\) [ResetPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1258>)
 
 ```go
 func (frontend *Frontend) ResetPassword(ctx *gin.Context)
@@ -4374,7 +4598,7 @@ func (frontend *Frontend) Root(ctx *gin.Context)
 Root renders the home page for authenticated users @Summary Home page @Description Renders the home page showing product dashboard @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web \[get\]
 
 <a name="Frontend.ShoppingList"></a>
-### func \(\*Frontend\) [ShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1082>)
+### func \(\*Frontend\) [ShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1096>)
 
 ```go
 func (frontend *Frontend) ShoppingList(ctx *gin.Context)
@@ -4383,7 +4607,7 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context)
 ShoppingList renders the shopping list page @Summary Shopping List page @Description Renders the shared household shopping list with custom items and import banner @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/shopping\-list \[get\]
 
 <a name="Frontend.Unsubscribe"></a>
-### func \(\*Frontend\) [Unsubscribe](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1164>)
+### func \(\*Frontend\) [Unsubscribe](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1178>)
 
 ```go
 func (frontend *Frontend) Unsubscribe(ctx *gin.Context)
@@ -4401,7 +4625,7 @@ func (frontend *Frontend) User(ctx *gin.Context)
 User renders the user page @Summary User page @Description Renders the user page showing user info @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/user \[get\]
 
 <a name="Frontend.UserSettings"></a>
-### func \(\*Frontend\) [UserSettings](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L165>)
+### func \(\*Frontend\) [UserSettings](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L179>)
 
 ```go
 func (frontend *Frontend) UserSettings(ctx *gin.Context)
@@ -4410,7 +4634,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context)
 UserSettings renders the user settings page @Summary User settings page @Description Renders the user settings page with household management @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/user/settings \[get\]
 
 <a name="Frontend.VerifyEmail"></a>
-### func \(\*Frontend\) [VerifyEmail](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L939>)
+### func \(\*Frontend\) [VerifyEmail](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L953>)
 
 ```go
 func (frontend *Frontend) VerifyEmail(ctx *gin.Context)
@@ -4419,7 +4643,7 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context)
 VerifyEmail renders the email verification page @Summary Verify email page @Description Renders the email verification status page @Tags web @Produce html @Param token query string false "Verification token" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Router /web/verify\-email \[get\]
 
 <a name="Frontend.WasteAnalytics"></a>
-### func \(\*Frontend\) [WasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1053>)
+### func \(\*Frontend\) [WasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1067>)
 
 ```go
 func (frontend *Frontend) WasteAnalytics(ctx *gin.Context)
@@ -5368,15 +5592,15 @@ func GetNotifications(ctx *gin.Context, appCtx *AppContext)
 GetNotifications returns actionable notification items for the current user: pending invitations from their household, incoming join requests \(admin only\), and outgoing join requests the user submitted. @Summary Get notifications @Description Returns pending invitations and household join requests for the current user @Tags Notifications @Produce json @Success 200 \{object\} apiModel.NotificationsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/notifications \[get\]
 
 <a name="GetOpenFoodFactsData"></a>
-## func [GetOpenFoodFactsData](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_scan.go#L160>)
+## func [GetOpenFoodFactsData](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_scan.go#L161>)
 
 ```go
 func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode, using the database cache when cacheEnabled is true in the OpenFoodFacts configuration.
+GetOpenFoodFactsData returns product data from OpenFoodFacts for a given barcode. It consults the locally imported bulk dump first, then the database cache when cacheEnabled is true, and finally proxies the live OpenFoodFacts API.
 
-@Summary Return OpenFoodFacts product data @Description Proxies OpenFoodFacts API with optional database caching @Tags product @Produce json @Param barcode path string true "Barcode" @Success 200 \{object\} apiModel.OpenFoodFactsCacheResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Failure 502 \{object\} api.APIResponse @Router /api/v1/products/openfoodfacts/\{barcode\} \[get\]
+@Summary Return OpenFoodFacts product data @Description Resolves a barcode from the imported dump, the database cache, or the proxy @Tags product @Produce json @Param barcode path string true "Barcode" @Success 200 \{object\} apiModel.OpenFoodFactsCacheResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Failure 502 \{object\} api.APIResponse @Router /api/v1/products/openfoodfacts/\{barcode\} \[get\]
 
 <a name="GetProduct"></a>
 ## func [GetProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L83>)
@@ -6315,6 +6539,15 @@ import "github.com/Isotop7/proviant/controllers/database"
   - [func \(r \*NotificationRepository\) SetTelegramChatID\(userID uint, chatID string\) error](<#NotificationRepository.SetTelegramChatID>)
   - [func \(r \*NotificationRepository\) SetTelegramLinkToken\(userID uint, token string\) error](<#NotificationRepository.SetTelegramLinkToken>)
 - [type NotificationRepositoryInterface](<#NotificationRepositoryInterface>)
+- [type OffDumpRepository](<#OffDumpRepository>)
+  - [func NewOffDumpRepository\(db \*gorm.DB\) \*OffDumpRepository](<#NewOffDumpRepository>)
+  - [func \(r \*OffDumpRepository\) Close\(\) error](<#OffDumpRepository.Close>)
+  - [func \(r \*OffDumpRepository\) Count\(\) \(int64, error\)](<#OffDumpRepository.Count>)
+  - [func \(r \*OffDumpRepository\) GetState\(key string\) \(string, error\)](<#OffDumpRepository.GetState>)
+  - [func \(r \*OffDumpRepository\) Lookup\(barcode string\) \(string, bool, error\)](<#OffDumpRepository.Lookup>)
+  - [func \(r \*OffDumpRepository\) Migrate\(\) error](<#OffDumpRepository.Migrate>)
+  - [func \(r \*OffDumpRepository\) SetState\(key, value string\) error](<#OffDumpRepository.SetState>)
+  - [func \(r \*OffDumpRepository\) UpsertBatch\(ctx context.Context, rows \[\]database.OffProduct\) error](<#OffDumpRepository.UpsertBatch>)
 - [type PATRepository](<#PATRepository>)
   - [func NewPATRepository\(db \*gorm.DB\) \*PATRepository](<#NewPATRepository>)
   - [func \(r \*PATRepository\) CreatePAT\(userID uint, name, tokenHash string, expiresAt \*time.Time, scopes string\) \(\*authentication.PersonalAccessToken, error\)](<#PATRepository.CreatePAT>)
@@ -7803,6 +8036,89 @@ type NotificationRepositoryInterface interface {
     DeleteMailDigestUnsubscribeToken(token string) error
 }
 ```
+
+<a name="OffDumpRepository"></a>
+## type [OffDumpRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/offdump_repository.go#L16-L18>)
+
+OffDumpRepository owns access to the imported OpenFoodFacts bulk dump. The store is a dedicated SQLite file or MariaDB schema, separate from the main database, so a bulk import or re\-import never touches household data.
+
+```go
+type OffDumpRepository struct {
+    DB *gorm.DB
+}
+```
+
+<a name="NewOffDumpRepository"></a>
+### func [NewOffDumpRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/offdump_repository.go#L21>)
+
+```go
+func NewOffDumpRepository(db *gorm.DB) *OffDumpRepository
+```
+
+NewOffDumpRepository constructs a repository over an already\-opened dump handle.
+
+<a name="OffDumpRepository.Close"></a>
+### func \(\*OffDumpRepository\) [Close](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/offdump_repository.go#L84>)
+
+```go
+func (r *OffDumpRepository) Close() error
+```
+
+Close releases the underlying connection pool.
+
+<a name="OffDumpRepository.Count"></a>
+### func \(\*OffDumpRepository\) [Count](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/offdump_repository.go#L77>)
+
+```go
+func (r *OffDumpRepository) Count() (int64, error)
+```
+
+Count returns the number of stored products.
+
+<a name="OffDumpRepository.GetState"></a>
+### func \(\*OffDumpRepository\) [GetState](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/offdump_repository.go#L56>)
+
+```go
+func (r *OffDumpRepository) GetState(key string) (string, error)
+```
+
+GetState returns a state value, or "" when it has never been set.
+
+<a name="OffDumpRepository.Lookup"></a>
+### func \(\*OffDumpRepository\) [Lookup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/offdump_repository.go#L43>)
+
+```go
+func (r *OffDumpRepository) Lookup(barcode string) (string, bool, error)
+```
+
+Lookup returns the stored filtered JSON for a barcode, and whether it exists.
+
+<a name="OffDumpRepository.Migrate"></a>
+### func \(\*OffDumpRepository\) [Migrate](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/offdump_repository.go#L27>)
+
+```go
+func (r *OffDumpRepository) Migrate() error
+```
+
+Migrate creates the dump tables on the dump handle. It never creates a schema: a missing MariaDB schema is a configuration error the caller handles.
+
+<a name="OffDumpRepository.SetState"></a>
+### func \(\*OffDumpRepository\) [SetState](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/offdump_repository.go#L69>)
+
+```go
+func (r *OffDumpRepository) SetState(key, value string) error
+```
+
+SetState writes a state value, replacing any previous value.
+
+<a name="OffDumpRepository.UpsertBatch"></a>
+### func \(\*OffDumpRepository\) [UpsertBatch](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/offdump_repository.go#L32>)
+
+```go
+func (r *OffDumpRepository) UpsertBatch(ctx context.Context, rows []database.OffProduct) error
+```
+
+UpsertBatch inserts or replaces the given products in one statement.
 
 <a name="PATRepository"></a>
 ## type [PATRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/pat_repository.go#L23-L25>)
@@ -11956,7 +12272,7 @@ type AuthenticationConfiguration struct {
 ```
 
 <a name="BackupConfiguration"></a>
-## type [BackupConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L208-L213>)
+## type [BackupConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L223-L228>)
 
 BackupConfiguration controls the scheduled household backup job. The target is a local directory: backup files carry household data in cleartext, so the operator chooses where they land and who can read them.
 
@@ -12035,7 +12351,7 @@ type DatabaseSQLiteConfiguration struct {
 ```
 
 <a name="ExpiryConfiguration"></a>
-## type [ExpiryConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L192-L195>)
+## type [ExpiryConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L207-L210>)
 
 ExpiryConfiguration controls the visual expiry\-status thresholds.
 
@@ -12113,7 +12429,7 @@ type NtfyConfiguration struct {
 ```
 
 <a name="OCRConfiguration"></a>
-## type [OCRConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L158-L167>)
+## type [OCRConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L173-L182>)
 
 OCRConfiguration contains settings for OCR expiry date detection
 
@@ -12131,7 +12447,7 @@ type OCRConfiguration struct {
 ```
 
 <a name="OfflineSyncConfiguration"></a>
-## type [OfflineSyncConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L225-L227>)
+## type [OfflineSyncConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L240-L242>)
 
 OfflineSyncConfiguration bounds one queued\-sync request. The byte cap is injected into every page, so the outbox client splits its batches at the value the endpoint actually enforces and the two cannot drift.
 
@@ -12142,7 +12458,7 @@ type OfflineSyncConfiguration struct {
 ```
 
 <a name="OpenFoodFactsConfiguration"></a>
-## type [OpenFoodFactsConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L149-L155>)
+## type [OpenFoodFactsConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L149-L170>)
 
 OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
 
@@ -12153,11 +12469,26 @@ type OpenFoodFactsConfiguration struct {
     CacheEnabled      bool
     ImageCacheEnabled bool
     ImageCachePath    string
+
+    // Bulk dump import. It imports the OFF JSONL export into a separate store so
+    // a scan resolves offline without a live API call, distinct from the
+    // per-barcode open_food_facts_caches table. Off by default: the full dump is
+    // a multi-gigabyte download.
+    DumpImportEnabled    bool   `mapstructure:"dumpImportEnabled"`
+    DumpImportExpiryDays int    `mapstructure:"dumpImportExpiryDays"`
+    DumpURL              string `mapstructure:"dumpUrl"`
+    DumpDeltaWindowDays  int    `mapstructure:"dumpDeltaWindowDays"`
+    DumpDatabase         string `mapstructure:"dumpDatabase"`
+
+    // DumpStagingPath is the directory the full dump is staged in before
+    // import. Empty falls back to util.OffDumpStagingDir. Staging makes an
+    // interrupted download or import resumable.
+    DumpStagingPath string `mapstructure:"dumpStagingPath"`
 }
 ```
 
 <a name="ProviantConfiguration"></a>
-## type [ProviantConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L247-L271>)
+## type [ProviantConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L262-L286>)
 
 ProviantConfiguration is the configuration wrapper struct
 
@@ -12190,7 +12521,7 @@ type ProviantConfiguration struct {
 ```
 
 <a name="ProviantConfiguration.ValidateBackupConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateBackupConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L427>)
+### func \(\*ProviantConfiguration\) [ValidateBackupConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L457>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateBackupConfiguration() error
@@ -12199,7 +12530,7 @@ func (ec *ProviantConfiguration) ValidateBackupConfiguration() error
 ValidateBackupConfiguration validates the scheduled backup target. A disabled job is always valid: nothing is written, so there is no directory to reject. An enabled one must name a directory and a positive interval; retention may be 0 to keep every file.
 
 <a name="ProviantConfiguration.ValidateDatabaseConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateDatabaseConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L370>)
+### func \(\*ProviantConfiguration\) [ValidateDatabaseConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L400>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error
@@ -12208,7 +12539,7 @@ func (ec *ProviantConfiguration) ValidateDatabaseConfiguration() error
 ValidateDatabaseConfiguration checks the current database configuration for common errors
 
 <a name="ProviantConfiguration.ValidateNotificationConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateNotificationConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L314>)
+### func \(\*ProviantConfiguration\) [ValidateNotificationConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L344>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error
@@ -12217,7 +12548,7 @@ func (ec *ProviantConfiguration) ValidateNotificationConfiguration() error
 ValidateNotificationConfiguration validates the notification configuration
 
 <a name="ProviantConfiguration.ValidateOCRReceiptConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateOCRReceiptConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L342>)
+### func \(\*ProviantConfiguration\) [ValidateOCRReceiptConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L372>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateOCRReceiptConfiguration() error
@@ -12226,7 +12557,7 @@ func (ec *ProviantConfiguration) ValidateOCRReceiptConfiguration() error
 ValidateOCRReceiptConfiguration validates the receipt scan configuration. A disabled feature is always valid: nothing is parsed, no endpoint is contacted, so there is nothing to reject. An enabled configuration must name a vision\-capable provider \("openai" — any OpenAI\-compatible endpoint\) and a model; a non\-vision provider such as "tesseract" cannot return structured line items at all, so it is a hard validation error rather than a runtime fallback.
 
 <a name="ProviantConfiguration.ValidateOfflineSyncConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateOfflineSyncConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L455>)
+### func \(\*ProviantConfiguration\) [ValidateOfflineSyncConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L485>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateOfflineSyncConfiguration()
@@ -12235,7 +12566,7 @@ func (ec *ProviantConfiguration) ValidateOfflineSyncConfiguration()
 ValidateOfflineSyncConfiguration normalizes the queued\-sync body cap. A missing or nonsensical value falls back to the built\-in default rather than refusing every sync: the outbox client splits its batches at this value, so it has to stay a positive number.
 
 <a name="ProviantConfiguration.ValidateOpenFoodFactsConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L274>)
+### func \(\*ProviantConfiguration\) [ValidateOpenFoodFactsConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L289>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error
@@ -12244,7 +12575,7 @@ func (ec *ProviantConfiguration) ValidateOpenFoodFactsConfiguration() error
 ValidateOpenFoodFactsConfiguration validates the current configuration to connect to the OpenFoodFact API
 
 <a name="ProviantConfiguration.ValidateRecipeAPIConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateRecipeAPIConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L542>)
+### func \(\*ProviantConfiguration\) [ValidateRecipeAPIConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L572>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateRecipeAPIConfiguration() error
@@ -12259,7 +12590,7 @@ Validation runs in two stages on purpose: the provider\-independent checks \(URL
 - A self\-hosted provider whose URL is the public TheMealDB endpoint is rejected after the key check: without a key there is nothing to leak, so the missing key is the actionable problem first. With a key present, that URL is unambiguously wrong and no substitute URL can be guessed. Both self\-hosted failures are recoverable configuration errors, not programming errors, so the caller degrades the feature instead of refusing to boot.
 
 <a name="ProviantConfiguration.ValidateRestoreConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateRestoreConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L445>)
+### func \(\*ProviantConfiguration\) [ValidateRestoreConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L475>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateRestoreConfiguration()
@@ -12268,7 +12599,7 @@ func (ec *ProviantConfiguration) ValidateRestoreConfiguration()
 ValidateRestoreConfiguration normalizes the restore upload cap. A missing or nonsensical value falls back to the restore default rather than disabling restores: the endpoint must be able to read back every document the exporter writes.
 
 <a name="ProviantConfiguration.ValidateServerConfiguration"></a>
-### func \(\*ProviantConfiguration\) [ValidateServerConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L402>)
+### func \(\*ProviantConfiguration\) [ValidateServerConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L432>)
 
 ```go
 func (ec *ProviantConfiguration) ValidateServerConfiguration() error
@@ -12293,7 +12624,7 @@ type RateLimitConfiguration struct {
 ```
 
 <a name="ReceiptOCRConfiguration"></a>
-## type [ReceiptOCRConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L172-L179>)
+## type [ReceiptOCRConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L187-L194>)
 
 ReceiptOCRConfiguration contains settings for receipt photo scanning \(issue \#61\). Provider is restricted to vision\-capable OpenAI\-compatible endpoints; the whole feature is off unless Enabled is true.
 
@@ -12309,7 +12640,7 @@ type ReceiptOCRConfiguration struct {
 ```
 
 <a name="ReceiptOCRConfiguration.UsesInsecureTransport"></a>
-### func \(\*ReceiptOCRConfiguration\) [UsesInsecureTransport](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L584>)
+### func \(\*ReceiptOCRConfiguration\) [UsesInsecureTransport](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L614>)
 
 ```go
 func (rc *ReceiptOCRConfiguration) UsesInsecureTransport() bool
@@ -12318,7 +12649,7 @@ func (rc *ReceiptOCRConfiguration) UsesInsecureTransport() bool
 UsesInsecureTransport reports whether the configured receipt endpoint is served over plaintext HTTP. A custom endpoint authenticates every request with a bearer API key and receives the uploaded receipt photo, so an http:// URL transmits both in cleartext. Mirrors RecipeAPIConfiguration. UsesInsecureTransport: surfaced as a startup warning rather than a rejection because a LAN\-only vision endpoint is a legitimate deployment. An empty Endpoint resolves to the https:// OpenAI default, so it is never insecure.
 
 <a name="RecipeAPIConfiguration"></a>
-## type [RecipeAPIConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L182-L189>)
+## type [RecipeAPIConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L197-L204>)
 
 RecipeAPIConfiguration contains settings for the recipe suggestions feature
 
@@ -12334,7 +12665,7 @@ type RecipeAPIConfiguration struct {
 ```
 
 <a name="RecipeAPIConfiguration.IsSelfHosted"></a>
-### func \(RecipeAPIConfiguration\) [IsSelfHosted](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L471>)
+### func \(RecipeAPIConfiguration\) [IsSelfHosted](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L501>)
 
 ```go
 func (rc RecipeAPIConfiguration) IsSelfHosted() bool
@@ -12345,7 +12676,7 @@ IsSelfHosted reports whether the configured provider is a self\-hosted instance 
 It delegates to isSelfHostedRecipeProvider so the provider list that gates the api\_key check and the public\-TheMealDB\-host leak guard stays a single list. Two hand\-maintained copies could drift, and the failure mode is silent: a provider present in one but not the other skips the guard whose whole purpose is keeping the operator's key and the household's product names off a third party.
 
 <a name="RecipeAPIConfiguration.UsesInsecureTransport"></a>
-### func \(RecipeAPIConfiguration\) [UsesInsecureTransport](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L511>)
+### func \(RecipeAPIConfiguration\) [UsesInsecureTransport](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L541>)
 
 ```go
 func (rc RecipeAPIConfiguration) UsesInsecureTransport() bool
@@ -12354,7 +12685,7 @@ func (rc RecipeAPIConfiguration) UsesInsecureTransport() bool
 UsesInsecureTransport reports whether the configured provider URL is served over plaintext HTTP. A self\-hosted provider authenticates every request with an API key and puts the household's inventory\-derived search keywords in the query string, so an http:// instance URL transmits both in cleartext. This is surfaced as a startup warning rather than a rejection because a Mealie or Tandoor instance reachable only over a trusted LAN is a legitimate deployment, and refusing to start would be a worse outcome than the warning.
 
 <a name="RestoreConfiguration"></a>
-## type [RestoreConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L218-L220>)
+## type [RestoreConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L233-L235>)
 
 RestoreConfiguration bounds a household backup restore upload. It is separate from server.maxUploadSizeMB because a full household backup is legitimately much larger than an ordinary request body.
 
@@ -12418,7 +12749,7 @@ type ServerConfiguration struct {
 ```
 
 <a name="ShoppingListSyncConfiguration"></a>
-## type [ShoppingListSyncConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L198-L203>)
+## type [ShoppingListSyncConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L213-L218>)
 
 ShoppingListSyncConfiguration contains instance\-level settings for external shopping list synchronization.
 
@@ -12432,7 +12763,7 @@ type ShoppingListSyncConfiguration struct {
 ```
 
 <a name="ShoppingListSyncConfiguration.IsProviderEnabled"></a>
-### func \(ShoppingListSyncConfiguration\) [IsProviderEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L230>)
+### func \(ShoppingListSyncConfiguration\) [IsProviderEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L245>)
 
 ```go
 func (c ShoppingListSyncConfiguration) IsProviderEnabled(provider string) bool
@@ -12481,6 +12812,8 @@ import "github.com/Isotop7/proviant/models/database"
 - [type HouseholdWithMemberCount](<#HouseholdWithMemberCount>)
 - [type MailDigestUnsubscribeToken](<#MailDigestUnsubscribeToken>)
 - [type MealPlanEntry](<#MealPlanEntry>)
+- [type OffDumpState](<#OffDumpState>)
+- [type OffProduct](<#OffProduct>)
 - [type OnboardingState](<#OnboardingState>)
 - [type OpenFoodFactsCache](<#OpenFoodFactsCache>)
 - [type PasswordReset](<#PasswordReset>)
@@ -12883,6 +13216,30 @@ type MealPlanEntry struct {
     Servings    int       `gorm:"not null;default:1" json:"servings"`
     Notes       string    `json:"notes"`
     CreatedBy   uint      `gorm:"not null;default:0" json:"createdBy"`
+}
+```
+
+<a name="OffDumpState"></a>
+## type [OffDumpState](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/off_product.go#L15-L18>)
+
+OffDumpState is a key/value row tracking dump import progress: the last full import time and the timestamp of the last applied delta. It lives beside the dump products so a re\-import can decide what to fetch without touching the main database.
+
+```go
+type OffDumpState struct {
+    StateKey string `gorm:"primaryKey;size:64" json:"stateKey"`
+    Value    string `gorm:"not null" json:"value"`
+}
+```
+
+<a name="OffProduct"></a>
+## type [OffProduct](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/off_product.go#L6-L9>)
+
+OffProduct is one row of the imported OpenFoodFacts bulk dump. Only the fields Proviant actually uses are kept, serialized as JSON in Data, which makes the store far smaller than the raw dump.
+
+```go
+type OffProduct struct {
+    Barcode string `gorm:"primaryKey;size:32" json:"barcode"`
+    Data    string `gorm:"type:longtext;not null" json:"data"`
 }
 ```
 
@@ -13318,7 +13675,12 @@ external provides model definitions from external parties
 - [Variables](<#variables>)
 - [type AgribalyseData](<#AgribalyseData>)
 - [type EcoscoreData](<#EcoscoreData>)
+- [type FlexibleFloat64](<#FlexibleFloat64>)
+  - [func \(f \*FlexibleFloat64\) UnmarshalJSON\(data \[\]byte\) error](<#FlexibleFloat64.UnmarshalJSON>)
+- [type FlexibleString](<#FlexibleString>)
+  - [func \(s \*FlexibleString\) UnmarshalJSON\(data \[\]byte\) error](<#FlexibleString.UnmarshalJSON>)
 - [type OpenFoodFactsAPIDataset](<#OpenFoodFactsAPIDataset>)
+- [type OpenFoodFactsDumpProduct](<#OpenFoodFactsDumpProduct>)
 
 
 ## Variables
@@ -13334,18 +13696,18 @@ var (
 ```
 
 <a name="AgribalyseData"></a>
-## type [AgribalyseData](<https://github.com/Isotop7/proviant/blob/develop/src/models/external/openfoodfactsapidataset.go#L28-L30>)
+## type [AgribalyseData](<https://github.com/Isotop7/proviant/blob/develop/src/models/external/openfoodfactsapidataset.go#L35-L37>)
 
 
 
 ```go
 type AgribalyseData struct {
-    CO2Total float64 `json:"co2_total"`
+    CO2Total FlexibleFloat64 `json:"co2_total"`
 }
 ```
 
 <a name="EcoscoreData"></a>
-## type [EcoscoreData](<https://github.com/Isotop7/proviant/blob/develop/src/models/external/openfoodfactsapidataset.go#L32-L34>)
+## type [EcoscoreData](<https://github.com/Isotop7/proviant/blob/develop/src/models/external/openfoodfactsapidataset.go#L93-L95>)
 
 
 
@@ -13355,8 +13717,44 @@ type EcoscoreData struct {
 }
 ```
 
+<a name="FlexibleFloat64"></a>
+## type [FlexibleFloat64](<https://github.com/Isotop7/proviant/blob/develop/src/models/external/openfoodfactsapidataset.go#L43>)
+
+FlexibleFloat64 accepts a JSON number or a numeric string. OpenFoodFacts stores the same Agribalyse value as either in different exports; a plain float64 rejects the string form and aborts a whole bulk import. An empty or null value is read as zero.
+
+```go
+type FlexibleFloat64 float64
+```
+
+<a name="FlexibleFloat64.UnmarshalJSON"></a>
+### func \(\*FlexibleFloat64\) [UnmarshalJSON](<https://github.com/Isotop7/proviant/blob/develop/src/models/external/openfoodfactsapidataset.go#L46>)
+
+```go
+func (f *FlexibleFloat64) UnmarshalJSON(data []byte) error
+```
+
+UnmarshalJSON implements json.Unmarshaler.
+
+<a name="FlexibleString"></a>
+## type [FlexibleString](<https://github.com/Isotop7/proviant/blob/develop/src/models/external/openfoodfactsapidataset.go#L65>)
+
+FlexibleString accepts a JSON string or number. OpenFoodFacts exports the same barcode as either across dump versions; a plain string rejects the numeric form and drops the whole product. Objects, arrays and booleans are rejected so a malformed record is skipped rather than stored under a garbage barcode.
+
+```go
+type FlexibleString string
+```
+
+<a name="FlexibleString.UnmarshalJSON"></a>
+### func \(\*FlexibleString\) [UnmarshalJSON](<https://github.com/Isotop7/proviant/blob/develop/src/models/external/openfoodfactsapidataset.go#L68>)
+
+```go
+func (s *FlexibleString) UnmarshalJSON(data []byte) error
+```
+
+UnmarshalJSON implements json.Unmarshaler.
+
 <a name="OpenFoodFactsAPIDataset"></a>
-## type [OpenFoodFactsAPIDataset](<https://github.com/Isotop7/proviant/blob/develop/src/models/external/openfoodfactsapidataset.go#L13-L26>)
+## type [OpenFoodFactsAPIDataset](<https://github.com/Isotop7/proviant/blob/develop/src/models/external/openfoodfactsapidataset.go#L20-L33>)
 
 OpenFoodFactsAPIDataset represents the data model of a json respons from the OpenFoodFacts API
 
@@ -13374,6 +13772,23 @@ type OpenFoodFactsAPIDataset struct {
         EcoscoreData           EcoscoreData `json:"ecoscore_data"`
         ConservationConditions string       `json:"conservation_conditions"`
     }   `json:"product"`
+}
+```
+
+<a name="OpenFoodFactsDumpProduct"></a>
+## type [OpenFoodFactsDumpProduct](<https://github.com/Isotop7/proviant/blob/develop/src/models/external/openfoodfactsapidataset.go#L101-L109>)
+
+OpenFoodFactsDumpProduct is one product object from the OpenFoodFacts JSONL bulk dump. The dump exposes products flat, unlike the API v2 response which nests them under "product", so this mirrors the fields Proviant uses directly on the object. It is what gets filtered and stored per barcode.
+
+```go
+type OpenFoodFactsDumpProduct struct {
+    Code                   FlexibleString `json:"code"`
+    ProductName            string         `json:"product_name"`
+    Categories             string         `json:"categories"`
+    Countries              string         `json:"countries"`
+    ImageURL               string         `json:"image_url"`
+    ConservationConditions string         `json:"conservation_conditions"`
+    EcoscoreData           EcoscoreData   `json:"ecoscore_data"`
 }
 ```
 

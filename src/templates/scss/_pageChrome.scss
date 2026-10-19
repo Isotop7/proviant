@@ -382,6 +382,14 @@
   font-size: 11px;
   color: var(--fg-3);
   text-decoration: none;
+
+  &:hover {
+    color: var(--fg-1);
+  }
+  &.active {
+    color: var(--accent);
+    font-weight: 600;
+  }
 }
 
 button.pv-nav-item {

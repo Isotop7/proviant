@@ -3168,7 +3168,7 @@ const docTemplate = `{
         },
         "/api/v1/products/openfoodfacts/{barcode}": {
             "get": {
-                "description": "Proxies OpenFoodFacts API with optional database caching",
+                "description": "Resolves a barcode from the imported dump, the database cache, or the proxy",
                 "produces": [
                     "application/json"
                 ],
@@ -6207,6 +6207,26 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/licenses": {
+            "get": {
+                "description": "Renders third-party data attribution and license information",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Licenses page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }

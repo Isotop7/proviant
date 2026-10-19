@@ -1,0 +1,11 @@
+{
+  "licenses.openFoodFacts.attribution": "Enthält Daten von Open Food Facts, verfügbar unter der Open Database License.",
+  "licenses.openFoodFacts.description": "Produktdaten wie Barcodes, Namen, Kategorien, Länder und Bilder stammen aus der offenen Datenbank von Open Food Facts.",
+  "licenses.openFoodFacts.licenseLink": "Open Database License (ODbL) 1.0",
+  "licenses.openFoodFacts.link": "Open-Food-Facts-Website",
+  "licenses.openFoodFacts.title": "Open Food Facts",
+  "licenses.proviant.description": "Proviant ist Open-Source-Software und steht unter der MIT-Lizenz.",
+  "licenses.proviant.licenseLink": "MIT-Lizenz",
+  "licenses.proviant.title": "Proviant",
+  "licenses.subtitle": "Datenherkunft und Lizenzinformationen"
+}

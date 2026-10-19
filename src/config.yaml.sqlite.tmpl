@@ -86,6 +86,17 @@ openfoodfacts:
   cacheEnabled: true
   imageCacheEnabled: false
   imageCachePath: "data/images"
+  # Bulk dump import for offline barcode lookup. Off by default: the full dump is
+  # a multi-gigabyte download. SQLite stores the dump in data/<dumpDatabase>.db;
+  # a value that names a path (e.g. /var/opt/off_dump) is used verbatim.
+  dumpImportEnabled: false
+  dumpImportExpiryDays: 7
+  dumpUrl: https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz
+  dumpDeltaWindowDays: 14
+  # Directory the full dump is staged in before import; makes an interrupted
+  # download/import resumable. Needs room for the multi-gigabyte dump.
+  dumpStagingPath: data
+  dumpDatabase: off_dump
 
 ocr:
   enabled: true

@@ -24,15 +24,43 @@ type DatasetGetter interface {
 	GetDataset(barcode string) (database.Product, error)
 }
 
+// OfflineProductLookup resolves a barcode from locally imported OpenFoodFacts
+// bulk data without a live API call. A false result means the barcode is not in
+// the local store, so the caller proceeds to the live API.
+type OfflineProductLookup interface {
+	LookupProduct(barcode string) (database.Product, bool)
+}
+
 // OpenFoodFactsAPIController is the object struct for interacting with the API of OpenFoodFacts
 // It uses the given configuration for accessing the API
 type OpenFoodFactsAPIController struct {
 	Logger        *zerolog.Logger
 	Configuration configuration.OpenFoodFactsConfiguration
+	OfflineLookup OfflineProductLookup
 }
 
-// GetDataset gets data from OpenFoodFacts by its API. The search parameter is the barcode of the product
-func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database.Product, error) {
+// LookupOffline resolves a barcode from the imported bulk dump when it is
+// configured, reporting whether a local entry was found.
+func (offacntrl *OpenFoodFactsAPIController) LookupOffline(barcode string) (database.Product, bool) {
+	if offacntrl.OfflineLookup == nil {
+		return database.Product{}, false
+	}
+	return offacntrl.OfflineLookup.LookupProduct(barcode)
+}
+
+// GetDataset gets data from OpenFoodFacts by its API, consulting the imported
+// bulk dump first so a locally known barcode costs no API call. The search
+// parameter is the barcode of the product.
+func (offacntrl *OpenFoodFactsAPIController) GetDataset(barcode string) (database.Product, error) {
+	if product, found := offacntrl.LookupOffline(barcode); found {
+		return product, nil
+	}
+	return offacntrl.GetLiveDataset(barcode)
+}
+
+// GetLiveDataset queries the live OpenFoodFacts API. The search parameter is
+// the barcode of the product.
+func (offacntrl *OpenFoodFactsAPIController) GetLiveDataset(barcode string) (database.Product, error) {
 	// Create a context with a timeout
 	queryTimeout := time.Second * time.Duration(offacntrl.Configuration.Timeout)
 	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
@@ -99,7 +127,7 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 			// Request was successful, returning subset of populated dataset
 			var co2 *float64
 			if dataset.Product.EcoscoreData.Agribalyse.CO2Total > 0 {
-				v := dataset.Product.EcoscoreData.Agribalyse.CO2Total
+				v := float64(dataset.Product.EcoscoreData.Agribalyse.CO2Total)
 				co2 = &v
 			}
 			return database.Product{
@@ -119,7 +147,7 @@ func (offacntrl OpenFoodFactsAPIController) GetDataset(barcode string) (database
 
 // DownloadImage fetches an image from imageURL and saves it to {cachePath}/{barcode}.jpg.
 // Returns the local serve path /product-images/{barcode}.jpg on success.
-func (offacntrl OpenFoodFactsAPIController) DownloadImage(imageURL, barcode string) (string, error) {
+func (offacntrl *OpenFoodFactsAPIController) DownloadImage(imageURL, barcode string) (string, error) {
 	if err := os.MkdirAll(offacntrl.Configuration.ImageCachePath, 0755); err != nil {
 		return "", fmt.Errorf("creating image cache dir: %w", err)
 	}

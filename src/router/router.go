@@ -491,6 +491,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/mealplan", webFrontendHandler.MealPlan)
 	publicWebFrontend.GET("/waste-analytics", webFrontendHandler.WasteAnalytics)
 	publicWebFrontend.GET("/shopping-list", webFrontendHandler.ShoppingList)
+	publicWebFrontend.GET("/licenses", webFrontendHandler.Licenses)
 
 	// Public invite acceptance page (no auth required)
 	engine.GET("/web/invite/accept", LanguageMiddleware(), webFrontendHandler.AcceptInvite)

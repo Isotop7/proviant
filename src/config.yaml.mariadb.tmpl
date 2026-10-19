@@ -90,6 +90,17 @@ openfoodfacts:
   cacheEnabled: true
   imageCacheEnabled: false
   imageCachePath: "data/images"
+  # Bulk dump import for offline barcode lookup. Off by default: the full dump is
+  # a multi-gigabyte download. MariaDB needs the schema created by
+  # scripts/mariadb-init.sql before enabling; SQLite uses data/<dumpDatabase>.db.
+  dumpImportEnabled: false
+  dumpImportExpiryDays: 7
+  dumpUrl: https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz
+  dumpDeltaWindowDays: 14
+  # Directory the full dump is staged in before import; makes an interrupted
+  # download/import resumable. Needs room for the multi-gigabyte dump.
+  dumpStagingPath: data
+  dumpDatabase: off_dump
 
 ocr:
   enabled: true

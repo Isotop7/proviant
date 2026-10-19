@@ -230,6 +230,27 @@ var (
 	// ErrOpenFoodFactsAPIInvalidImageCachePath is thrown if image caching is enabled but no path is specified
 	ErrOpenFoodFactsAPIInvalidImageCachePath = errors.New("image cache enabled but no image cache path specified")
 
+	// ErrOpenFoodFactsDumpEmptyURL is thrown if the bulk dump import is enabled but no dump URL was specified
+	ErrOpenFoodFactsDumpEmptyURL = errors.New("dump import enabled but no dump URL specified")
+
+	// ErrOpenFoodFactsDumpInvalidExpiryDays is thrown if the dump expiry is not a positive number of days
+	ErrOpenFoodFactsDumpInvalidExpiryDays = errors.New("invalid OpenFoodFacts dump import expiry days")
+
+	// ErrOpenFoodFactsDumpInvalidDeltaWindowDays is thrown if the delta window is negative
+	ErrOpenFoodFactsDumpInvalidDeltaWindowDays = errors.New("invalid OpenFoodFacts dump delta window days")
+
+	// ErrOpenFoodFactsDumpEmptyDatabase is thrown if dump import is enabled on MariaDB but no schema name was specified
+	ErrOpenFoodFactsDumpEmptyDatabase = errors.New("dump import enabled but no dump database (schema) specified for MariaDB")
+
+	// ErrOpenFoodFactsDumpSchemaUnavailable is thrown when the configured MariaDB dump schema does not exist
+	ErrOpenFoodFactsDumpSchemaUnavailable = errors.New("configured OpenFoodFacts dump database (schema) does not exist")
+
+	// ErrOpenFoodFactsDumpDatabaseUnavailable is thrown when the dump store cannot be opened or reached
+	ErrOpenFoodFactsDumpDatabaseUnavailable = errors.New("OpenFoodFacts dump database is not reachable")
+
+	// ErrOpenFoodFactsDumpStagingUnavailable is thrown when the full dump staging file cannot be created or opened
+	ErrOpenFoodFactsDumpStagingUnavailable = errors.New("OpenFoodFacts dump staging file is not writable")
+
 	/*
 	 * Notification related errors
 	 */

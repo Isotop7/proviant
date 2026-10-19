@@ -4116,7 +4116,8 @@ paths:
       - import
   /api/v1/products/openfoodfacts/{barcode}:
     get:
-      description: Proxies OpenFoodFacts API with optional database caching
+      description: Resolves a barcode from the imported dump, the database cache,
+        or the proxy
       parameters:
       - description: Barcode
         in: path
@@ -5764,6 +5765,19 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Accept invitation page
+      tags:
+      - web
+  /web/licenses:
+    get:
+      description: Renders third-party data attribution and license information
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Licenses page
       tags:
       - web
   /web/mealplan:

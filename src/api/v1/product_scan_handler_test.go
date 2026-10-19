@@ -99,6 +99,16 @@ func setupOFFController(env *handlerTestEnv, url string, cacheEnabled bool) {
 	})
 }
 
+// stubOfflineLookup is a canned OfflineProductLookup for handler tests.
+type stubOfflineLookup struct {
+	product dbModel.Product
+	found   bool
+}
+
+func (s stubOfflineLookup) LookupProduct(string) (dbModel.Product, bool) {
+	return s.product, s.found
+}
+
 func TestGetOpenFoodFactsData(t *testing.T) {
 	barcode := "1234567890123"
 
@@ -152,6 +162,48 @@ func TestGetOpenFoodFactsData(t *testing.T) {
 		}
 		if calls != 0 {
 			t.Errorf("API calls = %d, want 0 on cache hit", calls)
+		}
+	})
+
+	t.Run("offline dump hit skips cache and API", func(t *testing.T) {
+		env := setupHandlerTest(t)
+		env.DB.Create(&dbModel.OpenFoodFactsCache{
+			Barcode:     barcode,
+			ProductName: "Cached Milk",
+			Categories:  "Dairy",
+		})
+		calls := 0
+		server := offTestServer(t, barcode, &calls)
+		defer server.Close()
+		logger := zerolog.Nop()
+		env.Ctx.Set("offacntrl", &controllers.OpenFoodFactsAPIController{
+			Logger: &logger,
+			Configuration: configuration.OpenFoodFactsConfiguration{
+				URL:          server.URL,
+				Timeout:      5,
+				CacheEnabled: true,
+			},
+			OfflineLookup: stubOfflineLookup{
+				product: dbModel.Product{Barcode: barcode, ProductName: "Dump Milk", Categories: "Dairy"},
+				found:   true,
+			},
+		})
+		env.Ctx.Params = []gin.Param{{Key: "barcode", Value: barcode}}
+
+		GetOpenFoodFactsData(env.Ctx, env.AppCtx)
+
+		if env.W.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
+		}
+		var entry dbModel.OpenFoodFactsCache
+		if err := json.Unmarshal(env.W.Body.Bytes(), &entry); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if entry.ProductName != "Dump Milk" {
+			t.Errorf("productName = %q, want Dump Milk (dump wins over cache)", entry.ProductName)
+		}
+		if calls != 0 {
+			t.Errorf("API calls = %d, want 0 on dump hit", calls)
 		}
 	})
 
