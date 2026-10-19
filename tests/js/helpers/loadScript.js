@@ -63,6 +63,30 @@ const UNIT_TABLE = [
 ];
 const UNIT_SYMBOLS = UNIT_TABLE.map((unit) => unit.symbol);
 
+// Mirrors util.unitAliases (rendered by util.UnitAliasJSON). The frontend
+// resolves a stored spelling through it before looking the unit up, so the
+// tests need the same table to exercise that resolution.
+const UNIT_ALIASES = {
+  g: "g", gr: "g", gram: "g", grams: "g", gramm: "g",
+  kg: "kg", kilo: "kg", kilos: "kg", kilogram: "kg", kilograms: "kg",
+  oz: "oz", ounce: "oz", ounces: "oz",
+  lb: "lb", lbs: "lb", pound: "lb", pounds: "lb",
+  ml: "ml", milliliter: "ml", milliliters: "ml", millilitre: "ml", millilitres: "ml",
+  l: "l", liter: "l", liters: "l", litre: "l", litres: "l",
+  tsp: "tsp", teaspoon: "tsp", teaspoons: "tsp",
+  tbsp: "tbsp", tbs: "tbsp", tablespoon: "tbsp", tablespoons: "tbsp",
+  cup: "cup", cups: "cup",
+  "fl oz": "fl oz", floz: "fl oz", "fl. oz": "fl oz", "fluid ounce": "fl oz", "fluid ounces": "fl oz",
+  pcs: "pcs", pc: "pcs", piece: "pcs", pieces: "pcs",
+  pkg: "pkg", package: "pkg", packages: "pkg", pack: "pkg", packs: "pkg",
+  can: "can", cans: "can",
+  box: "box", boxes: "box",
+  jar: "jar", jars: "jar",
+  bottle: "bottle", bottles: "bottle",
+  bunch: "bunch", bunches: "bunch",
+  slice: "slice", slices: "slice",
+};
+
 /**
  * Load a shipped frontend script and capture the identifiers it declares.
  *
@@ -111,6 +135,7 @@ export function loadClassicScript(fileName, exportNames, options = {}) {
     proviantUnitSystem: "metric",
     proviantUnits: UNIT_SYMBOLS,
     proviantUnitTable: UNIT_TABLE,
+    proviantUnitAliases: UNIT_ALIASES,
     ...globals,
   };
   if (environment.proviant && typeof environment.proviant === "object") {

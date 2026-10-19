@@ -316,6 +316,50 @@ describe("proviant.js pure helpers", () => {
     });
   });
 
+  // A measured amount is one package no matter its size, and a single count
+  // item is one package too, so both read as the localized "1 qty".
+  describe("quantityLabel", () => {
+    it("shows a measured amount as one package", () => {
+      expect(proviant.quantityLabel(500, "g", "metric")).toBe("1 qty");
+      expect(proviant.quantityLabel(2000, "ml", "metric")).toBe("1 qty");
+    });
+
+    it("shows a single count item as one package", () => {
+      expect(proviant.quantityLabel(1, "pcs", "metric")).toBe("1 qty");
+      expect(proviant.isPackageQuantity(1, "jar")).toBe(true);
+    });
+
+    it("keeps the unit for several count items", () => {
+      expect(proviant.quantityLabel(6, "pcs", "metric")).toBe("6 pcs");
+      expect(proviant.isPackageQuantity(6, "pcs")).toBe(false);
+    });
+
+    it("leaves a unit-less or unknown amount alone", () => {
+      expect(proviant.quantityLabel(2, "", "metric")).toBe("2");
+      expect(proviant.quantityLabel(4, "handful", "metric")).toBe("4 handful");
+    });
+
+    it("resolves an alias the way the server does", () => {
+      expect(proviant.isPackageQuantity(1, "pc")).toBe(true);
+      expect(proviant.quantityLabel(1, "piece", "metric")).toBe("1 qty");
+      expect(proviant.formatUnit(2000, "Millilitres", "metric")).toBe("2 l");
+    });
+
+    it("drives the stepper label through the same rule", () => {
+      const { proviant: fresh, realm } = freshProviant();
+      const element = realm.document.createElement("span");
+      element.dataset.amount = "1";
+      element.dataset.unit = "pcs";
+
+      fresh.renderAmountLabel(element);
+      expect(element.textContent).toBe("1 qty");
+
+      element.dataset.amount = "2";
+      fresh.renderAmountLabel(element);
+      expect(element.textContent).toBe("2 pcs");
+    });
+  });
+
   // The stepper must move by one *displayed* unit, otherwise a "2 kg" label
   // stays at 2 kg when the server adds a single gram.
   describe("amountStep", () => {

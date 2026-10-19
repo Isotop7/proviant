@@ -264,6 +264,46 @@ func TestShoppingListHandler(t *testing.T) {
 	})
 }
 
+// TestShoppingListHandlerMeasuredQuantityShowsOnePackage pins the package
+// display: a measured row is one package, so it leads with "1 qty" and keeps
+// its net contents as secondary text instead of exposing a gram stepper. A
+// single count item is one package too, while a multi-count row keeps its unit.
+func TestShoppingListHandlerMeasuredQuantityShowsOnePackage(t *testing.T) {
+	env := newHandlerEnv(t)
+	household, user := seedHouseholdUser(t, env.db)
+
+	items := []dbModel.ShoppingListItem{
+		{HouseholdID: household.ID, Name: "Pasta", Quantity: 500, Unit: "g", CreatedBy: user.ID},
+		{HouseholdID: household.ID, Name: "Eggs", Quantity: 6, Unit: "pcs", CreatedBy: user.ID},
+		{HouseholdID: household.ID, Name: "Yogurt", Quantity: 1, Unit: "pcs", CreatedBy: user.ID},
+	}
+	for i := range items {
+		if err := env.db.Create(&items[i]).Error; err != nil {
+			t.Fatalf("failed to create shopping list item: %v", err)
+		}
+	}
+
+	w := env.run(user.ID, "/web/shopping-list", nil, env.frontend.ShoppingList)
+	requireStatus(t, w, http.StatusOK)
+
+	body := w.Body.String()
+	if got := elementText(t, body, `class="unit-count"`); got != "1 qty" {
+		t.Errorf("measured row count = %q, want %q", got, "1 qty")
+	}
+	if got := elementText(t, body, `class="unit-secondary"`); got != "500 g" {
+		t.Errorf("measured row net contents = %q, want %q", got, "500 g")
+	}
+	if strings.Contains(body, `id="qty-`+fmtUint(items[0].ID)+`"`) {
+		t.Errorf("measured row still exposes a quantity stepper")
+	}
+	if got := elementText(t, body, `id="qty-`+fmtUint(items[1].ID)+`"`); got != "6 pcs" {
+		t.Errorf("multi count row = %q, want %q", got, "6 pcs")
+	}
+	if got := elementText(t, body, `id="qty-`+fmtUint(items[2].ID)+`"`); got != "1 qty" {
+		t.Errorf("single count row = %q, want %q", got, "1 qty")
+	}
+}
+
 func TestProductsScanHandler(t *testing.T) {
 	env := newHandlerEnv(t)
 	w := env.run(0, "/web/products/scan", nil, env.frontend.ProductsScan)
@@ -342,6 +382,33 @@ func TestProductsEditHandler(t *testing.T) {
 		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsEdit)
 		requireStatus(t, w, http.StatusOK)
 		requireContains(t, w, `<option value="handful" selected>handful</option>`)
+	})
+
+	// The quick-info panel mirrors the list: a measured product is one package,
+	// so it reads "1 qty" with the net contents underneath.
+	t.Run("shows a measured product as one package", func(t *testing.T) {
+		household, user := seedHouseholdUser(t, env.db)
+		product := testutil.CreateTestProduct(env.db, household.ID, user.ID)
+		if err := env.db.Model(product).Updates(map[string]any{"amount": 500, "unit": "g"}).Error; err != nil {
+			t.Fatalf("set amount and unit: %v", err)
+		}
+		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsEdit)
+		requireStatus(t, w, http.StatusOK)
+		requireContains(t, w, `class="unit-count">1 qty<`)
+		requireContains(t, w, `class="unit-secondary">500 g<`)
+	})
+
+	// A single count item is one package too, so its quick-info reads "1 qty"
+	// instead of "1 pcs".
+	t.Run("shows a single count item as one package", func(t *testing.T) {
+		household, user := seedHouseholdUser(t, env.db)
+		product := testutil.CreateTestProduct(env.db, household.ID, user.ID)
+		if err := env.db.Model(product).Updates(map[string]any{"amount": 1, "unit": "pcs"}).Error; err != nil {
+			t.Fatalf("set amount and unit: %v", err)
+		}
+		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsEdit)
+		requireStatus(t, w, http.StatusOK)
+		requireContains(t, w, `class="font-mono fw-semibold">1 qty<`)
 	})
 }
 

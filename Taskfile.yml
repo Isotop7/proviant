@@ -46,8 +46,15 @@ tasks:
 
   test-js:
     desc: Run frontend (vitest) tests
+    deps: [test-fixtures]
     cmds:
       - npm run test-js
+
+  test-fixtures:
+    desc: Check the JS unit-table fixtures against the Go tables (uncached)
+    dir: src
+    cmds:
+      - go test -count=1 -run TestFrontendUnit ./util/...
 
   i18n:
     desc: Validate message catalogs (load, key parity, referenced keys)

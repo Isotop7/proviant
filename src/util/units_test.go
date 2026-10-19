@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -173,6 +174,72 @@ func TestFormatUnit(t *testing.T) {
 	}
 }
 
+// IsMeasuredUnit separates package contents from countable items: only mass and
+// volume units are measurements, so only those rows read as one package.
+func TestIsMeasuredUnit(t *testing.T) {
+	tests := []struct {
+		name string
+		unit string
+		want bool
+	}{
+		{name: "gram", unit: "g", want: true},
+		{name: "kilogram", unit: "kg", want: true},
+		{name: "ounce", unit: "oz", want: true},
+		{name: "pound", unit: "lb", want: true},
+		{name: "millilitre", unit: "ml", want: true},
+		{name: "litre", unit: "l", want: true},
+		{name: "teaspoon", unit: "tsp", want: true},
+		{name: "tablespoon", unit: "tbsp", want: true},
+		{name: "cup", unit: "cup", want: true},
+		{name: "fluid ounce", unit: "fl oz", want: true},
+		{name: "alias resolves", unit: "Millilitres", want: true},
+		{name: "empty unit", unit: "", want: false},
+		{name: "count unit", unit: "pcs", want: false},
+		{name: "package unit", unit: "pkg", want: false},
+		{name: "unknown unit", unit: "handful", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsMeasuredUnit(tt.unit); got != tt.want {
+				t.Errorf("IsMeasuredUnit(%q) = %v, want %v", tt.unit, got, tt.want)
+			}
+		})
+	}
+}
+
+// IsPackageQuantity is the display rule: a measured unit is one package at any
+// size, and a count unit is one package only at amount 1. Everything else keeps
+// its stored amount and unit.
+func TestIsPackageQuantity(t *testing.T) {
+	tests := []struct {
+		name   string
+		amount int
+		unit   string
+		want   bool
+	}{
+		{name: "gram", amount: 500, unit: "g", want: true},
+		{name: "kilogram", amount: 2, unit: "kg", want: true},
+		{name: "millilitre", amount: 1, unit: "ml", want: true},
+		{name: "litre alias", amount: 1, unit: "Litres", want: true},
+		{name: "single piece", amount: 1, unit: "pcs", want: true},
+		{name: "piece alias", amount: 1, unit: "pc", want: true},
+		{name: "single jar", amount: 1, unit: "jar", want: true},
+		{name: "several pieces", amount: 6, unit: "pcs", want: false},
+		{name: "several jars", amount: 2, unit: "jar", want: false},
+		{name: "empty unit", amount: 1, unit: "", want: false},
+		{name: "unknown unit", amount: 1, unit: "handful", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsPackageQuantity(tt.amount, tt.unit); got != tt.want {
+				t.Errorf("IsPackageQuantity(%d, %q) = %v, want %v", tt.amount, tt.unit, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFromBaseEmptySystemDefaultsToMetric(t *testing.T) {
 	value, symbol := FromBase(1500, "g", "")
 	if symbol != "kg" || value != 1.5 {
@@ -277,11 +344,10 @@ func TestUnitOptionsCoverEveryTableEntry(t *testing.T) {
 	}
 }
 
-// TestFrontendUnitTableMatchesServerTable pins the UNIT_TABLE copy in
-// tests/js/helpers/loadScript.js to conversionUnits: the fixture exists because
-// vitest cannot import Go, so a factor edited on one side must fail here
-// instead of silently validating stale math.
-func TestFrontendUnitTableMatchesServerTable(t *testing.T) {
+// readFrontendFixture returns tests/js/helpers/loadScript.js, the fixture the
+// frontend-table tests below pin to this package's tables.
+func readFrontendFixture(t *testing.T) string {
+	t.Helper()
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("runtime.Caller failed")
@@ -291,9 +357,36 @@ func TestFrontendUnitTableMatchesServerTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read frontend fixture: %v", err)
 	}
+	return string(source)
+}
+
+// frontendAliasBlock returns the body of the UNIT_ALIASES object literal. The
+// alias regex below would otherwise also match the conversion table's quoted
+// `symbol` and `kind` values, which carry the same `key: "value"` shape.
+func frontendAliasBlock(t *testing.T, source string) string {
+	t.Helper()
+	const marker = "const UNIT_ALIASES = {"
+	start := strings.Index(source, marker)
+	if start < 0 {
+		t.Fatal("frontend fixture has no UNIT_ALIASES block")
+	}
+	rest := source[start+len(marker):]
+	end := strings.Index(rest, "};")
+	if end < 0 {
+		t.Fatal("frontend UNIT_ALIASES block is unterminated")
+	}
+	return rest[:end]
+}
+
+// TestFrontendUnitTableMatchesServerTable pins the UNIT_TABLE copy in
+// tests/js/helpers/loadScript.js to conversionUnits: the fixture exists because
+// vitest cannot import Go, so a factor edited on one side must fail here
+// instead of silently validating stale math.
+func TestFrontendUnitTableMatchesServerTable(t *testing.T) {
+	source := readFrontendFixture(t)
 
 	entry := regexp.MustCompile(`symbol:\s*"([^"]+)",\s*kind:\s*"([^"]+)",\s*factor:\s*([0-9.]+)`)
-	matches := entry.FindAllStringSubmatch(string(source), -1)
+	matches := entry.FindAllStringSubmatch(source, -1)
 	if len(matches) != len(conversionUnits) {
 		t.Fatalf("frontend UNIT_TABLE has %d entries, want %d", len(matches), len(conversionUnits))
 	}
@@ -309,6 +402,34 @@ func TestFrontendUnitTableMatchesServerTable(t *testing.T) {
 		}
 		if factor != want.Factor {
 			t.Errorf("frontend entry %d (%s) factor = %v, want %v", i, want.Symbol, factor, want.Factor)
+		}
+	}
+}
+
+// TestFrontendUnitAliasesMatchServerAliases pins the UNIT_ALIASES copy in
+// tests/js/helpers/loadScript.js to unitAliases. The frontend resolves a stored
+// spelling through the copy the server injects, so an alias added on one side
+// must fail here instead of leaving the client label silently unresolved.
+func TestFrontendUnitAliasesMatchServerAliases(t *testing.T) {
+	block := frontendAliasBlock(t, readFrontendFixture(t))
+
+	entry := regexp.MustCompile(`(?:"([^"]+)"|([\w.]+)):\s*"([^"]+)"`)
+	matches := entry.FindAllStringSubmatch(block, -1)
+	if len(matches) != len(unitAliases) {
+		t.Fatalf("frontend UNIT_ALIASES has %d entries, want %d", len(matches), len(unitAliases))
+	}
+	for _, match := range matches {
+		alias := match[1]
+		if alias == "" {
+			alias = match[2]
+		}
+		want, ok := unitAliases[alias]
+		if !ok {
+			t.Errorf("frontend alias %q is not in unitAliases", alias)
+			continue
+		}
+		if match[3] != want {
+			t.Errorf("frontend alias %q = %q, want %q", alias, match[3], want)
 		}
 	}
 }

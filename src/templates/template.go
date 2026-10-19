@@ -317,6 +317,17 @@ func unitIsKnown(raw string) bool {
 	return ok
 }
 
+// QuantityLabel renders the amount the way every quantity surface does: a whole
+// package reads as the localized "1 qty", anything else as the formatted amount.
+// It carries the language because only the label needs it, and it lives here so
+// the web handler and the templates share one composition of the display rule.
+func QuantityLabel(lang string, amount int, unit, system string) string {
+	if util.IsPackageQuantity(amount, unit) {
+		return i18n.T(lang, "common.qtyOne")
+	}
+	return util.FormatUnit(amount, unit, system)
+}
+
 func flagReplace(source string) template.HTML {
 	var output strings.Builder
 	for elements := range strings.SplitSeq(source, ",") {
@@ -351,6 +362,10 @@ func templateFunctions(lang string) template.FuncMap {
 		"effectiveExpireAt":    effectiveExpireAt,
 		"unitDisplay":          util.FormatUnit,
 		"unitIsKnown":          unitIsKnown,
+		"isMeasuredUnit":       util.IsMeasuredUnit,
+		"quantityLabel": func(amount int, unit, system string) string {
+			return QuantityLabel(lang, amount, unit, system)
+		},
 	}
 	for name, fn := range i18n.FuncMap(lang) {
 		functions[name] = fn
@@ -449,6 +464,7 @@ func injectI18nData(ctx *gin.Context, data map[string]any) string {
 	data["UnitOptions"] = util.UnitOptions()
 	data["UnitOptionsJSON"] = template.JS(util.UnitOptionsJSON())
 	data["UnitConversionJSON"] = template.JS(util.UnitConversionJSON())
+	data["UnitAliasJSON"] = template.JS(util.UnitAliasJSON())
 	if title, ok := data["Title"].(string); ok && title != "" {
 		key := "pageTitle." + strings.ReplaceAll(title, " ", "")
 		if i18n.Has(lang, key) {

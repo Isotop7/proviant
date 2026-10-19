@@ -42,6 +42,10 @@ const UNIT_CONVERSIONS = {};
 (window.proviantUnitTable || []).forEach(function (unit) {
   UNIT_CONVERSIONS[unit.symbol] = { symbol: unit.symbol, kind: unit.kind, factor: unit.factor };
 });
+// The alias table is injected alongside the conversion table, so a spelling the
+// server resolves ("pc", "Millilitres") resolves here too instead of falling
+// through as an unknown unit and diverging from the server-rendered label.
+const UNIT_ALIASES = window.proviantUnitAliases || {};
 
 proviant.unitSystem = function () {
   return window.proviantUnitSystem === "imperial" ? "imperial" : "metric";
@@ -63,7 +67,9 @@ function normalizeUnitSymbol(raw) {
 }
 
 function unitConversion(raw) {
-  return UNIT_CONVERSIONS[normalizeUnitSymbol(raw)] || null;
+  const normalized = normalizeUnitSymbol(raw);
+  const symbol = Object.prototype.hasOwnProperty.call(UNIT_ALIASES, normalized) ? UNIT_ALIASES[normalized] : normalized;
+  return UNIT_CONVERSIONS[symbol] || null;
 }
 
 // displayUnit picks the unit a person would write for a base amount, mirroring
@@ -119,6 +125,28 @@ proviant.formatUnit = function (amount, unit, system) {
     : formatUnitQuantity(displayed.value);
 };
 
+// isPackageQuantity mirrors util.IsPackageQuantity: a mass or volume amount is
+// one package no matter its size, and a single count item is one package too.
+proviant.isPackageQuantity = function (amount, unit) {
+  const conversion = unitConversion(unit);
+  if (!conversion) {
+    return false;
+  }
+  if (conversion.kind === "mass" || conversion.kind === "volume") {
+    return true;
+  }
+  return conversion.kind === "count" && Number(amount) === 1;
+};
+
+// quantityLabel renders the amount the way the list templates do: one package
+// reads as "1 qty" instead of "500 g" or "1 pcs".
+proviant.quantityLabel = function (amount, unit, system) {
+  if (proviant.isPackageQuantity(amount, unit)) {
+    return proviant.t("common.qtyOne");
+  }
+  return proviant.formatUnit(amount, unit, system);
+};
+
 // amountStep is the number of base units one +/− click moves, so the shown
 // value actually changes: stepping a "2 kg" label by 1 g would leave it reading
 // 2 kg. It is one displayed unit (1000 for kg, 454 for lb), or 1 for a count or
@@ -163,7 +191,7 @@ proviant.convertUnit = function (amount, fromRaw, toRaw) {
 proviant.renderAmountLabel = function (element) {
   if (!element || element.dataset.amount === undefined) return;
   const baseAmount = Number.parseInt(element.dataset.amount, 10) || 0;
-  element.textContent = proviant.formatUnit(baseAmount, element.dataset.unit || "", proviant.unitSystem());
+  element.textContent = proviant.quantityLabel(baseAmount, element.dataset.unit || "", proviant.unitSystem());
 };
 
 // Re-render every amount label that carries a data-amount once the DOM is

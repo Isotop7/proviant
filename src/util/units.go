@@ -163,6 +163,33 @@ func Convert(amount int, fromRaw, toRaw string) (int, bool) {
 	return roundToInt(float64(amount) * from.Factor / to.Factor), true
 }
 
+// IsMeasuredUnit reports whether a unit denotes a physical measurement (mass or
+// volume) rather than a countable item. A measured product row is one package,
+// so the UI shows its count instead of the net contents. Unknown and empty
+// units are not measured: they are displayed exactly as stored.
+func IsMeasuredUnit(raw string) bool {
+	unit, ok := ParseUnit(raw)
+	if !ok {
+		return false
+	}
+	return unit.Kind == UnitKindMass || unit.Kind == UnitKindVolume
+}
+
+// IsPackageQuantity reports whether an amount of unit is whole packages for
+// display: a mass or volume unit is always one package, its net contents shown
+// as secondary text, and a single count item is one package too. Unknown and
+// empty units are not packages, so "4 handful" stays as stored.
+func IsPackageQuantity(amount int, raw string) bool {
+	unit, ok := ParseUnit(raw)
+	if !ok {
+		return false
+	}
+	if unit.Kind == UnitKindMass || unit.Kind == UnitKindVolume {
+		return true
+	}
+	return unit.Kind == UnitKindCount && amount == 1
+}
+
 // FromBase renders a canonical base amount in the requested measurement system,
 // picking the unit a person would write. Count units and unknown units are
 // returned as-is. An empty system means metric.
@@ -275,6 +302,17 @@ func UnitConversionJSON() string {
 	encoded, err := json.Marshal(conversionUnits)
 	if err != nil {
 		return "[]"
+	}
+	return string(encoded)
+}
+
+// UnitAliasJSON renders the alias map for the frontend, which needs to resolve
+// the same spellings the server does ("pc", "Millilitres") to a canonical
+// symbol before it looks the unit up in the conversion table.
+func UnitAliasJSON() string {
+	encoded, err := json.Marshal(unitAliases)
+	if err != nil {
+		return "{}"
 	}
 	return string(encoded)
 }

@@ -17,6 +17,7 @@
   "common.offlineBanner": "You're offline — showing cached data. Changes will sync when reconnected.",
   "common.ok": "OK",
   "common.previous": "Previous",
+  "common.qtyOne": "1 qty",
   "common.reload": "Reload",
   "common.retry": "Retry",
   "common.save": "Save",

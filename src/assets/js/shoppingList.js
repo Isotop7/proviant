@@ -270,6 +270,7 @@
     html += '<p class="meta">' + proviant.tn("js.shoppingList.printCount", items.length) + '</p>';
     items.forEach(function(item) {
       var name = item.name || item.Name || '';
+      // Print keeps the stored amount, not the row's "1 qty" label: at the store you need how much to buy.
       var qty = item.quantity || item.Quantity || '';
       var unit = item.unit || item.Unit || '';
       var checked = item.checked || item.Checked ? ' checked' : '';

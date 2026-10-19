@@ -224,6 +224,29 @@
   color: var(--fg);
 }
 
+// A measured product row is one package: the count leads and the net contents
+// follow as secondary metadata, so the list reads "1 qty" over "500 g".
+.qty-measured {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  line-height: 1.2;
+
+  .unit-count {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+
+  .unit-secondary {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--fg-3);
+  }
+}
+
 .filter-pill {
   display: inline-flex;
   gap: 4px;

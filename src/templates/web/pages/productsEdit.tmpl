@@ -302,7 +302,14 @@
             </div>
             <div class="product-info-row product-info-row-sep">
               <span class="text-fg-3">{{ t "products.amount" }}</span>
-              <span class="font-mono fw-semibold">{{ unitDisplay .Product.Amount .Product.Unit $.UnitSystem }}</span>
+              {{ if isMeasuredUnit .Product.Unit }}
+              <span class="qty-measured">
+                <span class="unit-count">{{ quantityLabel .Product.Amount .Product.Unit $.UnitSystem }}</span>
+                <span class="unit-secondary">{{ unitDisplay .Product.Amount .Product.Unit $.UnitSystem }}</span>
+              </span>
+              {{ else }}
+              <span class="font-mono fw-semibold">{{ quantityLabel .Product.Amount .Product.Unit $.UnitSystem }}</span>
+              {{ end }}
             </div>
             <div class="product-info-row product-info-row-sep">
               <span class="text-fg-3">{{ t "products.expiryDate" }}</span>

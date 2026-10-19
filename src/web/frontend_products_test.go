@@ -22,6 +22,27 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// elementText returns the trimmed text of the first tag in body carrying marker
+// (e.g. `id="qty-7"`), scoping an assertion to that row and freeing it from the
+// order of the tag's other attributes.
+func elementText(t *testing.T, body, marker string) string {
+	t.Helper()
+	start := strings.Index(body, marker)
+	if start < 0 {
+		t.Fatalf("marker %s not found in body", marker)
+	}
+	open := strings.Index(body[start:], ">")
+	if open < 0 {
+		t.Fatalf("tag carrying %s is incomplete", marker)
+	}
+	rest := body[start+open+1:]
+	end := strings.Index(rest, "<")
+	if end < 0 {
+		t.Fatalf("tag carrying %s has no closing tag", marker)
+	}
+	return strings.TrimSpace(rest[:end])
+}
+
 func candidateRows(n int) []dbModel.Product {
 	products := make([]dbModel.Product, n)
 	for i := range products {
@@ -237,6 +258,128 @@ func TestProductsHandlerOmitsPagerOnASinglePage(t *testing.T) {
 	}
 	if strings.Contains(w.Body.String(), "products-pagination") {
 		t.Errorf("single-page list rendered a pager")
+	}
+}
+
+// TestProductsHandlerShowsOnePackageForMeasuredProducts pins the package display
+// on the list view: a mass or volume row is one package, so it leads with
+// "1 qty" and shows its net contents as secondary text. A single count item is
+// one package too, so it reads "1 qty" while keeping its stepper; a multi-count
+// row keeps its unit.
+func TestProductsHandlerShowsOnePackageForMeasuredProducts(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	pasta := testutil.CreateTestProduct(db, household.ID, user.ID)
+	pasta.ProductName = "Pasta"
+	pasta.Amount = 500
+	pasta.Unit = "g"
+	if err := db.Save(pasta).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	eggs := testutil.CreateTestProduct(db, household.ID, user.ID)
+	eggs.ProductName = "Eggs"
+	eggs.Amount = 6
+	eggs.Unit = "pcs"
+	if err := db.Save(eggs).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	yogurt := testutil.CreateTestProduct(db, household.ID, user.ID)
+	yogurt.ProductName = "Yogurt"
+	yogurt.Amount = 1
+	yogurt.Unit = "pcs"
+	if err := db.Save(yogurt).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/web/products", nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+
+	(&Frontend{TemplateCache: cache}).Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if got := elementText(t, body, `class="unit-count"`); got != "1 qty" {
+		t.Errorf("measured row count = %q, want %q", got, "1 qty")
+	}
+	if got := elementText(t, body, `class="unit-secondary"`); got != "500 g" {
+		t.Errorf("measured row net contents = %q, want %q", got, "500 g")
+	}
+	if strings.Contains(body, `id="qty-`+fmtUint(pasta.ID)+`"`) {
+		t.Errorf("measured product still exposes a quantity stepper")
+	}
+	if got := elementText(t, body, `id="qty-`+fmtUint(eggs.ID)+`"`); got != "6 pcs" {
+		t.Errorf("multi count row = %q, want %q", got, "6 pcs")
+	}
+	if got := elementText(t, body, `id="qty-`+fmtUint(yogurt.ID)+`"`); got != "1 qty" {
+		t.Errorf("single count row = %q, want %q", got, "1 qty")
+	}
+}
+
+// The grid card is invoked with the product as its root, so it cannot read the
+// page's unit system or language; render it to pin that the handler-computed
+// package label reaches the card.
+func TestProductsGridShowsOnePackageForMeasuredProducts(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	pasta := testutil.CreateTestProduct(db, household.ID, user.ID)
+	pasta.ProductName = "Pasta"
+	pasta.Amount = 500
+	pasta.Unit = "g"
+	if err := db.Save(pasta).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	yogurt := testutil.CreateTestProduct(db, household.ID, user.ID)
+	yogurt.ProductName = "Yogurt"
+	yogurt.Amount = 1
+	yogurt.Unit = "pcs"
+	if err := db.Save(yogurt).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/web/products?view=grid", nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+
+	(&Frontend{TemplateCache: cache}).Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if strings.Contains(body, `id="amount-`+fmtUint(pasta.ID)+`"`) {
+		t.Errorf("measured card still exposes a quantity stepper")
+	}
+	if got := elementText(t, body, `class="unit-count"`); got != "1 qty" {
+		t.Errorf("measured card count = %q, want %q", got, "1 qty")
+	}
+	if got := elementText(t, body, `id="amount-`+fmtUint(yogurt.ID)+`"`); got != "1 qty" {
+		t.Errorf("single count card = %q, want %q", got, "1 qty")
 	}
 }
 

@@ -631,11 +631,13 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		return
 	}
 	// The card partial is invoked with the product as its root, so it cannot
-	// reach the page's unit system; pre-format the amount here for it.
+	// reach the page's unit system or language; pre-format both labels here.
 	unitSystemValue, _ := ctx.Get(util.ContextKeyUnitSystem)
 	unitSystem := util.UnitSystemFromContextValue(unitSystemValue)
+	lang := pageLanguage(ctx)
 	for i := range products {
 		products[i].DisplayAmount = util.FormatUnit(products[i].Amount, products[i].Unit, unitSystem)
+		products[i].DisplayQuantity = templates.QuantityLabel(lang, products[i].Amount, products[i].Unit, unitSystem)
 	}
 
 	params := url.Values{}

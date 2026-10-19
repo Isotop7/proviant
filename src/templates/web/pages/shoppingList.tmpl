@@ -70,11 +70,18 @@
             </div>
         </div>
         <div class="sl-qty-col">
+            {{ if isMeasuredUnit $item.Unit }}
+            <span class="qty-measured">
+                <span class="unit-count">{{ quantityLabel $item.Quantity $item.Unit $.UnitSystem }}</span>
+                <span class="unit-secondary">{{ unitDisplay $item.Quantity $item.Unit $.UnitSystem }}</span>
+            </span>
+            {{ else }}
             <div class="qty-stepper">
                 <button type="button" data-qty-action="dec" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.decreaseQuantity" $item.Name }}">−</button>
-                <span id="qty-{{ $item.ID }}" class="unit-amount" data-amount="{{ $item.Quantity }}" data-unit="{{ $item.Unit }}">{{ unitDisplay $item.Quantity $item.Unit $.UnitSystem }}</span>
+                <span id="qty-{{ $item.ID }}" class="unit-amount" data-amount="{{ $item.Quantity }}" data-unit="{{ $item.Unit }}">{{ quantityLabel $item.Quantity $item.Unit $.UnitSystem }}</span>
                 <button type="button" data-qty-action="inc" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.increaseQuantity" $item.Name }}">+</button>
             </div>
+            {{ end }}
         </div>
         <div class="sl-actions-col">
             <button type="button" class="btn-icon text-secondary-custom" data-notes-toggle="{{ $item.ID }}" title="{{ t "shoppingList.notes" }}" aria-label="{{ t "shoppingList.toggleNotes" $item.Name }}">

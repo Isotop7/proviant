@@ -87,6 +87,13 @@ jobs:
         run: |
           cd ./src
           go test -race $(go list ./... | grep -v /vendor/)
+      # The unit-table guards read tests/js/helpers/loadScript.js at runtime, a
+      # file the Go test cache does not track, so a fixture-only change would
+      # replay the cached result of the step above.
+      - name: Check frontend unit-table fixtures
+        run: |
+          cd ./src
+          go test -count=1 -run 'TestFrontendUnit' ./util/...
       - name: Test code coverage
         run: |
           cd ./src

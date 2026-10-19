@@ -332,12 +332,17 @@
             {{ if .StorageLocation }}{{ .StorageLocation.Name }}{{ else }}—{{ end }}
         </div>
         <div class="col-qty">
-            {{ if eq $.StatusFilter "archived" }}
-            <span class="qty-static">{{ unitDisplay .Amount .Unit $.UnitSystem }}</span>
+            {{ if isMeasuredUnit .Unit }}
+            <span class="qty-static qty-measured">
+                <span class="unit-count">{{ quantityLabel .Amount .Unit $.UnitSystem }}</span>
+                <span class="unit-secondary">{{ unitDisplay .Amount .Unit $.UnitSystem }}</span>
+            </span>
+            {{ else if eq $.StatusFilter "archived" }}
+            <span class="qty-static">{{ quantityLabel .Amount .Unit $.UnitSystem }}</span>
             {{ else }}
             <div class="qty-stepper">
                 <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}" aria-label="{{ t "products.table.decreaseQuantity" .ProductName }}">−</button>
-                <span id="qty-{{ .Model.ID }}" class="unit-amount" data-amount="{{ .Amount }}" data-unit="{{ .Unit }}">{{ unitDisplay .Amount .Unit $.UnitSystem }}</span>
+                <span id="qty-{{ .Model.ID }}" class="unit-amount" data-amount="{{ .Amount }}" data-unit="{{ .Unit }}">{{ quantityLabel .Amount .Unit $.UnitSystem }}</span>
                 <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}" aria-label="{{ t "products.table.increaseQuantity" .ProductName }}">+</button>
             </div>
             {{ end }}
