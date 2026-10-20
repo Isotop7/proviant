@@ -856,7 +856,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	token := ctx.Query("token")
 
 	if token == "" {
-		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "base", AcceptInviteFileName, map[string]any{
+		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "baseAuth", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
 			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteTokenMissing"),
 		})
@@ -866,7 +866,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", AcceptInviteFileName, map[string]any{
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "baseAuth", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
 			"Error": i18n.T(pageLanguage(ctx), "pageError.internalError"),
 		})
@@ -876,14 +876,14 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	invitation, invErr := repos.Invitations.GetInvitationByToken(token)
 	if invErr != nil {
 		if invErr == errors.ErrInvitationNotFound {
-			templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "base", AcceptInviteFileName, map[string]any{
+			templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "baseAuth", AcceptInviteFileName, map[string]any{
 				"Title": AcceptInvitationTitle,
 				"Error": i18n.T(pageLanguage(ctx), "pageError.inviteNotFound"),
 			})
 			return
 		}
 		logger.Error().Msg(invErr.Error())
-		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", AcceptInviteFileName, map[string]any{
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "baseAuth", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
 			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteProcessError"),
 		})
@@ -900,7 +900,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		default:
 			msg = i18n.T(pageLanguage(ctx), "pageError.inviteAlreadyUsed")
 		}
-		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", AcceptInviteFileName, map[string]any{
+		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "baseAuth", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
 			"Error": msg,
 		})
@@ -909,7 +909,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 
 	if time.Now().After(invitation.ExpiresAt) {
 		_ = repos.Invitations.MarkInvitationExpired(invitation.ID)
-		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", AcceptInviteFileName, map[string]any{
+		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "baseAuth", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
 			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteExpired"),
 		})
@@ -928,7 +928,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		userID, ok := claims[static.TokenIdentityKey].(float64)
 		if ok && uint(userID) > 0 {
 			// User is logged in — show confirmation
-			templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", AcceptInviteFileName, map[string]any{
+			templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", AcceptInviteFileName, map[string]any{
 				"Title":           AcceptInvitationTitle,
 				"ConfirmAccept":   true,
 				"Token":           token,
