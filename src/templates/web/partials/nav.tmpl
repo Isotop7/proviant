@@ -1,68 +1,42 @@
 {{ define "nav" }}
-<nav class="app__sidebar">
-	<a href="/web" class="brand" aria-label="{{ t "a11y.goToHome" }}">
-		<img src="/assets/icons/proviant_logo_192.png" alt="" class="brand-logo">
-		<span class="brand-name">proviant</span>
-	</a>
-	<div class="nav flex-column nav-items">
-		<a href="/web" class="nav-link {{ if eq .Title "Home" }}active{{ end }}"
+<a href="/web" class="app__brand" aria-label="{{ t "a11y.goToHome" }}">
+	<img src="/assets/icons/proviant_logo_192.png" alt="" class="app__brand-logo">
+	<span class="app__brand-name">proviant</span>
+</a>
+
+<nav class="app__nav" aria-label="{{ t "a11y.primaryNavigation" }}">
+		<a href="/web" class="nav-link{{ if eq .Title "Home" }} active{{ end }}"
 			{{ if eq .Title "Home" }}aria-current="page"{{ end }}
-			data-bs-toggle="tooltip" data-bs-placement="right" title="{{ t "nav.dashboard" }}">
-			<i class="bi bi-speedometer2" aria-hidden="true"></i> {{ t "nav.dashboard" }}
+			title="{{ t "nav.dashboard" }}">{{ t "nav.dashboard" }}
 		</a>
-		<a href="/web/products" class="nav-link {{ if eq .Title "Products" }}active{{ end }}"
+		<a href="/web/products" class="nav-link{{ if eq .Title "Products" }} active{{ end }}"
 			{{ if eq .Title "Products" }}aria-current="page"{{ end }}
-			data-bs-toggle="tooltip" data-bs-placement="right" title="{{ t "nav.products" }}">
-			<i class="bi bi-box-seam" aria-hidden="true"></i> {{ t "nav.products" }}
-			{{ if .UrgentCount }}
-			{{ if gt .UrgentCount 0 }}
-			<span class="nav-badge">{{ .UrgentCount }}</span>
-			{{ end }}
-			{{ end }}
+			title="{{ t "nav.products" }}">{{ t "nav.products" }}
+				{{ if .UrgentCount }}
+				{{ if gt .UrgentCount 0 }}
+				<span class="nav-badge">{{ .UrgentCount }}</span>
+				{{ end }}
+				{{ end }}
 		</a>
-		<a href="/web/shopping-list" class="nav-link {{ if eq .Title "Shopping List" }}active{{ end }}"
+		<a href="/web/shopping-list" class="nav-link{{ if eq .Title "Shopping List" }} active{{ end }}"
 			{{ if eq .Title "Shopping List" }}aria-current="page"{{ end }}
-			data-bs-toggle="tooltip" data-bs-placement="right" title="{{ t "nav.shoppingList" }}">
-			<i class="bi bi-cart3" aria-hidden="true"></i> {{ t "nav.shoppingList" }}
+			title="{{ t "nav.shoppingList" }}">{{ t "nav.shoppingList" }}
 		</a>
-		<a href="/web/mealplan" class="nav-link {{ if eq .Title "Meal Plan" }}active{{ end }}"
+		<a href="/web/mealplan" class="nav-link{{ if eq .Title "Meal Plan" }} active{{ end }}"
 			{{ if eq .Title "Meal Plan" }}aria-current="page"{{ end }}
-			data-bs-toggle="tooltip" data-bs-placement="right" title="{{ t "nav.mealPlan" }}">
-			<i class="bi bi-calendar-week" aria-hidden="true"></i> {{ t "nav.mealPlan" }}
+			title="{{ t "nav.mealPlan" }}">{{ t "nav.mealPlan" }}
 		</a>
-		<a href="/web/recipes" class="nav-link {{ if eq .Title "Recipes" }}active{{ end }}"
+		<a href="/web/recipes" class="nav-link{{ if eq .Title "Recipes" }} active{{ end }}"
 			{{ if eq .Title "Recipes" }}aria-current="page"{{ end }}
-			data-bs-toggle="tooltip" data-bs-placement="right" title="{{ t "nav.recipes" }}">
-			<i class="bi bi-journal-richtext" aria-hidden="true"></i> {{ t "nav.recipes" }}
+			title="{{ t "nav.recipes" }}">{{ t "nav.recipes" }}
 		</a>
-		<a href="/web/waste-analytics" class="nav-link {{ if eq .Title "Waste Analytics" }}active{{ end }}"
+		<a href="/web/waste-analytics" class="nav-link{{ if eq .Title "Waste Analytics" }} active{{ end }}"
 			{{ if eq .Title "Waste Analytics" }}aria-current="page"{{ end }}
-			data-bs-toggle="tooltip" data-bs-placement="right" title="{{ t "nav.wasteAnalytics" }}">
-			<i class="bi bi-bar-chart-line" aria-hidden="true"></i> {{ t "nav.wasteAnalytics" }}
+			title="{{ t "nav.wasteAnalytics" }}">{{ t "nav.wasteAnalytics" }}
 		</a>
-		<a href="/web/user/settings" class="nav-link {{ if eq .Title "User Settings" }}active{{ end }}"
+		<a href="/web/user/settings" class="nav-link{{ if eq .Title "User Settings" }} active{{ end }}"
 			{{ if eq .Title "User Settings" }}aria-current="page"{{ end }}
-			data-bs-toggle="tooltip" data-bs-placement="right" title="{{ t "nav.settings" }}">
-			<i class="bi bi-gear-wide-connected" aria-hidden="true"></i> {{ t "nav.settings" }}
+			title="{{ t "nav.settings" }}">{{ t "nav.settings" }}
 		</a>
-	</div>
-	<div class="nav-version">
-		<a href="https://github.com/Isotop7/proviant/releases/tag/{{ .Version }}"
-		   target="_blank" rel="noopener" class="nav-version-link">
-			{{ .Version }}
-		</a>
-	</div>
-	<div class="nav-footer-meta d-flex flex-column gap-2">
-		<a href="/web/licenses" class="nav-source-link {{ if eq .Title "Licenses" }}active{{ end }}"
-			{{ if eq .Title "Licenses" }}aria-current="page"{{ end }}
-			data-bs-toggle="tooltip" data-bs-placement="right" title="{{ t "nav.licenses" }}">
-			<i class="bi bi-info-circle" aria-hidden="true"></i> {{ t "nav.licenses" }}
-		</a>
-		<a href="https://github.com/Isotop7/proviant" target="_blank" rel="noopener"
-			class="nav-source-link"
-			title="{{ t "nav.viewSource" }}">
-			<i class="bi bi-git" aria-hidden="true"></i> proviant@GitHub
-		</a>
-	</div>
 </nav>
 {{ end }}

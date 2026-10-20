@@ -206,7 +206,7 @@ departure in `design-system/deviations.md`.
 - **Type**: VendSans for the interface, DMMono for numbers and codes; hierarchy via weight and size, not colour alone.
 - **Guidance**: async >500ms → loading indicator + disable the trigger; inline validation on blur, page-level feedback at submit; empty states carry a clear CTA; confirm before irreversible actions.
 - **Feedback**: `proviant.showFeedback()` shows a toast, not a modal; field and section errors stay inline. A toast's callback fires when it goes — the auto-hiding types after their timeout, an error when it is dismissed.
-- **Accessibility**: `<html lang>` matches the active UI language; the topbar carries the page's only `h1`; icon-only buttons get an `aria-label`; everything keyboard-navigable (`tabindex`, `focus-visible`); populate `aria-live` after dynamic updates.
+- **Accessibility**: `<html lang>` matches the active UI language; the page header carries the page's only `h1` — the topnav is navigation; icon-only buttons get an `aria-label`; everything keyboard-navigable (`tabindex`, `focus-visible`); populate `aria-live` after dynamic updates.
 
 ## graphify
 

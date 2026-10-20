@@ -26,65 +26,67 @@
 <body>
   <a href="#main-content" class="skip-link">{{ t "a11y.skipToContent" }}
   <div class="app">
-    {{template "nav" .}}
+    <header class="app__topbar">
+      {{template "nav" .}}
 
-    <div class="app__main">
-      <header class="app__topbar">
-        <h1 class="app__topbar-title">{{ .TitleText }}</h1>
-
-        <div class="app__topbar-actions">
-          <div class="position-relative">
-            <button class="btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false"
-              aria-label="{{ t "a11y.notifications" }}" title="{{ t "nav.notifications" }}">
-              <i class="bi bi-bell" aria-hidden="true"></i>
-              <span class="nav-badge position-absolute d-none" id="notification-badge">0</span>
-            </button>
-            <div class="dropdown-menu p-0 dropdown-menu-end" id="notification-dropdown">
-              <div class="px-3 py-2 border-bottom">
-                <span class="fw-bold small">{{ t "nav.notifications" }}</span>
-              </div>
-              <div id="notification-items">
-                <p class="text-body-secondary small px-3 py-2 mb-0">{{ t "common.loading" }}</p>
-              </div>
+      <div class="app__topbar-actions">
+        <div class="position-relative">
+          <button class="btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+            aria-label="{{ t "a11y.notifications" }}" title="{{ t "nav.notifications" }}">
+            <i class="bi bi-bell" aria-hidden="true"></i>
+            <span class="nav-badge position-absolute d-none" id="notification-badge">0</span>
+          </button>
+          <div class="dropdown-menu p-0 dropdown-menu-end" id="notification-dropdown">
+            <div class="px-3 py-2 border-bottom">
+              <span class="fw-bold small">{{ t "nav.notifications" }}</span>
             </div>
-          </div>
-
-          <div class="d-none d-md-flex gap-1">
-            <button class="btn-icon" type="button" id="btnThemeToggle"
-              aria-label="{{ t "a11y.toggleColorTheme" }}" title="{{ t "a11y.toggleColorTheme" }}">
-              <i class="bi bi-circle-half" id="themeToggleIcon" aria-hidden="true"></i>
-            </button>
-
-            <a class="btn-icon" href="/web" data-logout aria-label="{{ t "nav.logout" }}" title="{{ t "nav.logout" }}">
-              <i class="bi bi-escape" aria-hidden="true"></i>
-            </a>
-          </div>
-
-          <!-- Mobile only: the rest of the utility cluster -->
-          <div class="mobile-top-more d-md-none">
-            <button class="mobile-top-more-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ t "a11y.moreOptions" }}">
-              <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-            </button>
-            <div class="dropdown-menu dropdown-menu-end mobile-top-more-dropdown">
-              <button type="button" class="dropdown-item" id="btnThemeToggleMobile">
-                <i class="bi bi-circle-half me-2" id="themeToggleIconMobile" aria-hidden="true"></i>{{ t "common.toggleTheme" }}
-              </button>
-              <div class="dropdown-divider"></div>
-              <a href="/web/user/settings" class="dropdown-item">
-                <i class="bi bi-gear-wide-connected me-2" aria-hidden="true"></i>{{ t "common.settings" }}
-              </a>
-              <a href="/web" data-logout class="dropdown-item dropdown-item-danger">
-                <i class="bi bi-escape me-2" aria-hidden="true"></i>{{ t "common.logout" }}
-              </a>
+            <div id="notification-items">
+              <p class="text-body-secondary small px-3 py-2 mb-0">{{ t "common.loading" }}</p>
             </div>
           </div>
         </div>
-      </header>
 
-      <main id="main-content" class="app__content">
-        {{template "content" .}}
-      </main>
-    </div>
+        <div class="d-none d-lg-flex gap-1">
+          <button class="btn-icon" type="button" id="btnThemeToggle"
+            aria-label="{{ t "a11y.toggleColorTheme" }}" title="{{ t "a11y.toggleColorTheme" }}">
+            <i class="bi bi-circle-half" id="themeToggleIcon" aria-hidden="true"></i>
+          </button>
+
+          <a class="btn-icon" href="/web" data-logout aria-label="{{ t "nav.logout" }}" title="{{ t "nav.logout" }}">
+            <i class="bi bi-escape" aria-hidden="true"></i>
+          </a>
+        </div>
+
+        <!-- Mobile only: the rest of the utility cluster -->
+        <div class="mobile-top-more d-lg-none">
+          <button class="mobile-top-more-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ t "a11y.moreOptions" }}">
+            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end mobile-top-more-dropdown">
+            <button type="button" class="dropdown-item" id="btnThemeToggleMobile">
+              <i class="bi bi-circle-half me-2" id="themeToggleIconMobile" aria-hidden="true"></i>{{ t "common.toggleTheme" }}
+            </button>
+            <div class="dropdown-divider"></div>
+            <a href="/web/user/settings" class="dropdown-item">
+              <i class="bi bi-gear-wide-connected me-2" aria-hidden="true"></i>{{ t "common.settings" }}
+            </a>
+            <a href="/web" data-logout class="dropdown-item dropdown-item-danger">
+              <i class="bi bi-escape me-2" aria-hidden="true"></i>{{ t "common.logout" }}
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" class="app__content">
+      {{template "content" .}}
+    </main>
+
+    <footer class="app__footer">
+      <a href="/web/licenses">{{ t "nav.licenses" }}</a>
+      <a href="https://github.com/Isotop7/proviant" target="_blank" rel="noopener">{{ t "nav.viewSource" }}</a>
+      <span class="app__footer-version">{{ .Version }}</span>
+    </footer>
   </div>
   <!-- Shared confirm modal — destructive actions requiring user decision -->
   <div id="proviantConfirmModal" class="modal fade" tabindex="-1"

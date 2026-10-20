@@ -9,9 +9,16 @@ The `design-system/screens/*.html` spec sheets are standalone files (no shared
 include), so this document is the single place the menu is defined. When the app
 menu changes, change this file, then mirror it in every screen listed below.
 
-## 1. Sidebar — primary items (desktop, ≥ 1024 px)
+## 1. Topnav — primary items (desktop, ≥ 1024 px)
 
-Rendered in `nav.tmpl` inside `.nav-items`, in this order:
+Rendered in `nav.tmpl` inside `.app__nav`, in this order. The topnav
+carries the wordmark on the left and the utility cluster on the right; the
+link row disappears below 1024 px and the bottom tab takes over — the way
+the screen sheets show it.
+
+Below 1024 px the items live in the bottom tab: Dashboard, Products, Scan,
+Shopping, Recipes. Meal Plan, Waste Analytics and Settings are in the
+mobile more menu.
 
 | # | Label (`nav.*` key) | Route | Icon |
 |---|---------------------|-------|------|
@@ -25,9 +32,9 @@ Rendered in `nav.tmpl` inside `.nav-items`, in this order:
 
 Products carries an optional badge (`.nav-badge`) with the urgent/expiring count.
 
-## 2. Topbar — utility cluster (desktop ≥ 1024 px)
+## 2. Topnav — utility cluster (desktop ≥ 1024 px)
 
-Rendered in `layout/base.tmpl` inside `.app__topbar .nav-actions`,
+Rendered in `layout/base.tmpl` inside `.app__topbar-actions`,
 right-aligned, in this order:
 
 | Item | Behaviour | Icon |

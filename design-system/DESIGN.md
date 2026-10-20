@@ -320,21 +320,20 @@ Bootstrap-`.list-group` mit Custom-Geometrie (56 px Min-Höhe, 40 px Leading-Ava
 - Sticky-Header beim Scrollen.
 - Resize-Handle zwischen Spalten (4 px breiter Cursor-Streifen).
 
-### App-Layout / Sidebar
+### App-Layout / Topnav
 
-Eigene Layout-Komponente (Bootstrap hat keine passende App-Shell). Sidebar nutzt `.nav.flex-column` (Bootstrap-Nav) mit `.nav-link`-Items und Salwei-Politur. Bottom-Nav nutzt `.nav` mit Grid-Layout (4 Spalten) und `env(safe-area-inset-bottom)`.
+Eigene Layout-Komponente (Bootstrap hat keine passende App-Shell). Die Navigation trägt die Topnav: Wortmarke links, die sieben primären Einträge in der Mitte, der Utility-Cluster rechts. Bottom-Nav nutzt `.nav` mit Grid-Layout (5 Spalten) und `env(safe-area-inset-bottom)`.
 
-Verbindliche Menü-Struktur (sieben Sidebar-Items,
+Verbindliche Menü-Struktur (sieben Topnav-Items,
 Footer-Utilities, Bottom-Nav-Slots) steht in `design-system/nav.md`.
 
-- Sidebar 240 px fix auf ≥ 1024 px, Bottom-Nav < 1024 px.
-- BG `--surface-warm`, Trennlinie rechts `1 px --border`.
-- Section-Label: `--text-eyebrow`, Padding `--space-3` `--space-4`.
-- Item: 40 px hoch, 8 px Radius, 12 px horizontaler Innenpadding.
+- Topnav 56 px fix, sticky; die Linkzeile verschwindet < 1024 px, dann übernimmt der Bottom-Nav.
+- BG `--surface` zu 85 % mit Blur, Trennlinie unten `1 px --border`.
+- Wortmarke links, Linkzeile zentriert, Utility-Cluster rechts.
+- Link: `--text-sm` 500, FG `--fg-2`, Radius `--radius-sm`.
 - Aktiv: BG `--accent-soft`, FG `--accent-text`, Font-Gewicht 600.
 - Inaktiv: FG `--fg-2`, Gewicht 400.
-- Icon links 20 × 20, VendSans-Icon-Font oder Bootstrap-Icons.
-- Topbar: 56 px, BG `--surface`, Border unten 1 px `--border`, Title links (`--text-h2` 600), Aktionen rechts (Notifications, Theme, Logout). Der Topbar-Titel ist das **einzige** `h1` der Seite; die seitenweise `.page-header` behält nur Untertitel und Seitenaktionen.
+- Die Seite trägt ihren Namen selbst: das `.page-header` führt das **einzige** `h1`, die Topnav ist Navigation.
 - **Theme-Umschalter: genau einer pro Seite.** In der Shell im Topbar-Utility-Cluster (Desktop) bzw. im Mobile-More; in den Spec-Screens ebenfalls im Topnav-Utility-Cluster (`.nav-actions`). Ein zusätzlicher Floating-Button unten rechts ist verboten. Auth-Screens haben keinen Umschalter — dort greift nur `data-bs-theme` / `prefers-color-scheme`.
 - **Mobile-Bottom-Nav** (sichtbar < 1024 px, ersetzt Sidebar): BG `--surface-warm`, Border oben 1 px `--border`, 5 Grid-Spalten (Dashboard · Products · Scan · Shopping · Recipes), 56 px hoch + `env(safe-area-inset-bottom)` für iOS-Home-Indikator. Item: Icon 20 px + Label 11 px, aktiv in `--accent` auf `--accent-soft`. Meal Plan, Waste Analytics und Settings liegen im Mobile-More-Menü.
 

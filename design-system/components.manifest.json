@@ -88,12 +88,14 @@
       "metric-tile": "kpi",
       "metric-label": "kpi__label",
       "metric-value": "kpi__value",
-      "pv-sidebar": "app__sidebar",
-      "pv-nav-item": "nav-link (in .nav.flex-column)",
+      "pv-sidebar": "app__topbar + app__nav",
+      "pv-nav-item": "nav-link (in .app__nav)",
       "login-root": "auth",
       "login-brand": "auth__brand",
       "login-form-panel": "auth__form",
-      "login-form-inner": "auth__form-inner"
+      "login-form-inner": "auth__form-inner",
+      "app__sidebar": "app__topbar",
+      "app__sidebar .nav-link": "app__nav .nav-link"
     },
     "app-layout": {
       "app": "app (eigene Grid-Klasse, da Bootstrap-Default-Container für App-Shells ungeeignet)",
@@ -539,8 +541,7 @@
     "page-header": "page-header (eigene Klasse, da Bootstrap keine Brand-Pattern-Header kennt)",
     "page-header__brand": "page-header__brand (Wortmarke, kein h1)",
     "page-nav": "page-nav (eigene Klasse, sticky Anker-Sektion-Navigation)",
-    "app": "app (eigene Grid-Klasse für App-Shell)",
-    "app__sidebar": "app__sidebar (eigene Komponente)",
+    "app": "app (die Seite: Topnav, Inhalt, Fußzeile)",
     "bottom-nav": "bottom-nav (eigene Komponente, sticky mobile)",
     "modal--demo": "modal--demo (Demo-Modal ohne JS im Spec-Sheet sichtbar)",
     "skeleton": "skeleton (eigene Klasse, Bootstrap hat keinen Skeleton-Primitive)",
@@ -562,7 +563,12 @@
     "bento__cell": "bento__cell",
     "bento__cell--2": "bento__cell--2 (zwei Spalten)",
     "bento__cell--3": "bento__cell--3 (drei Spalten)",
-    "bento__cell--6": "bento__cell--6 (die volle Breite)"
+    "bento__cell--6": "bento__cell--6 (die volle Breite)",
+    "app__topbar": "app__topbar (die Navigationsleiste über dem Inhalt)",
+    "app__brand": "app__brand (Wortmarke, verlinkt zur Startseite)",
+    "app__nav": "app__nav (die sieben primären Einträge)",
+    "app__content": "app__content (der Seiteninhalt)",
+    "app__footer": "app__footer (Lizenzen, Quelle, Version)"
   },
   "notImplemented": {
     "_comment": "Aus dem Spec übernommene Bausteine, die bewusst NICHT gebaut werden. Grund und Beleg stehen in deviations.md.",
@@ -580,24 +586,6 @@
   },
   "navigation": {
     "_comment": "Verbindliche Menü-Struktur. Details, Routen und Icons in design-system/nav.md.",
-    "sidebarPrimary": [
-      "Dashboard",
-      "Products",
-      "Shopping List",
-      "Meal Plan",
-      "Recipes",
-      "Waste Analytics",
-      "Settings"
-    ],
-    "sidebarFooter": [
-      "Version",
-      "Source"
-    ],
-    "topbarActions": [
-      "Notifications",
-      "Theme",
-      "Logout"
-    ],
     "bottomNav": [
       "Dashboard",
       "Products",
@@ -609,6 +597,25 @@
       "Theme",
       "Settings",
       "Logout"
+    ],
+    "topnavPrimary": [
+      "Dashboard",
+      "Products",
+      "Shopping List",
+      "Meal Plan",
+      "Recipes",
+      "Waste Analytics",
+      "Settings"
+    ],
+    "topnavActions": [
+      "Notifications",
+      "Theme",
+      "Logout"
+    ],
+    "footer": [
+      "Licenses",
+      "Source",
+      "Version"
     ]
   },
   "iconSystem": {

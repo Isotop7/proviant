@@ -26,7 +26,7 @@ export const PRESETS = {
   'waste': { path: '/web/waste-analytics', login: true, ready: '#waste-status:has-text("Waste analytics loaded")' },
   'shopping-list': { path: '/web/shopping-list', login: true, ready: '#shoppingListContainer .shopping-list__item' },
   'settings': { path: '/web/user/settings', login: true, ready: 'h1:has-text("User Settings")' },
-  'user': { path: '/web/user', login: true, ready: 'h3:has-text("User")' },
+  'user': { path: '/web/user', login: true, ready: 'h1:has-text("User")' },
   'onboarding': { path: '/web/onboarding', login: true, ready: '#step1' },
   'product-edit': { path: '/web/products/1/edit', login: true, ready: '#editProductForm' },
 

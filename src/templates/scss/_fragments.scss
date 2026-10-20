@@ -232,7 +232,9 @@
   }
 }
 
-@media (min-width: 768px) {
+// The link row in the topnav disappears below 1024px — the bottom tab takes
+// over, the way the design system's screen sheets do it.
+@media (min-width: 1024px) {
   .bottom-nav {
     display: none;
   }
@@ -247,11 +249,8 @@
     margin: 0;
     overflow-x: hidden;
   }
-  .app__sidebar {
+  .app__nav {
     display: none;
-  }
-  .app__main {
-    margin-left: 0;
   }
   .app__content {
     min-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0));
