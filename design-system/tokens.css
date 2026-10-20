@@ -15,7 +15,7 @@
 
   /* Surfaces */
   --bg:           #FAF7F1;
-  --surface:      #FFFFFF;
+  --surface:      #FAF7F1;
   --surface-warm: #F1ECE0;
 
   /* Ink */
@@ -42,7 +42,7 @@
   --status-neutral:  #8A8A8A;
 
   --status-fresh-text:    #35604E;
-  --status-soon-text:     #7A6318;
+  --status-soon-text:     #77600F;
   --status-critical-text: #93491F;
   --status-expired-text:  #8C3A3A;
   --status-neutral-text:  #5F5F5F;

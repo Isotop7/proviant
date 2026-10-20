@@ -28,7 +28,7 @@
 
 // ── Surfaces ────────────────────────────────────────────────────────────────
 $bg:            #FAF7F1;   // Crème-Papier, App-Hintergrund
-$surface:       #FFFFFF;   // Karten, Panels, Inset-Container
+$surface:       #FAF7F1;   // Karten, Panels, Inset-Container (die Crème-Fläche selbst)
 $surface-warm:  #F1ECE0;   // Auth-Brand-Panel, Sidebar, Hervorhebung
 
 // ── Ink ─────────────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ $status-neutral:  #8A8A8A;   // kein Ablaufdatum
 // Balken und Rahmen; Text braucht eine dunklere Variante, sonst fällt die
 // Beschriftung auf dem 18-%-Tint unter 4.5:1.
 $status-fresh-text:    #35604E;
-$status-soon-text:     #7A6318;
+$status-soon-text:     #77600F;
 $status-critical-text: #93491F;
 $status-expired-text:  #8C3A3A;
 $status-neutral-text:  #5F5F5F;
