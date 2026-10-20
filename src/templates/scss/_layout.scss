@@ -1,9 +1,52 @@
 // ── Page shell & widgets ───────────────────────────────────────────────────
 
-// Main content area — offset for fixed sidebar
-#content-wrapper {
-  padding: var(--space-6) var(--space-3);
+// The app shell: a fixed sidebar and a main column with a sticky topbar.
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app__main {
+  flex: 1;
+  min-width: 0;
   margin-left: var(--sidebar-width);
+}
+
+.app__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 95;
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--topbar-height);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app__topbar-title {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+  color: var(--fg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app__topbar-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+// Main content area
+.app__content {
+  padding: var(--space-6) var(--space-3);
 }
 
 // Page-level header bar — white surface, bottom border, bleeds to content-wrapper edges

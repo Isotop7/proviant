@@ -2,7 +2,7 @@
 document.addEventListener("click", function (event) {
     const target = event.target;
 
-    if (target.closest("#btnLogout")) {
+    if (target.closest("[data-logout]")) {
         event.preventDefault();
         void proviant.logoutUser().then(() => {
             window.location.href = '/web';

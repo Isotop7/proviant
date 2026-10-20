@@ -822,6 +822,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	pageData := map[string]any{
 		"InviteToken":                     ctx.Query("invite_token"),
 		"Title":                           "Products",
+		"PageTitle":                       "EditProduct",
 		"Product":                         product,
 		"Locations":                       locations,
 		"IsArchived":                      product.DeletedAt.Valid,

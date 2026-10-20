@@ -141,15 +141,7 @@
 }
 
 .mobile-top-more {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 1036;
-  display: none;
-
-  @media (max-width: 767.98px) {
-    display: block;
-  }
+  display: block;
 }
 
 .mobile-top-more-btn {
@@ -255,12 +247,14 @@
     margin: 0;
     overflow-x: hidden;
   }
-  .pv-sidebar {
+  .app__sidebar {
     display: none;
   }
-  #content-wrapper {
+  .app__main {
+    margin-left: 0;
+  }
+  .app__content {
     min-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0));
     padding-bottom: calc(60px + env(safe-area-inset-bottom, 0));
-    margin-left: 0;
   }
 }

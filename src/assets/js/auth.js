@@ -341,7 +341,7 @@ document.getElementById('authForm')?.addEventListener('submit', (event) => {
 
 // Logout button (present on other pages but auth.js is auth-only; kept for safety)
 document.addEventListener('click', (event) => {
-    if (event.target.closest('#btnLogout')) {
+    if (event.target.closest('[data-logout]')) {
         event.preventDefault();
         void proviant.logoutUser().then(() => {
             window.location.href = '/web';

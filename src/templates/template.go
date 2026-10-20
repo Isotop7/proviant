@@ -403,12 +403,20 @@ func injectI18nData(ctx *gin.Context, data map[string]any) string {
 	// receipt review clamps to the same values the server enforces.
 	data["MaxProductQuantity"] = util.MaxProductQuantity
 	data["MaxPackSizeLength"] = util.MaxPackSizeLength
-	if title, ok := data["Title"].(string); ok && title != "" {
-		key := "pageTitle." + strings.ReplaceAll(title, " ", "")
+	// The page title and the nav key are two different things. The edit
+	// page keeps "Products" as its nav key so the sidebar stays lit, while
+	// its title is "Edit Product" — PageTitle carries the title, Title the
+	// nav key.
+	pageTitle, _ := data["PageTitle"].(string)
+	if pageTitle == "" {
+		pageTitle, _ = data["Title"].(string)
+	}
+	if pageTitle != "" {
+		key := "pageTitle." + strings.ReplaceAll(pageTitle, " ", "")
 		if i18n.Has(lang, key) {
 			data["TitleText"] = i18n.T(lang, key)
 		} else {
-			data["TitleText"] = title
+			data["TitleText"] = pageTitle
 		}
 	}
 	return lang

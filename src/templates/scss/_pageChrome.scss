@@ -331,10 +331,6 @@
 }
 
 // Nav sidebar extensions
-.nav-footer-section {
-  padding: 8px;
-  border-top: 1px solid var(--border);
-}
 .nav-footer-meta {
   padding: 12px 16px;
   margin-top: auto;
@@ -371,30 +367,6 @@
     font-weight: 600;
     color: var(--accent);
   }
-}
-
-button.pv-nav-item {
-  text-align: left;
-  cursor: pointer;
-  background: none;
-  border: none;
-}
-
-.pv-nav-item-danger {
-  color: var(--status-expired);
-  &:hover {
-    color: var(--status-expired-hover);
-  }
-}
-
-// Auth page toast
-.toast-success-icon {
-  font-size: 16px;
-  color: var(--status-fresh);
-}
-.toast-body-text {
-  flex: 1;
-  font-size: var(--text-sm);
 }
 
 // Scan page — product data panel

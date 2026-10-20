@@ -87,7 +87,13 @@
       "btn-modal-close": "btn-close",
       "metric-tile": "kpi",
       "metric-label": "kpi__label",
-      "metric-value": "kpi__value"
+      "metric-value": "kpi__value",
+      "pv-sidebar": "app__sidebar",
+      "pv-nav-item": "nav-link (in .nav.flex-column)",
+      "login-root": "auth",
+      "login-brand": "auth__brand",
+      "login-form-panel": "auth__form",
+      "login-form-inner": "auth__form-inner"
     },
     "app-layout": {
       "app":                  "app (eigene Grid-Klasse, da Bootstrap-Default-Container für App-Shells ungeeignet)",
