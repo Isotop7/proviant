@@ -78,7 +78,7 @@
       </div>
     </header>
 
-    <main id="main-content" class="app__content">
+    <main id="main-content" class="app__content{{ with .ContentClass }} {{ . }}{{ end }}">
       {{template "content" .}}
     </main>
 

@@ -663,6 +663,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	pageData := map[string]any{
 		"InviteToken":        ctx.Query("invite_token"),
 		"Title":              "Products",
+		"ContentClass":       util.ContentClassTable,
 		"Products":           products,
 		"QueryParam":         queryParam,
 		"QueryValue":         queryValue,

@@ -143,6 +143,12 @@
   }
 }
 
+// The table screens get the measure the screen sheets give them: a table
+// needs a readable line length, the full column would stretch it.
+.app__content--table {
+  max-width: 900px;
+}
+
 .app__footer {
   display: flex;
   flex-wrap: wrap;
